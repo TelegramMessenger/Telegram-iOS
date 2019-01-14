@@ -5,7 +5,7 @@ struct Entry {
     let value: String
 }
 
-enum ArgumentType {
+enum ArgumentType: Equatable {
     case any
     case integer(decimalNumbers: Int)
     case float
@@ -24,7 +24,7 @@ enum ArgumentType {
     }
 }
 
-struct Argument {
+struct Argument: Equatable {
     let index: Int
     let type: ArgumentType
 }
@@ -424,7 +424,69 @@ public final class PresentationStrings {
         }
         
         for (key, id) in pluralizationKeyPairs {
-            result +=
+            var arguments: [Argument]?
+            for (otherKey, value, _) in idKeyPairs {
+                if let (base, _) = pluralizationForm(otherKey), base == key {
+                    let localArguments = parseArguments(value)
+                    if !localArguments.isEmpty {
+                        let numericCount = localArguments.filter({
+                            switch $0.type {
+                                case .integer:
+                                    return true
+                                default:
+                                    return false
+                            }
+                        }).count
+                        if numericCount > 1 {
+                            preconditionFailure("value for \(key) contains more than 1 numeric argument")
+                        }
+                        if let argumentsValue = arguments {
+                            for i in 0 ..< min(argumentsValue.count, localArguments.count) {
+                                if argumentsValue[i] != localArguments[i] {
+                                    preconditionFailure("value for \(key) contains incompatible argument lists")
+                                }
+                            }
+                            if argumentsValue.count < localArguments.count {
+                                arguments = localArguments
+                            }
+                        } else {
+                            arguments = localArguments
+                        }
+                    }
+                }
+            }
+            if let arguments = arguments, !arguments.isEmpty {
+                if arguments.count > 1 {
+                    var argList = ""
+                    var argListAccessor = ""
+                    for argument in arguments {
+                        if !argList.isEmpty {
+                            argList.append(", ")
+                        }
+                        if !argListAccessor.isEmpty {
+                            argListAccessor.append(", ")
+                        }
+                        argList.append("_ _\(argument.index): ")
+                        argListAccessor.append("_\(argument.index)")
+                        switch argument.type {
+                            case .any:
+                                argList.append("String")
+                            case .integer:
+                                argList.append("Int32")
+                            case .float:
+                                argList.append("Float")
+                        }
+                    }
+                    result +=
+"""
+    public func \(escapedIdentifier(key))(_ selector: Int32, \(argList)) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, selector)
+        return String(format: self._ps[\(id) * \(PluralizationForm.formCount) + Int(form.rawValue)]!, \(argListAccessor))
+    }
+
+"""
+                } else {
+                    result +=
 """
     public func \(escapedIdentifier(key))(_ value: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, value)
@@ -432,6 +494,10 @@ public final class PresentationStrings {
     }
 
 """
+                }
+            } else {
+                preconditionFailure("arguments for \(key) is nil")
+            }
         }
         
         result +=

@@ -63,7 +63,6 @@
 "PUSH_CHANNEL_MESSAGE_GEO" = "%1$@ posted a map";
 "PUSH_CHANNEL_MESSAGE_GEOLIVE" = "%1$@ posted a live location";
 "PUSH_CHANNEL_MESSAGE_GIF" = "%1$@ posted a GIF";
-"PUSH_CHANNEL_MESSAGE_PHOTOS" = "%1$@ posted %2$@ photos";
 "PUSH_CHANNEL_MESSAGES" = "%1$@ posted %2$@ messages";
 
 "PUSH_PINNED_TEXT" = "%1$@ pinned \"%2$@\"";
@@ -212,6 +211,10 @@
 
 "PUSH_PHONE_CALL_REQUEST" = "%1$@|is calling you!";
 "PUSH_PHONE_CALL_MISSED" = "%1$@|You missed a call";
+
+"LOCAL_MESSAGE_FWDS" = "%1$@ forwarded you %2$d messages";
+"LOCAL_CHANNEL_MESSAGE_FWDS" = "%1$@ posted %2$d forwarded messages";
+"LOCAL_CHAT_MESSAGE_FWDS" = "%1$@ forwarded %2$d messages";
 
 // Common
 "Common.OK" = "OK";

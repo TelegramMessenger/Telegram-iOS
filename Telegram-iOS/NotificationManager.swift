@@ -184,7 +184,7 @@ final class NotificationManager {
             if #available(iOS 10.0, *) {
                 let content = UNMutableNotificationContent()
                 if isLocked {
-                    content.body = strings.LOCKED_MESSAGE("").0
+                    content.body = strings.PUSH_LOCKED_MESSAGE("").0
                 } else {
                     if title.isEmpty {
                         content.body = text
@@ -226,7 +226,7 @@ final class NotificationManager {
             } else {
                 let notification = UILocalNotification()
                 if isLocked {
-                    notification.alertBody = strings.LOCKED_MESSAGE("").0
+                    notification.alertBody = strings.PUSH_LOCKED_MESSAGE("").0
                 } else {
                     if #available(iOS 8.2, *) {
                         notification.alertTitle = title
@@ -427,11 +427,23 @@ final class NotificationManager {
                         if messages.count > 1 {
                             if messages[0].forwardInfo != nil {
                                 if let author = firstMessage.author, displayAuthor {
-                                    title = nil
-                                    body = strings.CHAT_MESSAGE_FWDS(author.compactDisplayTitle, peer.displayTitle, "\(messages.count)").0
+                                    let rawText = presentationData.strings.PUSH_CHAT_MESSAGE_FWDS(Int32(messages.count), peer.displayTitle, author.compactDisplayTitle, Int32(messages.count))
+                                    if let index = rawText.firstIndex(of: "|") {
+                                        title = String(rawText[rawText.startIndex ..< index])
+                                        body = String(rawText[rawText.index(after: index)...])
+                                    } else {
+                                        title = nil
+                                        body = rawText
+                                    }
                                 } else {
-                                    title = nil
-                                    body = strings.MESSAGE_FWDS(peer.displayTitle, "\(messages.count)").0
+                                    let rawText = presentationData.strings.PUSH_MESSAGE_FWDS(Int32(messages.count), peer.displayTitle, Int32(messages.count))
+                                    if let index = rawText.firstIndex(of: "|") {
+                                        title = String(rawText[rawText.startIndex ..< index])
+                                        body = String(rawText[rawText.index(after: index)...])
+                                    } else {
+                                        title = nil
+                                        body = rawText
+                                    }
                                 }
                             } else if messages[0].groupingKey != nil {
                                 var kind = messageContentKind(messages[0], strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: account.peerId).key
@@ -457,23 +469,65 @@ final class NotificationManager {
                                 if isChannel {
                                     switch kind {
                                         case .image:
-                                            body = strings.CHANNEL_MESSAGE_PHOTOS(peer.compactDisplayTitle, "\(messages.count)").0
+                                            let rawText = presentationData.strings.PUSH_CHANNEL_MESSAGE_PHOTOS(Int32(messages.count), peer.displayTitle, Int32(messages.count))
+                                            if let index = rawText.firstIndex(of: "|") {
+                                                title = String(rawText[rawText.startIndex ..< index])
+                                                body = String(rawText[rawText.index(after: index)...])
+                                            } else {
+                                                title = nil
+                                                body = rawText
+                                            }
                                         default:
-                                            body = strings.CHANNEL_MESSAGES(peer.compactDisplayTitle, "\(messages.count)").0
+                                            let rawText = presentationData.strings.PUSH_CHANNEL_MESSAGES(Int32(messages.count), peer.displayTitle, Int32(messages.count))
+                                            if let index = rawText.firstIndex(of: "|") {
+                                                title = String(rawText[rawText.startIndex ..< index])
+                                                body = String(rawText[rawText.index(after: index)...])
+                                            } else {
+                                                title = nil
+                                                body = rawText
+                                            }
                                     }
                                 } else if isGroup, let author = firstMessage.author {
                                     switch kind {
                                         case .image:
-                                            body = strings.CHAT_MESSAGE_PHOTOS(author.compactDisplayTitle, peer.displayTitle, "\(messages.count)").0
+                                            let rawText = presentationData.strings.PUSH_CHAT_MESSAGE_PHOTOS(Int32(messages.count), peer.displayTitle, author.compactDisplayTitle, Int32(messages.count))
+                                            if let index = rawText.firstIndex(of: "|") {
+                                                title = String(rawText[rawText.startIndex ..< index])
+                                                body = String(rawText[rawText.index(after: index)...])
+                                            } else {
+                                                title = nil
+                                                body = rawText
+                                            }
                                         default:
-                                            body = strings.CHAT_MESSAGES(author.compactDisplayTitle,  peer.displayTitle, "\(messages.count)").0
+                                            let rawText = presentationData.strings.PUSH_CHAT_MESSAGES(Int32(messages.count), peer.displayTitle, author.compactDisplayTitle, Int32(messages.count))
+                                            if let index = rawText.firstIndex(of: "|") {
+                                                title = String(rawText[rawText.startIndex ..< index])
+                                                body = String(rawText[rawText.index(after: index)...])
+                                            } else {
+                                                title = nil
+                                                body = rawText
+                                            }
                                     }
                                 } else {
                                     switch kind {
                                         case .image:
-                                            body = strings.MESSAGE_PHOTOS(peer.displayTitle, "\(messages.count)").0
+                                            let rawText = presentationData.strings.PUSH_MESSAGE_PHOTOS(Int32(messages.count), peer.displayTitle, Int32(messages.count))
+                                            if let index = rawText.firstIndex(of: "|") {
+                                                title = String(rawText[rawText.startIndex ..< index])
+                                                body = String(rawText[rawText.index(after: index)...])
+                                            } else {
+                                                title = nil
+                                                body = rawText
+                                            }
                                         default:
-                                            body = strings.MESSAGES(peer.displayTitle, "\(messages.count)").0
+                                            let rawText = presentationData.strings.PUSH_MESSAGES(Int32(messages.count), peer.displayTitle, Int32(messages.count))
+                                            if let index = rawText.firstIndex(of: "|") {
+                                                title = String(rawText[rawText.startIndex ..< index])
+                                                body = String(rawText[rawText.index(after: index)...])
+                                            } else {
+                                                title = nil
+                                                body = rawText
+                                            }
                                     }
                                 }
                             }
@@ -526,17 +580,17 @@ final class NotificationManager {
                                     if location.liveBroadcastingTimeout != nil {
                                         if let chatMainPeer = chatPeer.chatMainPeer {
                                             if let user = chatMainPeer as? TelegramUser {
-                                                body = strings.MESSAGE_GEOLIVE(user.displayTitle).0
+                                                body = strings.PUSH_MESSAGE_GEOLIVE(user.displayTitle).0
                                             } else if let _ = chatMainPeer as? TelegramGroup, let author = firstMessage.author {
-                                                body = strings.MESSAGE_GEOLIVE(author.displayTitle).0
+                                                body = strings.PUSH_MESSAGE_GEOLIVE(author.displayTitle).0
                                             } else if let channel = chatMainPeer as? TelegramChannel {
                                                 switch channel.info {
                                                     case .group:
                                                         if let author = firstMessage.author {
-                                                            body = strings.MESSAGE_GEOLIVE(author.displayTitle).0
+                                                            body = strings.PUSH_MESSAGE_GEOLIVE(author.displayTitle).0
                                                         }
                                                     case .broadcast:
-                                                         body = strings.CHANNEL_MESSAGE_GEOLIVE(chatMainPeer.displayTitle).0
+                                                         body = strings.PUSH_CHANNEL_MESSAGE_GEOLIVE(chatMainPeer.displayTitle).0
                                                 }
                                             }
                                         }
@@ -546,14 +600,14 @@ final class NotificationManager {
                             }
                         }
                     } else {
-                        body = strings.ENCRYPTED_MESSAGE("").0
+                        body = strings.PUSH_ENCRYPTED_MESSAGE("").0
                     }
                     
                     if isLocked {
                         title = nil
                     }
                     if !displayContents {
-                        body = strings.ENCRYPTED_MESSAGE("").0
+                        body = strings.PUSH_ENCRYPTED_MESSAGE("").0
                     }
                     
                     var userInfo: [AnyHashable: Any] = ["peerId": firstMessage.id.peerId.toInt64()]
@@ -722,7 +776,7 @@ final class NotificationManager {
         if let notificationCall = call {
             if #available(iOS 10.0, *) {
                 let content = UNMutableNotificationContent()
-                content.body = presentationData.strings.PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle ?? "").0
+                content.body = presentationData.strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle ?? "").0
                 content.sound = UNNotificationSound(named: "0.m4a")
                 content.categoryIdentifier = "incomingCall"
                 content.userInfo = [:]
@@ -739,7 +793,7 @@ final class NotificationManager {
                 
             } else {
                 let notification = UILocalNotification()
-                notification.alertBody = presentationData.strings.PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle ?? "").0
+                notification.alertBody = presentationData.strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle ?? "").0
                 notification.category = "incomingCall"
                 notification.userInfo = ["callId": String(describing: notificationCall.internalId)]
                 notification.soundName = "0.m4a"
