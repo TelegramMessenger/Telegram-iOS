@@ -1,6 +1,7 @@
 
 subdir('freetype')
 subdir('pixman')
+subdir('stb')
 
 vector_dep = [freetype_dep]
 vector_dep += pixman_dep
@@ -24,6 +25,11 @@ source_file  += files('vdebug.cpp')
 source_file  += files('vinterpolator.cpp')
 source_file  += files('vbezier.cpp')
 source_file  += files('vraster.cpp')
+source_file  += files('vimageloader.cpp')
+
+# dl dependancy for dlopen, dlsym, dlclose symbol
+cc = meson.get_compiler('cpp')
+vector_dep += cc.find_library('dl', required : true)
 
 vector_dep += declare_dependency( include_directories : include_directories('.'),
                                   sources             : source_file

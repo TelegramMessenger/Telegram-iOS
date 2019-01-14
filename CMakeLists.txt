@@ -35,6 +35,11 @@ target_link_libraries(lottie-player
                         "${CMAKE_THREAD_LIBS_INIT}"
                      )
 
+# for dlopen, dlsym and dlclose dependancy
+target_link_libraries(lottie-player
+                    PRIVATE
+                    ${CMAKE_DL_LIBS})
+
 target_link_libraries(lottie-player
                     PUBLIC
                          "-Wl,--no-undefined"
