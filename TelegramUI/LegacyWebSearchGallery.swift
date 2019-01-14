@@ -208,6 +208,7 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
     var thumbnailResource: TelegramMediaResource?
     var imageResource: TelegramMediaResource?
     var imageDimensions = CGSize()
+    var immediateThumbnailData: Data?
     
     let thumbnailSignal: Signal<UIImage, NoError>
     let originalSignal: Signal<UIImage, NoError>
@@ -225,6 +226,7 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
                 imageDimensions = dimensions
             }
         case let .internalReference(_, _, _, _, _, image, _, _):
+            immediateThumbnailData = image?.immediateThumbnailData
             if let image = image {
                 if let imageRepresentation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 1000.0, height: 800.0)) {
                     imageDimensions = imageRepresentation.dimensions
@@ -255,7 +257,7 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
             representations.append(TelegramMediaImageRepresentation(dimensions: thumbnailDimensions, resource: thumbnailResource))
         }
         representations.append(TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: imageResource))
-        let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil)
+        let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil)
         thumbnailSignal = chatMessagePhotoDatas(postbox: account.postbox, photoReference: .standalone(media: tmpImage), autoFetchFullSize: false)
         |> mapToSignal { (thumbnailData, _, _) -> Signal<UIImage, NoError> in
             if let data = thumbnailData, let image = UIImage(data: data) {

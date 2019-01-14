@@ -154,7 +154,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
                 let entries = previousEntries.with { $0 }
                 if let entries = entries, !entries.isEmpty {
                     let wallpapers = entries.map { $0.wallpaper }
-                    let controller = WallpaperListPreviewController(account: account, source: .list(wallpapers: wallpapers, central: wallpaper, mode: nil))
+                    let controller = WallpaperListPreviewController(account: account, source: .list(wallpapers: wallpapers, central: wallpaper, type: .colors))
                     strongSelf.present(controller, nil)
                 }
             }
@@ -225,7 +225,13 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         insets.top += navigationBarHeight
         let scrollIndicatorInsets = insets
         
-        let referenceImageSize = CGSize(width: 108.0, height: 108.0)
+        let referenceImageSize: CGSize
+        let screenWidth = min(layout.size.width, layout.size.height)
+        if screenWidth >= 375.0 {
+            referenceImageSize = CGSize(width: 108.0, height: 108.0)
+        } else {
+            referenceImageSize = CGSize(width: 91.0, height: 91.0)
+        }
         
         let minSpacing: CGFloat = 8.0
         

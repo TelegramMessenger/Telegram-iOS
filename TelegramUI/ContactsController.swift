@@ -177,26 +177,9 @@ public class ContactsController: ViewController {
         
         self.contactsNode.contactListNode.suppressPermissionWarning = { [weak self] in
             if let strongSelf = self {
-                let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
-                strongSelf.present(textAlertController(account: strongSelf.account, title: presentationData.strings.Contacts_PermissionsSuppressWarningTitle, text: presentationData.strings.Contacts_PermissionsSuppressWarningText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Contacts_PermissionsKeepDisabled, action: {
-                    ApplicationSpecificNotice.setContactsPermissionWarning(postbox: strongSelf.account.postbox, value: Int32(Date().timeIntervalSince1970))
-                }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Contacts_PermissionsEnable, action: { [weak self] in
-                    if let strongSelf = self {
-                        let account = strongSelf.account
-                        let _ = (DeviceAccess.authorizationStatus(account: account, subject: .contacts)
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { status in
-                            switch status {
-                                case .notDetermined:
-                                    DeviceAccess.authorizeAccess(to: .contacts, account: account)
-                                case .denied, .restricted:
-                                    account.telegramApplicationContext.applicationBindings.openSettings()
-                                default:
-                                    break
-                            }
-                        })
-                    }
-                })]), in: .window(.root))
+                presentContactsWarningSuppression(account: strongSelf.account, present: { c, a in
+                    strongSelf.present(c, in: .window(.root), with: a)
+                })
             }
         }
         

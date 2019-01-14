@@ -125,7 +125,7 @@ final class ThemeGridController: ViewController {
                         let controller = generator(legacyController.context)
                         legacyController.bind(controller: controller)
                         legacyController.deferScreenEdgeGestures = [.top]
-                        controller.selectionBlock = { [weak self] asset, thumbnailImage in
+                        controller.selectionBlock = { [weak self, weak legacyController] asset, thumbnailImage in
                             if let strongSelf = self, let asset = asset {
                                 let controller = WallpaperListPreviewController(account: strongSelf.account, source: .asset(asset.backingAsset, thumbnailImage))
                                 controller.apply = { [weak self, weak legacyController, weak controller] wallpaper, mode, cropRect in

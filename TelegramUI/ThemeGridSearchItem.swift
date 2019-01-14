@@ -65,6 +65,7 @@ final class ThemeGridSearchItemNode: GridItemNode {
             var thumbnailResource: TelegramMediaResource?
             var imageResource: TelegramMediaResource?
             var imageDimensions: CGSize?
+            var immediateThumbnailData: Data?
             switch item.result {
             case let .externalReference(_, _, type, _, _, _, content, thumbnail, _):
                 if let content = content, type != "gif" {
@@ -75,6 +76,7 @@ final class ThemeGridSearchItemNode: GridItemNode {
                 imageDimensions = content?.dimensions
             case let .internalReference(_, _, _, _, _, image, file, _):
                 if let image = image {
+                    immediateThumbnailData = image.immediateThumbnailData
                     if let largestRepresentation = largestImageRepresentation(image.representations) {
                         imageDimensions = largestRepresentation.dimensions
                     }
@@ -91,6 +93,7 @@ final class ThemeGridSearchItemNode: GridItemNode {
                         }
                     }
                 } else if let file = file {
+                    immediateThumbnailData = file.immediateThumbnailData
                     if let dimensions = file.dimensions {
                         imageDimensions = dimensions
                     } else if let largestRepresentation = largestImageRepresentation(file.previewRepresentations) {
@@ -108,7 +111,7 @@ final class ThemeGridSearchItemNode: GridItemNode {
                 representations.append(TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: imageResource))
             }
             if !representations.isEmpty {
-                let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil)
+                let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil)
                 updateImageSignal =  mediaGridMessagePhoto(account: item.account, photoReference: .standalone(media: tmpImage))
             } else {
                 updateImageSignal = .complete()

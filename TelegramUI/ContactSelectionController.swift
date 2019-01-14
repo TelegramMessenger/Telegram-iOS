@@ -154,6 +154,14 @@ class ContactSelectionController: ViewController {
             self?.openPeer(peer: peer)
         }
         
+        self.contactsNode.contactListNode.suppressPermissionWarning = { [weak self] in
+            if let strongSelf = self {
+                presentContactsWarningSuppression(account: strongSelf.account, present: { c, a in
+                    strongSelf.present(c, in: .window(.root), with: a)
+                })
+            }
+        }
+        
         self.contactsNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: true, completion: nil)
         }

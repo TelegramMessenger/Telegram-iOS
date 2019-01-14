@@ -268,7 +268,7 @@ final class ThemeGridSearchContainerNode: SearchDisplayControllerContentNode {
         return self._isSearching.get()
     }
     
-    init(account: Account, openResult: @escaping (ChatContextResult, [ChatContextResult]) -> Void) {
+    init(account: Account, openResult: @escaping (ChatContextResult) -> Void) {
         self.account = account
         self.dimNode = ASDisplayNode()
         
@@ -330,12 +330,8 @@ final class ThemeGridSearchContainerNode: SearchDisplayControllerContentNode {
         let previousSearchItems = Atomic<[ThemeGridSearchEntry]?>(value: nil)
         
         let interaction = ThemeGridSearchInteraction(openResult: { [weak self] result in
+            openResult(result)
             self?.dismissInput?()
-            
-            let previousEntries = previousSearchItems.with { $0 }
-            if let entries = previousEntries {
-                openResult(result, entries.map { $0.result })
-            }
         }, selectColor: { [weak self] color in
             self?.setQuery?("#color\(color.string) ")
         }, setSearchQuery: { [weak self] query in
@@ -381,23 +377,25 @@ final class ThemeGridSearchContainerNode: SearchDisplayControllerContentNode {
                 }
                 |> mapToSignal { peer -> Signal<([ThemeGridSearchEntry], Bool)?, NoError> in
                     if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-                        return requestContextResults(account: account, botId: user.id, query: wallpaperQuery, peerId: account.peerId, limit: 16)
-                        |> map { collection -> ([ThemeGridSearchEntry], Bool)? in
-                            guard let collection = collection else {
-                                return nil
+                        return (.complete() |> delay(0.1, queue: Queue.concurrentDefaultQueue()))
+                        |> then(
+                            requestContextResults(account: account, botId: user.id, query: wallpaperQuery, peerId: account.peerId, limit: 16)
+                            |> map { collection -> ([ThemeGridSearchEntry], Bool)? in
+                                guard let collection = collection else {
+                                    return nil
+                                }
+                                var entries: [ThemeGridSearchEntry] = []
+                                var i = 0
+                                for result in collection.results {
+                                    entries.append(ThemeGridSearchEntry(index: i, result: result))
+                                    i += 1
+                                }
+                                updateSearchContext { _ in
+                                    return (ThemeGridSearchContext(result: ThemeGridSearchResult(query: query, items: collection.results, nextOffset: collection.nextOffset), loadMoreIndex: nil), true)
+                                }
+                                return (entries, false)
                             }
-                            var entries: [ThemeGridSearchEntry] = []
-                            var i = 0
-                            for result in collection.results {
-                                entries.append(ThemeGridSearchEntry(index: i, result: result))
-                                i += 1
-                            }
-                            
-                            updateSearchContext { _ in
-                                return (ThemeGridSearchContext(result: ThemeGridSearchResult(query: query, items: collection.results, nextOffset: collection.nextOffset), loadMoreIndex: nil), true)
-                            }
-                            return (entries, false)
-                        }
+                        )
                     } else {
                         return .single(nil)
                     }
@@ -484,7 +482,6 @@ final class ThemeGridSearchContainerNode: SearchDisplayControllerContentNode {
         self.backgroundColor = theme.chatList.backgroundColor
         self.dimNode.backgroundColor = theme.chatList.backgroundColor
         self.recentListNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
-        //self.gridNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
     }
     
 //    private func updateState(_ f: (ChatListSearchContainerNodeState) -> ChatListSearchContainerNodeState) {
@@ -562,7 +559,13 @@ final class ThemeGridSearchContainerNode: SearchDisplayControllerContentNode {
         self.validLayout = layout
         
         let minSpacing: CGFloat = 8.0
-        let referenceImageSize = CGSize(width: 108.0, height: 230.0)
+        let referenceImageSize: CGSize
+        let screenWidth = min(layout.size.width, layout.size.height)
+        if screenWidth >= 375.0 {
+            referenceImageSize = CGSize(width: 108.0, height: 230.0)
+        } else {
+            referenceImageSize = CGSize(width: 91.0, height: 161.0)
+        }
         let imageCount = Int((layout.size.width - minSpacing * 2.0) / (referenceImageSize.width + minSpacing))
         let imageSize = referenceImageSize.aspectFilled(CGSize(width: floor((layout.size.width - CGFloat(imageCount + 1) * minSpacing) / CGFloat(imageCount)), height: referenceImageSize.height))
         let spacing = floor((layout.size.width - CGFloat(imageCount) * imageSize.width) / CGFloat(imageCount + 1))

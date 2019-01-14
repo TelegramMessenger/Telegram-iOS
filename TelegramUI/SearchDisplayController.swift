@@ -31,6 +31,9 @@ final class SearchDisplayController {
             self?.isDeactivating = true
             cancel()
         }
+        self.searchBar.clearPrefix = {
+            
+        }
         self.contentNode.cancel = { [weak self] in
             self?.isDeactivating = true
             cancel()

@@ -7,6 +7,7 @@ import SwiftSignalKit
 
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let account: Account
+    private let present: (ViewController, Any?) -> Void
     private let dismiss: () -> Void
     private let filter: ChatListNodePeersFilter
     
@@ -49,8 +50,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     }
     
     
-    init(account: Account, filter: ChatListNodePeersFilter, hasContactSelector: Bool, dismiss: @escaping () -> Void) {
+    init(account: Account, filter: ChatListNodePeersFilter, hasContactSelector: Bool, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.account = account
+        self.present = present
         self.dismiss = dismiss
         self.filter = filter
         
@@ -253,7 +255,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                                     strongSelf.requestOpenPeerFromSearch?(peer)
                                 }
                             })
-                        case let .deviceContact(stableId, contact):
+                        case .deviceContact:
                             break
                     }
                 }
@@ -334,6 +336,13 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     contactListNode.openPeer = { [weak self] peer in
                         if case let .peer(peer, _) = peer {
                             self?.requestOpenPeer?(peer.id)
+                        }
+                    }
+                    contactListNode.suppressPermissionWarning = { [weak self] in
+                        if let strongSelf = self {
+                            presentContactsWarningSuppression(account: strongSelf.account, present: { c, a in
+                                strongSelf.present(c, a)
+                            })
                         }
                     }
                     contactListNode.contentOffsetChanged = { [weak self] offset in

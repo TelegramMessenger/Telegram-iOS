@@ -163,6 +163,14 @@ public class ComposeController: ViewController {
             }
         }
         
+        self.contactsNode.contactListNode.suppressPermissionWarning = { [weak self] in
+            if let strongSelf = self {
+                presentContactsWarningSuppression(account: strongSelf.account, present: { c, a in
+                    strongSelf.present(c, in: .window(.root), with: a)
+                })
+            }
+        }
+        
         self.contactsNode.contactListNode.contentOffsetChanged = { [weak self] offset in
             if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
                 searchContentNode.updateListVisibleContentOffset(offset)

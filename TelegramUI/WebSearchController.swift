@@ -28,7 +28,7 @@ func requestContextResults(account: Account, botId: PeerId, query: String, peerI
             collection = results
         }
         if let collection = collection, collection.results.count < limit, let nextOffset = collection.nextOffset {
-            let nextResults = requestContextResults(account: account, botId: botId, query: query, peerId: peerId, offset: nextOffset, existingResults: collection)
+            let nextResults = requestContextResults(account: account, botId: botId, query: query, peerId: peerId, offset: nextOffset, existingResults: collection, limit: limit)
             if collection.results.count > 10 {
                 return .single(collection)
                 |> then(nextResults)

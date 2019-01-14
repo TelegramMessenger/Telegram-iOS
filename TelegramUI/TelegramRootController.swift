@@ -82,8 +82,8 @@ public final class TelegramRootController: NavigationController {
             return
         }
         
-        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.3) {
-            //(controller.navigationController as? NavigationController)?.pushViewController(ThemeGridController(account: self.account, mode: .wallpapers))
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.15) {
+            //(controller.navigationController as? NavigationController)?.pushViewController(ThemeGridController(account: self.account))
             
 //            let wrapperNode = ASDisplayNode()
 //            let bounds = controller.displayNode.bounds

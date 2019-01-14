@@ -57,13 +57,13 @@ final class ChatBackgroundNode: ASDisplayNode {
     }
 }
 
-private var backgroundImageForWallpaper: (TelegramWallpaper, UIImage)?
+private var backgroundImageForWallpaper: (TelegramWallpaper, PresentationWallpaperMode, UIImage)?
 private var serviceBackgroundColorForWallpaper: (TelegramWallpaper, UIColor)?
 
 func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mode: PresentationWallpaperMode = .still, postbox: Postbox) -> UIImage? {
     var backgroundImage: UIImage?
-    if wallpaper == backgroundImageForWallpaper?.0 {
-        backgroundImage = backgroundImageForWallpaper?.1
+    if wallpaper == backgroundImageForWallpaper?.0, mode == backgroundImageForWallpaper?.1 {
+        backgroundImage = backgroundImageForWallpaper?.2
     } else {
         switch wallpaper {
             case .builtin:
@@ -105,7 +105,7 @@ func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mode: Presentat
                 }
         }
         if let backgroundImage = backgroundImage {
-            backgroundImageForWallpaper = (wallpaper, backgroundImage)
+            backgroundImageForWallpaper = (wallpaper, mode, backgroundImage)
         }
     }
     return backgroundImage
@@ -188,76 +188,94 @@ func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, postbox: Postbox) 
 }
 
 func chatBackgroundContrastColor(wallpaper: TelegramWallpaper, postbox: Postbox) -> Signal<UIColor, NoError> {
-   // if wallpaper == serviceBackgroundColorForWallpaper?.0, let color = serviceBackgroundColorForWallpaper?.1 {
-    //    return .single(color)
-   // } else {
-        switch wallpaper {
-            case .builtin:
-                return .single(UIColor(rgb: 0x888f96))
-            case let .color(color):
-                return .single(contrastingColor(for: UIColor(rgb: UInt32(bitPattern: color))))
-            case let .image(representations):
-                if let largest = largestImageRepresentation(representations) {
-                    return Signal<UIColor, NoError> { subscriber in
-                        let fetch = postbox.mediaBox.fetchedResource(largest.resource, parameters: nil).start()
-                        let data = backgroundContrastColor(for: postbox.mediaBox.resourceData(largest.resource)).start(next: { next in
-                            subscriber.putNext(next)
-                        }, completed: {
-                            subscriber.putCompletion()
-                        })
-                        return ActionDisposable {
-                            fetch.dispose()
-                            data.dispose()
+    switch wallpaper {
+        case .builtin:
+            return .single(UIColor(rgb: 0x888f96))
+        case let .color(color):
+            return .single(contrastingColor(for: UIColor(rgb: UInt32(bitPattern: color))))
+        case let .image(representations):
+            if let largest = largestImageRepresentation(representations) {
+                return Signal<UIColor, NoError> { subscriber in
+                    let fetch = postbox.mediaBox.fetchedResource(largest.resource, parameters: nil).start()
+                    let imageSignal = postbox.mediaBox.resourceData(largest.resource)
+                    |> mapToSignal { data -> Signal<UIImage?, NoError> in
+                        if data.complete, let image = UIImage(contentsOfFile: data.path) {
+                            return .single(image)
+                        } else {
+                            return .complete()
                         }
                     }
-                     //   |> afterNext { color in
-                    //        serviceBackgroundColorForWallpaper = (wallpaper, color)
-                    //}
+                    let data = backgroundContrastColor(for: imageSignal).start(next: { next in
+                        subscriber.putNext(next)
+                    }, completed: {
+                        subscriber.putCompletion()
+                    })
+                    return ActionDisposable {
+                        fetch.dispose()
+                        data.dispose()
+                    }
+                }
+            } else {
+                return .single(.white)
+            }
+    case let .file(file):
+        return Signal<UIColor, NoError> { subscriber in
+            let fetch = postbox.mediaBox.fetchedResource(file.file.resource, parameters: nil).start()
+            let imageSignal = postbox.mediaBox.resourceData(file.file.resource)
+            |> mapToSignal { data -> Signal<UIImage?, NoError> in
+                if data.complete, let image = UIImage(contentsOfFile: data.path) {
+                    return .single(image)
                 } else {
-                    return .single(.white)
+                    return .complete()
                 }
-        case let .file(file):
-            return Signal<UIColor, NoError> { subscriber in
-                let fetch = postbox.mediaBox.fetchedResource(file.file.resource, parameters: nil).start()
-                let data = backgroundContrastColor(for: postbox.mediaBox.resourceData(file.file.resource)).start(next: { next in
-                    subscriber.putNext(next)
-                }, completed: {
-                    subscriber.putCompletion()
-                })
-                return ActionDisposable {
-                    fetch.dispose()
-                    data.dispose()
-                }
-                }
-           // |> afterNext { color in
-            //        serviceBackgroundColorForWallpaper = (wallpaper, color)
-            //}
+            }
+            let data = backgroundContrastColor(for: imageSignal).start(next: { next in
+                subscriber.putNext(next)
+            }, completed: {
+                subscriber.putCompletion()
+            })
+            return ActionDisposable {
+                fetch.dispose()
+                data.dispose()
+            }
         }
-  //  }
+    }
 }
 
-private func backgroundContrastColor(for data: Signal<MediaResourceData, NoError>) -> Signal<UIColor, NoError> {
-    return data
-    |> mapToSignal { data -> Signal<UIColor, NoError> in
-        if data.complete {
-            let image = UIImage(contentsOfFile: data.path)
+func backgroundContrastColor(for image: Signal<UIImage?, NoError>) -> Signal<UIColor, NoError> {
+    return image
+    |> map { image -> UIColor in
+        if let image = image {
             let context = DrawingContext(size: CGSize(width: 128.0, height: 32.0), scale: 1.0, clear: false)
             context.withFlippedContext({ context in
-                if let image = image, let cgImage = image.cgImage {
+                if let cgImage = image.cgImage {
                     let size = image.size.aspectFilled(CGSize(width: 128.0, height: 128.0))
                     context.draw(cgImage, in: CGRect(x: floor((128.0 - size.width) / 2.0), y: 0.0, width: size.width, height: size.height))
                 }
             })
-            let finalContext = DrawingContext(size: CGSize(width: 1.0, height: 1.0), scale: 1.0, clear: false)
-            finalContext.withFlippedContext({ c in
-                if let cgImage = context.generateImage()?.cgImage {
-                    c.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0))
+            
+            var matching: Int = 0
+            var total: Int = Int(context.size.width) * Int(context.size.height)
+            for y in 0 ..< Int(context.size.height) {
+                for x in 0 ..< Int(context.size.width) {
+                    var saturation: CGFloat = 0.0
+                    var brightness: CGFloat = 0.0
+                    if context.colorAt(CGPoint(x: x, y: y)).getHue(nil, saturation: nil, brightness: &brightness, alpha: nil) {
+                        if brightness > 0.6 {
+                            matching += 1
+                        }
+                    }
                 }
-            })
-            let color = finalContext.colorAt(CGPoint())
-            return .single(contrastingColor(for: color))
+            }
+            
+            if CGFloat(matching) / CGFloat(total) > 0.4 {
+                return .black
+            } else {
+                return .white
+            }
+        } else {
+            return .black
         }
-        return .complete()
     }
 }
 
@@ -266,11 +284,10 @@ private func contrastingColor(for color: UIColor) -> UIColor {
     var green: CGFloat = 0.0
     var blue: CGFloat = 0.0
     var luminance: CGFloat = 0.0
-    var alpha: CGFloat = 0.0;
     
-    if color.getRed(&red, green: &green, blue: &blue, alpha: &alpha) {
+    if color.getRed(&red, green: &green, blue: &blue, alpha: nil) {
         luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722
-    } else if color.getWhite(&luminance, alpha: &alpha) {
+    } else if color.getWhite(&luminance, alpha: nil) {
     }
     
     if luminance > 0.6 {

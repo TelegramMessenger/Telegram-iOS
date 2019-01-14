@@ -104,7 +104,9 @@ public final class PeerSelectionController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerSelectionControllerNode(account: self.account, filter: self.filter, hasContactSelector: hasContactSelector, dismiss: { [weak self] in
+        self.displayNode = PeerSelectionControllerNode(account: self.account, filter: self.filter, hasContactSelector: hasContactSelector, present: { [weak self] c, a in
+            self?.present(c, in: .window(.root), with: a)
+        }, dismiss: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
         

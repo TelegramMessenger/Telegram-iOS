@@ -6,12 +6,18 @@ import TelegramCore
 import SwiftSignalKit
 import Photos
 
+enum WallpaperListType {
+    case wallpapers(PresentationWallpaperMode?)
+    case colors
+}
+
 enum WallpaperListPreviewSource {
-    case list(wallpapers: [TelegramWallpaper], central: TelegramWallpaper, mode: PresentationWallpaperMode?)
-    case slug(String, TelegramMediaFile?)
+    case list(wallpapers: [TelegramWallpaper], central: TelegramWallpaper, type: WallpaperListType)
     case wallpaper(TelegramWallpaper)
+    case slug(String, TelegramMediaFile?)
     case asset(PHAsset, UIImage?)
-    case contextResults(results: [ChatContextResult], central: ChatContextResult)
+    case contextResult(ChatContextResult)
+    case customColor
 }
 
 final class WallpaperListPreviewController: ViewController {
@@ -45,6 +51,7 @@ final class WallpaperListPreviewController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData

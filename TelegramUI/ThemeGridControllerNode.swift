@@ -222,7 +222,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
                         mode = strongSelf.presentationData.chatWallpaperMode
                     }
                     
-                    presentPreviewController(.list(wallpapers: wallpapers, central: wallpaper, mode: mode))
+                    presentPreviewController(.list(wallpapers: wallpapers, central: wallpaper, type: .wallpapers(mode)))
                 }
             }
         }, toggleWallpaperSelection: { [weak self] index, value in
@@ -412,7 +412,13 @@ final class ThemeGridControllerNode: ASDisplayNode {
         let scrollIndicatorInsets = insets
         
         let minSpacing: CGFloat = 8.0
-        let referenceImageSize = CGSize(width: 108.0, height: 230.0)
+        let referenceImageSize: CGSize
+        let screenWidth = min(layout.size.width, layout.size.height)
+        if screenWidth >= 375.0 {
+            referenceImageSize = CGSize(width: 108.0, height: 230.0)
+        } else {
+            referenceImageSize = CGSize(width: 91.0, height: 161.0)
+        }
         let imageCount = Int((layout.size.width - minSpacing * 2.0) / (referenceImageSize.width + minSpacing))
         let imageSize = referenceImageSize.aspectFilled(CGSize(width: floor((layout.size.width - CGFloat(imageCount + 1) * minSpacing) / CGFloat(imageCount)), height: referenceImageSize.height))
         let spacing = floor((layout.size.width - CGFloat(imageCount) * imageSize.width) / CGFloat(imageCount + 1))
@@ -520,9 +526,9 @@ final class ThemeGridControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ThemeGridSearchContainerNode(account: account, openResult: { [weak self] result, results in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ThemeGridSearchContainerNode(account: account, openResult: { [weak self] result in
             if let strongSelf = self {
-                strongSelf.presentPreviewController(.contextResults(results: results, central: result))
+                strongSelf.presentPreviewController(.contextResult(result))
             }
         }), cancel: { [weak self] in
             self?.requestDeactivateSearch?()

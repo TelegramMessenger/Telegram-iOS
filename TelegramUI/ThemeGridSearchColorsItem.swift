@@ -38,13 +38,20 @@ private func nodeColor(for color: WallpaperSearchColor) -> UIColor {
 private class ThemeGridColorNode: HighlightableButtonNode {
     let action: () -> Void
     
-    init(color: WallpaperSearchColor, action: @escaping (WallpaperSearchColor) -> Void) {
+    init(color: WallpaperSearchColor, strokeColor: UIColor, action: @escaping (WallpaperSearchColor) -> Void) {
         self.action = {
             action(color)
         }
         
         super.init()
-        self.setImage(generateFilledCircleImage(diameter: 42.0, color: nodeColor(for: color)), for: .normal)
+        
+        let image: UIImage?
+        if color == .white {
+            image = generateCircleImage(diameter: 42.0, lineWidth: 1.0, color: strokeColor)
+        } else {
+            image = generateFilledCircleImage(diameter: 42.0, color: nodeColor(for: color))
+        }
+        self.setImage(image, for: .normal)
     }
     
     override func didLoad() {
@@ -91,7 +98,7 @@ final class ThemeGridSearchColorsNode: ASDisplayNode {
         self.addSubnode(self.scrollNode)
         
         for color in WallpaperSearchColor.allCases {
-            let colorNode = ThemeGridColorNode(color: color, action: colorSelected)
+            let colorNode = ThemeGridColorNode(color: color, strokeColor: theme.list.controlSecondaryColor, action: colorSelected)
             self.scrollNode.addSubnode(colorNode)
         }
         self.scrollNode.view.contentSize = CGSize(width: (inset + diameter) * CGFloat(WallpaperSearchColor.allCases.count) + inset, height: 71.0)

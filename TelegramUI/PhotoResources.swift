@@ -2802,6 +2802,8 @@ func photoWallpaper(postbox: Postbox, photoLibraryResource: PhotoLibraryMediaRes
         return { arguments in
             let context = DrawingContext(size: arguments.drawingSize, scale: 1.0, clear: true)
             
+            var dimensions = sourceImage?.size
+            
             if let thumbnailImage = sourceImage?.cgImage, isThumbnail {
                 var fittedSize = arguments.imageSize
                 if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
@@ -2846,8 +2848,8 @@ func photoWallpaper(postbox: Postbox, photoLibraryResource: PhotoLibraryMediaRes
             
             context.withFlippedContext { c in
                 c.setBlendMode(.copy)
-                if let sourceImage = sourceImage, let cgImage = sourceImage.cgImage {
-                    let imageSize = sourceImage.size.aspectFilled(arguments.drawingRect.size)
+                if let sourceImage = sourceImage, let cgImage = sourceImage.cgImage, let dimensions = dimensions {
+                    let imageSize = dimensions.aspectFilled(arguments.drawingRect.size)
                     let fittedRect = CGRect(origin: CGPoint(x: floor((arguments.drawingRect.size.width - imageSize.width) / 2.0), y: floor((arguments.drawingRect.size.height - imageSize.height) / 2.0)), size: imageSize)
                     c.draw(cgImage, in: fittedRect)
                 }

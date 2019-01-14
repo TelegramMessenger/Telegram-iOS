@@ -89,6 +89,8 @@
 		09C9EA3821A044B500E90146 /* StringForDuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C9EA3721A044B500E90146 /* StringForDuration.swift */; };
 		09D304152173C0E900C00567 /* WatchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304142173C0E900C00567 /* WatchManager.swift */; };
 		09D304182173C15700C00567 /* WatchSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304172173C15700C00567 /* WatchSettingsController.swift */; };
+		09DD5D5021ECC3C400D7007A /* SuppressContactsWarning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD5D4F21ECC3C400D7007A /* SuppressContactsWarning.swift */; };
+		09DD5D5221ED175300D7007A /* WallpaperColorPickerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD5D5121ED175300D7007A /* WallpaperColorPickerNode.swift */; };
 		09DD88E921BAF65E000766BC /* ItemListAddressItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88E821BAF65E000766BC /* ItemListAddressItem.swift */; };
 		09DD88ED21BDC8B7000766BC /* FormEditableBlockItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88EC21BDC8B7000766BC /* FormEditableBlockItemNode.swift */; };
 		09DD88EF21BDDE2B000766BC /* Geocoding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88EE21BDDE2B000766BC /* Geocoding.swift */; };
@@ -1211,6 +1213,8 @@
 		09C9EA3721A044B500E90146 /* StringForDuration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StringForDuration.swift; sourceTree = "<group>"; };
 		09D304142173C0E900C00567 /* WatchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchManager.swift; sourceTree = "<group>"; };
 		09D304172173C15700C00567 /* WatchSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSettingsController.swift; sourceTree = "<group>"; };
+		09DD5D4F21ECC3C400D7007A /* SuppressContactsWarning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuppressContactsWarning.swift; sourceTree = "<group>"; };
+		09DD5D5121ED175300D7007A /* WallpaperColorPickerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperColorPickerNode.swift; sourceTree = "<group>"; };
 		09DD88E821BAF65E000766BC /* ItemListAddressItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListAddressItem.swift; sourceTree = "<group>"; };
 		09DD88EC21BDC8B7000766BC /* FormEditableBlockItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormEditableBlockItemNode.swift; sourceTree = "<group>"; };
 		09DD88EE21BDDE2B000766BC /* Geocoding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Geocoding.swift; sourceTree = "<group>"; };
@@ -3137,6 +3141,7 @@
 				09F664CB21EB552C00AB7E26 /* WallpaperSearchRecentQueries.swift */,
 				09F664CD21EBB3A100AB7E26 /* ImageBlur.swift */,
 				09F664CF21EBCFB900AB7E26 /* WallpaperCropNode.swift */,
+				09DD5D5121ED175300D7007A /* WallpaperColorPickerNode.swift */,
 			);
 			name = Themes;
 			sourceTree = "<group>";
@@ -4727,6 +4732,7 @@
 				09C9EA32219F79F600E90146 /* ID3Artwork.h */,
 				09C9EA31219F79F500E90146 /* ID3Artwork.m */,
 				099529B321D3E5D800805E13 /* CheckDiskSpace.swift */,
+				09DD5D4F21ECC3C400D7007A /* SuppressContactsWarning.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -5104,6 +5110,7 @@
 				D0EC6CB61EB9F58800EBF1C3 /* RMGeometry.m in Sources */,
 				0941A9A0210B057200EBE194 /* OpenInActionSheetController.swift in Sources */,
 				D079FCDD1F05C4F20038FADE /* LocalAuth.swift in Sources */,
+				09DD5D5221ED175300D7007A /* WallpaperColorPickerNode.swift in Sources */,
 				D0B2F76820528E3D00D3BFB9 /* UserInfoEditingPhoneActionItem.swift in Sources */,
 				D0EC6CB71EB9F58800EBF1C3 /* RMIntroPageView.m in Sources */,
 				D0EC6CB81EB9F58800EBF1C3 /* RMIntroViewController.m in Sources */,
@@ -5206,6 +5213,7 @@
 				D0EC6CE21EB9F58800EBF1C3 /* PresentationResourcesChatList.swift in Sources */,
 				D0EC6CE31EB9F58800EBF1C3 /* PresentationResourcesChat.swift in Sources */,
 				D0AA840C1FEB2BA3005C6E91 /* OverlayPlayerControlsNode.swift in Sources */,
+				09DD5D5021ECC3C400D7007A /* SuppressContactsWarning.swift in Sources */,
 				D0F67FF21EE6B915000E5906 /* ChannelMembersSearchControllerNode.swift in Sources */,
 				D0EC6CE41EB9F58800EBF1C3 /* PresentationData.swift in Sources */,
 				D0EC6CE51EB9F58800EBF1C3 /* PresentationStrings.swift in Sources */,
