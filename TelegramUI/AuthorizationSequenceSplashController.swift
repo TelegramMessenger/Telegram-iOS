@@ -155,7 +155,9 @@ final class AuthorizationSequenceSplashController: ViewController {
             return localization?.availableLocalizations.first?.languageCode
         }
         
-        let _ = (combineLatest(currentCode, suggestedCode) |> deliverOnMainQueue).start(next: { [weak self] currentCode, suggestedCode in
+        let _ = (combineLatest(currentCode, suggestedCode)
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] currentCode, suggestedCode in
             guard let strongSelf = self else {
                 return
             }
@@ -165,7 +167,7 @@ final class AuthorizationSequenceSplashController: ViewController {
             }
             
             if currentCode == code {
-                strongSelf.nextPressed?(nil)
+                strongSelf.pressNext(strings: nil)
                 return
             }
             
@@ -190,9 +192,15 @@ final class AuthorizationSequenceSplashController: ViewController {
                 }
                 |> deliverOnMainQueue).start(next: { strings in
                     self?.controller.isEnabled = true
-                    self?.nextPressed?(strings)
+                    self?.pressNext(strings: strings)
                 })
             }))
         })
+    }
+    
+    private func pressNext(strings: PresentationStrings?) {
+        if let navigationController = self.navigationController, navigationController.viewControllers.last === self {
+            self.nextPressed?(strings)
+        }
     }
 }
