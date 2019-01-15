@@ -84,7 +84,7 @@ public enum DeviceMetrics: CaseIterable {
         }
     }
     
-    func standardInputHeight(inLandscape: Bool) -> CGFloat {
+    public func standardInputHeight(inLandscape: Bool) -> CGFloat {
         if inLandscape {
             switch self {
                 case .iPhone4, .iPhone5:
