@@ -222,9 +222,9 @@ public func generateScaledImage(image: UIImage?, size: CGSize, scale: CGFloat? =
         return nil
     }
     
-    return generateImage(size, opaque: true, scale: scale, rotatedContext: { size, context in
+    return generateImage(size, contextGenerator: { size, context in
         context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-    })
+    }, opaque: true, scale: scale)
 }
 
 private func generateSingleColorImage(size: CGSize, color: UIColor) -> UIImage? {
