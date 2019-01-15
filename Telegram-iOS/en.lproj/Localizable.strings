@@ -2826,6 +2826,8 @@ Unused sets are archived when you add more.";
 
 "Group.Setup.HistoryVisibleHelp" = "New members will see messages that were sent before they joined.";
 "Group.Setup.HistoryHiddenHelp" = "New members won't see earlier messages.";
+"Group.Setup.BasicHistoryHiddenHelp" = "New members won't see more than 100 previous messages.";
+
 
 "Channel.AdminLog.MessageGroupPreHistoryVisible" = "%@ made the group history visible for new members";
 "Channel.AdminLog.MessageGroupPreHistoryHidden" = "%@ made the group history hidden from new members";

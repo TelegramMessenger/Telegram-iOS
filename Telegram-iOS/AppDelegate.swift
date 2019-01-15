@@ -366,6 +366,16 @@ private enum QueuedWakeup: Int32 {
             return true
         }
         
+        #if DEBUG
+        LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: true, redactSensitiveData: true)
+        #else
+        if BuildConfig.shared().isInternalBuild {
+            LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
+        } else {
+            LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
+        }
+        #endif
+        
         let rootPath = rootPathForBasePath(appGroupUrl.path)
         performAppGroupUpgrades(appGroupPath: appGroupUrl.path, rootPath: rootPath)
         
@@ -413,16 +423,6 @@ private enum QueuedWakeup: Int32 {
         }
         
         telegramUIDeclareEncodables()
-        
-        #if DEBUG
-        LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: true, redactSensitiveData: true)
-        #else
-        if BuildConfig.shared().isInternalBuild {
-            LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
-        } else {
-            LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
-        }
-        #endif
         
         GlobalExperimentalSettings.isAppStoreBuild = BuildConfig.shared().isAppStoreBuild
         
