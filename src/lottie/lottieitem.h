@@ -182,6 +182,19 @@ protected:
    void updateContent() final;
 };
 
+class LOTImageLayerItem: public LOTLayerItem
+{
+public:
+   LOTImageLayerItem(LOTLayerData *layerData);
+   void buildLayerNode() final;
+protected:
+   void updateContent() final;
+   void renderList(std::vector<VDrawable *> &list) final;
+private:
+   std::vector<LOTNode *>       mCNodeList;
+   std::unique_ptr<VDrawable>   mRenderNode;
+};
+
 class LOTMaskItem
 {
 public:

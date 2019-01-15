@@ -23,6 +23,7 @@
 #include "vdasher.h"
 #include "vpainter.h"
 #include "vraster.h"
+#include "vimageloader.h"
 
 /* Lottie Layer Rules
  * 1. time stretch is pre calculated and applied to all the properties of the
@@ -58,6 +59,10 @@ LOTCompItem::createLayerItem(LOTLayerData *layerData)
     }
     case LayerType::Null: {
         return std::make_unique<LOTNullLayerItem>(layerData);
+        break;
+    }
+    case LayerType::Image: {
+        return std::make_unique<LOTImageLayerItem>(layerData);
         break;
     }
     default:
@@ -682,6 +687,66 @@ void LOTSolidLayerItem::renderList(std::vector<VDrawable *> &list)
     if (!visible()) return;
 
     list.push_back(mRenderNode.get());
+}
+
+LOTImageLayerItem::LOTImageLayerItem(LOTLayerData *layerData)
+    : LOTLayerItem(layerData)
+{
+}
+
+void LOTImageLayerItem::updateContent()
+{
+    if (!mRenderNode) {
+        mRenderNode = std::make_unique<LOTDrawable>();
+        mRenderNode->mType = VDrawable::Type::Fill;
+        mRenderNode->mFlag |= VDrawable::DirtyState::All;
+        // load image
+        //@TODO find a better way to load
+        // so that can be shared by multiple layers
+        if (!mLayerData->mAsset->mImagePath.empty()) {
+            VBitmap img = VImageLoader::instance().load(mLayerData->mAsset->mImagePath.c_str());
+            VBrush brush(img);
+            mRenderNode->setBrush(brush);
+        }
+    }
+
+    if (flag() & DirtyFlagBit::Matrix) {
+        VPath path;
+        path.addRect(
+            VRectF(0, 0, mLayerData->mAsset->mWidth, mLayerData->mAsset->mHeight));
+        path.transform(combinedMatrix());
+        mRenderNode->mFlag |= VDrawable::DirtyState::Path;
+        mRenderNode->mPath = path;
+        mRenderNode->mBrush.setMatrix(combinedMatrix());
+    }
+
+    if (flag() & DirtyFlagBit::Alpha) {
+        //@TODO handle alpha with the image.
+    }
+}
+
+void LOTImageLayerItem::renderList(std::vector<VDrawable *> &list)
+{
+    if (!visible()) return;
+
+    list.push_back(mRenderNode.get());
+}
+
+void LOTImageLayerItem::buildLayerNode()
+{
+    LOTLayerItem::buildLayerNode();
+
+    mDrawableList.clear();
+    renderList(mDrawableList);
+
+    mCNodeList.clear();
+    for (auto &i : mDrawableList) {
+        LOTDrawable *lotDrawable = static_cast<LOTDrawable *>(i);
+        lotDrawable->sync();
+        mCNodeList.push_back(lotDrawable->mCNode.get());
+    }
+    layerNode()->mNodeList.ptr = mCNodeList.data();
+    layerNode()->mNodeList.size = mCNodeList.size();
 }
 
 LOTNullLayerItem::LOTNullLayerItem(LOTLayerData *layerData)
