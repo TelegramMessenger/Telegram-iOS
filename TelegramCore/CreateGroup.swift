@@ -21,8 +21,8 @@ public func createGroup(account: Account, title: String, peerIds: [PeerId]) -> S
         }
         return account.network.request(Api.functions.messages.createChat(users: inputUsers, title: title))
         |> map(Optional.init)
-        |> `catch` { _ in
-            return Signal<Api.Updates?, NoError>.single(nil)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
         }
         |> mapToSignal { updates -> Signal<PeerId?, NoError> in
             if let updates = updates {
@@ -36,9 +36,9 @@ public func createGroup(account: Account, title: String, peerIds: [PeerId]) -> S
                     |> map { _ in
                         return peerId
                     }
-                    |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .single(nil))
+                } else {
+                    return .single(nil)
                 }
-                return .single(nil)
             } else {
                 return .single(nil)
             }

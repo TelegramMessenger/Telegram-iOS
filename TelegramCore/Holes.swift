@@ -39,7 +39,7 @@ enum FetchMessageHistoryHoleSource {
     }
 }
 
-func withResolvedAssociatedMessages(postbox: Postbox, source: FetchMessageHistoryHoleSource, storeMessages: [StoreMessage], _ f: @escaping (Transaction, [Peer], [StoreMessage]) -> Void) -> Signal<Void, NoError> {
+func withResolvedAssociatedMessages(postbox: Postbox, source: FetchMessageHistoryHoleSource, peers: [PeerId: Peer], storeMessages: [StoreMessage], _ f: @escaping (Transaction, [Peer], [StoreMessage]) -> Void) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<Void, NoError> in
         var storedIds = Set<MessageId>()
         var referencedIds = Set<MessageId>()
@@ -53,7 +53,7 @@ func withResolvedAssociatedMessages(postbox: Postbox, source: FetchMessageHistor
             }
         }
         referencedIds.subtract(storedIds)
-        referencedIds = transaction.filterStoredMessageIds(referencedIds)
+        referencedIds.subtract(transaction.filterStoredMessageIds(referencedIds))
         
         if referencedIds.isEmpty {
             f(transaction, [], [])
@@ -61,7 +61,7 @@ func withResolvedAssociatedMessages(postbox: Postbox, source: FetchMessageHistor
         } else {
             var signals: [Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>] = []
             for (peerId, messageIds) in messagesIdsGroupedByPeerId(referencedIds) {
-                if let peer = transaction.getPeer(peerId) {
+                if let peer = transaction.getPeer(peerId) ?? peers[peerId] {
                     var signal: Signal<Api.messages.Messages, MTRpcError>?
                     if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
                         signal = source.request(Api.functions.messages.getMessages(id: messageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
@@ -282,6 +282,22 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             chats = []
                             users = []
                     }
+                    
+                    var peers: [Peer] = []
+                    var peerPresences: [PeerId: PeerPresence] = [:]
+                    for chat in chats {
+                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                            peers.append(groupOrChannel)
+                        }
+                    }
+                    for user in users {
+                        let telegramUser = TelegramUser(user: user)
+                        peers.append(telegramUser)
+                        if let presence = TelegramUserPresence(apiUser: user) {
+                            peerPresences[telegramUser.id] = presence
+                        }
+                    }
+                    
                     var updatedMaxIndex: MessageIndex?
                     if let maxIndexResult = maxIndexResult {
                         let maxIndexMessages: [Api.Message]
@@ -317,7 +333,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         }
                     }
                     
-                    return withResolvedAssociatedMessages(postbox: postbox, source: source, storeMessages: storeMessages, { transaction, additionalPeers, additionalMessages in
+                    return withResolvedAssociatedMessages(postbox: postbox, source: source, peers: Dictionary(peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: storeMessages, { transaction, additionalPeers, additionalMessages in
                         let fillDirection: HoleFillDirection
                         switch direction {
                             case .UpperToLower:
@@ -337,22 +353,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         transaction.fillMultipleHoles(hole, fillType: HoleFill(complete: completeFill, direction: fillDirection), tagMask: tagMask, messages: storeMessages)
                         let _ = transaction.addMessages(additionalMessages, location: .Random)
                         
-                        var peers: [Peer] = additionalPeers
-                        var peerPresences: [PeerId: PeerPresence] = [:]
-                        for chat in chats {
-                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                peers.append(groupOrChannel)
-                            }
-                        }
-                        for user in users {
-                            let telegramUser = TelegramUser(user: user)
-                            peers.append(telegramUser)
-                            if let presence = TelegramUserPresence(apiUser: user) {
-                                peerPresences[telegramUser.id] = presence
-                            }
-                        }
-                        
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                        updatePeers(transaction: transaction, peers: peers + additionalPeers, update: { _, updated -> Peer in
                             return updated
                         })
                         updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
@@ -574,16 +575,15 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
                 transaction.replaceChatListHole(groupId: groupId, index: hole.index, hole: nil)
             }
         }
-        return withResolvedAssociatedMessages(postbox: postbox, source: .network(network), storeMessages: fetchedChats.storeMessages, { transaction, additionalPeers, additionalMessages in
-            for peer in fetchedChats.peers {
-                updatePeers(transaction: transaction, peers: [peer], update: { _, updated -> Peer in
-                    return updated
-                })
-            }
+        return withResolvedAssociatedMessages(postbox: postbox, source: .network(network), peers: Dictionary(fetchedChats.peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: fetchedChats.storeMessages, { transaction, additionalPeers, additionalMessages in
+            updatePeers(transaction: transaction, peers: fetchedChats.peers + additionalPeers, update: { _, updated -> Peer in
+                return updated
+            })
             
             updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: fetchedChats.peerPresences)
             transaction.updateCurrentPeerNotificationSettings(fetchedChats.notificationSettings)
             let _ = transaction.addMessages(fetchedChats.storeMessages, location: .UpperHistoryBlock)
+            let _ = transaction.addMessages(additionalMessages, location: .Random)
             transaction.resetIncomingReadStates(fetchedChats.readStates)
             
             transaction.replaceChatListHole(groupId: groupId, index: hole.index, hole: fetchedChats.lowerNonPinnedIndex.flatMap(ChatListHole.init))
