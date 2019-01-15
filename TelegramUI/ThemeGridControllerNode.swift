@@ -161,7 +161,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(account: Account, presentationData: PresentationData, presentPreviewController: @escaping (WallpaperListPreviewSource) -> Void, presentGallery: @escaping () -> Void, presentColors: @escaping () -> Void, emptyStateUpdated: @escaping (Bool) -> Void, deleteWallpapers: @escaping ([TelegramWallpaper]) -> Void, shareWallpapers: @escaping ([TelegramWallpaper]) -> Void, popViewController: @escaping () -> Void) {
+    init(account: Account, presentationData: PresentationData, presentPreviewController: @escaping (WallpaperListPreviewSource) -> Void, presentGallery: @escaping () -> Void, presentColors: @escaping () -> Void, emptyStateUpdated: @escaping (Bool) -> Void, deleteWallpapers: @escaping ([TelegramWallpaper], @escaping () -> Void) -> Void, shareWallpapers: @escaping ([TelegramWallpaper]) -> Void, popViewController: @escaping () -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.presentPreviewController = presentPreviewController
@@ -240,15 +240,17 @@ final class ThemeGridControllerNode: ASDisplayNode {
         }, deleteSelectedWallpapers: { [weak self] in
             let entries = previousEntries.with { $0 }
             if let strongSelf = self, let entries = entries {
-                deleteWallpapers(selectedWallpapers(entries: entries, state: strongSelf.currentState))
-                
-                var updatedWallpapers: [TelegramWallpaper] = []
-                for entry in entries {
-                    if !strongSelf.currentState.selectedIndices.contains(entry.index) {
-                        updatedWallpapers.append(entry.wallpaper)
+                deleteWallpapers(selectedWallpapers(entries: entries, state: strongSelf.currentState), { [weak self] in
+                    if let strongSelf = self {
+                        var updatedWallpapers: [TelegramWallpaper] = []
+                        for entry in entries {
+                            if !strongSelf.currentState.selectedIndices.contains(entry.index) {
+                                updatedWallpapers.append(entry.wallpaper)
+                            }
+                        }
+                        wallpapersPromise.set(.single(updatedWallpapers))
                     }
-                }
-                wallpapersPromise.set(.single(updatedWallpapers))
+                })
             }
         }, shareSelectedWallpapers: { [weak self] in
             let entries = previousEntries.with { $0 }
@@ -409,6 +411,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
+        insets.left = layout.safeInsets.left
+        insets.right = layout.safeInsets.right
         let scrollIndicatorInsets = insets
         
         let minSpacing: CGFloat = 8.0
@@ -419,7 +423,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         } else {
             referenceImageSize = CGSize(width: 91.0, height: 161.0)
         }
-        let imageCount = Int((layout.size.width - minSpacing * 2.0) / (referenceImageSize.width + minSpacing))
+        let imageCount = Int((layout.size.width - insets.left - insets.right - minSpacing * 2.0) / (referenceImageSize.width + minSpacing))
         let imageSize = referenceImageSize.aspectFilled(CGSize(width: floor((layout.size.width - CGFloat(imageCount + 1) * minSpacing) / CGFloat(imageCount)), height: referenceImageSize.height))
         let spacing = floor((layout.size.width - CGFloat(imageCount) * imageSize.width) / CGFloat(imageCount + 1))
         
@@ -526,7 +530,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ThemeGridSearchContainerNode(account: account, openResult: { [weak self] result in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ThemeGridSearchContentNode(account: account, openResult: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.presentPreviewController(.contextResult(result))
             }

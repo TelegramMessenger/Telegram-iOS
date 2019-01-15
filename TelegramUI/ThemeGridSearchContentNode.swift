@@ -47,15 +47,92 @@ enum WallpaperSearchColor: CaseIterable {
                 return "White"
         }
     }
+    
+    func localizedString(strings: PresentationStrings) -> String {
+        switch self {
+            case .blue:
+                return strings.WallpaperSearch_ColorBlue
+            case .red:
+                return strings.WallpaperSearch_ColorRed
+            case .orange:
+                return strings.WallpaperSearch_ColorOrange
+            case .yellow:
+                return strings.WallpaperSearch_ColorYellow
+            case .green:
+                return strings.WallpaperSearch_ColorGreen
+            case .teal:
+                return strings.WallpaperSearch_ColorTeal
+            case .purple:
+                return strings.WallpaperSearch_ColorPurple
+            case .pink:
+                return strings.WallpaperSearch_ColorPink
+            case .brown:
+                return strings.WallpaperSearch_ColorBrown
+            case .black:
+                return strings.WallpaperSearch_ColorBlack
+            case .gray:
+                return strings.WallpaperSearch_ColorGray
+            case .white:
+                return strings.WallpaperSearch_ColorWhite
+        }
+    }
+}
+
+enum WallpaperSearchQuery: Equatable {
+    case generic(String)
+    case color(WallpaperSearchColor, String)
+    
+    var botQuery: String {
+        switch self {
+            case let .generic(query):
+                return query
+            case let .color(color, query):
+                return "#color\(color.string) \(query)"
+        }
+    }
+    
+    var query: String {
+        switch self {
+            case let .generic(query), let .color(_, query):
+                return query
+        }
+    }
+    
+    func updatedWithText(_ text: String) -> WallpaperSearchQuery {
+        switch self {
+            case .generic:
+                return .generic(text)
+            case let .color(color, _):
+                return .color(color, text)
+        }
+    }
+    
+    func updatedWithColor(_ color: WallpaperSearchColor?) -> WallpaperSearchQuery {
+        if let color = color {
+            switch self {
+                case let .generic(text):
+                    return .color(color, text)
+                case let .color(_, text):
+                    return .color(color, text)
+            }
+        } else {
+            switch self {
+                case .generic:
+                    return self
+                case let .color(_, text):
+                    return .generic(text)
+            }
+        }
+    }
 }
 
 final class ThemeGridSearchInteraction {
     let openResult: (ChatContextResult) -> Void
     let selectColor: (WallpaperSearchColor) -> Void
-    let setSearchQuery: (String) -> Void
+    let setSearchQuery: (WallpaperSearchQuery) -> Void
     let deleteRecentQuery: (String) -> Void
     
-    init(openResult: @escaping (ChatContextResult) -> Void, selectColor: @escaping (WallpaperSearchColor) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void) {
+    init(openResult: @escaping (ChatContextResult) -> Void, selectColor: @escaping (WallpaperSearchColor) -> Void, setSearchQuery: @escaping (WallpaperSearchQuery) -> Void, deleteRecentQuery: @escaping (String) -> Void) {
         self.openResult = openResult
         self.selectColor = selectColor
         self.setSearchQuery = setSearchQuery
@@ -152,7 +229,7 @@ private enum ThemeGridRecentEntry: Comparable, Identifiable {
                 })
             case let .query(_, query):
                 return WebSearchRecentQueryItem(account: account, theme: theme, strings: strings, query: query, tapped: { query in
-                    interaction.setSearchQuery(query)
+                    interaction.setSearchQuery(.generic(query))
                 }, deleted: { query in
                     interaction.deleteRecentQuery(query)
                 }, header: header)
@@ -214,25 +291,6 @@ private func themeGridSearchContainerPreparedTransition(from fromEntries: [Theme
     return ThemeGridSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, displayingResults: displayingResults)
 }
 
-private struct ThemeGridSearchContainerNodeState: Equatable {
-    let peerIdWithRevealedOptions: PeerId?
-    
-    init(peerIdWithRevealedOptions: PeerId? = nil) {
-        self.peerIdWithRevealedOptions = peerIdWithRevealedOptions
-    }
-    
-    static func ==(lhs: ThemeGridSearchContainerNodeState, rhs: ThemeGridSearchContainerNodeState) -> Bool {
-        if lhs.peerIdWithRevealedOptions != rhs.peerIdWithRevealedOptions {
-            return false
-        }
-        return true
-    }
-    
-    func withUpdatedPeerIdWithRevealedOptions(_ peerIdWithRevealedOptions: PeerId?) -> ThemeGridSearchContainerNodeState {
-        return ThemeGridSearchContainerNodeState(peerIdWithRevealedOptions: peerIdWithRevealedOptions)
-    }
-}
-
 private struct ThemeGridSearchResult {
     let query: String
     let items: [ChatContextResult]
@@ -244,7 +302,7 @@ private struct ThemeGridSearchContext {
     let loadMoreIndex: String?
 }
 
-final class ThemeGridSearchContainerNode: SearchDisplayControllerContentNode {
+final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
     private let account: Account
     
     private let recentListNode: ListView
@@ -254,7 +312,8 @@ final class ThemeGridSearchContainerNode: SearchDisplayControllerContentNode {
     private var enqueuedTransitions: [(ThemeGridSearchContainerTransition, Bool)] = []
     private var validLayout: ContainerViewLayout?
 
-    private let searchQuery = Promise<String?>()
+    private var queryValue: WallpaperSearchQuery = .generic("")
+    private let queryPromise: Promise<WallpaperSearchQuery>
     private let searchDisposable = MetaDisposable()
     private var recentDisposable: Disposable?
     
@@ -270,11 +329,12 @@ final class ThemeGridSearchContainerNode: SearchDisplayControllerContentNode {
     
     init(account: Account, openResult: @escaping (ChatContextResult) -> Void) {
         self.account = account
-        self.dimNode = ASDisplayNode()
+        self.queryPromise = Promise<WallpaperSearchQuery>(self.queryValue)
         
         self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.presentationDataPromise = Promise(self.presentationData)
         
+        self.dimNode = ASDisplayNode()
         self.recentListNode = ListView()
         self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         self.gridNode = GridNode()
@@ -331,11 +391,21 @@ final class ThemeGridSearchContainerNode: SearchDisplayControllerContentNode {
         
         let interaction = ThemeGridSearchInteraction(openResult: { [weak self] result in
             openResult(result)
-            self?.dismissInput?()
+            
+            if let strongSelf = self {
+                strongSelf.dismissInput?()
+                
+                let query = strongSelf.queryValue.query
+                if !query.isEmpty {
+                    let _ = addRecentWallpaperSearchQuery(postbox: strongSelf.account.postbox, string: query).start()
+                }
+            }
         }, selectColor: { [weak self] color in
-            self?.setQuery?("#color\(color.string) ")
+            self?.updateQuery({ $0.updatedWithColor(color) }, updateInterface: true)
         }, setSearchQuery: { [weak self] query in
-            self?.setQuery?(query)
+            self?.updateQuery({ _ in
+                return query
+            }, updateInterface: true)
         }, deleteRecentQuery: { query in
             let _ = removeRecentWallpaperSearchQuery(postbox: account.postbox, string: query).start()
         })
@@ -344,9 +414,10 @@ final class ThemeGridSearchContainerNode: SearchDisplayControllerContentNode {
             return currentSearchBotsConfiguration(transaction: transaction)
         }
         
-        let foundItems = self.searchQuery.get()
+        let foundItems = self.queryPromise.get()
         |> mapToSignal { query -> Signal<([ThemeGridSearchEntry], Bool)?, NoError> in
-            guard let query = query, !query.isEmpty else {
+            let query = query.botQuery
+            guard !query.isEmpty else {
                 return .single(nil)
             }
             
@@ -484,20 +555,37 @@ final class ThemeGridSearchContainerNode: SearchDisplayControllerContentNode {
         self.recentListNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
     }
     
-//    private func updateState(_ f: (ChatListSearchContainerNodeState) -> ChatListSearchContainerNodeState) {
-//        let state = f(self.stateValue)
-//        if state != self.stateValue {
-//            self.stateValue = state
-//            self.statePromise.set(state)
-//        }
-//    }
+    private func updateQuery(_ f: (WallpaperSearchQuery) -> (WallpaperSearchQuery), updateInterface: Bool = false) {
+        let query = f(self.queryValue)
+        if query != self.queryValue {
+            self.queryValue = query
+            self.queryPromise.set(.single(query))
+            
+            if updateInterface {
+                let prefix: NSAttributedString?
+                let text: String
+                switch query {
+                    case let .generic(query):
+                        prefix = nil
+                        text = query
+                    case let .color(color, query):
+                        let prefixString = NSMutableAttributedString()
+                        prefixString.append(NSAttributedString(string: self.presentationData.strings.WallpaperSearch_ColorPrefix, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.activeNavigationSearchBar.inputTextColor))
+                        prefixString.append(NSAttributedString(string: "\(color.localizedString(strings: self.presentationData.strings)) ", font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.activeNavigationSearchBar.accentColor))
+                        prefix = prefixString
+                        text = query
+                }
+                self.setQuery?(prefix, text)
+            }
+        }
+    }
     
     override func searchTextUpdated(text: String) {
-        if text.isEmpty {
-            self.searchQuery.set(.single(nil))
-        } else {
-            self.searchQuery.set(.single(text))
-        }
+        self.updateQuery({ $0.updatedWithText(text) })
+    }
+    
+    override func searchTextClearPrefix() {
+        self.updateQuery({ $0.updatedWithColor(nil) }, updateInterface: true)
     }
     
     private func enqueueRecentTransition(_ transition: ThemeGridSearchContainerRecentTransition, firstTime: Bool) {

@@ -6,6 +6,48 @@ import TelegramCore
 import SwiftSignalKit
 import LegacyComponents
 
+private func availableColors() -> [Int32] {
+    return [
+        0xffffff,
+        0xd4dfea,
+        0xb3cde1,
+        0x6ab7ea,
+        0x008dd0,
+        0xd3e2da,
+        0xc8e6c9,
+        0xc5e1a5,
+        0x61b06e,
+        0xcdcfaf,
+        0xa7a895,
+        0x7c6f72,
+        0xffd7ae,
+        0xffb66d,
+        0xde8751,
+        0xefd5e0,
+        0xdba1b9,
+        0xffafaf,
+        0xf16a60,
+        0xe8bcea,
+        0x9592ed,
+        0xd9bc60,
+        0xb17e49,
+        0xd5cef7,
+        0xdf506b,
+        0x8bd2cc,
+        0x3c847e,
+        0x22612c,
+        0x244d7c,
+        0x3d3b85,
+        0x65717d,
+        0x18222d,
+        0x000000
+    ]
+}
+
+private func randomColor() -> Int32 {
+    return availableColors().randomElement() ?? 0x000000
+}
+
 final class ThemeColorsGridController: ViewController {
     private var controllerNode: ThemeColorsGridControllerNode {
         return self.displayNode as! ThemeColorsGridControllerNode
@@ -72,8 +114,13 @@ final class ThemeColorsGridController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ThemeColorsGridControllerNode(account: self.account, presentationData: self.presentationData, present: { [weak self] controller, arguments in
+        self.displayNode = ThemeColorsGridControllerNode(account: self.account, presentationData: self.presentationData, colors: availableColors(), present: { [weak self] controller, arguments in
             self?.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
+        }, presentColorPicker: { [weak self] in
+            if let strongSelf = self {
+                let controller = WallpaperListPreviewController(account: strongSelf.account, source: .customColor(randomColor()))
+                self?.present(controller, in: .window(.root), blockInteraction: true)
+            }
         })
     
         self._ready.set(self.controllerNode.ready.get())

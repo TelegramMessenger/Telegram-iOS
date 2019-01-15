@@ -2,13 +2,13 @@ import Foundation
 import Display
 import AsyncDisplayKit
 
-class WallpaperCropNode: ASDisplayNode, UIScrollViewDelegate {
-    let scrollNode: ASScrollNode
-    
-    private var containerLayout: ContainerViewLayout?
+final class WallpaperCropNode: ASDisplayNode, UIScrollViewDelegate {
+    private let scrollNode: ASScrollNode
     
     private var ignoreZoom = false
     private var ignoreZoomTransition: ContainedViewLayoutTransition?
+    
+    private var containerLayout: ContainerViewLayout?
     
     var zoomableContent: (CGSize, ASDisplayNode)? {
         didSet {
@@ -185,5 +185,9 @@ class WallpaperCropNode: ASDisplayNode, UIScrollViewDelegate {
     var cropRect: CGRect {
         let scrollView = self.scrollNode.view
         return scrollView.convert(scrollView.bounds, to: self.zoomableContent?.1.view)
+    }
+    
+    func zoom(to rect: CGRect) {
+        self.scrollNode.view.zoom(to: rect, animated: false)
     }
 }

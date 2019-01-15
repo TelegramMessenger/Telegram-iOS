@@ -170,14 +170,35 @@ final class ThemeGridController: ViewController {
                     }
                 }
             }
-        }, deleteWallpapers: { [weak self] wallpapers in
+        }, deleteWallpapers: { [weak self] wallpapers, completed in
             if let strongSelf = self {
-                for wallpaper in wallpapers {
-                    let _ = deleteWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
-                }
+                let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                var items: [ActionSheetItem] = []
+                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Wallpaper_DeleteConfirmation(Int32(wallpapers.count)), color: .destructive, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    completed()
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    for wallpaper in wallpapers {
+                        let _ = deleteWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
+                    }
+                    
+                    let _ = telegramWallpapers(postbox: strongSelf.account.postbox, network: strongSelf.account.network).start()
+                    strongSelf.donePressed()
+                }))
                 
-                let _ = telegramWallpapers(postbox: strongSelf.account.postbox, network: strongSelf.account.network).start()
-                strongSelf.donePressed()
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                strongSelf.present(actionSheet, in: .window(.root))
             }
         }, shareWallpapers: { [weak self] wallpapers in
             if let strongSelf = self {

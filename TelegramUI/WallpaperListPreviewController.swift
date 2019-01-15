@@ -17,7 +17,7 @@ enum WallpaperListPreviewSource {
     case slug(String, TelegramMediaFile?)
     case asset(PHAsset, UIImage?)
     case contextResult(ChatContextResult)
-    case customColor
+    case customColor(Int32?)
 }
 
 final class WallpaperListPreviewController: ViewController {
@@ -197,7 +197,7 @@ final class WallpaperListPreviewController: ViewController {
                 case let .file(_, _, _, slug, _, _):
                     controller = ShareController(account: account, subject: .url("https://t.me/bg/\(slug)"))
                 case let .color(color):
-                    controller = ShareController(account: account, subject: .url("https://t.me/bg/\(String(UInt32(bitPattern: color), radix: 16, uppercase: false))"))
+                    controller = ShareController(account: account, subject: .url("https://t.me/bg/\(String(UInt32(bitPattern: color), radix: 16, uppercase: false).rightJustified(width: 6, pad: "0"))"))
                 default:
                     break
             }

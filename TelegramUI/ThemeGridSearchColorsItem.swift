@@ -71,7 +71,6 @@ private let diameter: CGFloat = 42.0
 final class ThemeGridSearchColorsNode: ASDisplayNode {
     private var theme: PresentationTheme
     private var strings: PresentationStrings
-    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     private let sectionHeaderNode: ListSectionHeaderNode
     private let scrollNode: ASScrollNode
     
@@ -80,7 +79,6 @@ final class ThemeGridSearchColorsNode: ASDisplayNode {
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings, colorSelected: @escaping (WallpaperSearchColor) -> Void) {
         self.theme = theme
         self.strings = strings
-        self.themeAndStringsPromise = Promise((self.theme, self.strings))
         
         self.colorSelected = colorSelected
     
@@ -97,18 +95,18 @@ final class ThemeGridSearchColorsNode: ASDisplayNode {
         self.addSubnode(self.sectionHeaderNode)
         self.addSubnode(self.scrollNode)
         
+        self.scrollNode.view.contentSize = CGSize(width: (inset + diameter) * CGFloat(WallpaperSearchColor.allCases.count) + inset, height: 71.0)
+        
         for color in WallpaperSearchColor.allCases {
             let colorNode = ThemeGridColorNode(color: color, strokeColor: theme.list.controlSecondaryColor, action: colorSelected)
             self.scrollNode.addSubnode(colorNode)
         }
-        self.scrollNode.view.contentSize = CGSize(width: (inset + diameter) * CGFloat(WallpaperSearchColor.allCases.count) + inset, height: 71.0)
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         if self.theme !== theme || self.strings !== strings {
             self.theme = theme
             self.strings = strings
-            self.themeAndStringsPromise.set(.single((self.theme, self.strings)))
             
             self.sectionHeaderNode.title = strings.WallpaperSearch_ColorTitle.uppercased()
             self.sectionHeaderNode.updateTheme(theme: theme)
@@ -124,13 +122,13 @@ final class ThemeGridSearchColorsNode: ASDisplayNode {
         self.sectionHeaderNode.updateLayout(size: CGSize(width: size.width, height: 29.0), leftInset: leftInset, rightInset: rightInset)
         
         var insets = UIEdgeInsets()
-        insets.top += leftInset
-        insets.bottom += rightInset
+        insets.left += leftInset
+        insets.right += rightInset
 
         self.scrollNode.frame = CGRect(x: 0.0, y: 29.0, width: size.width, height: size.height - 29.0)
-    
-        var offset: CGFloat = inset
+        self.scrollNode.view.contentInset = insets
         
+        var offset: CGFloat = inset
         if let subnodes = self.scrollNode.subnodes {
             for node in subnodes {
                 node.frame = CGRect(x: offset, y: inset, width: diameter, height: diameter)
@@ -220,7 +218,7 @@ class ThemeGridSearchColorsItemNode: ListViewItemNode {
         let currentItem = self.item
         
         return { [weak self] item, params, last in
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 130.0), insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0))
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 101.0), insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0))
             
             return (nodeLayout, { [weak self] in
                 var updatedTheme: PresentationTheme?

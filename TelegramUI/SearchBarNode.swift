@@ -50,6 +50,7 @@ private class SearchBarTextField: UITextField {
         self.prefixLabel = ASTextNode()
         self.prefixLabel.isUserInteractionEnabled = false
         self.prefixLabel.displaysAsynchronously = false
+        self.prefixLabel.truncationMode = .byTruncatingTail
         
         super.init(frame: frame)
         
@@ -113,7 +114,7 @@ private class SearchBarTextField: UITextField {
         let labelSize = self.placeholderLabel.measure(textRect.size)
         self.placeholderLabel.frame = CGRect(origin: CGPoint(x: textRect.minX, y: textRect.minY + textOffset), size: labelSize)
         
-        let prefixSize = self.prefixLabel.measure(textRect.size)
+        let prefixSize = self.prefixLabel.measure(bounds.size)
         let prefixBounds = bounds.insetBy(dx: 4.0, dy: 4.0)
         self.prefixLabel.frame = CGRect(origin: CGPoint(x: prefixBounds.minX, y: prefixBounds.minY + textOffset), size: prefixSize)
     }
@@ -502,7 +503,10 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         node.isHidden = true
         self.clearButton.isHidden = true
+        self.activityIndicator?.isHidden = true
+        self.textField.prefixString = nil
         self.textField.text = ""
+        self.textField.layoutSubviews()
     
         var backgroundCompleted = false
         var separatorCompleted = false

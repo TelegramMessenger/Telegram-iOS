@@ -34,7 +34,7 @@ class WebSearchRecentQueryItem: ListViewItem {
         async {
             let node = WebSearchRecentQueryItemNode()
             let makeLayout = node.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(self, params, nextItem == nil, previousItem == nil)
+            let (nodeLayout, nodeApply) = makeLayout(self, params, nextItem == nil, !(previousItem is WebSearchRecentQueryItem))
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -47,7 +47,7 @@ class WebSearchRecentQueryItem: ListViewItem {
             if let nodeValue = node() as? WebSearchRecentQueryItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let (nodeLayout, apply) = layout(self, params, nextItem == nil, previousItem == nil)
+                    let (nodeLayout, apply) = layout(self, params, nextItem == nil, !(previousItem is WebSearchRecentQueryItem))
                     Queue.mainQueue().async {
                         completion(nodeLayout, { info in
                             apply().1(info)

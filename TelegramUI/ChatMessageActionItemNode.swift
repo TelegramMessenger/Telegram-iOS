@@ -199,13 +199,13 @@ private func universalServiceMessageString(theme: ChatPresentationThemeData?, st
                             }
                             let textWithRanges: (String, [(Int, NSRange)])
                             if clippedText.isEmpty {
-                                textWithRanges = strings.PINNED_NOTEXT(authorName)
+                                textWithRanges = strings.PUSH_PINNED_NOTEXT(authorName)
                             } else {
                                 textWithRanges = strings.Notification_PinnedTextMessage(authorName, clippedText)
                             }
                             attributedString = addAttributesToStringWithRanges(textWithRanges, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                         case .game:
-                            attributedString = addAttributesToStringWithRanges(strings.PINNED_GAME(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                            attributedString = addAttributesToStringWithRanges(strings.PUSH_PINNED_GAME(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                         case .photo:
                             attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedPhotoMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                         case .video:
@@ -227,7 +227,7 @@ private func universalServiceMessageString(theme: ChatPresentationThemeData?, st
                         case .poll:
                             attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedPollMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                         case .deleted:
-                            attributedString = addAttributesToStringWithRanges(strings.PINNED_NOTEXT(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                            attributedString = addAttributesToStringWithRanges(strings.PUSH_PINNED_NOTEXT(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                     }
                 case .joinedByLink:
                     attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedGroupByLink(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))

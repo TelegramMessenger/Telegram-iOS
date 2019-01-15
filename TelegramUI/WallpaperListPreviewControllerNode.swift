@@ -328,9 +328,8 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
             
             if self.cropNode.supernode != nil, let contentSize = self.contentSize, self.cropNode.zoomableContent == nil {
                 let fittedSize = TGScaleToFit(self.cropNode.bounds.size, contentSize)
-                
                 self.cropNode.zoomableContent = (contentSize, self.imageNode)
-                self.cropNode.scrollNode.view.zoom(to: CGRect(x: (contentSize.width - fittedSize.width) / 2.0, y: (contentSize.height - fittedSize.height) / 2.0, width: fittedSize.width, height: fittedSize.height), animated: false)
+                self.cropNode.zoom(to: CGRect(x: (contentSize.width - fittedSize.width) / 2.0, y: (contentSize.height - fittedSize.height) / 2.0, width: fittedSize.width, height: fittedSize.height))
             }
             self.blurredNode.frame = self.imageNode.bounds
         }
@@ -360,6 +359,8 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     private let segmentedControl: UISegmentedControl
     private var segmentedControlColor = Promise<UIColor>(.white)
     private var segmentedControlColorDisposable: Disposable?
+    
+    private let colorPanelNode: WallpaperColorPanelNode
     
     private var status = Promise<MediaResourceStatus>(.Local)
     private var statusDisposable: Disposable?
@@ -414,6 +415,8 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         self.segmentedControl.selectedSegmentIndex = 0
         self.segmentedControl.tintColor = .white
         
+        self.colorPanelNode = WallpaperColorPanelNode(theme: presentationData.theme)
+        
         super.init()
         
         self.backgroundColor = .black
@@ -423,6 +426,8 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         self.addSubnode(self.toolbarVerticalSeparator)
         self.addSubnode(self.toolbarButtonCancel)
         self.addSubnode(self.toolbarButtonApply)
+        
+        self.addSubnode(self.colorPanelNode)
         
         self.view.addSubview(self.segmentedControl)
         
@@ -481,6 +486,17 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
             }
         })
         
+        self.colorPanelNode.colorChanged = { [weak self] color in
+            if let strongSelf = self {
+                let entry = WallpaperEntry.wallpaper(.color(Int32(color.rgb)))
+                strongSelf.wallpapers = [entry]
+                strongSelf.centralWallpaper = entry
+                if let (layout, navigationHeight) = strongSelf.validLayout {
+                    strongSelf.updateVisibleBackgroundNodes(layout: layout, navigationBarHeight: navigationHeight, transition: .immediate)
+                }
+            }
+        }
+        
         switch source {
             case let .list(wallpapers, central, type):
                 self.wallpapers = wallpapers.map { .wallpaper($0) }
@@ -512,7 +528,11 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                 self.wallpapers = [entry]
                 self.centralWallpaper = entry
                 self.ready.set(true)
-            case .customColor:
+            case let .customColor(color):
+                let initialColor = color ?? 0x000000
+                let entry = WallpaperEntry.wallpaper(.color(initialColor))
+                self.wallpapers = [entry]
+                self.centralWallpaper = entry
                 self.ready.set(true)
         }
         if let (layout, navigationHeight) = self.validLayout {
@@ -520,6 +540,9 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         }
         if let wallpaper = self.centralWallpaper {
             self.currentWallpaperPromise.set(.single(wallpaper))
+        }
+        if case let .customColor(colorValue) = self.source, let color = colorValue {
+            self.colorPanelNode.color = UIColor(rgb: UInt32(bitPattern: color))
         }
     }
     
@@ -562,11 +585,18 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         }
     }
     
+    private func didAppear() {
+        guard let centralNode = self.centralNode() else {
+            return
+        }
+        if self.segmentedControl.selectedSegmentIndex == 2 {
+            centralNode.setBlurEnabled(true, animated: true)
+        }
+    }
+    
     func animateIn() {
         self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak self] _ in
-            if let strongSelf = self, strongSelf.segmentedControl.selectedSegmentIndex == 2 {
-                strongSelf.centralNode()?.setBlurEnabled(true, animated: true)
-            }
+            self?.didAppear()
         })
     }
     
@@ -577,6 +607,8 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (layout, navigationBarHeight)
+        
         var items: [ChatMessageItem] = []
         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 1)
         let otherPeerId = self.account.peerId
@@ -604,32 +636,32 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         
         let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper), fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: false)
         
-        let topMessageText: String = ""
-        let bottomMessageText: String = ""
-//        switch self.source {
-//            case .wallpaper, .slug:
-//                topMessageText = presentationData.strings.WallpaperPreview_PreviewTopText
-//                bottomMessageText = presentationData.strings.WallpaperPreview_PreviewBottomText
-//            case let .list(_, _, type):
-//                switch type {
-//                    case .wallpapers:
-//                        topMessageText = presentationData.strings.WallpaperPreview_SwipeTopText
-//                        bottomMessageText = presentationData.strings.WallpaperPreview_SwipeBottomText
-//                    case .colors:
-//                        topMessageText = presentationData.strings.WallpaperPreview_SwipeColorsTopText
-//                        bottomMessageText = presentationData.strings.WallpaperPreview_SwipeColorsBottomText
-//                }
-//            case .asset, .contextResult:
-//                topMessageText = presentationData.strings.WallpaperPreview_CropTopText
-//                bottomMessageText = presentationData.strings.WallpaperPreview_CropBottomText
-//            case .customColor:
-//                topMessageText = presentationData.strings.WallpaperPreview_CustomColorTopText
-//                bottomMessageText = presentationData.strings.WallpaperPreview_CustomColorBottomText
-//        }
+        let topMessageText: String
+        let bottomMessageText: String
+        switch self.source {
+            case .wallpaper, .slug:
+                topMessageText = presentationData.strings.WallpaperPreview_PreviewTopText
+                bottomMessageText = presentationData.strings.WallpaperPreview_PreviewBottomText
+            case let .list(_, _, type):
+                switch type {
+                    case .wallpapers:
+                        topMessageText = presentationData.strings.WallpaperPreview_SwipeTopText
+                        bottomMessageText = presentationData.strings.WallpaperPreview_SwipeBottomText
+                    case .colors:
+                        topMessageText = presentationData.strings.WallpaperPreview_SwipeColorsTopText
+                        bottomMessageText = presentationData.strings.WallpaperPreview_SwipeColorsBottomText
+                }
+            case .asset, .contextResult:
+                topMessageText = presentationData.strings.WallpaperPreview_CropTopText
+                bottomMessageText = presentationData.strings.WallpaperPreview_CropBottomText
+            case .customColor:
+                topMessageText = presentationData.strings.WallpaperPreview_CustomColorTopText
+                bottomMessageText = presentationData.strings.WallpaperPreview_CustomColorBottomText
+        }
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: topMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
         if let messageNodes = self.messageNodes {
@@ -643,6 +675,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                     itemNode.contentSize = layout.contentSize
                     itemNode.insets = layout.insets
                     itemNode.frame = nodeFrame
+                    itemNode.isUserInteractionEnabled = false
                     
                     apply(ListViewItemApply(isOnScreen: true))
                 })
@@ -656,13 +689,14 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                     apply().1(ListViewItemApply(isOnScreen: true))
                 })
                 itemNode!.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+                itemNode!.isUserInteractionEnabled = false
                 messageNodes.append(itemNode!)
                 self.addSubnode(itemNode!)
             }
             self.messageNodes = messageNodes
         }
         
-        let bottomInset = layout.intrinsicInsets.bottom + 49.0
+        var bottomInset = layout.intrinsicInsets.bottom + 49.0
         transition.updateFrame(node: self.toolbarBackground, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset), size: CGSize(width: layout.size.width, height: bottomInset)))
         transition.updateFrame(node: self.toolbarSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.toolbarVerticalSeparator, frame: CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0), y: layout.size.height - bottomInset), size: CGSize(width: UIScreenPixel, height: bottomInset)))
@@ -675,8 +709,20 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.toolbarButtonApply, frame: applyFrame)
         transition.updateFrame(node: self.toolbarButtonApplyBackground, frame: applyFrame)
         
+        if case .customColor = self.source {
+            let metrics = DeviceMetrics.forScreenSize(layout.size)
+            let standardInputHeight = metrics?.standardInputHeight(inLandscape: false) ?? 216.0
+            let height = standardInputHeight - bottomInset + 47.0
+            
+            let colorPanelFrame = CGRect(x: 0.0, y: layout.size.height - bottomInset - height, width: layout.size.width, height: height)
+            transition.updateFrame(node: self.colorPanelNode, frame: colorPanelFrame)
+            self.colorPanelNode.updateLayout(size: colorPanelFrame.size, keyboardHeight: layout.inputHeight ?? 0.0, transition: transition)
+            
+            bottomInset += height
+         }
+        
         var optionsAvailable = true
-        if let centralWallpaper = centralWallpaper {
+        if let centralWallpaper = self.centralWallpaper {
             switch centralWallpaper {
                 case let .wallpaper(wallpaper):
                     switch wallpaper {

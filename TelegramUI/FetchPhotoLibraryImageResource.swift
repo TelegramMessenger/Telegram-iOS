@@ -113,9 +113,8 @@ func fetchPhotoLibraryImage(localIdentifier: String) -> Signal<(UIImage, Bool)?,
             option.deliveryMode = .opportunistic
             option.isNetworkAccessAllowed = true
             option.isSynchronous = false
-            let size = CGSize(width: 1280.0, height: 1280.0)
             
-            let requestIdValue = PHImageManager.default().requestImage(for: asset, targetSize: size, contentMode: .aspectFill, options: option, resultHandler: { (image, info) -> Void in
+            let requestIdValue = PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .aspectFill, options: option, resultHandler: { (image, info) -> Void in
                 Queue.concurrentDefaultQueue().async {
                     requestId.with { current -> Void in
                         if !current.invalidated {

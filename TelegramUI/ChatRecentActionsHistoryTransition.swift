@@ -575,8 +575,6 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 text += "\n"
                             }
                             
-                            let prevFlags = prevBanInfo?.rights.flags ?? []
-                            
                             let order: [(TelegramChatBannedRightsFlags, String)] = [
                                 (.banReadMessages, self.presentationData.strings.Channel_AdminLog_BanReadMessages),
                                 (.banSendMessages, self.presentationData.strings.Channel_AdminLog_BanSendMessages),
@@ -584,6 +582,10 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 (.banSendStickers, self.presentationData.strings.Channel_AdminLog_BanSendStickers),
                                 (.banSendGifs, self.presentationData.strings.Channel_AdminLog_BanSendGifs),
                                 (.banEmbedLinks, self.presentationData.strings.Channel_AdminLog_BanEmbedLinks),
+                                (.banSendPolls, self.presentationData.strings.Channel_AdminLog_SendPolls),
+                                (.banAddMembers, self.presentationData.strings.Channel_AdminLog_AddMembers),
+                                (.banPinMessages, self.presentationData.strings.Channel_AdminLog_PinMessages),
+                                (.banChangeInfo, self.presentationData.strings.Channel_AdminLog_ChangeInfo)
                             ]
                             
                             for (flag, string) in order {

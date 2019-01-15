@@ -31,8 +31,8 @@ final class SearchDisplayController {
             self?.isDeactivating = true
             cancel()
         }
-        self.searchBar.clearPrefix = {
-            
+        self.searchBar.clearPrefix = { [weak contentNode] in
+            contentNode?.searchTextClearPrefix()
         }
         self.contentNode.cancel = { [weak self] in
             self?.isDeactivating = true
@@ -41,7 +41,8 @@ final class SearchDisplayController {
         self.contentNode.dismissInput = { [weak self] in
             self?.searchBar.deactivate(clear: false)
         }
-        self.contentNode.setQuery = { [weak self] query in
+        self.contentNode.setQuery = { [weak self] prefix, query in
+            self?.searchBar.prefixString = prefix
             self?.searchBar.text = query
         }
         

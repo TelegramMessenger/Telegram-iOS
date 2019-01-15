@@ -57,49 +57,12 @@ private func preparedThemeColorsGridEntryTransition(account: Account, from fromE
     return ThemeColorsGridEntryTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: nil, stationaryItems: stationaryItems, scrollToItem: scrollToItem)
 }
 
-private func availableColors() -> [Int32] {
-    return [
-        0xffffff,
-        0xd4dfea,
-        0xb3cde1,
-        0x6ab7ea,
-        0x008dd0,
-        0xd3e2da,
-        0xc8e6c9,
-        0xc5e1a5,
-        0x61b06e,
-        0xcdcfaf,
-        0xa7a895,
-        0x7c6f72,
-        0xffd7ae,
-        0xffb66d,
-        0xde8751,
-        0xefd5e0,
-        0xdba1b9,
-        0xffafaf,
-        0xf16a60,
-        0xe8bcea,
-        0x9592ed,
-        0xd9bc60,
-        0xb17e49,
-        0xd5cef7,
-        0xdf506b,
-        0x8bd2cc,
-        0x3c847e,
-        0x22612c,
-        0x244d7c,
-        0x3d3b85,
-        0x65717d,
-        0x18222d,
-        0x000000
-    ]
-}
-
 final class ThemeColorsGridControllerNode: ASDisplayNode {
     private let account: Account
     private var presentationData: PresentationData
     private var controllerInteraction: ThemeColorsGridControllerInteraction?
     private let present: (ViewController, Any?) -> Void
+    private let presentColorPicker: () -> Void
     
     let ready = ValuePromise<Bool>()
     
@@ -116,10 +79,11 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(account: Account, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void) {
+    init(account: Account, presentationData: PresentationData, colors: [Int32], present: @escaping (ViewController, Any?) -> Void, presentColorPicker: @escaping () -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.present = present
+        self.presentColorPicker = presentColorPicker
         
         self.gridNode = GridNode()
         self.gridNode.showVerticalScrollIndicator = true
@@ -132,6 +96,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         
         self.customColorItemNode = ItemListActionItemNode()
         self.customColorItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.WallpaperColors_SetCustomColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: {
+            presentColorPicker()
         })
         
         super.init()
@@ -161,7 +126,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         })
         self.controllerInteraction = interaction
         
-        let wallpapers = availableColors().map { TelegramWallpaper.color($0) }
+        let wallpapers = colors.map { TelegramWallpaper.color($0) }
         let transition = account.telegramApplicationContext.presentationData
         |> map { presentationData -> (ThemeColorsGridEntryTransition, Bool) in
             var entries: [ThemeColorsGridControllerEntry] = []
@@ -187,12 +152,59 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         self.disposable?.dispose()
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        let tapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapAction(_:)))
+        tapRecognizer.delaysTouchesBegan = false
+        tapRecognizer.tapActionAtPoint = { _ in
+            return .waitForSingleTap
+        }
+        tapRecognizer.highlight = { [weak self] point in
+            if let strongSelf = self {
+                var highlightedNode: ListViewItemNode?
+                if let point = point {
+                    if strongSelf.customColorItemNode.frame.contains(point) {
+                        highlightedNode = strongSelf.customColorItemNode
+                    }
+                }
+                
+                if let highlightedNode = highlightedNode {
+                    highlightedNode.setHighlighted(true, at: CGPoint(), animated: false)
+                } else {
+                    strongSelf.customColorItemNode.setHighlighted(false, at: CGPoint(), animated: true)
+                }
+            }
+        }
+        self.gridNode.view.addGestureRecognizer(tapRecognizer)
+    }
+    
+    
+    @objc private func tapAction(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+            case .ended:
+                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                    switch gesture {
+                        case .tap:
+                            if self.customColorItemNode.frame.contains(location) {
+                                self.customColorItem.action()
+                            }
+                        default:
+                            break
+                    }
+                }
+            default:
+                break
+        }
+    }
+    
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         
         self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
     
         self.customColorItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.WallpaperColors_SetCustomColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
+            self?.presentColorPicker()
         })
         
         if let (layout, navigationBarHeight) = self.validLayout {
@@ -223,8 +235,11 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
+        insets.left = layout.safeInsets.left
+        insets.right = layout.safeInsets.right
         let scrollIndicatorInsets = insets
         
+        let minSpacing: CGFloat = 8.0
         let referenceImageSize: CGSize
         let screenWidth = min(layout.size.width, layout.size.height)
         if screenWidth >= 375.0 {
@@ -232,13 +247,8 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         } else {
             referenceImageSize = CGSize(width: 91.0, height: 91.0)
         }
-        
-        let minSpacing: CGFloat = 8.0
-        
-        let imageCount = Int((layout.size.width - minSpacing * 2.0) / (referenceImageSize.width + minSpacing))
-        
+        let imageCount = Int((layout.size.width - insets.left - insets.right - minSpacing * 2.0) / (referenceImageSize.width + minSpacing))
         let imageSize = referenceImageSize.aspectFilled(CGSize(width: floor((layout.size.width - CGFloat(imageCount + 1) * minSpacing) / CGFloat(imageCount)), height: referenceImageSize.height))
-        
         let spacing = floor((layout.size.width - CGFloat(imageCount) * imageSize.width) / CGFloat(imageCount + 1))
         
         let makeColorLayout = self.customColorItemNode.asyncLayout()
@@ -248,7 +258,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
     
         let buttonTopInset: CGFloat = 32.0
         let buttonHeight: CGFloat = 44.0
-        let buttonBottomInset: CGFloat = 17.0
+        let buttonBottomInset: CGFloat = 35.0
         
         let buttonInset: CGFloat = buttonTopInset + buttonHeight + buttonBottomInset
         let buttonOffset = buttonInset + 10.0

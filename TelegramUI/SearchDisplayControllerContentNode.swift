@@ -6,7 +6,7 @@ import SwiftSignalKit
 class SearchDisplayControllerContentNode: ASDisplayNode {
     final var dismissInput: (() -> Void)?
     final var cancel: (() -> Void)?
-    final var setQuery: ((String) -> Void)?
+    final var setQuery: ((NSAttributedString?, String) -> Void)?
     
     var isSearching: Signal<Bool, NoError> {
         return .single(false)
@@ -21,6 +21,10 @@ class SearchDisplayControllerContentNode: ASDisplayNode {
     }
     
     func searchTextUpdated(text: String) {
+        
+    }
+    
+    func searchTextClearPrefix() {
         
     }
     
