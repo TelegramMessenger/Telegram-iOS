@@ -58,6 +58,8 @@ main(void)
    view->setPos(0, 0);
    view->setSize(800, 800);
    view->show();
+   view->setMinProgress(0.5);
+   view->setMaxProgress(0.0);
    view->play();
    view->loop(true);
    view->setRepeatMode(LottieView::RepeatMode::Reverse);

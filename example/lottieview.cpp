@@ -24,11 +24,9 @@ static Eina_Bool
 animator(void *data , double pos)
 {
     LottieView *view = static_cast<LottieView *>(data);
-    float nextPos = pos + view->mStartPos;
-    if (nextPos > 1.0) nextPos = 1.0;
 
-    view->seek(nextPos);
-    if (nextPos == 1.0) {
+    view->seek(pos);
+    if (pos == 1.0) {
       view->mAnimator = NULL;
       view->finished();
       return EINA_FALSE;
@@ -307,10 +305,8 @@ void LottieView::seek(float pos)
 {
     if (!mPlayer) return;
 
-    if (mPalying && mReverse)
-        pos = 1.0 - pos;
 
-    mPos = pos;
+    mPos = mapProgress(pos);
 
     // check if the pos maps to the current frame
     if (mCurFrame == mPlayer->frameAtPos(mPos)) return;
@@ -427,9 +423,8 @@ void LottieView::play()
 {
     if (!mPlayer) return;
 
-    mStartPos = mPos;
     if (mAnimator) ecore_animator_del(mAnimator);
-    mAnimator = ecore_animator_timeline_add(mPlayer->duration()/mSpeed, animator, this);
+    mAnimator = ecore_animator_timeline_add(duration()/mSpeed, animator, this);
     mReverse = false;
     mCurCount = mRepeatCount;
     mPalying = true;
@@ -460,8 +455,7 @@ void LottieView::restart()
         else
             mReverse = false;
 
-        mStartPos = 0;
         if (mAnimator) ecore_animator_del(mAnimator);
-        mAnimator = ecore_animator_timeline_add(mPlayer->duration()/mSpeed, animator, this);
+        mAnimator = ecore_animator_timeline_add(duration()/mSpeed, animator, this);
     }
 }

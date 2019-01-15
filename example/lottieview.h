@@ -35,6 +35,7 @@
 #include "lottieanimation.h"
 #include "lottieanimation_capi.h"
 #include<future>
+#include <cmath>
 class LottieView
 {
 public:
@@ -66,7 +67,34 @@ public:
     void stop();
     void render();
     void initializeBufferObject(Evas *evas);
+    void setMinProgress(float progress)
+    {
+        //clamp it to [0,1]
+        mMinProgress = progress;
+    }
+    void setMaxProgress(float progress)
+    {
+        //clamp it to [0,1]
+        mMaxprogress = progress;
+    }
 private:
+    float mapProgress(float progress) {
+        //clamp it to the segment
+        progress = (mMinProgress + (mMaxprogress - mMinProgress) * progress);
+
+        // currently playing and in reverse mode
+        if (mPalying && mReverse)
+            progress = mMaxprogress > mMinProgress ?
+                        mMaxprogress - progress : mMinProgress - progress;
+
+
+        return progress;
+    }
+    float duration() const {
+        // usually we run the animation for mPlayer->duration()
+        // but now run animation for segmented duration.
+        return  mPlayer->duration() * fabs(mMaxprogress - mMinProgress);
+    }
     void createVgNode(LOTNode *node, Efl_VG *root);
     void update(const std::vector<LOTNode *> &);
     void updateTree(const LOTLayerNode *);
@@ -92,11 +120,14 @@ public:
     bool                     mRenderMode;
     bool                     mAsyncRender;
     bool                     mDirty;
-    float                    mStartPos;
     float                    mPos;
     float                    mFrameRate;
     long                     mTotalFrame;
     std::future<lottie::Surface>        mRenderTask;
+
+    //keep a segment of the animation default is [0, 1]
+    float                   mMinProgress{0};
+    float                   mMaxprogress{1};
 };
 
 class LottieViewCApi
