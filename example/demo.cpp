@@ -45,21 +45,15 @@ main(void)
    app->setup();
 
    std::string filePath = DEMO_DIR;
-   filePath +="mask.json";
-
-   std::ifstream f;
-   f.open(filePath);
-   std::stringstream buf;
-   buf << f.rdbuf();
-   f.close();
+   filePath +="image_test.json";
 
    LottieView *view = new LottieView(app->evas());
-   view->loadFromData(buf.str().data(), "test_key");
+   view->setFilePath(filePath.c_str());
    view->setPos(0, 0);
    view->setSize(800, 800);
    view->show();
-   view->setMinProgress(0.5);
-   view->setMaxProgress(0.0);
+//   view->setMinProgress(0.5);
+//   view->setMaxProgress(0.0);
    view->play();
    view->loop(true);
    view->setRepeatMode(LottieView::RepeatMode::Reverse);
