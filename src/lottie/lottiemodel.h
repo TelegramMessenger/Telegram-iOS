@@ -339,9 +339,19 @@ public:
 class LOTLayerData;
 struct LOTAsset
 {
-    int                                          mAssetType; //lottie asset type  (precomp/char/image)
-    std::string                                  mRefId; // ref id
-    std::vector<std::shared_ptr<LOTData>>   mLayers;
+    enum class Type {
+        Precomp,
+        Image,
+        Char
+    };
+
+    Type                                      mAssetType{Type::Precomp};
+    std::string                               mRefId; // ref id
+    std::vector<std::shared_ptr<LOTData>>     mLayers;
+    // image asset data
+    int                                       mWidth{0};
+    int                                       mHeight{0};
+    std::string                               mImagePath;
 };
 
 class LOTLayerData : public LOTGroupData
@@ -393,6 +403,7 @@ public:
     bool                 mAutoOrient{false};
     std::vector<std::shared_ptr<LOTMaskData>>  mMasks;
     LOTCompositionData   *mCompRef{nullptr};
+    std::shared_ptr<LOTAsset> mAsset;
 };
 
 class LOTCompositionData : public LOTData

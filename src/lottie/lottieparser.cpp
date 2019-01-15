@@ -173,7 +173,9 @@ protected:
 
 class LottieParserImpl : protected LookaheadParserHandler {
 public:
-    LottieParserImpl(char *str) : LookaheadParserHandler(str) {}
+    LottieParserImpl(char *str, const char *dir_path)
+        :LookaheadParserHandler(str),
+         mDirPath(dir_path){}
 
 public:
     bool        EnterObject();
@@ -270,6 +272,7 @@ protected:
     LOTCompositionData *                       compRef{nullptr};
     LOTLayerData *                             curLayerRef{nullptr};
     std::vector<std::shared_ptr<LOTLayerData>> mLayersToUpdate;
+    std::string                                mDirPath;
     void                                       SkipOut(int depth);
 };
 
@@ -557,7 +560,11 @@ void LottieParserImpl::resolveLayerRefs()
         LOTLayerData *layer = i.get();
         auto          search = compRef->mAssets.find(layer->mPreCompRefId);
         if (search != compRef->mAssets.end()) {
-            layer->mChildren = search->second.get()->mLayers;
+            if (layer->mLayerType == LayerType::Image) {
+                layer->mAsset = search->second;
+            } else if (layer->mLayerType == LayerType::Precomp) {
+                layer->mChildren = search->second.get()->mLayers;
+            }
         }
     }
 }
@@ -628,11 +635,23 @@ std::shared_ptr<LOTAsset> LottieParserImpl::parseAsset()
     RAPIDJSON_ASSERT(PeekType() == kObjectType);
     std::shared_ptr<LOTAsset> sharedAsset = std::make_shared<LOTAsset>();
     LOTAsset *                asset = sharedAsset.get();
+    std::string    filename;
+    std::string    relativePath;
     EnterObject();
     while (const char *key = NextObjectKey()) {
-        if (0 == strcmp(key, "ty")) { /* Type of layer: Shape. Value 4.*/
+        if (0 == strcmp(key, "w")) {
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
-            asset->mAssetType = GetInt();
+            asset->mWidth = GetInt();
+        } else if (0 == strcmp(key, "h")) {
+            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            asset->mHeight = GetInt();
+        } else if (0 == strcmp(key, "p")) { /* image name */
+            asset->mAssetType = LOTAsset::Type::Image;
+            RAPIDJSON_ASSERT(PeekType() == kStringType);
+            filename = std::string(GetString());
+        } else if (0 == strcmp(key, "u")) { /* relative image path */
+            RAPIDJSON_ASSERT(PeekType() == kStringType);
+            relativePath = std::string(GetString());
         } else if (0 == strcmp(key, "id")) { /* reference id*/
             if (PeekType() == kStringType) {
                 asset->mRefId = std::string(GetString());
@@ -641,6 +660,7 @@ std::shared_ptr<LOTAsset> LottieParserImpl::parseAsset()
                 asset->mRefId = std::to_string(GetInt());
             }
         } else if (0 == strcmp(key, "layers")) {
+            asset->mAssetType = LOTAsset::Type::Precomp;
             RAPIDJSON_ASSERT(PeekType() == kArrayType);
             EnterArray();
             while (NextArrayValue()) {
@@ -653,6 +673,10 @@ std::shared_ptr<LOTAsset> LottieParserImpl::parseAsset()
 #endif
             Skip(key);
         }
+    }
+    // its an image asset
+    if (!filename.empty()) {
+        asset->mImagePath = mDirPath + relativePath + filename;
     }
     return sharedAsset;
 }
@@ -1978,8 +2002,20 @@ public:
                << ", ao:" << obj->autoOrient()
                << ", ddd:" << obj->mTransform->ddd()
                << ", W:" << obj->layerSize().width()
-               << ", H:" << obj->layerSize().height()
-               << "\n";
+               << ", H:" << obj->layerSize().height();
+
+        if (obj->mLayerType == LayerType::Image)
+            vDebug << level
+                   << "\t{ "
+                   << "ImageInfo:"
+                   << " W :" << obj->mAsset->mWidth
+                   << ", H :" << obj->mAsset->mHeight
+                   << ", Path :"<<obj->mAsset->mImagePath
+                   <<" }"
+                   << "\n";
+        else {
+            vDebug<< level;
+        }
         visitChildren(static_cast<LOTGroupData *>(obj), level);
         vDebug << level
                << "} "
@@ -2121,7 +2157,7 @@ LottieParser::~LottieParser()
     delete d;
 }
 
-LottieParser::LottieParser(char *str) : d(new LottieParserImpl(str))
+LottieParser::LottieParser(char *str, const char *dir_path) : d(new LottieParserImpl(str, dir_path))
 {
     d->parseComposition();
 }

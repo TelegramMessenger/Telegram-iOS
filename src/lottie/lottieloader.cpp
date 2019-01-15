@@ -21,7 +21,7 @@
 
 #include <fstream>
 #include <unordered_map>
-
+#include <cstring>
 using namespace std;
 
 class LottieFileCache {
@@ -56,6 +56,13 @@ void LottieFileCache::add(const std::string &key, std::shared_ptr<LOTModel> valu
     mHash[key] = std::move(value);
 }
 
+static std::string dirname(const std::string &path)
+{
+    const char *ptr = strrchr(path.c_str(), '/');
+    int len = int(ptr + 1 - path.c_str()); // +1 to include '/'
+    return std::string(path, 0, len);
+}
+
 bool LottieLoader::load(const std::string &path)
 {
     LottieFileCache &fileCache = LottieFileCache::get();
@@ -73,7 +80,7 @@ bool LottieLoader::load(const std::string &path)
         std::stringstream buf;
         buf << f.rdbuf();
 
-        LottieParser parser(const_cast<char *>(buf.str().data()));
+        LottieParser parser(const_cast<char *>(buf.str().data()), dirname(path).c_str());
         mModel = parser.model();
         fileCache.add(path, mModel);
 
