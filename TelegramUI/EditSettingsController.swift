@@ -449,7 +449,9 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
                     updateState {
                         $0.withUpdatedUpdatingAvatar(.image(representation, true))
                     }
-                    updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: resource) |> deliverOnMainQueue).start(next: { result in
+                    updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: resource, mapResourceToAvatarSizes: { resource, representations in
+                        return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                    }) |> deliverOnMainQueue).start(next: { result in
                         switch result {
                             case .complete:
                                 updateState {
@@ -485,7 +487,9 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
                         return $0.withUpdatedUpdatingAvatar(.none)
                     }
                 }
-                updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: nil) |> deliverOnMainQueue).start(next: { result in
+                updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: nil, mapResourceToAvatarSizes: { resource, representations in
+                    return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                }) |> deliverOnMainQueue).start(next: { result in
                     switch result {
                     case .complete:
                         updateState {

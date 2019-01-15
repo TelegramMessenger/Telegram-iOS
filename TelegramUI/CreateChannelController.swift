@@ -247,7 +247,9 @@ public func createChannelController(account: Account) -> ViewController {
                         return $0.avatar
                     }
                     if let _ = updatingAvatar {
-                        let _ = updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedAvatar.get()).start()
+                        let _ = updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedAvatar.get(), mapResourceToAvatarSizes: { resource, representations in
+                            return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                        }).start()
                     }
                     
                     let controller = channelVisibilityController(account: account, peerId: peerId, mode: .initialSetup, upgradedToSupergroup: { _, f in f() })

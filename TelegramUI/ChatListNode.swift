@@ -281,6 +281,11 @@ enum ChatListNodeScrollPosition {
     case top
 }
 
+enum ChatListNodeEmtpyState: Equatable {
+    case notEmpty
+    case empty(isLoading: Bool)
+}
+
 final class ChatListNode: ListView {
     private let controlsHistoryPreload: Bool
     private let account: Account
@@ -346,8 +351,8 @@ final class ChatListNode: ListView {
         }
     }
     
-    var isEmptyUpdated: ((Bool) -> Void)?
-    private var wasEmpty: Bool?
+    var isEmptyUpdated: ((ChatListNodeEmtpyState) -> Void)?
+    private var currentIsEmptyState: ChatListNodeEmtpyState?
     
     private let currentRemovingPeerId = Atomic<PeerId?>(value: nil)
     func setCurrentRemovingPeerId(_ peerId: PeerId?) {
@@ -469,7 +474,8 @@ final class ChatListNode: ListView {
         
         let chatListNodeViewTransition = combineLatest(savedMessagesPeer, chatListViewUpdate, self.statePromise.get()) |> mapToQueue { (savedMessagesPeer, update, state) -> Signal<ChatListNodeListViewTransition, NoError> in
             
-            let entries = chatListNodeEntriesForView(update.view, state: state, savedMessagesPeer: savedMessagesPeer, mode: mode).filter { entry in
+            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.view, state: state, savedMessagesPeer: savedMessagesPeer, mode: mode)
+            let entries = rawEntries.filter { entry in
                 switch entry {
                 case let .PeerEntry(_, _, _, _, _, _, peer, _, _, _, _, _, _):
                     switch mode {
@@ -507,7 +513,7 @@ final class ChatListNode: ListView {
                 }
             }
             
-            let processedView = ChatListNodeView(originalView: update.view, filteredEntries: entries)
+            let processedView = ChatListNodeView(originalView: update.view, filteredEntries: entries, isLoading: isLoading)
             let previousView = previousView.swap(processedView)
             let previousState = previousState.swap(state)
             
@@ -520,6 +526,8 @@ final class ChatListNode: ListView {
                     if case .HoleEntry = previous.filteredEntries[0] {
                         previousWasEmptyOrSingleHole = true
                     }
+                } else if previous.filteredEntries.isEmpty && previous.isLoading {
+                    previousWasEmptyOrSingleHole = true
                 }
             } else {
                 previousWasEmptyOrSingleHole = true
@@ -991,10 +999,17 @@ final class ChatListNode: ListView {
                         strongSelf._ready.set(true)
                     }
                 
-                    let isEmpty = transition.chatListView.filteredEntries.isEmpty
-                    if strongSelf.wasEmpty != isEmpty {
-                        strongSelf.wasEmpty = isEmpty
-                        strongSelf.isEmptyUpdated?(isEmpty)
+                    let isEmptyState: ChatListNodeEmtpyState
+                    if transition.chatListView.isLoading {
+                        isEmptyState = .empty(isLoading: true)
+                    } else if transition.chatListView.filteredEntries.isEmpty {
+                        isEmptyState = .empty(isLoading: false)
+                    } else {
+                        isEmptyState = .notEmpty
+                    }
+                    if strongSelf.currentIsEmptyState != isEmptyState {
+                        strongSelf.currentIsEmptyState = isEmptyState
+                        strongSelf.isEmptyUpdated?(isEmptyState)
                     }
                     
                     completion()

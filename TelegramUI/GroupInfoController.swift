@@ -1279,7 +1279,9 @@ public func groupInfoController(account: Account, peerId originalPeerId: PeerId,
                             updateState {
                                 $0.withUpdatedUpdatingAvatar(.image(representation, true))
                             }
-                            updateAvatarDisposable.set((updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerView.peerId, photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: resource)) |> deliverOnMainQueue).start(next: { result in
+                            updateAvatarDisposable.set((updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerView.peerId, photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: resource), mapResourceToAvatarSizes: { resource, representations in
+                                return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                            }) |> deliverOnMainQueue).start(next: { result in
                                 switch result {
                                 case .complete:
                                     updateState {
@@ -1315,7 +1317,9 @@ public func groupInfoController(account: Account, peerId originalPeerId: PeerId,
                                 return $0.withUpdatedUpdatingAvatar(.none)
                             }
                         }
-                        updateAvatarDisposable.set((updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerView.peerId, photo: nil) |> deliverOnMainQueue).start(next: { result in
+                        updateAvatarDisposable.set((updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerView.peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
+                            return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                        }) |> deliverOnMainQueue).start(next: { result in
                             switch result {
                                 case .complete:
                                     updateState {

@@ -197,7 +197,7 @@ private func offsetPinnedIndex(_ index: ChatListIndex, offset: UInt16) -> ChatLi
     }
 }
 
-func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, savedMessagesPeer: Peer?, mode: ChatListNodeMode) -> [ChatListNodeEntry] {
+func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, savedMessagesPeer: Peer?, mode: ChatListNodeMode) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var result: [ChatListNodeEntry] = []
     var pinnedIndexOffset: UInt16 = 0
     if view.laterIndex == nil && savedMessagesPeer == nil {
@@ -249,12 +249,10 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
         }
     }
 
-//    if result.count == 1, case .HoleEntry = result[0] {
-
     if result.count >= 1, case .HoleEntry = result[result.count - 1] {
-        return []
+        return ([], true)
     } else if result.count == 1, case .HoleEntry = result[0] {
-        return []
+        return ([], true)
     }
-    return result
+    return (result, false)
 }

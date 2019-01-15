@@ -95,13 +95,17 @@ private struct GroupPreHistorySetupState: Equatable {
     var applyingSetting: Bool = false
 }
 
-private func groupPreHistorySetupEntries(presentationData: PresentationData, defaultValue: Bool, state: GroupPreHistorySetupState) -> [GroupPreHistorySetupEntry] {
+private func groupPreHistorySetupEntries(isSupergroup: Bool, presentationData: PresentationData, defaultValue: Bool, state: GroupPreHistorySetupState) -> [GroupPreHistorySetupEntry] {
     var entries: [GroupPreHistorySetupEntry] = []
     let value = state.changedValue ?? defaultValue
     entries.append(.header(presentationData.theme, presentationData.strings.Group_Setup_HistoryHeader))
     entries.append(.visible(presentationData.theme, presentationData.strings.Group_Setup_HistoryVisible, value))
     entries.append(.hidden(presentationData.theme, presentationData.strings.Group_Setup_HistoryHidden, !value))
-    entries.append(.info(presentationData.theme, value ? presentationData.strings.Group_Setup_HistoryVisibleHelp : presentationData.strings.Group_Setup_HistoryHiddenHelp))
+    if isSupergroup {
+        entries.append(.info(presentationData.theme, value ? presentationData.strings.Group_Setup_HistoryVisibleHelp : presentationData.strings.Group_Setup_HistoryHiddenHelp))
+    } else {
+        entries.append(.info(presentationData.theme, value ? presentationData.strings.Group_Setup_HistoryVisibleHelp : presentationData.strings.Group_Setup_BasicHistoryHiddenHelp))
+    }
     
     return entries
 }
@@ -186,7 +190,7 @@ public func groupPreHistorySetupController(account: Account, peerId: PeerId, upg
         }
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Group_Setup_HistoryTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: groupPreHistorySetupEntries(presentationData: presentationData, defaultValue: defaultValue, state: state), style: .blocks)
+        let listState = ItemListNodeState(entries: groupPreHistorySetupEntries(isSupergroup: peerId.namespace == Namespaces.Peer.CloudChannel, presentationData: presentationData, defaultValue: defaultValue, state: state), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }
