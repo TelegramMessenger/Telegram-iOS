@@ -54,24 +54,27 @@ class ChatListControllerNode: ASDisplayNode {
         self.backgroundColor = presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.chatListNode)
-        self.chatListNode.isEmptyUpdated = { [weak self] isEmpty in
+        self.chatListNode.isEmptyUpdated = { [weak self] isEmptyState in
             guard let strongSelf = self else {
                 return
             }
-            if isEmpty {
-                if strongSelf.chatListEmptyNode == nil {
-                    let chatListEmptyNode = ChatListEmptyNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings)
-                    strongSelf.chatListEmptyNode = chatListEmptyNode
-                    strongSelf.insertSubnode(chatListEmptyNode, belowSubnode: strongSelf.chatListNode)
-                    if let (layout, navigationHeight) = strongSelf.containerLayout {
-                        strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+            switch isEmptyState {
+                case let .empty(isLoading):
+                    if strongSelf.chatListEmptyNode == nil {
+                        let chatListEmptyNode = ChatListEmptyNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings)
+                        strongSelf.chatListEmptyNode = chatListEmptyNode
+                        strongSelf.insertSubnode(chatListEmptyNode, belowSubnode: strongSelf.chatListNode)
+                        if let (layout, navigationHeight) = strongSelf.containerLayout {
+                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+                        }
                     }
-                }
-            } else if let chatListEmptyNode = strongSelf.chatListEmptyNode {
-                strongSelf.chatListEmptyNode = nil
-                chatListEmptyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak chatListEmptyNode] _ in
-                    chatListEmptyNode?.removeFromSupernode()
-                })
+                case .notEmpty:
+                    if let chatListEmptyNode = strongSelf.chatListEmptyNode {
+                        strongSelf.chatListEmptyNode = nil
+                        chatListEmptyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak chatListEmptyNode] _ in
+                            chatListEmptyNode?.removeFromSupernode()
+                        })
+                    }
             }
         }
     }

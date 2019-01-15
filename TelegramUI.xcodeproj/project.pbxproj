@@ -118,6 +118,7 @@
 		09FE756D2153F5F900A3120F /* CallRouteActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */; };
 		9F06830921A404AB001D8EDB /* NotificationExceptionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */; };
 		9F06830B21A404C4001D8EDB /* NotificationExcetionSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */; };
+		D000CABA21EE130D0011B15D /* MapResourceToAvatarSizes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D000CAB921EE130D0011B15D /* MapResourceToAvatarSizes.swift */; };
 		D005808B21CAB8F000CB7CD3 /* VoipDerivedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D005808A21CAB8F000CB7CD3 /* VoipDerivedState.swift */; };
 		D00580A021DCF0A200CB7CD3 /* WallpaperListPreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D005809F21DCF0A200CB7CD3 /* WallpaperListPreviewController.swift */; };
 		D00580A221DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580A121DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift */; };
@@ -1240,6 +1241,7 @@
 		09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallRouteActionSheetItem.swift; sourceTree = "<group>"; };
 		9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExceptionControllerNode.swift; sourceTree = "<group>"; };
 		9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExcetionSettingsController.swift; sourceTree = "<group>"; };
+		D000CAB921EE130D0011B15D /* MapResourceToAvatarSizes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapResourceToAvatarSizes.swift; sourceTree = "<group>"; };
 		D00219051DDD1C9E00BE708A /* ImageContainingNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageContainingNode.swift; sourceTree = "<group>"; };
 		D002A0D01E9B99F500A81812 /* SoftwareVideoSource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareVideoSource.swift; sourceTree = "<group>"; };
 		D002A0D21E9BBE6700A81812 /* MultiplexedSoftwareVideoSourceManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiplexedSoftwareVideoSourceManager.swift; sourceTree = "<group>"; };
@@ -4727,6 +4729,7 @@
 				09C9EA32219F79F600E90146 /* ID3Artwork.h */,
 				09C9EA31219F79F500E90146 /* ID3Artwork.m */,
 				099529B321D3E5D800805E13 /* CheckDiskSpace.swift */,
+				D000CAB921EE130D0011B15D /* MapResourceToAvatarSizes.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -5443,6 +5446,7 @@
 				D0B2F76E2052B59F00D3BFB9 /* InviteContactsController.swift in Sources */,
 				D0EC6D591EB9F58800EBF1C3 /* ChatMessageThrottledProcessingManager.swift in Sources */,
 				D0BFAE4620AB04FB00793CF2 /* ChatRestrictedInputPanelNode.swift in Sources */,
+				D000CABA21EE130D0011B15D /* MapResourceToAvatarSizes.swift in Sources */,
 				D06E0F8E1F79ABFB003CF3DD /* ChatLoadingNode.swift in Sources */,
 				D0EC6D5A1EB9F58800EBF1C3 /* ListMessageItem.swift in Sources */,
 				D0EC6D5B1EB9F58800EBF1C3 /* ListMessageNode.swift in Sources */,

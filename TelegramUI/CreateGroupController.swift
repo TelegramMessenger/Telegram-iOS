@@ -255,7 +255,9 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
                 return current
             }
             endEditingImpl?()
-            actionsDisposable.add((createGroup(account: account, title: title, peerIds: peerIds) |> deliverOnMainQueue |> afterDisposed {
+            actionsDisposable.add((createGroup(account: account, title: title, peerIds: peerIds)
+            |> deliverOnMainQueue
+            |> afterDisposed {
                 Queue.mainQueue().async {
                     updateState { current in
                         var current = current
@@ -269,7 +271,9 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
                         return $0.avatar
                     }
                     if let _ = updatingAvatar {
-                        let _ = updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedAvatar.get()).start()
+                        let _ = updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedAvatar.get(), mapResourceToAvatarSizes: { resource, representations in
+                            return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                        }).start()
                     }
                     let controller = ChatController(account: account, chatLocation: .peer(peerId))
                     replaceControllerImpl?(controller)
@@ -353,24 +357,25 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
     })
     
     let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), account.postbox.multiplePeersView(peerIds))
-        |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<CreateGroupEntry>, CreateGroupEntry.ItemGenerationArguments)) in
-            
-            let rightNavigationButton: ItemListNavigationButton
-            if state.creating {
-                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
-            } else {
-                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Compose_Create), style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
-                    arguments.done()
-                })
-            }
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Compose_NewGroupTitle), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: createGroupEntries(presentationData: presentationData, state: state, peerIds: peerIds, view: view), style: .blocks, focusItemTag: CreateGroupEntryTag.info)
-            
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+    |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<CreateGroupEntry>, CreateGroupEntry.ItemGenerationArguments)) in
+        
+        let rightNavigationButton: ItemListNavigationButton
+        if state.creating {
+            rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
+        } else {
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Compose_Create), style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
+                arguments.done()
+            })
         }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Compose_NewGroupTitle), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(entries: createGroupEntries(presentationData: presentationData, state: state, peerIds: peerIds, view: view), style: .blocks, focusItemTag: CreateGroupEntryTag.info)
+        
+        return (controllerState, (listState, arguments))
+    }
+    |> afterDisposed {
+        actionsDisposable.dispose()
+    }
     
     let controller = ItemListController(account: account, state: signal)
     replaceControllerImpl = { [weak controller] value in

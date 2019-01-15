@@ -7,6 +7,7 @@ import Display
 struct ChatListNodeView {
     let originalView: ChatListView
     let filteredEntries: [ChatListNodeEntry]
+    let isLoading: Bool
 }
 
 enum ChatListNodeViewTransitionReason {

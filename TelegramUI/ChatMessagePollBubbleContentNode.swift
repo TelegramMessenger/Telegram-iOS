@@ -4,6 +4,78 @@ import Display
 import TelegramCore
 import Postbox
 
+private struct PercentCounterItem: Comparable  {
+    var index: Int = 0
+    var percent: Int = 0
+    var remainder: Int = 0
+    
+    static func <(lhs: PercentCounterItem, rhs: PercentCounterItem) -> Bool {
+        if lhs.remainder > rhs.remainder {
+            return true
+        } else if lhs.remainder < rhs.remainder {
+            return false
+        }
+        return lhs.percent < rhs.percent
+    }
+    
+}
+
+private func adjustPercentCount(_ items: [PercentCounterItem], left: Int) -> [PercentCounterItem] {
+    var left = left
+    var items = items.sorted(by: <)
+    var i:Int = 0
+    while i != items.count {
+        let item = items[i]
+        var j = i + 1
+        loop: while j != items.count {
+            if items[j].percent != item.percent || items[j].remainder != item.remainder {
+                break loop
+            }
+            j += 1
+        }
+        let equal = j - i
+        if equal <= left {
+            left -= equal
+            while i != j {
+                items[i].percent += 1
+                i += 1
+            }
+        } else {
+            i = j
+        }
+    }
+    return items
+}
+
+private func countNicePercent(votes: [Int], total: Int) -> [Int] {
+    var result:[Int] = []
+    var items:[PercentCounterItem] = []
+    for _ in votes {
+        result.append(0)
+        items.append(PercentCounterItem())
+    }
+    
+    let count = votes.count
+    
+    var left:Int = 100
+    for i in 0 ..< votes.count {
+        let votes = votes[i]
+        items[i].index = i
+        items[i].percent = Int((Float(votes) * 100) / Float(total))
+        items[i].remainder = (votes * 100) - (items[i].percent * total)
+        left -= items[i].percent
+    }
+    
+    if left > 0 && left <= count {
+        items = adjustPercentCount(items, left: left)
+    }
+    for item in items {
+        result[item.index] = item.percent
+    }
+    
+    return result
+}
+
 private final class ChatMessagePollOptionRadioNodeParameters: NSObject {
     let staticColor: UIColor
     let animatedColor: UIColor
@@ -205,31 +277,30 @@ private final class ChatMessagePollOptionRadioNode: ASDisplayNode {
 
 private let percentageFont = Font.bold(14.5)
 
-private func generatePercentageImage(presentationData: ChatPresentationData, incoming: Bool, value: CGFloat) -> UIImage {
+private func generatePercentageImage(presentationData: ChatPresentationData, incoming: Bool, value: Int) -> UIImage {
     return generateImage(CGSize(width: 42.0, height: 20.0), rotatedContext: { size, context in
         UIGraphicsPushContext(context)
         context.clear(CGRect(origin: CGPoint(), size: size))
-        let percents = Int(round(value * 100.0))
-        let string = NSAttributedString(string: "\(percents)%", font: percentageFont, textColor: incoming ? presentationData.theme.theme.chat.bubble.incomingPrimaryTextColor : presentationData.theme.theme.chat.bubble.outgoingPrimaryTextColor, paragraphAlignment: .right)
+        let string = NSAttributedString(string: "\(value)%", font: percentageFont, textColor: incoming ? presentationData.theme.theme.chat.bubble.incomingPrimaryTextColor : presentationData.theme.theme.chat.bubble.outgoingPrimaryTextColor, paragraphAlignment: .right)
         string.draw(in: CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: size))
         UIGraphicsPopContext()
     })!
 }
 
-private func generatePercentageAnimationImages(presentationData: ChatPresentationData, incoming: Bool, from fromValue: CGFloat, to toValue: CGFloat, duration: Double) -> [UIImage] {
+private func generatePercentageAnimationImages(presentationData: ChatPresentationData, incoming: Bool, from fromValue: Int, to toValue: Int, duration: Double) -> [UIImage] {
     let minimumFrameDuration = 1.0 / 40.0
     let numberOfFrames = max(1, Int(duration / minimumFrameDuration))
     var images: [UIImage] = []
     for i in 0 ..< numberOfFrames {
         let t = CGFloat(i) / CGFloat(numberOfFrames)
-        images.append(generatePercentageImage(presentationData: presentationData, incoming: incoming, value: (1.0 - t) * fromValue + t * toValue))
+        images.append(generatePercentageImage(presentationData: presentationData, incoming: incoming, value: Int((1.0 - t) * CGFloat(fromValue) + t * CGFloat(toValue))))
     }
     return images
 }
 
 private struct ChatMessagePollOptionResult: Equatable {
     let normalized: CGFloat
-    let absolute: CGFloat
+    let percent: Int
 }
 
 private final class ChatMessagePollOptionNode: ASDisplayNode {
@@ -312,7 +383,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
             
             var updatedPercentageImage: UIImage?
             if currentResult != optionResult {
-                updatedPercentageImage = generatePercentageImage(presentationData: presentationData, incoming: incoming, value: optionResult?.absolute ?? 0.0)
+                updatedPercentageImage = generatePercentageImage(presentationData: presentationData, incoming: incoming, value: optionResult?.percent ?? 0)
             }
             
             return (titleLayout.size.width + leftInset + rightInset, { width in
@@ -374,9 +445,9 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     }
                     if let image = node.percentageImage {
                         node.percentageNode.frame = CGRect(origin: CGPoint(x: leftInset - 7.0 - image.size.width, y: 12.0), size: image.size)
-                        if animated && previousResult?.absolute != optionResult?.absolute {
+                        if animated && previousResult?.percent != optionResult?.percent {
                             let percentageDuration = 0.27
-                            let images = generatePercentageAnimationImages(presentationData: presentationData, incoming: incoming, from: previousResult?.absolute ?? 0.0, to: optionResult?.absolute ?? 0.0, duration: percentageDuration)
+                            let images = generatePercentageAnimationImages(presentationData: presentationData, incoming: incoming, from: previousResult?.percent ?? 0, to: optionResult?.percent ?? 0, duration: percentageDuration)
                             if !images.isEmpty {
                                 let animation = CAKeyframeAnimation(keyPath: "contents")
                                 animation.values = images.map { $0.cgImage! }
@@ -635,6 +706,13 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                     
+                    var optionVoterCounts: [Int]
+                    if totalVoterCount != 0 {
+                        optionVoterCounts = countNicePercent(votes: (0 ..< poll.options.count).map({ Int(optionVoterCount[$0] ?? 0) }), total: Int(totalVoterCount))
+                    } else {
+                        optionVoterCounts = Array(repeating: 0, count: poll.options.count)
+                    }
+                    
                     for i in 0 ..< poll.options.count {
                         let option = poll.options[i]
                         
@@ -647,12 +725,12 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         var optionResult: ChatMessagePollOptionResult?
                         if let count = optionVoterCount[i] {
                             if maxOptionVoterCount != 0 && totalVoterCount != 0 {
-                                optionResult = ChatMessagePollOptionResult(normalized: CGFloat(count) / CGFloat(maxOptionVoterCount), absolute: CGFloat(count) / CGFloat(totalVoterCount))
+                                optionResult = ChatMessagePollOptionResult(normalized: CGFloat(count) / CGFloat(maxOptionVoterCount), percent: optionVoterCounts[i])
                             } else if poll.isClosed {
-                                optionResult = ChatMessagePollOptionResult(normalized: 0, absolute: 0)
+                                optionResult = ChatMessagePollOptionResult(normalized: 0, percent: 0)
                             }
                         } else if poll.isClosed {
-                            optionResult = ChatMessagePollOptionResult(normalized: 0, absolute: 0)
+                            optionResult = ChatMessagePollOptionResult(normalized: 0, percent: 0)
                         }
                         let result = makeLayout(item.account.peerId, item.presentationData, item.message, option, optionResult, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
                         boundingSize.width = max(boundingSize.width, result.minimumWidth + layoutConstants.bubble.borderInset * 2.0)
