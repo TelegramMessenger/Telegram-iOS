@@ -587,6 +587,111 @@ static void blendGradientARGB(int count, const VRle::Span *spans,
     }
 }
 
+template<class T>
+constexpr const T& clamp( const T& v, const T& lo, const T& hi)
+{
+    return v < lo ? lo : hi < v ? hi : v;
+}
+
+static const int buffer_size = 1024;
+static const int fixed_scale = 1 << 16;
+static void blend_transformed_argb(int count, const VRle::Span *spans, void *userData)
+{
+    VSpanData *data = reinterpret_cast<VSpanData *>(userData);
+    if (data->mBitmap.format != VBitmap::Format::ARGB32_Premultiplied
+        && data->mBitmap.format != VBitmap::Format::ARGB32) {
+        //@TODO other formats not yet handled.
+        return;
+    }
+
+    Operator op = getOperator(data, spans, count);
+    uint buffer[buffer_size];
+
+    const int image_x1 = data->mBitmap.x1;
+    const int image_y1 = data->mBitmap.y1;
+    const int image_x2 = data->mBitmap.x2 - 1;
+    const int image_y2 = data->mBitmap.y2 - 1;
+
+    if (data->fast_matrix) {
+        // The increment pr x in the scanline
+        int fdx = (int)(data->m11 * fixed_scale);
+        int fdy = (int)(data->m12 * fixed_scale);
+
+        while (count--) {
+            uint *target = data->buffer(spans->x, spans->y);
+
+            const float cx = spans->x + float(0.5);
+            const float cy = spans->y + float(0.5);
+
+            int x = int((data->m21 * cy
+                         + data->m11 * cx + data->dx) * fixed_scale);
+            int y = int((data->m22 * cy
+                         + data->m12 * cx + data->dy) * fixed_scale);
+
+            int length = spans->len;
+            const int coverage = (spans->coverage * data->mBitmap.const_alpha) >> 8;
+            while (length) {
+                int l = std::min(length, buffer_size);
+                const uint *end = buffer + l;
+                uint *b = buffer;
+                while (b < end) {
+                    int px = clamp(x >> 16, image_x1, image_x2);
+                    int py = clamp(y >> 16, image_y1, image_y2);
+                    *b = reinterpret_cast<const uint *>(data->mBitmap.scanLine(py))[px];
+
+                    x += fdx;
+                    y += fdy;
+                    ++b;
+                }
+                op.func(target, buffer, l, coverage);
+                target += l;
+                length -= l;
+            }
+            ++spans;
+        }
+    } else {
+        const float fdx = data->m11;
+        const float fdy = data->m12;
+        const float fdw = data->m13;
+        while (count--) {
+            uint *target = data->buffer(spans->x, spans->y);
+
+            const float cx = spans->x + float(0.5);
+            const float cy = spans->y + float(0.5);
+
+            float x = data->m21 * cy + data->m11 * cx + data->dx;
+            float y = data->m22 * cy + data->m12 * cx + data->dy;
+            float w = data->m23 * cy + data->m13 * cx + data->m33;
+
+            int length = spans->len;
+            const int coverage = (spans->coverage * data->mBitmap.const_alpha) >> 8;
+            while (length) {
+                int l = std::min(length, buffer_size);
+                const uint *end = buffer + l;
+                uint *b = buffer;
+                while (b < end) {
+                    const float iw = w == 0 ? 1 : 1 / w;
+                    const float tx = x * iw;
+                    const float ty = y * iw;
+                    const int px = clamp(int(tx) - (tx < 0), image_x1, image_x2);
+                    const int py = clamp(int(ty) - (ty < 0), image_y1, image_y2);
+
+                    *b = reinterpret_cast<const uint *>(data->mBitmap.scanLine(py))[px];
+                    x += fdx;
+                    y += fdy;
+                    w += fdw;
+
+                    ++b;
+                }
+                op.func(target, buffer, l, coverage);
+                target += l;
+                length -= l;
+            }
+            ++spans;
+        }
+    }
+}
+
 static void blend_untransformed_argb(int count, const VRle::Span *spans, void *userData)
 {
     VSpanData *data = reinterpret_cast<VSpanData *>(userData);
@@ -631,6 +736,8 @@ static void blend_untransformed_argb(int count, const VRle::Span *spans, void *u
 void VSpanData::setup(const VBrush &brush, VPainter::CompositionMode /*mode*/,
                       int /*alpha*/)
 {
+    transformType = VMatrix::MatrixType::None;
+
     switch (brush.type()) {
     case VBrush::Type::NoBrush:
         mType = VSpanData::Type::None;
@@ -667,6 +774,13 @@ void VSpanData::setup(const VBrush &brush, VPainter::CompositionMode /*mode*/,
         setupMatrix(brush.mGradient->mMatrix);
         break;
     }
+    case VBrush::Type::Texture: {
+        mType = VSpanData::Type::Texture;
+        initTexture(&brush.mTexture, 255, VBitmapData::Plain,
+                    VRect(0, 0, brush.mTexture.width(), brush.mTexture.height()));
+        setupMatrix(brush.mMatrix);
+        break;
+    }
     default:
         break;
     }
@@ -685,13 +799,18 @@ void VSpanData::setupMatrix(const VMatrix &matrix)
     m33 = inv.m33;
     dx = inv.mtx;
     dy = inv.mty;
+    transformType = inv.type();
 
-    // const bool affine = inv.isAffine();
-    //    fast_matrix = affine
-    //        && m11 * m11 + m21 * m21 < 1e4
-    //        && m12 * m12 + m22 * m22 < 1e4
-    //        && fabs(dx) < 1e4
-    //        && fabs(dy) < 1e4;
+    const bool affine = inv.isAffine();
+    const float f1 = m11 * m11 + m21 * m21;
+    const float f2 = m12 * m12 + m22 * m22;
+    fast_matrix = affine
+        && f1 < 1e4
+        && f2 < 1e4
+        && f1 > (1.0 / 65536)
+        && f2 > (1.0 / 65536)
+        && fabs(dx) < 1e4
+        && fabs(dy) < 1e4;
 }
 
 void VSpanData::initTexture(const VBitmap *bitmap, int alpha, VBitmapData::Type type, const VRect &sourceRect)
@@ -730,7 +849,11 @@ void VSpanData::updateSpanFunc()
     }
     case VSpanData::Type::Texture: {
         //@TODO update proper image function.
-        mUnclippedBlendFunc = &blend_untransformed_argb;
+        if (transformType <= VMatrix::MatrixType::Translate){
+            mUnclippedBlendFunc = &blend_untransformed_argb;
+        } else {
+            mUnclippedBlendFunc = &blend_transformed_argb;
+        }
         break;
     }
     }

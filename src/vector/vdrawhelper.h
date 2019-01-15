@@ -176,6 +176,8 @@ struct VSpanData {
         VBitmapData   mBitmap;
     };
     float m11, m12, m13, m21, m22, m23, m33, dx, dy;  // inverse xform matrix
+    bool fast_matrix{true};
+    VMatrix::MatrixType   transformType{VMatrix::MatrixType::None};
 };
 
 void        vInitDrawhelperFunctions();
