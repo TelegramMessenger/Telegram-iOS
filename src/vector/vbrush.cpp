@@ -85,7 +85,7 @@ VBrush::VBrush(int r, int g, int b, int a)
 {
 }
 
-VBrush::VBrush(const VGradient *gradient) : mType(VBrush::Type::NoBrush)
+VBrush::VBrush(const VGradient *gradient)
 {
     if (!gradient) return;
 
@@ -96,6 +96,19 @@ VBrush::VBrush(const VGradient *gradient) : mType(VBrush::Type::NoBrush)
     } else if (gradient->mType == VGradient::Type::Radial) {
         mType = VBrush::Type::RadialGradient;
     }
+}
+
+VBrush::VBrush(const VBitmap &texture)
+{
+    if (!texture.valid()) return;
+
+    mType = VBrush::Type::Texture;
+    mTexture = texture;
+}
+
+void VBrush::setMatrix(const VMatrix &m)
+{
+    mMatrix = m;
 }
 
 V_END_NAMESPACE

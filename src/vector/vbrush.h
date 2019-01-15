@@ -23,6 +23,7 @@
 #include "vglobal.h"
 #include "vmatrix.h"
 #include "vpoint.h"
+#include "vbitmap.h"
 
 V_BEGIN_NAMESPACE
 
@@ -78,12 +79,15 @@ public:
     VBrush(const VColor &color);
     VBrush(const VGradient *gradient);
     VBrush(int r, int g, int b, int a);
+    VBrush(const VBitmap &texture);
     inline VBrush::Type type() const { return mType; }
-
+    void setMatrix(const VMatrix &m);
 public:
     VBrush::Type     mType{Type::NoBrush};
     VColor           mColor;
     const VGradient *mGradient{nullptr};
+    VBitmap          mTexture;
+    VMatrix          mMatrix;
 };
 
 V_END_NAMESPACE
