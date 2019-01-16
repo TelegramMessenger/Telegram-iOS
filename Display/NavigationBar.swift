@@ -1013,10 +1013,10 @@ open class NavigationBar: ASDisplayNode {
             self.contentNode?.requestContainerLayout = { [weak self] transition in
                 self?.requestContainerLayout(transition)
             }
-            //let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
             if let contentNode = contentNode {
+                contentNode.clipsToBounds = true
                 contentNode.layer.removeAnimation(forKey: "opacity")
-                self.addSubnode(contentNode)
+                self.insertSubnode(contentNode, belowSubnode: self.stripeNode)
                 if animated {
                     contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
