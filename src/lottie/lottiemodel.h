@@ -422,6 +422,7 @@ public:
     long frameAtTime(double timeInSec) const {
         return isStatic() ? startFrame() : frameAtPos(timeInSec / duration());
     }
+    size_t totalFrame() const {return mEndFrame - mStartFrame;}
     long frameDuration() const {return mEndFrame - mStartFrame -1;}
     float frameRate() const {return mFrameRate;}
     long startFrame() const {return mStartFrame;}
@@ -797,6 +798,7 @@ class LOTModel
 public:
    bool  isStatic() const {return mRoot->isStatic();}
    double duration() const {return mRoot->duration();}
+   size_t totalFrame() const {return mRoot->totalFrame();}
    size_t frameDuration() const {return mRoot->frameDuration();}
    size_t frameRate() const {return mRoot->frameRate();}
    size_t startFrame() const {return mRoot->startFrame();}

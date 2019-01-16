@@ -43,7 +43,7 @@ public:
     VSize   size() const {return mCompItem->size();}
     double  duration() const {return mModel->duration();}
     double  frameRate() const {return mModel->frameRate();}
-    size_t  totalFrame() const {return mModel->frameDuration();}
+    size_t  totalFrame() const {return mModel->totalFrame();}
     size_t  frameAtPos(double pos) const {return mModel->frameAtPos(pos);}
     Surface render(size_t frameNo, const Surface &surface);
     std::future<Surface> renderAsync(size_t frameNo, Surface &&surface);
