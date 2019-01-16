@@ -121,7 +121,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     private var controllerInteraction: ThemeGridControllerInteraction?
     
-    private let presentPreviewController: (WallpaperListPreviewSource) -> Void
+    private let presentPreviewController: (WallpaperListSource) -> Void
     private let presentGallery: () -> Void
     private let presentColors: () -> Void
     private let emptyStateUpdated: (Bool) -> Void
@@ -161,7 +161,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(account: Account, presentationData: PresentationData, presentPreviewController: @escaping (WallpaperListPreviewSource) -> Void, presentGallery: @escaping () -> Void, presentColors: @escaping () -> Void, emptyStateUpdated: @escaping (Bool) -> Void, deleteWallpapers: @escaping ([TelegramWallpaper], @escaping () -> Void) -> Void, shareWallpapers: @escaping ([TelegramWallpaper]) -> Void, popViewController: @escaping () -> Void) {
+    init(account: Account, presentationData: PresentationData, presentPreviewController: @escaping (WallpaperListSource) -> Void, presentGallery: @escaping () -> Void, presentColors: @escaping () -> Void, emptyStateUpdated: @escaping (Bool) -> Void, deleteWallpapers: @escaping ([TelegramWallpaper], @escaping () -> Void) -> Void, shareWallpapers: @escaping ([TelegramWallpaper]) -> Void, popViewController: @escaping () -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.presentPreviewController = presentPreviewController
@@ -217,7 +217,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 if let entries = entries, !entries.isEmpty {
                     let wallpapers = entries.map { $0.wallpaper }
                     
-                    var mode: PresentationWallpaperMode?
+                    var mode: WallpaperPresentationOptions?
                     if wallpaper == strongSelf.presentationData.chatWallpaper {
                         mode = strongSelf.presentationData.chatWallpaperMode
                     }

@@ -410,7 +410,7 @@ func openChatWallpaper(account: Account, message: Message, present: @escaping (V
             let _ = (resolveUrl(account: account, url: content.url)
             |> deliverOnMainQueue).start(next: { resolvedUrl in
                 if case let .wallpaper(parameter) = resolvedUrl {
-                    let source: WallpaperListPreviewSource
+                    let source: WallpaperListSource
                     switch parameter {
                         case let .slug(slug):
                             source = .slug(slug, content.file)

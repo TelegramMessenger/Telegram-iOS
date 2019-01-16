@@ -388,7 +388,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         }
         if self.theme != theme {
             self.backgroundNode.backgroundColor = theme.background
-            if fieldStyle != .modern {
+            if self.fieldStyle != .modern {
                 self.separatorNode.backgroundColor = theme.separator
             }
             self.textBackgroundNode.image = generateBackground(foregroundColor: theme.inputFill, diameter: self.fieldStyle.cornerDiameter)

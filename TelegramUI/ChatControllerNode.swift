@@ -241,7 +241,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, mode: chatPresentationInterfaceState.chatWallpaperMode, postbox: account.postbox)
-        if case .perspective = chatPresentationInterfaceState.chatWallpaperMode {
+        if chatPresentationInterfaceState.chatWallpaperMode.contains(.motion) {
             self.backgroundNode.parallaxEnabled = true
         }
         self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
@@ -540,28 +540,28 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         self.containerLayoutAndNavigationBarHeight = (layout, navigationBarHeight)
         
-        let transitionIsAnimated: Bool
-        if case .immediate = transition {
-            transitionIsAnimated = false
-        } else {
-            transitionIsAnimated = true
-        }
-        
-        if let _ = self.chatPresentationInterfaceState.search, let interfaceInteraction = self.interfaceInteraction {
-            var activate = false
-            if self.searchNavigationNode == nil {
-                activate = true
-                self.searchNavigationNode = ChatSearchNavigationContentNode(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, chatLocation: self.chatPresentationInterfaceState.chatLocation, interaction: interfaceInteraction)
-            }
-            self.navigationBar?.setContentNode(self.searchNavigationNode, animated: transitionIsAnimated)
-            self.searchNavigationNode?.update(presentationInterfaceState: self.chatPresentationInterfaceState)
-            if activate {
-                self.searchNavigationNode?.activate()
-            }
-        } else if let _ = self.searchNavigationNode {
-            self.searchNavigationNode = nil
-            self.navigationBar?.setContentNode(nil, animated: transitionIsAnimated)
-        }
+//        let transitionIsAnimated: Bool
+//        if case .immediate = transition {
+//            transitionIsAnimated = false
+//        } else {
+//            transitionIsAnimated = true
+//        }
+//
+//        if let _ = self.chatPresentationInterfaceState.search, let interfaceInteraction = self.interfaceInteraction {
+//            var activate = false
+//            if self.searchNavigationNode == nil {
+//                activate = true
+//                self.searchNavigationNode = ChatSearchNavigationContentNode(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, chatLocation: self.chatPresentationInterfaceState.chatLocation, interaction: interfaceInteraction)
+//            }
+//            self.navigationBar?.setContentNode(self.searchNavigationNode, animated: transitionIsAnimated)
+//            self.searchNavigationNode?.update(presentationInterfaceState: self.chatPresentationInterfaceState)
+//            if activate {
+//                self.searchNavigationNode?.activate()
+//            }
+//        } else if let _ = self.searchNavigationNode {
+//            self.searchNavigationNode = nil
+//            self.navigationBar?.setContentNode(nil, animated: transitionIsAnimated)
+//        }
         
         var dismissedTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
         var immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance = false
@@ -1316,12 +1316,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if self.chatPresentationInterfaceState != chatPresentationInterfaceState {
             let themeUpdated = self.chatPresentationInterfaceState.theme !== chatPresentationInterfaceState.theme
             
-            if self.chatPresentationInterfaceState.chatWallpaper != chatPresentationInterfaceState.chatWallpaper {
+            if self.chatPresentationInterfaceState.chatWallpaper != chatPresentationInterfaceState.chatWallpaper ||  self.chatPresentationInterfaceState.chatWallpaperMode != chatPresentationInterfaceState.chatWallpaperMode {
                 self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, mode: chatPresentationInterfaceState.chatWallpaperMode, postbox: account.postbox)
-            }
-            
-            if self.chatPresentationInterfaceState.chatWallpaperMode != chatPresentationInterfaceState.chatWallpaperMode {
-                if case .perspective = chatPresentationInterfaceState.chatWallpaperMode {
+
+                if chatPresentationInterfaceState.chatWallpaperMode.contains(.motion) {
                     self.backgroundNode.parallaxEnabled = true
                 } else {
                     self.backgroundNode.parallaxEnabled = false
@@ -1392,6 +1390,29 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             
             let layoutTransition: ContainedViewLayoutTransition = transition
+            
+            let transitionIsAnimated: Bool
+            if case .immediate = transition {
+                transitionIsAnimated = false
+            } else {
+                transitionIsAnimated = true
+            }
+            
+            if let _ = self.chatPresentationInterfaceState.search, let interfaceInteraction = self.interfaceInteraction {
+                var activate = false
+                if self.searchNavigationNode == nil {
+                    activate = true
+                    self.searchNavigationNode = ChatSearchNavigationContentNode(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, chatLocation: self.chatPresentationInterfaceState.chatLocation, interaction: interfaceInteraction)
+                }
+                self.navigationBar?.setContentNode(self.searchNavigationNode, animated: transitionIsAnimated)
+                self.searchNavigationNode?.update(presentationInterfaceState: self.chatPresentationInterfaceState)
+                if activate {
+                    self.searchNavigationNode?.activate()
+                }
+            } else if let _ = self.searchNavigationNode {
+                self.searchNavigationNode = nil
+                self.navigationBar?.setContentNode(nil, animated: transitionIsAnimated)
+            }
             
             if updatedInputFocus {
                 if !self.ignoreUpdateHeight {

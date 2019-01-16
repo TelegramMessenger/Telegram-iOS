@@ -47,7 +47,7 @@ final class RadialCheckContentNode: RadialStatusContentNode {
         self.isLayerBacked = true
     }
     
-    func animateProgress() {
+    func animateProgress(delay: Double) {
         self.animationCompletionTimer?.invalidate()
         self.animationCompletionTimer = nil
         let animation = POPBasicAnimation()
@@ -64,6 +64,7 @@ final class RadialCheckContentNode: RadialStatusContentNode {
         animation.toValue = 1.0 as NSNumber
         animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
         animation.duration = 0.25
+        animation.beginTime = delay
         animation.completionBlock = { [weak self] _, _ in
             if let strongSelf = self {
                 strongSelf.animationCompletionTimer?.invalidate()
@@ -163,10 +164,10 @@ final class RadialCheckContentNode: RadialStatusContentNode {
         self.layer.animateScale(from: 1.0, to: 0.6, duration: duration, removeOnCompletion: false)
     }
     
-    override func animateIn(from: RadialStatusNodeState) {
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
-        self.layer.animateScale(from: 0.7, to: 1.0, duration: duration)
-        self.animateProgress()
+    override func animateIn(from: RadialStatusNodeState, delay: Double) {
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, delay: delay)
+        self.layer.animateScale(from: 0.7, to: 1.0, duration: duration, delay: delay)
+        self.animateProgress(delay: delay)
     }
 }
 

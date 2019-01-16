@@ -291,11 +291,19 @@ final class WallpaperColorPickerNode: ASDisplayNode {
             return
         }
         
+        let location = recognizer.location(in: recognizer.view)
         let transition = recognizer.translation(in: recognizer.view)
-        let newHue = max(0.0, min(1.0, self.colorHSV.0 + transition.x / size.width))
-        let newSaturation = max(0.0, min(1.0, self.colorHSV.1 - transition.y / (size.height - 66.0)))
-        self.colorHSV.0 = newHue
-        self.colorHSV.1 = newSaturation
+        if recognizer.state == .began {
+            let newHue = max(0.0, min(1.0, location.x / size.width))
+            let newSaturation = max(0.0, min(1.0, (1.0 - location.y / (size.height - 66.0))))
+            self.colorHSV.0 = newHue
+            self.colorHSV.1 = newSaturation
+        } else {
+            let newHue = max(0.0, min(1.0, self.colorHSV.0 + transition.x / size.width))
+            let newSaturation = max(0.0, min(1.0, self.colorHSV.1 - transition.y / (size.height - 66.0)))
+            self.colorHSV.0 = newHue
+            self.colorHSV.1 = newSaturation
+        }
         
         switch recognizer.state {
             case .began:

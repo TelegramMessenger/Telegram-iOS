@@ -3619,7 +3619,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         
         if let button = leftNavigationButtonForChatInterfaceState(updatedChatPresentationInterfaceState, strings: updatedChatPresentationInterfaceState.strings, currentButton: self.leftNavigationButton, target: self, selector: #selector(self.leftNavigationButtonAction))  {
             if self.leftNavigationButton != button {
-                self.navigationItem.setLeftBarButton(button.buttonItem, animated: transition.isAnimated)
+                var animated = transition.isAnimated
+                if let currentButton = self.leftNavigationButton?.action, currentButton == button.action {
+                    animated = false
+                }
+                self.navigationItem.setLeftBarButton(button.buttonItem, animated: animated)
                 self.leftNavigationButton = button
             }
         } else if let _ = self.leftNavigationButton {
@@ -3629,7 +3633,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         
         if let button = rightNavigationButtonForChatInterfaceState(updatedChatPresentationInterfaceState, strings: updatedChatPresentationInterfaceState.strings, currentButton: self.rightNavigationButton, target: self, selector: #selector(self.rightNavigationButtonAction), chatInfoNavigationButton: self.chatInfoNavigationButton) {
             if self.rightNavigationButton != button {
-                self.navigationItem.setRightBarButton(button.buttonItem, animated: transition.isAnimated)
+                var animated = transition.isAnimated
+                if let currentButton = self.rightNavigationButton?.action, currentButton == button.action {
+                    animated = false
+                }
+                self.navigationItem.setRightBarButton(button.buttonItem, animated: animated)
                 self.rightNavigationButton = button
             }
         } else if let _ = self.rightNavigationButton {

@@ -35,7 +35,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case fontSizeHeader(PresentationTheme, String)
     case fontSize(PresentationTheme, PresentationFontSize)
     case chatPreviewHeader(PresentationTheme, String)
-    case chatPreview(PresentationTheme, PresentationTheme, TelegramWallpaper, PresentationWallpaperMode, PresentationFontSize, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder)
+    case chatPreview(PresentationTheme, PresentationTheme, TelegramWallpaper, WallpaperPresentationOptions, PresentationFontSize, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder)
     case wallpaper(PresentationTheme, String)
     case accentColor(PresentationTheme, String, Int32)
     case autoNightTheme(PresentationTheme, String, String)
@@ -210,7 +210,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func themeSettingsControllerEntries(presentationData: PresentationData, theme: PresentationTheme, themeAccentColor: Int32?, autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, wallpaperMode: PresentationWallpaperMode, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, disableAnimations: Bool) -> [ThemeSettingsControllerEntry] {
+private func themeSettingsControllerEntries(presentationData: PresentationData, theme: PresentationTheme, themeAccentColor: Int32?, autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, wallpaperMode: WallpaperPresentationOptions, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, disableAnimations: Bool) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
     entries.append(.fontSizeHeader(presentationData.theme, strings.Appearance_TextSize))
@@ -270,25 +270,25 @@ public func themeSettingsController(account: Account) -> ViewController {
                 wallpaper = .color(0x18222D)
                 theme = .builtin(.nightAccent)
             }
-            return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperMode: .still, theme: theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+            return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: [], theme: theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
         }).start()
     }, selectFontSize: { size in
         let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
-            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, chatWallpaperMode: current.chatWallpaperMode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: size, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, chatWallpaperOptions: current.chatWallpaperOptions, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: size, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
         }).start()
     }, openWallpaperSettings: {
         pushControllerImpl?(ThemeGridController(account: account))
     }, openAccentColor: { color in
         presentControllerImpl?(ThemeAccentColorActionSheet(account: account, currentValue: color, applyValue: { color in
             let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
-                return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, chatWallpaperMode: current.chatWallpaperMode, theme: current.theme, themeAccentColor: color, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, chatWallpaperOptions: current.chatWallpaperOptions, theme: current.theme, themeAccentColor: color, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
             }).start()
         }))
     }, openAutoNightTheme: {
         pushControllerImpl?(themeAutoNightSettingsController(account: account))
     }, disableAnimations: { disabled in
         let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
-            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, chatWallpaperMode: current.chatWallpaperMode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: disabled)
+            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, chatWallpaperOptions: current.chatWallpaperOptions, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: disabled)
         }).start()
     })
     
@@ -304,7 +304,7 @@ public func themeSettingsController(account: Account) -> ViewController {
             let theme: PresentationTheme
             let fontSize: PresentationFontSize
             let wallpaper: TelegramWallpaper
-            let wallpaperMode: PresentationWallpaperMode
+            let wallpaperMode: WallpaperPresentationOptions
             let strings: PresentationStrings
             let dateTimeFormat: PresentationDateTimeFormat
             let disableAnimations: Bool
@@ -324,7 +324,7 @@ public func themeSettingsController(account: Account) -> ViewController {
                 }
             }
             wallpaper = settings.chatWallpaper
-            wallpaperMode = settings.chatWallpaperMode
+            wallpaperMode = settings.chatWallpaperOptions
             fontSize = settings.fontSize
             
             if let localizationSettings = preferences.values[localizationSettingsKey] as? LocalizationSettings {

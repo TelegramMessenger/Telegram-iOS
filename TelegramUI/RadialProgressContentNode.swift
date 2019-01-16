@@ -152,14 +152,16 @@ private final class RadialProgressContentSpinnerNode: ASDisplayNode {
         super.willEnterHierarchy()
         
         let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-        basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
         basicAnimation.duration = 1.5
-        let fromValue = Float.pi + 0.33
+        var fromValue = Float.pi + 0.58
+        if let presentation = self.layer.presentation(), let value = (presentation.value(forKeyPath: "transform.rotation.z") as? NSNumber)?.floatValue {
+            fromValue = value
+        }
         basicAnimation.fromValue = NSNumber(value: fromValue)
         basicAnimation.toValue = NSNumber(value: fromValue + Float.pi * 2.0)
         basicAnimation.repeatCount = Float.infinity
         basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
-        basicAnimation.beginTime = 0.0 //1.0
+        basicAnimation.beginTime = 0.0
         
         self.layer.add(basicAnimation, forKey: "progressRotation")
     }
@@ -274,14 +276,6 @@ final class RadialProgressContentNode: RadialStatusContentNode {
         }
     }
     
-    override func enqueueReadyForTransition(_ f: @escaping () -> Void) {
-        if self.spinnerNode.isAnimatingProgress && self.progress == 1.0 {
-            self.enqueuedReadyForTransition = f
-        } else {
-            f()
-        }
-    }
-    
     override func layout() {
         super.layout()
         
@@ -291,10 +285,9 @@ final class RadialProgressContentNode: RadialStatusContentNode {
         self.cancelNode.frame = bounds
     }
     
-    override func prepareAnimateOut(completion: @escaping () -> Void) {
-        self.cancelNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.15, removeOnCompletion: false, completion: { _ in
-            completion()
-        })
+    override func prepareAnimateOut(completion: @escaping (Double) -> Void) {
+        self.cancelNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.15, removeOnCompletion: false, completion: { _ in })
+        completion(0.0)
     }
     
     override func animateOut(to: RadialStatusNodeState, completion: @escaping () -> Void) {
@@ -308,11 +301,11 @@ final class RadialProgressContentNode: RadialStatusContentNode {
         self.spinnerNode.progress = self.progress
     }
     
-    override func animateIn(from: RadialStatusNodeState) {
+    override func animateIn(from: RadialStatusNodeState, delay: Double) {
         if case .download = from {
         } else {
-            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay)
         }
-        self.cancelNode.layer.animateScale(from: 0.2, to: 1.0, duration: 0.2)
+        self.cancelNode.layer.animateScale(from: 0.2, to: 1.0, duration: 0.2, delay: delay)
     }
 }

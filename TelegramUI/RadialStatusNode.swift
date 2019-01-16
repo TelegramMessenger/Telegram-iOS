@@ -173,23 +173,18 @@ public final class RadialStatusNode: ASControlNode {
                                 }
                             }
                         })
-                        previousContentNode.prepareAnimateOut(completion: {
+                        previousContentNode.prepareAnimateOut(completion: { delay in
                             if let contentNode = strongSelf.contentNode {
                                 strongSelf.addSubnode(contentNode)
                                 contentNode.frame = strongSelf.bounds
                                 contentNode.prepareAnimateIn(from: fromState)
                                 if strongSelf.isNodeLoaded {
                                     contentNode.layout()
-                                    contentNode.animateIn(from: fromState)
+                                    contentNode.animateIn(from: fromState, delay: delay)
                                 }
                             }
-                            if backgroundColor != nil {
-                                strongSelf.transitionToBackgroundColor(backgroundColor, previousContentNode: previousContentNode, animated: animated, completion: completion)
-                            }
-                        })
-                        if backgroundColor == nil {
                             strongSelf.transitionToBackgroundColor(backgroundColor, previousContentNode: previousContentNode, animated: animated, completion: completion)
-                        }
+                        })
                     } else {
                         previousContentNode.removeFromSupernode()
                         strongSelf.contentNode = strongSelf.nextContentNode

@@ -220,7 +220,7 @@ class ThemeGalleryController: ViewController {
                                 wallpaper = value
                         }
                         let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in                            
-                            return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperMode: .still, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                            return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: [], theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                         }) |> deliverOnMainQueue).start(completed: {
                             self?.dismiss(forceAway: true)
                         })

@@ -6,20 +6,6 @@ import TelegramCore
 import SwiftSignalKit
 import Photos
 
-enum WallpaperListType {
-    case wallpapers(PresentationWallpaperMode?)
-    case colors
-}
-
-enum WallpaperListPreviewSource {
-    case list(wallpapers: [TelegramWallpaper], central: TelegramWallpaper, type: WallpaperListType)
-    case wallpaper(TelegramWallpaper)
-    case slug(String, TelegramMediaFile?)
-    case asset(PHAsset, UIImage?)
-    case contextResult(ChatContextResult)
-    case customColor(Int32?)
-}
-
 final class WallpaperListPreviewController: ViewController {
     private var controllerNode: WallpaperListPreviewControllerNode {
         return self.displayNode as! WallpaperListPreviewControllerNode
@@ -31,7 +17,7 @@ final class WallpaperListPreviewController: ViewController {
     }
     
     private let account: Account
-    private let source: WallpaperListPreviewSource
+    private let source: WallpaperListSource
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -41,9 +27,9 @@ final class WallpaperListPreviewController: ViewController {
     
     private var didPlayPresentationAnimation = false
     
-    var apply: ((WallpaperEntry, PresentationWallpaperMode, CGRect?) -> Void)?
+    var apply: ((WallpaperEntry, WallpaperPresentationOptions, CGRect?) -> Void)?
     
-    init(account: Account, source: WallpaperListPreviewSource) {
+    init(account: Account, source: WallpaperListSource) {
         self.account = account
         self.source = source
         
@@ -121,7 +107,7 @@ final class WallpaperListPreviewController: ViewController {
                 case let .wallpaper(wallpaper):
                     let completion: () -> Void = {
                         let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in
-                            return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperMode: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                            return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                         })
                             |> deliverOnMainQueue).start(completed: {
                                 self?.dismiss()
@@ -133,7 +119,7 @@ final class WallpaperListPreviewController: ViewController {
                         let _ = installWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
                     }
                     
-                    if case .blurred = mode {
+                    if mode.contains(.blur) {
                         var resource: MediaResource?
                         switch wallpaper {
                             case let .file(file):
