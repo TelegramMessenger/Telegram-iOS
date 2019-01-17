@@ -244,7 +244,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         super.init()
         
         self.textNode.highlightAttributeAction = { attributes in
-            var highlightedAttributes = [TelegramTextAttributes.URL,
+            let highlightedAttributes = [TelegramTextAttributes.URL,
                                          TelegramTextAttributes.PeerMention,
                                          TelegramTextAttributes.PeerTextMention,
                                          TelegramTextAttributes.BotCommand,

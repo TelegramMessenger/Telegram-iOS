@@ -165,16 +165,10 @@ public final class RadialStatusNode: ASControlNode {
             contentNode.enqueueReadyForTransition { [weak contentNode, weak self] in
                 if let strongSelf = self, let previousContentNode = contentNode, strongSelf.contentNode === contentNode {
                     if animated {
-                        strongSelf.contentNode = strongSelf.nextContentNode
-                        previousContentNode.animateOut(to: state, completion: { [weak contentNode] in
-                            if let strongSelf = self, let contentNode = contentNode {
-                                if contentNode !== strongSelf.contentNode {
-                                    contentNode.removeFromSupernode()
-                                }
-                            }
-                        })
+                        let nextContentNode = strongSelf.nextContentNode
+                        strongSelf.contentNode = nextContentNode
                         previousContentNode.prepareAnimateOut(completion: { delay in
-                            if let contentNode = strongSelf.contentNode {
+                            if let contentNode = strongSelf.contentNode, nextContentNode === contentNode {
                                 strongSelf.addSubnode(contentNode)
                                 contentNode.frame = strongSelf.bounds
                                 contentNode.prepareAnimateIn(from: fromState)
@@ -184,6 +178,13 @@ public final class RadialStatusNode: ASControlNode {
                                 }
                             }
                             strongSelf.transitionToBackgroundColor(backgroundColor, previousContentNode: previousContentNode, animated: animated, completion: completion)
+                        })
+                        previousContentNode.animateOut(to: state, completion: { [weak contentNode] in
+                            if let strongSelf = self, let contentNode = contentNode {
+                                if contentNode !== strongSelf.contentNode {
+                                    contentNode.removeFromSupernode()
+                                }
+                            }
                         })
                     } else {
                         previousContentNode.removeFromSupernode()

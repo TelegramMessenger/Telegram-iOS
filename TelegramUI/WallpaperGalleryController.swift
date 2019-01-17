@@ -101,7 +101,7 @@ class WallpaperGalleryController: ViewController {
                 //}
             case let .slug(slug, file):
                 if let file = file {
-                    self.entries = [.wallpaper(.file(id: 0, accessHash: 0, isCreator: false, slug: slug, file: file, color: nil))]
+                    self.entries = [.wallpaper(.file(id: 0, accessHash: 0, isCreator: false, isDefault: false, slug: slug, file: file))]
                     self.centralEntryIndex = 0
                 }
             case let .wallpaper(wallpaper):

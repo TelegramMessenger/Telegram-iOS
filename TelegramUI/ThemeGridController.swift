@@ -317,7 +317,7 @@ final class ThemeGridController: ViewController {
 
                     let _ = uploadWallpaper(account: account, resource: resource).start(next: { status in
                         if case let .complete(wallpaper) = status {
-                            if mode.contains(.blur), case let .file(_, _, _, _, file, _) = wallpaper {
+                            if mode.contains(.blur), case let .file(_, _, _, _, _, file) = wallpaper {
                                 let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
                                     updateWallpaper(wallpaper)
                                 })
@@ -346,7 +346,7 @@ final class ThemeGridController: ViewController {
         for wallpaper in wallpapers {
             var item: String?
             switch wallpaper {
-                case let .file(_, _, _, slug, _, _):
+                case let .file(_, _, _, _, slug, _):
                     item = slug
                 case let .color(color):
                     item = "\(String(UInt32(bitPattern: color), radix: 16, uppercase: false))"

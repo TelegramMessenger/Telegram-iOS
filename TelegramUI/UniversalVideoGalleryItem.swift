@@ -179,6 +179,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.statusButtonNode = HighlightableButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
+        self.statusNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 50.0, height: 50.0))
         
         self._title.set(.single(""))
         self._titleView.set(.single(nil))

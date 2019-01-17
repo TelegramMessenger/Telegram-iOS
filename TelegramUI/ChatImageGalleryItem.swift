@@ -170,6 +170,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.statusNodeContainer = HighlightableButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
+        self.statusNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 50.0, height: 50.0))
         self.statusNode.isHidden = true
         
         super.init()

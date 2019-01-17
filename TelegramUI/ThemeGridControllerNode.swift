@@ -5,6 +5,35 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
+private func areWallpapersEqual(_ lhs: TelegramWallpaper, _ rhs: TelegramWallpaper) -> Bool {
+    switch lhs {
+        case .builtin:
+            if case .builtin = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .color(color):
+            if case .color(color) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .image(representations):
+            if case .image(representations) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .file(lhsId, _, _, _, lhsSlug, _):
+            if case let .file(rhsId, _, _, _, rhsSlug, _) = rhs, lhsId == rhsId, lhsSlug == rhsSlug {
+                return true
+            } else {
+                return false
+            }
+    }
+}
+
 struct ThemeGridControllerNodeState: Equatable {
     let editing: Bool
     var selectedIndices: Set<Int>
@@ -267,7 +296,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             
             var hasCurrent = false
             for wallpaper in wallpapers {
-                let selected = presentationData.chatWallpaper == wallpaper
+                let selected = areWallpapersEqual(presentationData.chatWallpaper, wallpaper)
                 entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: selected))
                 hasCurrent = hasCurrent || selected
                 index += 1

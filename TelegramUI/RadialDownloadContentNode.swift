@@ -30,13 +30,8 @@ final class RadialDownloadContentNode: RadialStatusContentNode {
         }
     }
     
-    private var animationCompletionTimer: SwiftSignalKit.Timer?
-    
-    private var isAnimatingProgress: Bool {
-        return self.pop_animation(forKey: "progress") != nil || self.animationCompletionTimer != nil
-    }
-    
     private var enqueuedReadyForTransition: (() -> Void)?
+    private var isAnimatingTransition = false
     
     private let leftLine = CAShapeLayer()
     private let rightLine = CAShapeLayer()
@@ -69,7 +64,7 @@ final class RadialDownloadContentNode: RadialStatusContentNode {
     }
     
     override func enqueueReadyForTransition(_ f: @escaping () -> Void) {
-        if self.isAnimatingProgress {
+        if self.isAnimatingTransition {
             self.enqueuedReadyForTransition = f
         } else {
             f()
@@ -163,8 +158,13 @@ final class RadialDownloadContentNode: RadialStatusContentNode {
     }
     
     override func animateOut(to: RadialStatusNodeState, completion: @escaping () -> Void) {
-        self.arrowBody.animateStrokeStart(from: 0.65, to: 0.0, duration: 0.5, removeOnCompletion: false, completion: { _ in
+        self.isAnimatingTransition = true
+        self.arrowBody.animateStrokeStart(from: 0.65, to: 0.0, duration: 0.5, removeOnCompletion: false, completion: { [weak self] _ in
             completion()
+            if let strongSelf = self, strongSelf.isAnimatingTransition, let f = strongSelf.enqueuedReadyForTransition {
+                strongSelf.isAnimatingTransition = false
+                f()
+            }
         })
         self.arrowBody.animateStrokeEnd(from: 1.0, to: 0.0, duration: 0.5, removeOnCompletion: false, completion: nil)
         self.arrowBody.animateAlpha(from: 1.0, to: 0.0, duration: 0.01, delay: 0.4, removeOnCompletion: false)

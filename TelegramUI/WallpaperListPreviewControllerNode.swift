@@ -508,7 +508,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                 }
             case let .slug(slug, file):
                 if let file = file {
-                    let entry = WallpaperEntry.wallpaper(.file(id: 0, accessHash: 0, isCreator: false, slug: slug, file: file, color: nil))
+                    let entry = WallpaperEntry.wallpaper(.file(id: 0, accessHash: 0, isCreator: false, isDefault: false, slug: slug, file: file))
                     self.wallpapers = [entry]
                     self.centralWallpaper = entry
                 }

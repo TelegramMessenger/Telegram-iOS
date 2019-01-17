@@ -180,7 +180,7 @@ final class WallpaperListPreviewController: ViewController {
         if let entry = self.wallpaper, case let .wallpaper(wallpaper) = entry {
             var controller: ShareController?
             switch wallpaper {
-                case let .file(_, _, _, slug, _, _):
+                case let .file(_, _, _, _, slug, _):
                     controller = ShareController(account: account, subject: .url("https://t.me/bg/\(slug)"))
                 case let .color(color):
                     controller = ShareController(account: account, subject: .url("https://t.me/bg/\(String(UInt32(bitPattern: color), radix: 16, uppercase: false).rightJustified(width: 6, pad: "0"))"))

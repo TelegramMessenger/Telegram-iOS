@@ -504,6 +504,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         node.isHidden = true
         self.clearButton.isHidden = true
         self.activityIndicator?.isHidden = true
+        self.iconNode.isHidden = false
         self.textField.prefixString = nil
         self.textField.text = ""
         self.textField.layoutSubviews()
@@ -553,14 +554,28 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         let textFieldFrame = self.textField.frame
         let targetLabelNodeFrame = CGRect(origin: CGPoint(x: node.labelNode.frame.minX + targetTextBackgroundFrame.origin.x - 4.0, y: targetTextBackgroundFrame.minY + floorToScreenPixels((targetTextBackgroundFrame.size.height - textFieldFrame.size.height) / 2.0)), size: textFieldFrame.size)
         self.textField.layer.animateFrame(from: self.textField.frame, to: targetLabelNodeFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
-        if let snapshot = node.labelNode.layer.snapshotContentTree() {
-            snapshot.frame = CGRect(origin: self.textField.placeholderLabel.frame.origin.offsetBy(dx: 0.0, dy: UIScreenPixel), size: node.labelNode.frame.size)
-            self.textField.layer.addSublayer(snapshot)
-            snapshot.animateAlpha(from: 0.0, to: 1.0, duration: duration * 2.0 / 3.0, timingFunction: kCAMediaTimingFunctionLinear)
-            self.textField.placeholderLabel.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 3.0 / 2.0, timingFunction: kCAMediaTimingFunctionLinear, removeOnCompletion: false)
+        if #available(iOSApplicationExtension 10.0, *) {
+            if let snapshot = node.labelNode.layer.snapshotContentTree() {
+                snapshot.frame = CGRect(origin: self.textField.placeholderLabel.frame.origin.offsetBy(dx: 0.0, dy: UIScreenPixel), size: node.labelNode.frame.size)
+                self.textField.layer.addSublayer(snapshot)
+                snapshot.animateAlpha(from: 0.0, to: 1.0, duration: duration * 2.0 / 3.0, timingFunction: kCAMediaTimingFunctionLinear)
+                self.textField.placeholderLabel.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: kCAMediaTimingFunctionLinear, removeOnCompletion: false)
+            }
+        } else if let cachedLayout = node.labelNode.cachedLayout {
+            let labelNode = TextNode()
+            labelNode.isOpaque = false
+            labelNode.isLayerBacked = true
+            let labelLayout = TextNode.asyncLayout(labelNode)
+            let (labelLayoutResult, labelApply) = labelLayout(TextNodeLayoutArguments(attributedString: self.placeholderString, backgroundColor: .clear, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: cachedLayout.size, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let _ = labelApply()
             
+            self.textField.addSubnode(labelNode)
+            labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 2.0 / 3.0, timingFunction: kCAMediaTimingFunctionLinear)
+            labelNode.frame = CGRect(origin: self.textField.placeholderLabel.frame.origin.offsetBy(dx: 0.0, dy: UIScreenPixel), size: labelLayoutResult.size)
+            self.textField.placeholderLabel.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: kCAMediaTimingFunctionLinear, removeOnCompletion: false, completion: { _ in
+                labelNode.removeFromSupernode()
+            })
         }
-        
         let iconFrame = self.iconNode.frame
         let targetIconFrame = CGRect(origin: node.iconNode.frame.offsetBy(dx: targetTextBackgroundFrame.origin.x, dy: targetTextBackgroundFrame.origin.y).origin, size: iconFrame.size)
         self.iconNode.image = node.iconNode.image
