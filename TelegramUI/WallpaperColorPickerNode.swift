@@ -244,6 +244,9 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         let colorPanRecognizer = UIPanGestureRecognizer(target: self, action: #selector(WallpaperColorPickerNode.colorPan))
         self.colorNode.view.addGestureRecognizer(colorPanRecognizer)
         
+        let colorTapRecognizer = UITapGestureRecognizer(target: self, action: #selector(WallpaperColorPickerNode.colorTap))
+        self.colorNode.view.addGestureRecognizer(colorTapRecognizer)
+        
         let brightnessPanRecognizer = UIPanGestureRecognizer(target: self, action: #selector(WallpaperColorPickerNode.brightnessPan))
         self.brightnessNode.view.addGestureRecognizer(brightnessPanRecognizer)
     }
@@ -286,6 +289,23 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         self.updateKnobLayout(size: size, panningColor: false, transition: transition)
     }
     
+    @objc private func colorTap(_ recognizer: UITapGestureRecognizer) {
+        guard let size = self.validLayout, recognizer.state == .recognized else {
+            return
+        }
+        
+        let location = recognizer.location(in: recognizer.view)
+        let newHue = max(0.0, min(1.0, location.x / size.width))
+        let newSaturation = max(0.0, min(1.0, (1.0 - location.y / (size.height - 66.0))))
+        self.colorHSV.0 = newHue
+        self.colorHSV.1 = newSaturation
+        
+        self.updateKnobLayout(size: size, panningColor: false, transition: .immediate)
+        
+        self.update()
+        self.colorChanged?(self.color)
+    }
+    
     @objc private func colorPan(_ recognizer: UIPanGestureRecognizer) {
         guard let size = self.validLayout else {
             return
@@ -307,7 +327,7 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         
         switch recognizer.state {
             case .began:
-                self.updateKnobLayout(size: size, panningColor: true, transition: .animated(duration: 0.3, curve: .easeInOut))
+                self.updateKnobLayout(size: size, panningColor: true, transition: .immediate)
             case .changed:
                 self.updateKnobLayout(size: size, panningColor: true, transition: .immediate)
                 recognizer.setTranslation(CGPoint(), in: recognizer.view)

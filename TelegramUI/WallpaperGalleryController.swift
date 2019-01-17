@@ -50,6 +50,17 @@ enum WallpaperGalleryEntry: Equatable {
     }
 }
 
+class WallpaperGalleryOverlayNode: ASDisplayNode {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        if result != self.view {
+            return result
+        } else {
+            return nil
+        }
+    }
+}
+
 class WallpaperGalleryController: ViewController {
     private var galleryNode: GalleryControllerNode {
         return self.displayNode as! GalleryControllerNode
@@ -57,7 +68,7 @@ class WallpaperGalleryController: ViewController {
     
     private let account: Account
     private let source: WallpaperListSource
-    var apply: ((WallpaperEntry, WallpaperPresentationOptions, CGRect?) -> Void)?
+    var apply: ((WallpaperGalleryEntry, WallpaperPresentationOptions, CGRect?) -> Void)?
     
     private let _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
@@ -79,6 +90,8 @@ class WallpaperGalleryController: ViewController {
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
+    private var overlayNode: WallpaperGalleryOverlayNode?
+    private var messageNodes: [ListViewItemNode]?
     private var toolbarNode: ThemeGalleryToolbarNode?
     
     init(account: Account, source: WallpaperListSource) {
@@ -119,24 +132,6 @@ class WallpaperGalleryController: ViewController {
                 self.centralEntryIndex = 0
         }
         
-//        let initialEntries: [ThemeGalleryEntry] = wallpapers.map { ThemeGalleryEntry.wallpaper($0) }
-//        let entriesSignal: Signal<[ThemeGalleryEntry], NoError> = .single(initialEntries)
-//
-//        self.disposable.set((entriesSignal |> deliverOnMainQueue).start(next: { [weak self] entries in
-//            if let strongSelf = self {
-//                strongSelf.entries = entries
-//                strongSelf.centralEntryIndex = wallpapers.index(of: centralWallpaper)!
-//                if strongSelf.isViewLoaded {
-//                    strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ ThemeGalleryItem(account: account, entry: $0) }), centralItemIndex: strongSelf.centralEntryIndex, keepFirst: true)
-//
-//                    let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
-//                        strongSelf?.didSetReady = true
-//                    }
-//                    strongSelf._ready.set(ready |> map { true })
-//                }
-//            }
-//        }))
-        
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
             |> deliverOnMainQueue).start(next: { [weak self] presentationData in
                 if let strongSelf = self {
@@ -150,15 +145,18 @@ class WallpaperGalleryController: ViewController {
                 }
             })
         
-        //self.centralItemAttributesDisposable.add(self.centralItemTitleView.get().start(next: { [weak self] titleView in
-        //    self?.navigationItem.titleView = titleView
-        //}))
-        
-//        self.centralItemAttributesDisposable.add(self.centralItemFooterContentNode.get().start(next: { [weak self] footerContentNode in
-//            self?.galleryNode.updatePresentationState({
-//                $0.withUpdatedFooterContentNode(footerContentNode)
-//            }, transition: .immediate)
-//        }))
+        self.centralItemAttributesDisposable.add(self.centralItemStatus.get().start(next: { [weak self] status in
+            if let strongSelf = self {
+                let enabled: Bool
+                switch status {
+                    case .Local:
+                        enabled = true
+                    default:
+                        enabled = false
+                }
+                strongSelf.toolbarNode?.setDoneEnabled(enabled)
+            }
+        }))
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -177,16 +175,12 @@ class WallpaperGalleryController: ViewController {
         self.toolbarNode?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
     }
     
-    @objc func donePressed() {
-        self.dismiss(forceAway: false)
-    }
-    
     private func dismiss(forceAway: Bool) {
-        let completion = { [weak self] in
+        let completion: () -> Void = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
-        //self.galleryNode.modalAnimateOut(completion: completion)
+        self.galleryNode.modalAnimateOut(completion: completion)
     }
     
     override func loadDisplayNode() {
@@ -203,27 +197,14 @@ class WallpaperGalleryController: ViewController {
         
         self.galleryNode.statusBar = self.statusBar
         self.galleryNode.navigationBar = self.navigationBar
-        
-        self.galleryNode.transitionDataForCentralItem = { [weak self] in
-//            if let strongSelf = self {
-//                if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode(), let presentationArguments = strongSelf.presentationArguments as? ThemePreviewControllerPresentationArguments {
-//                    if let transitionArguments = presentationArguments.transitionArguments(strongSelf.entries[centralItemNode.index]) {
-//                        return (transitionArguments.transitionNode, transitionArguments.addToTransitionSurface)
-//                    }
-//                }
-//            }
-            return nil
-        }
         self.galleryNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in
             if let strongSelf = self {
-                if let index = index {
-                    if let node = strongSelf.galleryNode.pager.centralItemNode() {
-                        //strongSelf.centralItemTitle.set(node.title())
-                    }
+                if let node = strongSelf.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
+                    strongSelf.centralItemStatus.set(node.status.get())
                 }
             }
         }
@@ -234,29 +215,36 @@ class WallpaperGalleryController: ViewController {
         
         let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
         let toolbarNode = ThemeGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings)
+        let overlayNode = WallpaperGalleryOverlayNode()
+        self.overlayNode = overlayNode
+        self.galleryNode.overlayNode = overlayNode
+        self.galleryNode.addSubnode(overlayNode)
+        
         self.toolbarNode = toolbarNode
-        self.galleryNode.addSubnode(toolbarNode)
-        self.galleryNode.toolbarNode = toolbarNode
+        overlayNode.addSubnode(toolbarNode)
+        
         toolbarNode.cancel = { [weak self] in
-            //self?.dismiss(forceAway: true)
+            self?.dismiss(forceAway: true)
         }
         toolbarNode.done = { [weak self] in
-//            if let strongSelf = self {
-//                if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode() {
-//                    if !strongSelf.entries.isEmpty {
-//                        let wallpaper: TelegramWallpaper
-//                        switch strongSelf.entries[centralItemNode.index] {
-//                        case let .wallpaper(value):
-//                            wallpaper = value
-//                        }
-//                        let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in
-//                            return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: [], theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
-//                        }) |> deliverOnMainQueue).start(completed: {
-//                            self?.dismiss(forceAway: true)
-//                        })
-//                    }
-//                }
-//            }
+            if let strongSelf = self {
+                if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode() {
+                    if !strongSelf.entries.isEmpty {
+                        let entry = strongSelf.entries[centralItemNode.index]
+                        switch entry {
+                            case let .wallpaper(wallpaper):
+                                let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in
+                                    return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: [], theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                                }) |> deliverOnMainQueue).start(completed: {
+                                    self?.dismiss(forceAway: true)
+                                })
+                            default:
+                                break
+                        }
+                        strongSelf.apply?(entry, [], nil)
+                    }
+                }
+            }
         }
         
         let ready = self.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak self] _ in
@@ -276,9 +264,128 @@ class WallpaperGalleryController: ViewController {
         
         self.galleryNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.galleryNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.overlayNode?.frame = self.galleryNode.bounds
+        
+        var items: [ChatMessageItem] = []
+        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 1)
+        let otherPeerId = self.account.peerId
+        var peers = SimpleDictionary<PeerId, Peer>()
+        let messages = SimpleDictionary<MessageId, Message>()
+        peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        peers[otherPeerId] = TelegramUser(id: otherPeerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        let controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
+            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openWallpaper: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+        }, presentController: { _, _ in }, navigationController: {
+            return nil
+        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
+        }, canSetupReply: { _ in
+            return false
+        }, navigateToFirstDateMessage: { _ in
+        }, requestRedeliveryOfFailedMessages: { _ in
+        }, addContact: { _ in
+        }, rateCall: { _, _ in
+        }, requestSelectMessagePollOption: { _, _ in
+        }, openAppStorePage: {
+        }, requestMessageUpdate: { _ in
+        }, cancelInteractiveKeyboardGestures: {
+        }, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings.defaultSettings,
+           pollActionState: ChatInterfacePollActionState())
+        
+        let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper), fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: false)
+        
+        let topMessageText: String
+        let bottomMessageText: String
+        switch self.source {
+            case .wallpaper, .slug:
+                topMessageText = presentationData.strings.WallpaperPreview_PreviewTopText
+                bottomMessageText = presentationData.strings.WallpaperPreview_PreviewBottomText
+            case let .list(_, _, type):
+                switch type {
+                    case .wallpapers:
+                        topMessageText = presentationData.strings.WallpaperPreview_SwipeTopText
+                        bottomMessageText = presentationData.strings.WallpaperPreview_SwipeBottomText
+                    case .colors:
+                        topMessageText = presentationData.strings.WallpaperPreview_SwipeColorsTopText
+                        bottomMessageText = presentationData.strings.WallpaperPreview_SwipeColorsBottomText
+                }
+            case .asset, .contextResult:
+                topMessageText = presentationData.strings.WallpaperPreview_CropTopText
+                bottomMessageText = presentationData.strings.WallpaperPreview_CropBottomText
+            case .customColor:
+                topMessageText = presentationData.strings.WallpaperPreview_CustomColorTopText
+                bottomMessageText = presentationData.strings.WallpaperPreview_CustomColorBottomText
+        }
+        
+        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
+        
+        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
+        
+        let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
+        if let messageNodes = self.messageNodes {
+            for i in 0 ..< items.count {
+                let itemNode = messageNodes[i]
+                items[i].updateNode(async: { $0() }, node: {
+                    return itemNode
+                }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None, completion: { (layout, apply) in
+                    let nodeFrame = CGRect(origin: itemNode.frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
+                    
+                    itemNode.contentSize = layout.contentSize
+                    itemNode.insets = layout.insets
+                    itemNode.frame = nodeFrame
+                    itemNode.isUserInteractionEnabled = false
+                    
+                    apply(ListViewItemApply(isOnScreen: true))
+                })
+            }
+        } else {
+            var messageNodes: [ListViewItemNode] = []
+            for i in 0 ..< items.count {
+                var itemNode: ListViewItemNode?
+                items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], completion: { node, apply in
+                    itemNode = node
+                    apply().1(ListViewItemApply(isOnScreen: true))
+                })
+                itemNode!.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+                itemNode!.isUserInteractionEnabled = false
+                messageNodes.append(itemNode!)
+                self.overlayNode?.addSubnode(itemNode!)
+            }
+            self.messageNodes = messageNodes
+        }
+        
+        var bottomInset = layout.intrinsicInsets.bottom + 49.0
+        
+        var optionsAvailable = true
+        if let centralItemNode = self.galleryNode.pager.centralItemNode() {
+            if !self.entries.isEmpty {
+                let entry = self.entries[centralItemNode.index]
+                switch entry {
+                    case let .wallpaper(wallpaper):
+                        switch wallpaper {
+                        case .color:
+                            optionsAvailable = false
+                        default:
+                            break
+                    }
+                    default:
+                        break
+                }
+            }
+        }
         
         transition.updateFrame(node: self.toolbarNode!, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 49.0 - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: 49.0 + layout.intrinsicInsets.bottom)))
         self.toolbarNode!.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)
+        
+        if let messageNodes = self.messageNodes {
+            var bottomOffset: CGFloat = layout.size.height - bottomInset - 9.0
+//            if optionsAvailable {
+//                bottomOffset -= segmentedControlSize.height + 37.0
+//            }
+            for itemNode in messageNodes {
+                transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: bottomOffset - itemNode.frame.height), size: itemNode.frame.size))
+                bottomOffset -= itemNode.frame.height
+            }
+        }
         
         let replace = self.validLayout == nil
         self.validLayout = (layout, 0.0)

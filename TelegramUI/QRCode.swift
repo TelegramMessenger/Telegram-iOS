@@ -76,7 +76,7 @@ func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil, sca
                 c.setFillColor(color.cgColor)
                 let _ = try? drawSvgPath(c, path: "M0.0,40 C0,20.3664202 20.1230605,0.0 32.5,0.0 C44.8769395,0.0 65,20.3664202 65,40 C65,47.217934 65,55.5505326 65,64.9977957 L32.5,79 L0.0,64.9977957 C0.0,55.0825772 0.0,46.7499786 0.0,40 Z")
                 
-                if false, let backgroundColor = backgroundColor {
+                if let backgroundColor = backgroundColor {
                     c.setFillColor(backgroundColor.cgColor)
                 } else {
                     c.setBlendMode(.clear)

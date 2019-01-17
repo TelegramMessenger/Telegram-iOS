@@ -996,7 +996,8 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     markAllChatsAsReadInteractively(transaction: transaction, viewTracker: account.viewTracker)
                 }
             }
-            let _ = signal.start(completed: { [weak self] in
+            let _ = (signal
+            |> deliverOnMainQueue).start(completed: { [weak self] in
                 self?.donePressed()
             })
         } else if !peerIds.isEmpty {
@@ -1034,7 +1035,8 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         progressDisposable.dispose()
                     }
                 }
-                let _ = signal.start(completed: {
+                let _ = (signal
+                |> deliverOnMainQueue).start(completed: {
                     self?.donePressed()
                 })
             }))

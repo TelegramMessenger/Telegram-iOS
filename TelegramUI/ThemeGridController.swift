@@ -64,10 +64,10 @@ final class ThemeGridController: ViewController {
             }
         })
         
-        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search, activate: { [weak self] in
-            self?.activateSearch()
-        })
-        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+//        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search, activate: { [weak self] in
+//            self?.activateSearch()
+//        })
+//        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -84,11 +84,11 @@ final class ThemeGridController: ViewController {
         
         if let isEmpty = self.isEmpty, isEmpty {
         } else {
-            if self.editingMode {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
-            } else {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
-            }
+//            if self.editingMode {
+//                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+//            } else {
+//                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+//            }
         }
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
@@ -103,19 +103,19 @@ final class ThemeGridController: ViewController {
     override func loadDisplayNode() {
         self.displayNode = ThemeGridControllerNode(account: self.account, presentationData: self.presentationData, presentPreviewController: { [weak self] source in
             if let strongSelf = self {
-                //let controller = WallpaperGalleryController(account: strongSelf.account, source: source)
-                //self?.present(controller, in: .window(.root), with: nil, blockInteraction: true)
-                let controller = WallpaperListPreviewController(account: strongSelf.account, source: source)
-                controller.apply = { [weak self, weak controller] wallpaper, mode, cropRect in
-                    if let strongSelf = self {
-                        strongSelf.uploadCustomWallpaper(wallpaper, mode: mode, cropRect: cropRect)
-                        if case .wallpaper = wallpaper {
-                        } else if let controller = controller {
-                            controller.dismiss()
-                        }
-                    }
-                }
+                let controller = WallpaperGalleryController(account: strongSelf.account, source: source)
                 self?.present(controller, in: .window(.root), with: nil, blockInteraction: true)
+//                let controller = WallpaperListPreviewController(account: strongSelf.account, source: source)
+//                controller.apply = { [weak self, weak controller] wallpaper, mode, cropRect in
+//                    if let strongSelf = self {
+//                        strongSelf.uploadCustomWallpaper(wallpaper, mode: mode, cropRect: cropRect)
+//                        if case .wallpaper = wallpaper {
+//                        } else if let controller = controller {
+//                            controller.dismiss()
+//                        }
+//                    }
+//                }
+//                self?.present(controller, in: .window(.root), with: nil, blockInteraction: true)
             }
         }, presentGallery: { [weak self] in
             if let strongSelf = self {
@@ -132,11 +132,12 @@ final class ThemeGridController: ViewController {
                                 let controller = WallpaperListPreviewController(account: strongSelf.account, source: .asset(asset.backingAsset, thumbnailImage))
                                 controller.apply = { [weak self, weak legacyController, weak controller] wallpaper, mode, cropRect in
                                     if let strongSelf = self, let legacyController = legacyController, let controller = controller {
-                                        strongSelf.uploadCustomWallpaper(wallpaper, mode: mode, cropRect: cropRect)
-                                        
-                                        let _ = (strongSelf.navigationController as? NavigationController)?.popViewController(animated: true)
-                                        legacyController.dismiss()
-                                        controller.dismiss()
+                                        strongSelf.uploadCustomWallpaper(wallpaper, mode: mode, cropRect: cropRect, completion: { [weak legacyController, weak controller] in
+                                            if let legacyController = legacyController, let controller = controller {
+                                                legacyController.dismiss()
+                                                controller.dismiss()
+                                            }
+                                        })
                                     }
                                 }
                                 strongSelf.present(controller, in: .window(.root), with: nil, blockInteraction: true)
@@ -164,11 +165,11 @@ final class ThemeGridController: ViewController {
                     if empty {
                         strongSelf.navigationItem.setRightBarButton(nil, animated: true)
                     } else {
-                        if strongSelf.editingMode {
-                            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed))
-                        } else {
-                            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed))
-                        }
+//                        if strongSelf.editingMode {
+//                            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed))
+//                        } else {
+//                            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed))
+//                        }
                     }
                 }
             }
@@ -238,13 +239,13 @@ final class ThemeGridController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    private func uploadCustomWallpaper(_ wallpaper: WallpaperEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?) {
+    private func uploadCustomWallpaper(_ wallpaper: WallpaperEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, completion: @escaping () -> Void) {
         let imageSignal: Signal<UIImage, NoError>
         switch wallpaper {
             case .wallpaper:
                 imageSignal = .complete()
             case let .asset(asset, _):
-                imageSignal = fetchPhotoLibraryImage(localIdentifier: asset.localIdentifier)
+                imageSignal = fetchPhotoLibraryImage(localIdentifier: asset.localIdentifier, thumbnail: false)
                 |> filter { value in
                     return !(value?.1 ?? true)
                 }
@@ -311,29 +312,31 @@ final class ThemeGridController: ViewController {
                     })).start()
                 }
                 
-                let completion: () -> Void = {
-                    let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: image.size, resource: resource)])
+                let apply: () -> Void = {
+                    let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: croppedImage.size, resource: resource)])
                     updateWallpaper(wallpaper)
-
-                    let _ = uploadWallpaper(account: account, resource: resource).start(next: { status in
-                        if case let .complete(wallpaper) = status {
-                            if mode.contains(.blur), case let .file(_, _, _, _, _, file) = wallpaper {
-                                let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
-                                    updateWallpaper(wallpaper)
-                                })
-                            } else {
-                                updateWallpaper(wallpaper)
-                            }
-                        }
-                    })
+                    DispatchQueue.main.async {
+                        completion()
+                    }
+//                    let _ = uploadWallpaper(account: account, resource: resource).start(next: { status in
+//                        if case let .complete(wallpaper) = status {
+//                            if mode.contains(.blur), case let .file(_, _, _, _, _, file) = wallpaper {
+//                                let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+//                                    updateWallpaper(wallpaper)
+//                                })
+//                            } else {
+//                                updateWallpaper(wallpaper)
+//                            }
+//                        }
+//                    }).start()
                 }
                 
                 if mode.contains(.blur) {
                     let _ = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
-                        completion()
+                        apply()
                     })
                 } else {
-                    completion()
+                    apply()
                 }
             }
             

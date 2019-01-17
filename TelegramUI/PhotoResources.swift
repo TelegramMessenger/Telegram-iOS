@@ -2196,7 +2196,7 @@ func instantPageImageFile(account: Account, fileReference: FileMediaReference, f
     }
 }
 
-private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], autoFetchFullSize: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
+private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, autoFetchFullSize: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
     if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = largestImageRepresentation(representations.map({ $0.representation })), let smallestIndex = representations.index(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.index(where: { $0.representation == largestRepresentation }) {
         let maybeFullSize = account.postbox.mediaBox.resourceData(largestRepresentation.resource)
         let decodedThumbnailData = fileReference?.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
@@ -2206,7 +2206,12 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
         |> mapToSignal { maybeData -> Signal<(Data?, Data?, Bool), NoError> in
             if maybeData.complete {
                 let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
-                return .single((nil, loadedData, true))
+                if alwaysShowThumbnailFirst, let decodedThumbnailData = decodedThumbnailData {
+                    return .single((decodedThumbnailData, nil, false))
+                    |> then(.single((nil, loadedData, true)))
+                } else {
+                    return .single((nil, loadedData, true))
+                }
             } else {
                 let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
                 if let _ = decodedThumbnailData {
@@ -2269,8 +2274,8 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
     }
 }
 
-func chatAvatarGalleryPhoto(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = avatarGalleryPhotoDatas(account: account, fileReference: fileReference, representations: representations, autoFetchFullSize: autoFetchFullSize)
+func chatAvatarGalleryPhoto(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = avatarGalleryPhotoDatas(account: account, fileReference: fileReference, representations: representations, alwaysShowThumbnailFirst: alwaysShowThumbnailFirst, autoFetchFullSize: autoFetchFullSize)
     
     return signal
     |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
@@ -2794,7 +2799,10 @@ func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumA
 }
 
 func photoWallpaper(postbox: Postbox, photoLibraryResource: PhotoLibraryMediaResource) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    return fetchPhotoLibraryImage(localIdentifier: photoLibraryResource.localIdentifier)
+    let thumbnail = fetchPhotoLibraryImage(localIdentifier: photoLibraryResource.localIdentifier, thumbnail: true)
+    let fullSize = fetchPhotoLibraryImage(localIdentifier: photoLibraryResource.localIdentifier, thumbnail: false)
+    
+    return (thumbnail |> then(fullSize))
     |> map { result in
         var sourceImage = result?.0
         let isThumbnail = result?.1 ?? false
@@ -2802,7 +2810,7 @@ func photoWallpaper(postbox: Postbox, photoLibraryResource: PhotoLibraryMediaRes
         return { arguments in
             let context = DrawingContext(size: arguments.drawingSize, scale: 1.0, clear: true)
             
-            var dimensions = sourceImage?.size
+            let dimensions = sourceImage?.size
             
             if let thumbnailImage = sourceImage?.cgImage, isThumbnail {
                 var fittedSize = arguments.imageSize

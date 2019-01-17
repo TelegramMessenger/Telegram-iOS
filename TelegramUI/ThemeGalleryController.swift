@@ -206,7 +206,7 @@ class ThemeGalleryController: ViewController {
         let toolbarNode = ThemeGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings)
         self.toolbarNode = toolbarNode
         self.galleryNode.addSubnode(toolbarNode)
-        self.galleryNode.toolbarNode = toolbarNode
+        //self.galleryNode.toolbarNode = toolbarNode
         toolbarNode.cancel = { [weak self] in
             self?.dismiss(forceAway: true)
         }

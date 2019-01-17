@@ -97,7 +97,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     
                     var convertedRepresentations: [ImageRepresentationWithReference] = []
                     for representation in file.file.previewRepresentations {
-                        convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .standalone(resource: representation.resource)))
+                        convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .wallpaper(resource: representation.resource)))
                     }
                     let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
                     self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, fileReference: .standalone(media: file.file), representations: convertedRepresentations, autoFetchFullSize: true))

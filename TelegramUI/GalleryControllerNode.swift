@@ -8,7 +8,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
     var navigationBar: NavigationBar?
     let footerNode: GalleryFooterNode
     var currentThumbnailContainerNode: GalleryThumbnailContainerNode?
-    var toolbarNode: ASDisplayNode?
+    var overlayNode: ASDisplayNode?
     var transitionDataForCentralItem: (() -> ((ASDisplayNode, () -> UIView?)?, (UIView) -> Void)?)?
     var dismiss: (() -> Void)?
     
@@ -255,10 +255,6 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
             self.currentThumbnailContainerNode?.alpha = 1.0
         })
         
-        if let toolbarNode = self.toolbarNode {
-            toolbarNode.layer.animatePosition(from: CGPoint(x: 0.0, y: self.bounds.size.height), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-        }
-        
         if animateContent {
             self.scrollView.layer.animateBounds(from: self.scrollView.layer.bounds.offsetBy(dx: 0.0, dy: -self.scrollView.layer.bounds.size.height), to: self.scrollView.layer.bounds, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
         }
@@ -292,10 +288,6 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
             intermediateCompletion()
         })
         
-        if let toolbarNode = self.toolbarNode {
-            toolbarNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.bounds.size.height), duration: 0.25, timingFunction: kCAMediaTimingFunctionLinear, removeOnCompletion: false, additive: true)
-        }
-        
         if animateContent {
             contentAnimationCompleted = false
             self.scrollView.layer.animateBounds(from: self.scrollView.layer.bounds, to: self.scrollView.layer.bounds.offsetBy(dx: 0.0, dy: -self.scrollView.layer.bounds.size.height), duration: 0.25, timingFunction: kCAMediaTimingFunctionLinear, removeOnCompletion: false, completion: { _ in
@@ -327,8 +319,8 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
         
         self.updateDismissTransition(transition)
         
-        if let toolbarNode = toolbarNode {
-            toolbarNode.alpha = transition
+        if let overlayNode = self.overlayNode {
+            overlayNode.alpha = transition
         }
     }
     
