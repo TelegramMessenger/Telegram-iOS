@@ -134,161 +134,167 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
     }
     
     return network.request(Api.functions.messages.getPinnedDialogs())
-        |> retryRequest
-        |> mapToSignal { dialogs -> Signal<Void, NoError> in
-            var storeMessages: [StoreMessage] = []
-            var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
-            var chatStates: [PeerId: PeerChatState] = [:]
-            var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
-            
-            var remoteItemIds: [PinnedItemId] = []
-            
-            var peers: [Peer] = []
-            var peerPresences: [PeerId: PeerPresence] = [:]
-            
-            switch dialogs {
-                case let .peerDialogs(dialogs, messages, chats, users, _):
-                    var channelGroupIds: [PeerId: PeerGroupId] = [:]
-                    for chat in chats {
-                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                            peers.append(groupOrChannel)
-                            if let channel = groupOrChannel as? TelegramChannel, let peerGroupId = channel.peerGroupId {
-                                channelGroupIds[channel.id] = peerGroupId
+    |> retryRequest
+    |> mapToSignal { dialogs -> Signal<Void, NoError> in
+        var storeMessages: [StoreMessage] = []
+        var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
+        var chatStates: [PeerId: PeerChatState] = [:]
+        var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
+        
+        var remoteItemIds: [PinnedItemId] = []
+        
+        var peers: [Peer] = []
+        var peerPresences: [PeerId: PeerPresence] = [:]
+        
+        switch dialogs {
+            case let .peerDialogs(dialogs, messages, chats, users, _):
+                var channelGroupIds: [PeerId: PeerGroupId] = [:]
+                for chat in chats {
+                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                        peers.append(groupOrChannel)
+                        if let channel = groupOrChannel as? TelegramChannel, let peerGroupId = channel.peerGroupId {
+                            channelGroupIds[channel.id] = peerGroupId
+                        }
+                    }
+                }
+                for user in users {
+                    let telegramUser = TelegramUser(user: user)
+                    peers.append(telegramUser)
+                    if let presence = TelegramUserPresence(apiUser: user) {
+                        peerPresences[telegramUser.id] = presence
+                    }
+                }
+                
+                loop: for dialog in dialogs {
+                    let apiPeer: Api.Peer
+                    let apiReadInboxMaxId: Int32
+                    let apiReadOutboxMaxId: Int32
+                    let apiTopMessage: Int32
+                    let apiUnreadCount: Int32
+                    let apiMarkedUnread: Bool
+                    var apiChannelPts: Int32?
+                    let apiNotificationSettings: Api.PeerNotifySettings
+                    switch dialog {
+                        case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
+                            if channelGroupIds[peer.peerId] != nil {
+                                continue loop
                             }
-                        }
-                    }
-                    for user in users {
-                        let telegramUser = TelegramUser(user: user)
-                        peers.append(telegramUser)
-                        if let presence = TelegramUserPresence(apiUser: user) {
-                            peerPresences[telegramUser.id] = presence
-                        }
-                    }
-                    
-                    loop: for dialog in dialogs {
-                        let apiPeer: Api.Peer
-                        let apiReadInboxMaxId: Int32
-                        let apiReadOutboxMaxId: Int32
-                        let apiTopMessage: Int32
-                        let apiUnreadCount: Int32
-                        let apiMarkedUnread: Bool
-                        var apiChannelPts: Int32?
-                        let apiNotificationSettings: Api.PeerNotifySettings
-                        switch dialog {
-                            case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
-                                if channelGroupIds[peer.peerId] != nil {
-                                    continue loop
-                                }
-                                apiPeer = peer
-                                apiTopMessage = topMessage
-                                apiReadInboxMaxId = readInboxMaxId
-                                apiReadOutboxMaxId = readOutboxMaxId
-                                apiUnreadCount = unreadCount
-                                apiMarkedUnread = (flags & (1 << 3)) != 0
-                                apiNotificationSettings = peerNotificationSettings
-                                apiChannelPts = pts
-                            /*feed*/
-                            /*case let .dialogFeed(_, _, _, feedId, _, _, _, _):
-                                remoteItemIds.append(.group(PeerGroupId(rawValue: feedId)))
-                                continue loop*/
-                        }
-                        
-                        let peerId: PeerId
-                        switch apiPeer {
-                            case let .peerUser(userId):
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                            case let .peerChat(chatId):
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                            case let .peerChannel(channelId):
-                                peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                        }
-                        
-                        remoteItemIds.append(.peer(peerId))
-                        
-                        if readStates[peerId] == nil {
-                            readStates[peerId] = [:]
-                        }
-                        readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
-                        
-                        if let apiChannelPts = apiChannelPts {
-                            chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: nil)
-                        }
-                        
-                        notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
+                            apiPeer = peer
+                            apiTopMessage = topMessage
+                            apiReadInboxMaxId = readInboxMaxId
+                            apiReadOutboxMaxId = readOutboxMaxId
+                            apiUnreadCount = unreadCount
+                            apiMarkedUnread = (flags & (1 << 3)) != 0
+                            apiNotificationSettings = peerNotificationSettings
+                            apiChannelPts = pts
+                        /*feed*/
+                        /*case let .dialogFeed(_, _, _, feedId, _, _, _, _):
+                            remoteItemIds.append(.group(PeerGroupId(rawValue: feedId)))
+                            continue loop*/
                     }
                     
-                    for message in messages {
-                        if let storeMessage = StoreMessage(apiMessage: message) {
-                            storeMessages.append(storeMessage)
-                        }
+                    let peerId: PeerId
+                    switch apiPeer {
+                        case let .peerUser(userId):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                        case let .peerChat(chatId):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                        case let .peerChannel(channelId):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                     }
-            }
-            
+                    
+                    remoteItemIds.append(.peer(peerId))
+                    
+                    if readStates[peerId] == nil {
+                        readStates[peerId] = [:]
+                    }
+                    readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
+                    
+                    if let apiChannelPts = apiChannelPts {
+                        chatStates[peerId] = ChannelState(pts: apiChannelPts, invalidatedPts: nil)
+                    }
+                    
+                    notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
+                }
+                
+                for message in messages {
+                    if let storeMessage = StoreMessage(apiMessage: message) {
+                        storeMessages.append(storeMessage)
+                    }
+                }
+        }
+        
+        var resultingItemIds: [PinnedItemId]
+        if initialRemoteItemIds == localItemIds {
+            resultingItemIds = remoteItemIds
+        } else {
             let locallyRemovedFromRemoteItemIds = Set(initialRemoteItemIdsWithoutSecretChats).subtracting(Set(localItemIdsWithoutSecretChats))
             let remotelyRemovedItemIds = Set(initialRemoteItemIdsWithoutSecretChats).subtracting(Set(remoteItemIds))
             
-            var resultingItemIds = localItemIds.filter { !remotelyRemovedItemIds.contains($0) }
+            resultingItemIds = localItemIds.filter { !remotelyRemovedItemIds.contains($0) }
             resultingItemIds.append(contentsOf: remoteItemIds.filter { !locallyRemovedFromRemoteItemIds.contains($0) && !resultingItemIds.contains($0) })
+        }
+        
+        return postbox.transaction { transaction -> Signal<Void, NoError> in
+            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                return updated
+            })
             
-            return postbox.transaction { transaction -> Signal<Void, NoError> in
-                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                    return updated
-                })
-                
-                transaction.setPinnedItemIds(resultingItemIds)
-                
-                updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
-                
-                transaction.updateCurrentPeerNotificationSettings(notificationSettings)
-                
-                var allPeersWithMessages = Set<PeerId>()
-                for message in storeMessages {
-                    if !allPeersWithMessages.contains(message.id.peerId) {
-                        allPeersWithMessages.insert(message.id.peerId)
-                    }
+            transaction.setPinnedItemIds(resultingItemIds)
+            
+            updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
+            
+            transaction.updateCurrentPeerNotificationSettings(notificationSettings)
+            
+            var allPeersWithMessages = Set<PeerId>()
+            for message in storeMessages {
+                if !allPeersWithMessages.contains(message.id.peerId) {
+                    allPeersWithMessages.insert(message.id.peerId)
                 }
-                let _ = transaction.addMessages(storeMessages, location: .UpperHistoryBlock)
-                
-                transaction.resetIncomingReadStates(readStates)
-                
-                for (peerId, chatState) in chatStates {
-                    if let chatState = chatState as? ChannelState {
-                        if let _ = transaction.getPeerChatState(peerId) as? ChannelState {
-                            // skip changing state
-                        } else {
-                            transaction.setPeerChatState(peerId, state: chatState)
-                        }
+            }
+            let _ = transaction.addMessages(storeMessages, location: .UpperHistoryBlock)
+            
+            transaction.resetIncomingReadStates(readStates)
+            
+            for (peerId, chatState) in chatStates {
+                if let chatState = chatState as? ChannelState {
+                    if let _ = transaction.getPeerChatState(peerId) as? ChannelState {
+                        // skip changing state
                     } else {
                         transaction.setPeerChatState(peerId, state: chatState)
                     }
+                } else {
+                    transaction.setPeerChatState(peerId, state: chatState)
+                }
+            }
+            
+            if remoteItemIds == resultingItemIds {
+                return .complete()
+            } else {
+                var inputDialogPeers: [Api.InputDialogPeer] = []
+                for itemId in resultingItemIds {
+                    switch itemId {
+                        case let .peer(peerId):
+                            if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                                inputDialogPeers.append(Api.InputDialogPeer.inputDialogPeer(peer: inputPeer))
+                            }
+                        case let .group(groupId):
+                            /*feed*/
+                            /*inputDialogPeers.append(.inputDialogPeerFeed(feedId: groupId.rawValue))*/
+                            break
+                    }
                 }
                 
-                if remoteItemIds == resultingItemIds {
-                    return .complete()
-                } else {
-                    var inputDialogPeers: [Api.InputDialogPeer] = []
-                    for itemId in resultingItemIds {
-                        switch itemId {
-                            case let .peer(peerId):
-                                if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-                                    inputDialogPeers.append(Api.InputDialogPeer.inputDialogPeer(peer: inputPeer))
-                                }
-                            case let .group(groupId):
-                                /*feed*/
-                                /*inputDialogPeers.append(.inputDialogPeerFeed(feedId: groupId.rawValue))*/
-                                break
+                return network.request(Api.functions.messages.reorderPinnedDialogs(flags: 1 << 0, order: inputDialogPeers))
+                    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                        return .single(Api.Bool.boolFalse)
+                    }
+                    |> mapToSignal { result -> Signal<Void, NoError> in
+                        return postbox.transaction { transaction -> Void in
                         }
                     }
-                    
-                    return network.request(Api.functions.messages.reorderPinnedDialogs(flags: 1 << 0, order: inputDialogPeers))
-                        |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                            return .single(Api.Bool.boolFalse)
-                        }
-                        |> mapToSignal { result -> Signal<Void, NoError> in
-                            return postbox.transaction { transaction -> Void in
-                            }
-                        }
-                }
-            } |> switchToLatest
+            }
         }
+        |> switchToLatest
+    }
 }
