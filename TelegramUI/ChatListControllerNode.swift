@@ -22,6 +22,7 @@ class ChatListControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     
     private var chatListEmptyNode: ChatListEmptyNode?
+    private var chatListEmptyIndicator: ActivityIndicator?
     let chatListNode: ChatListNode
     var navigationBar: NavigationBar?
     weak var controller: ChatListController?
@@ -59,7 +60,7 @@ class ChatListControllerNode: ASDisplayNode {
                 return
             }
             switch isEmptyState {
-                case let .empty(isLoading):
+                case .empty(false):
                     if strongSelf.chatListEmptyNode == nil {
                         let chatListEmptyNode = ChatListEmptyNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings)
                         strongSelf.chatListEmptyNode = chatListEmptyNode
@@ -68,12 +69,28 @@ class ChatListControllerNode: ASDisplayNode {
                             strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
                         }
                     }
-                case .notEmpty:
+                default:
                     if let chatListEmptyNode = strongSelf.chatListEmptyNode {
                         strongSelf.chatListEmptyNode = nil
                         chatListEmptyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak chatListEmptyNode] _ in
                             chatListEmptyNode?.removeFromSupernode()
                         })
+                    }
+            }
+            switch isEmptyState {
+                case .empty(true):
+                    if strongSelf.chatListEmptyIndicator == nil {
+                        let chatListEmptyIndicator = ActivityIndicator(type: .custom(strongSelf.presentationData.theme.list.itemAccentColor, 22.0, 1.0, false))
+                        strongSelf.chatListEmptyIndicator = chatListEmptyIndicator
+                        strongSelf.insertSubnode(chatListEmptyIndicator, belowSubnode: strongSelf.chatListNode)
+                        if let (layout, navigationHeight) = strongSelf.containerLayout {
+                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+                        }
+                    }
+                default:
+                    if let chatListEmptyIndicator = strongSelf.chatListEmptyIndicator {
+                        strongSelf.chatListEmptyIndicator = nil
+                        chatListEmptyIndicator.removeFromSupernode()
                     }
             }
         }
@@ -137,6 +154,11 @@ class ChatListControllerNode: ASDisplayNode {
             let emptySize = CGSize(width: updateSizeAndInsets.size.width, height: updateSizeAndInsets.size.height - updateSizeAndInsets.insets.top - updateSizeAndInsets.insets.bottom)
             transition.updateFrame(node: chatListEmptyNode, frame: CGRect(origin: CGPoint(x: 0.0, y: updateSizeAndInsets.insets.top), size: emptySize))
             chatListEmptyNode.updateLayout(size: emptySize, transition: transition)
+        }
+        
+        if let chatListEmptyIndicator = self.chatListEmptyIndicator {
+            let indicatorSize = chatListEmptyIndicator.measure(CGSize(width: 100.0, height: 100.0))
+            transition.updateFrame(node: chatListEmptyIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: updateSizeAndInsets.insets.top + floor((layout.size.height -  updateSizeAndInsets.insets.top - updateSizeAndInsets.insets.bottom - indicatorSize.height) / 2.0)), size: indicatorSize))
         }
         
         if let searchDisplayController = self.searchDisplayController {

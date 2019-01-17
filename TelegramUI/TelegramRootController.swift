@@ -76,20 +76,18 @@ public final class TelegramRootController: NavigationController {
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
         
-        ///TESTBED
-        
-        guard let controller = self.viewControllers.last as? ViewController else {
-            return
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.15) {
-            //(controller.navigationController as? NavigationController)?.pushViewController(ThemeGridController(account: self.account))
-            
+//        guard let controller = self.viewControllers.last as? ViewController else {
+//            return
+//        }
+//        
+//        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.15) {
+//            //(controller.navigationController as? NavigationController)?.pushViewController(ThemeGridController(account: self.account))
+//            
 //            let wrapperNode = ASDisplayNode()
 //            let bounds = controller.displayNode.bounds
 //            wrapperNode.frame = bounds
 //            wrapperNode.backgroundColor = .gray
-//            //controller.displayNode.addSubnode(wrapperNode)
+//            controller.displayNode.addSubnode(wrapperNode)
 //
 //            let radialStatusSize: CGFloat = 50.0
 //            let statusNode = RadialStatusNode(backgroundNodeColor: UIColor(rgb: 0x000000, alpha: 0.6))
@@ -107,16 +105,21 @@ public final class TelegramRootController: NavigationController {
 //                        smth = false
 //                        //statusNode.transitionToState(.play(color), animated: true, completion: {})
 //                        statusNode.transitionToState(.download(.white), animated: true, completion: {})
-//                        //statusNode.transitionToState(.none, animated: true, completion: {})
+////                        statusNode.transitionToState(.progress(color: color, lineWidth: nil, value: 1.0, cancelEnabled: true), animated: true, completion: {})
+////                        statusNode.transitionToState(.none, animated: true, completion: {
+////                            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.85) {
+////                                statusNode.transitionToState(.download(.white), animated: true, completion: {})
+////                            }
+////                        })
 //                    } else {
 //                        smth = true
-//                        statusNode.transitionToState(.progress(color: color, lineWidth: nil, value: 0.3, cancelEnabled: true), animated: true, completion: {})
+//                        statusNode.transitionToState(.progress(color: color, lineWidth: nil, value: 0.1, cancelEnabled: true), animated: true, completion: {})
 //                    }
 //                }
 //            }
 //            button.addTarget(self, action: #selector(self.mock), forControlEvents: .touchUpInside)
 //            statusNode.transitionToState(.download(.white), animated: false, completion: {})
-        }
+//        }
     }
     
     @objc func mock() {

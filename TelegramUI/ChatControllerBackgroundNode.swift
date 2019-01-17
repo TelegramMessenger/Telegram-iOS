@@ -11,7 +11,7 @@ final class ChatBackgroundNode: ASDisplayNode {
         didSet {
             if oldValue != self.parallaxEnabled {
                 if self.parallaxEnabled {
-                    let amount = 16.0
+                    let amount = 24.0
                     
                     let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
                     horizontal.minimumRelativeValue = -amount
@@ -57,10 +57,10 @@ final class ChatBackgroundNode: ASDisplayNode {
     }
 }
 
-private var backgroundImageForWallpaper: (TelegramWallpaper, PresentationWallpaperMode, UIImage)?
+private var backgroundImageForWallpaper: (TelegramWallpaper, WallpaperPresentationOptions, UIImage)?
 private var serviceBackgroundColorForWallpaper: (TelegramWallpaper, UIColor)?
 
-func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mode: PresentationWallpaperMode = .still, postbox: Postbox) -> UIImage? {
+func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mode: WallpaperPresentationOptions = [], postbox: Postbox) -> UIImage? {
     var backgroundImage: UIImage?
     if wallpaper == backgroundImageForWallpaper?.0, mode == backgroundImageForWallpaper?.1 {
         backgroundImage = backgroundImageForWallpaper?.2
@@ -77,7 +77,7 @@ func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mode: Presentat
                 })
             case let .image(representations):
                 if let largest = largestImageRepresentation(representations) {
-                    if case .blurred = mode {
+                    if mode.contains(.blur) {
                         var image: UIImage?
                         let _ = postbox.mediaBox.cachedResourceRepresentation(largest.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                             if data.complete {
@@ -91,7 +91,7 @@ func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mode: Presentat
                     }
                 }
             case let .file(file):
-                if case .blurred = mode {
+                if mode.contains(.blur) {
                     var image: UIImage?
                     let _ = postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                         if data.complete {
@@ -255,7 +255,7 @@ func backgroundContrastColor(for image: Signal<UIImage?, NoError>) -> Signal<UIC
             })
             
             var matching: Int = 0
-            var total: Int = Int(context.size.width) * Int(context.size.height)
+            let total: Int = Int(context.size.width) * Int(context.size.height)
             for y in 0 ..< Int(context.size.height) {
                 for x in 0 ..< Int(context.size.width) {
                     var saturation: CGFloat = 0.0

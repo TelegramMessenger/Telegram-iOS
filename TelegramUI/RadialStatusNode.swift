@@ -165,7 +165,20 @@ public final class RadialStatusNode: ASControlNode {
             contentNode.enqueueReadyForTransition { [weak contentNode, weak self] in
                 if let strongSelf = self, let previousContentNode = contentNode, strongSelf.contentNode === contentNode {
                     if animated {
-                        strongSelf.contentNode = strongSelf.nextContentNode
+                        let nextContentNode = strongSelf.nextContentNode
+                        strongSelf.contentNode = nextContentNode
+                        previousContentNode.prepareAnimateOut(completion: { delay in
+                            if let contentNode = strongSelf.contentNode, nextContentNode === contentNode {
+                                strongSelf.addSubnode(contentNode)
+                                contentNode.frame = strongSelf.bounds
+                                contentNode.prepareAnimateIn(from: fromState)
+                                if strongSelf.isNodeLoaded {
+                                    contentNode.layout()
+                                    contentNode.animateIn(from: fromState, delay: delay)
+                                }
+                            }
+                            strongSelf.transitionToBackgroundColor(backgroundColor, previousContentNode: previousContentNode, animated: animated, completion: completion)
+                        })
                         previousContentNode.animateOut(to: state, completion: { [weak contentNode] in
                             if let strongSelf = self, let contentNode = contentNode {
                                 if contentNode !== strongSelf.contentNode {
@@ -173,23 +186,6 @@ public final class RadialStatusNode: ASControlNode {
                                 }
                             }
                         })
-                        previousContentNode.prepareAnimateOut(completion: {
-                            if let contentNode = strongSelf.contentNode {
-                                strongSelf.addSubnode(contentNode)
-                                contentNode.frame = strongSelf.bounds
-                                contentNode.prepareAnimateIn(from: fromState)
-                                if strongSelf.isNodeLoaded {
-                                    contentNode.layout()
-                                    contentNode.animateIn(from: fromState)
-                                }
-                            }
-                            if backgroundColor != nil {
-                                strongSelf.transitionToBackgroundColor(backgroundColor, previousContentNode: previousContentNode, animated: animated, completion: completion)
-                            }
-                        })
-                        if backgroundColor == nil {
-                            strongSelf.transitionToBackgroundColor(backgroundColor, previousContentNode: previousContentNode, animated: animated, completion: completion)
-                        }
                     } else {
                         previousContentNode.removeFromSupernode()
                         strongSelf.contentNode = strongSelf.nextContentNode

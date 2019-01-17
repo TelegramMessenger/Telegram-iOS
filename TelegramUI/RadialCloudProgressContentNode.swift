@@ -294,8 +294,8 @@ final class RadialCloudProgressContentNode: RadialStatusContentNode {
         self.cancelNode.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, removeOnCompletion: false)
     }
     
-    override func animateIn(from: RadialStatusNodeState) {
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-        self.cancelNode.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15)
+    override func animateIn(from: RadialStatusNodeState, delay: Double) {
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
+        self.cancelNode.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, delay: delay)
     }
 }

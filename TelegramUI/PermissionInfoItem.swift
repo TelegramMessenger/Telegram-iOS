@@ -304,7 +304,7 @@ class PermissionInfoItemNode: ListViewItemNode {
                     
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + 9.0), size: textLayout.size)
                     
-                    strongSelf.closeButton.frame = CGRect(x: params.width - rightInset - 21.0, y: 10.0, width: 32.0, height: 32.0)
+                    strongSelf.closeButton.frame = CGRect(x: params.width - rightInset - 26.0, y: 10.0, width: 32.0, height: 32.0)
                 }
             })
         }

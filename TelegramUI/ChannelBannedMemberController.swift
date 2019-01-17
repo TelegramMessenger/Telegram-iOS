@@ -308,7 +308,9 @@ private func channelBannedMemberControllerEntries(presentationData: Presentation
             entries.append(.exceptionInfo(presentationData.theme, presentationData.strings.GroupPermission_AddedInfo(initialBannedBy.displayTitle, stringForRelativeSymbolicTimestamp(strings: presentationData.strings, relativeTimestamp: banInfo.timestamp, relativeTo: state.referenceTimestamp, dateTimeFormat: presentationData.dateTimeFormat)).0))
             entries.append(.delete(presentationData.theme, presentationData.strings.GroupPermission_Delete))
         }
-    } else if let group = channelView.peers[channelView.peerId] as? TelegramGroup, let defaultBannedRights = group.defaultBannedRights, let member = memberView.peers[memberView.peerId] {
+    } else if let group = channelView.peers[channelView.peerId] as? TelegramGroup, let member = memberView.peers[memberView.peerId] {
+        let defaultBannedRightsFlags = group.defaultBannedRights?.flags ?? []
+        
         entries.append(.info(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, member, memberView.peerPresences[member.id] as? TelegramUserPresence))
         
         let currentRightsFlags: TelegramChatBannedRightsFlags
@@ -317,7 +319,7 @@ private func channelBannedMemberControllerEntries(presentationData: Presentation
         } else if let initialParticipant = initialParticipant, case let .member(_, _, _, maybeBanInfo) = initialParticipant, let banInfo = maybeBanInfo {
             currentRightsFlags = banInfo.rights.flags
         } else {
-            currentRightsFlags = defaultBannedRights.flags
+            currentRightsFlags = defaultBannedRightsFlags
         }
         
         let currentTimeout: Int32
@@ -341,7 +343,7 @@ private func channelBannedMemberControllerEntries(presentationData: Presentation
         
         var index = 0
         for right in allGroupPermissionList {
-            let defaultEnabled = !defaultBannedRights.flags.contains(right)
+            let defaultEnabled = !defaultBannedRightsFlags.contains(right)
             entries.append(.rightItem(presentationData.theme, index, stringForGroupPermission(strings: presentationData.strings, right: right), right, defaultEnabled && !currentRightsFlags.contains(right), defaultEnabled && !state.updating))
             index += 1
         }

@@ -13,11 +13,11 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     let fontSize: PresentationFontSize
     let wallpaper: TelegramWallpaper
-    let wallpaperMode: PresentationWallpaperMode
+    let wallpaperMode: WallpaperPresentationOptions
     let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
     
-    init(account: Account, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, wallpaperMode: PresentationWallpaperMode, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder) {
+    init(account: Account, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, wallpaperMode: WallpaperPresentationOptions, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder) {
         self.account = account
         self.theme = theme
         self.componentTheme = componentTheme
@@ -139,7 +139,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                         })
                     case let .image(representations):
                         if let largest = largestImageRepresentation(representations) {
-                            if case .blurred = item.wallpaperMode {
+                            if item.wallpaperMode.contains(.blur) {
                                 var image: UIImage?
                                 let _ = item.account.postbox.mediaBox.cachedResourceRepresentation(largest.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                                     if data.complete {
@@ -153,7 +153,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                             }
                         }
                     case let .file(file):
-                        if case .blurred = item.wallpaperMode {
+                        if item.wallpaperMode.contains(.blur) {
                             var image: UIImage?
                             let _ = item.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                                 if data.complete {

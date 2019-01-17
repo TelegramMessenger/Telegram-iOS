@@ -112,9 +112,9 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
         }
         
         self.player.addObserver(self, forKeyPath: "rate", options: [], context: nil)
-        playerItem.addObserver(self, forKeyPath: "playbackBufferEmpty", options: .new, context: nil)
-        playerItem.addObserver(self, forKeyPath: "playbackLikelyToKeepUp", options: .new, context: nil)
-        playerItem.addObserver(self, forKeyPath: "playbackBufferFull", options: .new, context: nil)
+        self.playerItem.addObserver(self, forKeyPath: "playbackBufferEmpty", options: .new, context: nil)
+        self.playerItem.addObserver(self, forKeyPath: "playbackLikelyToKeepUp", options: .new, context: nil)
+        self.playerItem.addObserver(self, forKeyPath: "playbackBufferFull", options: .new, context: nil)
         
         self._bufferingStatus.set(.single(nil))
     }

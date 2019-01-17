@@ -195,7 +195,7 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
             self.imageNode.contentMode = .scaleAspectFill
             self.wrapperNode.addSubnode(self.imageNode)
         }
-        self.wrapperNode.addSubnode(self.statusNode)
+        self.addSubnode(self.statusNode)
         
         let imagePromise = Promise<UIImage?>()
         self.imageNode.setSignal(signal, dispatchOnDisplayLink: false)
@@ -258,7 +258,7 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
     
     func setParallaxEnabled(_ enabled: Bool) {
         if enabled {
-            let amount = 16.0
+            let amount = 24.0
             
             let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
             horizontal.minimumRelativeValue = -amount
@@ -342,9 +342,9 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
 final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     private let account: Account
     private var presentationData: PresentationData
-    private let source: WallpaperListPreviewSource
+    private let source: WallpaperListSource
     private let dismiss: () -> Void
-    private let apply: (WallpaperEntry, PresentationWallpaperMode, CGRect?) -> Void
+    private let apply: (WallpaperEntry, WallpaperPresentationOptions, CGRect?) -> Void
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
@@ -380,7 +380,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     }
     private var visibleBackgroundNodesOffset: CGFloat = 0.0
     
-    init(account: Account, presentationData: PresentationData, source: WallpaperListPreviewSource, dismiss: @escaping () -> Void, apply: @escaping (WallpaperEntry, PresentationWallpaperMode, CGRect?) -> Void) {
+    init(account: Account, presentationData: PresentationData, source: WallpaperListSource, dismiss: @escaping () -> Void, apply: @escaping (WallpaperEntry, WallpaperPresentationOptions, CGRect?) -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.source = source
@@ -508,7 +508,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                 }
             case let .slug(slug, file):
                 if let file = file {
-                    let entry = WallpaperEntry.wallpaper(.file(id: 0, accessHash: 0, isCreator: false, slug: slug, file: file, color: nil))
+                    let entry = WallpaperEntry.wallpaper(.file(id: 0, accessHash: 0, isCreator: false, isDefault: false, slug: slug, file: file))
                     self.wallpapers = [entry]
                     self.centralWallpaper = entry
                 }
@@ -843,15 +843,13 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     }
     
     @objc private func indexChanged() {
-        guard let mode = PresentationWallpaperMode(rawValue: Int32(self.segmentedControl.selectedSegmentIndex)) else {
-            return
-        }
-        
+        let index = self.segmentedControl.selectedSegmentIndex
+
         if let node = self.centralNode() {
-            if mode == .perspective {
+            if index == 1 {
                 node.setParallaxEnabled(true)
                 node.setBlurEnabled(false, animated: true)
-            } else if mode == .blurred {
+            } else if index == 2 {
                 node.setParallaxEnabled(false)
                 node.setBlurEnabled(true, animated: true)
             } else {
@@ -867,16 +865,16 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     
     @objc private func applyPressed() {
         if let wallpaper = self.centralWallpaper {
-            let mode: PresentationWallpaperMode
+            var options: WallpaperPresentationOptions = []
             switch self.segmentedControl.selectedSegmentIndex {
                 case 1:
-                    mode = .perspective
+                    options.insert(.motion)
                 case 2:
-                    mode = .blurred
+                    options.insert(.blur)
                 default:
-                    mode = .still
+                    break
             }
-            self.apply(wallpaper, mode, self.centralNode()?.cropRect)
+            self.apply(wallpaper, options, self.centralNode()?.cropRect)
         }
     }
 }

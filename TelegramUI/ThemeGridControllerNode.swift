@@ -5,6 +5,35 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
+private func areWallpapersEqual(_ lhs: TelegramWallpaper, _ rhs: TelegramWallpaper) -> Bool {
+    switch lhs {
+        case .builtin:
+            if case .builtin = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .color(color):
+            if case .color(color) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .image(representations):
+            if case .image(representations) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .file(lhsId, _, _, _, lhsSlug, _):
+            if case let .file(rhsId, _, _, _, rhsSlug, _) = rhs, lhsId == rhsId, lhsSlug == rhsSlug {
+                return true
+            } else {
+                return false
+            }
+    }
+}
+
 struct ThemeGridControllerNodeState: Equatable {
     let editing: Bool
     var selectedIndices: Set<Int>
@@ -121,7 +150,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     private var controllerInteraction: ThemeGridControllerInteraction?
     
-    private let presentPreviewController: (WallpaperListPreviewSource) -> Void
+    private let presentPreviewController: (WallpaperListSource) -> Void
     private let presentGallery: () -> Void
     private let presentColors: () -> Void
     private let emptyStateUpdated: (Bool) -> Void
@@ -161,7 +190,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(account: Account, presentationData: PresentationData, presentPreviewController: @escaping (WallpaperListPreviewSource) -> Void, presentGallery: @escaping () -> Void, presentColors: @escaping () -> Void, emptyStateUpdated: @escaping (Bool) -> Void, deleteWallpapers: @escaping ([TelegramWallpaper], @escaping () -> Void) -> Void, shareWallpapers: @escaping ([TelegramWallpaper]) -> Void, popViewController: @escaping () -> Void) {
+    init(account: Account, presentationData: PresentationData, presentPreviewController: @escaping (WallpaperListSource) -> Void, presentGallery: @escaping () -> Void, presentColors: @escaping () -> Void, emptyStateUpdated: @escaping (Bool) -> Void, deleteWallpapers: @escaping ([TelegramWallpaper], @escaping () -> Void) -> Void, shareWallpapers: @escaping ([TelegramWallpaper]) -> Void, popViewController: @escaping () -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.presentPreviewController = presentPreviewController
@@ -217,7 +246,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 if let entries = entries, !entries.isEmpty {
                     let wallpapers = entries.map { $0.wallpaper }
                     
-                    var mode: PresentationWallpaperMode?
+                    var mode: WallpaperPresentationOptions?
                     if wallpaper == strongSelf.presentationData.chatWallpaper {
                         mode = strongSelf.presentationData.chatWallpaperMode
                     }
@@ -267,7 +296,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             
             var hasCurrent = false
             for wallpaper in wallpapers {
-                let selected = presentationData.chatWallpaper == wallpaper
+                let selected = areWallpapersEqual(presentationData.chatWallpaper, wallpaper)
                 entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: selected))
                 hasCurrent = hasCurrent || selected
                 index += 1

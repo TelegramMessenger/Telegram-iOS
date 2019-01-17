@@ -360,8 +360,14 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
             
             switch item.text {
                 case .presence:
-                    if let user = item.peer as? TelegramUser, user.botInfo != nil {
-                        statusAttributedString = NSAttributedString(string: item.strings.Bot_GenericBotStatus, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                    if let user = item.peer as? TelegramUser, let botInfo = user.botInfo {
+                        let botStatus: String
+                        if botInfo.flags.contains(.hasAccessToChatHistory) {
+                            botStatus = item.strings.Bot_GroupStatusReadsHistory
+                        } else {
+                            botStatus = item.strings.Bot_GroupStatusDoesNotReadHistory
+                        }
+                        statusAttributedString = NSAttributedString(string: botStatus, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                     } else if let presence = item.presence as? TelegramUserPresence {
                         let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                         let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, dateTimeFormat: item.dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))

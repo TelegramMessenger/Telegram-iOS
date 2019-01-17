@@ -17,6 +17,8 @@
 		091346982183498A00846E49 /* InstantPageArticleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091346972183498A00846E49 /* InstantPageArticleNode.swift */; };
 		0913469A218528D200846E49 /* InstantPageTableItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09134699218528D200846E49 /* InstantPageTableItem.swift */; };
 		0913469C21883C3700846E49 /* InstantPageDetailsItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0913469B21883C3700846E49 /* InstantPageDetailsItem.swift */; };
+		091417F221EF4E5D00C8325A /* WallpaperGalleryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091417F121EF4E5D00C8325A /* WallpaperGalleryController.swift */; };
+		091417F421EF4F5F00C8325A /* WallpaperGalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091417F321EF4F5F00C8325A /* WallpaperGalleryItem.swift */; };
 		091BEAB3214552D9003AEA30 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02DADBE2138D76F00116225 /* Vision.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		092F368D2154AAEA001A9F49 /* SFCompactRounded-Semibold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */; };
 		092F36902157AB46001A9F49 /* ItemListCallListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 092F368F2157AB46001A9F49 /* ItemListCallListItem.swift */; };
@@ -1141,6 +1143,8 @@
 		091346972183498A00846E49 /* InstantPageArticleNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageArticleNode.swift; sourceTree = "<group>"; };
 		09134699218528D200846E49 /* InstantPageTableItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageTableItem.swift; sourceTree = "<group>"; };
 		0913469B21883C3700846E49 /* InstantPageDetailsItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageDetailsItem.swift; sourceTree = "<group>"; };
+		091417F121EF4E5D00C8325A /* WallpaperGalleryController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperGalleryController.swift; sourceTree = "<group>"; };
+		091417F321EF4F5F00C8325A /* WallpaperGalleryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperGalleryItem.swift; sourceTree = "<group>"; };
 		092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SFCompactRounded-Semibold.otf"; sourceTree = "<group>"; };
 		092F368F2157AB46001A9F49 /* ItemListCallListItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListCallListItem.swift; sourceTree = "<group>"; };
 		09310D14213BC5DE0020033A /* anim_read.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_read.json; sourceTree = "<group>"; };
@@ -3148,6 +3152,8 @@
 				09F664CF21EBCFB900AB7E26 /* WallpaperCropNode.swift */,
 				09DD5D5121ED175300D7007A /* WallpaperColorPickerNode.swift */,
 				0900678C21ED5EA800530762 /* WallpaperColorPanelNode.swift */,
+				091417F121EF4E5D00C8325A /* WallpaperGalleryController.swift */,
+				091417F321EF4F5F00C8325A /* WallpaperGalleryItem.swift */,
 			);
 			name = Themes;
 			sourceTree = "<group>";
@@ -5871,6 +5877,7 @@
 				D093D7E22062F40100BC3599 /* SecureIdDocumentFormControllerNode.swift in Sources */,
 				D0B2F7702052B5A800D3BFB9 /* InviteContactsControllerNode.swift in Sources */,
 				D0EC6E211EB9F58900EBF1C3 /* InstantPageController.swift in Sources */,
+				091417F221EF4E5D00C8325A /* WallpaperGalleryController.swift in Sources */,
 				D0671F232143BDA6000A8AE7 /* TwoStepVerificationEmptyItem.swift in Sources */,
 				D0EC6E221EB9F58900EBF1C3 /* InstantPageControllerNode.swift in Sources */,
 				D0EC6E231EB9F58900EBF1C3 /* StickerPackPreviewController.swift in Sources */,
@@ -5935,6 +5942,7 @@
 				D01C06BE1FBCAF06001561AB /* ChatMessageBubbleMosaicLayout.swift in Sources */,
 				0900678D21ED5EA800530762 /* WallpaperColorPanelNode.swift in Sources */,
 				D0EC6E451EB9F58900EBF1C3 /* ItemListMultilineTextItem.swift in Sources */,
+				091417F421EF4F5F00C8325A /* WallpaperGalleryItem.swift in Sources */,
 				D02F4AE91FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift in Sources */,
 				D0EC6E461EB9F58900EBF1C3 /* ItemListLoadingIndicatorEmptyStateItem.swift in Sources */,
 				D067B4A5211C911C00796039 /* LegacyChannelIntroController.swift in Sources */,

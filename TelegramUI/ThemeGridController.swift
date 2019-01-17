@@ -103,6 +103,8 @@ final class ThemeGridController: ViewController {
     override func loadDisplayNode() {
         self.displayNode = ThemeGridControllerNode(account: self.account, presentationData: self.presentationData, presentPreviewController: { [weak self] source in
             if let strongSelf = self {
+                //let controller = WallpaperGalleryController(account: strongSelf.account, source: source)
+                //self?.present(controller, in: .window(.root), with: nil, blockInteraction: true)
                 let controller = WallpaperListPreviewController(account: strongSelf.account, source: source)
                 controller.apply = { [weak self, weak controller] wallpaper, mode, cropRect in
                     if let strongSelf = self {
@@ -236,7 +238,7 @@ final class ThemeGridController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    private func uploadCustomWallpaper(_ wallpaper: WallpaperEntry, mode: PresentationWallpaperMode, cropRect: CGRect?) {
+    private func uploadCustomWallpaper(_ wallpaper: WallpaperEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?) {
         let imageSignal: Signal<UIImage, NoError>
         switch wallpaper {
             case .wallpaper:
@@ -305,7 +307,7 @@ final class ThemeGridController: ViewController {
                 let account = self.account
                 let updateWallpaper: (TelegramWallpaper) -> Void = { wallpaper in
                     let _ = (updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
-                        return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperMode: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                        return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                     })).start()
                 }
                 
@@ -315,7 +317,7 @@ final class ThemeGridController: ViewController {
 
                     let _ = uploadWallpaper(account: account, resource: resource).start(next: { status in
                         if case let .complete(wallpaper) = status {
-                            if case .blurred = mode, case let .file(_, _, _, _, file, _) = wallpaper {
+                            if mode.contains(.blur), case let .file(_, _, _, _, _, file) = wallpaper {
                                 let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
                                     updateWallpaper(wallpaper)
                                 })
@@ -326,7 +328,7 @@ final class ThemeGridController: ViewController {
                     })
                 }
                 
-                if case .blurred = mode {
+                if mode.contains(.blur) {
                     let _ = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
                         completion()
                     })
@@ -344,7 +346,7 @@ final class ThemeGridController: ViewController {
         for wallpaper in wallpapers {
             var item: String?
             switch wallpaper {
-                case let .file(_, _, _, slug, _, _):
+                case let .file(_, _, _, _, slug, _):
                     item = slug
                 case let .color(color):
                     item = "\(String(UInt32(bitPattern: color), radix: 16, uppercase: false))"

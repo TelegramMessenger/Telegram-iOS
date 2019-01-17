@@ -30,13 +30,8 @@ final class RadialDownloadContentNode: RadialStatusContentNode {
         }
     }
     
-    private var animationCompletionTimer: SwiftSignalKit.Timer?
-    
-    private var isAnimatingProgress: Bool {
-        return self.pop_animation(forKey: "progress") != nil || self.animationCompletionTimer != nil
-    }
-    
     private var enqueuedReadyForTransition: (() -> Void)?
+    private var isAnimatingTransition = false
     
     private let leftLine = CAShapeLayer()
     private let rightLine = CAShapeLayer()
@@ -69,7 +64,7 @@ final class RadialDownloadContentNode: RadialStatusContentNode {
     }
     
     override func enqueueReadyForTransition(_ f: @escaping () -> Void) {
-        if self.isAnimatingProgress {
+        if self.isAnimatingTransition {
             self.enqueuedReadyForTransition = f
         } else {
             f()
@@ -116,11 +111,8 @@ final class RadialDownloadContentNode: RadialStatusContentNode {
         let diameter = min(bounds.size.width, bounds.size.height)
         let factor = diameter / 50.0
         
-        var lineWidth: CGFloat = 2.0
-        if diameter < 24.0 {
-            lineWidth = 1.3
-        }
-        
+        let lineWidth: CGFloat = max(1.6, 2.25 * factor)
+
         self.leftLine.lineWidth = lineWidth
         self.rightLine.lineWidth = lineWidth
         self.arrowBody.lineWidth = lineWidth
@@ -142,34 +134,40 @@ final class RadialDownloadContentNode: RadialStatusContentNode {
     
     private let duration: Double = 0.2
     
-    override func prepareAnimateOut(completion: @escaping () -> Void) {
+    override func prepareAnimateOut(completion: @escaping (Double) -> Void) {
         let bounds = self.bounds
         let diameter = min(bounds.size.width, bounds.size.height)
         let factor = diameter / 50.0
         
         var bodyPath = UIBezierPath()
-        if let path = try? svgPath("M1.20125335,62.2095675 C1.78718228,62.9863141 2.3877868,63.7395876 3.00158591,64.4690754 C22.1087455,87.1775489 54.0019347,86.8368674 54.0066002,54.0178571 L54.0066002,0.625 ", scale: CGPoint(x: 0.333333 * factor, y: 0.333333 * factor), offset: CGPoint(x: 7.0 * factor, y: (17.0 - UIScreenPixel) * factor)) {
+        
+        if let path = try? svgPath("M1.10890748,47.3077093 C2.74202161,51.7201715 4.79761832,55.7299828 7.15775768,59.3122505 C25.4413606,87.0634763 62.001605,89.1563513 62.0066002,54.0178571 L62.0066002,0.625 ", scale: CGPoint(x: 0.333333 * factor, y: 0.333333 * factor), offset: CGPoint(x: (4.0 + UIScreenPixel) * factor, y: (17.0 - UIScreenPixel) * factor)) {
             bodyPath = path
         }
         
         self.arrowBody.path = bodyPath.cgPath
-        self.arrowBody.strokeStart = 0.62
+        self.arrowBody.strokeStart = 0.65
         
         self.leftLine.animateStrokeEnd(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.rightLine.animateStrokeEnd(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         
-        self.leftLine.animateAlpha(from: 1.0, to: 0.0, duration: 0.23, delay: 0.07, removeOnCompletion: false) { finished in
-            completion()
+        self.leftLine.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.07, removeOnCompletion: false) { finished in
+            completion(0.0)
         }
-        self.rightLine.animateAlpha(from: 1.0, to: 0.0, duration: 0.23, delay: 0.07, removeOnCompletion: false)
+        self.rightLine.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.07, removeOnCompletion: false)
     }
     
     override func animateOut(to: RadialStatusNodeState, completion: @escaping () -> Void) {
-        self.arrowBody.animateStrokeStart(from: 0.62, to: 0.0, duration: 0.5, removeOnCompletion: false, completion: { _ in
+        self.isAnimatingTransition = true
+        self.arrowBody.animateStrokeStart(from: 0.65, to: 0.0, duration: 0.5, removeOnCompletion: false, completion: { [weak self] _ in
             completion()
+            if let strongSelf = self, strongSelf.isAnimatingTransition, let f = strongSelf.enqueuedReadyForTransition {
+                strongSelf.isAnimatingTransition = false
+                f()
+            }
         })
         self.arrowBody.animateStrokeEnd(from: 1.0, to: 0.0, duration: 0.5, removeOnCompletion: false, completion: nil)
-        self.arrowBody.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, delay: 0.4, removeOnCompletion: false)
+        self.arrowBody.animateAlpha(from: 1.0, to: 0.0, duration: 0.01, delay: 0.4, removeOnCompletion: false)
     }
     
     override func prepareAnimateIn(from: RadialStatusNodeState?) {
@@ -178,28 +176,28 @@ final class RadialDownloadContentNode: RadialStatusContentNode {
         let factor = diameter / 50.0
         
         var bodyPath = UIBezierPath()
-        if let path = try? svgPath("M1.20125335,62.2095675 C1.78718228,62.9863141 2.3877868,63.7395876 3.00158591,64.4690754 C22.1087455,87.1775489 54.0019347,86.8368674 54.0066002,54.0178571 L54.0066002,0.625 ", scale: CGPoint(x: -0.333333 * factor, y: 0.333333 * factor), offset: CGPoint(x: 43.0 * factor, y: (17.0 - UIScreenPixel) * factor)) {
+        if let path = try? svgPath("M1.10890748,47.3077093 C2.74202161,51.7201715 4.79761832,55.7299828 7.15775768,59.3122505 C25.4413606,87.0634763 62.001605,89.1563513 62.0066002,54.0178571 L62.0066002,0.625 ", scale: CGPoint(x: -0.333333 * factor, y: 0.333333 * factor), offset: CGPoint(x: (46.0 - UIScreenPixel) * factor, y: (17.0 - UIScreenPixel) * factor)) {
             bodyPath = path
         }
         
         self.arrowBody.path = bodyPath.cgPath
-        self.arrowBody.strokeStart = 0.62
+        self.arrowBody.strokeStart = 0.65
     }
     
-    override func animateIn(from: RadialStatusNodeState) {
+    override func animateIn(from: RadialStatusNodeState, delay: Double) {
         if case .progress = from {
-            self.arrowBody.animateStrokeStart(from: 0.62, to: 0.62, duration: 0.25, removeOnCompletion: false, completion: nil)
-            self.arrowBody.animateStrokeEnd(from: 0.62, to: 1.0, duration: 0.25, removeOnCompletion: false, completion: nil)
+            self.arrowBody.animateStrokeStart(from: 0.65, to: 0.65, duration: 0.25, delay: delay, removeOnCompletion: false, completion: nil)
+            self.arrowBody.animateStrokeEnd(from: 0.65, to: 1.0, duration: 0.25, delay: delay, removeOnCompletion: false, completion: nil)
             
-            self.leftLine.animateStrokeEnd(from: 0.0, to: 1.0, duration: 0.25, delay: 0.0, removeOnCompletion: false)
-            self.rightLine.animateStrokeEnd(from: 0.0, to: 1.0, duration: 0.25, delay: 0.0, removeOnCompletion: false)
+            self.leftLine.animateStrokeEnd(from: 0.0, to: 1.0, duration: 0.25, delay: delay, removeOnCompletion: false)
+            self.rightLine.animateStrokeEnd(from: 0.0, to: 1.0, duration: 0.25, delay: delay, removeOnCompletion: false)
             
-            self.arrowBody.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.0, removeOnCompletion: false)
-            self.leftLine.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.0, removeOnCompletion: false)
-            self.rightLine.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.0, removeOnCompletion: false)
+            self.arrowBody.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: delay, removeOnCompletion: false)
+            self.leftLine.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: delay, removeOnCompletion: false)
+            self.rightLine.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: delay, removeOnCompletion: false)
         } else {
-            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
-            self.layer.animateScale(from: 0.7, to: 1.0, duration: duration)
+            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, delay: delay)
+            self.layer.animateScale(from: 0.7, to: 1.0, duration: duration, delay: delay)
         }
     }
 }
