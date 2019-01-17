@@ -251,6 +251,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, activate: { [weak self] in
             self?.activateSearch()
         })
+        self.searchContentNode?.updateExpansionProgress(0.0)
         self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
 

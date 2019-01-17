@@ -154,7 +154,10 @@ final class RadialDownloadContentNode: RadialStatusContentNode {
         self.leftLine.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.07, removeOnCompletion: false) { finished in
             completion(0.0)
         }
-        self.rightLine.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.07, removeOnCompletion: false)
+        self.rightLine.animateAlpha(from: 1.0, to: 0.0, duration: 0.02, delay: 0.15, removeOnCompletion: false)  { finished in
+            self.leftLine.strokeColor = UIColor.clear.cgColor
+            self.rightLine.strokeColor = UIColor.clear.cgColor
+        }
     }
     
     override func animateOut(to: RadialStatusNodeState, completion: @escaping () -> Void) {
