@@ -89,9 +89,9 @@ func snapshotEnvironment(application: UIApplication, mainWindow: UIWindow, statu
     let _ = updatePresentationThemeSettingsInteractively(postbox: result!.postbox, { _ in
         switch theme {
             case .day:
-                return PresentationThemeSettings(chatWallpaper: .color(0xffffff), chatWallpaperMode: .still, theme: .builtin(.day), themeAccentColor: nil, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), disableAnimations: false)
+                return PresentationThemeSettings(chatWallpaper: .color(0xffffff), chatWallpaperOptions: [], theme: .builtin(.day), themeAccentColor: nil, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), disableAnimations: false)
             case .night:
-                return PresentationThemeSettings(chatWallpaper: .color(0x000000), chatWallpaperMode: .still, theme: .builtin(.nightAccent), themeAccentColor: nil, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), disableAnimations: false)
+                return PresentationThemeSettings(chatWallpaper: .color(0x000000), chatWallpaperOptions: [], theme: .builtin(.nightAccent), themeAccentColor: nil, fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), disableAnimations: false)
         }
     }).start()
     

@@ -3870,8 +3870,16 @@ Unused sets are archived when you add more.";
 "EmptyGroupInfo.Line4" = "Admins with different rights";
 
 "WallpaperPreview.Title" = "Background Preview";
-"WallpaperPreview.SwipeInfo" = "Swipe left or right to preview more backgrounds";
-"WallpaperPreview.MessageText" = "Lorem ipsum dolor sit amet";
+"WallpaperPreview.PreviewTopText" = "Press Set to apply the background";
+"WallpaperPreview.PreviewBottomText" = "Lorem ipsum dolor sit amet";
+"WallpaperPreview.SwipeTopText" = "Swipe left or right to preview more backgrounds";
+"WallpaperPreview.SwipeBottomText" = "Lorem ipsum dolor sit amet";
+"WallpaperPreview.SwipeColorsTopText" = "Swipe left or right to see more colors";
+"WallpaperPreview.SwipeColorsBottomText" = "Lorem ipsum dolor sit amet";
+"WallpaperPreview.CustomColorTopText" = "Use sliders to adjust color";
+"WallpaperPreview.CustomColorBottomText" = "Lorem ipsum dolor sit amet";
+"WallpaperPreview.CropTopText" = "Pinch and pan to adjust background";
+"WallpaperPreview.CropBottomText" = "Lorem ipsum dolor sit amet";
 "WallpaperPreview.Still" = "Still";
 "WallpaperPreview.Perspective" = "Perspective";
 "WallpaperPreview.Blurred" = "Blurred";
@@ -3881,11 +3889,31 @@ Unused sets are archived when you add more.";
 "Wallpaper.SetCustomBackground" = "Choose from Gallery";
 "Wallpaper.SetCustomBackgroundInfo" = "You can set a custom background image and share it with your friends.";
 
+"Wallpaper.DeleteConfirmation_1" = "Delete Background";
+"Wallpaper.DeleteConfirmation_2" = "Delete 2 Backgrounds";
+"Wallpaper.DeleteConfirmation_3_10" = "Delete %@ Backgrounds";
+"Wallpaper.DeleteConfirmation_any" = "Delete %@ Backgrounds";
+"Wallpaper.DeleteConfirmation_many" = "Delete %@ Backgrounds";
+"Wallpaper.DeleteConfirmation_0" = "Delete %@ Backgrounds";
+
 "WallpaperColors.Title" = "Set a Color";
 "WallpaperColors.SetCustomColor" = "Set Custom Color";
 
 "WallpaperSearch.ColorTitle" = "SEARCH BY COLOR";
 "WallpaperSearch.Recent" = "RECENT";
+"WallpaperSearch.ColorPrefix" = "color: ";
+"WallpaperSearch.ColorBlue" = "Blue";
+"WallpaperSearch.ColorRed" = "Red";
+"WallpaperSearch.ColorOrange" = "Orange";
+"WallpaperSearch.ColorYellow" = "Yellow";
+"WallpaperSearch.ColorGreen" = "Green";
+"WallpaperSearch.ColorTeal" = "Teal";
+"WallpaperSearch.ColorPurple" = "Purple";
+"WallpaperSearch.ColorPink" = "Pink";
+"WallpaperSearch.ColorBrown" = "Brown";
+"WallpaperSearch.ColorBlack" = "Black";
+"WallpaperSearch.ColorGray" = "Gray";
+"WallpaperSearch.ColorWhite" = "White";
 
 "Channel.AdminLog.DefaultRestrictionsUpdated" = "changed default permissions";
 "Channel.AdminLog.PollStopped" = "%@ stopped poll";
