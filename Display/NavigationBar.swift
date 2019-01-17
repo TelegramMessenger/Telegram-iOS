@@ -247,6 +247,7 @@ open class NavigationBar: ASDisplayNode {
         didSet {
             if let title = self.title {
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: self.presentationData.theme.primaryTextColor)
+                self.titleNode.accessibilityLabel = title
                 if self.titleNode.supernode == nil {
                     self.clippingNode.addSubnode(self.titleNode)
                 }
@@ -254,6 +255,7 @@ open class NavigationBar: ASDisplayNode {
                 self.titleNode.removeFromSupernode()
             }
             
+            self.updateAccessibilityElements()
             self.invalidateCalculatedLayout()
             self.requestLayout()
         }
@@ -280,6 +282,72 @@ open class NavigationBar: ASDisplayNode {
     
     var previousItemListenerKey: Int?
     var previousItemBackListenerKey: Int?
+    
+    private func updateAccessibilityElements() {
+        /*if !self.isNodeLoaded {
+            return
+        }
+        var accessibilityElements: [AnyObject] = []
+        
+        if self.leftButtonNode.supernode != nil {
+            accessibilityElements.append(self.leftButtonNode)
+        }
+        if self.titleNode.supernode != nil {
+            accessibilityElements.append(self.titleNode)
+        }
+        if let titleView = self.titleView, titleView.superview != nil {
+            accessibilityElements.append(titleView)
+        }
+        if self.rightButtonNode.supernode != nil {
+            accessibilityElements.append(self.rightButtonNode)
+        }
+        
+        var updated = false
+        if let currentAccessibilityElements = self.accessibilityElements {
+            if currentAccessibilityElements.count != accessibilityElements.count {
+                updated = true
+            } else {
+                for i in 0 ..< accessibilityElements.count {
+                    let element = currentAccessibilityElements[i] as AnyObject
+                    if element !== accessibilityElements[i] {
+                        updated = true
+                    }
+                }
+            }
+        }
+        if updated {
+            self.accessibilityElements = accessibilityElements
+        }*/
+    }
+    
+    override open var accessibilityElements: [Any]? {
+        get {
+            var accessibilityElements: [Any] = []
+            if self.backButtonNode.supernode != nil {
+                accessibilityElements.append(self.backButtonNode)
+            }
+            if self.leftButtonNode.supernode != nil {
+                accessibilityElements.append(self.leftButtonNode)
+            }
+            if self.titleNode.supernode != nil {
+                accessibilityElements.append(self.titleNode)
+            }
+            if let titleView = self.titleView, titleView.superview != nil {
+                accessibilityElements.append(titleView)
+            }
+            if self.rightButtonNode.supernode != nil {
+                accessibilityElements.append(self.rightButtonNode)
+            }
+            return accessibilityElements
+        } set(value) {
+        }
+    }
+    
+    override open func didLoad() {
+        super.didLoad()
+        
+        self.updateAccessibilityElements()
+    }
     
     var _previousItem: NavigationPreviousAction?
     var previousItem: NavigationPreviousAction? {
@@ -471,6 +539,7 @@ open class NavigationBar: ASDisplayNode {
             self.badgeNode.removeFromSupernode()
         }
         
+        self.updateAccessibilityElements()
         if animated {
             self.hintAnimateTitleNodeOnNextLayout = true
         }
@@ -512,6 +581,7 @@ open class NavigationBar: ASDisplayNode {
         if animated {
             self.hintAnimateTitleNodeOnNextLayout = true
         }
+        self.updateAccessibilityElements()
     }
     
     private let backButtonNode: NavigationButtonNode
@@ -596,6 +666,9 @@ open class NavigationBar: ASDisplayNode {
         self.stripeNode = ASDisplayNode()
         
         self.titleNode = ASTextNode()
+        self.titleNode.isAccessibilityElement = true
+        self.titleNode.accessibilityTraits = UIAccessibilityTraitHeader
+        
         self.backButtonNode = NavigationButtonNode()
         self.badgeNode = NavigationBarBadgeNode(fillColor: self.presentationData.theme.badgeBackgroundColor, strokeColor: self.presentationData.theme.badgeStrokeColor, textColor: self.presentationData.theme.badgeTextColor)
         self.badgeNode.isUserInteractionEnabled = false
@@ -619,6 +692,7 @@ open class NavigationBar: ASDisplayNode {
         self.backButtonArrow.image = backArrowImage(color: self.presentationData.theme.buttonColor)
         if let title = self.title {
             self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.presentationData.theme.primaryTextColor)
+            self.titleNode.accessibilityLabel = title
         }
         self.stripeNode.backgroundColor = self.presentationData.theme.separatorColor
         
@@ -692,6 +766,7 @@ open class NavigationBar: ASDisplayNode {
             self.backButtonArrow.image = backArrowImage(color: self.presentationData.theme.buttonColor)
             if let title = self.title {
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.presentationData.theme.primaryTextColor)
+                self.titleNode.accessibilityLabel = title
             }
             self.stripeNode.backgroundColor = self.presentationData.theme.separatorColor
             

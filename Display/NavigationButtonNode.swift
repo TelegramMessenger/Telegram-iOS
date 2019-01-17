@@ -31,6 +31,7 @@ private final class NavigationButtonItemNode: ASTextNode {
                     self.setEnabledListener = item.addSetEnabledListener { [weak self] value in
                         self?.isEnabled = value
                     }
+                    self.accessibilityHint = item.accessibilityHint
                 }
             }
         }
@@ -123,6 +124,20 @@ private final class NavigationButtonItemNode: ASTextNode {
     public var pressed: () -> () = { }
     public var highlightChanged: (Bool) -> () = { _ in }
     
+    override public var isAccessibilityElement: Bool {
+        get {
+            return true
+        } set(value) {
+        }
+    }
+    
+    override public var accessibilityLabel: String? {
+        get {
+            return self.item?.accessibilityLabel
+        } set(value) {
+        }
+    }
+    
     override public init() {
         super.init()
         
@@ -130,6 +145,8 @@ private final class NavigationButtonItemNode: ASTextNode {
         self.isExclusiveTouch = true
         self.hitTestSlop = UIEdgeInsets(top: -16.0, left: -10.0, bottom: -16.0, right: -10.0)
         self.displaysAsynchronously = false
+        
+        self.accessibilityTraits = UIAccessibilityTraitButton
     }
     
     func updateLayout(_ constrainedSize: CGSize) -> CGSize {
@@ -249,8 +266,17 @@ final class NavigationButtonNode: ASDisplayNode {
         }
     }
     
+    override public var accessibilityElements: [Any]? {
+        get {
+            return self.nodes
+        } set(value) {
+        }
+    }
+    
     override init() {
         super.init()
+        
+        self.isAccessibilityElement = false
     }
     
     var manualText: String {
