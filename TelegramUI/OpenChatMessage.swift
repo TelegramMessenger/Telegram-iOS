@@ -102,9 +102,6 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
             return .pass(file)
         } else {
             if let file = galleryMedia as? TelegramMediaFile {
-                if file.mimeType.hasPrefix("audio/") {
-                    return .audio(file)
-                }
                 if let fileName = file.fileName {
                     let ext = (fileName as NSString).pathExtension.lowercased()
                     if ext == "wav" || ext == "opus" {

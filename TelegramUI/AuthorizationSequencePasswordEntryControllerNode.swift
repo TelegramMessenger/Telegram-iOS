@@ -107,6 +107,14 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
         var insets = layout.insets(options: [.input])
         insets.top = navigationBarHeight
         
+        if let inputHeight = layout.inputHeight {
+            if abs(inputHeight - (layout.standardInputHeight - 44.0)) < 2.0 {
+                insets.bottom += layout.standardInputHeight
+            } else {
+                insets.bottom += inputHeight
+            }
+        }
+        
         if max(layout.size.width, layout.size.height) > 1023.0 {
             self.titleNode.attributedText = NSAttributedString(string: self.strings.LoginPassword_Title, font: Font.light(40.0), textColor: self.theme.primaryColor)
         } else {

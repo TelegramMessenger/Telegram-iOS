@@ -101,7 +101,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
     private(set) var historyNode: ChatHistoryNode & ASDisplayNode
     private var historyEmptyNode: PeerMediaCollectionEmptyNode
     
-    private var searchDisplayController: SearchDisplayController?
+    private(set) var searchDisplayController: SearchDisplayController?
     
     private let candidateHistoryNodeReadyDisposable = MetaDisposable()
     private var candidateHistoryNode: (ASDisplayNode, PeerMediaCollectionMode)?

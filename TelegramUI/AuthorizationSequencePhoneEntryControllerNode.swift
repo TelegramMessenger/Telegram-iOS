@@ -262,7 +262,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         insets.top = navigationBarHeight
         
         if let inputHeight = layout.inputHeight {
-            if inputHeight.isEqual(to: layout.standardInputHeight - 44.0) {
+            if abs(inputHeight - (layout.standardInputHeight - 44.0)) < 2.0 {
                 insets.bottom += layout.standardInputHeight
             } else {
                 insets.bottom += inputHeight
