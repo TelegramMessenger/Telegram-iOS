@@ -80,14 +80,23 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             self.tabBarItem.image = icon
             self.tabBarItem.selectedImage = icon
             
-            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
-            self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
+            let leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+            leftBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Edit
+            self.navigationItem.leftBarButtonItem = leftBarButtonItem
+            
+            let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
+            rightBarButtonItem.accessibilityLabel = "Compose"
+            self.navigationItem.rightBarButtonItem = rightBarButtonItem
         } else {
             self.navigationItem.title = "Channels"
-            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+            let rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+            rightBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Edit
+            self.navigationItem.rightBarButtonItem = rightBarButtonItem
         }
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
+        let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
+        backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
+        self.navigationItem.backBarButtonItem = backBarButtonItem
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -271,7 +280,11 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     
     private func updateThemeAndStrings() {
         self.tabBarItem.title = self.presentationData.strings.DialogList_Title
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
+        
+        let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
+        backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
+        self.navigationItem.backBarButtonItem = backBarButtonItem
+        
         self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel)
         var editing = false
         self.chatListDisplayNode.chatListNode.updateState { state in
@@ -281,12 +294,16 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         let editItem: UIBarButtonItem
         if editing {
             editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+            editItem.accessibilityLabel = self.presentationData.strings.Common_Done
         } else {
             editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+            editItem.accessibilityLabel = self.presentationData.strings.Common_Edit
         }
         if self.groupId == nil {
             self.navigationItem.leftBarButtonItem = editItem
-            self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
+            let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
+            rightBarButtonItem.accessibilityLabel = "Compose"
+            self.navigationItem.rightBarButtonItem = rightBarButtonItem
         } else {
             self.navigationItem.rightBarButtonItem = editItem
         }
@@ -764,6 +781,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     
     @objc func editPressed() {
         let editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+        editItem.accessibilityLabel = self.presentationData.strings.Common_Done
         if self.groupId == nil {
             self.navigationItem.leftBarButtonItem = editItem
         } else {
@@ -780,6 +798,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     
     @objc func donePressed() {
         let editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+        editItem.accessibilityLabel = self.presentationData.strings.Common_Edit
         if self.groupId == nil {
             self.navigationItem.leftBarButtonItem = editItem
         } else {
