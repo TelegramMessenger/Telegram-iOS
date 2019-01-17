@@ -67,10 +67,10 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     
     var fetchedData: Data?
     
-    #if DEBUG
+    /*#if DEBUG
     maxOffset = max(maxOffset, context.readingOffset + Int(bufferSize))
     print("maxOffset \(maxOffset)")
-    #endif
+    #endif*/
     
     if streamable {
         let data: Signal<Data, NoError>
