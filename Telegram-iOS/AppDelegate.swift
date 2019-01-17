@@ -366,15 +366,20 @@ private enum QueuedWakeup: Int32 {
             return true
         }
         
+        var isDebugConfiguration = false
         #if DEBUG
-        LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: true, redactSensitiveData: true)
-        #else
-        if BuildConfig.shared().isInternalBuild {
+        isDebugConfiguration = true
+        #endif
+        
+        if Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt" {
+            isDebugConfiguration = true
+        }
+        
+        if isDebugConfiguration || BuildConfig.shared().isInternalBuild {
             LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
         } else {
-            LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
+            LoggingSettings.defaultSettings = LoggingSettings(logToFile: false, logToConsole: false, redactSensitiveData: true)
         }
-        #endif
         
         let rootPath = rootPathForBasePath(appGroupUrl.path)
         performAppGroupUpgrades(appGroupPath: appGroupUrl.path, rootPath: rootPath)
