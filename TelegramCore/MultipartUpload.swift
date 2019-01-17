@@ -145,9 +145,9 @@ private enum HeaderPartState {
 
 private final class MultipartUploadManager {
     let parallelParts: Int = 3
-    let defaultPartSize: Int
-    let bigTotalParts: Int?
-    let bigParts: Bool
+    var defaultPartSize: Int
+    var bigTotalParts: Int?
+    var bigParts: Bool
     
     let queue = Queue()
     let fileId: Int64
@@ -225,6 +225,20 @@ private final class MultipartUploadManager {
     }
     
     func checkState() {
+        if let resourceData = self.resourceData, resourceData.complete && resourceData.size != 0 {
+            if self.committedOffset == 0 && self.uploadedParts.isEmpty && self.uploadingParts.isEmpty {
+                if resourceData.size > 10 * 1024 * 1024 {
+                    self.defaultPartSize = 512 * 1024
+                    self.bigTotalParts = (resourceData.size / self.defaultPartSize) + (resourceData.size % self.defaultPartSize == 0 ? 0 : 1)
+                    self.bigParts = true
+                } else {
+                    self.bigParts = false
+                    self.defaultPartSize = 16 * 1024
+                    self.bigTotalParts = nil
+                }
+            }
+        }
+        
         var updatedCommittedOffset = false
         for offset in self.uploadedParts.keys.sorted() {
             if offset == self.committedOffset {
