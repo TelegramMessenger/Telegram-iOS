@@ -11234,28 +11234,27 @@ extension Api {
     
     }
     enum WallPaper: TypeConstructorDescription {
-        case wallPaper(id: Int64, flags: Int32, accessHash: Int64, slug: String, document: Api.Document, color: Int32?)
+        case wallPaper(id: Int64, flags: Int32, accessHash: Int64, slug: String, document: Api.Document)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .wallPaper(let id, let flags, let accessHash, let slug, let document, let color):
+                case .wallPaper(let id, let flags, let accessHash, let slug, let document):
                     if boxed {
-                        buffer.appendInt32(-1695098544)
+                        buffer.appendInt32(-263220756)
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     serializeString(slug, buffer: buffer, boxed: false)
                     document.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(color!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .wallPaper(let id, let flags, let accessHash, let slug, let document, let color):
-                return ("wallPaper", [("id", id), ("flags", flags), ("accessHash", accessHash), ("slug", slug), ("document", document), ("color", color)])
+                case .wallPaper(let id, let flags, let accessHash, let slug, let document):
+                return ("wallPaper", [("id", id), ("flags", flags), ("accessHash", accessHash), ("slug", slug), ("document", document)])
     }
     }
     
@@ -11272,16 +11271,13 @@ extension Api {
             if let signature = reader.readInt32() {
                 _5 = Api.parse(reader, signature: signature) as? Api.Document
             }
-            var _6: Int32?
-            if Int(_2!) & Int(1 << 2) != 0 {_6 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            let _c6 = (Int(_2!) & Int(1 << 2) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.WallPaper.wallPaper(id: _1!, flags: _2!, accessHash: _3!, slug: _4!, document: _5!, color: _6)
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.WallPaper.wallPaper(id: _1!, flags: _2!, accessHash: _3!, slug: _4!, document: _5!)
             }
             else {
                 return nil
