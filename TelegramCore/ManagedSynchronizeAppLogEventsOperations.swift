@@ -116,8 +116,7 @@ func managedSynchronizeAppLogEventsOperations(postbox: Postbox, network: Network
 }
 
 private func synchronizeAppLogEvents(transaction: Transaction, postbox: Postbox, network: Network, operations: [SynchronizeAppLogEventsOperation]) -> Signal<Void, NoError> {
-    return .complete()
-    /*var events: [Api.InputAppEvent] = []
+    var events: [Api.InputAppEvent] = []
     for operation in operations {
         switch operation.content {
             case let .add(time, type, peerId, data):
@@ -135,5 +134,5 @@ private func synchronizeAppLogEvents(transaction: Transaction, postbox: Postbox,
     }
     |> mapToSignal { _ -> Signal<Void, NoError> in
         return .complete()
-    }*/
+    }
 }
