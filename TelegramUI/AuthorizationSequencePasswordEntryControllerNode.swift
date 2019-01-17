@@ -104,7 +104,7 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.layoutArguments = (layout, navigationBarHeight)
         
-        var insets = layout.insets(options: [.input])
+        var insets = layout.insets(options: [])
         insets.top = navigationBarHeight
         
         if let inputHeight = layout.inputHeight {

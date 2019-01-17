@@ -257,6 +257,10 @@ class WallpaperGalleryController: ViewController {
         super.viewDidAppear(animated)
         
         self.galleryNode.modalAnimateIn()
+        
+        if let centralItemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
+            self.centralItemStatus.set(centralItemNode.status.get())
+        }
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
