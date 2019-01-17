@@ -197,7 +197,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.layoutArguments = (layout, navigationBarHeight)
         
-        var insets = layout.insets(options: [.statusBar, .input])
+        var insets = layout.insets(options: [.statusBar])
         if let inputHeight = layout.inputHeight {
             if abs(inputHeight - (layout.standardInputHeight - 44.0)) < 2.0 {
                 insets.bottom += layout.standardInputHeight
