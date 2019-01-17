@@ -1364,12 +1364,12 @@ public final class Postbox {
         }
         
         do {
-            let startTime = CFAbsoluteTimeGetCurrent()
+            /*let startTime = CFAbsoluteTimeGetCurrent()
             let state = self.chatListIndexTable.debugReindexUnreadCounts(postbox: self)
             if state != self.messageHistoryMetadataTable.getChatListTotalUnreadState() {
                 print("Initial read state mismatch")
                 self.messageHistoryMetadataTable.setChatListTotalUnreadState(state)
-            }
+            }*/
             postboxLog("debugReindexUnreadCounts took \(CFAbsoluteTimeGetCurrent() - startTime)")
         }
     }
