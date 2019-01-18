@@ -38,6 +38,7 @@ static bool TGProxyWindowIsLight = true;
     bool _light;
     NSString *_text;
     bool _shieldIcon;
+    bool _starIcon;
     UIVisualEffectView *_effectView;
     UIView *_backgroundView;
     TGProxySpinnerView *_spinner;
@@ -53,15 +54,16 @@ static bool TGProxyWindowIsLight = true;
 @implementation TGProxyWindowController
 
 - (instancetype)init {
-    return [self initWithLight:TGProxyWindowIsLight text:TGLocalized(@"SocksProxySetup.ProxyEnabled") shield:true];
+    return [self initWithLight:TGProxyWindowIsLight text:TGLocalized(@"SocksProxySetup.ProxyEnabled") shield:true star:false];
 }
 
-- (instancetype)initWithLight:(bool)light text:(NSString *)text shield:(bool)shield {
+- (instancetype)initWithLight:(bool)light text:(NSString *)text shield:(bool)shield star:(bool)star {
     self = [super init];
     if (self != nil) {
         _light = light;
         _text = text;
         _shieldIcon = shield;
+        _starIcon = star;
     }
     return self;
 }
@@ -78,11 +80,11 @@ static bool TGProxyWindowIsLight = true;
 - (void)updateLayout {
     CGSize spinnerSize = CGSizeMake(48.0, 48.0);
     CGSize containerSize = CGSizeMake(156.0, 176.0);
-    if (!_shieldIcon) {
+    if (!_shieldIcon && !_starIcon) {
         containerSize = CGSizeMake(207.0, 177.0);
         spinnerSize = CGSizeMake(40.0, 40.0);
     }
-    CGRect spinnerFrame = CGRectMake((containerSize.width - spinnerSize.width) / 2.0f, _shieldIcon ? 40.0f : 45.0, spinnerSize.width, spinnerSize.height);
+    CGRect spinnerFrame = CGRectMake((containerSize.width - spinnerSize.width) / 2.0f, _shieldIcon || _starIcon ? 40.0f : 45.0, spinnerSize.width, spinnerSize.height);
     if (_containerView == nil) {
         _containerView = [[UIView alloc] initWithFrame:CGRectMake(CGFloor(self.view.frame.size.width - containerSize.width) / 2, CGFloor(self.view.frame.size.height - containerSize.height) / 2, containerSize.width, containerSize.height)];
         _containerView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
@@ -113,6 +115,8 @@ static bool TGProxyWindowIsLight = true;
         UIImage *image = nil;
         if (_shieldIcon) {
             image = generateShieldImage(color);
+        } else if (_starIcon) {
+            image = TGComponentsImageNamed(@"Star");
         } else {
             CGSize size = CGSizeMake(66.0, 66.0);
             UIGraphicsBeginImageContextWithOptions(size, false, 0.0);
@@ -194,9 +198,11 @@ static bool TGProxyWindowIsLight = true;
             dismissBlock();
         }];
         
-        TGDispatchAfter(0.15, dispatch_get_main_queue(), ^{
-            [_spinner setSucceed];
-        });
+        if (!_starIcon) {
+            TGDispatchAfter(0.15, dispatch_get_main_queue(), ^{
+                [_spinner setSucceed];
+            });
+        }
     } else {
         _spinner.onSuccess = ^{
             dismissBlock();

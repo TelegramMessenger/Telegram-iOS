@@ -4,7 +4,7 @@
 
 @interface TGProxyWindowController : TGOverlayWindowViewController
 
-- (instancetype)initWithLight:(bool)light text:(NSString *)text shield:(bool)shield;
+- (instancetype)initWithLight:(bool)light text:(NSString *)text shield:(bool)shield star:(bool)star;
 
 - (void)dismissWithSuccess:(void (^)(void))completion increasedDelay:(bool)increasedDelay;
 - (void)updateLayout;
