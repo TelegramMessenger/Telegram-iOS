@@ -2545,9 +2545,8 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.BanReadMessages" = "Read Messages";
 "Channel.AdminLog.BanSendMessages" = "Send Messages";
 "Channel.AdminLog.BanSendMedia" = "Send Media";
-"Channel.AdminLog.BanSendStickers" = "Send Stickers";
+"Channel.AdminLog.BanSendStickersAndGifs" = "Send Stickers & GIFs";
 "Channel.AdminLog.BanEmbedLinks" = "Embed Links";
-"Channel.AdminLog.BanSendGifs" = "Send GIFs";
 "Channel.AdminLog.MessageRestricted" = "%@ changed restrictions for %@ (%@)";
 "Channel.AdminLog.MessageAdmin" = "%@ changed privileges for %@ (%@)";
 "Channel.AdminLog.ChangeInfo" = "Change Info";
@@ -3936,3 +3935,7 @@ Unused sets are archived when you add more.";
 
 "Conversation.ChatBackground" = "Chat Background";
 "Conversation.ViewBackground" = "VIEW BACKGROUND";
+
+"SocksProxySetup.ShareQRCodeInfo" = "Your friends can add this proxy by scanning this code with phone or in-app camera.";
+"SocksProxySetup.ShareQRCode" = "Share QR Code";
+"SocksProxySetup.ShareLink" = "Share Link";
