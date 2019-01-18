@@ -109,7 +109,7 @@ private func takenImmutableOperation(postbox: Postbox, peerId: PeerId, tagLocalI
     }
 }
 
-func managedSecretChatOutgoingOperations(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+func managedSecretChatOutgoingOperations(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     return Signal { _ in
         let helper = Atomic<ManagedSecretChatOutgoingOperationsHelper>(value: ManagedSecretChatOutgoingOperationsHelper())
         
@@ -131,7 +131,7 @@ func managedSecretChatOutgoingOperations(postbox: Postbox, network: Network) -> 
                                 case let .initialHandshakeAccept(gA, accessHash, b):
                                     return initialHandshakeAccept(postbox: postbox, network: network, peerId: entry.peerId, accessHash: accessHash, gA: gA, b: b, tagLocalIndex: entry.tagLocalIndex)
                                 case let .sendMessage(layer, id, file):
-                                    return sendMessage(postbox: postbox, network: network, messageId: id, file: file, tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered, layer: layer)
+                                    return sendMessage(auxiliaryMethods: auxiliaryMethods, postbox: postbox, network: network, messageId: id, file: file, tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered, layer: layer)
                                 case let .reportLayerSupport(layer, actionGloballyUniqueId, layerSupport):
                                     return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .reportLayerSupport(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, layerSupport: layerSupport), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                 case let .deleteMessages(layer, actionGloballyUniqueId, globallyUniqueIds):
@@ -598,7 +598,7 @@ private func decryptedEntities73(_ entities: [MessageTextEntity]?) -> [SecretApi
     return result
 }
 
-private func boxedDecryptedMessage(transaction: Transaction, message: Message, globallyUniqueId: Int64, uploadedFile: SecretChatOutgoingFile?, thumbnailData: [MediaId: Data], layer: SecretChatLayer) -> BoxedDecryptedMessage {
+private func boxedDecryptedMessage(transaction: Transaction, message: Message, globallyUniqueId: Int64, uploadedFile: SecretChatOutgoingFile?, thumbnailData: [MediaId: (CGSize, Data)], layer: SecretChatLayer) -> BoxedDecryptedMessage {
     let media: Media? = message.media.first
     var messageAutoremoveTimeout: Int32 = 0
     var replyGlobalId: Int64? = nil
@@ -635,9 +635,9 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
             let thumbW: Int32
             let thumbH: Int32
             let thumb: Buffer
-            if let smallestRepresentation = smallestImageRepresentation(image.representations), smallestRepresentation.dimensions.width < 100.0 && smallestRepresentation.dimensions.height < 100.0, let data = thumbnailData[image.imageId] {
-                thumbW = Int32(smallestRepresentation.dimensions.width)
-                thumbH = Int32(smallestRepresentation.dimensions.height)
+            if let (thumbnailSize, data) = thumbnailData[image.imageId] {
+                thumbW = Int32(thumbnailSize.width)
+                thumbH = Int32(thumbnailSize.height)
                 thumb = Buffer(data: data)
             } else {
                 thumbW = 90
@@ -680,9 +680,9 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
             let thumbW: Int32
             let thumbH: Int32
             let thumb: Buffer
-            if let smallestRepresentation = smallestImageRepresentation(file.previewRepresentations), let data = thumbnailData[file.fileId] {
-                thumbW = Int32(smallestRepresentation.dimensions.width)
-                thumbH = Int32(smallestRepresentation.dimensions.height)
+            if let (thumbnailSize, data) = thumbnailData[file.fileId] {
+                thumbW = Int32(thumbnailSize.width)
+                thumbH = Int32(thumbnailSize.height)
                 thumb = Buffer(data: data)
             } else {
                 thumbW = 0
@@ -1078,47 +1078,47 @@ private func replaceOutgoingOperationWithEmptyMessage(transaction: Transaction, 
     }
 }
 
-private func resourceThumbnailData(mediaBox: MediaBox, resource: MediaResource, mediaId: MediaId) -> Signal<(MediaId, Data)?, NoError> {
+private func resourceThumbnailData(auxiliaryMethods: AccountAuxiliaryMethods, mediaBox: MediaBox, resource: MediaResource, mediaId: MediaId) -> Signal<(MediaId, CGSize, Data)?, NoError> {
     return mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
-        |> take(1)
-        |> map { data -> (MediaId, Data)? in
-            if data.complete, data.size < 1024 * 1024, let content = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                return (mediaId, content)
-            } else {
-                return nil
-            }
+    |> take(1)
+    |> map { data -> (MediaId, CGSize, Data)? in
+        if data.complete, let (mappedSize, mappedData) = auxiliaryMethods.prepareSecretThumbnailData(data) {
+            return (mediaId, mappedSize, mappedData)
+        } else {
+            return nil
         }
+    }
 }
 
-private func messageWithThumbnailData(mediaBox: MediaBox, message: Message) -> Signal<[MediaId: Data], NoError> {
-    var signals: [Signal<(MediaId, Data)?, NoError>] = []
+private func messageWithThumbnailData(auxiliaryMethods: AccountAuxiliaryMethods, mediaBox: MediaBox, message: Message) -> Signal<[MediaId: (CGSize, Data)], NoError> {
+    var signals: [Signal<(MediaId, CGSize, Data)?, NoError>] = []
     for media in message.media {
         if let image = media as? TelegramMediaImage {
             if let smallestRepresentation = smallestImageRepresentation(image.representations) {
-                signals.append(resourceThumbnailData(mediaBox: mediaBox, resource: smallestRepresentation.resource, mediaId: image.imageId))
+                signals.append(resourceThumbnailData(auxiliaryMethods: auxiliaryMethods, mediaBox: mediaBox, resource: smallestRepresentation.resource, mediaId: image.imageId))
             }
         } else if let file = media as? TelegramMediaFile {
             if let smallestRepresentation = smallestImageRepresentation(file.previewRepresentations) {
-                signals.append(resourceThumbnailData(mediaBox: mediaBox, resource: smallestRepresentation.resource, mediaId: file.fileId))
+                signals.append(resourceThumbnailData(auxiliaryMethods: auxiliaryMethods, mediaBox: mediaBox, resource: smallestRepresentation.resource, mediaId: file.fileId))
             }
         }
     }
     return combineLatest(signals)
     |> map { values in
-        var result: [MediaId: Data] = [:]
+        var result: [MediaId: (CGSize, Data)] = [:]
         for value in values {
             if let value = value {
-                result[value.0] = value.1
+                result[value.0] = (value.1, value.2)
             }
         }
         return result
     }
 }
 
-private func sendMessage(postbox: Postbox, network: Network, messageId: MessageId, file: SecretChatOutgoingFile?, tagLocalIndex: Int32, wasDelivered: Bool, layer: SecretChatLayer) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Signal<[MediaId: Data], NoError> in
+private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Postbox, network: Network, messageId: MessageId, file: SecretChatOutgoingFile?, tagLocalIndex: Int32, wasDelivered: Bool, layer: SecretChatLayer) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<[MediaId: (CGSize, Data)], NoError> in
         if let message = transaction.getMessage(messageId) {
-            return messageWithThumbnailData(mediaBox: postbox.mediaBox, message: message)
+            return messageWithThumbnailData(auxiliaryMethods: auxiliaryMethods, mediaBox: postbox.mediaBox, message: message)
         } else {
             return .single([:])
         }
