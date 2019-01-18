@@ -707,11 +707,13 @@ public final class AccountAuxiliaryMethods {
     public let updatePeerChatInputState: (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?
     public let fetchResource: (Account, MediaResource, Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?
     public let fetchResourceMediaReferenceHash: (MediaResource) -> Signal<Data?, NoError>
+    public let prepareSecretThumbnailData: (MediaResourceData) -> (CGSize, Data)?
     
-    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>) {
+    public init(updatePeerChatInputState: @escaping (PeerChatInterfaceState?, SynchronizeableChatInputState?) -> PeerChatInterfaceState?, fetchResource: @escaping (Account, MediaResource, Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>, prepareSecretThumbnailData: @escaping (MediaResourceData) -> (CGSize, Data)?) {
         self.updatePeerChatInputState = updatePeerChatInputState
         self.fetchResource = fetchResource
         self.fetchResourceMediaReferenceHash = fetchResourceMediaReferenceHash
+        self.prepareSecretThumbnailData = prepareSecretThumbnailData
     }
 }
 
@@ -1106,7 +1108,7 @@ public class Account {
             pendingMessageManager?.updatePendingMessageIds(view.ids)
         }))
         
-        self.managedOperationsDisposable.add(managedSecretChatOutgoingOperations(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedSecretChatOutgoingOperations(auxiliaryMethods: auxiliaryMethods, postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedCloudChatRemoveMessagesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(postbox: self.postbox).start())
         self.managedOperationsDisposable.add(managedGlobalNotificationSettings(postbox: self.postbox, network: self.network).start())
