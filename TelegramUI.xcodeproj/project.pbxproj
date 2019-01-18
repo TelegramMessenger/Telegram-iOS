@@ -130,6 +130,7 @@
 		9F06830921A404AB001D8EDB /* NotificationExceptionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */; };
 		9F06830B21A404C4001D8EDB /* NotificationExcetionSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */; };
 		D000CABA21EE130D0011B15D /* MapResourceToAvatarSizes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D000CAB921EE130D0011B15D /* MapResourceToAvatarSizes.swift */; };
+		D000CABC21F158AD0011B15D /* PrepareSecretThumbnailData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D000CABB21F158AD0011B15D /* PrepareSecretThumbnailData.swift */; };
 		D005808B21CAB8F000CB7CD3 /* VoipDerivedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D005808A21CAB8F000CB7CD3 /* VoipDerivedState.swift */; };
 		D00580A021DCF0A200CB7CD3 /* WallpaperListPreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D005809F21DCF0A200CB7CD3 /* WallpaperListPreviewController.swift */; };
 		D00580A221DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580A121DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift */; };
@@ -1262,6 +1263,7 @@
 		9F06830821A404AB001D8EDB /* NotificationExceptionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExceptionControllerNode.swift; sourceTree = "<group>"; };
 		9F06830A21A404C4001D8EDB /* NotificationExcetionSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationExcetionSettingsController.swift; sourceTree = "<group>"; };
 		D000CAB921EE130D0011B15D /* MapResourceToAvatarSizes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapResourceToAvatarSizes.swift; sourceTree = "<group>"; };
+		D000CABB21F158AD0011B15D /* PrepareSecretThumbnailData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrepareSecretThumbnailData.swift; sourceTree = "<group>"; };
 		D00219051DDD1C9E00BE708A /* ImageContainingNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageContainingNode.swift; sourceTree = "<group>"; };
 		D002A0D01E9B99F500A81812 /* SoftwareVideoSource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareVideoSource.swift; sourceTree = "<group>"; };
 		D002A0D21E9BBE6700A81812 /* MultiplexedSoftwareVideoSourceManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiplexedSoftwareVideoSourceManager.swift; sourceTree = "<group>"; };
@@ -4757,6 +4759,7 @@
 				099529B321D3E5D800805E13 /* CheckDiskSpace.swift */,
 				09DD5D4F21ECC3C400D7007A /* SuppressContactsWarning.swift */,
 				D000CAB921EE130D0011B15D /* MapResourceToAvatarSizes.swift */,
+				D000CABB21F158AD0011B15D /* PrepareSecretThumbnailData.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -5840,6 +5843,7 @@
 				D0EC6E051EB9F58900EBF1C3 /* SecretMediaPreviewControllerNode.swift in Sources */,
 				D007019C2029E8F2006B9E34 /* LegqacyICloudFileController.swift in Sources */,
 				0902838D2194AEB90067EFBD /* ImageTransparency.swift in Sources */,
+				D000CABC21F158AD0011B15D /* PrepareSecretThumbnailData.swift in Sources */,
 				D0208AD61FA33D14001F0D5F /* RaiseToListenActivator.m in Sources */,
 				D0EC6E061EB9F58900EBF1C3 /* ChatDocumentGalleryItem.swift in Sources */,
 				D0EC6E071EB9F58900EBF1C3 /* ChatExternalFileGalleryItem.swift in Sources */,
