@@ -31,6 +31,19 @@ private final class NavigationControllerView: UITracingLayerView {
     var navigationSeparatorView: UIView?
     var emptyDetailView: UIImageView?
     
+    var topControllerNode: ASDisplayNode?
+    
+    override var accessibilityElements: [Any]? {
+        get {
+            var accessibilityElements: [Any] = []
+            if let topControllerNode = self.topControllerNode {
+                addAccessibilityChildren(of: topControllerNode, to: &accessibilityElements)
+            }
+            return accessibilityElements
+        } set(value) {
+        }
+    }
+    
     override init(frame: CGRect) {
         self.containerView = NavigationControllerContainerView()
         self.separatorView = UIView()
@@ -107,7 +120,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     private var _viewControllers: [ControllerRecord] = []
-    open override var viewControllers: [UIViewController] {
+    override open var viewControllers: [UIViewController] {
         get {
             return self._viewControllers.map { $0.controller }
         } set(value) {
@@ -115,7 +128,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
     }
     
-    open override var topViewController: UIViewController? {
+    override open var topViewController: UIViewController? {
         return self._viewControllers.last?.controller
     }
     
@@ -521,6 +534,8 @@ open class NavigationController: UINavigationController, ContainableController, 
                 (previous.controller as? ViewController)?.navigationStackConfigurationUpdated(next: [])
             }
         }
+        
+        (self.view as! NavigationControllerView).topControllerNode = (self._viewControllers.last?.controller as? ViewController)?.displayNode
         
         for i in 0 ..< self._viewControllers.count {
             var currentNext: UIViewController? = (i == (self._viewControllers.count - 1)) ? nil : self._viewControllers[i + 1].controller

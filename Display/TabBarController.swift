@@ -87,7 +87,7 @@ open class TabBarController: ViewController {
     private var debugTapCounter: (Double, Int) = (0.0, 0)
     
     override open func loadDisplayNode() {
-        self.displayNode = TabBarControllerNode(theme: self.theme, itemSelected: { [weak self] index, longTap in
+        self.displayNode = TabBarControllerNode(theme: self.theme, navigationBar: self.navigationBar, itemSelected: { [weak self] index, longTap in
             if let strongSelf = self {
                 if strongSelf.selectedIndex == index {
                     let timestamp = CACurrentMediaTime()
@@ -144,7 +144,7 @@ open class TabBarController: ViewController {
         
         if let currentController = self.currentController {
             currentController.willMove(toParentViewController: nil)
-            self.tabBarControllerNode.currentControllerView = nil
+            self.tabBarControllerNode.currentControllerNode = nil
             currentController.removeFromParentViewController()
             currentController.didMove(toParentViewController: nil)
             
@@ -158,7 +158,7 @@ open class TabBarController: ViewController {
         var displayNavigationBar = false
         if let currentController = self.currentController {
             currentController.willMove(toParentViewController: self)
-            self.tabBarControllerNode.currentControllerView = currentController.view
+            self.tabBarControllerNode.currentControllerNode = currentController.displayNode
             currentController.navigationBar?.isHidden = true
             self.addChildViewController(currentController)
             currentController.didMove(toParentViewController: self)

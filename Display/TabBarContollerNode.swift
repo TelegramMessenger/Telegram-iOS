@@ -4,21 +4,37 @@ import AsyncDisplayKit
 final class TabBarControllerNode: ASDisplayNode {
     private var theme: TabBarControllerTheme
     let tabBarNode: TabBarNode
+    private let navigationBar: NavigationBar?
     private var toolbarNode: ToolbarNode?
     private let toolbarActionSelected: (Bool) -> Void
 
-    var currentControllerView: UIView? {
+    var currentControllerNode: ASDisplayNode? {
         didSet {
-            oldValue?.removeFromSuperview()
+            oldValue?.removeFromSupernode()
             
-            if let currentControllerView = self.currentControllerView {
-                self.view.insertSubview(currentControllerView, at: 0)
+            if let currentControllerNode = self.currentControllerNode {
+                self.insertSubnode(currentControllerNode, at: 0)
             }
         }
     }
     
-    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int, Bool) -> Void, toolbarActionSelected: @escaping (Bool) -> Void) {
+    override var accessibilityElements: [Any]? {
+        get {
+            var accessibilityElements: [Any] = []
+            if let navigationBar = self.navigationBar {
+                addAccessibilityChildren(of: navigationBar, to: &accessibilityElements)
+            }
+            if let currentControllerNode = self.currentControllerNode {
+                addAccessibilityChildren(of: currentControllerNode, to: &accessibilityElements)
+            }
+            return accessibilityElements
+        } set(value) {
+        }
+    }
+    
+    init(theme: TabBarControllerTheme, navigationBar: NavigationBar?, itemSelected: @escaping (Int, Bool) -> Void, toolbarActionSelected: @escaping (Bool) -> Void) {
         self.theme = theme
+        self.navigationBar = navigationBar
         self.tabBarNode = TabBarNode(theme: theme, itemSelected: itemSelected)
         self.toolbarActionSelected = toolbarActionSelected
         

@@ -324,19 +324,21 @@ open class NavigationBar: ASDisplayNode {
         get {
             var accessibilityElements: [Any] = []
             if self.backButtonNode.supernode != nil {
-                accessibilityElements.append(self.backButtonNode)
+                addAccessibilityChildren(of: self.backButtonNode, to: &accessibilityElements)
             }
             if self.leftButtonNode.supernode != nil {
-                accessibilityElements.append(self.leftButtonNode)
+                addAccessibilityChildren(of: self.leftButtonNode, to: &accessibilityElements)
             }
             if self.titleNode.supernode != nil {
+                addAccessibilityChildren(of: self.titleNode, to: &accessibilityElements)
                 accessibilityElements.append(self.titleNode)
             }
             if let titleView = self.titleView, titleView.superview != nil {
+                titleView.accessibilityFrame = UIAccessibilityConvertFrameToScreenCoordinates(titleView.bounds, titleView)
                 accessibilityElements.append(titleView)
             }
             if self.rightButtonNode.supernode != nil {
-                accessibilityElements.append(self.rightButtonNode)
+                addAccessibilityChildren(of: self.rightButtonNode, to: &accessibilityElements)
             }
             return accessibilityElements
         } set(value) {

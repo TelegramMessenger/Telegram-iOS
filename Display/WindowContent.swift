@@ -220,6 +220,7 @@ public final class WindowHostView {
     var invalidatePreferNavigationUIHidden: (() -> Void)?
     var cancelInteractiveKeyboardGestures: (() -> Void)?
     var forEachController: (((ViewController) -> Void) -> Void)?
+    var getAccessibilityElements: (() -> [Any]?)?
     
     init(containerView: UIView, eventView: UIView, isRotating: @escaping () -> Bool, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void, updateDeferScreenEdgeGestures: @escaping (UIRectEdge) -> Void, updatePreferNavigationUIHidden: @escaping (Bool) -> Void) {
         self.containerView = containerView
@@ -323,6 +324,10 @@ public class Window1 {
     
     private var isInteractionBlocked = false
     
+    private var accessibilityElements: [Any]? {
+        return self.viewController?.view.accessibilityElements
+    }
+    
     public init(hostView: WindowHostView, statusBarHost: StatusBarHost?) {
         self.hostView = hostView
         
@@ -405,6 +410,10 @@ public class Window1 {
                 f(controller)
                 return true
             })
+        }
+        
+        self.hostView.getAccessibilityElements = { [weak self] in
+            return self?.accessibilityElements
         }
         
         self.presentationContext.view = self.hostView.containerView

@@ -49,6 +49,7 @@
 		D01E2BE21D9049F60066BF65 /* GridItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01E2BE11D9049F60066BF65 /* GridItemNode.swift */; };
 		D01E2BE41D904A000066BF65 /* GridItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01E2BE31D904A000066BF65 /* GridItem.swift */; };
 		D01EA41B203227BA00B4B0B5 /* ViewControllerPreviewing.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01EA41A203227BA00B4B0B5 /* ViewControllerPreviewing.swift */; };
+		D01F728221F13891006AB634 /* Accessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F728121F13891006AB634 /* Accessibility.swift */; };
 		D02383801DDF7916004018B6 /* LegacyPresentedController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D023837F1DDF7916004018B6 /* LegacyPresentedController.swift */; };
 		D02383821DDF798E004018B6 /* LegacyPresentedControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02383811DDF798E004018B6 /* LegacyPresentedControllerNode.swift */; };
 		D02383861DE0E3B4004018B6 /* ListViewIntermediateState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02383851DE0E3B4004018B6 /* ListViewIntermediateState.swift */; };
@@ -229,6 +230,7 @@
 		D01E2BE11D9049F60066BF65 /* GridItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GridItemNode.swift; sourceTree = "<group>"; };
 		D01E2BE31D904A000066BF65 /* GridItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GridItem.swift; sourceTree = "<group>"; };
 		D01EA41A203227BA00B4B0B5 /* ViewControllerPreviewing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewControllerPreviewing.swift; sourceTree = "<group>"; };
+		D01F728121F13891006AB634 /* Accessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Accessibility.swift; sourceTree = "<group>"; };
 		D023837F1DDF7916004018B6 /* LegacyPresentedController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyPresentedController.swift; sourceTree = "<group>"; };
 		D02383811DDF798E004018B6 /* LegacyPresentedControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyPresentedControllerNode.swift; sourceTree = "<group>"; };
 		D02383851DE0E3B4004018B6 /* ListViewIntermediateState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewIntermediateState.swift; sourceTree = "<group>"; };
@@ -670,6 +672,7 @@
 				D0C0D28D1C997110001D2851 /* FBAnimationPerformanceTracker.h */,
 				D0C0D28E1C997110001D2851 /* FBAnimationPerformanceTracker.mm */,
 				D0D94A161D3814F900740E02 /* UniversalTapRecognizer.swift */,
+				D01F728121F13891006AB634 /* Accessibility.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -1086,6 +1089,7 @@
 				D03AA4E9202E02070056C405 /* ListViewReorderingItemNode.swift in Sources */,
 				D05CC2EC1B69558A00E235A3 /* RuntimeUtils.m in Sources */,
 				D0E35A031DE473B900BC6096 /* HighlightableButton.swift in Sources */,
+				D01F728221F13891006AB634 /* Accessibility.swift in Sources */,
 				D0FA08C42048803C00DD23FC /* TextNode.swift in Sources */,
 				D0CA3F8C2073F8240042D2B6 /* TapLongTapOrDoubleTapGestureRecognizer.swift in Sources */,
 				D0CD12161CCFEB4E000DE7BC /* ScrollToTopProxyView.swift in Sources */,

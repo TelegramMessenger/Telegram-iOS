@@ -178,6 +178,14 @@ private final class NativeWindow: UIWindow, WindowHost {
     var invalidatePreferNavigationUIHiddenImpl: (() -> Void)?
     var cancelInteractiveKeyboardGesturesImpl: (() -> Void)?
     var forEachControllerImpl: (((ViewController) -> Void) -> Void)?
+    var getAccessibilityElementsImpl: (() -> [Any]?)?
+    
+    override var accessibilityElements: [Any]? {
+        get {
+            return self.getAccessibilityElementsImpl?()
+        } set(value) {
+        }
+    }
     
     override var frame: CGRect {
         get {
@@ -304,9 +312,7 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
         hostView?.updateSize?(size, duration)
     }
     
-    window.updateSize = { [weak hostView] size in
-        //hostView?.updateSize?(size)
-        assert(true)
+    window.updateSize = { _ in
     }
     
     window.layoutSubviewsEvent = { [weak hostView] in
@@ -351,6 +357,10 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
     
     window.forEachControllerImpl = { [weak hostView] f in
         hostView?.forEachController?(f)
+    }
+    
+    window.getAccessibilityElementsImpl = { [weak hostView] in
+        return hostView?.getAccessibilityElements?()
     }
     
     rootViewController.presentController = { [weak hostView] controller, level, animated, completion in
