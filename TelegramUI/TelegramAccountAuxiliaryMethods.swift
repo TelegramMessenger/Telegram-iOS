@@ -36,4 +36,6 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerC
         return fetchVideoLibraryMediaResourceHash(resource: resource)
     }
     return .single(nil)
+}, prepareSecretThumbnailData: { data in
+    return prepareSecretThumbnailData(data)
 })
