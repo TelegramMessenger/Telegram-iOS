@@ -495,10 +495,22 @@ class WallpaperGalleryController: ViewController {
             return
         }
         
+        var options = ""
+        if (self.blurredButtonNode?.isSelected ?? false) {
+            options = "?mode=blur"
+        }
+        if (self.motionButtonNode?.isSelected ?? false) {
+            if options.isEmpty {
+                options = "?mode=motion"
+            } else {
+                options += "+motion"
+            }
+        }
+        
         var controller: ShareController?
         switch wallpaper {
             case let .file(_, _, _, _, slug, _):
-                controller = ShareController(account: account, subject: .url("https://t.me/bg/\(slug)"))
+                controller = ShareController(account: account, subject: .url("https://t.me/bg/\(slug)\(options)"))
             case let .color(color):
                 controller = ShareController(account: account, subject: .url("https://t.me/bg/\(String(UInt32(bitPattern: color), radix: 16, uppercase: false).rightJustified(width: 6, pad: "0"))"))
             default:
