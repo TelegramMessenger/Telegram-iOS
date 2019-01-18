@@ -3879,8 +3879,7 @@ Unused sets are archived when you add more.";
 "WallpaperPreview.CustomColorBottomText" = "Lorem ipsum dolor sit amet";
 "WallpaperPreview.CropTopText" = "Pinch and pan to adjust background";
 "WallpaperPreview.CropBottomText" = "Lorem ipsum dolor sit amet";
-"WallpaperPreview.Still" = "Still";
-"WallpaperPreview.Perspective" = "Perspective";
+"WallpaperPreview.Motion" = "Motion";
 "WallpaperPreview.Blurred" = "Blurred";
 
 "Wallpaper.Search" = "Search Backgrounds";
