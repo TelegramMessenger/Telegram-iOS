@@ -210,6 +210,8 @@ final class AuthorizedApplicationContext {
         }
     }
     
+    let isReady = ValuePromise<Bool>(false, ignoreRepeated: true)
+    
     private var presentationDataDisposable: Disposable?
     private var displayAlertsDisposable: Disposable?
     private var removeNotificationsDisposable: Disposable?
@@ -623,6 +625,7 @@ final class AuthorizedApplicationContext {
                     transaction.setAccessChallengeData(data)
                 }).start()
             }*/
+            strongSelf.isReady.set(true)
         }))
         
         let accountId = account.id

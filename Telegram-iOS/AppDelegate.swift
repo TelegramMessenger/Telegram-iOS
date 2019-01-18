@@ -451,6 +451,8 @@ private enum QueuedWakeup: Int32 {
             }
         }
         |> mapToSignal { accountManager, loggingSettings -> Signal<AccountManager, NoError> in
+            AccountStore.initialize(accountManager: accountManager)
+            
             Logger.shared.logToFile = loggingSettings.logToFile
             Logger.shared.logToConsole = loggingSettings.logToConsole
             Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
@@ -682,6 +684,8 @@ private enum QueuedWakeup: Int32 {
             })
         })
         
+        let contextReadyDisposable = MetaDisposable()
+        
         self.contextDisposable.set(self.context.get().start(next: { context in
             assert(Queue.mainQueue().isCurrent())
             var network: Network?
@@ -716,27 +720,41 @@ private enum QueuedWakeup: Int32 {
             if let context = context {
                 (context.account?.applicationContext as? TelegramApplicationContext)?.isCurrent = true
                 updateLegacyComponentsAccount(context.account)
-                self.mainWindow.viewController = context.rootController
-                self.mainWindow.topLevelOverlayControllers = context.overlayControllers
-                self.maybeDequeueNotificationPayloads()
-                self.maybeDequeueNotificationRequests()
-                self.maybeDequeueWakeups()
+                
+                let isReady: Signal<Bool, NoError>
                 switch context {
-                    case let .authorized(context):
-                        var authorizeNotifications = true
-                        if #available(iOS 10.0, *) {
-                            authorizeNotifications = false
-                        }
-                        self.registerForNotifications(account: context.account, authorize: authorizeNotifications)
-                        context.account.notificationToken.set(self.notificationTokenPromise.get())
-                        context.account.voipToken.set(self.voipTokenPromise.get())
-                    case .unauthorized:
-                        break
-                    case .upgrading:
-                        break
+                    case let .authorized(authorized):
+                        isReady = authorized.isReady.get()
+                    default:
+                        isReady = .single(true)
                 }
+                contextReadyDisposable.set((isReady
+                |> filter { $0 }
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { _ in
+                    self.mainWindow.viewController = context.rootController
+                    self.mainWindow.topLevelOverlayControllers = context.overlayControllers
+                    self.maybeDequeueNotificationPayloads()
+                    self.maybeDequeueNotificationRequests()
+                    self.maybeDequeueWakeups()
+                    switch context {
+                        case let .authorized(context):
+                            var authorizeNotifications = true
+                            if #available(iOS 10.0, *) {
+                                authorizeNotifications = false
+                            }
+                            self.registerForNotifications(account: context.account, authorize: authorizeNotifications)
+                            context.account.notificationToken.set(self.notificationTokenPromise.get())
+                            context.account.voipToken.set(self.voipTokenPromise.get())
+                        case .unauthorized:
+                            break
+                        case .upgrading:
+                            break
+                    }
+                }))
             } else {
                 self.mainWindow.viewController = nil
+                contextReadyDisposable.set(nil)
             }
         }))
         

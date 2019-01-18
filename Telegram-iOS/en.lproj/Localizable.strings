@@ -3939,3 +3939,5 @@ Unused sets are archived when you add more.";
 "SocksProxySetup.ShareQRCodeInfo" = "Your friends can add this proxy by scanning this code with phone or in-app camera.";
 "SocksProxySetup.ShareQRCode" = "Share QR Code";
 "SocksProxySetup.ShareLink" = "Share Link";
+
+"Settings.AddAccount" = "Add Account";
