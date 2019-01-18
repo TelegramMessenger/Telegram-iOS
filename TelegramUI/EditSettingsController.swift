@@ -17,6 +17,7 @@ private struct EditSettingsItemArguments {
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let updateBioText: (String, String) -> Void
     let saveEditingState: () -> Void
+    let addAccount: () -> Void
     let logout: () -> Void
 }
 
@@ -24,6 +25,7 @@ private enum SettingsSection: Int32 {
     case info
     case bio
     case personalData
+    case addAccount
     case logOut
 }
 
@@ -37,6 +39,7 @@ private enum SettingsEntry: ItemListNodeEntry {
     case phoneNumber(PresentationTheme, String, String)
     case username(PresentationTheme, String, String)
     
+    case addAccount(PresentationTheme, String)
     case logOut(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -47,6 +50,8 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return SettingsSection.bio.rawValue
             case .phoneNumber, .username:
                 return SettingsSection.personalData.rawValue
+            case .addAccount:
+                return SettingsSection.addAccount.rawValue
             case .logOut:
                 return SettingsSection.logOut.rawValue
         }
@@ -66,8 +71,10 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return 4
             case .username:
                 return 5
-            case .logOut:
+            case .addAccount:
                 return 6
+            case .logOut:
+                return 7
         }
     }
     
@@ -138,6 +145,12 @@ private enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .addAccount(lhsTheme, lhsText):
+                if case let .addAccount(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .logOut(lhsTheme, lhsText):
                 if case let .logOut(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -176,6 +189,10 @@ private enum SettingsEntry: ItemListNodeEntry {
             case let .username(theme, text, address):
                 return ItemListDisclosureItem(theme: theme, title: text, label: address, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.presentController(usernameSetupController(account: arguments.account))
+                })
+            case let .addAccount(theme, text):
+                return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .center, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
+                    arguments.addAccount()
                 })
             case let .logOut(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .center, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -256,6 +273,7 @@ private func editSettingsEntries(presentationData: PresentationData, state: Edit
         }
         entries.append(.username(presentationData.theme, presentationData.strings.Settings_Username, peer.addressName == nil ? "" : ("@" + peer.addressName!)))
         
+        entries.append(.addAccount(presentationData.theme, presentationData.strings.Settings_AddAccount))
         entries.append(.logOut(presentationData.theme, presentationData.strings.Settings_Logout))
     }
     
@@ -349,6 +367,12 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
         updatePeerNameDisposable.set((combineLatest(updateNameSignal, updateBioSignal) |> deliverOnMainQueue).start(completed: {
             dismissImpl?()
         }))
+    }, addAccount: {
+        let isTestingEnvironment = account.testingEnvironment
+        let _ = accountManager.transaction({ transaction -> Void in
+            let id = transaction.createRecord([AccountEnvironmentAttribute(environment: isTestingEnvironment ? .test : .production)])
+            transaction.setCurrentId(id)
+        }).start()
     }, logout: {
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Settings_LogoutConfirmationTitle, text: presentationData.strings.Settings_LogoutConfirmationText, actions: [

@@ -64,10 +64,14 @@ public final class TelegramRootController: NavigationController {
         }
         controllers.append(chatListController)
         
-        let accountSettingsController = settingsController(account: self.account, accountManager: self.account.telegramApplicationContext.accountManager)
+        let restoreSettignsController = AccountStore.switchingSettingsController
+        restoreSettignsController?.updateAccount(account: self.account)
+        AccountStore.switchingSettingsController = nil
+        
+        let accountSettingsController = restoreSettignsController ?? settingsController(account: self.account, accountManager: self.account.telegramApplicationContext.accountManager)
         controllers.append(accountSettingsController)
         
-        tabBarController.setControllers(controllers, selectedIndex: controllers.count - 2)
+        tabBarController.setControllers(controllers, selectedIndex: restoreSettignsController != nil ? (controllers.count - 1) : (controllers.count - 2))
         
         self.contactsController = contactsController
         self.callListController = callListController

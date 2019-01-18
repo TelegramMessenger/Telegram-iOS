@@ -16,7 +16,7 @@ private final class ChatListControllerNodeView: UITracingLayerView, PreviewingHo
     weak var controller: ChatListController?
 }
 
-class ChatListControllerNode: ASDisplayNode {
+final class ChatListControllerNode: ASDisplayNode {
     private let account: Account
     private let groupId: PeerGroupId?
     private var presentationData: PresentationData
@@ -36,6 +36,15 @@ class ChatListControllerNode: ASDisplayNode {
     var requestOpenRecentPeerOptions: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
     var requestAddContact: ((String) -> Void)?
+    
+    override var accessibilityElements: [Any]? {
+        get {
+            var accessibilityElements: [Any] = []
+            addAccessibilityChildren(of: self.chatListNode, to: &accessibilityElements)
+            return accessibilityElements
+        } set(value) {
+        }
+    }
     
     init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListController) {
         self.account = account

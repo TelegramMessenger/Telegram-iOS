@@ -250,6 +250,57 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
+    override var accessibilityLabel: String? {
+        get {
+            guard let item = self.item else {
+                return nil
+            }
+            switch item.content {
+                case .groupReference:
+                    return nil
+                case let .peer(peer):
+                    guard let chatMainPeer = peer.peer.chatMainPeer else {
+                        return nil
+                    }
+                    return chatMainPeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+            }
+        } set(value) {
+        }
+    }
+    
+    override var accessibilityValue: String? {
+        get {
+            guard let item = self.item else {
+                return nil
+            }
+            switch item.content {
+                case .groupReference:
+                    return nil
+                case let .peer(peer):
+                    if let message = peer.message {
+                        var result = ""
+                        if message.flags.contains(.Incoming) {
+                            result += "Message"
+                        } else {
+                            result += "Outgoing message"
+                        }
+                        let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: peer.message, chatPeer: peer.peer, accountPeerId: item.account.peerId)
+                        if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, author is TelegramUser {
+                            result += "\nFrom: \(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder))"
+                        }
+                        if !message.flags.contains(.Incoming), let combinedReadState = peer.combinedReadState, combinedReadState.isOutgoingMessageIndexRead(MessageIndex(message)) {
+                            result += "\nRead"
+                        }
+                        result += "\n\(messageText)"
+                        return result
+                    } else {
+                        return "Empty"
+                    }
+            }
+        } set(value) {
+        }
+    }
+    
     required init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
@@ -307,6 +358,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.separatorNode.isLayerBacked = true
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        
+        self.isAccessibilityElement = true
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)

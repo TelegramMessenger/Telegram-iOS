@@ -21,6 +21,7 @@ enum ItemListPeerItemLabel {
     case none
     case text(String)
     case disclosure(String)
+    case badge(String)
 }
 
 struct ItemListPeerItemSwitch {
@@ -160,6 +161,7 @@ private let statusFont = Font.regular(14.0)
 private let labelFont = Font.regular(13.0)
 private let labelDisclosureFont = Font.regular(17.0)
 private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 17.0)!
+private let badgeFont = Font.regular(15.0)
 
 class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
@@ -171,6 +173,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
     fileprivate let avatarNode: AvatarNode
     private let titleNode: TextNode
     private let labelNode: TextNode
+    private let labelBadgeNode: ASImageNode
     private var labelArrowNode: ASImageNode?
     private let statusNode: TextNode
     private var switchNode: SwitchNode?
@@ -220,6 +223,11 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
         self.labelNode.contentMode = .left
         self.labelNode.contentsScale = UIScreen.main.scale
         
+        self.labelBadgeNode = ASImageNode()
+        self.labelBadgeNode.displayWithoutProcessing = true
+        self.labelBadgeNode.displaysAsynchronously = false
+        self.labelBadgeNode.isLayerBacked = true
+        
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
@@ -253,13 +261,28 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
         
         let currentItem = self.layoutParams?.0
         
+        let currentHasBadge = self.labelBadgeNode.image != nil
+        
         return { item, params, neighbors in
             var updateArrowImage: UIImage?
             var updatedTheme: PresentationTheme?
             
+            var updatedLabelBadgeImage: UIImage?
+            
+            var badgeColor: UIColor?
+            if case .badge = item.label {
+                badgeColor = item.theme.list.itemAccentColor
+            }
+            
+            let badgeDiameter: CGFloat = 20.0
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
                 updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.theme)
+                if let badgeColor = badgeColor {
+                    updatedLabelBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: badgeColor)
+                }
+            } else if let badgeColor = badgeColor, !currentHasBadge {
+                updatedLabelBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: badgeColor)
             }
             
             var titleAttributedString: NSAttributedString?
@@ -415,6 +438,9 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                     }
                     labelInset += 40.0
                     labelAttributedString = NSAttributedString(string: text, font: labelDisclosureFont, textColor: item.theme.list.itemSecondaryTextColor)
+                case let .badge(text):
+                    labelAttributedString = NSAttributedString(string: text, font: badgeFont, textColor: item.theme.list.itemCheckColors.foregroundColor)
+                    labelInset += 15.0
             }
             
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: labelAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 16.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -611,15 +637,36 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                         labelArrowNode.removeFromSupernode()
                         strongSelf.labelArrowNode = nil
                     }
-
-                    transition.updateFrame(node: strongSelf.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + params.width - labelLayout.size.width - rightLabelInset - rightInset, y: floor((contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size))
+                    
+                    let badgeWidth = max(badgeDiameter, labelLayout.size.width + 10.0)
+                    let labelFrame: CGRect
+                    if case .badge = item.label {
+                        labelFrame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - badgeWidth + (badgeWidth - labelLayout.size.width) / 2.0, y: 13.0), size: labelLayout.size)
+                        strongSelf.labelNode.frame = labelFrame
+                    } else {
+                        labelFrame = CGRect(origin: CGPoint(x: revealOffset + params.width - labelLayout.size.width - rightLabelInset - rightInset, y: floor((contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
+                        transition.updateFrame(node: strongSelf.labelNode, frame: labelFrame)
+                    }
+                    
+                    if let updateBadgeImage = updatedLabelBadgeImage {
+                        if strongSelf.labelBadgeNode.supernode == nil {
+                            strongSelf.insertSubnode(strongSelf.labelBadgeNode, belowSubnode: strongSelf.labelNode)
+                        }
+                        strongSelf.labelBadgeNode.image = updateBadgeImage
+                    }
+                    if badgeColor == nil && strongSelf.labelBadgeNode.supernode != nil {
+                        strongSelf.labelBadgeNode.image = nil
+                        strongSelf.labelBadgeNode.removeFromSupernode()
+                    }
+                    
+                    strongSelf.labelBadgeNode.frame = CGRect(origin: CGPoint(x: params.width - rightLabelInset - badgeWidth, y: 12.0), size: CGSize(width: badgeWidth, height: badgeDiameter))
                     
                     transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: 5.0), size: CGSize(width: 40.0, height: 40.0)))
                     
                     if item.peer.id == item.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
                         strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer, overrideImage: .savedMessagesIcon, emptyColor: item.theme.list.mediaPlaceholderColor)
                     } else {
-                        strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
+                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 50.0 + UIScreenPixel + UIScreenPixel))

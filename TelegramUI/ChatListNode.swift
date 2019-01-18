@@ -351,6 +351,19 @@ final class ChatListNode: ListView {
         }
     }
     
+    override var accessibilityElements: [Any]? {
+        get {
+            var accessibilityElements: [Any] = []
+            self.forEachVisibleItemNode { itemNode in
+                if itemNode.isAccessibilityElement {
+                    accessibilityElements.append(itemNode)
+                }
+            }
+            return accessibilityElements
+        } set(value) {
+        }
+    }
+    
     var isEmptyUpdated: ((ChatListNodeEmtpyState) -> Void)?
     private var currentIsEmptyState: ChatListNodeEmtpyState?
     
@@ -946,7 +959,7 @@ final class ChatListNode: ListView {
                     subscriber.putCompletion()
                 })
                 
-                if strongSelf.isNodeLoaded {
+                if strongSelf.isNodeLoaded, strongSelf.dequeuedInitialTransitionOnLayout {
                     strongSelf.dequeueTransition()
                 } else {
                     if !strongSelf.didSetReady {
