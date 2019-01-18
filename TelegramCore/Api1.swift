@@ -1299,6 +1299,146 @@ extension Api {
         }
     
     }
+    enum JSONValue: TypeConstructorDescription {
+        case jsonNull
+        case jsonBool(value: Api.Bool)
+        case jsonNumber(value: Double)
+        case jsonString(value: String)
+        case jsonArray(value: [Api.JSONValue])
+        case jsonObject(value: [Api.JSONObjectValue])
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .jsonNull:
+                    if boxed {
+                        buffer.appendInt32(1064139624)
+                    }
+                    
+                    break
+                case .jsonBool(let value):
+                    if boxed {
+                        buffer.appendInt32(-952869270)
+                    }
+                    value.serialize(buffer, true)
+                    break
+                case .jsonNumber(let value):
+                    if boxed {
+                        buffer.appendInt32(736157604)
+                    }
+                    serializeDouble(value, buffer: buffer, boxed: false)
+                    break
+                case .jsonString(let value):
+                    if boxed {
+                        buffer.appendInt32(-1222740358)
+                    }
+                    serializeString(value, buffer: buffer, boxed: false)
+                    break
+                case .jsonArray(let value):
+                    if boxed {
+                        buffer.appendInt32(-146520221)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(value.count))
+                    for item in value {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .jsonObject(let value):
+                    if boxed {
+                        buffer.appendInt32(-1715350371)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(value.count))
+                    for item in value {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .jsonNull:
+                return ("jsonNull", [])
+                case .jsonBool(let value):
+                return ("jsonBool", [("value", value)])
+                case .jsonNumber(let value):
+                return ("jsonNumber", [("value", value)])
+                case .jsonString(let value):
+                return ("jsonString", [("value", value)])
+                case .jsonArray(let value):
+                return ("jsonArray", [("value", value)])
+                case .jsonObject(let value):
+                return ("jsonObject", [("value", value)])
+    }
+    }
+    
+        static func parse_jsonNull(_ reader: BufferReader) -> JSONValue? {
+            return Api.JSONValue.jsonNull
+        }
+        static func parse_jsonBool(_ reader: BufferReader) -> JSONValue? {
+            var _1: Api.Bool?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.JSONValue.jsonBool(value: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_jsonNumber(_ reader: BufferReader) -> JSONValue? {
+            var _1: Double?
+            _1 = reader.readDouble()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.JSONValue.jsonNumber(value: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_jsonString(_ reader: BufferReader) -> JSONValue? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.JSONValue.jsonString(value: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_jsonArray(_ reader: BufferReader) -> JSONValue? {
+            var _1: [Api.JSONValue]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.JSONValue.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.JSONValue.jsonArray(value: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_jsonObject(_ reader: BufferReader) -> JSONValue? {
+            var _1: [Api.JSONObjectValue]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.JSONObjectValue.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.JSONValue.jsonObject(value: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     enum Photo: TypeConstructorDescription {
         case photoEmpty(id: Int64)
         case photo(flags: Int32, id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, sizes: [Api.PhotoSize])
@@ -13881,6 +14021,46 @@ extension Api {
         }
     
     }
+    enum JSONObjectValue: TypeConstructorDescription {
+        case jsonObjectValue(key: String, value: Api.JSONValue)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .jsonObjectValue(let key, let value):
+                    if boxed {
+                        buffer.appendInt32(-1059185703)
+                    }
+                    serializeString(key, buffer: buffer, boxed: false)
+                    value.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .jsonObjectValue(let key, let value):
+                return ("jsonObjectValue", [("key", key), ("value", value)])
+    }
+    }
+    
+        static func parse_jsonObjectValue(_ reader: BufferReader) -> JSONObjectValue? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Api.JSONValue?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.JSONValue
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.JSONObjectValue.jsonObjectValue(key: _1!, value: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     enum InputWebDocument: TypeConstructorDescription {
         case inputWebDocument(url: String, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute])
     
@@ -16942,18 +17122,18 @@ extension Api {
     
     }
     enum InputAppEvent: TypeConstructorDescription {
-        case inputAppEvent(time: Double, type: String, peer: Int64, data: String)
+        case inputAppEvent(time: Double, type: String, peer: Int64, data: Api.JSONValue)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputAppEvent(let time, let type, let peer, let data):
                     if boxed {
-                        buffer.appendInt32(1996904104)
+                        buffer.appendInt32(488313413)
                     }
                     serializeDouble(time, buffer: buffer, boxed: false)
                     serializeString(type, buffer: buffer, boxed: false)
                     serializeInt64(peer, buffer: buffer, boxed: false)
-                    serializeString(data, buffer: buffer, boxed: false)
+                    data.serialize(buffer, true)
                     break
     }
     }
@@ -16972,8 +17152,10 @@ extension Api {
             _2 = parseString(reader)
             var _3: Int64?
             _3 = reader.readInt64()
-            var _4: String?
-            _4 = parseString(reader)
+            var _4: Api.JSONValue?
+            if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.JSONValue
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
