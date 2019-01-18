@@ -533,7 +533,7 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
-    var popToRootControllerImpl: (() -> Void)?
+    var removePeerChatImpl: ((Peer, Bool) -> Void)?
     var endEditingImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -732,42 +732,54 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
             presentControllerImpl?(c, a)
         }), nil)
     }, leaveChannel: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationTheme: presentationData.theme)
-        let dismissAction: () -> Void = { [weak controller] in
-            controller?.dismissAnimated()
+        let _ = (account.postbox.transaction { transaction -> Peer? in
+            return transaction.getPeer(peerId)
         }
-        controller.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.Channel_LeaveChannel, color: .destructive, action: {
-                    let _ = removePeerChat(postbox: account.postbox, peerId: peerId, reportChatSpam: false).start()
-                    dismissAction()
-                    popToRootControllerImpl?()
-                }),
-            ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-        ])
-        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-    }, deleteChannel: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let controller = ActionSheetController(presentationTheme: presentationData.theme)
-        let dismissAction: () -> Void = { [weak controller] in
-            controller?.dismissAnimated()
-        }
-        controller.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: presentationData.strings.ChannelInfo_DeleteChannelConfirmation),
-                ActionSheetButtonItem(title: presentationData.strings.ChannelInfo_DeleteChannel, color: .destructive, action: {
-                    actionsDisposable.add((removePeerChat(postbox: account.postbox, peerId: peerId, reportChatSpam: false)
-                    |> deliverOnMainQueue).start(completed: {
-                        popToRootControllerImpl?()
-                    }))
-                    dismissAction()
-                }),
-            ]),
+        |> deliverOnMainQueue).start(next: { peer in
+            guard let peer = peer else {
+                return
+            }
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let controller = ActionSheetController(presentationTheme: presentationData.theme)
+            let dismissAction: () -> Void = { [weak controller] in
+                controller?.dismissAnimated()
+            }
+            controller.setItemGroups([
+                ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: presentationData.strings.Channel_LeaveChannel, color: .destructive, action: {
+                        dismissAction()
+                        removePeerChatImpl?(peer, false)
+                    }),
+                ]),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
             ])
-        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        })
+    }, deleteChannel: {
+        let _ = (account.postbox.transaction { transaction -> Peer? in
+            return transaction.getPeer(peerId)
+        }
+        |> deliverOnMainQueue).start(next: { peer in
+            guard let peer = peer else {
+                return
+            }
+            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let controller = ActionSheetController(presentationTheme: presentationData.theme)
+            let dismissAction: () -> Void = { [weak controller] in
+                controller?.dismissAnimated()
+            }
+            controller.setItemGroups([
+                ActionSheetItemGroup(items: [
+                    ActionSheetTextItem(title: presentationData.strings.ChannelInfo_DeleteChannelConfirmation),
+                    ActionSheetButtonItem(title: presentationData.strings.ChannelInfo_DeleteChannel, color: .destructive, action: {
+                        dismissAction()
+                        removePeerChatImpl?(peer, true)
+                    }),
+                ]),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+            ])
+            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        })
     }, displayAddressNameContextMenu: { text in
         let shareController = ShareController(account: account, subject: .url(text))
         presentControllerImpl?(shareController, nil)
@@ -897,8 +909,20 @@ public func channelInfoController(account: Account, peerId: PeerId) -> ViewContr
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.present(value, in: .window(.root), with: presentationArguments)
     }
-    popToRootControllerImpl = { [weak controller] in
-        (controller?.navigationController as? NavigationController)?.popToRoot(animated: true)
+    removePeerChatImpl = { [weak controller] peer, deleteGloballyIfPossible in
+        guard let controller = controller, let navigationController = controller.navigationController as? NavigationController else {
+            return
+        }
+        guard let tabController = navigationController.viewControllers.first as? TabBarController else {
+            return
+        }
+        for childController in tabController.controllers {
+            if let chatListController = childController as? ChatListController {
+                navigationController.popToRoot(animated: true)
+                chatListController.schedulePeerChatRemoval(peer: RenderedPeer(peer: peer), deleteGloballyIfPossible: deleteGloballyIfPossible)
+                break
+            }
+        }
     }
     avatarGalleryTransitionArguments = { [weak controller] entry in
         if let controller = controller {

@@ -719,22 +719,22 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
             self.colorPanelNode.updateLayout(size: colorPanelFrame.size, keyboardHeight: layout.inputHeight ?? 0.0, transition: transition)
             
             bottomInset += height
-         }
-        
-        var optionsAvailable = true
-        if let centralWallpaper = self.centralWallpaper {
-            switch centralWallpaper {
-                case let .wallpaper(wallpaper):
-                    switch wallpaper {
-                        case .color:
-                            optionsAvailable = false
-                        default:
-                            break
-                    }
-                default:
-                    break
-            }
         }
+        
+        let optionsAvailable = false //true
+//        if let centralWallpaper = self.centralWallpaper {
+//            switch centralWallpaper {
+//                case let .wallpaper(wallpaper):
+//                    switch wallpaper {
+//                        case .color:
+//                            optionsAvailable = false
+//                        default:
+//                            break
+//                    }
+//                default:
+//                    break
+//            }
+//        }
         
         var segmentedControlSize = self.segmentedControl.sizeThatFits(layout.size)
         segmentedControlSize.width = max(270.0, segmentedControlSize.width)
@@ -875,6 +875,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                     break
             }
             self.apply(wallpaper, options, self.centralNode()?.cropRect)
+            self.isUserInteractionEnabled = false
         }
     }
 }

@@ -79,7 +79,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(account: Account, presentationData: PresentationData, colors: [Int32], present: @escaping (ViewController, Any?) -> Void, presentColorPicker: @escaping () -> Void) {
+    init(account: Account, presentationData: PresentationData, colors: [Int32], present: @escaping (ViewController, Any?) -> Void, pop: @escaping () -> Void, presentColorPicker: @escaping () -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.present = present
@@ -119,7 +119,11 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
                 let entries = previousEntries.with { $0 }
                 if let entries = entries, !entries.isEmpty {
                     let wallpapers = entries.map { $0.wallpaper }
-                    let controller = WallpaperListPreviewController(account: account, source: .list(wallpapers: wallpapers, central: wallpaper, type: .colors))
+                    let controller = WallpaperGalleryController(account: account, source: .list(wallpapers: wallpapers, central: wallpaper, type: .colors))
+                    controller.apply = {  _, _, _ in
+                        pop()
+                    }
+                    //let controller = WallpaperListPreviewController(account: account, source: .list(wallpapers: wallpapers, central: wallpaper, type: .colors))
                     strongSelf.present(controller, nil)
                 }
             }

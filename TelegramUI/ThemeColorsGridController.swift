@@ -45,7 +45,8 @@ private func availableColors() -> [Int32] {
 }
 
 private func randomColor() -> Int32 {
-    return availableColors().randomElement() ?? 0x000000
+    let colors = availableColors()
+    return colors[1 ..< colors.count - 1].randomElement() ?? 0x000000
 }
 
 final class ThemeColorsGridController: ViewController {
@@ -116,9 +117,18 @@ final class ThemeColorsGridController: ViewController {
     override func loadDisplayNode() {
         self.displayNode = ThemeColorsGridControllerNode(account: self.account, presentationData: self.presentationData, colors: availableColors(), present: { [weak self] controller, arguments in
             self?.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
+        }, pop: { [weak self] in
+            if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+                let _ = navigationController.popViewController(animated: true)
+            }
         }, presentColorPicker: { [weak self] in
             if let strongSelf = self {
                 let controller = WallpaperListPreviewController(account: strongSelf.account, source: .customColor(randomColor()))
+                controller.apply = { _, _, _ in
+                    if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+                        let _ = navigationController.popViewController(animated: true)
+                    }
+                }
                 self?.present(controller, in: .window(.root), blockInteraction: true)
             }
         })

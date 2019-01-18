@@ -251,6 +251,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, activate: { [weak self] in
             self?.activateSearch()
         })
+        self.searchContentNode?.updateExpansionProgress(0.0)
         self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
 
@@ -996,7 +997,8 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     markAllChatsAsReadInteractively(transaction: transaction, viewTracker: account.viewTracker)
                 }
             }
-            let _ = signal.start(completed: { [weak self] in
+            let _ = (signal
+            |> deliverOnMainQueue).start(completed: { [weak self] in
                 self?.donePressed()
             })
         } else if !peerIds.isEmpty {
@@ -1034,7 +1036,8 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         progressDisposable.dispose()
                     }
                 }
-                let _ = signal.start(completed: {
+                let _ = (signal
+                |> deliverOnMainQueue).start(completed: {
                     self?.donePressed()
                 })
             }))

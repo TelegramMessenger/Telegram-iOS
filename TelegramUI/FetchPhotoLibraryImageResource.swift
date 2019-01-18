@@ -103,18 +103,22 @@ func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceD
     }
 }
 
-func fetchPhotoLibraryImage(localIdentifier: String) -> Signal<(UIImage, Bool)?, NoError> {
+func fetchPhotoLibraryImage(localIdentifier: String, thumbnail: Bool) -> Signal<(UIImage, Bool)?, NoError> {
     return Signal { subscriber in
         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
         let requestId = Atomic<RequestId>(value: RequestId())
         if fetchResult.count != 0 {
             let asset = fetchResult.object(at: 0)
             let option = PHImageRequestOptions()
-            option.deliveryMode = .opportunistic
+            option.deliveryMode = .highQualityFormat
+            if thumbnail {
+                option.resizeMode = .fast
+            }
             option.isNetworkAccessAllowed = true
             option.isSynchronous = false
             
-            let requestIdValue = PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .aspectFill, options: option, resultHandler: { (image, info) -> Void in
+            let targetSize: CGSize = thumbnail ? CGSize(width: 128.0, height: 128.0) : PHImageManagerMaximumSize
+            let requestIdValue = PHImageManager.default().requestImage(for: asset, targetSize: targetSize, contentMode: .aspectFill, options: option, resultHandler: { (image, info) -> Void in
                 Queue.concurrentDefaultQueue().async {
                     requestId.with { current -> Void in
                         if !current.invalidated {
@@ -123,15 +127,8 @@ func fetchPhotoLibraryImage(localIdentifier: String) -> Signal<(UIImage, Bool)?,
                         }
                     }
                     if let image = image {
-                        var isThumbnail = true
-                        if let info = info, let degraded = info[PHImageResultIsDegradedKey] {
-                            isThumbnail = (degraded as AnyObject).boolValue!
-                        }
-                        subscriber.putNext((image, isThumbnail))
-                        if !isThumbnail {
-                            subscriber.putCompletion()
-                        }
-
+                        subscriber.putNext((image, thumbnail))
+                        subscriber.putCompletion()
                     }
                 }
             })

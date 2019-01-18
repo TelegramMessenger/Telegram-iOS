@@ -20,6 +20,31 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
         
         listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: scrollToItem, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         return true
+    } else if searchNode.expansionProgress == 1.0 {
+        var sortItemNode: ListViewItemNode?
+        var nextItemNode: ListViewItemNode?
+        
+        listNode.forEachItemNode({ itemNode in
+            if sortItemNode == nil, let itemNode = itemNode as? ContactListActionItemNode {
+                sortItemNode = itemNode
+            } else if sortItemNode != nil && nextItemNode == nil {
+                nextItemNode = itemNode as? ListViewItemNode
+            }
+        })
+        
+        if let sortItemNode = sortItemNode {
+            let itemFrame = sortItemNode.apparentFrame
+            if itemFrame.contains(CGPoint(x: 0.0, y: listNode.insets.top)) {
+                var scrollToItem: ListViewScrollToItem?
+                if itemFrame.minY + itemFrame.height * 0.6 < listNode.insets.top {
+                    scrollToItem = ListViewScrollToItem(index: 0, position: .top(-50), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
+                } else {
+                    scrollToItem = ListViewScrollToItem(index: 0, position: .top(0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
+                }
+                listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: scrollToItem, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                return true
+            }
+        }
     }
     return false
 }

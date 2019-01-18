@@ -507,7 +507,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         switch status {
             case let .fetchStatus(fetchStatus):
                 switch fetchStatus {
-                    case let .Fetching(isActive, progress):
+                    case let .Fetching(_, progress):
                         let adjustedProgress = max(progress, 0.027)
                         state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
                     case .Local:

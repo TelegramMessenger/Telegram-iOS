@@ -27,6 +27,8 @@ func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil, sca
             let scale = arguments.drawingRect.size.width / inputImage.extent.width * context.scale
             let transformed = inputImage.transformed(by: CGAffineTransform.init(scaleX: scale, y: scale))
             
+            let codeScale = 43.0 / inputImage.extent.width
+            
             let invertFilter = CIFilter(name: "CIColorInvert")
             invertFilter?.setValue(transformed, forKey: kCIInputImageKey)
             let alphaFilter = CIFilter(name: "CIMaskToAlpha")
@@ -63,12 +65,11 @@ func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil, sca
                     c.setFillColor(UIColor.clear.cgColor)
                 }
                 
-                let clipOrigin = 93.0 * fittedRect.width / 267.0
-                let clipSide = 81.0 * fittedRect.width / 267.0
-                c.fill(CGRect(x: clipOrigin, y: clipOrigin, width: clipSide, height: clipSide))
+                let clipSide = 81.0 * fittedRect.width / 267.0 * codeScale
+                c.fill(CGRect(x: fittedRect.midX - clipSide / 2.0, y: fittedRect.midY - clipSide / 2.0, width: clipSide, height: clipSide))
                 c.setBlendMode(.normal)
                 
-                let iconScale = fittedRect.width / 308.0
+                let iconScale = fittedRect.width / 308.0 * codeScale
                 let iconSize = CGSize(width: 65.0 * iconScale, height: 79.0 * iconScale)
                 let point = CGPoint(x: fittedRect.midX - iconSize.width / 2.0, y: fittedRect.midY - iconSize.height / 2.0)
                 c.translateBy(x: point.x, y: point.y)
@@ -76,7 +77,7 @@ func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil, sca
                 c.setFillColor(color.cgColor)
                 let _ = try? drawSvgPath(c, path: "M0.0,40 C0,20.3664202 20.1230605,0.0 32.5,0.0 C44.8769395,0.0 65,20.3664202 65,40 C65,47.217934 65,55.5505326 65,64.9977957 L32.5,79 L0.0,64.9977957 C0.0,55.0825772 0.0,46.7499786 0.0,40 Z")
                 
-                if false, let backgroundColor = backgroundColor {
+                if let backgroundColor = backgroundColor {
                     c.setFillColor(backgroundColor.cgColor)
                 } else {
                     c.setBlendMode(.clear)

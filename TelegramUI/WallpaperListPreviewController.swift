@@ -55,7 +55,7 @@ final class WallpaperListPreviewController: ViewController {
         })
         
         self.title = self.presentationData.strings.WallpaperPreview_Title
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: self.presentationData.theme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.sharePressed))
+        //self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: self.presentationData.theme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.sharePressed))
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -166,7 +166,7 @@ final class WallpaperListPreviewController: ViewController {
             } else {
                 strongSelf.wallpaper = nil
             }
-            strongSelf.navigationItem.rightBarButtonItem = barButtonItem
+            //strongSelf.navigationItem.rightBarButtonItem = barButtonItem
         })
     }
     

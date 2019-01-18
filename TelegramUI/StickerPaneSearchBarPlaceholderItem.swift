@@ -80,7 +80,7 @@ final class StickerPaneSearchBarPlaceholderNode: GridItemNode {
         if self.currentState?.0 !== theme || self.currentState?.1 !== strings {
             self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 36.0, color: theme.chat.inputMediaPanel.stickersSearchBackgroundColor)
             self.iconNode.image = generateLoupeIcon(color: theme.chat.inputMediaPanel.stickersSearchControlColor)
-            self.labelNode.attributedText = NSAttributedString(string: strings.Stickers_Search, font: Font.regular(14.0), textColor: theme.chat.inputMediaPanel.stickersSearchPlaceholderColor)
+            self.labelNode.attributedText = NSAttributedString(string: strings.Stickers_Search, font: Font.regular(17.0), textColor: theme.chat.inputMediaPanel.stickersSearchPlaceholderColor)
         }
     }
     
@@ -97,7 +97,7 @@ final class StickerPaneSearchBarPlaceholderNode: GridItemNode {
         self.labelNode.frame = textFrame
         
         if let iconImage = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: textFrame.minX - iconImage.size.width - 5.0, y: floorToScreenPixels(textFrame.midY - iconImage.size.height / 2.0)), size: iconImage.size)
+            self.iconNode.frame = CGRect(origin: CGPoint(x: textFrame.minX - iconImage.size.width - 6.0, y: floorToScreenPixels(textFrame.midY - iconImage.size.height / 2.0)), size: iconImage.size)
         }
     }
     

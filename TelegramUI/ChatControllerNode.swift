@@ -181,9 +181,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.controller = controller
         
         self.backgroundNode = ChatBackgroundNode()
-        //self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
-        //self.backgroundNode.clipsToBounds = true
         
         self.titleAccessoryPanelContainer = ChatControllerTitlePanelNodeContainer()
         self.titleAccessoryPanelContainer.clipsToBounds = true

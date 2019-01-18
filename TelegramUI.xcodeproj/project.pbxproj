@@ -57,6 +57,8 @@
 		096C98C021787C6700C211FF /* TGBridgeAudioEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */; };
 		096C98C121787C6700C211FF /* TGBridgeAudioDecoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 096C98BD21787C6700C211FF /* TGBridgeAudioDecoder.h */; };
 		096C98C221787C6700C211FF /* TGBridgeAudioDecoder.mm in Sources */ = {isa = PBXBuildFile; fileRef = 096C98BE21787C6700C211FF /* TGBridgeAudioDecoder.mm */; };
+		09749BC321F0DFFD008FDDE9 /* StickersChatInputContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09749BC221F0DFFD008FDDE9 /* StickersChatInputContextPanelNode.swift */; };
+		09749BC521F0E024008FDDE9 /* StickersChatInputPanelItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09749BC421F0E024008FDDE9 /* StickersChatInputPanelItem.swift */; };
 		09797873210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09797872210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift */; };
 		0979787C210642CB0077D77F /* WebEmbedPlayerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0979787B210642CB0077D77F /* WebEmbedPlayerNode.swift */; };
 		0979787E210646C00077D77F /* YoutubeEmbedImplementation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0979787D210646C00077D77F /* YoutubeEmbedImplementation.swift */; };
@@ -1183,6 +1185,8 @@
 		096C98BC21787C6600C211FF /* TGBridgeAudioEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeAudioEncoder.h; sourceTree = "<group>"; };
 		096C98BD21787C6700C211FF /* TGBridgeAudioDecoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeAudioDecoder.h; sourceTree = "<group>"; };
 		096C98BE21787C6700C211FF /* TGBridgeAudioDecoder.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TGBridgeAudioDecoder.mm; sourceTree = "<group>"; };
+		09749BC221F0DFFD008FDDE9 /* StickersChatInputContextPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickersChatInputContextPanelNode.swift; sourceTree = "<group>"; };
+		09749BC421F0E024008FDDE9 /* StickersChatInputPanelItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickersChatInputPanelItem.swift; sourceTree = "<group>"; };
 		09797872210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsButtonItemNode.swift; sourceTree = "<group>"; };
 		0979787B210642CB0077D77F /* WebEmbedPlayerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebEmbedPlayerNode.swift; sourceTree = "<group>"; };
 		0979787D210646C00077D77F /* YoutubeEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YoutubeEmbedImplementation.swift; sourceTree = "<group>"; };
@@ -2914,6 +2918,8 @@
 			children = (
 				D049EAE11E447AD500A2CD3A /* HorizontalStickersChatContextPanelNode.swift */,
 				D049EAE31E44949F00A2CD3A /* HorizontalStickerGridItem.swift */,
+				09749BC221F0DFFD008FDDE9 /* StickersChatInputContextPanelNode.swift */,
+				09749BC421F0E024008FDDE9 /* StickersChatInputPanelItem.swift */,
 			);
 			name = Stickers;
 			sourceTree = "<group>";
@@ -5171,6 +5177,7 @@
 				092F36902157AB46001A9F49 /* ItemListCallListItem.swift in Sources */,
 				D0EC6CC61EB9F58800EBF1C3 /* PresenceStrings.swift in Sources */,
 				D0EC6CC71EB9F58800EBF1C3 /* PeerNotificationSoundStrings.swift in Sources */,
+				09749BC321F0DFFD008FDDE9 /* StickersChatInputContextPanelNode.swift in Sources */,
 				D01C06C01FBF118A001561AB /* MessageUtils.swift in Sources */,
 				D0104F281F47171F004E4881 /* InstantPageGalleryController.swift in Sources */,
 				D0EC6CC81EB9F58800EBF1C3 /* ProgressiveImage.swift in Sources */,
@@ -5727,6 +5734,7 @@
 				D0EEE9A12165585F001292A6 /* DocumentPreviewController.swift in Sources */,
 				D0EC6DCE1EB9F58900EBF1C3 /* HorizontalStickersChatContextPanelNode.swift in Sources */,
 				D0BCC3D2203F0A6C008126C2 /* StringForMessageTimestampStatus.swift in Sources */,
+				09749BC521F0E024008FDDE9 /* StickersChatInputPanelItem.swift in Sources */,
 				D0EC6DCF1EB9F58900EBF1C3 /* HorizontalStickerGridItem.swift in Sources */,
 				D0EC6DD01EB9F58900EBF1C3 /* HashtagChatInputContextPanelNode.swift in Sources */,
 				09B4EE5621A8149C00847FA6 /* PermissionInfoItem.swift in Sources */,

@@ -373,14 +373,25 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
         let _ = controller?.dismiss()
     }
     
-    shareImpl = {
+    shareImpl = { [weak controller] in
         let state = stateValue.with { $0 }
-        guard let server = proxyServerSettings(with: state) else {
+        guard let server = proxyServerSettings(with: state), let strongController = controller else {
             return
         }
         
-        let controller = ShareProxyServerActionSheetController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, link: shareLink(for: server))
-        presentImpl?(controller, nil)
+        let link = shareLink(for: server)
+        if #available(iOSApplicationExtension 9.0, *) {
+            let controller = ShareProxyServerActionSheetController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, link: link)
+            presentImpl?(controller, nil)
+        } else {
+            let activityController = UIActivityViewController(activityItems: [link], applicationActivities: nil)
+            
+            if let window = strongController.view.window, let rootViewController = window.rootViewController {
+                activityController.popoverPresentationController?.sourceView = window
+                activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+                rootViewController.present(activityController, animated: true, completion: nil)
+            }
+        }
     }
     
     return controller

@@ -33,7 +33,7 @@ public final class ShareProxyServerActionSheetController: ActionSheetController 
         items.append(ProxyServerQRCodeItem(strings: strings, link: link, ready: { [weak self] in
             self?._ready.set(.single(true))
         }))
-        items.append(ActionSheetButtonItem(title: "Share QR Code", action: { [weak self] in
+        items.append(ActionSheetButtonItem(title: strings.SocksProxySetup_ShareQRCode, action: { [weak self] in
             self?.dismissAnimated()
             let _ = (qrCode(string: link, color: .black, backgroundColor: .white, scale: 1.0)
             |> map { generator -> UIImage? in
@@ -47,7 +47,7 @@ public final class ShareProxyServerActionSheetController: ActionSheetController 
                 }
             })
         }))
-        items.append(ActionSheetButtonItem(title: "Share Link", action: { [weak self] in
+        items.append(ActionSheetButtonItem(title: strings.SocksProxySetup_ShareLink, action: { [weak self] in
             self?.dismissAnimated()
             presentActivityController(link)
         }))
@@ -105,6 +105,9 @@ private final class ProxyServerQRCodeItemNode: ActionSheetItemNode {
     
     private let ready: () -> Void
     
+    private var cachedHasLabel = true
+    private var cachedHasImage = true
+    
     init(theme: ActionSheetControllerTheme, strings: PresentationStrings, link: String, ready: @escaping () -> Void = {}) {
         self.theme = theme
         self.strings = strings
@@ -117,10 +120,10 @@ private final class ProxyServerQRCodeItemNode: ActionSheetItemNode {
         self.label.displaysAsynchronously = false
         self.label.truncationMode = .byTruncatingTail
         self.label.isUserInteractionEnabled = false
-        self.label.attributedText = NSAttributedString(string: "Your friends can add this proxy by scanning this code with phone or in-app camera.", font: ActionSheetTextNode.defaultFont, textColor: self.theme.secondaryTextColor, paragraphAlignment: .center)
+        self.label.attributedText = NSAttributedString(string: strings.SocksProxySetup_ShareQRCodeInfo, font: ActionSheetTextNode.defaultFont, textColor: self.theme.secondaryTextColor, paragraphAlignment: .center)
         
         self.imageNode = TransformImageNode()
-        self.imageNode.setSignal(qrCode(string: link, color: self.theme.primaryTextColor), attemptSynchronously: true)
+        self.imageNode.setSignal(qrCode(string: link, color: .black, backgroundColor: .white), attemptSynchronously: true)
 
         super.init(theme: theme)
         
@@ -131,16 +134,26 @@ private final class ProxyServerQRCodeItemNode: ActionSheetItemNode {
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         let imageInset: CGFloat = 44.0
         let side = constrainedSize.width - imageInset * 2.0
-        let imageSize = CGSize(width: side, height: side)
+        var imageSize = CGSize(width: side, height: side)
         
         let makeLayout = self.imageNode.asyncLayout()
         let apply = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil))
         apply()
         
+        var labelSize = self.label.measure(CGSize(width: max(1.0, constrainedSize.width - 64.0), height: constrainedSize.height))
+        
+        self.cachedHasImage = constrainedSize.width < constrainedSize.height
+        if !self.cachedHasImage {
+            imageSize = CGSize()
+        }
+        
         self.ready()
         
-        let labelSize = self.label.measure(CGSize(width: max(1.0, constrainedSize.width - 64.0), height: constrainedSize.height))
-        return CGSize(width: constrainedSize.width, height: 14.0 + labelSize.height + 14.0 + constrainedSize.width - 88.0 + 14.0)
+        self.cachedHasLabel = constrainedSize.height > 480 || !self.cachedHasImage
+        if !self.cachedHasLabel {
+            labelSize = CGSize()
+        }
+        return CGSize(width: constrainedSize.width, height: 14.0 + (labelSize.height > 0.0 ? labelSize.height + 14.0 : 0.0) + (imageSize.height > 0.0 ? imageSize.height + 14.0 : 8.0))
     }
     
     override func layout() {
@@ -151,10 +164,21 @@ private final class ProxyServerQRCodeItemNode: ActionSheetItemNode {
         let imageInset: CGFloat = 44.0
         let spacing: CGFloat = 18.0
         
-        let labelSize = self.label.measure(CGSize(width: max(1.0, size.width - inset * 2.0), height: size.height))
-        self.label.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - labelSize.width) / 2.0), y: spacing), size: labelSize)
+        let labelSize: CGSize
+        if self.cachedHasLabel {
+            labelSize = self.label.measure(CGSize(width: max(1.0, size.width - inset * 2.0), height: size.height))
+            self.label.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - labelSize.width) / 2.0), y: spacing), size: labelSize)
+        } else {
+            labelSize = CGSize()
+        }
         
-        let imageFrame = CGRect(x: imageInset, y: self.label.frame.maxY + spacing - 4.0, width: size.width - imageInset * 2.0, height: size.width - imageInset * 2.0)
-        self.imageNode.frame = imageFrame
+        let imageOrigin = CGPoint(x: imageInset, y: self.label.frame.maxY + spacing - 4.0)
+        var imageSize: CGSize
+        if !self.cachedHasImage {
+            imageSize = CGSize()
+        } else {
+            imageSize =  CGSize(width: size.width - imageInset * 2.0, height: size.width - imageInset * 2.0)
+        }
+        self.imageNode.frame = CGRect(origin: imageOrigin, size: imageSize)
     }
 }

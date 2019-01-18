@@ -49,6 +49,11 @@ final class ThemeGalleryToolbarNode: ASDisplayNode {
         self.doneButton.addTarget(self, action: #selector(self.donePressed), forControlEvents: .touchUpInside)
     }
     
+    func setDoneEnabled(_ enabled: Bool) {
+        self.doneButton.alpha = enabled ? 1.0 : 0.3
+        self.doneButton.isUserInteractionEnabled = enabled
+    }
+    
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.backgroundColor = theme.rootController.tabBar.backgroundColor
         self.separatorNode.backgroundColor = theme.rootController.tabBar.separatorColor

@@ -116,7 +116,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 case let .wallpaper(wallpaper):
                     switch wallpaper {
                         case .builtin:
-                            displaySize = CGSize(width: 640.0, height: 1136.0)
+                            displaySize = CGSize(width: 1308.0, height: 2688.0).fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                             contentSize = displaySize
                             signal = settingsBuiltinWallpaperImage(account: account)
                             fetchSignal = .complete()
@@ -135,10 +135,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             
                             var convertedRepresentations: [ImageRepresentationWithReference] = []
                             for representation in file.file.previewRepresentations {
-                                convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .standalone(resource: representation.resource)))
+                                convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .wallpaper(resource: representation.resource)))
                             }
-                            convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .standalone(resource: file.file.resource)))
-                            signal = chatMessageImageFile(account: account, fileReference: .standalone(media: file.file), thumbnail: false)
+                            convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .wallpaper(resource: file.file.resource)))
+                            signal = chatAvatarGalleryPhoto(account: account, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
                             fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
                             statusSignal = account.postbox.mediaBox.resourceStatus(file.file.resource)
                         case let .image(representations):
@@ -276,7 +276,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 controlsColorSignal = backgroundContrastColor(for: imagePromise.get())
             }
             self.controlsColor.set(.single(.white) |> then(controlsColorSignal))
-            self.status.set(statusSignal)
+            self.status.set(statusSignal |> deliverOnMainQueue)
         }
     }
     

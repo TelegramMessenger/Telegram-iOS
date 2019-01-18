@@ -235,11 +235,11 @@ public class PeerMediaCollectionController: TelegramController {
                                         let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
                                     }
                                 })
-                                ]), ActionSheetItemGroup(items: [
-                                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                                        actionSheet?.dismissAnimated()
-                                    })
-                                ])])
+                            ]), ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])])
                             strongSelf.present(actionSheet, in: .window(.root))
                         default:
                             break
@@ -589,37 +589,52 @@ public class PeerMediaCollectionController: TelegramController {
     }
     
     func forwardMessages(_ messageIds: Set<MessageId>) {
-        let forwardMessageIds = Array(messageIds).sorted()
-        
-        let controller = PeerSelectionController(account: self.account)
-        controller.peerSelected = { [weak self, weak controller] peerId in
-            if let strongSelf = self, let _ = controller {
-                let _ = (strongSelf.account.postbox.transaction({ transaction -> Void in
-                    transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
-                        if let currentState = currentState as? ChatInterfaceState {
-                            return currentState.withUpdatedForwardMessageIds(forwardMessageIds)
-                        } else {
-                            return ChatInterfaceState().withUpdatedForwardMessageIds(forwardMessageIds)
-                        }
-                    })
-                }) |> deliverOnMainQueue).start(completed: {
-                    if let strongSelf = self {
-                        strongSelf.updateInterfaceState(animated: false, { $0.withoutSelectionState() })
-                        
-                        let ready = ValuePromise<Bool>()
-                        
-                        strongSelf.messageContextDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
-                            if let strongController = controller {
-                                strongController.dismiss()
-                            }
-                        }))
-                        
-                        (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)), animated: false, ready: ready)
+        let currentMessages = (self.mediaCollectionDisplayNode.searchDisplayController?.contentNode as? ChatHistorySearchContainerNode)?.currentMessages
+        let _ = (self.account.postbox.transaction { transaction -> Void in
+            for id in messageIds {
+                if transaction.getMessage(id) == nil {
+                    if let message = currentMessages?[id] {
+                        storeMessageFromSearch(transaction: transaction, message: message)
                     }
-                })
+                }
             }
         }
-        self.present(controller, in: .window(.root))
+        |> deliverOnMainQueue).start(completed: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            let forwardMessageIds = Array(messageIds).sorted()
+            
+            let controller = PeerSelectionController(account: strongSelf.account)
+            controller.peerSelected = { [weak controller] peerId in
+                if let strongSelf = self, let _ = controller {
+                    let _ = (strongSelf.account.postbox.transaction({ transaction -> Void in
+                        transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
+                            if let currentState = currentState as? ChatInterfaceState {
+                                return currentState.withUpdatedForwardMessageIds(forwardMessageIds)
+                            } else {
+                                return ChatInterfaceState().withUpdatedForwardMessageIds(forwardMessageIds)
+                            }
+                        })
+                    }) |> deliverOnMainQueue).start(completed: {
+                        if let strongSelf = self {
+                            strongSelf.updateInterfaceState(animated: false, { $0.withoutSelectionState() })
+                            
+                            let ready = ValuePromise<Bool>()
+                            
+                            strongSelf.messageContextDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                                if let strongController = controller {
+                                    strongController.dismiss()
+                                }
+                            }))
+                            
+                            (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                        }
+                    })
+                }
+            }
+            strongSelf.present(controller, in: .window(.root))
+        })
     }
     
     func deleteMessages(_ messageIds: Set<MessageId>) {

@@ -641,6 +641,16 @@ private func preparedContactListNodeTransition(account: Account, from fromEntrie
                     break
             }
         }
+    } else {
+        outer: for entry in toEntries {
+            switch entry {
+                case .sort:
+                    shouldFixScroll = true
+                    break outer
+                default:
+                    break
+            }
+        }
     }
     
     var scrollToItem: ListViewScrollToItem?

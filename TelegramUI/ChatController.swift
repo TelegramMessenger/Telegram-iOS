@@ -5350,6 +5350,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     private func openUrl(_ url: String, concealed: Bool) {
+        self.commitPurposefulAction()
+        
         let openImpl: () -> Void = { [weak self] in
             guard let strongSelf = self else {
                 return
