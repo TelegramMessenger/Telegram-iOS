@@ -21,6 +21,8 @@ private let accountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerChatInpu
     return nil
 }, fetchResourceMediaReferenceHash: { resource in
     return .single(nil)
+}, prepareSecretThumbnailData: { _ in
+    return nil
 })
 
 private struct ApplicationSettings {

@@ -36,6 +36,8 @@ func snapshotEnvironment(application: UIApplication, mainWindow: UIWindow, statu
             return .never()
         }, fetchResourceMediaReferenceHash: { _ in
             return .never()
+        }, prepareSecretThumbnailData: { _ in
+            return nil
         })) |> take(1)
         let semaphore = DispatchSemaphore(value: 0)
         let _ = account.start(next: { value in

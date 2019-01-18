@@ -21,6 +21,8 @@ private let auxiliaryMethods = AccountAuxiliaryMethods(updatePeerChatInputState:
     return nil
 }, fetchResourceMediaReferenceHash: { _ in
     return .single(nil)
+}, prepareSecretThumbnailData: { _ in
+    return nil
 })
 
 class TodayViewController: UIViewController, NCWidgetProviding {
