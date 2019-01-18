@@ -59,6 +59,9 @@
 		096C98C221787C6700C211FF /* TGBridgeAudioDecoder.mm in Sources */ = {isa = PBXBuildFile; fileRef = 096C98BE21787C6700C211FF /* TGBridgeAudioDecoder.mm */; };
 		09749BC321F0DFFD008FDDE9 /* StickersChatInputContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09749BC221F0DFFD008FDDE9 /* StickersChatInputContextPanelNode.swift */; };
 		09749BC521F0E024008FDDE9 /* StickersChatInputPanelItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09749BC421F0E024008FDDE9 /* StickersChatInputPanelItem.swift */; };
+		09749BC921F1BBA1008FDDE9 /* CallFeedbackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09749BC821F1BBA1008FDDE9 /* CallFeedbackController.swift */; };
+		09749BCD21F23139008FDDE9 /* WallpaperGalleryDecorationNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09749BCC21F23139008FDDE9 /* WallpaperGalleryDecorationNode.swift */; };
+		09749BCF21F236F2008FDDE9 /* ModernCheckNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09749BCE21F236F2008FDDE9 /* ModernCheckNode.swift */; };
 		09797873210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09797872210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift */; };
 		0979787C210642CB0077D77F /* WebEmbedPlayerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0979787B210642CB0077D77F /* WebEmbedPlayerNode.swift */; };
 		0979787E210646C00077D77F /* YoutubeEmbedImplementation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0979787D210646C00077D77F /* YoutubeEmbedImplementation.swift */; };
@@ -1061,9 +1064,7 @@
 		D0EC6E6C1EB9F58900EBF1C3 /* FeaturedStickerPacksController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E23DD71E805E2600B9B6D2 /* FeaturedStickerPacksController.swift */; };
 		D0EC6E6D1EB9F58900EBF1C3 /* ItemListStickerPackItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04791661E79A22000F18979 /* ItemListStickerPackItem.swift */; };
 		D0EC6E6E1EB9F58900EBF1C3 /* ArchivedStickerPacksController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E23DDC1E8081A200B9B6D2 /* ArchivedStickerPacksController.swift */; };
-		D0EC6E711EB9F58900EBF1C3 /* ThemeGalleryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05174A41EAA456600A1BF36 /* ThemeGalleryController.swift */; };
-		D0EC6E721EB9F58900EBF1C3 /* ThemeGalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05174A81EAA46E000A1BF36 /* ThemeGalleryItem.swift */; };
-		D0EC6E731EB9F58900EBF1C3 /* ThemeGalleryToolbarNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05174AA1EAA5B4700A1BF36 /* ThemeGalleryToolbarNode.swift */; };
+		D0EC6E731EB9F58900EBF1C3 /* WallpaperGalleryToolbarNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05174AA1EAA5B4700A1BF36 /* WallpaperGalleryToolbarNode.swift */; };
 		D0EC6E741EB9F58900EBF1C3 /* ThemeGridController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EC6B351EB88D0A00EBF1C3 /* ThemeGridController.swift */; };
 		D0EC6E751EB9F58900EBF1C3 /* ThemeGridControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EC6B371EB88D1600EBF1C3 /* ThemeGridControllerNode.swift */; };
 		D0EC6E761EB9F58900EBF1C3 /* SettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01B279A1E39386C0022A4C0 /* SettingsController.swift */; };
@@ -1186,6 +1187,9 @@
 		096C98BE21787C6700C211FF /* TGBridgeAudioDecoder.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TGBridgeAudioDecoder.mm; sourceTree = "<group>"; };
 		09749BC221F0DFFD008FDDE9 /* StickersChatInputContextPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickersChatInputContextPanelNode.swift; sourceTree = "<group>"; };
 		09749BC421F0E024008FDDE9 /* StickersChatInputPanelItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickersChatInputPanelItem.swift; sourceTree = "<group>"; };
+		09749BC821F1BBA1008FDDE9 /* CallFeedbackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallFeedbackController.swift; sourceTree = "<group>"; };
+		09749BCC21F23139008FDDE9 /* WallpaperGalleryDecorationNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperGalleryDecorationNode.swift; sourceTree = "<group>"; };
+		09749BCE21F236F2008FDDE9 /* ModernCheckNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModernCheckNode.swift; sourceTree = "<group>"; };
 		09797872210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsButtonItemNode.swift; sourceTree = "<group>"; };
 		0979787B210642CB0077D77F /* WebEmbedPlayerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebEmbedPlayerNode.swift; sourceTree = "<group>"; };
 		0979787D210646C00077D77F /* YoutubeEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YoutubeEmbedImplementation.swift; sourceTree = "<group>"; };
@@ -1611,9 +1615,7 @@
 		D050F2121E48B61500988324 /* PhoneInputNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhoneInputNode.swift; sourceTree = "<group>"; };
 		D050F2151E48D9E000988324 /* AuthorizationSequenceCountrySelectionController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationSequenceCountrySelectionController.swift; sourceTree = "<group>"; };
 		D050F2171E48D9EA00988324 /* AuthorizationSequenceCountrySelectionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationSequenceCountrySelectionControllerNode.swift; sourceTree = "<group>"; };
-		D05174A41EAA456600A1BF36 /* ThemeGalleryController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeGalleryController.swift; sourceTree = "<group>"; };
-		D05174A81EAA46E000A1BF36 /* ThemeGalleryItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeGalleryItem.swift; sourceTree = "<group>"; };
-		D05174AA1EAA5B4700A1BF36 /* ThemeGalleryToolbarNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeGalleryToolbarNode.swift; sourceTree = "<group>"; };
+		D05174AA1EAA5B4700A1BF36 /* WallpaperGalleryToolbarNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WallpaperGalleryToolbarNode.swift; sourceTree = "<group>"; };
 		D05174BB1EAE156500A1BF36 /* PresentationResourcesItemList.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationResourcesItemList.swift; sourceTree = "<group>"; };
 		D05174BD1EAE161C00A1BF36 /* PresentationResourcesRootController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationResourcesRootController.swift; sourceTree = "<group>"; };
 		D05174BF1EAE3AD400A1BF36 /* DefaultDarkPresentationTheme.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DefaultDarkPresentationTheme.swift; sourceTree = "<group>"; };
@@ -3139,9 +3141,6 @@
 				D06E4C322134A59700088087 /* ThemeAccentColorActionSheet.swift */,
 				D06E4C342134AE3C00088087 /* ThemeAutoNightSettingsController.swift */,
 				D06F31E3213597FF001A0F12 /* ThemeAutoNightTimeSelectionActionSheet.swift */,
-				D05174A41EAA456600A1BF36 /* ThemeGalleryController.swift */,
-				D05174A81EAA46E000A1BF36 /* ThemeGalleryItem.swift */,
-				D05174AA1EAA5B4700A1BF36 /* ThemeGalleryToolbarNode.swift */,
 				D0EC6B351EB88D0A00EBF1C3 /* ThemeGridController.swift */,
 				D0EC6B371EB88D1600EBF1C3 /* ThemeGridControllerNode.swift */,
 				D0C0B5B61EE1DEF1000F4D2C /* ThemeGridControllerItem.swift */,
@@ -3159,7 +3158,9 @@
 				09DD5D5121ED175300D7007A /* WallpaperColorPickerNode.swift */,
 				0900678C21ED5EA800530762 /* WallpaperColorPanelNode.swift */,
 				091417F121EF4E5D00C8325A /* WallpaperGalleryController.swift */,
+				09749BCC21F23139008FDDE9 /* WallpaperGalleryDecorationNode.swift */,
 				091417F321EF4F5F00C8325A /* WallpaperGalleryItem.swift */,
+				D05174AA1EAA5B4700A1BF36 /* WallpaperGalleryToolbarNode.swift */,
 			);
 			name = Themes;
 			sourceTree = "<group>";
@@ -4146,6 +4147,7 @@
 				09FE756C2153F5F900A3120F /* CallRouteActionSheetItem.swift */,
 				0962E65C21B1486D00245FD9 /* CallDebugNode.swift */,
 				09DD88F021BE1090000766BC /* CallRatingController.swift */,
+				09749BC821F1BBA1008FDDE9 /* CallFeedbackController.swift */,
 			);
 			name = Call;
 			sourceTree = "<group>";
@@ -4329,6 +4331,7 @@
 				D056CD6F1FF147B000880D28 /* IconButtonNode.swift */,
 				09F85BA621E7DA5F00D73170 /* BlurredImageNode.swift */,
 				D00580B221E4B51600CB7CD3 /* DeleteChatPeerActionSheetItem.swift */,
+				09749BCE21F236F2008FDDE9 /* ModernCheckNode.swift */,
 			);
 			name = Nodes;
 			sourceTree = "<group>";
@@ -5358,6 +5361,7 @@
 				D0461439200514F000EC0EF2 /* LiveLocationSummaryManager.swift in Sources */,
 				D056CD781FF2A6EE00880D28 /* ChatMessageSwipeToReplyNode.swift in Sources */,
 				D0CE67941F7DB45100FFB557 /* ChatMessageContactBubbleContentNode.swift in Sources */,
+				09749BCD21F23139008FDDE9 /* WallpaperGalleryDecorationNode.swift in Sources */,
 				D0B3AC802142E2E900CD1374 /* ResetPasswordController.swift in Sources */,
 				D05D8B3A2192FC460064586F /* LocalizationListController.swift in Sources */,
 				D0943AFE1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift in Sources */,
@@ -5451,6 +5455,7 @@
 				0962E67921B67A9800245FD9 /* ChatMessageAnimatedStickerItemNode.swift in Sources */,
 				D0EC6D4E1EB9F58800EBF1C3 /* ChatListItem.swift in Sources */,
 				D0B2F76A2052920D00D3BFB9 /* UserInfoEditingPhoneItem.swift in Sources */,
+				09749BC921F1BBA1008FDDE9 /* CallFeedbackController.swift in Sources */,
 				099529FA21DD8A3100805E13 /* NavigationBarSearchContentNode.swift in Sources */,
 				D0AEAE272080D6970013176E /* StickerPaneSearchBarNode.swift in Sources */,
 				D0EC6D4F1EB9F58800EBF1C3 /* ChatListSearchItem.swift in Sources */,
@@ -5904,6 +5909,7 @@
 				D0943AF61FDAAE7E001522CC /* MultipleAvatarsNode.swift in Sources */,
 				D0EC6E2B1EB9F58900EBF1C3 /* ComposeController.swift in Sources */,
 				D099D74D1EEFEE1500A3128C /* GameController.swift in Sources */,
+				09749BCF21F236F2008FDDE9 /* ModernCheckNode.swift in Sources */,
 				D0EC6E2C1EB9F58900EBF1C3 /* ComposeControllerNode.swift in Sources */,
 				D0EC6E2D1EB9F58900EBF1C3 /* CounterContollerTitleView.swift in Sources */,
 				D0AEAE292080FD660013176E /* StickerPaneSearchGlobaltem.swift in Sources */,
@@ -6031,13 +6037,11 @@
 				D0EC6E6D1EB9F58900EBF1C3 /* ItemListStickerPackItem.swift in Sources */,
 				D0EC6E6E1EB9F58900EBF1C3 /* ArchivedStickerPacksController.swift in Sources */,
 				D0DE5805205B202500C356A8 /* ScreenCaptureDetection.swift in Sources */,
-				D0EC6E711EB9F58900EBF1C3 /* ThemeGalleryController.swift in Sources */,
 				09F79A0B21C832F400820234 /* WebSearchGalleryFooterContentNode.swift in Sources */,
 				D0C0B5B11EE1C421000F4D2C /* ChatDateSelectionSheet.swift in Sources */,
-				D0EC6E721EB9F58900EBF1C3 /* ThemeGalleryItem.swift in Sources */,
 				D00781052084DFB100369A39 /* UrlEscaping.swift in Sources */,
 				D0471B581EFE6D020074D609 /* BotCheckoutInfoController.swift in Sources */,
-				D0EC6E731EB9F58900EBF1C3 /* ThemeGalleryToolbarNode.swift in Sources */,
+				D0EC6E731EB9F58900EBF1C3 /* WallpaperGalleryToolbarNode.swift in Sources */,
 				D025A4261F79428E00563950 /* FetchManagerLocation.swift in Sources */,
 				D087BFB11F745483003FD209 /* ShareSearchBarNode.swift in Sources */,
 				D0EC6E741EB9F58900EBF1C3 /* ThemeGridController.swift in Sources */,

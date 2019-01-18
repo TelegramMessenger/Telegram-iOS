@@ -42,6 +42,7 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
     private let doneButton: HighlightableButtonNode
     private let colorPickerNode: WallpaperColorPickerNode
     
+    var previousColor: UIColor?
     var color: UIColor {
         get {
             return self.colorPickerNode.color
@@ -126,8 +127,8 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         
         let fieldHeight: CGFloat = 33.0
         let buttonSpacing: CGFloat = keyboardHeight > 0.0 ? 3.0 : 6.0
-        let leftInset: CGFloat = 5.0  //42.0
-        let rightInset: CGFloat = 5.0 //keyboardHeight > 0.0 ? 42.0 : 5.0
+        let leftInset: CGFloat = 5.0
+        let rightInset: CGFloat = 5.0
         
         transition.updateFrame(node: self.palleteButton, frame: CGRect(x: 0.0, y: 0.0, width: topPanelHeight, height: topPanelHeight))
         transition.updateFrame(node: self.textBackgroundNode, frame: CGRect(x: leftInset, y: (topPanelHeight - fieldHeight) / 2.0, width: size.width - leftInset - rightInset, height: fieldHeight))
@@ -169,11 +170,16 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         return false
     }
     
+    func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
+        self.previousColor = self.color
+        return true
+    }
+    
     @objc func textFieldDidEndEditing(_ textField: UITextField) {
         if let text = self.textFieldNode.textField.text, text.count == 6, let color = UIColor(hexString: text) {
             self.setColor(color)
         } else {
-            self.setColor(.black)
+            self.setColor(self.previousColor ?? .black)
         }
     }
 }

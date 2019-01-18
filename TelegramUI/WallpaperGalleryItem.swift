@@ -36,12 +36,13 @@ let progressDiameter: CGFloat = 50.0
 
 final class WallpaperGalleryItemNode: GalleryItemNode {
     private let account: Account
-    private var entry: WallpaperGalleryEntry?
+    var entry: WallpaperGalleryEntry?
     private var contentSize: CGSize?
     
     let wrapperNode: ASDisplayNode
     let imageNode: TransformImageNode
     private let statusNode: RadialStatusNode
+    private let progressNode: ASTextNode
     private let blurredNode: BlurredImageNode
     let cropNode: WallpaperCropNode
     
@@ -49,8 +50,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     private let fetchDisposable = MetaDisposable()
     private let statusDisposable = MetaDisposable()
     
-    let controlsColor = Promise<UIColor>(.white)
+    let subtitle = Promise<String?>(nil)
     let status = Promise<MediaResourceStatus>(.Local)
+    let actionButton = Promise<UIBarButtonItem?>(nil)
+    var action: (() -> Void)?
     
     init(account: Account) {
         self.account = account
@@ -62,6 +65,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
         self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
         self.statusNode.isUserInteractionEnabled = false
+        self.progressNode = ASTextNode()
         
         self.blurredNode = BlurredImageNode()
         
@@ -79,6 +83,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         self.addSubnode(self.wrapperNode)
         self.addSubnode(self.statusNode)
+        self.addSubnode(self.progressNode)
     }
     
     deinit {
@@ -102,6 +107,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         return self._ready.get()
     }
     
+    @objc private func actionPressed() {
+        self.action?()
+    }
+    
     fileprivate func setEntry(_ entry: WallpaperGalleryEntry) {
         if self.entry != entry {
             self.entry = entry
@@ -109,8 +118,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
             let fetchSignal: Signal<FetchResourceSourceType, FetchResourceError>
             let statusSignal: Signal<MediaResourceStatus, NoError>
+            let subtitleSignal: Signal<String?, NoError>
+            var actionSignal: Signal<UIBarButtonItem?, NoError> = .single(nil)
             let displaySize: CGSize
             let contentSize: CGSize
+            
+            let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let defaultAction = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: presentationData.theme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.actionPressed))
             
             switch entry {
                 case let .wallpaper(wallpaper):
@@ -121,12 +135,14 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             signal = settingsBuiltinWallpaperImage(account: account)
                             fetchSignal = .complete()
                             statusSignal = .single(.Local)
+                            subtitleSignal = .single(nil)
                         case let .color(color):
                             displaySize = CGSize(width: 1.0, height: 1.0)
                             contentSize = displaySize
                             signal = .never()
                             fetchSignal = .complete()
                             statusSignal = .single(.Local)
+                            subtitleSignal = .single(nil)
                             self.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
                         case let .file(file):
                             let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
@@ -141,6 +157,12 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             signal = chatAvatarGalleryPhoto(account: account, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
                             fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
                             statusSignal = account.postbox.mediaBox.resourceStatus(file.file.resource)
+                            if let fileSize = file.file.size {
+                                subtitleSignal = .single(dataSizeString(fileSize))
+                            } else {
+                                subtitleSignal = .single(nil)
+                            }
+                            actionSignal = .single(defaultAction)
                         case let .image(representations):
                             if let largestSize = largestImageRepresentation(representations) {
                                 contentSize = largestSize.dimensions
@@ -162,6 +184,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 fetchSignal = .complete()
                                 statusSignal = .single(.Local)
                             }
+                            subtitleSignal = .single(nil)
                     }
                     self.cropNode.removeFromSupernode()
                 case let .asset(asset, _):
@@ -171,6 +194,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     signal = photoWallpaper(postbox: account.postbox, photoLibraryResource: PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64()))
                     fetchSignal = .complete()
                     statusSignal = .single(.Local)
+                    subtitleSignal = .single(nil)
                     self.wrapperNode.addSubnode(self.cropNode)
                 case let .contextResult(result):
                     var imageDimensions: CGSize?
@@ -223,6 +247,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         fetchSignal = .complete()
                         statusSignal = .single(.Local)
                     }
+                    subtitleSignal = .single(nil)
                     self.wrapperNode.addSubnode(self.cropNode)
             }
             self.contentSize = contentSize
@@ -257,30 +282,28 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 if let strongSelf = self {
                     let state: RadialStatusNodeState
                     switch status {
-                    case let .Fetching(_, progress):
-                        let adjustedProgress = max(progress, 0.027)
-                        state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: false)
-                    case .Local:
-                        state = .none
-                    case .Remote:
-                        state = .progress(color: statusForegroundColor, lineWidth: nil, value: 0.027, cancelEnabled: false)
+                        case let .Fetching(_, progress):
+                            let adjustedProgress = max(progress, 0.027)
+                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: false)
+                            strongSelf.progressNode.attributedText = NSAttributedString(string: "\(Int(progress * 100))%", font: Font.medium(13), textColor: .white, paragraphAlignment: .center)
+                        case .Local:
+                            state = .none
+                            strongSelf.progressNode.attributedText = nil
+                        case .Remote:
+                            state = .progress(color: statusForegroundColor, lineWidth: nil, value: 0.027, cancelEnabled: false)
+                            strongSelf.progressNode.attributedText = nil
                     }
                     strongSelf.statusNode.transitionToState(state, completion: {})
                 }
             }))
             
-            let controlsColorSignal: Signal<UIColor, NoError>
-            if case let .wallpaper(wallpaper) = entry {
-                controlsColorSignal = chatBackgroundContrastColor(wallpaper: wallpaper, postbox: account.postbox)
-            } else {
-                controlsColorSignal = backgroundContrastColor(for: imagePromise.get())
-            }
-            self.controlsColor.set(.single(.white) |> then(controlsColorSignal))
+            self.subtitle.set(subtitleSignal |> deliverOnMainQueue)
             self.status.set(statusSignal |> deliverOnMainQueue)
+            self.actionButton.set(actionSignal |> deliverOnMainQueue)
         }
     }
     
-    func setParallaxEnabled(_ enabled: Bool) {
+    func setMotionEnabled(_ enabled: Bool) {
         if enabled {
             let amount = 24.0
             
@@ -296,7 +319,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             group.motionEffects = [horizontal, vertical]
             self.wrapperNode.view.addMotionEffect(group)
         } else {
-            for effect in self.imageNode.view.motionEffects {
+            for effect in self.wrapperNode.view.motionEffects {
                 self.wrapperNode.view.removeMotionEffect(effect)
             }
         }
@@ -365,5 +388,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
         
         self.statusNode.frame = CGRect(x: layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - progressDiameter) / 2.0), y: floorToScreenPixels((layout.size.height - progressDiameter) / 2.0), width: progressDiameter, height: progressDiameter)
+        self.progressNode.frame = CGRect(x: layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - progressDiameter) / 2.0), y: floorToScreenPixels((layout.size.height - 15.0) / 2.0), width: progressDiameter, height: progressDiameter)
     }
 }

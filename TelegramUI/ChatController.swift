@@ -1096,9 +1096,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }, rateCall: { [weak self] message, callId in
             if let strongSelf = self {
-                let controller = callRatingController(account: strongSelf.account, callId: callId, present: { [weak self] controller in
+                let controller = callRatingController(account: strongSelf.account, callId: callId, present: { [weak self] c, a in
                     if let strongSelf = self {
-                        strongSelf.present(controller, in: .window(.root))
+                        strongSelf.present(c, in: .window(.root), with: a)
                     }
                 })
                 strongSelf.present(controller, in: .window(.root))

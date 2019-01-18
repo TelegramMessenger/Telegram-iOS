@@ -415,8 +415,8 @@ func openChatWallpaper(account: Account, message: Message, present: @escaping (V
                             source = .wallpaper(.color(Int32(color.rgb)))
                     }
                     
-                    let controller = WallpaperListPreviewController(account: account, source: source)
-                    present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    let controller = WallpaperGalleryController(account: account, source: source)
+                    present(controller, nil)
                 }
             })
         }

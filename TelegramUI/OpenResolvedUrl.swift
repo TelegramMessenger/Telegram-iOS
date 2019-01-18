@@ -210,8 +210,8 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
             let _ = (signal
             |> deliverOnMainQueue).start(next: { [weak controller] wallpaper in
                 controller?.dismiss()
-                let wallpaperController = WallpaperListPreviewController(account: account, source: .wallpaper(wallpaper))
-                present(wallpaperController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                let galleryController = WallpaperGalleryController(account: account, source: .wallpaper(wallpaper))
+                present(galleryController, nil)
             }, error: { [weak controller] error in
                 controller?.dismiss()
                 

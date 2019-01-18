@@ -233,7 +233,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.gridNode.addSubnode(self.separatorNode)
         self.gridNode.addSubnode(self.colorItemNode)
         self.gridNode.addSubnode(self.galleryItemNode)
-        //self.gridNode.addSubnode(self.descriptionItemNode)
+        self.gridNode.addSubnode(self.descriptionItemNode)
         self.addSubnode(self.gridNode)
         
         let wallpapersPromise: Promise<[TelegramWallpaper]> = Promise()
@@ -471,7 +471,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         
         let buttonTopInset: CGFloat = 32.0
         let buttonHeight: CGFloat = 44.0
-        let buttonBottomInset: CGFloat = 35.0 //descriptionLayout.contentSize.height + 17.0
+        let buttonBottomInset: CGFloat = descriptionLayout.contentSize.height + 17.0
         
         let buttonInset: CGFloat = buttonTopInset + buttonHeight * 2.0 + buttonBottomInset
         let buttonOffset = buttonInset + 10.0

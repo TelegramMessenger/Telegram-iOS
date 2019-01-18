@@ -64,10 +64,10 @@ final class ThemeGridController: ViewController {
             }
         })
         
-//        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search, activate: { [weak self] in
-//            self?.activateSearch()
-//        })
-//        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search, activate: { [weak self] in
+            self?.activateSearch()
+        })
+        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -84,11 +84,11 @@ final class ThemeGridController: ViewController {
         
         if let isEmpty = self.isEmpty, isEmpty {
         } else {
-//            if self.editingMode {
-//                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
-//            } else {
-//                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
-//            }
+            if self.editingMode {
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+            } else {
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+            }
         }
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
@@ -104,6 +104,9 @@ final class ThemeGridController: ViewController {
         self.displayNode = ThemeGridControllerNode(account: self.account, presentationData: self.presentationData, presentPreviewController: { [weak self] source in
             if let strongSelf = self {
                 let controller = WallpaperGalleryController(account: strongSelf.account, source: source)
+                controller.apply = { [weak self, weak controller] wallpaper, mode, cropRect in
+                    
+                }
                 self?.present(controller, in: .window(.root), with: nil, blockInteraction: true)
 //                let controller = WallpaperListPreviewController(account: strongSelf.account, source: source)
 //                controller.apply = { [weak self, weak controller] wallpaper, mode, cropRect in
@@ -165,11 +168,11 @@ final class ThemeGridController: ViewController {
                     if empty {
                         strongSelf.navigationItem.setRightBarButton(nil, animated: true)
                     } else {
-//                        if strongSelf.editingMode {
-//                            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed))
-//                        } else {
-//                            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed))
-//                        }
+                        if strongSelf.editingMode {
+                            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed))
+                        } else {
+                            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed))
+                        }
                     }
                 }
             }

@@ -411,7 +411,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         self.toolbarButtonApply = HighlightTrackingButtonNode()
         self.toolbarButtonApply.setAttributedTitle(NSAttributedString(string: self.presentationData.strings.Wallpaper_Set, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor), for: [])
         
-        self.segmentedControl = UISegmentedControl(items: [self.presentationData.strings.WallpaperPreview_Still, self.presentationData.strings.WallpaperPreview_Perspective, self.presentationData.strings.WallpaperPreview_Blurred])
+        self.segmentedControl = UISegmentedControl(items: ["Still", "Perspective", self.presentationData.strings.WallpaperPreview_Blurred])
         self.segmentedControl.selectedSegmentIndex = 0
         self.segmentedControl.tintColor = .white
         
