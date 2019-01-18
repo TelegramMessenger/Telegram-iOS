@@ -57,7 +57,14 @@ CONFIGURE_FILE(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc @ONLY)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 
 #install header
-install(FILES inc/lottieanimation.h inc/lottieanimation_capi.h inc/lottiecommon.h  DESTINATION include)
+install(FILES
+        inc/rlottie.h
+        inc/rlottie_capi.h
+        inc/rlottiecommon.h
+        inc/lottieanimation.h
+        inc/lottieanimation_capi.h
+        inc/lottiecommon.h
+        DESTINATION include)
 
 #install lib
 install( TARGETS lottie-player EXPORT lottie-player-targets

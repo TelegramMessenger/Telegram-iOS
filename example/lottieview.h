@@ -32,8 +32,8 @@
 #include <Evas.h>
 #include <Ecore.h>
 #include <Ecore_Evas.h>
-#include "lottieanimation.h"
-#include "lottieanimation_capi.h"
+#include "rlottie.h"
+#include "rlottie_capi.h"
 #include<future>
 #include <cmath>
 class LottieView

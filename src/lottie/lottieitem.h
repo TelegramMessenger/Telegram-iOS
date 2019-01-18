@@ -27,8 +27,8 @@
 #include"vpath.h"
 #include"vpoint.h"
 #include"vpathmesure.h"
-#include"lottiecommon.h"
-#include"lottieanimation.h"
+#include"rlottiecommon.h"
+#include"rlottie.h"
 #include"vpainter.h"
 #include"vdrawable.h"
 

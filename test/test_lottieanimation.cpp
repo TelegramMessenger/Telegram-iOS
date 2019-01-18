@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "lottieanimation.h"
+#include "rlottie.h"
 
 class AnimationTest : public ::testing::Test {
 public:

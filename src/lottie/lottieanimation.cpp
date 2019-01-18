@@ -16,7 +16,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "lottieanimation.h"
+#include "rlottie.h"
 #include "lottieitem.h"
 #include "lottieloader.h"
 #include "lottiemodel.h"
