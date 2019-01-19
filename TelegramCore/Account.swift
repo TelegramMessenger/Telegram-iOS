@@ -810,7 +810,7 @@ public class Account {
     public let testingEnvironment: Bool
     public let postbox: Postbox
     public let network: Network
-    let networkArguments: NetworkInitializationArguments
+    public let networkArguments: NetworkInitializationArguments
     public let peerId: PeerId
     
     public let auxiliaryMethods: AccountAuxiliaryMethods
