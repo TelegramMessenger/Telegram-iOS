@@ -1,8 +1,8 @@
-project('lottie-player library',
+project('rlottie library',
         'cpp',
         license : 'Apache')
 
-lottie_player_lib_version = '0.0.1'
+rlottie_lib_version = '0.0.1'
 
 add_global_arguments('-DDEMO_DIR="@0@/example/resource/"'.format(meson.current_source_dir()), language : 'cpp')
 
@@ -46,9 +46,9 @@ endif
 
 pkg_mod = import('pkgconfig')
 
-pkg_mod.generate( libraries   : lottie_player_lib,
-                  version     : lottie_player_lib_version,
-                  name        : 'liblottie-player',
-                  filebase    : 'lottie-player',
+pkg_mod.generate( libraries   : rlottie_lib,
+                  version     : rlottie_lib_version,
+                  name        : 'librlottie',
+                  filebase    : 'rlottie',
                   description : 'A Library for rendering lottie files.'
                 )

@@ -19,7 +19,7 @@ animation_test_sources += files('test_lottieanimation_capi.cpp')
 animation_testsuite = executable('animationTestSuite',
                               animation_test_sources,
                               include_directories : inc,
-                              link_with : lottie_player_lib,
+                              link_with : rlottie_lib,
                               dependencies : gtest_dep)
 
 test('Animation Testsuite', animation_testsuite)

@@ -16,7 +16,7 @@ if (demo_dep.found())
     executable('demo',
                demo_sources,
                include_directories : inc,
-               link_with : lottie_player_lib,
+               link_with : rlottie_lib,
                dependencies : demo_dep)
 
     lottieview_test_src  = files('lottieviewtest.cpp')
@@ -25,7 +25,7 @@ if (demo_dep.found())
     executable('lottieviewTest',
                lottieview_test_src,
                include_directories : inc,
-               link_with : lottie_player_lib,
+               link_with : rlottie_lib,
                dependencies : demo_dep)
 
     uxsample_test_src  = files('uxsampletest.cpp')
@@ -34,7 +34,7 @@ if (demo_dep.found())
     executable('uxsampleTest',
                uxsample_test_src,
                include_directories : inc,
-               link_with : lottie_player_lib,
+               link_with : rlottie_lib,
                dependencies : demo_dep)
 
     lottieviewer_sources = files('lottieviewer.cpp')
@@ -43,14 +43,14 @@ if (demo_dep.found())
     executable('lottieviewer',
                lottieviewer_sources,
                include_directories : inc,
-               link_with : lottie_player_lib,
+               link_with : rlottie_lib,
                dependencies : demo_dep)
 
 if (meson.get_compiler('cpp').has_header('elementary-1/elm_animation_view.h'))
     executable('efl_animview',
                'efl_animview.cpp',
                include_directories : inc,
-               link_with : lottie_player_lib,
+               link_with : rlottie_lib,
                dependencies : demo_dep)
 endif
 

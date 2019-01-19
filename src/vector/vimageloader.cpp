@@ -15,18 +15,18 @@ struct VImageLoader::Impl
     Impl()
     {
         #ifdef __APPLE__
-            dl_handle = dlopen("liblottie-image-loader.dylib", RTLD_LAZY);
+            dl_handle = dlopen("librlottie-image-loader.dylib", RTLD_LAZY);
         #else
-            dl_handle = dlopen("liblottie-image-loader.so", RTLD_LAZY);
+            dl_handle = dlopen("librlottie-image-loader.so", RTLD_LAZY);
         #endif
         if (!dl_handle)
-            vWarning<<"Failed to dlopen liblottie-image-loader library";
+            vWarning<<"Failed to dlopen librlottie-image-loader library";
         lottie_image_load = (lottie_image_load_f) dlsym(dl_handle, "lottie_image_load");
         if (!lottie_image_load)
-            vWarning<<"Failed to find symbol lottie_image_load in liblottie-image-loader library";
+            vWarning<<"Failed to find symbol lottie_image_load in librlottie-image-loader library";
         lottie_image_free = (lottie_image_free_f) dlsym(dl_handle, "lottie_image_free");
         if (!lottie_image_free)
-            vWarning<<"Failed to find symbol lottie_image_free in liblottie-image-loader library";
+            vWarning<<"Failed to find symbol lottie_image_free in librlottie-image-loader library";
     }
     ~Impl()
     {
