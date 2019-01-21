@@ -186,7 +186,6 @@ enum MutableMessageHistoryEntry {
                         assert(location.count != 0)
                         return .HoleEntry(hole, MessageHistoryEntryLocation(index: location.index - 1, count: location.count - 1), lowerIndex: lowerIndex)
                     } else {
-                        assert(location.count != 0)
                         return .HoleEntry(hole, MessageHistoryEntryLocation(index: location.index, count: max(0, location.count - 1)), lowerIndex: lowerIndex)
                     }
                 } else {
