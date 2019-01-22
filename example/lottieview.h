@@ -108,7 +108,7 @@ public:
     Evas_Object             *mVg;
     int                      mRepeatCount;
     LottieView::RepeatMode   mRepeatMode;
-    std::unique_ptr<lottie::Animation>       mPlayer;
+    std::unique_ptr<rlottie::Animation>       mPlayer;
     size_t                   mCurFrame{UINT_MAX};
     Ecore_Animator          *mAnimator{nullptr};
     bool                     mLoop;
@@ -123,7 +123,7 @@ public:
     float                    mPos;
     float                    mFrameRate;
     long                     mTotalFrame;
-    std::future<lottie::Surface>        mRenderTask;
+    std::future<rlottie::Surface>        mRenderTask;
 
     //keep a segment of the animation default is [0, 1]
     float                   mMinProgress{0};

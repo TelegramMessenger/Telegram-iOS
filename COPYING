@@ -1,6 +1,6 @@
 Licensing
 
-lottie-player basically comes with LGPL-v2.1 license(licenses/COPYING.LGPL)
+rlottie basically comes with LGPL-v2.1 license(licenses/COPYING.LGPL)
 but some parts of shared code are covered by different licenses. Listed
 below are the folder names and the license file covering it. Note that this
 license would cover all of the source invovled in each folders, unless

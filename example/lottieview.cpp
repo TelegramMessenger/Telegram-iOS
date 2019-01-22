@@ -18,7 +18,7 @@
 
 #include"lottieview.h"
 
-using namespace lottie;
+using namespace rlottie;
 
 static Eina_Bool
 animator(void *data , double pos)
@@ -321,14 +321,14 @@ void LottieView::seek(float pos)
             mDirty = true;
             auto buffer = (uint32_t *)evas_object_image_data_get(mImage, EINA_TRUE);
             size_t bytesperline =  evas_object_image_stride_get(mImage);
-            lottie::Surface surface(buffer, width, height, bytesperline);
+            rlottie::Surface surface(buffer, width, height, bytesperline);
             mRenderTask = mPlayer->render(mCurFrame, surface);
             // to force a redraw
             evas_object_image_data_update_add(mImage, 0 , 0, surface.width(), surface.height());
         } else {
             auto buffer = (uint32_t *)evas_object_image_data_get(mImage, EINA_TRUE);
             size_t bytesperline =  evas_object_image_stride_get(mImage);
-            lottie::Surface surface(buffer, width, height, bytesperline);
+            rlottie::Surface surface(buffer, width, height, bytesperline);
             mPlayer->renderSync(mCurFrame, surface);
             evas_object_image_data_set(mImage, surface.buffer());
             evas_object_image_data_update_add(mImage, 0 , 0, surface.width(), surface.height());

@@ -19,7 +19,7 @@
 #include "rlottie.h"
 #include "vdebug.h"
 
-using namespace lottie;
+using namespace rlottie;
 
 extern "C" {
 
@@ -117,7 +117,7 @@ lottie_animation_render_async(Lottie_Animation_S *animation,
 {
     if (!animation) return;
 
-    lottie::Surface surface(buffer, width, height, bytes_per_line);
+    rlottie::Surface surface(buffer, width, height, bytes_per_line);
     animation->mRenderTask = animation->mAnimation->render(frame_number, surface);
     animation->mBufferRef = buffer;
 }

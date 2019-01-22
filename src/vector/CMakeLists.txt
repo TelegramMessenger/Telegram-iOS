@@ -2,7 +2,7 @@
 add_subdirectory(freetype)
 add_subdirectory(pixman)
 
-target_sources(lottie-player
+target_sources(rlottie
     PRIVATE
         "${CMAKE_CURRENT_LIST_DIR}/vrect.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/vdasher.cpp"
@@ -26,7 +26,7 @@ target_sources(lottie-player
         "${CMAKE_CURRENT_LIST_DIR}/vimageloader.cpp"
     )
 
-target_include_directories(lottie-player
+target_include_directories(rlottie
     PRIVATE
         "${CMAKE_CURRENT_LIST_DIR}"
     )
