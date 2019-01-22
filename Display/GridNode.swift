@@ -1,6 +1,12 @@
 import Foundation
 import AsyncDisplayKit
 
+public enum GridNodeVisibleContentOffset {
+    case known(CGFloat)
+    case unknown
+    case none
+}
+
 public struct GridNodeInsertItem {
     public let index: Int
     public let item: GridItem
@@ -216,6 +222,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     public var presentationLayoutUpdated: ((GridNodeCurrentPresentationLayout, ContainedViewLayoutTransition) -> Void)?
     public var scrollingInitiated: (() -> Void)?
     public var scrollingCompleted: (() -> Void)?
+    public var visibleContentOffsetChanged: (GridNodeVisibleContentOffset) -> Void = { _ in }
     
     public final var floatingSections = false
     
@@ -359,24 +366,28 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     
     public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         self.updateItemNodeVisibilititesAndScrolling()
+        self.updateVisibleContentOffset()
         self.scrollingInitiated?()
     }
     
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if !decelerate {
             self.updateItemNodeVisibilititesAndScrolling()
+            self.updateVisibleContentOffset()
             self.scrollingCompleted?()
         }
     }
     
     public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         self.updateItemNodeVisibilititesAndScrolling()
+        self.updateVisibleContentOffset()
         self.scrollingCompleted?()
     }
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if !self.applyingContentOffset {
             self.applyPresentationLayoutTransition(self.generatePresentationLayoutTransition(layoutTransactionOffset: 0.0), removedNodes: [], updateLayoutTransition: nil, customScrollToItem: false, itemTransition: .immediate, synchronousLoads: false, updatingLayout: false, completion: { _ in })
+            self.updateVisibleContentOffset()
         }
     }
     
@@ -1064,6 +1075,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         completion(self.displayedItemRange())
         
         self.updateItemNodeVisibilititesAndScrolling()
+        self.updateVisibleContentOffset()
         
         if let visibleItemsUpdated = self.visibleItemsUpdated {
             if presentationLayoutTransition.layout.items.count != 0 {
@@ -1158,6 +1170,29 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 itemNode.isGridScrolling = isScrolling
             }
         }
+    }
+    
+    public func visibleContentOffset() -> GridNodeVisibleContentOffset {
+        var offset: GridNodeVisibleContentOffset = .unknown
+        
+        if let supernode = self.supernode {
+            var topItemIndexAndFrame: (Int, CGRect) = (-1, CGRect())
+            for index in self.itemNodes.keys.sorted() {
+                let itemNode = self.itemNodes[index]!
+                topItemIndexAndFrame = (index, supernode.convert(itemNode.bounds, from: itemNode))
+                break
+            }
+            if topItemIndexAndFrame.0 == 0 {
+                offset = .known(self.scrollView.contentOffset.y + self.scrollView.contentInset.top)
+            } else if topItemIndexAndFrame.0 == -1 {
+                offset = .none
+            }
+        }
+        return offset
+    }
+    
+    private func updateVisibleContentOffset() {
+        self.visibleContentOffsetChanged(self.visibleContentOffset())
     }
     
     public func forEachItemNode(_ f: (ASDisplayNode) -> Void) {
