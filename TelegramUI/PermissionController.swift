@@ -99,7 +99,7 @@ public final class PermissionController : ViewController {
                         switch status {
                             case .requestable:
                                 strongSelf.splitTest.addEvent(.ContactsRequest)
-                                DeviceAccess.authorizeAccess(to: .contacts, account: strongSelf.context.account, { [weak self] result in
+                                DeviceAccess.authorizeAccess(to: .contacts, context: strongSelf.context, { [weak self] result in
                                     if let strongSelf = self {
                                         if result {
                                             strongSelf.splitTest.addEvent(.ContactsAllowed)
@@ -125,7 +125,7 @@ public final class PermissionController : ViewController {
                         switch status {
                             case .requestable:
                                 strongSelf.splitTest.addEvent(.NotificationsRequest)
-                                DeviceAccess.authorizeAccess(to: .notifications, account: strongSelf.context.account, { [weak self] result in
+                                DeviceAccess.authorizeAccess(to: .notifications, context: strongSelf.context, { [weak self] result in
                                     if let strongSelf = self {
                                         if result {
                                             strongSelf.splitTest.addEvent(.NotificationsAllowed)
@@ -147,7 +147,7 @@ public final class PermissionController : ViewController {
                 self.allow = { [weak self] in
                     self?.proceed?(true)
                 }
-            case let .cellularData:
+            case .cellularData:
                 self.allow = { [weak self] in
                     self?.proceed?(true)
                 }
@@ -168,7 +168,7 @@ public final class PermissionController : ViewController {
         }
         self.controllerNode.openPrivacyPolicy = { [weak self] in
             if let strongSelf = self {
-                openExternalUrl(context: strongSelf.context, context: .generic, url: "https://telegram.org/privacy", forceExternal: true, presentationData: strongSelf.context.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+                openExternalUrl(context: strongSelf.context, urlContext: .generic, url: "https://telegram.org/privacy", forceExternal: true, presentationData: strongSelf.context.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
             }
         }
     }

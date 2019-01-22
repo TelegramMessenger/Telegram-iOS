@@ -255,7 +255,7 @@ final class GridMessageItemNode: GridItemNode {
                 }
                 
                 self.resourceStatus = nil
-                self.fetchStatusDisposable.set((messageMediaFileStatus(account: context.account, messageId: messageId, file: file) |> deliverOnMainQueue).start(next: { [weak self] status in
+                self.fetchStatusDisposable.set((messageMediaFileStatus(context: context, messageId: messageId, file: file) |> deliverOnMainQueue).start(next: { [weak self] status in
                     if let strongSelf = self {
                         strongSelf.resourceStatus = status
                         let statusState: RadialStatusNodeState
@@ -421,11 +421,11 @@ final class GridMessageItemNode: GridItemNode {
                                     if let resourceStatus = self.resourceStatus {
                                         switch resourceStatus {
                                         case .Fetching:
-                                            messageMediaFileCancelInteractiveFetch(account: context.account, messageId: message.id, file: file)
+                                            messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
                                         case .Local:
                                             let _ = controllerInteraction.openMessage(message, .default)
                                         case .Remote:
-                                            self.fetchDisposable.set(messageMediaFileInteractiveFetched(account: context.account, message: message, file: file, userInitiated: true).start())
+                                            self.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: true).start())
                                         }
                                     }
                                 } else {

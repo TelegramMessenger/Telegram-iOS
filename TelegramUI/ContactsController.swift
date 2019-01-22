@@ -121,7 +121,7 @@ public class ContactsController: ViewController {
         let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
         if #available(iOSApplicationExtension 10.0, *) {
             let warningKey = PostboxViewKey.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())
-            self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(account: context.account, subject: .contacts), context.account.postbox.combinedView(keys: [warningKey, preferencesKey])
+            self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(context: context, subject: .contacts), context.account.postbox.combinedView(keys: [warningKey, preferencesKey])
                 |> map { combined -> (Bool, ContactsSortOrder) in
                     let settings = ((combined.views[preferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)
                     let synchronizeDeviceContacts: Bool = settings?.synchronizeDeviceContacts ?? true
@@ -335,7 +335,7 @@ public class ContactsController: ViewController {
     }
     
     @objc func addPressed() {
-        let _ = (DeviceAccess.authorizationStatus(account: self.context.account, subject: .contacts)
+        let _ = (DeviceAccess.authorizationStatus(context: self.context, subject: .contacts)
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             guard let strongSelf = self else {
@@ -358,11 +358,11 @@ public class ContactsController: ViewController {
                         }
                     })), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 case .notDetermined:
-                    DeviceAccess.authorizeAccess(to: .contacts, account: strongSelf.context.account)
+                    DeviceAccess.authorizeAccess(to: .contacts, context: strongSelf.context)
                 default:
                     let presentationData = strongSelf.presentationData
                     strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                        self?.account.telegramApplicationContext.applicationBindings.openSettings()
+                        self?.context.applicationBindings.openSettings()
                     })]), in: .window(.root))
             }
         })

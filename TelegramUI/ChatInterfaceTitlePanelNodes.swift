@@ -43,7 +43,7 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
                 if let currentPanel = currentPanel as? ChatPinnedMessageTitlePanelNode {
                     return currentPanel
                 } else {
-                    let panel = ChatPinnedMessageTitlePanelNode(account: account)
+                    let panel = ChatPinnedMessageTitlePanelNode(context: context)
                     panel.interfaceInteraction = interfaceInteraction
                     return panel
                 }

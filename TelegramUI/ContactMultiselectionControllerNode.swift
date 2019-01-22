@@ -45,7 +45,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     private var presentationDataDisposable: Disposable?
     
     init(context: AccountContext, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter]) {
-        self.account = account
+        self.context = context
         self.presentationData = context.currentPresentationData.with { $0 }
         
         let placeholder: String

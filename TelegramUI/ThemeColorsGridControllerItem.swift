@@ -6,15 +6,15 @@ import AsyncDisplayKit
 import Postbox
 
 final class ThemeColorsGridControllerItem: GridItem {
-    let account: Account
+    let context: AccountContext
     let wallpaper: TelegramWallpaper
     let selected: Bool
     let interaction: ThemeColorsGridControllerInteraction
     
     let section: GridSection? = nil
     
-    init(account: Account, wallpaper: TelegramWallpaper, selected: Bool, interaction: ThemeColorsGridControllerInteraction) {
-        self.account = account
+    init(context: AccountContext, wallpaper: TelegramWallpaper, selected: Bool, interaction: ThemeColorsGridControllerInteraction) {
+        self.context = context
         self.wallpaper = wallpaper
         self.selected = selected
         self.interaction = interaction
@@ -22,7 +22,7 @@ final class ThemeColorsGridControllerItem: GridItem {
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = ThemeColorsGridControllerItemNode()
-        node.setup(account: self.account, wallpaper: self.wallpaper, selected: self.selected, interaction: self.interaction)
+        node.setup(context: self.context, wallpaper: self.wallpaper, selected: self.selected, interaction: self.interaction)
         return node
     }
     
@@ -31,7 +31,7 @@ final class ThemeColorsGridControllerItem: GridItem {
             assertionFailure()
             return
         }
-        node.setup(account: self.account, wallpaper: self.wallpaper, selected: self.selected, interaction: self.interaction)
+        node.setup(context: self.context, wallpaper: self.wallpaper, selected: self.selected, interaction: self.interaction)
     }
 }
 
@@ -39,7 +39,7 @@ final class ThemeColorsGridControllerItemNode: GridItemNode {
     private let wallpaperNode: SettingsThemeWallpaperNode
     private var selectionNode: GridMessageSelectionNode?
     
-    private var currentState: (Account, TelegramWallpaper, Bool)?
+    private var currentState: (AccountContext, TelegramWallpaper, Bool)?
     private var interaction: ThemeColorsGridControllerInteraction?
     
     override init() {
@@ -55,11 +55,11 @@ final class ThemeColorsGridControllerItemNode: GridItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    func setup(account: Account, wallpaper: TelegramWallpaper, selected: Bool, interaction: ThemeColorsGridControllerInteraction) {
+    func setup(context: AccountContext, wallpaper: TelegramWallpaper, selected: Bool, interaction: ThemeColorsGridControllerInteraction) {
         self.interaction = interaction
         
-        if self.currentState == nil || self.currentState!.0 !== account || wallpaper != self.currentState!.1 || selected != self.currentState!.2 {
-            self.currentState = (account, wallpaper, selected)
+        if self.currentState == nil || self.currentState!.0 !== context || wallpaper != self.currentState!.1 || selected != self.currentState!.2 {
+            self.currentState = (context, wallpaper, selected)
             self.setNeedsLayout()
         }
     }
@@ -76,8 +76,8 @@ final class ThemeColorsGridControllerItemNode: GridItemNode {
         super.layout()
         
         let bounds = self.bounds
-        if let (account, wallpaper, selected) = self.currentState {
-            self.wallpaperNode.setWallpaper(account: account, wallpaper: wallpaper, selected: selected, size: bounds.size)
+        if let (context, wallpaper, selected) = self.currentState {
+            self.wallpaperNode.setWallpaper(context: context, wallpaper: wallpaper, selected: selected, size: bounds.size)
             self.selectionNode?.frame = CGRect(origin: CGPoint(), size: bounds.size)
         }
     }

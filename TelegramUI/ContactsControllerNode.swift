@@ -69,7 +69,7 @@ final class ContactsControllerNode: ASDisplayNode {
         })
         
         inviteImpl = { [weak self] in
-            let _ = (DeviceAccess.authorizationStatus(account: account, subject: .contacts)
+            let _ = (DeviceAccess.authorizationStatus(context: context, subject: .contacts)
             |> take(1)
             |> deliverOnMainQueue).start(next: { value in
                 guard let strongSelf = self else {

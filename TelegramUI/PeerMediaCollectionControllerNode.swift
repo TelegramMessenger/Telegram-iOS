@@ -267,7 +267,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                 self.selectionPanelBackgroundNode = selectionPanelBackgroundNode
                 
                 let selectionPanel = ChatMessageSelectionInputPanelNode(theme: self.chatPresentationInterfaceState.theme)
-                selectionPanel.account = self.context.account
+                selectionPanel.context = self.context
                 selectionPanel.backgroundColor = self.presentationData.theme.chat.inputPanel.panelBackgroundColor
                 selectionPanel.interfaceInteraction = self.interfaceInteraction
                 selectionPanel.selectedMessages = selectionState.selectedIds

@@ -181,7 +181,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             var updatedPlaybackStatus: Signal<FileMediaResourceStatus, NoError>?
             if let updatedFile = updatedFile, updatedMedia {
-                updatedPlaybackStatus = combineLatest(messageFileMediaResourceStatus(account: item.context.account, file: updatedFile, message: item.message, isRecentActions: item.associatedData.isRecentActions), item.context.account.pendingMessageManager.pendingMessageStatus(item.message.id))
+                updatedPlaybackStatus = combineLatest(messageFileMediaResourceStatus(context: item.context, file: updatedFile, message: item.message, isRecentActions: item.associatedData.isRecentActions), item.context.account.pendingMessageManager.pendingMessageStatus(item.message.id))
                 |> map { resourceStatus, pendingStatus -> FileMediaResourceStatus in
                     if let pendingStatus = pendingStatus {
                         var progress = pendingStatus.progress
@@ -364,7 +364,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             if let strongSelf = self {
                                 if let item = strongSelf.item {
                                     if strongSelf.infoBackgroundNode.alpha.isZero {
-                                        item.context.account.telegramApplicationContext.mediaManager?.playlistControl(.playback(.togglePlayPause), type: .voice)
+                                        item.context.mediaManager.playlistControl(.playback(.togglePlayPause), type: .voice)
                                     } else {
                                         //let _ = item.controllerInteraction.openMessage(item.message)
                                     }
@@ -407,7 +407,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     strongSelf.updateStatus()
                     
                     if let telegramFile = updatedFile, previousAutomaticDownload != automaticDownload, automaticDownload {
-                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: item.context.account, message: item.message, file: telegramFile, userInitiated: false).start())
+                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: item.context, message: item.message, file: telegramFile, userInitiated: false).start())
                     }
                 }
             })
@@ -545,7 +545,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
             playbackStatusNode.frame = videoFrame.insetBy(dx: 1.5, dy: 1.5)
             
-            let status = messageFileMediaPlaybackStatus(account: item.context.account, file: file, message: item.message, isRecentActions: item.associatedData.isRecentActions)
+            let status = messageFileMediaPlaybackStatus(context: item.context, file: file, message: item.message, isRecentActions: item.associatedData.isRecentActions)
             playbackStatusNode.status = status
             self.durationNode?.status = status
             |> map(Optional.init)
@@ -637,7 +637,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                     deleteMessages(transaction: transaction, mediaBox: item.context.account.postbox.mediaBox, ids: [messageId])
                                 }).start()
                             } else {
-                                messageMediaFileCancelInteractiveFetch(account: item.context.account, messageId: item.message.id, file: file)
+                                messageMediaFileCancelInteractiveFetch(context: item.context, messageId: item.message.id, file: file)
                             }
                         case .Remote:
                             self.videoNode?.fetchControl(.fetch)

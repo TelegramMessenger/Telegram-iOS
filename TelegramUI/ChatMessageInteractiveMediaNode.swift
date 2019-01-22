@@ -105,9 +105,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         }).start()
                     } else if let media = media, let context = self.context, let message = message {
                         if let media = media as? TelegramMediaFile {
-                            messageMediaFileCancelInteractiveFetch(account: context.account, messageId: message.id, file: media)
+                            messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: media)
                         } else if let media = media as? TelegramMediaImage, let resource = largestImageRepresentation(media.representations)?.resource {
-                            messageMediaImageCancelInteractiveFetch(account: context.account, messageId: message.id, image: media, resource: resource)
+                            messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: media, resource: resource)
                         }
                     }
                     if let cancel = self.fetchControls.with({ return $0?.cancel }) {
@@ -296,15 +296,15 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             updatedFetchControls = FetchControls(fetch: { manual in
                                 if let strongSelf = self {
                                     if !manual {
-                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: context.account, photoReference: .message(message: MessageReference(message), media: image), storeToDownloadsPeerType: storeToDownloadsPeerType).start())
+                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: .message(message: MessageReference(message), media: image), storeToDownloadsPeerType: storeToDownloadsPeerType).start())
                                     } else if let resource = largestRepresentationForPhoto(image)?.resource {
-                                        strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(account: context.account, message: message, image: image, resource: resource, storeToDownloadsPeerType: storeToDownloadsPeerType).start())
+                                        strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: resource, storeToDownloadsPeerType: storeToDownloadsPeerType).start())
                                     }
                                 }
                             }, cancel: {
                                 chatMessagePhotoCancelInteractiveFetch(account: context.account, photoReference: .message(message: MessageReference(message), media: image))
                                 if let resource = largestRepresentationForPhoto(image)?.resource {
-                                    messageMediaImageCancelInteractiveFetch(account: context.account, messageId: message.id, image: image, resource: resource)
+                                    messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: image, resource: resource)
                                 }
                             })
                         } else if let image = media as? TelegramMediaWebFile {
@@ -359,14 +359,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     if file.isAnimated {
                                         strongSelf.fetchDisposable.set(fetchedMediaResource(postbox: context.account.postbox, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).start())
                                     } else {
-                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: context.account, message: message, file: file, userInitiated: manual).start())
+                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: manual).start())
                                     }
                                 }
                             }, cancel: {
                                 if file.isAnimated {
                                     context.account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
                                 } else {
-                                    messageMediaFileCancelInteractiveFetch(account: context.account, messageId: message.id, file: file)
+                                    messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
                                 }
                             })
                         }
@@ -375,7 +375,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     if statusUpdated {
                         if let image = media as? TelegramMediaImage {
                             if message.flags.isSending {
-                                updatedStatusSignal = combineLatest(chatMessagePhotoStatus(account: context.account, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image)), context.account.pendingMessageManager.pendingMessageStatus(message.id))
+                                updatedStatusSignal = combineLatest(chatMessagePhotoStatus(context: context, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image)), context.account.pendingMessageManager.pendingMessageStatus(message.id))
                                 |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
                                     if let pendingStatus = pendingStatus {
                                         let adjustedProgress = max(pendingStatus.progress, 0.027)
@@ -385,10 +385,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     }
                                 }
                             } else {
-                                updatedStatusSignal = chatMessagePhotoStatus(account: context.account, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image))
+                                updatedStatusSignal = chatMessagePhotoStatus(context: context, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image))
                             }
                         } else if let file = media as? TelegramMediaFile {
-                            updatedStatusSignal = combineLatest(messageMediaFileStatus(account: context.account, messageId: message.id, file: file), account.pendingMessageManager.pendingMessageStatus(message.id))
+                            updatedStatusSignal = combineLatest(messageMediaFileStatus(context: context, messageId: message.id, file: file), context.account.pendingMessageManager.pendingMessageStatus(message.id))
                                 |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
                                     if let pendingStatus = pendingStatus {
                                         let adjustedProgress = max(pendingStatus.progress, 0.027)
@@ -500,7 +500,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                         strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, image: image).start())
                                     } else if let file = media as? TelegramMediaFile {
                                         if automaticPlayback || !file.isAnimated {
-                                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: context.account, message: message, file: file, userInitiated: false).start())
+                                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: false).start())
                                         }
                                     }
                                 }

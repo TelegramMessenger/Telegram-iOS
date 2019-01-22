@@ -8,6 +8,7 @@ final class ChatMultipleAvatarsNavigationNode: ASDisplayNode {
     private let multipleAvatarsNode: MultipleAvatarsNode
     
     private weak var account: Account?
+    private var theme: PresentationTheme?
     private var peers: [Peer] = []
     
     override init() {
@@ -30,9 +31,9 @@ final class ChatMultipleAvatarsNavigationNode: ASDisplayNode {
         super.layout()
         
         let bounds = self.bounds
-        if let account = self.account, !bounds.width.isZero {
+        if let account = self.account, let theme = self.theme, !bounds.width.isZero {
             let avatarsLayout = MultipleAvatarsNode.asyncLayout(self.multipleAvatarsNode)
-            let apply = avatarsLayout(account, self.peers, bounds.size)
+            let apply = avatarsLayout(account, theme, self.peers, bounds.size)
             let _ = apply(false)
         }
         if self.bounds.size.height.isLessThanOrEqualTo(26.0) {
@@ -42,14 +43,14 @@ final class ChatMultipleAvatarsNavigationNode: ASDisplayNode {
         }
     }
     
-    func setPeers(account: Account, peers: [Peer], animated: Bool) {
+    func setPeers(account: Account, theme: PresentationTheme, peers: [Peer], animated: Bool) {
         self.account = account
         self.peers = peers
         
         let bounds = self.bounds
         if !bounds.width.isZero {
             let avatarsLayout = MultipleAvatarsNode.asyncLayout(self.multipleAvatarsNode)
-            let apply = avatarsLayout(account, peers, bounds.size)
+            let apply = avatarsLayout(account, theme, peers, bounds.size)
             let _ = apply(animated)
         }
     }

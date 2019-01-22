@@ -1223,7 +1223,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         if let strongSelf = self {
                             if let peer = peerViewMainPeer(peerView) {
                                 strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, onlineMemberCount: onlineMemberCount)
-                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(account: strongSelf.context.account, peer: peer)
+                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, peer: peer)
                             }
                             if strongSelf.peerView === peerView {
                                 return
@@ -1345,7 +1345,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         |> deliverOnMainQueue).start(next: { [weak self] topPeersView in
                             if let strongSelf = self {
                                 strongSelf.chatTitleView?.titleContent = .group(topPeersView.peers)
-                            (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatMultipleAvatarsNavigationNode)?.setPeers(account: strongSelf.context.account, peers: topPeersView.peers, animated: strongSelf.didSetChatLocationInfoReady)
+                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatMultipleAvatarsNavigationNode)?.setPeers(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, peers: topPeersView.peers, animated: strongSelf.didSetChatLocationInfoReady)
                             
                                 if !strongSelf.didSetChatLocationInfoReady {
                                     strongSelf.didSetChatLocationInfoReady = true
@@ -2499,7 +2499,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 guard let strongSelf = self, strongSelf.beginMediaRecordingRequestId == requestId else {
                     return
                 }
-                guard checkAvailableDiskSpace(account: strongSelf.context.account, present: { [weak self] c, a in
+                guard checkAvailableDiskSpace(context: strongSelf.context, present: { [weak self] c, a in
                     self?.present(c, in: .window(.root), with: a)
                 }) else {
                     return
@@ -3874,7 +3874,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             legacyController.bind(controller: navigationController)
         
             legacyController.enableSizeClassSignal = true
-            let controller = legacyAttachmentMenu(account: strongSelf.context.account, peer: peer, editMediaOptions: editMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, openGallery: {
+            let controller = legacyAttachmentMenu(context: strongSelf.context, peer: peer, editMediaOptions: editMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, openGallery: {
                 self?.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, completion: { signals in
                     if editMediaOptions != nil {
                         self?.editMessageMediaWithLegacySignals(signals)
@@ -4322,7 +4322,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         |> deliverOnMainQueue).start(next: { [weak self] settings in
             if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                 strongSelf.chatDisplayNode.dismissInput()
-                let _ = presentLegacyPasteMenu(account: strongSelf.context.account, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, images: images, sendMessagesWithSignals: { signals in
+                let _ = presentLegacyPasteMenu(context: strongSelf.context, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, images: images, sendMessagesWithSignals: { signals in
                     self?.enqueueMediaMessages(signals: signals)
                 }, present: { [weak self] controller, arguments in
                     if let strongSelf = self {
@@ -5466,7 +5466,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     }
                     
                     if let selectedTransitionNode = selectedTransitionNode {
-                        if let previewData = chatMessagePreviewControllerData(account: self.context.account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: self.navigationController as? NavigationController) {
+                        if let previewData = chatMessagePreviewControllerData(context: self.context, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: self.navigationController as? NavigationController) {
                             switch previewData {
                                 case let .gallery(gallery):
                                     gallery.setHintWillBePresentedInPreviewingContext(true)

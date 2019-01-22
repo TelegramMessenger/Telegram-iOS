@@ -71,7 +71,7 @@ final class InstantPageController: ViewController {
     }
     
     override func viewWillDisappear(_ animated: Bool) {
-        let _ = updateInstantPageStoredStateInteractively(postbox: self.contextaccount.postbox, webPage: self.webPage, state: self.controllerNode.currentState).start()
+        let _ = updateInstantPageStoredStateInteractively(postbox: self.context.account.postbox, webPage: self.webPage, state: self.controllerNode.currentState).start()
     }
     
     override public func loadDisplayNode() {
@@ -83,7 +83,7 @@ final class InstantPageController: ViewController {
             (self?.navigationController as? NavigationController)?.pushViewController(c)
         }, openPeer: { [weak self] peerId in
             if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)))
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId)))
             }
         }, navigateBack: { [weak self] in
             if let strongSelf = self, let controllers = strongSelf.navigationController?.viewControllers.reversed() {

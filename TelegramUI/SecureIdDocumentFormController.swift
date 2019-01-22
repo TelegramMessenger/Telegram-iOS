@@ -40,7 +40,7 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
         self.updatedValues = updatedValues
         self.scrollTo = scrollTo
         
-        super.init(initParams: SecureIdDocumentFormControllerNodeInitParams(account: context.account, context: secureIdContext), presentationData: self.presentationData)
+        super.init(initParams: SecureIdDocumentFormControllerNodeInitParams(context: context, secureIdContext: secureIdContext), presentationData: self.presentationData)
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         

@@ -908,7 +908,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, sharePrivateLink: {
-        let _ = (account.postbox.transaction { transaction -> String? in
+        let _ = (context.account.postbox.transaction { transaction -> String? in
             if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
                 if let cachedData = cachedData as? CachedChannelData {
                     return cachedData.exportedInvitation?.link
@@ -1190,7 +1190,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                             navigateToChatController(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peerId), keepStack: .never, animated: true)
                         } else {
                             selectionController.displayProgress = true
-                            let _ = (addChannelMembers(account: account, peerId: peerId, memberIds: filteredPeerIds)
+                            let _ = (addChannelMembers(account: context.account, peerId: peerId, memberIds: filteredPeerIds)
                             |> deliverOnMainQueue).start(completed: { [weak selectionController] in
                                 guard let selectionController = selectionController, let navigationController = selectionController.navigationController as? NavigationController else {
                                     return

@@ -139,7 +139,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
     private var enqueuedTransitions: [ContactListSearchContainerTransition] = []
     
     init(context: AccountContext, onlyWriteable: Bool, categories: ContactsSearchCategories, filters: [ContactListFilter] = [.excludeSelf], openPeer: @escaping (ContactListPeer) -> Void) {
-        self.account = account
+        self.context = context
         self.openPeer = openPeer
         
         self.presentationData = context.currentPresentationData.with { $0 }
@@ -169,7 +169,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
             if let query = query, !query.isEmpty {
                 let foundLocalContacts: Signal<([Peer], [PeerId: PeerPresence]), NoError>
                 if categories.contains(.cloudContacts) {
-                    foundLocalContacts = account.postbox.searchContacts(query: query.lowercased())
+                    foundLocalContacts = context.account.postbox.searchContacts(query: query.lowercased())
                 } else {
                     foundLocalContacts = .single(([], [:]))
                 }
@@ -177,7 +177,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                 if categories.contains(.global) {
                     foundRemoteContacts = .single(nil)
                     |> then(
-                        searchPeers(account: account, query: query)
+                        searchPeers(account: context.account, query: query)
                         |> map { ($0.0, $0.1) }
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     )

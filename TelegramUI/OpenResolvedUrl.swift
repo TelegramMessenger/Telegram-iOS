@@ -39,25 +39,25 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
             controller.peerSelected = { [weak controller] peerId in
                 if payload.isEmpty {
                     if peerId.namespace == Namespaces.Peer.CloudGroup {
-                        let _ = (addGroupMember(account: account, peerId: peerId, memberId: botPeerId)
+                        let _ = (addGroupMember(account: context.account, peerId: peerId, memberId: botPeerId)
                         |> deliverOnMainQueue).start(completed: {
                             controller?.dismiss()
                         })
                     } else {
-                        let _ = (addChannelMember(account: account, peerId: peerId, memberId: botPeerId)
+                        let _ = (addChannelMember(account: context.account, peerId: peerId, memberId: botPeerId)
                         |> deliverOnMainQueue).start(completed: {
                             controller?.dismiss()
                         })
                     }
                 } else {
-                    let _ = (requestStartBotInGroup(account: account, botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
+                    let _ = (requestStartBotInGroup(account: context.account, botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
                     |> deliverOnMainQueue).start(next: { result in
                         if let navigationController = navigationController {
-                            navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
+                            navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId))
                         }
                         switch result {
                             case let .channelParticipant(participant):
-                                account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.externallyAdded(peerId: peerId, participant: participant)
+                                context.peerChannelMemberCategoriesContextsManager.externallyAdded(peerId: peerId, participant: participant)
                             case .none:
                                 break
                         }
@@ -73,19 +73,19 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
             openPeer(peerId, .chat(textInputState: nil, messageId: messageId))
         case let .stickerPack(name):
             dismissInput()
-            let controller = StickerPackPreviewController(account: account, stickerPack: .name(name), parentNavigationController: navigationController)
+            let controller = StickerPackPreviewController(context: context, stickerPack: .name(name), parentNavigationController: navigationController)
             controller.sendSticker = sendFile
             present(controller, nil)
         case let .instantView(webpage, anchor):
-            navigationController?.pushViewController(InstantPageController(account: account, webPage: webpage, anchor: anchor))
+            navigationController?.pushViewController(InstantPageController(context: context, webPage: webpage, anchor: anchor))
         case let .join(link):
             dismissInput()
-            present(JoinLinkPreviewController(account: account, link: link, navigateToPeer: { peerId in
+            present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId in
                 openPeer(peerId, .chat(textInputState: nil, messageId: nil))
             }), nil)
         case let .localization(identifier):
             dismissInput()
-            present(LanguageLinkPreviewController(account: account, identifier: identifier), nil)
+            present(LanguageLinkPreviewController(context: context, identifier: identifier), nil)
         case let .proxy(host, port, username, password, secret):
             let server: ProxyServerSettings
             if let secret = secret {
@@ -95,7 +95,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
             }
 
             dismissInput()
-            present(ProxyServerActionSheetController(account: account, server: server), nil)
+            present(ProxyServerActionSheetController(context: context, server: server), nil)
         case let .confirmationCode(code):
             if let topController = navigationController?.topViewController as? ChangePhoneNumberCodeController {
                 topController.applyCode(code)
@@ -108,18 +108,18 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
                     }
                 })
                 if !found {
-                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    let presentationData = context.currentPresentationData.with { $0 }
                     present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.AuthCode_Alert(formattedConfirmationCode(code)).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 }
             }
         case let .cancelAccountReset(phone, hash):
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = context.currentPresentationData.with { $0 }
             let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
             present(controller, nil)
-            let _ = (requestCancelAccountResetData(network: account.network, hash: hash)
+            let _ = (requestCancelAccountResetData(network: context.account.network, hash: hash)
             |> deliverOnMainQueue).start(next: { [weak controller] data in
                 controller?.dismiss()
-                present(confirmPhoneNumberCodeController(account: account, phoneNumber: phone, codeData: data), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                present(confirmPhoneNumberCodeController(context: context, phoneNumber: phone, codeData: data), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }, error: { [weak controller] error in
                 controller?.dismiss()
                 
@@ -130,7 +130,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
                     case .generic:
                         text = presentationData.strings.Login_UnknownError
                 }
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let presentationData = context.currentPresentationData.with { $0 }
                 present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             })
             dismissInput()
@@ -154,7 +154,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
                 }
                 
                 if let textInputState = textInputState {
-                    let _ = (account.postbox.transaction({ transaction -> Void in
+                    let _ = (context.account.postbox.transaction({ transaction -> Void in
                         transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
                             if let currentState = currentState as? ChatInterfaceState {
                                 return currentState.withUpdatedComposeInputState(textInputState)
@@ -164,14 +164,14 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
                         })
                     })
                     |> deliverOnMainQueue).start(completed: {
-                        navigationController?.pushViewController(ChatController(account: account, chatLocation: .peer(peerId), messageId: nil))
+                        navigationController?.pushViewController(ChatController(context: context, chatLocation: .peer(peerId), messageId: nil))
                     })
                 }
             }
             
             if let to = to {
                 let query = to.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789").inverted)
-                let _ = (account.postbox.searchContacts(query: query)
+                let _ = (context.account.postbox.searchContacts(query: query)
                 |> deliverOnMainQueue).start(next: { (peers, _) in
                     for case let peer as TelegramUser in peers {
                         if peer.phone == query {
@@ -181,7 +181,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
                     }
                 })
             } else {
-                let controller = PeerSelectionController(account: account)
+                let controller = PeerSelectionController(context: context)
                 controller.peerSelected = { [weak controller] peerId in
                     if let strongController = controller {
                         strongController.dismiss()
@@ -189,18 +189,18 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
                     }
                 }
                 if let navigationController = navigationController {
-                    account.telegramApplicationContext.applicationBindings.dismissNativeController()
+                    context.applicationBindings.dismissNativeController()
                     (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
                 }
             }
         case let .wallpaper(parameter):
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = context.currentPresentationData.with { $0 }
             var controller: OverlayStatusController?
             
             let signal: Signal<TelegramWallpaper, GetWallpaperError>
             switch parameter {
                 case let .slug(slug):
-                    signal = getWallpaper(account: account, slug: slug)
+                    signal = getWallpaper(account: context.account, slug: slug)
                     controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
                     present(controller!, nil)
                 case let .color(color):
@@ -210,7 +210,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
             let _ = (signal
             |> deliverOnMainQueue).start(next: { [weak controller] wallpaper in
                 controller?.dismiss()
-                let wallpaperController = WallpaperListPreviewController(account: account, source: .wallpaper(wallpaper))
+                let wallpaperController = WallpaperListPreviewController(context: context, source: .wallpaper(wallpaper))
                 present(wallpaperController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }, error: { [weak controller] error in
                 controller?.dismiss()

@@ -403,7 +403,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
             openShippingMethodImpl?()
         })
         
-        let signal: Signal<(PresentationTheme, (ItemListNodeState<BotCheckoutEntry>, BotCheckoutEntry.ItemGenerationArguments)), NoError> = combineLatest(context.presentationData, self.state.get(), paymentFormAndInfo.get(), account.postbox.loadedPeerWithId(messageId.peerId))
+        let signal: Signal<(PresentationTheme, (ItemListNodeState<BotCheckoutEntry>, BotCheckoutEntry.ItemGenerationArguments)), NoError> = combineLatest(context.presentationData, self.state.get(), paymentFormAndInfo.get(), context.account.postbox.loadedPeerWithId(messageId.peerId))
             |> map { presentationData, state, paymentFormAndInfo, botPeer -> (PresentationTheme, (ItemListNodeState<BotCheckoutEntry>, BotCheckoutEntry.ItemGenerationArguments)) in
                 let nodeState = ItemListNodeState(entries: botCheckoutControllerEntries(presentationData: presentationData, state: state, invoice: invoice, paymentForm: paymentFormAndInfo?.0, formInfo: paymentFormAndInfo?.1, validatedFormInfo: paymentFormAndInfo?.2, currentShippingOptionId: paymentFormAndInfo?.3, currentPaymentMethod: paymentFormAndInfo?.4, botPeer: botPeer), style: .plain, focusItemTag: nil, emptyStateItem: nil, animateChanges: false)
                 

@@ -128,7 +128,7 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, con
         legacyLocation.venue = TGVenueAttachment(title: venue.title, address: venue.address, provider: venue.provider, venueId: venue.id, type: venue.type)
     }
     
-    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    let presentationData = context.currentPresentationData.with { $0 }
     
     let legacyController = LegacyController(presentation: isModal ? .modal(animateIn: true) : .navigation, theme: presentationData.theme, strings: presentationData.strings)
     let controller: TGLocationViewController
@@ -138,7 +138,7 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, con
         let legacyAuthor: AnyObject? = message.author.flatMap(makeLegacyPeer)
         
         let updatedLocations = SSignal(generator: { subscriber in
-            let disposable = topPeerActiveLiveLocationMessages(viewTracker: account.viewTracker, accountPeerId: account.peerId, peerId: message.id.peerId).start(next: { (_, messages) in
+            let disposable = topPeerActiveLiveLocationMessages(viewTracker: context.account.viewTracker, accountPeerId: context.account.peerId, peerId: message.id.peerId).start(next: { (_, messages) in
                 var result: [Any] = []
                 let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                 loop: for message in messages {
@@ -224,7 +224,7 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, con
         legacyController?.dismiss()
     }
     
-    let theme = (account.telegramApplicationContext.currentPresentationData.with { $0 }).theme
+    let theme = (context.currentPresentationData.with { $0 }).theme
     controller.pallete = legacyLocationPalette(from: theme)
     
     controller.modalMode = isModal
@@ -232,12 +232,12 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, con
         if let strongLegacyController = legacyController, let location = legacyLocation {
             let map = telegramMap(for: location)
             
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = context.currentPresentationData.with { $0 }
             let shareAction = OpenInControllerAction(title: presentationData.strings.Conversation_ContextMenuShare, action: {
-                strongLegacyController.present(ShareController(account: account, subject: .mapMedia(map), externalShare: true), in: .window(.root), with: nil)
+                strongLegacyController.present(ShareController(context: context, subject: .mapMedia(map), externalShare: true), in: .window(.root), with: nil)
             })
             
-            strongLegacyController.present(OpenInActionSheetController(account: account, item: .location(location: map, withDirections: directions), additionalAction: !directions ? shareAction : nil, openUrl: openUrl), in: .window(.root), with: nil)
+            strongLegacyController.present(OpenInActionSheetController(context: context, item: .location(location: map, withDirections: directions), additionalAction: !directions ? shareAction : nil, openUrl: openUrl), in: .window(.root), with: nil)
         }
     }
     
@@ -267,7 +267,7 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, con
         legacyController.bind(controller: controller)
     }
     
-    let presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak controller] presentationData in
+    let presentationDisposable = context.presentationData.start(next: { [weak controller] presentationData in
         if let controller = controller  {
             controller.pallete = legacyLocationPalette(from: presentationData.theme)
         }

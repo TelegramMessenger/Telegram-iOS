@@ -6,13 +6,13 @@ import TelegramCore
 import MtProtoKitDynamic
 
 private final class DebugControllerArguments {
-    let account: Account
+    let context: AccountContext
     let accountManager: AccountManager
     let presentController: (ViewController, ViewControllerPresentationArguments?) -> Void
     let pushController: (ViewController) -> Void
     
-    init(account: Account, accountManager: AccountManager, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping (ViewController) -> Void) {
-        self.account = account
+    init(context: AccountContext, accountManager: AccountManager, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping (ViewController) -> Void) {
+        self.context = context
         self.accountManager = accountManager
         self.presentController = presentController
         self.pushController = pushController
@@ -111,7 +111,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, title: "Send Logs", label: "", sectionId: self.section, style: .blocks, action: {
                     let _ = (Logger.shared.collectLogs()
                         |> deliverOnMainQueue).start(next: { logs in
-                            let controller = PeerSelectionController(account: arguments.account)
+                            let controller = PeerSelectionController(context: arguments.context)
                             controller.peerSelected = { [weak controller] peerId in
                                 if let strongController = controller {
                                     strongController.dismiss()
@@ -121,7 +121,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
                                         return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
                                     }
-                                    let _ = enqueueMessages(account: arguments.account, peerId: peerId, messages: messages).start()
+                                    let _ = enqueueMessages(account: arguments.context.account, peerId: peerId, messages: messages).start()
                                 }
                             }
                             arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
@@ -131,7 +131,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, title: "Send Latest Log", label: "", sectionId: self.section, style: .blocks, action: {
                     let _ = (Logger.shared.collectLogs()
                     |> deliverOnMainQueue).start(next: { logs in
-                        let controller = PeerSelectionController(account: arguments.account)
+                        let controller = PeerSelectionController(context: arguments.context)
                         controller.peerSelected = { [weak controller] peerId in
                             if let strongController = controller {
                                 strongController.dismiss()
@@ -143,7 +143,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
                                     return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
                                 }
-                                let _ = enqueueMessages(account: arguments.account, peerId: peerId, messages: messages).start()
+                                let _ = enqueueMessages(account: arguments.context.account, peerId: peerId, messages: messages).start()
                             }
                         }
                         arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
@@ -151,15 +151,15 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 })
             case let .accounts(theme):
                 return ItemListDisclosureItem(theme: theme, title: "Accounts", label: "", sectionId: self.section, style: .blocks, action: {
-                    arguments.pushController(debugAccountsController(account: arguments.account, accountManager: arguments.accountManager))
+                    arguments.pushController(debugAccountsController(context: arguments.context, accountManager: arguments.accountManager))
                 })
             case let .resetServerContacts(theme):
                 return ItemListActionItem(theme: theme, title: "Reset Server Contacts", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    let _ = resetSavedContacts(network: arguments.account.network).start()
+                    let _ = resetSavedContacts(network: arguments.context.account.network).start()
                 })
             case let .clearPaymentData(theme):
                 return ItemListActionItem(theme: theme, title: "Clear Payment Password", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    let _ = cacheTwoStepPasswordToken(postbox: arguments.account.postbox, token: nil).start()
+                    let _ = cacheTwoStepPasswordToken(postbox: arguments.context.account.postbox, token: nil).start()
                 })
             case let .logToFile(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Log to File", value: value, sectionId: self.section, style: .blocks, updated: { value in
@@ -181,13 +181,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 })
             case let .enableRaiseToSpeak(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Enable Raise to Speak", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    let _ = updateMediaInputSettingsInteractively(postbox: arguments.account.postbox, {
+                    let _ = updateMediaInputSettingsInteractively(postbox: arguments.context.account.postbox, {
                         $0.withUpdatedEnableRaiseToSpeak(value)
                     }).start()
                 })
             case let .keepChatNavigationStack(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Keep Chat Stack", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    let _ = updateExperimentalUISettingsInteractively(postbox: arguments.account.postbox, { settings in
+                    let _ = updateExperimentalUISettingsInteractively(postbox: arguments.context.account.postbox, { settings in
                         var settings = settings
                         settings.keepChatNavigationStack = value
                         return settings
@@ -195,7 +195,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 })
             case let .clearTips(theme):
                 return ItemListActionItem(theme: theme, title: "Clear Tips", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    let _ = (arguments.account.postbox.transaction { transaction -> Void in
+                    let _ = (arguments.context.account.postbox.transaction { transaction -> Void in
                         transaction.clearNoticeEntries()
                     }).start()
                 })
@@ -268,7 +268,7 @@ public func debugController(context: AccountContext, accountManager: AccountMana
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     
-    let arguments = DebugControllerArguments(account: context.account, accountManager: accountManager, presentController: { controller, arguments in
+    let arguments = DebugControllerArguments(context: context, accountManager: accountManager, presentController: { controller, arguments in
         presentControllerImpl?(controller, arguments)
     }, pushController: { controller in
         pushControllerImpl?(controller)

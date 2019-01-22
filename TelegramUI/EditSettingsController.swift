@@ -6,7 +6,7 @@ import TelegramCore
 import LegacyComponents
 
 private struct EditSettingsItemArguments {
-    let account: Account
+    let context: AccountContext
     let accountManager: AccountManager
     let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
     
@@ -167,7 +167,7 @@ private enum SettingsEntry: ItemListNodeEntry {
     func item(_ arguments: EditSettingsItemArguments) -> ListViewItem {
         switch self {
             case let .userInfo(theme, strings, dateTimeFormat, peer, cachedData, state, updatingImage):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max), lastActivity: 0), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: arguments.context.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer, presence: TelegramUserPresence(status: .present(until: Int32.max), lastActivity: 0), cachedData: cachedData, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.avatarTapAction()
@@ -184,11 +184,11 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .phoneNumber(theme, text, number):
                 return ItemListDisclosureItem(theme: theme, title: text, label: number, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    arguments.pushController(ChangePhoneNumberIntroController(account: arguments.account, phoneNumber: number))
+                    arguments.pushController(ChangePhoneNumberIntroController(context: arguments.context, phoneNumber: number))
                 })
             case let .username(theme, text, address):
                 return ItemListDisclosureItem(theme: theme, title: text, label: address, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    arguments.presentController(usernameSetupController(account: arguments.account))
+                    arguments.presentController(usernameSetupController(context: arguments.context))
                 })
             case let .addAccount(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .center, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -313,7 +313,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
     var updateHiddenAvatarImpl: (() -> Void)?
     var changeProfilePhotoImpl: (() -> Void)?
         
-    let arguments = EditSettingsItemArguments(account: context.account, accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
+    let arguments = EditSettingsItemArguments(context: context, accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
         var updating = false
         updateState {
             updating = $0.updatingAvatar != nil
@@ -531,7 +531,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { peer in
                     if peer.smallProfileImage != nil {
-                        let galleryController = AvatarGalleryController(account: context.account, peer: peer, replaceRootController: { controller, ready in
+                        let galleryController = AvatarGalleryController(context: context, peer: peer, replaceRootController: { controller, ready in
                         })
                         /*hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
                             avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first

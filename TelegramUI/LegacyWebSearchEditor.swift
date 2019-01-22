@@ -8,13 +8,13 @@ import UIKit
 import Display
 
 func presentLegacyWebSearchEditor(context: AccountContext, theme: PresentationTheme, result: ChatContextResult, initialLayout: ContainerViewLayout?, updateHiddenMedia: @escaping (String?) -> Void, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (UIImage) -> Void, present: @escaping (ViewController, Any?) -> Void) {
-    guard let item = legacyWebSearchItem(account: account, result: result) else {
+    guard let item = legacyWebSearchItem(account: context.account, result: result) else {
         return
     }
     
     var screenImage: Signal<UIImage?, NoError> = .single(nil)
     if let resource = item.thumbnailResource {
-        screenImage = account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: true)
+        screenImage = context.account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: true)
         |> map { maybeData -> UIImage? in
             if maybeData.complete {
                 if let loadedData = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: []), let image = UIImage(data: loadedData) {

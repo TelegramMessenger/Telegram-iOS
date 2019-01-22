@@ -5,7 +5,7 @@ import Postbox
 import TelegramCore
 
 private final class ThemeSettingsControllerArguments {
-    let account: Account
+    let context: AccountContext
     let selectTheme: (Int32) -> Void
     let selectFontSize: (PresentationFontSize) -> Void
     let openWallpaperSettings: () -> Void
@@ -13,8 +13,8 @@ private final class ThemeSettingsControllerArguments {
     let openAutoNightTheme: () -> Void
     let disableAnimations: (Bool) -> Void
     
-    init(account: Account, selectTheme: @escaping (Int32) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, openAccentColor: @escaping (Int32) -> Void, openAutoNightTheme: @escaping () -> Void, disableAnimations: @escaping (Bool) -> Void) {
-        self.account = account
+    init(context: AccountContext, selectTheme: @escaping (Int32) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, openAccentColor: @escaping (Int32) -> Void, openAutoNightTheme: @escaping () -> Void, disableAnimations: @escaping (Bool) -> Void) {
+        self.context = context
         self.selectTheme = selectTheme
         self.selectFontSize = selectFontSize
         self.openWallpaperSettings = openWallpaperSettings
@@ -179,7 +179,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
             case let .chatPreviewHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .chatPreview(theme, componentTheme, wallpaper, wallpaperMode, fontSize, strings, dateTimeFormat, nameDisplayOrder):
-                return ThemeSettingsChatPreviewItem(account: arguments.account, theme: theme, componentTheme: componentTheme, strings: strings, sectionId: self.section, fontSize: fontSize, wallpaper: wallpaper, wallpaperMode: wallpaperMode, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder)
+                return ThemeSettingsChatPreviewItem(context: arguments.context, theme: theme, componentTheme: componentTheme, strings: strings, sectionId: self.section, fontSize: fontSize, wallpaper: wallpaper, wallpaperMode: wallpaperMode, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder)
             case let .wallpaper(theme, text):
                 return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openWallpaperSettings()
@@ -253,7 +253,7 @@ public func themeSettingsController(context: AccountContext) -> ViewController {
     
     let _ = telegramWallpapers(postbox: context.account.postbox, network: context.account.network).start()
     
-    let arguments = ThemeSettingsControllerArguments(account: context.account, selectTheme: { index in
+    let arguments = ThemeSettingsControllerArguments(context: context, selectTheme: { index in
         let _ = updatePresentationThemeSettingsInteractively(postbox: context.account.postbox, { current in
             let wallpaper: TelegramWallpaper
             let theme: PresentationThemeReference

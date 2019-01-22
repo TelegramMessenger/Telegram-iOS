@@ -499,7 +499,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     let itemIndex = itemIndex
                     let embedIndex = embedIndex
                     let detailsIndex = detailsIndex
-                    if let newNode = item.node(account: self.context.account, strings: self.strings, theme: theme, openMedia: { [weak self] media in
+                    if let newNode = item.node(context: self.context, strings: self.strings, theme: theme, openMedia: { [weak self] media in
                         self?.openMedia(media)
                     }, longPressMedia: { [weak self] media in
                         self?.longPressMedia(media)
@@ -866,12 +866,12 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
             if let strongSelf = self, let image = media.media as? TelegramMediaImage {
                 let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil)
-                let _ = copyToPasteboard(context: strongSelf.context, postbox: strongSelf.account.postbox, mediaReference: .standalone(media: media)).start()
+                let _ = copyToPasteboard(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(self.strings.Conversation_LinkDialogSave), action: { [weak self] in
             if let strongSelf = self, let image = media.media as? TelegramMediaImage {
                 let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil)
-                let _ = saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.account.postbox, mediaReference: .standalone(media: media)).start()
+                let _ = saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuShare), action: { [weak self] in
             if let strongSelf = self, let webPage = strongSelf.webPage, let image = media.media as? TelegramMediaImage {
@@ -1131,7 +1131,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             }))
                         } else {
                             strongSelf.loadProgress.set(1.0)
-                            openExternalUrl(context: strongSelf.context, url: externalUrl, presentationData: context.currentPresentationData.with { $0 }, navigationController: strongSelf.getNavigationController(), dismissInput: {
+                            openExternalUrl(context: strongSelf.context, url: externalUrl, presentationData: strongSelf.context.currentPresentationData.with { $0 }, navigationController: strongSelf.getNavigationController(), dismissInput: {
                                 self?.view.endEditing(true)
                             })
                         }

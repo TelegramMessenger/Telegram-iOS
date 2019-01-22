@@ -16,7 +16,7 @@ final class SecretChatKeyController: ViewController {
     private var presentationData: PresentationData
     
     init(context: AccountContext, fingerprint: SecretChatKeyFingerprint, peer: Peer) {
-        self.account = account
+        self.context = context
         self.fingerprint = fingerprint
         self.peer = peer
         

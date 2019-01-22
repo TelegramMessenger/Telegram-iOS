@@ -176,7 +176,7 @@ final class ChatRecentActionsController: TelegramController {
     }
     
     private func openFilterSetup() {
-        self.present(channelRecentActionsFilterController(account: self.account, peer: self.peer, events: self.controllerNode.filter.events, adminPeerIds: self.controllerNode.filter.adminPeerIds, apply: { [weak self] events, adminPeerIds in
+        self.present(channelRecentActionsFilterController(context: self.context, peer: self.peer, events: self.controllerNode.filter.events, adminPeerIds: self.controllerNode.filter.adminPeerIds, apply: { [weak self] events, adminPeerIds in
             self?.controllerNode.updateFilter(events: events, adminPeerIds: adminPeerIds)
             self?.updateTitle()
         }), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

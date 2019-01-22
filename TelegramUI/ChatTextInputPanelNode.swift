@@ -257,7 +257,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     override var context: AccountContext? {
         didSet {
-            self.actionButtons.micButton.account = self.context.account
+            self.actionButtons.micButton.account = self.context?.account
         }
     }
     

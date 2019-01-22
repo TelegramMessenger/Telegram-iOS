@@ -185,7 +185,7 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
     }
     
     if let parsedUrlValue = parsedUrlValue, parsedUrlValue.scheme == "mailto" {
-        applicationContext.applicationBindings.openUrl(url)
+        context.applicationBindings.openUrl(url)
         return
     }
     
@@ -199,19 +199,19 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
     
     if let host = parsedUrl.host?.lowercased() {
         if host == "itunes.apple.com" {
-            if applicationContext.applicationBindings.canOpenUrl(parsedUrl.absoluteString) {
-                applicationContext.applicationBindings.openUrl(url)
+            if context.applicationBindings.canOpenUrl(parsedUrl.absoluteString) {
+                context.applicationBindings.openUrl(url)
                 return
             }
         }
         if host == "twitter.com" || host == "mobile.twitter.com" {
-            if applicationContext.applicationBindings.canOpenUrl("twitter://status") {
-                applicationContext.applicationBindings.openUrl(url)
+            if context.applicationBindings.canOpenUrl("twitter://status") {
+                context.applicationBindings.openUrl(url)
                 return
             }
         } else if host == "instagram.com" {
-            if applicationContext.applicationBindings.canOpenUrl("instagram://photo") {
-                applicationContext.applicationBindings.openUrl(url)
+            if context.applicationBindings.canOpenUrl("instagram://photo") {
+                context.applicationBindings.openUrl(url)
                 return
             }
         }
@@ -220,14 +220,14 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
     let continueHandling: () -> Void = {
         let handleRevolvedUrl: (ResolvedUrl) -> Void = { resolved in
             if case let .externalUrl(value) = resolved {
-                applicationContext.applicationBindings.openUrl(value)
+                context.applicationBindings.openUrl(value)
             } else {
-                openResolvedUrl(resolved, account: account, navigationController: navigationController, openPeer: { peerId, navigation in
+                openResolvedUrl(resolved, context: context, navigationController: navigationController, openPeer: { peerId, navigation in
                     switch navigation {
                         case .info:
-                            let _ = (account.postbox.loadedPeerWithId(peerId)
+                            let _ = (context.account.postbox.loadedPeerWithId(peerId)
                                 |> deliverOnMainQueue).start(next: { peer in
-                                    if let infoController = peerInfoController(account: account, peer: peer) {
+                                    if let infoController = peerInfoController(context: context, peer: peer) {
                                         if let navigationController = navigationController {
                                             navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
                                         }
@@ -237,22 +237,22 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
                         case let .chat(_, messageId):
                             if let navigationController = navigationController {
                                 navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                                navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId), messageId: messageId)
+                                navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId), messageId: messageId)
                             }
                         case let .withBotStartPayload(payload):
                             if let navigationController = navigationController {
                                 navigationController.view.window?.rootViewController?.dismiss(animated: true, completion: nil)
-                                navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId), botStart: payload)
+                                navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId), botStart: payload)
                             }
                         default:
                             break
                     }
                 }, present: { c, a in
-                    account.telegramApplicationContext.applicationBindings.dismissNativeController()
+                    context.applicationBindings.dismissNativeController()
                     
                     c.presentationArguments = a
                     
-                    account.telegramApplicationContext.applicationBindings.getWindowHost()?.present(c, on: .root, blockInteraction: false, completion: {})
+                    context.applicationBindings.getWindowHost()?.present(c, on: .root, blockInteraction: false, completion: {})
                 }, dismissInput: {
                     dismissInput()
                 })
@@ -260,11 +260,11 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
         }
         
         let handleInternalUrl: (String) -> Void = { url in
-            let _ = (resolveUrl(account: account, url: url)
+            let _ = (resolveUrl(account: context.account, url: url)
             |> deliverOnMainQueue).start(next: handleRevolvedUrl)
         }
         
-        if let scheme = parsedUrl.scheme, (scheme == "tg" || scheme == applicationContext.applicationBindings.appSpecificScheme), let query = parsedUrl.query {
+        if let scheme = parsedUrl.scheme, (scheme == "tg" || scheme == context.applicationBindings.appSpecificScheme), let query = parsedUrl.query {
             var convertedUrl: String?
             if parsedUrl.host == "localpeer" {
                  if let components = URLComponents(string: "/?" + query) {
@@ -279,8 +279,8 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
                         }
                     }
                     if let peerId = peerId, let navigationController = navigationController {
-                        account.telegramApplicationContext.applicationBindings.dismissNativeController()
-                        navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
+                        context.applicationBindings.dismissNativeController()
+                        navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId))
                     }
                 }
             } else if parsedUrl.host == "join" {
@@ -469,16 +469,16 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
                             } else if opaquePayload.isEmpty {
                                 return
                             }
-                            if case .chat = context {
+                            if case .chat = urlContext {
                                 return
                             }
-                            let controller = SecureIdAuthController(account: account, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce))
+                            let controller = SecureIdAuthController(context: context, mode: .form(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: botId), scope: scope, publicKey: publicKey, callbackUrl: callbackUrl, opaquePayload: opaquePayload, opaqueNonce: opaqueNonce))
                             
                             if let navigationController = navigationController {
-                                account.telegramApplicationContext.applicationBindings.dismissNativeController()
+                                context.applicationBindings.dismissNativeController()
                                 
                                 navigationController.view.window?.endEditing(true)
-                                account.telegramApplicationContext.applicationBindings.getWindowHost()?.present(controller, on: .root, blockInteraction: false, completion: {})
+                                context.applicationBindings.getWindowHost()?.present(controller, on: .root, blockInteraction: false, completion: {})
                             }
                         }
                         return
@@ -498,11 +498,11 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
                     }
                     
                     if let id = id, !id.isEmpty, let idValue = Int32(id), idValue > 0 {
-                        let _ = (account.postbox.transaction { transaction -> Peer? in
+                        let _ = (context.account.postbox.transaction { transaction -> Peer? in
                             return transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: idValue))
                         }
                         |> deliverOnMainQueue).start(next: { peer in
-                            if let peer = peer, let controller = peerInfoController(account: account, peer: peer) {
+                            if let peer = peer, let controller = peerInfoController(context: context, peer: peer) {
                                 navigationController?.pushViewController(controller)
                             }
                         })
@@ -625,14 +625,14 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
                         }
                         window.rootViewController?.present(controller, animated: true)
                     } else {
-                        applicationContext.applicationBindings.openUrl(parsedUrl.absoluteString)
+                        context.applicationBindings.openUrl(parsedUrl.absoluteString)
                     }
                 } else {
-                    applicationContext.applicationBindings.openUrl(url)
+                    context.applicationBindings.openUrl(url)
                 }
             }
         } else {
-            applicationContext.applicationBindings.openUrl(url)
+            context.applicationBindings.openUrl(url)
         }
     }
     
@@ -641,7 +641,7 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
         if let host = parsedUrl.host, nativeHosts.contains(host) {
             continueHandling()
         } else {
-            applicationContext.applicationBindings.openUniversalUrl(url, TelegramApplicationOpenUrlCompletion(completion: { success in
+            context.applicationBindings.openUniversalUrl(url, TelegramApplicationOpenUrlCompletion(completion: { success in
                 if !success {
                     continueHandling()
                 }

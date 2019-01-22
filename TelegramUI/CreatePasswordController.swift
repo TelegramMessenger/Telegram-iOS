@@ -218,7 +218,7 @@ enum CreatePasswordState: Equatable {
     case pendingVerification(emailPattern: String)
 }
 
-func createPasswordController(context: AccountContext, context: CreatePasswordContext, state: CreatePasswordState, completion: @escaping (String, String, Bool) -> Void, updatePasswordEmailConfirmation: @escaping ((String, String)?) -> Void, processPasswordEmailConfirmation: Bool = true) -> ViewController {
+func createPasswordController(context: AccountContext, createPasswordContext: CreatePasswordContext, state: CreatePasswordState, completion: @escaping (String, String, Bool) -> Void, updatePasswordEmailConfirmation: @escaping ((String, String)?) -> Void, processPasswordEmailConfirmation: Bool = true) -> ViewController {
     let statePromise = ValuePromise(CreatePasswordControllerState(state: state), ignoreRepeated: true)
     let stateValue = Atomic(value: CreatePasswordControllerState(state: state))
     let updateState: ((CreatePasswordControllerState) -> CreatePasswordControllerState) -> Void = { f in
@@ -398,7 +398,7 @@ func createPasswordController(context: AccountContext, context: CreatePasswordCo
         }
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: createPasswordControllerEntries(presentationData: presentationData, context: context, state: state), style: .blocks, focusItemTag: CreatePasswordEntryTag.password, emptyStateItem: nil, animateChanges: false)
+        let listState = ItemListNodeState(entries: createPasswordControllerEntries(presentationData: presentationData, context: createPasswordContext, state: state), style: .blocks, focusItemTag: CreatePasswordEntryTag.password, emptyStateItem: nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

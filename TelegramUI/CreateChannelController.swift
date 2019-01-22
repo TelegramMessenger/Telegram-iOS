@@ -266,7 +266,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
             return state.editingName.composedTitle
         }
         
-        let _ = (account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
+        let _ = (context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
             return (transaction.getPeer(context.account.peerId), currentSearchBotsConfiguration(transaction: transaction))
         } |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
             let presentationData = context.currentPresentationData.with { $0 }
@@ -287,9 +287,9 @@ public func createChannelController(context: AccountContext) -> ViewController {
             let completedImpl: (UIImage) -> Void = { image in
                 if let data = UIImageJPEGRepresentation(image, 0.6) {
                     let resource = LocalFileMediaResource(fileId: arc4random64())
-                    account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                    context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
-                    uploadedAvatar.set(uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: resource))
+                    uploadedAvatar.set(uploadedPeerPhoto(postbox: context.account.postbox, network: context.account.network, resource: resource))
                     updateState { current in
                         var current = current
                         current.avatar = .image(representation, false)
@@ -301,7 +301,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: stateValue.with({ $0.avatar }) != nil, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { assetsController in
-                let controller = WebSearchController(account: account, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: title, completion: { result in
+                let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: title, completion: { result in
                     assetsController?.dismiss()
                     completedImpl(result)
                 }))

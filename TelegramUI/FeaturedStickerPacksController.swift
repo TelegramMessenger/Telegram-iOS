@@ -233,7 +233,7 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
         if !unreadIds.isEmpty {
             alreadyReadIds.formUnion(Set(unreadIds))
             
-            let _ = markFeaturedStickerPacksAsSeenInteractively(postbox: account.postbox, ids: unreadIds).start()
+            let _ = markFeaturedStickerPacksAsSeenInteractively(postbox: context.account.postbox, ids: unreadIds).start()
         }
     }
     
@@ -244,7 +244,7 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
     }
     
     presentStickerPackController = { [weak controller] info in
-        presentControllerImpl?(StickerPackPreviewController(account: account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), mode: .settings, parentNavigationController: controller?.navigationController as? NavigationController), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(StickerPackPreviewController(context: context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), mode: .settings, parentNavigationController: controller?.navigationController as? NavigationController), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
     
     return controller

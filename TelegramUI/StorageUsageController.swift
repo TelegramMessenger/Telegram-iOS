@@ -261,7 +261,7 @@ private func stringForCategory(strings: PresentationStrings, category: PeerCache
     }
 }
 
-func storageUsageController(context: context, isModal: Bool = false) -> ViewController {
+func storageUsageController(context: AccountContext, isModal: Bool = false) -> ViewController {
     let cacheSettingsPromise = Promise<CacheStorageSettings>()
     cacheSettingsPromise.set(context.account.postbox.preferencesView(keys: [PreferencesKeys.cacheStorageSettings])
         |> map { view -> CacheStorageSettings in

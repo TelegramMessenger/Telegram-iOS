@@ -88,7 +88,7 @@ class ContactSelectionController: ViewController {
             }
         }
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

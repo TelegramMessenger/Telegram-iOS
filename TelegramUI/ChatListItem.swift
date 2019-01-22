@@ -515,7 +515,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     summaryInfo = ChatListMessageTagSummaryInfo()
                     inputActivities = nil
                     isPeerGroup = true
-                    multipleAvatarsApply = multipleAvatarsLayout(item.account, topPeersValue, CGSize(width: 60.0, height: 60.0))
+                    multipleAvatarsApply = multipleAvatarsLayout(item.account, item.presentationData.theme, topPeersValue, CGSize(width: 60.0, height: 60.0))
                     if counters.unreadCount > 0 {
                         let count = counters.unreadCount + counters.unreadMutedCount
                         unreadCount = (count, count > 0, false)

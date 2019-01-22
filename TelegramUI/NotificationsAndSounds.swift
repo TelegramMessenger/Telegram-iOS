@@ -5,7 +5,7 @@ import Postbox
 import TelegramCore
 
 private final class NotificationsAndSoundsArguments {
-    let account: Account
+    let context: AccountContext
     let presentController: (ViewController, ViewControllerPresentationArguments?) -> Void
     let pushController: (ViewController) -> Void
     let soundSelectionDisposable: MetaDisposable
@@ -42,8 +42,8 @@ private final class NotificationsAndSoundsArguments {
     
     let openAppSettings: () -> Void
     
-    init(account: Account, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping(ViewController)->Void, soundSelectionDisposable: MetaDisposable, authorizeNotifications: @escaping () -> Void, suppressWarning: @escaping () -> Void, updateMessageAlerts: @escaping (Bool) -> Void, updateMessagePreviews: @escaping (Bool) -> Void, updateMessageSound: @escaping (PeerMessageSound) -> Void, updateGroupAlerts: @escaping (Bool) -> Void, updateGroupPreviews: @escaping (Bool) -> Void, updateGroupSound: @escaping (PeerMessageSound) -> Void, updateChannelAlerts: @escaping (Bool) -> Void, updateChannelPreviews: @escaping (Bool) -> Void, updateChannelSound: @escaping (PeerMessageSound) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, updateDisplayNameOnLockscreen: @escaping (Bool) -> Void, updateTotalUnreadCountStyle: @escaping (Bool) -> Void, updateIncludeTag: @escaping (PeerSummaryCounterTags, Bool) -> Void, updateTotalUnreadCountCategory: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void, updatedExceptionMode: @escaping(NotificationExceptionMode) -> Void, openAppSettings: @escaping () -> Void, updateJoinedNotifications: @escaping (Bool) -> Void) {
-        self.account = account
+    init(context: AccountContext, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping(ViewController)->Void, soundSelectionDisposable: MetaDisposable, authorizeNotifications: @escaping () -> Void, suppressWarning: @escaping () -> Void, updateMessageAlerts: @escaping (Bool) -> Void, updateMessagePreviews: @escaping (Bool) -> Void, updateMessageSound: @escaping (PeerMessageSound) -> Void, updateGroupAlerts: @escaping (Bool) -> Void, updateGroupPreviews: @escaping (Bool) -> Void, updateGroupSound: @escaping (PeerMessageSound) -> Void, updateChannelAlerts: @escaping (Bool) -> Void, updateChannelPreviews: @escaping (Bool) -> Void, updateChannelSound: @escaping (PeerMessageSound) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, updateDisplayNameOnLockscreen: @escaping (Bool) -> Void, updateTotalUnreadCountStyle: @escaping (Bool) -> Void, updateIncludeTag: @escaping (PeerSummaryCounterTags, Bool) -> Void, updateTotalUnreadCountCategory: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void, updatedExceptionMode: @escaping(NotificationExceptionMode) -> Void, openAppSettings: @escaping () -> Void, updateJoinedNotifications: @escaping (Bool) -> Void) {
+        self.context = context
         self.presentController = presentController
         self.pushController = pushController
         self.soundSelectionDisposable = soundSelectionDisposable
@@ -478,14 +478,14 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 })
             case let .messageSound(theme, text, value, sound):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
-                    let controller = notificationSoundSelectionController(account: arguments.account, isModal: true, currentSound: sound, defaultSound: nil, completion: { [weak arguments] value in
+                    let controller = notificationSoundSelectionController(context: arguments.context, isModal: true, currentSound: sound, defaultSound: nil, completion: { [weak arguments] value in
                         arguments?.updateMessageSound(value)
                     })
                     arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 })
             case let .userExceptions(theme, strings, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: strings.Notifications_Exceptions(Int32(value.settings.count)), sectionId: self.section, style: .blocks, action: {
-                    let controller = NotificationExceptionsController(account: arguments.account, mode: value, updatedMode: arguments.updatedExceptionMode)
+                    let controller = NotificationExceptionsController(context: arguments.context, mode: value, updatedMode: arguments.updatedExceptionMode)
                     arguments.pushController(controller)
                 })
             case let .messageNotice(theme, text):
@@ -502,14 +502,14 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 })
             case let .groupSound(theme, text, value, sound):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
-                    let controller = notificationSoundSelectionController(account: arguments.account, isModal: true, currentSound: sound, defaultSound: nil, completion: { [weak arguments] value in
+                    let controller = notificationSoundSelectionController(context: arguments.context, isModal: true, currentSound: sound, defaultSound: nil, completion: { [weak arguments] value in
                         arguments?.updateGroupSound(value)
                     })
                     arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 })
             case let .groupExceptions(theme, strings, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: strings.Notifications_Exceptions(Int32(value.settings.count)), sectionId: self.section, style: .blocks, action: {
-                    let controller = NotificationExceptionsController(account: arguments.account, mode: value, updatedMode: arguments.updatedExceptionMode)
+                    let controller = NotificationExceptionsController(context: arguments.context, mode: value, updatedMode: arguments.updatedExceptionMode)
                     arguments.pushController(controller)
                 })
             case let .groupNotice(theme, text):
@@ -526,14 +526,14 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 })
             case let .channelSound(theme, text, value, sound):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
-                    let controller = notificationSoundSelectionController(account: arguments.account, isModal: true, currentSound: sound, defaultSound: nil, completion: { [weak arguments] value in
+                    let controller = notificationSoundSelectionController(context: arguments.context, isModal: true, currentSound: sound, defaultSound: nil, completion: { [weak arguments] value in
                         arguments?.updateChannelSound(value)
                     })
                     arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 })
             case let .channelExceptions(theme, strings, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: strings.Notifications_Exceptions(Int32(value.settings.count)), sectionId: self.section, style: .blocks, action: {
-                    let controller = NotificationExceptionsController(account: arguments.account, mode: value, updatedMode: arguments.updatedExceptionMode)
+                    let controller = NotificationExceptionsController(context: arguments.context, mode: value, updatedMode: arguments.updatedExceptionMode)
                     arguments.pushController(controller)
                 })
             case let .channelNotice(theme, text):
@@ -689,17 +689,17 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
         notificationExceptions.set(.single(value))
     }
     
-    let arguments = NotificationsAndSoundsArguments(account: context.account, presentController: { controller, arguments in
+    let arguments = NotificationsAndSoundsArguments(context: context, presentController: { controller, arguments in
         presentControllerImpl?(controller, arguments)
     }, pushController: { controller in
         pushControllerImpl?(controller)
     }, soundSelectionDisposable: MetaDisposable(), authorizeNotifications: {
-        let _ = (DeviceAccess.authorizationStatus(account: context.account, subject: .notifications)
+        let _ = (DeviceAccess.authorizationStatus(context: context, subject: .notifications)
         |> take(1)
         |> deliverOnMainQueue).start(next: { status in
             switch status {
                 case .notDetermined:
-                    DeviceAccess.authorizeAccess(to: .notifications, account: context.account)
+                    DeviceAccess.authorizeAccess(to: .notifications, context: context)
                 case .denied, .restricted:
                     context.applicationBindings.openSettings()
                 case .unreachable:
@@ -922,7 +922,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
             }))
     }
     
-    let signal = combineLatest(context.presentationData, preferences, notificationExceptions.get(), DeviceAccess.authorizationStatus(account: context.account, subject: .notifications), notificationsWarningSuppressed.get())
+    let signal = combineLatest(context.presentationData, preferences, notificationExceptions.get(), DeviceAccess.authorizationStatus(context: context, subject: .notifications), notificationsWarningSuppressed.get())
         |> map { presentationData, view, exceptions, authorizationStatus, warningSuppressed -> (ItemListControllerState, (ItemListNodeState<NotificationsAndSoundsEntry>, NotificationsAndSoundsEntry.ItemGenerationArguments)) in
             
             let viewSettings: GlobalNotificationSettingsSet

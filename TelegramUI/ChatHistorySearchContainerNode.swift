@@ -75,10 +75,10 @@ private enum ChatHistorySearchEntry: Comparable, Identifiable {
         }
     }
     
-    func item(account: Account, peerId: PeerId, interaction: ChatControllerInteraction) -> ListViewItem {
+    func item(context: AccountContext, peerId: PeerId, interaction: ChatControllerInteraction) -> ListViewItem {
         switch self {
             case let .message(message, theme, strings, dateTimeFormat):
-                return ListMessageItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: account, chatLocation: .peer(peerId), controllerInteraction: interaction, message: message, selection: .none, displayHeader: true)
+                return ListMessageItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, context: context, chatLocation: .peer(peerId), controllerInteraction: interaction, message: message, selection: .none, displayHeader: true)
         }
     }
 }
@@ -91,12 +91,12 @@ private struct ChatHistorySearchContainerTransition {
     let displayingResults: Bool
 }
 
-private func chatHistorySearchContainerPreparedTransition(from fromEntries: [ChatHistorySearchEntry], to toEntries: [ChatHistorySearchEntry], query: String, displayingResults: Bool, account: Account, peerId: PeerId, interaction: ChatControllerInteraction) -> ChatHistorySearchContainerTransition {
+private func chatHistorySearchContainerPreparedTransition(from fromEntries: [ChatHistorySearchEntry], to toEntries: [ChatHistorySearchEntry], query: String, displayingResults: Bool, context: AccountContext, peerId: PeerId, interaction: ChatControllerInteraction) -> ChatHistorySearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, peerId: peerId, interaction: interaction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, peerId: peerId, interaction: interaction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, peerId: peerId, interaction: interaction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, peerId: peerId, interaction: interaction), directionHint: nil) }
     
     return ChatHistorySearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, query: query, displayingResults: displayingResults)
 }
@@ -175,7 +175,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
             if let strongSelf = self {
                 let signal: Signal<([ChatHistorySearchEntry], [MessageId: Message])?, NoError>
                 if let query = query, !query.isEmpty {
-                    let foundRemoteMessages: Signal<[Message], NoError> = searchMessages(account: account, location: .peer(peerId: peerId, fromId: nil, tags: tagMask), query: query, state: nil)
+                    let foundRemoteMessages: Signal<[Message], NoError> = searchMessages(account: context.account, location: .peer(peerId: peerId, fromId: nil, tags: tagMask), query: query, state: nil)
                     |> map { $0.0.messages }
                     |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     
@@ -202,7 +202,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
                         let previousEntries = previousEntriesValue.swap(entriesAndMessages?.0)
                         
                         let firstTime = previousEntries == nil
-                        let transition = chatHistorySearchContainerPreparedTransition(from: previousEntries ?? [], to: entriesAndMessages?.0 ?? [], query: query ?? "", displayingResults: entriesAndMessages?.0 != nil, account: account, peerId: peerId, interaction: interfaceInteraction)
+                        let transition = chatHistorySearchContainerPreparedTransition(from: previousEntries ?? [], to: entriesAndMessages?.0 ?? [], query: query ?? "", displayingResults: entriesAndMessages?.0 != nil, context: context, peerId: peerId, interaction: interfaceInteraction)
                         strongSelf.currentEntries = entriesAndMessages?.0
                         strongSelf.currentMessages = entriesAndMessages?.1
                         strongSelf.enqueueTransition(transition, firstTime: firstTime)
@@ -216,7 +216,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
             self?.dismissInput?()
         }
         
-        self.presentationDataDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak self] presentationData in
+        self.presentationDataDisposable = context.presentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings, presentationData.dateTimeFormat)))
                 

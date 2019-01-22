@@ -163,7 +163,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         
         self.backgroundNode = ASDisplayNode()
         
-        self.trendingPane = ChatMediaInputTrendingPane(account: context.account, controllerInteraction: controllerInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
+        self.trendingPane = ChatMediaInputTrendingPane(context: context, controllerInteraction: controllerInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
             return inputNodeInteraction?.previewedStickerPackItem == .pack(item)
         })
         
@@ -214,14 +214,14 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
             }
         }, install: { [weak self] info in
             if let strongSelf = self {
-                let _ = (loadedStickerPack(postbox: strongSelf.account.postbox, network: strongSelf.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+                let _ = (loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
                 |> mapToSignal { result -> Signal<Void, NoError> in
                     switch result {
                         case let .result(info, items, installed):
                             if installed {
                                 return .complete()
                             } else {
-                                return addStickerPackInteractively(postbox: strongSelf.account.postbox, info: info, items: items)
+                                return addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
                             }
                         case .fetching:
                             break
@@ -254,13 +254,13 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
                     var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
                     
                     if text.isSingleEmoji {
-                        signals.append(searchStickers(account: account, query: text.firstEmoji)
+                        signals.append(searchStickers(account: context.account, query: text.firstEmoji)
                         |> take(1)
                         |> map { (nil, $0) })
                     } else {
                         for entry in TGEmojiSuggestions.suggestions(forQuery: text.lowercased()) {
                             if let entry = entry as? TGAlphacodeEntry {
-                                signals.append(searchStickers(account: account, query: entry.emoji)
+                                signals.append(searchStickers(account: context.account, query: entry.emoji)
                                 |> take(1)
                                 |> map { (entry.emoji, $0) })
                             }
@@ -280,8 +280,8 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
                     })
                 }
                 
-                let local = searchStickerSets(postbox: account.postbox, query: text)
-                let remote = searchStickerSetsRemotely(network: account.network, query: text)
+                let local = searchStickerSets(postbox: context.account.postbox, query: text)
+                let remote = searchStickerSetsRemotely(network: context.account.network, query: text)
                 |> delay(0.2, queue: Queue.mainQueue())
                 let packs = local
                 |> mapToSignal { result -> Signal<(FoundStickerSets, Bool, FoundStickerSets?), NoError> in
@@ -355,7 +355,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
                     }
                     
                     let previousEntries = currentEntries.swap(entries)
-                    let transition = preparedChatMediaInputGridEntryTransition(account: account, theme: theme, strings: strings, from: previousEntries ?? [], to: entries, interaction: interaction, inputNodeInteraction: strongSelf.inputNodeInteraction)
+                    let transition = preparedChatMediaInputGridEntryTransition(account: context.account, theme: theme, strings: strings, from: previousEntries ?? [], to: entries, interaction: interaction, inputNodeInteraction: strongSelf.inputNodeInteraction)
                     strongSelf.enqueueTransition(transition)
                 }
             }))

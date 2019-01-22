@@ -1681,20 +1681,31 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
     }
 }
 
-func chatMessagePhotoStatus(account: Account, messageId: MessageId, photoReference: ImageMediaReference) -> Signal<MediaResourceStatus, NoError> {
+func chatMessagePhotoStatus(context: AccountContext, messageId: MessageId, photoReference: ImageMediaReference) -> Signal<MediaResourceStatus, NoError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
-        return account.telegramApplicationContext.fetchManager.fetchStatus(category: .image, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: largestRepresentation.resource)
+        return context.fetchManager.fetchStatus(category: .image, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: largestRepresentation.resource)
     } else {
         return .never()
     }
 }
 
-public func chatMessagePhotoInteractiveFetched(account: Account, photoReference: ImageMediaReference, storeToDownloadsPeerType: AutomaticMediaDownloadPeerType?) -> Signal<FetchResourceSourceType, FetchResourceError> {
+public func standaloneChatMessagePhotoInteractiveFetched(account: Account, photoReference: ImageMediaReference) -> Signal<FetchResourceSourceType, FetchResourceError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
         return fetchedMediaResource(postbox: account.postbox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image, reportResultStatus: true)
         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
+            return .single(type)
+        }
+    } else {
+        return .never()
+    }
+}
+
+public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoReference: ImageMediaReference, storeToDownloadsPeerType: AutomaticMediaDownloadPeerType?) -> Signal<FetchResourceSourceType, FetchResourceError> {
+    if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
+        return fetchedMediaResource(postbox: context.account.postbox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image, reportResultStatus: true)
+        |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
             if case .remote = type, let peerType = storeToDownloadsPeerType {
-                return storeDownloadedMedia(storeManager: account.telegramApplicationContext.mediaManager?.downloadedMediaStoreManager, media: photoReference.abstract, peerType: peerType)
+                return storeDownloadedMedia(storeManager: context.mediaManager.downloadedMediaStoreManager, media: photoReference.abstract, peerType: peerType)
                 |> introduceError(FetchResourceError.self)
                 |> mapToSignal { _ -> Signal<FetchResourceSourceType, FetchResourceError> in
                     return .complete()

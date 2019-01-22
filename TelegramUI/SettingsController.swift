@@ -552,7 +552,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     |> distinctUntilChanged
     |> mapToSignal { recordIds -> Signal<[(Account, Peer, Int32)], NoError> in
         return contextValue.get()
-        |> mapToSignal { currentAccount -> Signal<[(Account, Peer, Int32)], NoError> in
+        |> mapToSignal { currentContext -> Signal<[(Account, Peer, Int32)], NoError> in
             var accounts: [Signal<(Account, Peer, Int32)?, NoError>] = []
             func accountWithPeer(_ account: Signal<Account?, NoError>) -> Signal<(Account, Peer, Int32)?, NoError> {
                 return account
@@ -577,7 +577,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 }
             }
             for id in recordIds {
-                if id == currentAccount.id {
+                if id == currentContext.account.id {
                     continue
                 } else {
                     accounts.append(accountWithPeer(accountWithId(networkArguments: networkArguments, id: id, supplementary: true, rootPath: rootPath, beginWithTestingEnvironment: false, auxiliaryMethods: auxiliaryMethods)
@@ -643,7 +643,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            let _ = (context.account.postbox.loadedPeerWithId(account.peerId)
+            let _ = (context.account.postbox.loadedPeerWithId(context.account.peerId)
             |> take(1)
             |> deliverOnMainQueue).start(next: { peer in
                 if peer.smallProfileImage != nil {
@@ -756,7 +756,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                     supportPeerDisposable.set((supportPeer.get() |> take(1) |> deliverOnMainQueue).start(next: { peerId in
                         if let peerId = peerId {
-                            pushControllerImpl?(ChatController(account: account, chatLocation: .peer(peerId)))
+                            pushControllerImpl?(ChatController(context: context, chatLocation: .peer(peerId)))
                         }
                     }))
                 })
@@ -789,7 +789,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             let progressDisposable = progressSignal.start()
             
             let peerKey: PostboxViewKey = .peer(peerId: context.account.peerId, components: [])
-            let cachedDataKey: PostboxViewKey = .cachedPeerData(peerId: account.peerId)
+            let cachedDataKey: PostboxViewKey = .cachedPeerData(peerId: context.account.peerId)
             let signal = (context.account.postbox.combinedView(keys: [peerKey, cachedDataKey])
             |> mapToSignal { view -> Signal<(TelegramUser, CachedUserData), NoError> in
                 guard let cachedDataView = view.views[cachedDataKey] as? CachedPeerDataView, let cachedData = cachedDataView.cachedPeerData as? CachedUserData else {
@@ -984,7 +984,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             |> then(
                 contextValue.get()
                 |> mapToSignal { context -> Signal<AccessType, NoError> in
-                    return DeviceAccess.authorizationStatus(account: context.account, subject: .notifications)
+                    return DeviceAccess.authorizationStatus(context: context, subject: .notifications)
                 }
             )
         )
@@ -1124,17 +1124,17 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     openSavedMessagesImpl = { [weak controller] in
         let _ = (contextValue.get()
         |> take(1)
-        |> deliverOnMainQueue).start(next: { account in
+        |> deliverOnMainQueue).start(next: { context in
             if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
-                navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(account.peerId))
+                navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(context.account.peerId))
             }
         })
     }
     controller.tabBarItemDebugTapAction = {
         let _ = (contextValue.get()
         |> take(1)
-        |> deliverOnMainQueue).start(next: { account in
-            pushControllerImpl?(debugController(account: account, accountManager: accountManager))
+        |> deliverOnMainQueue).start(next: { context in
+            pushControllerImpl?(debugController(context: context, accountManager: accountManager))
         })
     }
     

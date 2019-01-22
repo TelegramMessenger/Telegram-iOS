@@ -5,14 +5,14 @@ import Postbox
 import TelegramCore
 
 private final class DebugAccountsControllerArguments {
-    let account: Account
+    let context: AccountContext
     let presentController: (ViewController, ViewControllerPresentationArguments) -> Void
     
     let switchAccount: (AccountRecordId) -> Void
     let loginNewAccount: () -> Void
     
-    init(account: Account, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, switchAccount: @escaping (AccountRecordId) -> Void, loginNewAccount: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, switchAccount: @escaping (AccountRecordId) -> Void, loginNewAccount: @escaping () -> Void) {
+        self.context = context
         self.presentController = presentController
         self.switchAccount = switchAccount
         self.loginNewAccount = loginNewAccount

@@ -323,7 +323,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
             }
         })
         
-        let account = self.account
+        let account = self.context.account
         var firstTime: Int32 = 1
         let selectionStateSignal = self.selectionStatePromise.get()
         let transition: Signal<InviteContactsTransition, NoError>

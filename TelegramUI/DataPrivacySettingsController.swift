@@ -479,7 +479,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
     
     actionsDisposable.add(managedUpdatedRecentPeers(accountPeerId: context.account.peerId, postbox: context.account.postbox, network: context.account.network).start())
     
-    let signal = combineLatest(context.presentationData, statePromise.get() |> deliverOnMainQueue, account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.secretChatLinkPreviewsKey()), preferencesKey]), recentPeers(account: context.account))
+    let signal = combineLatest(context.presentationData, statePromise.get() |> deliverOnMainQueue, context.account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.secretChatLinkPreviewsKey()), preferencesKey]), recentPeers(account: context.account))
         |> map { presentationData, state, combined, recentPeers -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
             let secretChatLinkPreviews = (combined.views[.noticeEntry(ApplicationSpecificNotice.secretChatLinkPreviewsKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getSecretChatLinkPreviews($0) })
             

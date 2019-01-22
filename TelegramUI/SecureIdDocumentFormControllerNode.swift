@@ -2155,7 +2155,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.context = initParams.context
-        self.context = initParams.context
+        self.secureIdContext = initParams.secureIdContext
         
         var updateImpl: ((Int64, SecureIdVerificationLocalDocumentState) -> Void)?
         
@@ -2718,7 +2718,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
         
         var saveValues: [Signal<SecureIdValueWithContext, SaveSecureIdValueError>] = []
         for (_, value) in values {
-            saveValues.append(saveSecureIdValue(postbox: self.context.account.postbox, network: self.context.account.network, context: self.context, value: value, uploadedFiles: self.uploadContext.uploadedFiles))
+            saveValues.append(saveSecureIdValue(postbox: self.context.account.postbox, network: self.context.account.network, context: self.secureIdContext, value: value, uploadedFiles: self.uploadContext.uploadedFiles))
         }
         
         self.actionDisposable.set((combineLatest(saveValues)
@@ -2965,7 +2965,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
             }
         }
         
-        let galleryController = SecureIdDocumentGalleryController(account: self.context.account, context: self.context, entries: entries, centralIndex: centralIndex, replaceRootController: { _, _ in
+        let galleryController = SecureIdDocumentGalleryController(context: self.context, secureIdContext: self.secureIdContext, entries: entries, centralIndex: centralIndex, replaceRootController: { _, _ in
             
         })
         galleryController.deleteResource = { [weak self] resource in

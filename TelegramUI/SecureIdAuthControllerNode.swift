@@ -428,7 +428,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     }
     
     private func presentDocumentSelection(field: SecureIdParsedRequestedFormField) {
-        guard let state = self.state, case let .form(form) = state, let verificationState = form.verificationState, case let .verified(context) = verificationState, let encryptedFormData = form.encryptedFormData, let formData = form.formData else {
+        guard let state = self.state, case let .form(form) = state, let verificationState = form.verificationState, case let .verified(secureIdContext) = verificationState, let encryptedFormData = form.encryptedFormData, let formData = form.formData else {
             return
         }
         let updatedValues: ([SecureIdValueKey], [SecureIdValueWithContext]) -> Void = { [weak self] touchedKeys, updatedValues in
@@ -508,7 +508,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                         else if requireTranslation && !hasTranslation {
                             scrollTo = .translation
                         }
-                        self.interaction.present(SecureIdDocumentFormController(context: self.context, context: context, requestedData: .identity(details: personalDetails, document: hasValueType, selfie: requireSelfie, translations: requireTranslation), scrollTo: scrollTo, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
+                        self.interaction.present(SecureIdDocumentFormController(context: self.context, secureIdContext: secureIdContext, requestedData: .identity(details: personalDetails, document: hasValueType, selfie: requireSelfie, translations: requireTranslation), scrollTo: scrollTo, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
                             var keys: [SecureIdValueKey] = []
                             if personalDetails != nil {
                                 keys.append(.personalDetails)
@@ -519,7 +519,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                         return
                     }
                 } else if personalDetails != nil {
-                    self.interaction.present(SecureIdDocumentFormController(context: self.context, context: context, requestedData: .identity(details: personalDetails, document: nil, selfie: false, translations: false), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
+                    self.interaction.present(SecureIdDocumentFormController(context: self.context, secureIdContext: secureIdContext, requestedData: .identity(details: personalDetails, document: nil, selfie: false, translations: false), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
                         updatedValues([.personalDetails], values)
                     }), nil)
                     return
@@ -583,7 +583,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                         if requireTranslation && !hasTranslation {
                             scrollTo = .translation
                         }
-                        self.interaction.present(SecureIdDocumentFormController(context: self.context, context: context, requestedData: .address(details: addressDetails, document: hasValueType, translations: requireTranslation), scrollTo: scrollTo, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
+                        self.interaction.present(SecureIdDocumentFormController(context: self.context, secureIdContext: secureIdContext, requestedData: .address(details: addressDetails, document: hasValueType, translations: requireTranslation), scrollTo: scrollTo, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
                             var keys: [SecureIdValueKey] = []
                             if addressDetails {
                                 keys.append(.address)
@@ -594,7 +594,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                         return
                     }
                 } else if addressDetails {
-                    self.interaction.present(SecureIdDocumentFormController(context: self.context, context: context, requestedData: .address(details: addressDetails, document: nil, translations: false), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
+                    self.interaction.present(SecureIdDocumentFormController(context: self.context, secureIdContext: secureIdContext, requestedData: .address(details: addressDetails, document: nil, translations: false), primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
                         updatedValues([.address], values)
                     }), nil)
                     return
@@ -626,7 +626,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     attachmentTarget = .scan
             }
             
-            let controller = SecureIdDocumentFormController(context: strongSelf.context, context: context, requestedData: requestedData, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
+            let controller = SecureIdDocumentFormController(context: strongSelf.context, secureIdContext: secureIdContext, requestedData: requestedData, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, values: formData.values, updatedValues: { values in
                 var keys: [SecureIdValueKey] = []
                 switch requestedData {
                     case let .identity(details, document, _, _):
@@ -673,7 +673,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     }
     
     private func presentPlaintextSelection(type: SecureIdPlaintextFormType) {
-        guard let state = self.state, case let .form(form) = state, let formData = form.formData, let verificationState = form.verificationState, case let .verified(context) = verificationState else {
+        guard let state = self.state, case let .form(form) = state, let formData = form.formData, let verificationState = form.verificationState, case let .verified(secureIdContext) = verificationState else {
             return
         }
         
@@ -695,7 +695,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.interaction.present(SecureIdPlaintextFormController(context: strongSelf.context, context: context, type: type, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { valueWithContext in
+            strongSelf.interaction.present(SecureIdPlaintextFormController(context: strongSelf.context, secureIdContext: secureIdContext, type: type, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { valueWithContext in
                 if let strongSelf = self {
                     strongSelf.interaction.updateState { state in
                         if case let .form(form) = state, let formData = form.formData {
@@ -773,7 +773,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
     }
     
     private func openListField(_ field: SecureIdAuthListContentField) {
-        guard let state = self.state, case let .list(list) = state, let verificationState = list.verificationState, case let .verified(context) = verificationState else {
+        guard let state = self.state, case let .list(list) = state, let verificationState = list.verificationState, case let .verified(secureIdContext) = verificationState else {
             return
         }
         guard let values = list.values else {
@@ -809,27 +809,27 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
             let primaryLanguageByCountry = list.primaryLanguageByCountry ?? [:]
             switch field {
                 case .personalDetails:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, context: context, requestedData: .identity(details: ParsedRequestedPersonalDetails(nativeNames: false), document: nil, selfie: false, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, secureIdContext: secureIdContext, requestedData: .identity(details: ParsedRequestedPersonalDetails(nativeNames: false), document: nil, selfie: false, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .passport:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, context: context, requestedData: .identity(details: nil, document: .passport, selfie: false, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, secureIdContext: secureIdContext, requestedData: .identity(details: nil, document: .passport, selfie: false, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .internalPassport:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, context: context, requestedData: .identity(details: nil, document: .internalPassport, selfie: false, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, secureIdContext: secureIdContext, requestedData: .identity(details: nil, document: .internalPassport, selfie: false, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .driversLicense:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, context: context, requestedData: .identity(details: nil, document: .driversLicense, selfie: false, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, secureIdContext: secureIdContext, requestedData: .identity(details: nil, document: .driversLicense, selfie: false, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .idCard:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, context: context, requestedData: .identity(details: nil, document: .idCard, selfie: false, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, secureIdContext: secureIdContext, requestedData: .identity(details: nil, document: .idCard, selfie: false, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .address:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, context: context, requestedData: .address(details: true, document: nil, translations: false), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, secureIdContext: secureIdContext, requestedData: .address(details: true, document: nil, translations: false), primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .utilityBill:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, context: context, requestedData: .address(details: false, document: .utilityBill, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, secureIdContext: secureIdContext, requestedData: .address(details: false, document: .utilityBill, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .bankStatement:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, context: context, requestedData: .address(details: false, document: .bankStatement, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, secureIdContext: secureIdContext, requestedData: .address(details: false, document: .bankStatement, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .rentalAgreement:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, context: context, requestedData: .address(details: false, document: .rentalAgreement, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, secureIdContext: secureIdContext, requestedData: .address(details: false, document: .rentalAgreement, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .passportRegistration:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, context: context, requestedData: .address(details: false, document: .passportRegistration, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, secureIdContext: secureIdContext, requestedData: .address(details: false, document: .passportRegistration, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .temporaryRegistration:
-                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, context: context, requestedData: .address(details: false, document: .temporaryRegistration, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
+                    strongSelf.interaction.present(SecureIdDocumentFormController(context: strongSelf.context, secureIdContext: secureIdContext, requestedData: .address(details: false, document: .temporaryRegistration, translations: false), requestOptionalData: true, primaryLanguageByCountry: primaryLanguageByCountry, values: values, updatedValues: updatedValues(field)), nil)
                 case .phone:
                     break
                 case .email:
@@ -866,7 +866,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                         }
                         return state
                     }
-                    strongSelf.deleteValueDisposable.set((deleteSecureIdValues(network: strongSelf.account.network, keys: Set([field]))
+                    strongSelf.deleteValueDisposable.set((deleteSecureIdValues(network: strongSelf.context.account.network, keys: Set([field]))
                         |> deliverOnMainQueue).start(completed: {
                             guard let strongSelf = self else {
                                 return
@@ -936,7 +936,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     if let peer = list.accountPeer as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
                         immediatelyAvailableValue = .phone(SecureIdPhoneValue(phone: phone))
                     }
-                    self.interaction.present(SecureIdPlaintextFormController(context: self.context, context: context, type: .phone, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { value in
+                    self.interaction.present(SecureIdPlaintextFormController(context: self.context, secureIdContext: secureIdContext, type: .phone, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { value in
                         updatedValues(.phone)(value.flatMap({ [$0] }) ?? [])
                     }), nil)
                 }
@@ -948,7 +948,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                     if let email = list.twoStepEmail {
                         immediatelyAvailableValue = .email(SecureIdEmailValue(email: email))
                     }
-                    self.interaction.present(SecureIdPlaintextFormController(context: self.context, context: context, type: .email, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { value in
+                    self.interaction.present(SecureIdPlaintextFormController(context: self.context, secureIdContext: secureIdContext, type: .email, immediatelyAvailableValue: immediatelyAvailableValue, updatedValue: { value in
                         updatedValues(.email)(value.flatMap({ [$0] }) ?? [])
                     }), nil)
                 }

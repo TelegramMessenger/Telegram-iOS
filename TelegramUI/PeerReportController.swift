@@ -85,7 +85,7 @@ func peerReportOptionsController(context: AccountContext, subject: PeerReportSub
                         })
                 }
             } else {
-                controller?.present(peerReportController(account: context.account, subject: subject), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                controller?.present(peerReportController(context: context, subject: subject), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
             
             controller?.dismissAnimated()

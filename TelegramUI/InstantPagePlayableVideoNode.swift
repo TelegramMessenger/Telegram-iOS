@@ -6,7 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 
 final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
-    private let account: Account
+    private let context: AccountContext
     let media: InstantPageMedia
     private let interactive: Bool
     private let openMedia: (InstantPageMedia) -> Void
@@ -19,8 +19,8 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
     
     private var localIsVisible = false
     
-    init(account: Account, webPage: TelegramMediaWebpage, theme: InstantPageTheme, media: InstantPageMedia, interactive: Bool, openMedia: @escaping  (InstantPageMedia) -> Void) {
-        self.account = account
+    init(context: AccountContext, webPage: TelegramMediaWebpage, theme: InstantPageTheme, media: InstantPageMedia, interactive: Bool, openMedia: @escaping  (InstantPageMedia) -> Void) {
+        self.context = context
         self.media = media
         self.interactive = interactive
         self.openMedia = openMedia
@@ -31,7 +31,7 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
             imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
         }
         
-        self.videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: context.mediaManager.audioSession, manager: context.universalVideoManager, decoration: GalleryVideoDecoration(), content: NativeVideoContent(id: .instantPage(webPage.webpageId, media.media.id!), fileReference: .webPage(webPage: WebpageReference(webPage), media: media.media as! TelegramMediaFile), imageReference: imageReference, loopVideo: true, enableSound: false, fetchAutomatically: true, placeholderColor: theme.pageBackgroundColor), priority: .embedded, autoplay: true)
+        self.videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: context.mediaManager.audioSession, manager: context.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: NativeVideoContent(id: .instantPage(webPage.webpageId, media.media.id!), fileReference: .webPage(webPage: WebpageReference(webPage), media: media.media as! TelegramMediaFile), imageReference: imageReference, loopVideo: true, enableSound: false, fetchAutomatically: true, placeholderColor: theme.pageBackgroundColor), priority: .embedded, autoplay: true)
         self.videoNode.isUserInteractionEnabled = false
         
         super.init()
@@ -39,7 +39,7 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
         self.addSubnode(self.videoNode)
         
         if let file = media.media as? TelegramMediaFile {
-            self.fetchedDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: AnyMediaReference.webPage(webPage: WebpageReference(webPage), media: file).resourceReference(file.resource)).start())
+            self.fetchedDisposable.set(fetchedMediaResource(postbox: context.account.postbox, reference: AnyMediaReference.webPage(webPage: WebpageReference(webPage), media: file).resourceReference(file.resource)).start())
         }
     }
     

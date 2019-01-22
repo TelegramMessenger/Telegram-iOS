@@ -204,16 +204,16 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     
                     updatedFetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: context.account, message: message, file: file, userInitiated: true).start())
+                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: true).start())
                         }
                     }, cancel: {
-                        messageMediaFileCancelInteractiveFetch(account: context.account, messageId: message.id, file: file)
+                        messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
                     })
                 }
                 
                 if statusUpdated {
-                    updatedStatusSignal = messageFileMediaResourceStatus(account: context.account, file: file, message: message, isRecentActions: isRecentActions)
-                    updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(account: context.account, file: file, message: message, isRecentActions: isRecentActions)
+                    updatedStatusSignal = messageFileMediaResourceStatus(context: context, file: file, message: message, isRecentActions: isRecentActions)
+                    updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: context, file: file, message: message, isRecentActions: isRecentActions)
                 }
                 
                 var statusSize: CGSize?

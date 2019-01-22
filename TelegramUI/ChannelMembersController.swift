@@ -245,7 +245,7 @@ private struct ChannelMembersControllerState: Equatable {
     }
 }
 
-private func ChannelMembersControllerEntries(context: Account, presentationData: PresentationData, view: PeerView, state: ChannelMembersControllerState, participants: [RenderedChannelParticipant]?) -> [ChannelMembersEntry] {
+private func ChannelMembersControllerEntries(context: AccountContext, presentationData: PresentationData, view: PeerView, state: ChannelMembersControllerState, participants: [RenderedChannelParticipant]?) -> [ChannelMembersEntry] {
     if participants == nil || participants?.count == nil {
         return []
     }
@@ -291,7 +291,7 @@ private func ChannelMembersControllerEntries(context: Account, presentationData:
                 canEditMembers = peer.hasPermission(.banMembers)
             }
             
-            if participant.peer.id == account.peerId {
+            if participant.peer.id == context.account.peerId {
                 editable = false
             } else {
                 switch participant.participant {
@@ -404,7 +404,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
     
     let peerView = context.account.viewTracker.peerView(peerId)
     
-    let (disposable, loadMoreControl) = context.peerChannelMemberCategoriesContextsManager.recent(postbox: contextaccount.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { state in
+    let (disposable, loadMoreControl) = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { state in
         peersPromise.set(.single(state.list))
     })
     actionsDisposable.add(disposable)
@@ -465,7 +465,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
             previousPeers = peers
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Channel_Subscribers_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-            let listState = ItemListNodeState(entries: ChannelMembersControllerEntries(account: context.account, presentationData: presentationData, view: view, state: state, participants: peers), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
+            let listState = ItemListNodeState(entries: ChannelMembersControllerEntries(context: context, presentationData: presentationData, view: view, state: state, participants: peers), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

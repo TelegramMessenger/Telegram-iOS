@@ -272,7 +272,7 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId]) ->
                     }
                     if let _ = updatingAvatar {
                         let _ = updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedAvatar.get(), mapResourceToAvatarSizes: { resource, representations in
-                            return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                            return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                         }).start()
                     }
                     let controller = ChatController(context: context, chatLocation: .peer(peerId))
@@ -288,7 +288,7 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId]) ->
         }
         
         let _ = (context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
-            return (transaction.getPeer(account.peerId), currentSearchBotsConfiguration(transaction: transaction))
+            return (transaction.getPeer(context.account.peerId), currentSearchBotsConfiguration(transaction: transaction))
         }
         |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
             let presentationData = context.currentPresentationData.with { $0 }

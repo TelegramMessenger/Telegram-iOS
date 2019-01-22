@@ -66,7 +66,7 @@ class ThemeGalleryController: ViewController {
     }
     
     init(context: AccountContext, wallpapers: [TelegramWallpaper], at centralWallpaper: TelegramWallpaper) {
-        self.account = account
+        self.context = context
         self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))

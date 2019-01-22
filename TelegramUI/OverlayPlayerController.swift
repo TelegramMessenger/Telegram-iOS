@@ -43,13 +43,13 @@ final class OverlayPlayerController: ViewController {
             self?.dismiss()
         }, requestShare: { [weak self] messageId in
             if let strongSelf = self {
-                let _ = (strongSelf.account.postbox.transaction { transaction -> Message? in
+                let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
                     return transaction.getMessage(messageId)
                 } |> deliverOnMainQueue).start(next: { message in
                     if let strongSelf = self, let message = message {
-                        let shareController = ShareController(account: strongSelf.account, subject: .messages([message]), showInChat: { message in
+                        let shareController = ShareController(context: strongSelf.context, subject: .messages([message]), showInChat: { message in
                             if let strongSelf = self, let navigationController = strongSelf.parentNavigationController {
-                                navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(message.id.peerId), messageId: messageId, animated: true)
+                                navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(message.id.peerId), messageId: messageId, animated: true)
                                 strongSelf.dismiss()
                             }
                         }, externalShare: true)

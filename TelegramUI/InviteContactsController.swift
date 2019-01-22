@@ -85,7 +85,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = InviteContactsControllerNode(account: self.account)
+        self.displayNode = InviteContactsControllerNode(context: self.context)
         self._ready.set(self.contactsNode.ready)
         
         self.contactsNode.navigationBar = self.navigationBar

@@ -16,8 +16,8 @@ func guessMimeTypeByFileExtension(_ ext: String) -> String {
 func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, presentWebSearch: (() -> Void)?) {
     controller.captionsEnabled = captionsEnabled
     controller.inhibitDocumentCaptions = false
-    controller.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
-    if (peer is TelegramUser) && peer.id != account.peerId {
+    controller.suggestionContext = legacySuggestionContext(account: context.account, peerId: peer.id)
+    if (peer is TelegramUser) && peer.id != context.account.peerId {
         controller.hasTimer = true
     }
     controller.dismissalBlock = {
@@ -34,7 +34,7 @@ func legacyAssetPicker(context: AccountContext, presentationData: PresentationDa
     return Signal { subscriber in
         let intent = fileMode ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
         
-        DeviceAccess.authorizeAccess(to: .mediaLibrary(.send), presentationData: presentationData, present: applicationContext.presentGlobalController, openSettings: applicationContext.applicationBindings.openSettings, { value in
+        DeviceAccess.authorizeAccess(to: .mediaLibrary(.send), presentationData: presentationData, present: context.presentGlobalController, openSettings: context.applicationBindings.openSettings, { value in
             if !value {
                 subscriber.putError(Void())
                 return

@@ -50,7 +50,7 @@ final class LegacyImageDownloadActor: ASActor {
         } else if let resource = resourceFromLegacyImageUri(url) {
             let disposables = DisposableSet()
             self.disposable.set(disposables)
-            if let account = legacyAccountGet() {
+            if let account = legacyContextGet()?.account {
                 let path = self.path
                 disposables.add(account.postbox.mediaBox.resourceData(resource).start(next: { data in
                     if data.complete {

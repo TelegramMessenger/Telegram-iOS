@@ -331,7 +331,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 }
                 if let file = file {
-                    let status = messageMediaFileStatus(account: item.context.account, messageId: message.id, file: file)
+                    let status = messageMediaFileStatus(context: item.context, messageId: message.id, file: file)
                     if !isWebpage {
                         self.scrubberView.setFetchStatusSignal(status, strings: self.strings, fileSize: file.size)
                     }
@@ -340,10 +340,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     mediaFileStatus = status |> map(Optional.init)
                     self.fetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: item.context.account, message: message, file: file, userInitiated: true).start())
+                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: item.context, message: message, file: file, userInitiated: true).start())
                         }
                     }, cancel: {
-                        messageMediaFileCancelInteractiveFetch(account: item.context.account, messageId: message.id, file: file)
+                        messageMediaFileCancelInteractiveFetch(context: item.context, messageId: message.id, file: file)
                     })
                 }
             }

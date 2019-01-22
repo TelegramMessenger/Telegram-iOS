@@ -18,7 +18,7 @@ public final class ProxyServerActionSheetController: ActionSheetController {
     
     convenience init(context: AccountContext, server: ProxyServerSettings) {
         let presentationData = context.currentPresentationData.with { $0 }
-        self.init(theme: presentationData.theme, strings: context.presentationData.strings, postbox: context.account.postbox, network: context.account.network, server: server, presentationData: presentationData)
+        self.init(theme: presentationData.theme, strings: presentationData.strings, postbox: context.account.postbox, network: context.account.network, server: server, presentationData: context.presentationData)
     }
     
     public init(theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, network: Network, server: ProxyServerSettings, presentationData: Signal<PresentationData, NoError>?) {

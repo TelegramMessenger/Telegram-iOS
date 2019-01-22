@@ -42,7 +42,7 @@ private enum JoinState: Equatable {
 }
 
 final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
-    private let account: Account
+    private let context: AccountContext
     let safeInset: CGFloat
     private let transparent: Bool
     private let rtl: Bool
@@ -63,8 +63,8 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     private let joinDisposable = MetaDisposable()
     private var joinState: JoinState = .none
     
-    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, initialPeer: Peer, safeInset: CGFloat, transparent: Bool, rtl: Bool, openPeer: @escaping (PeerId) -> Void) {
-        self.account = account
+    init(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, initialPeer: Peer, safeInset: CGFloat, transparent: Bool, rtl: Bool, openPeer: @escaping (PeerId) -> Void) {
+        self.context = context
         self.strings = strings
         self.theme = theme
         self.peer = initialPeer
@@ -137,7 +137,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         self.joinNode.addTarget(self, action: #selector(self.joinPressed), forControlEvents: .touchUpInside)
         
-        let account = self.account
+        let account = self.context.account
         let signal = actualizedPeer(postbox: account.postbox, network: account.network, peer: initialPeer)
         |> mapToSignal({ peer -> Signal<Peer, NoError> in
             if let peer = peer as? TelegramChannel, let username = peer.username, peer.accessHash == nil {
@@ -300,7 +300,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     @objc func joinPressed() {
         if let peer = self.peer, case .notJoined = self.joinState {
             self.updateJoinState(.inProgress)
-            self.joinDisposable.set((joinChannel(account: self.account, peerId: peer.id) |> deliverOnMainQueue).start(error: { [weak self] _ in
+            self.joinDisposable.set((joinChannel(account: self.context.account, peerId: peer.id) |> deliverOnMainQueue).start(error: { [weak self] _ in
                 if let strongSelf = self {
                     if case .inProgress = strongSelf.joinState {
                         strongSelf.updateJoinState(.notJoined)

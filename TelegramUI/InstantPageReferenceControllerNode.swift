@@ -33,7 +33,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
     var close: (() -> Void)?
     
     init(context: AccountContext, theme: InstantPageTheme, webPage: TelegramMediaWebpage, item: InstantPageTextItem, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlIn: @escaping (InstantPageUrlItem) -> Void, present: @escaping (ViewController, Any?) -> Void) {
-        self.account = account
+        self.context = context
         self.presentationData = context.currentPresentationData.with { $0 }
         self.theme = theme
         self.webPage = webPage

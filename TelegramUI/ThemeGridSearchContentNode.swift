@@ -450,7 +450,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                     if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
                         return (.complete() |> delay(0.1, queue: Queue.concurrentDefaultQueue()))
                         |> then(
-                            requestContextResults(account: context.account, botId: user.id, query: wallpaperQuery, peerId: account.peerId, limit: 16)
+                            requestContextResults(account: context.account, botId: user.id, query: wallpaperQuery, peerId: context.account.peerId, limit: 16)
                             |> map { collection -> ([ThemeGridSearchEntry], Bool)? in
                                 guard let collection = collection else {
                                     return nil

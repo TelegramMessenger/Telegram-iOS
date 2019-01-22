@@ -30,8 +30,8 @@ private struct ThemeColorsGridControllerEntry: Comparable, Identifiable {
         return self.index
     }
     
-    func item(account: Account, interaction: ThemeColorsGridControllerInteraction) -> ThemeColorsGridControllerItem {
-        return ThemeColorsGridControllerItem(account: account, wallpaper: self.wallpaper, selected: self.selected, interaction: interaction)
+    func item(context: AccountContext, interaction: ThemeColorsGridControllerInteraction) -> ThemeColorsGridControllerItem {
+        return ThemeColorsGridControllerItem(context: context, wallpaper: self.wallpaper, selected: self.selected, interaction: interaction)
     }
 }
 
@@ -44,15 +44,15 @@ private struct ThemeColorsGridEntryTransition {
     let scrollToItem: GridNodeScrollToItem?
 }
 
-private func preparedThemeColorsGridEntryTransition(account: Account, from fromEntries: [ThemeColorsGridControllerEntry], to toEntries: [ThemeColorsGridControllerEntry], interaction: ThemeColorsGridControllerInteraction) -> ThemeColorsGridEntryTransition {
+private func preparedThemeColorsGridEntryTransition(context: AccountContext, from fromEntries: [ThemeColorsGridControllerEntry], to toEntries: [ThemeColorsGridControllerEntry], interaction: ThemeColorsGridControllerInteraction) -> ThemeColorsGridEntryTransition {
     let stationaryItems: GridNodeStationaryItems = .none
     let scrollToItem: GridNodeScrollToItem? = nil
     
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interaction: interaction), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction)) }
     
     return ThemeColorsGridEntryTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: nil, stationaryItems: stationaryItems, scrollToItem: scrollToItem)
 }
@@ -143,7 +143,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
             }
             
             let previous = previousEntries.swap(entries)
-            return (preparedThemeColorsGridEntryTransition(account: context.account, from: previous ?? [], to: entries, interaction: interaction), previous == nil)
+            return (preparedThemeColorsGridEntryTransition(context: context, from: previous ?? [], to: entries, interaction: interaction), previous == nil)
         }
         self.disposable = (transition |> deliverOnMainQueue).start(next: { [weak self] (transition, _) in
             if let strongSelf = self {

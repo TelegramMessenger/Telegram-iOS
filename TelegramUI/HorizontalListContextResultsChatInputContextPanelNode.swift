@@ -155,7 +155,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                     }
                                 }))
                             }
-                            selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.context.account, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems))
+                            selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems))
                         } else {
                             var menuItems: [PeekControllerMenuItem] = []
                             if case let .internalReference(internalReference) = item.result, let file = internalReference.file, file.isAnimated {
@@ -166,7 +166,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                             menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
                                 item.resultSelected(item.result)
                             }))
-                            selectedItemNodeAndContent = (itemNode, ChatContextResultPeekContent(account: item.context.account, contextResult: item.result, menu: menuItems))
+                            selectedItemNodeAndContent = (itemNode, ChatContextResultPeekContent(account: item.account, contextResult: item.result, menu: menuItems))
                         }
                     }
                 }

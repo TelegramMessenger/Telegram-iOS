@@ -8,7 +8,7 @@ import LegacyComponents
 import SafariServices
 
 private final class GroupInfoArguments {
-    let account: Account
+    let context: AccountContext
     
     let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
     let tapAvatarAction: () -> Void
@@ -35,8 +35,8 @@ private final class GroupInfoArguments {
     let openStickerPackSetup: () -> Void
     let openGroupTypeSetup: () -> Void
     
-    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openPreHistory: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdministrators: @escaping () -> Void, openPermissions: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, leave: @escaping () -> Void, displayUsernameShareMenu: @escaping (String) -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void, openGroupTypeSetup: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, ViewControllerPresentationArguments) -> Void, changeNotificationMuteSettings: @escaping () -> Void, openPreHistory: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdministrators: @escaping () -> Void, openPermissions: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addMember: @escaping () -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void, leave: @escaping () -> Void, displayUsernameShareMenu: @escaping (String) -> Void, displayUsernameContextMenu: @escaping (String) -> Void, displayAboutContextMenu: @escaping (String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, openStickerPackSetup: @escaping () -> Void, openGroupTypeSetup: @escaping () -> Void) {
+        self.context = context
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.tapAvatarAction = tapAvatarAction
         self.changeProfilePhoto = changeProfilePhoto
@@ -408,7 +408,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     func item(_ arguments: GroupInfoArguments) -> ListViewItem {
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, cachedData, state, updatingAvatar):
-                return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(account: arguments.context.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .blocks(withTopInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.tapAvatarAction()
@@ -494,8 +494,8 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                         }
                     }))
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!), editing: editing, revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: enabled, sectionId: self.section, action: {
-                    if let infoController = peerInfoController(account: arguments.account, peer: peer) {
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!), editing: editing, revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: enabled, sectionId: self.section, action: {
+                    if let infoController = peerInfoController(context: arguments.context, peer: peer) {
                         arguments.pushController(infoController)
                     }
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
@@ -1222,7 +1222,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     }
     peerView.set(peerViewSignal)
     
-    let arguments = GroupInfoArguments(account: context.account, avatarAndNameInfoContext: avatarAndNameInfoContext, tapAvatarAction: {
+    let arguments = GroupInfoArguments(context: context, avatarAndNameInfoContext: avatarAndNameInfoContext, tapAvatarAction: {
         let _ = (peerView.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { peerView in
@@ -1365,7 +1365,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 }
                 let controller = notificationMuteSettingsController(presentationData: presentationData, notificationSettings: globalSettings.effective.groupChats, soundSettings: soundSettings, openSoundSettings: {
                     let controller = notificationSoundSelectionController(context: context, isModal: true, currentSound: peerSettings.messageSound, defaultSound: globalSettings.effective.groupChats.sound, completion: { sound in
-                        let _ = updatePeerNotificationSoundInteractive(context: context, peerId: peerView.peerId, sound: sound).start()
+                        let _ = updatePeerNotificationSoundInteractive(account: context.account, peerId: peerView.peerId, sound: sound).start()
                     })
                     presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 }, updateSettings: { value in
@@ -1482,7 +1482,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 }
                 
                 confirmationImpl = { [weak contactsController] peerId in
-                    return account.postbox.loadedPeerWithId(peerId)
+                    return context.account.postbox.loadedPeerWithId(peerId)
                     |> deliverOnMainQueue
                     |> mapToSignal { peer in
                         let result = ValuePromise<Bool>()
@@ -1850,7 +1850,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     |> distinctUntilChanged
     |> deliverOnMainQueue).start(next: { peerId in
         if peerId.namespace == Namespaces.Peer.CloudChannel {
-            let (disposable, control) = context.peerChannelMemberCategoriesContextsManager.recent(postbox: contextaccount.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { state in
+            let (disposable, control) = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { state in
                 channelMembersPromise.set(.single(state.list))
                 if case .loading(true) = state.loadingState {
                 } else if !membersLoadedCalled {
@@ -2191,7 +2191,7 @@ func handlePeerInfoAboutTextAction(context: AccountContext, peerId: PeerId, navi
                     }
                 case .info:
                     let peerSignal: Signal<Peer?, NoError>
-                    peerSignal = account.postbox.loadedPeerWithId(peerId) |> map(Optional.init)
+                    peerSignal = context.account.postbox.loadedPeerWithId(peerId) |> map(Optional.init)
                     navigateDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { peer in
                         if let controller = controller, let peer = peer {
                             if let infoController = peerInfoController(context: context, peer: peer) {
@@ -2206,7 +2206,7 @@ func handlePeerInfoAboutTextAction(context: AccountContext, peerId: PeerId, navi
     }
     
     let openLinkImpl: (String) -> Void = { [weak controller] url in
-        navigateDisposable.set((resolveUrl(context: context, url: url) |> deliverOnMainQueue).start(next: { result in
+        navigateDisposable.set((resolveUrl(account: context.account, url: url) |> deliverOnMainQueue).start(next: { result in
             if let controller = controller {
                 switch result {
                 case let .externalUrl(url):
@@ -2220,7 +2220,7 @@ func handlePeerInfoAboutTextAction(context: AccountContext, peerId: PeerId, navi
                 case let .stickerPack(name):
                     controller.present(StickerPackPreviewController(context: context, stickerPack: .name(name), parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
                 case let .instantView(webpage, anchor):
-                    (controller.navigationController as? NavigationController)?.pushViewController(InstantPageController(context: account, webPage: webpage, anchor: anchor))
+                    (controller.navigationController as? NavigationController)?.pushViewController(InstantPageController(context: context, webPage: webpage, anchor: anchor))
                 case let .join(link):
                     controller.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId in
                         openResolvedPeerImpl(peerId, .chat(textInputState: nil, messageId: nil))

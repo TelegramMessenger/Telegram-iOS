@@ -416,15 +416,15 @@ final class ListMessageFileItemNode: ListMessageNode {
                     let context = item.context
                     updatedFetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: context.account, message: message, file: selectedMedia, userInitiated: true).start())
+                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: selectedMedia, userInitiated: true).start())
                         }
                     }, cancel: {
-                        messageMediaFileCancelInteractiveFetch(account: context.account, messageId: message.id, file: selectedMedia)
+                        messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: selectedMedia)
                     })
                 }
                 
                 if statusUpdated {
-                    updatedStatusSignal = messageFileMediaResourceStatus(account: item.context.account, file: selectedMedia, message: message, isRecentActions: false)
+                    updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: selectedMedia, message: message, isRecentActions: false)
                     
                     if isAudio {
                         if let currentUpdatedStatusSignal = updatedStatusSignal {
@@ -858,8 +858,8 @@ final class ListMessageFileItemNode: ListMessageNode {
                             }
                         }
                 case .playbackStatus:
-                    if let account = self.account, let applicationContext = account.applicationContext as? TelegramApplicationContext {
-                        applicationContext.mediaManager?.playlistControl(.playback(.togglePlayPause))
+                    if let context = self.context {
+                        context.mediaManager.playlistControl(.playback(.togglePlayPause))
                     }
             }
         }

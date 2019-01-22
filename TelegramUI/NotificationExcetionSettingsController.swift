@@ -261,7 +261,7 @@ func notificationPeerExceptionController(context: AccountContext, peerId: PeerId
     let arguments = NotificationPeerExceptionArguments(account: context.account, selectSound: { sound in
       
         updateState { state in
-            playSoundDisposable.set(playSound(account: context.account, sound: sound, defaultSound: state.defaultSound).start())
+            playSoundDisposable.set(playSound(context: context, sound: sound, defaultSound: state.defaultSound).start())
             return state.withUpdatedSound(sound)
         }
 

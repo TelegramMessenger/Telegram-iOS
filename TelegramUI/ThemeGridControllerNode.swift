@@ -89,8 +89,8 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
         return self.index
     }
     
-    func item(account: Account, interaction: ThemeGridControllerInteraction) -> ThemeGridControllerItem {
-        return ThemeGridControllerItem(account: account, wallpaper: self.wallpaper, index: self.index, selected: self.selected, interaction: interaction)
+    func item(context: AccountContext, interaction: ThemeGridControllerInteraction) -> ThemeGridControllerItem {
+        return ThemeGridControllerItem(context: context, wallpaper: self.wallpaper, index: self.index, selected: self.selected, interaction: interaction)
     }
 }
 
@@ -104,15 +104,15 @@ private struct ThemeGridEntryTransition {
     let scrollToItem: GridNodeScrollToItem?
 }
 
-private func preparedThemeGridEntryTransition(account: Account, from fromEntries: [ThemeGridControllerEntry], to toEntries: [ThemeGridControllerEntry], interaction: ThemeGridControllerInteraction) -> ThemeGridEntryTransition {
+private func preparedThemeGridEntryTransition(context: AccountContext, from fromEntries: [ThemeGridControllerEntry], to toEntries: [ThemeGridControllerEntry], interaction: ThemeGridControllerInteraction) -> ThemeGridEntryTransition {
     let stationaryItems: GridNodeStationaryItems = .none
     let scrollToItem: GridNodeScrollToItem? = nil
     
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interaction: interaction), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction)) }
     
     var hasEditableItems = false
     for entry in toEntries {
@@ -307,7 +307,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             }
             
             let previous = previousEntries.swap(entries)
-            return (preparedThemeGridEntryTransition(account: context.account, from: previous ?? [], to: entries, interaction: interaction), previous == nil)
+            return (preparedThemeGridEntryTransition(context: context, from: previous ?? [], to: entries, interaction: interaction), previous == nil)
         }
         self.disposable = (transition |> deliverOnMainQueue).start(next: { [weak self] (transition, _) in
             if let strongSelf = self {

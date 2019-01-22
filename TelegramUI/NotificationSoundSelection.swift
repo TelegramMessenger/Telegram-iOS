@@ -230,10 +230,10 @@ func playSound(context: AccountContext, sound: PeerMessageSound, defaultSound: P
                 return .complete()
             })
             deactivateImpl = {
-                session?.dispose()
+                session.dispose()
             }
             return ActionDisposable {
-                session?.dispose()
+                session.dispose()
                 currentPlayer?.stop()
                 currentPlayer = nil
             }

@@ -81,7 +81,7 @@ public final class DeviceAccess {
         return AVAudioSession.sharedInstance().recordPermission() == .granted
     }
     
-    public static func authorizationStatus(account: Account? = nil, subject: DeviceAccessSubject) -> Signal<AccessType, NoError> {
+    public static func authorizationStatus(context: AccountContext? = nil, subject: DeviceAccessSubject) -> Signal<AccessType, NoError> {
         switch subject {
             case .notifications:
                 let status = (Signal<AccessType, NoError> { subscriber in
@@ -124,8 +124,8 @@ public final class DeviceAccess {
                             return .complete()
                         }
                     })
-                if let account = account {
-                    return account.telegramApplicationContext.applicationBindings.applicationInForeground
+                if let context = context {
+                    return context.applicationBindings.applicationInForeground
                     |> distinctUntilChanged
                     |> mapToSignal { inForeground -> Signal<AccessType, NoError> in
                         return status
@@ -196,9 +196,9 @@ public final class DeviceAccess {
                     return EmptyDisposable
             }
             case .siri:
-                if let account = account {
+                if let context = context {
                     return Signal { subscriber in
-                        let status = account.telegramApplicationContext.applicationBindings.siriAuthorization()
+                        let status = context.applicationBindings.siriAuthorization()
                         subscriber.putNext(status)
                         subscriber.putCompletion()
                         return EmptyDisposable
@@ -219,7 +219,7 @@ public final class DeviceAccess {
         }
     }
     
-    public static func authorizeAccess(to subject: DeviceAccessSubject, account: Account? = nil, presentationData: PresentationData? = nil, present: @escaping (ViewController, Any?) -> Void = { _, _ in }, openSettings: @escaping () -> Void = { }, displayNotificationFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void = { _ in }) {
+    public static func authorizeAccess(to subject: DeviceAccessSubject, context: AccountContext? = nil, presentationData: PresentationData? = nil, present: @escaping (ViewController, Any?) -> Void = { _, _ in }, openSettings: @escaping () -> Void = { }, displayNotificationFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void = { _ in }) {
             switch subject {
                 case .camera:
                     let status = PGCamera.cameraAuthorizationStatus()
@@ -404,15 +404,15 @@ public final class DeviceAccess {
                         }
                     })
                 case .notifications:
-                    if let account = account {
-                        account.telegramApplicationContext.applicationBindings.registerForNotifications { result in
+                    if let context = context {
+                        context.applicationBindings.registerForNotifications { result in
                             self.notificationsPromise.set(.single(result))
                             completion(result)
                         }
                     }
                 case .siri:
-                    if let account = account {
-                        account.telegramApplicationContext.applicationBindings.requestSiriAuthorization { result in
+                    if let context = context {
+                        context.applicationBindings.requestSiriAuthorization { result in
                             self.siriPromise.set(.single(result))
                             completion(result)
                         }

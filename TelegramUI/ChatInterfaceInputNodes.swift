@@ -18,7 +18,7 @@ func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState:
                 if case let .peer(id) = chatPresentationInterfaceState.chatLocation {
                     peerId = id
                 }
-                let inputNode = ChatMediaInputNode(account: account, peerId: peerId, controllerInteraction: controllerInteraction, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, gifPaneIsActiveUpdated: { [weak interfaceInteraction] value in
+                let inputNode = ChatMediaInputNode(context: context, peerId: peerId, controllerInteraction: controllerInteraction, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, gifPaneIsActiveUpdated: { [weak interfaceInteraction] value in
                     if let interfaceInteraction = interfaceInteraction {
                         interfaceInteraction.updateInputModeAndDismissedButtonKeyboardMessageId { state in
                             if case let .media(_, expanded) = state.inputMode {
@@ -40,7 +40,7 @@ func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState:
             if let currentNode = currentNode as? ChatButtonKeyboardInputNode {
                 return currentNode
             } else {
-                let inputNode = ChatButtonKeyboardInputNode(account: account, controllerInteraction: controllerInteraction)
+                let inputNode = ChatButtonKeyboardInputNode(context: context, controllerInteraction: controllerInteraction)
                 inputNode.interfaceInteraction = interfaceInteraction
                 return inputNode
             }

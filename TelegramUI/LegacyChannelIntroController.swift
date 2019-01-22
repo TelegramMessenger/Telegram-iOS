@@ -4,7 +4,7 @@ import Display
 
 import TelegramUIPrivateModule
 
-func legacyChannelIntroController(account: Account, theme: PresentationTheme, strings: PresentationStrings) -> ViewController {
+func legacyChannelIntroController(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) -> ViewController {
     let controller = LegacyController(presentation: .custom, theme: theme)
     controller.bind(controller: TGChannelIntroController(context: controller.context, getLocalizedString: { string in
         guard let string = string else {
@@ -23,7 +23,7 @@ func legacyChannelIntroController(account: Account, theme: PresentationTheme, st
             }
         }, completion: { [weak controller] in
         if let navigationController = controller?.navigationController as? NavigationController {
-            navigationController.replaceTopController(createChannelController(account: account), animated: true)
+            navigationController.replaceTopController(createChannelController(context: context), animated: true)
         }
     })!)
     return controller

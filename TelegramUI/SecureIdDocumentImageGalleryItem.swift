@@ -75,7 +75,7 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
         self.context = context
         
         self.imageNode = TransformImageNode()
-        self.footerContentNode = SecureIdDocumentGalleryFooterContentNode(account: account, theme: theme, strings: strings)
+        self.footerContentNode = SecureIdDocumentGalleryFooterContentNode(context: context, theme: theme, strings: strings)
         
         super.init()
         

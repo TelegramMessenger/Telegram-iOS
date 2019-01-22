@@ -9,9 +9,9 @@ private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size
 final class MultipleAvatarsNode: ASDisplayNode {
     private var nodes: [(Peer, AvatarNode)] = []
     
-    static func asyncLayout(_ current: MultipleAvatarsNode?) -> (Account, [Peer], CGSize) -> (Bool) -> MultipleAvatarsNode {
+    static func asyncLayout(_ current: MultipleAvatarsNode?) -> (Account, PresentationTheme, [Peer], CGSize) -> (Bool) -> MultipleAvatarsNode {
         let currentNodes: [(Peer, AvatarNode)] = current?.nodes ?? []
-        return { account, peers, size in
+        return { account, theme, peers, size in
             var node: MultipleAvatarsNode
             if let current = current {
                 node = current
@@ -60,7 +60,7 @@ final class MultipleAvatarsNode: ASDisplayNode {
                             avatarNode.layer.animatePosition(from: distance, to: CGPoint(), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, additive: true)
                         }
                     }
-                    avatarNode.setPeer(account: account, peer: peer)
+                    avatarNode.setPeer(account: account, theme: theme, peer: peer)
                     index += 1
                 }
                 index += 1

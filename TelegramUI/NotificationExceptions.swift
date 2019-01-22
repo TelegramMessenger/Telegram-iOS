@@ -28,7 +28,7 @@ public class NotificationExceptionsController: ViewController {
     private var searchContentNode: NavigationBarSearchContentNode?
     
     public init(context: AccountContext, mode: NotificationExceptionMode, updatedMode: @escaping(NotificationExceptionMode) -> Void) {
-        self.account = account
+        self.context = context
         self.mode = mode
         self.updatedMode = updatedMode
         self.presentationData = context.currentPresentationData.with { $0 }

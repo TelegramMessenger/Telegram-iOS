@@ -551,7 +551,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                     if messages.count == 1 {
                         strongSelf.commitDeleteMessages(messages, ask: true)
                     } else {
-                        let presentationData = strongSelf.context.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        let presentationData = strongSelf.context.currentPresentationData.with { $0 }
                         var generalMessageContentKind: MessageContentKind?
                         for message in messages {
                             let currentKind = messageContentKind(message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: strongSelf.context.account.peerId)

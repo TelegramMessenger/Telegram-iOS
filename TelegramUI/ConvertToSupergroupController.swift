@@ -142,7 +142,7 @@ public func convertToSupergroupController(context: AccountContext, peerId: PeerI
             if !alreadyConverting {
                 convertDisposable.set((convertGroupToSupergroup(account: context.account, peerId: peerId)
                 |> deliverOnMainQueue).start(next: { createdPeerId in
-                    replaceControllerImpl?(ChatController(account: context.account, chatLocation: .peer(createdPeerId)))
+                    replaceControllerImpl?(ChatController(context: context, chatLocation: .peer(createdPeerId)))
                 }))
             }
         })]), nil)

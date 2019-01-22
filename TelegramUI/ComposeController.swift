@@ -116,7 +116,7 @@ public class ComposeController: ViewController {
                 strongSelf.createActionDisposable.set((controller.result
                     |> deliverOnMainQueue).start(next: { [weak controller] peerIds in
                         if let strongSelf = self, let controller = controller {
-                            let createGroup = createGroupController(account: strongSelf.account, peerIds: peerIds.compactMap({ peerId in
+                            let createGroup = createGroupController(context: strongSelf.context, peerIds: peerIds.compactMap({ peerId in
                                 if case let .peer(peerId) = peerId {
                                     return peerId
                                 } else {
@@ -138,14 +138,14 @@ public class ComposeController: ViewController {
                     if let strongSelf = self, let contactPeer = peer, case let .peer(peer, _) = contactPeer {
                         controller?.dismissSearch()
                         controller?.displayNavigationActivity = true
-                        strongSelf.createActionDisposable.set((createSecretChat(account: strongSelf.account, peerId: peer.id) |> deliverOnMainQueue).start(next: { peerId in
+                        strongSelf.createActionDisposable.set((createSecretChat(account: strongSelf.context.account, peerId: peer.id) |> deliverOnMainQueue).start(next: { peerId in
                             if let strongSelf = self, let controller = controller {
                                 controller.displayNavigationActivity = false
-                                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)), animated: true)
+                                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId)), animated: true)
                             }
                         }, error: { _ in
                             if let strongSelf = self, let controller = controller {
-                                let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                let presentationData = strongSelf.context.currentPresentationData.with { $0 }
                                 
                                 controller.displayNavigationActivity = false
                                 controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))

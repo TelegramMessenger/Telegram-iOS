@@ -769,11 +769,11 @@ final class ContactListNode: ASDisplayNode {
             if value != self.enableUpdatesValue {
                 self.enableUpdatesValue = value
                 if value {
-                    self.contactPeersViewPromise.set(self.context.account.postbox.contactPeersView(accountPeerId: self.account.peerId, includePresences: true) |> mapToThrottled { next -> Signal<ContactPeersView, NoError> in
+                    self.contactPeersViewPromise.set(self.context.account.postbox.contactPeersView(accountPeerId: self.context.account.peerId, includePresences: true) |> mapToThrottled { next -> Signal<ContactPeersView, NoError> in
                         return .single(next) |> then(.complete() |> delay(5.0, queue: Queue.concurrentDefaultQueue()))
                     })
                 } else {
-                    self.contactPeersViewPromise.set(self.context.account.postbox.contactPeersView(accountPeerId: self.account.peerId, includePresences: true) |> take(1))
+                    self.contactPeersViewPromise.set(self.context.account.postbox.contactPeersView(accountPeerId: self.context.account.peerId, includePresences: true) |> take(1))
                 }
             }
         }
@@ -814,7 +814,7 @@ final class ContactListNode: ASDisplayNode {
         
         let contactsAuthorization = Promise<AccessType>()
         contactsAuthorization.set(.single(.allowed)
-        |> then(DeviceAccess.authorizationStatus(account: context.account, subject: .contacts)))
+        |> then(DeviceAccess.authorizationStatus(context: context, subject: .contacts)))
         
         let warningKey = PostboxViewKey.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())
         let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
@@ -945,7 +945,7 @@ final class ContactListNode: ASDisplayNode {
                                     resultPeers.append(mainPeer)
                                 }
                             }
-                            return account.postbox.transaction { transaction -> ([Peer], [PeerId : PeerPresence]) in
+                            return context.account.postbox.transaction { transaction -> ([Peer], [PeerId : PeerPresence]) in
                                 var resultPresences: [PeerId: PeerPresence] = [:]
                                 for peer in resultPeers {
                                     if let presence = transaction.getPeerPresence(peerId: peer.id) {
@@ -1181,7 +1181,7 @@ final class ContactListNode: ASDisplayNode {
         }
         
         authorizeImpl = {
-            let _ = (DeviceAccess.authorizationStatus(account: context.account, subject: .contacts)
+            let _ = (DeviceAccess.authorizationStatus(context: context, subject: .contacts)
             |> take(1)
             |> deliverOnMainQueue).start(next: { status in
                 switch status {

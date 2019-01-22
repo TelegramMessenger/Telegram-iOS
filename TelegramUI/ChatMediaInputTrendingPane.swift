@@ -149,7 +149,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         
         let interaction = TrendingPaneInteraction(installPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
-                let _ = (loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+                let _ = (loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
                 |> mapToSignal { result -> Signal<Void, NoError> in
                     switch result {
                         case let .result(info, items, installed):
@@ -199,7 +199,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
             let entries = trendingPaneEntries(trendingEntries: trendingEntries, installedPacks: installedPacks, theme: presentationData.theme, strings: presentationData.strings)
             let previous = previousEntries.swap(entries)
             
-            return preparedTransition(from: previous ?? [], to: entries, account: account, interaction: interaction, initial: previous == nil)
+            return preparedTransition(from: previous ?? [], to: entries, account: context.account, interaction: interaction, initial: previous == nil)
         }
         |> deliverOnMainQueue).start(next: { [weak self] transition in
             guard let strongSelf = self else {

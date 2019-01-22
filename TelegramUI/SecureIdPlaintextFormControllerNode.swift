@@ -849,7 +849,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
         innerState.actionState = .saving
         self.updateInnerState(transition: .immediate, with: innerState)
         
-        self.actionDisposable.set((saveSecureIdValue(postbox: self.context.account.postbox, network: self.context.account.network, context: self.context, value: .email(SecureIdEmailValue(email: value)), uploadedFiles: [:])
+        self.actionDisposable.set((saveSecureIdValue(postbox: self.context.account.postbox, network: self.context.account.network, context: self.secureIdContext, value: .email(SecureIdEmailValue(email: value)), uploadedFiles: [:])
         |> deliverOnMainQueue).start(next: { [weak self] result in
             guard let strongSelf = self else {
                 return

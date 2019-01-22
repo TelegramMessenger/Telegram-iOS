@@ -22,8 +22,8 @@ final class InstantPagePeerReferenceItem: InstantPageItem {
         self.rtl = rtl
     }
     
-    func node(account: Account, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
-        return InstantPagePeerReferenceNode(account: account, strings: strings, theme: theme, initialPeer: self.initialPeer, safeInset: self.safeInset, transparent: self.transparent, rtl: self.rtl, openPeer: openPeer)
+    func node(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> (InstantPageNode & ASDisplayNode)? {
+        return InstantPagePeerReferenceNode(context: context, strings: strings, theme: theme, initialPeer: self.initialPeer, safeInset: self.safeInset, transparent: self.transparent, rtl: self.rtl, openPeer: openPeer)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {

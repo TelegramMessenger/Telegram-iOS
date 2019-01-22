@@ -376,7 +376,7 @@ private func networkUsageStatsControllerEntries(presentationData: PresentationDa
 func networkUsageStatsController(context: AccountContext) -> ViewController {
     let section = ValuePromise<NetworkUsageControllerSection>(.cellular)
     let stats = Promise<NetworkUsageStats>()
-    stats.set(accountNetworkUsageStats(account: account, reset: []))
+    stats.set(accountNetworkUsageStats(account: context.account, reset: []))
     
     var presentControllerImpl: ((ViewController) -> Void)?
     

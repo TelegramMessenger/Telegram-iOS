@@ -772,7 +772,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                                 break inner
                             }
                         }
-                        let itemNode = currentItemNode ?? WallpaperBackgroundNode(account: self.context.account, wallpaper: wallpapers[j])
+                        let itemNode = currentItemNode ?? WallpaperBackgroundNode(context: self.context, wallpaper: wallpapers[j])
                         visibleBackgroundNodes.append(itemNode)
                         let itemNodeTransition: ContainedViewLayoutTransition
                         if itemNode.supernode == nil {

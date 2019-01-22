@@ -309,11 +309,11 @@ func presentLegacyWebSearchGallery(context: AccountContext, peer: Peer?, theme: 
     controller.asyncTransitionIn = true
     legacyController.bind(controller: controller)
     
-    let (items, focusItem) = galleryItems(account: account, results: results, current: current, selectionContext: selectionContext, editingContext: editingContext)
+    let (items, focusItem) = galleryItems(account: context.account, results: results, current: current, selectionContext: selectionContext, editingContext: editingContext)
     
     let model = TGMediaPickerGalleryModel(context: legacyController.context, items: items, focus: focusItem, selectionContext: selectionContext, editingContext: editingContext, hasCaptions: false, allowCaptionEntities: true, hasTimer: false, onlyCrop: false, inhibitDocumentCaptions: false, hasSelectionPanel: false, hasCamera: false, recipientName: peer?.displayTitle)!
     if let peer = peer {
-        model.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
+        model.suggestionContext = legacySuggestionContext(account: context.account, peerId: peer.id)
     }
     controller.model = model
     model.controller = controller
