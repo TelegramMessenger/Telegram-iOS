@@ -107,6 +107,14 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
                     if ext == "wav" || ext == "opus" {
                         return .audio(file)
                     }
+                    #if DEBUG
+                    if ext == "mkv" {
+                        let gallery = GalleryController(account: account, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                            navigationController?.replaceTopController(controller, animated: false, ready: ready)
+                            }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
+                        return .gallery(gallery)
+                    }
+                    #endif
                 }
                 
                 if !file.isVideo, !internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName) {

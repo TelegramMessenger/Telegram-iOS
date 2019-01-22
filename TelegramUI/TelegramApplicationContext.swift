@@ -91,6 +91,12 @@ public final class TelegramApplicationContext {
         return self._automaticMediaDownloadSettings.get()
     }
     
+    public let currentLimitsConfiguration: Atomic<LimitsConfiguration>
+    private let _limitsConfiguration = Promise<LimitsConfiguration>()
+    public var limitsConfiguration: Signal<LimitsConfiguration, NoError> {
+        return self._limitsConfiguration.get()
+    }
+    
     public let currentMediaInputSettings: Atomic<MediaInputSettings>
     private var mediaInputSettingsDisposable: Disposable?
     
@@ -150,6 +156,7 @@ public final class TelegramApplicationContext {
         self.fetchManager = FetchManager(postbox: postbox, storeManager: self.mediaManager?.downloadedMediaStoreManager)
         self.currentPresentationData = Atomic(value: initialPresentationDataAndSettings.presentationData)
         self.currentAutomaticMediaDownloadSettings = Atomic(value: initialPresentationDataAndSettings.automaticMediaDownloadSettings)
+        self.currentLimitsConfiguration = Atomic(value: initialPresentationDataAndSettings.limitsConfiguration)
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)
        
         if let account = account {
