@@ -41,7 +41,7 @@ CONFIGURE_FLAGS="--enable-cross-compile --disable-programs \
                  --enable-audiotoolbox \
                  --enable-bsf=aac_adtstoasc \
                  --enable-decoder=h264,libopus,mp3_at,aac_at,flac,alac_at,pcm_s16le,pcm_s24le,gsm_ms_at \
-                 --enable-demuxer=aac,mov,m4v,mp3,ogg,libopus,flac,wav \
+                 --enable-demuxer=aac,mov,m4v,mp3,ogg,libopus,flac,wav,aiff,matroska \
                  --enable-parser=aac,h264,mp3,libopus \
                  --enable-protocol=file \
                  --enable-muxer=mp4 \

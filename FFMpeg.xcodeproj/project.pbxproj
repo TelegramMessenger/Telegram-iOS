@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		D000CAB721E672600011B15D /* FFMpegRemuxer.h in Headers */ = {isa = PBXBuildFile; fileRef = D000CAB521E672600011B15D /* FFMpegRemuxer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D000CAB821E672600011B15D /* FFMpegRemuxer.m in Sources */ = {isa = PBXBuildFile; fileRef = D000CAB621E672600011B15D /* FFMpegRemuxer.m */; };
+		D000CABF21F76B1B0011B15D /* libbz2.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D000CABE21F76B1B0011B15D /* libbz2.tbd */; };
 		D0320A8D21BFC95800D153AA /* FFMpegAVCodecContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D0320A8B21BFC95800D153AA /* FFMpegAVCodecContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0320A8E21BFC95800D153AA /* FFMpegAVCodecContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D0320A8C21BFC95800D153AA /* FFMpegAVCodecContext.m */; };
 		D0320BC021BFD48E00D153AA /* FFMpegAVIOContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D0320BBE21BFD48E00D153AA /* FFMpegAVIOContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -40,6 +41,7 @@
 /* Begin PBXFileReference section */
 		D000CAB521E672600011B15D /* FFMpegRemuxer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FFMpegRemuxer.h; sourceTree = "<group>"; };
 		D000CAB621E672600011B15D /* FFMpegRemuxer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FFMpegRemuxer.m; sourceTree = "<group>"; };
+		D000CABE21F76B1B0011B15D /* libbz2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libbz2.tbd; path = usr/lib/libbz2.tbd; sourceTree = SDKROOT; };
 		D0320A8B21BFC95800D153AA /* FFMpegAVCodecContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FFMpegAVCodecContext.h; sourceTree = "<group>"; };
 		D0320A8C21BFC95800D153AA /* FFMpegAVCodecContext.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FFMpegAVCodecContext.m; sourceTree = "<group>"; };
 		D0320BBE21BFD48E00D153AA /* FFMpegAVIOContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FFMpegAVIOContext.h; sourceTree = "<group>"; };
@@ -76,6 +78,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D000CABF21F76B1B0011B15D /* libbz2.tbd in Frameworks */,
 				D04555DB21BF8B77007A6DD9 /* libopus.a in Frameworks */,
 				D04555D921BF8B4E007A6DD9 /* libiconv.tbd in Frameworks */,
 				D04555D721BF8B2F007A6DD9 /* AudioToolbox.framework in Frameworks */,
@@ -139,6 +142,7 @@
 		D04554C921BF1119007A6DD9 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D000CABE21F76B1B0011B15D /* libbz2.tbd */,
 				D04555DA21BF8B77007A6DD9 /* libopus.a */,
 				D04555D821BF8B4E007A6DD9 /* libiconv.tbd */,
 				D04555D621BF8B2F007A6DD9 /* AudioToolbox.framework */,
