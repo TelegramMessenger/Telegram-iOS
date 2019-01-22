@@ -3937,4 +3937,19 @@ Unused sets are archived when you add more.";
 
 "SocksProxySetup.ShareQRCodeInfo" = "Your friends can add this proxy by scanning this code with phone or in-app camera.";
 "SocksProxySetup.ShareQRCode" = "Share QR Code";
-"SocksProxySetup.ShareLink" = "Share Link";
+"SocksProxySetup.ShareLink" = "Share Lisnk";
+
+"CallFeedback.Title" = "Call Feedback";
+"CallFeedback.WhatWentWrong" = "WHAT WENT WRONG?";
+"CallFeedback.ReasonEcho" = "I heard my own voice";
+"CallFeedback.ReasonNoise" = "I heard background noise";
+"CallFeedback.ReasonInterruption" = "The other side kept disappearing";
+"CallFeedback.ReasonDistortedSpeech" = "Speech was distorted";
+"CallFeedback.ReasonSilentLocal" = "I couldn't hear the other side";
+"CallFeedback.ReasonSilentRemote" = "The other side couldn't hear me";
+"CallFeedback.ReasonDropped" = "Call ended unexpectedly";
+"CallFeedback.AddComment" = "Add an optional comment";
+"CallFeedback.IncludeLogs" = "Include technical information";
+"CallFeedback.IncludeLogsInfo" = "This won't reveal the contents of your conversation, but will help us fix the issue sooner.";
+"CallFeedback.Send" = "Send";
+"CallFeedback.Success" = "Thanks for\nyour feedback";
