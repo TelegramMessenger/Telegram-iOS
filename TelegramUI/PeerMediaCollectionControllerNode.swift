@@ -148,7 +148,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         self.historyEmptyNode = PeerMediaCollectionEmptyNode(mode: self.mediaCollectionInterfaceState.mode, theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.historyEmptyNode.isHidden = true
         
-        self.chatPresentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, chatWallpaperMode: self.presentationData.chatWallpaperMode, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, fontSize: self.presentationData.fontSize, accountPeerId: account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId))
+        self.chatPresentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, chatWallpaperMode: self.presentationData.chatWallpaperOptions, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, fontSize: self.presentationData.fontSize, accountPeerId: account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId))
         
         super.init()
         

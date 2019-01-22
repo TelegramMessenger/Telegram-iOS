@@ -6,6 +6,34 @@ import Postbox
 import TelegramCore
 import LegacyComponents
 
+private class WallpaperMotionEffect: UIInterpolatingMotionEffect {
+    var previousValue: CGFloat?
+    
+    override func keyPathsAndRelativeValues(forViewerOffset viewerOffset: UIOffset) -> [String : Any]? {
+        var motionAmplitude: CGFloat = 0.0
+        switch self.type {
+            case .tiltAlongHorizontalAxis:
+                motionAmplitude = viewerOffset.horizontal
+            case .tiltAlongVerticalAxis:
+                motionAmplitude = viewerOffset.vertical
+        }
+        
+        if (motionAmplitude > 0) {
+            guard let max = (self.maximumRelativeValue as? CGFloat) else {
+                return nil
+            }
+            let value = max * motionAmplitude
+            return [self.keyPath: value]
+        } else {
+            guard let min = (self.minimumRelativeValue as? CGFloat) else {
+                return nil
+            }
+            let value = -(min) * motionAmplitude
+            return [self.keyPath: value]
+        }
+    }
+}
+
 class WallpaperGalleryItem: GalleryItem {
     let account: Account
     let entry: WallpaperGalleryEntry
@@ -32,7 +60,8 @@ class WallpaperGalleryItem: GalleryItem {
     }
 }
 
-let progressDiameter: CGFloat = 50.0
+private let progressDiameter: CGFloat = 50.0
+private let motionAmount: CGFloat = 32.0
 
 final class WallpaperGalleryItemNode: GalleryItemNode {
     private let account: Account
@@ -46,14 +75,22 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     private let blurredNode: BlurredImageNode
     let cropNode: WallpaperCropNode
     
+    private var blurButtonNode: WallpaperOptionButtonNode
+    private var motionButtonNode: WallpaperOptionButtonNode
+    
     fileprivate let _ready = Promise<Void>()
     private let fetchDisposable = MetaDisposable()
     private let statusDisposable = MetaDisposable()
+    private let colorDisposable = MetaDisposable()
     
     let subtitle = Promise<String?>(nil)
     let status = Promise<MediaResourceStatus>(.Local)
     let actionButton = Promise<UIBarButtonItem?>(nil)
+    let controlsColor = Promise<UIColor>(UIColor(rgb: 0x000000, alpha: 0.3))
     var action: (() -> Void)?
+    
+    private var validLayout: ContainerViewLayout?
+    private var validOffset: CGFloat?
     
     init(account: Account) {
         self.account = account
@@ -68,6 +105,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.progressNode = ASTextNode()
         
         self.blurredNode = BlurredImageNode()
+        
+        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.blurButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Blurred)
+        self.motionButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Motion)
         
         super.init()
         
@@ -84,11 +125,18 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.addSubnode(self.wrapperNode)
         self.addSubnode(self.statusNode)
         self.addSubnode(self.progressNode)
+        
+        self.addSubnode(self.blurButtonNode)
+        self.addSubnode(self.motionButtonNode)
+        
+        self.blurButtonNode.addTarget(self, action: #selector(self.toggleBlur), forControlEvents: .touchUpInside)
+        self.motionButtonNode.addTarget(self, action: #selector(self.toggleMotion), forControlEvents: .touchUpInside)
     }
     
     deinit {
         self.fetchDisposable.dispose()
         self.statusDisposable.dispose()
+        self.colorDisposable.dispose()
     }
     
     var cropRect: CGRect? {
@@ -144,6 +192,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             statusSignal = .single(.Local)
                             subtitleSignal = .single(nil)
                             self.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                            actionSignal = .single(defaultAction)
                         case let .file(file):
                             let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
                             contentSize = dimensions
@@ -187,7 +236,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             subtitleSignal = .single(nil)
                     }
                     self.cropNode.removeFromSupernode()
-                case let .asset(asset, _):
+                case let .asset(asset):
                     let dimensions = CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
                     contentSize = dimensions
                     displaySize = dimensions.dividedByScreenScale().integralFloor
@@ -300,29 +349,53 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             self.subtitle.set(subtitleSignal |> deliverOnMainQueue)
             self.status.set(statusSignal |> deliverOnMainQueue)
             self.actionButton.set(actionSignal |> deliverOnMainQueue)
+            self.controlsColor.set(serviceColor(from: imagePromise.get()) |> deliverOnMainQueue)
+            self.colorDisposable.set((serviceColor(from: imagePromise.get())
+            |> deliverOnMainQueue).start(next: { [weak self] color in
+                self?.blurButtonNode.color = color
+                self?.motionButtonNode.color = color
+            }))
         }
     }
     
-    func setMotionEnabled(_ enabled: Bool) {
-        if enabled {
-            let amount = 24.0
-            
-            let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
-            horizontal.minimumRelativeValue = -amount
-            horizontal.maximumRelativeValue = amount
-            
-            let vertical = UIInterpolatingMotionEffect(keyPath: "center.y", type: .tiltAlongVerticalAxis)
-            vertical.minimumRelativeValue = -amount
-            vertical.maximumRelativeValue = amount
-            
-            let group = UIMotionEffectGroup()
-            group.motionEffects = [horizontal, vertical]
-            self.wrapperNode.view.addMotionEffect(group)
-        } else {
-            for effect in self.wrapperNode.view.motionEffects {
-                self.wrapperNode.view.removeMotionEffect(effect)
-            }
+    override func screenFrameUpdated(_ frame: CGRect) {
+        let offset = -frame.minX
+        self.validOffset = offset
+        if let layout = self.validLayout {
+            self.updateButtonsLayout(layout: layout, offset: CGPoint(x: offset, y: 0.0), transition: .immediate)
         }
+    }
+    
+    func updateDismissTransition(_ value: CGFloat) {
+        if let layout = self.validLayout {
+            self.updateButtonsLayout(layout: layout, offset: CGPoint(x: 0.0, y: value), transition: .immediate)
+        }
+    }
+    
+    var options: WallpaperPresentationOptions {
+        get {
+            var options: WallpaperPresentationOptions = []
+            if self.blurButtonNode.isSelected {
+                options.insert(.blur)
+            }
+            if self.motionButtonNode.isSelected {
+                options.insert(.motion)
+            }
+            return options
+        }
+        set {
+            self.setBlurEnabled(newValue.contains(.blur), animated: false)
+            self.blurButtonNode.isSelected = newValue.contains(.blur)
+            
+            self.setMotionEnabled(newValue.contains(.motion), animated: false)
+            self.motionButtonNode.isSelected = newValue.contains(.motion)
+        }
+    }
+    
+    @objc func toggleBlur() {
+        let value = !self.blurButtonNode.isSelected
+        self.blurButtonNode.setSelected(value, animated: true)
+        self.setBlurEnabled(value, animated: true)
     }
     
     func setBlurEnabled(_ enabled: Bool, animated: Bool) {
@@ -334,8 +407,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     self.blurredNode.frame = self.imageNode.bounds
                     self.imageNode.addSubnode(self.blurredNode)
                 } else {
-                    self.blurredNode.frame = self.imageNode.frame
-                    self.addSubnode(self.blurredNode)
+                    self.blurredNode.frame = self.imageNode.bounds
+                    self.imageNode.addSubnode(self.blurredNode)
                 }
             }
             
@@ -364,14 +437,68 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
     }
     
-    override func visibilityUpdated(isVisible: Bool) {
-        super.visibilityUpdated(isVisible: isVisible)
+    @objc func toggleMotion() {
+        let value = !self.motionButtonNode.isSelected
+        self.motionButtonNode.setSelected(value, animated: true)
+        self.setMotionEnabled(value, animated: true)
+    }
+    
+    func setMotionEnabled(_ enabled: Bool, animated: Bool) {
+        if enabled {
+            let horizontal = WallpaperMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
+            horizontal.minimumRelativeValue = motionAmount
+            horizontal.maximumRelativeValue = -motionAmount
+            
+            let vertical = WallpaperMotionEffect(keyPath: "center.y", type: .tiltAlongVerticalAxis)
+            vertical.minimumRelativeValue = motionAmount
+            vertical.maximumRelativeValue = -motionAmount
+            
+            let group = UIMotionEffectGroup()
+            group.motionEffects = [horizontal, vertical]
+            self.wrapperNode.view.addMotionEffect(group)
+            
+            let scale = (self.frame.width + motionAmount * 2.0) / self.frame.width
+            if animated {
+                self.wrapperNode.layer.animateScale(from: 1.0, to: scale, duration: 0.2, removeOnCompletion: false)
+            } else {
+                self.wrapperNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
+            }
+        } else {
+            let position = self.wrapperNode.layer.presentation()?.position
+            
+            for effect in self.wrapperNode.view.motionEffects {
+                self.wrapperNode.view.removeMotionEffect(effect)
+            }
+            
+            let scale = (self.frame.width + motionAmount * 2.0) / self.frame.width
+            if animated {
+                self.wrapperNode.layer.animateScale(from: scale, to: 1.0, duration: 0.2, removeOnCompletion: false)
+                if let position = position {
+                    self.wrapperNode.layer.animatePosition(from: position, to: self.wrapperNode.layer.position, duration: 0.2)
+                }
+            } else {
+                self.wrapperNode.transform = CATransform3DIdentity
+            }
+        }
+    }
+    
+    func updateButtonsLayout(layout: ContainerViewLayout, offset: CGPoint, transition: ContainedViewLayoutTransition) {
+        let buttonSize = CGSize(width: 100.0, height: 30.0)
+        let alpha = 1.0 - min(1.0, max(0.0, abs(offset.y) / 50.0))
+        
+        transition.updateFrame(node: self.blurButtonNode, frame: CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0 - buttonSize.width - 10.0) + offset.x, y: layout.size.height - 49.0 - layout.intrinsicInsets.bottom - 54.0 + offset.y), size: buttonSize))
+        transition.updateAlpha(node: self.blurButtonNode, alpha: alpha)
+        
+        transition.updateFrame(node: self.motionButtonNode, frame: CGRect(origin: CGPoint(x: ceil(layout.size.width / 2.0 + 10.0) + offset.x, y: layout.size.height - 49.0 - layout.intrinsicInsets.bottom - 54.0 + offset.y), size: buttonSize))
+        transition.updateAlpha(node: self.motionButtonNode, alpha: alpha)
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
-        self.wrapperNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        self.wrapperNode.bounds = CGRect(origin: CGPoint(), size: layout.size)
+        self.wrapperNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+        
         if self.cropNode.supernode == nil {
             self.imageNode.frame = self.wrapperNode.bounds
             self.blurredNode.frame = self.imageNode.frame
@@ -389,5 +516,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         self.statusNode.frame = CGRect(x: layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - progressDiameter) / 2.0), y: floorToScreenPixels((layout.size.height - progressDiameter) / 2.0), width: progressDiameter, height: progressDiameter)
         self.progressNode.frame = CGRect(x: layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - progressDiameter) / 2.0), y: floorToScreenPixels((layout.size.height - 15.0) / 2.0), width: progressDiameter, height: progressDiameter)
+        
+        var offset: CGFloat = 0.0
+        if let validOffset = self.validOffset {
+            offset = validOffset
+        }
+        self.updateButtonsLayout(layout: layout, offset: CGPoint(x: offset, y: 0.0), transition: transition)
+        
+        self.validLayout = layout
     }
 }

@@ -254,23 +254,51 @@ public func themeSettingsController(account: Account) -> ViewController {
     let _ = telegramWallpapers(postbox: account.postbox, network: account.network).start()
     
     let arguments = ThemeSettingsControllerArguments(account: account, selectTheme: { index in
-        let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
-            let wallpaper: TelegramWallpaper
-            let theme: PresentationThemeReference
-            if index == 0 {
-                wallpaper = .builtin
-                theme = .builtin(.dayClassic)
-            } else if index == 1 {
-                wallpaper = .color(0xffffff)
+        let theme: PresentationThemeReference
+        switch index {
+            case 1:
                 theme = .builtin(.day)
-            } else if index == 2 {
-                wallpaper = .color(0x000000)
+            case 2:
                 theme = .builtin(.nightGrayscale)
-            } else {
-                wallpaper = .color(0x18222D)
+            case 3:
                 theme = .builtin(.nightAccent)
+            default:
+                theme = .builtin(.dayClassic)
+        }
+        
+        let _ = (account.postbox.transaction { transaction -> Void in
+            let wallpaper: TelegramWallpaper
+            let wallpaperOptions: WallpaperPresentationOptions
+            
+            let key = ValueBoxKey(length: 8)
+            key.setInt64(0, value: theme.index)
+            if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.themeSpecificSettings, key: key)) as? PresentationThemeSpecificSettings {
+                wallpaper = entry.chatWallpaper
+                wallpaperOptions = entry.chatWallpaperOptions
+            } else {
+                switch index {
+                    case 1:
+                        wallpaper = .color(0xffffff)
+                    case 2:
+                        wallpaper = .color(0x000000)
+                    case 3:
+                        wallpaper = .color(0x18222d)
+                    default:
+                        wallpaper = .builtin
+                }
+                wallpaperOptions = []
             }
-            return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: [], theme: theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+            
+            transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings, { entry in
+                let current: PresentationThemeSettings
+                if let entry = entry as? PresentationThemeSettings {
+                    current = entry
+                } else {
+                    current = PresentationThemeSettings.defaultSettings
+                }
+                
+                return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: wallpaperOptions, theme: theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+            })
         }).start()
     }, selectFontSize: { size in
         let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in

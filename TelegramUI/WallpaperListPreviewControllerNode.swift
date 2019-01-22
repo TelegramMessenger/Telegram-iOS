@@ -232,13 +232,6 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
             }
         })
         
-        let controlsColorSignal: Signal<UIColor, NoError>
-        if case let .wallpaper(wallpaper) = wallpaper {
-            controlsColorSignal = chatBackgroundContrastColor(wallpaper: wallpaper, postbox: account.postbox)
-        } else {
-            controlsColorSignal = backgroundContrastColor(for: imagePromise.get())
-        }
-        self.controlsColor.set(.single(.white) |> then(controlsColorSignal))
         self.status.set(statusSignal)
     }
     
@@ -506,20 +499,20 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                 if case let .wallpapers(wallpaperMode) = type, let mode = wallpaperMode {
                     self.segmentedControl.selectedSegmentIndex = Int(clamping: mode.rawValue)
                 }
-            case let .slug(slug, file):
+            case let .slug(slug, file, _):
                 if let file = file {
                     let entry = WallpaperEntry.wallpaper(.file(id: 0, accessHash: 0, isCreator: false, isDefault: false, slug: slug, file: file))
                     self.wallpapers = [entry]
                     self.centralWallpaper = entry
                 }
                 self.ready.set(true)
-            case let .wallpaper(wallpaper):
+            case let .wallpaper(wallpaper, _):
                 let entry = WallpaperEntry.wallpaper(wallpaper)
                 self.wallpapers = [entry]
                 self.centralWallpaper = entry
                 self.ready.set(true)
-            case let .asset(asset, thumbnailImage):
-                let entry = WallpaperEntry.asset(asset, thumbnailImage)
+            case let .asset(asset):
+                let entry = WallpaperEntry.asset(asset, nil)
                 self.wallpapers = [entry]
                 self.centralWallpaper = entry
                 self.ready.set(true)

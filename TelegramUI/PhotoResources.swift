@@ -2196,9 +2196,15 @@ func instantPageImageFile(account: Account, fileReference: FileMediaReference, f
     }
 }
 
-private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, autoFetchFullSize: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
+private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, scaled: Bool = false, autoFetchFullSize: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
     if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = largestImageRepresentation(representations.map({ $0.representation })), let smallestIndex = representations.index(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.index(where: { $0.representation == largestRepresentation }) {
-        let maybeFullSize = account.postbox.mediaBox.resourceData(largestRepresentation.resource)
+       
+        let maybeFullSize: Signal<MediaResourceData, NoError>
+        if scaled {
+            maybeFullSize = account.postbox.mediaBox.cachedResourceRepresentation(largestRepresentation.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 320.0, height: 320.0), mode: .aspectFit), complete: false, fetch: false)
+        } else {
+            maybeFullSize = account.postbox.mediaBox.resourceData(largestRepresentation.resource)
+        }
         let decodedThumbnailData = fileReference?.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
         
         let signal = maybeFullSize
@@ -2274,8 +2280,8 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
     }
 }
 
-func chatAvatarGalleryPhoto(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = avatarGalleryPhotoDatas(account: account, fileReference: fileReference, representations: representations, alwaysShowThumbnailFirst: alwaysShowThumbnailFirst, autoFetchFullSize: autoFetchFullSize)
+func chatAvatarGalleryPhoto(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, scaled: Bool = false, autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = avatarGalleryPhotoDatas(account: account, fileReference: fileReference, representations: representations, alwaysShowThumbnailFirst: alwaysShowThumbnailFirst, scaled: scaled, autoFetchFullSize: autoFetchFullSize)
     
     return signal
     |> map { (thumbnailData, fullSizeData, fullSizeComplete) in

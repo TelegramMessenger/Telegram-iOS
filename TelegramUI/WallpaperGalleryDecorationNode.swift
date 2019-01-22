@@ -6,7 +6,7 @@ import Postbox
 
 final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     private let backgroundNode: ASDisplayNode
-    private let checkNode: CheckNode
+    private let checkNode: ModernCheckNode
     private let textNode: ASTextNode
     
     private var _isSelected: Bool = false
@@ -16,18 +16,19 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         }
         set {
             self._isSelected = newValue
-            self.checkNode.setIsChecked(newValue, animated: false)
+            self.checkNode.setSelected(newValue, animated: false)
         }
     }
     
     init(title: String) {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
-        self.backgroundNode.cornerRadius = 8.0
-        self.checkNode = CheckNode(strokeColor: .white, fillColor: .white, foregroundColor: .black, style: .plain)
+        self.backgroundNode.cornerRadius = 6.0
+        
+        self.checkNode = ModernCheckNode(theme: CheckNodeTheme(backgroundColor: .white, strokeColor: .clear, borderColor: .white, hasShadow: false))
         self.checkNode.isUserInteractionEnabled = false
         self.textNode = ASTextNode()
-        self.textNode.attributedText = NSAttributedString(string: title, font: Font.regular(13), textColor: .white)
+        self.textNode.attributedText = NSAttributedString(string: title, font: Font.medium(13), textColor: .white)
         
         super.init()
         
@@ -60,9 +61,15 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         }
     }
     
+    var color: UIColor = UIColor(rgb: 0x000000, alpha: 0.3) {
+        didSet {
+            self.backgroundNode.backgroundColor = self.color
+        }
+    }
+    
     func setSelected(_ selected: Bool, animated: Bool = false) {
         self._isSelected = selected
-        self.checkNode.setIsChecked(selected, animated: animated)
+        self.checkNode.setSelected(selected, animated: animated)
     }
     
     func setEnabled(_ enabled: Bool) {
@@ -80,8 +87,8 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         
         self.backgroundNode.frame = self.bounds
         
-        let checkSize = CGSize(width: 32.0, height: 32.0)
-        self.checkNode.frame = CGRect(origin: CGPoint(x: 5.0, y: -1.0), size: checkSize)
+        let checkSize = CGSize(width: 18.0, height: 18.0)
+        self.checkNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 6.0), size: checkSize)
         
         self.textNode.frame = CGRect(x: 39.0, y: 6.0 + UIScreenPixel, width: 100.0, height: 20.0)
     }

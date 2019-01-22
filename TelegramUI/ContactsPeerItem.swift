@@ -281,8 +281,6 @@ class ContactsPeerItem: ListViewItem {
     }
 }
 
-private let separatorHeight = 1.0 / UIScreen.main.scale
-
 private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
 
 class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
@@ -770,6 +768,8 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 selectionNode.removeFromSupernode()
                                 strongSelf.selectionNode = nil
                             }
+                            
+                            let separatorHeight = UIScreenPixel
                             
                             let topHighlightInset: CGFloat = (first || !nodeLayout.insets.top.isZero) ? 0.0 : separatorHeight
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))

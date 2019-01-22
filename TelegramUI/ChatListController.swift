@@ -529,7 +529,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         
         self.chatListDisplayNode.requestOpenRecentPeerOptions = { [weak self] peer in
             if let strongSelf = self {
-                strongSelf.view.endEditing(true)
+                strongSelf.view.window?.endEditing(true)
                 let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                 
                 actionSheet.setItemGroups([

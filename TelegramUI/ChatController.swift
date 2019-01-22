@@ -242,7 +242,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         self.presentationData = (account.applicationContext as! TelegramApplicationContext).currentPresentationData.with { $0 }
         self.automaticMediaDownloadSettings = (account.applicationContext as! TelegramApplicationContext).currentAutomaticMediaDownloadSettings.with { $0 }
         
-        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, chatWallpaperMode: self.presentationData.chatWallpaperMode, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, fontSize: self.presentationData.fontSize, accountPeerId: account.peerId, mode: mode, chatLocation: chatLocation)
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, chatWallpaperMode: self.presentationData.chatWallpaperOptions, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, fontSize: self.presentationData.fontSize, accountPeerId: account.peerId, mode: mode, chatLocation: chatLocation)
         
         var mediaAccessoryPanelVisibility = MediaAccessoryPanelVisibility.none
         if case .standard = mode {
@@ -1656,7 +1656,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             state = state.updatedTheme(self.presentationData.theme)
             state = state.updatedStrings(self.presentationData.strings)
             state = state.updatedDateTimeFormat(self.presentationData.dateTimeFormat)
-            state = state.updatedChatWallpaper(self.presentationData.chatWallpaper, mode: self.presentationData.chatWallpaperMode)
+            state = state.updatedChatWallpaper(self.presentationData.chatWallpaper, mode: self.presentationData.chatWallpaperOptions)
             return state
         })
     }
@@ -5419,17 +5419,15 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     private func openUrlIn(_ url: String) {
-        if let applicationContext = self.account.applicationContext as? TelegramApplicationContext {
-            let actionSheet = OpenInActionSheetController(account: self.account, item: .url(url: url), openUrl: { [weak self] url in
-                if let strongSelf = self, let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext, let navigationController = strongSelf.navigationController as? NavigationController {
-                    openExternalUrl(account: strongSelf.account, url: url, forceExternal: true, presentationData: strongSelf.presentationData, applicationContext: applicationContext, navigationController: navigationController, dismissInput: {
-                        self?.chatDisplayNode.dismissInput()
-                    })
-                }
-            })
-            self.chatDisplayNode.dismissInput()
-            self.present(actionSheet, in: .window(.root))
-        }
+        let actionSheet = OpenInActionSheetController(account: self.account, item: .url(url: url), openUrl: { [weak self] url in
+            if let strongSelf = self, let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext, let navigationController = strongSelf.navigationController as? NavigationController {
+                openExternalUrl(account: strongSelf.account, url: url, forceExternal: true, presentationData: strongSelf.presentationData, applicationContext: applicationContext, navigationController: navigationController, dismissInput: {
+                    self?.chatDisplayNode.dismissInput()
+                })
+            }
+        })
+        self.chatDisplayNode.dismissInput()
+        self.present(actionSheet, in: .window(.root))
     }
     
     func avatarPreviewingController(from sourceView: UIView) -> (UIViewController, CGRect)? {
@@ -5945,9 +5943,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             
             if true {
                 inputShortcuts.append(KeyShortcut(input: UIKeyInputUpArrow, action: { [weak self] in
-                    if let strongSelf = self {
-                       
-                    }
+                    
                 }))
             }
         }
@@ -5978,8 +5974,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }
             }),
             KeyShortcut(input: "W", modifiers: [.command], action: { [weak self] in
-                if let strongSelf = self {
-                }
+
             })
         ]
         
