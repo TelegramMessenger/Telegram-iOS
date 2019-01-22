@@ -7,8 +7,7 @@ import Display
 
 import LegacyComponents
 
-var legacyComponentsApplication: UIApplication!
-private var legacyComponentsAccount: Account?
+var legacyComponentsApplication: UIApplication?
 
 private var legacyLocalization = TGLocalization(version: 0, code: "en", dict: [:], isActive: true)
 
@@ -18,10 +17,6 @@ public func updateLegacyLocalization(strings: PresentationStrings) {
 
 func updateLegacyTheme() {
     TGCheckButtonView.resetCache()
-}
-
-public func updateLegacyComponentsAccount(_ account: Account?) {
-    legacyComponentsAccount = account
 }
 
 private var legacyDocumentsStorePath: String?
@@ -105,7 +100,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func applicationWindows() -> [UIWindow]! {
-        return legacyComponentsApplication.windows
+        return legacyComponentsApplication?.windows ?? []
     }
     
     public func applicationStatusBarWindow() -> UIWindow! {
@@ -117,7 +112,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
             return nil
         }
         
-        for window in legacyComponentsApplication.windows {
+        for window in legacyComponentsApplication?.windows ?? [] {
             if window.isKind(of: keyboardWindowClass) {
                 return window
             }
@@ -172,7 +167,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func setIdleTimerDisabled(_ value: Bool) {
-        legacyComponentsApplication.isIdleTimerDisabled = value
+        legacyComponentsApplication?.isIdleTimerDisabled = value
     }
     
     public func pauseMusicPlayback() {
