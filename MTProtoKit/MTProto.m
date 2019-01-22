@@ -822,7 +822,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             }
         } else {
             if (!_isProbing) {
-                /*
+                
                 _isProbing = true;
                 __weak MTProto *weakSelf = self;
                 MTSignal *checkSignal = [[MTConnectionProbing probeProxyWithContext:_context datacenterId:_datacenterId settings:transport.proxySettings] delay:5.0 onQueue:[MTQueue concurrentDefaultQueue]];
@@ -838,7 +838,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                             [strongSelf _updateConnectionIssuesStatus:[strongSelf->_probingStatus boolValue]];
                         }
                     }];
-                }]];*/
+                }]];
             }
         }
     }];
