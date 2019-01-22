@@ -3,6 +3,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Display
 import TelegramCore
+import Postbox
 
 final class OverlayUniversalVideoNode: OverlayMediaItemNode {
     private let content: UniversalVideoContent
@@ -25,7 +26,7 @@ final class OverlayUniversalVideoNode: OverlayMediaItemNode {
         }
     }
     
-    init(account: Account, audioSession: ManagedAudioSession, manager: UniversalVideoContentManager, content: UniversalVideoContent, expand: @escaping () -> Void, close: @escaping () -> Void) {
+    init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoContentManager, content: UniversalVideoContent, expand: @escaping () -> Void, close: @escaping () -> Void) {
         self.content = content
         var unminimizeImpl: (() -> Void)?
         var togglePlayPauseImpl: (() -> Void)?
@@ -39,7 +40,7 @@ final class OverlayUniversalVideoNode: OverlayMediaItemNode {
         }, close: {
             closeImpl?()
         })
-        self.videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: audioSession, manager: manager, decoration: decoration, content: content, priority: .overlay)
+        self.videoNode = UniversalVideoNode(postbox: postbox, audioSession: audioSession, manager: manager, decoration: decoration, content: content, priority: .overlay)
         self.decoration = decoration
         
         super.init()

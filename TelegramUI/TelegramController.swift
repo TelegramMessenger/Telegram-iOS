@@ -16,10 +16,10 @@ enum LocationBroadcastPanelSource {
     case peer(PeerId)
 }
 
-private func presentLiveLocationController(account: Account, peerId: PeerId, controller: ViewController) {
+private func presentLiveLocationController(context: AccountContext, peerId: PeerId, controller: ViewController) {
     let presentImpl: (Message?) -> Void = { [weak controller] message in
         if let message = message, let strongController = controller {
-            let _ = openChatMessage(account: account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
+            let _ = openChatMessage(context: context, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
                 controller?.view.endEditing(true)
             }, present: { c, a in
                 controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -33,11 +33,11 @@ private func presentLiveLocationController(account: Account, peerId: PeerId, con
             }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in})
         }
     }
-    if let id = account.telegramApplicationContext.liveLocationManager?.internalMessageForPeerId(peerId) {
-        let _ = (account.postbox.transaction { transaction -> Message? in
+    if let id = context.liveLocationManager?.internalMessageForPeerId(peerId) {
+        let _ = (context.account.postbox.transaction { transaction -> Message? in
             return transaction.getMessage(id)
         } |> deliverOnMainQueue).start(next: presentImpl)
-    } else if let liveLocationManager = account.telegramApplicationContext.liveLocationManager {
+    } else if let liveLocationManager = context.liveLocationManager {
         let _ = (liveLocationManager.summaryManager.peersBroadcastingTo(peerId: peerId)
         |> take(1)
         |> map { peersAndMessages -> Message? in
@@ -47,7 +47,7 @@ private func presentLiveLocationController(account: Account, peerId: PeerId, con
 }
 
 public class TelegramController: ViewController {
-    private let account: Account
+    private let context: AccountContext
     
     let mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility
     let locationBroadcastPanelSource: LocationBroadcastPanelSource
@@ -96,17 +96,17 @@ public class TelegramController: ViewController {
         return super.navigationHeight
     }
     
-    init(account: Account, navigationBarPresentationData: NavigationBarPresentationData?, mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility, locationBroadcastPanelSource: LocationBroadcastPanelSource) {
-        self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, navigationBarPresentationData: NavigationBarPresentationData?, mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility, locationBroadcastPanelSource: LocationBroadcastPanelSource) {
+        self.context = context
+        self.presentationData = context.currentPresentationData.with { $0 }
         self.mediaAccessoryPanelVisibility = mediaAccessoryPanelVisibility
         self.locationBroadcastPanelSource = locationBroadcastPanelSource
         
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
         if case .none = mediaAccessoryPanelVisibility {
-        } else if let mediaManager = account.telegramApplicationContext.mediaManager {
-            self.mediaStatusDisposable = (mediaManager.globalMediaPlayerState
+        } else {
+            self.mediaStatusDisposable = (context.mediaManager.globalMediaPlayerState
             |> mapToSignal { playlistStateAndType -> Signal<(SharedMediaPlayerItemPlaybackState, MediaManagerPlayerType)?, NoError> in
                 if let (state, type) = playlistStateAndType {
                     switch state {
@@ -153,7 +153,7 @@ public class TelegramController: ViewController {
             })
         }
         
-        if let liveLocationManager = account.telegramApplicationContext.liveLocationManager {
+        if let liveLocationManager = context.liveLocationManager {
             switch locationBroadcastPanelSource {
                 case .none:
                     self.locationBroadcastMode = nil
@@ -220,7 +220,7 @@ public class TelegramController: ViewController {
             }
         }
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -268,8 +268,8 @@ public class TelegramController: ViewController {
                 transition.updateFrame(node: locationBroadcastAccessoryPanel, frame: panelFrame)
                 locationBroadcastAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
             } else {
-                let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
-                locationBroadcastAccessoryPanel = LocationBroadcastNavigationAccessoryPanel(accountPeerId: self.account.peerId, theme: presentationData.theme, strings: presentationData.strings, tapAction: { [weak self] in
+                let presentationData = self.context.currentPresentationData.with { $0 }
+                locationBroadcastAccessoryPanel = LocationBroadcastNavigationAccessoryPanel(accountPeerId: self.context.account.peerId, theme: presentationData.theme, strings: presentationData.strings, tapAction: { [weak self] in
                     if let strongSelf = self {
                         switch strongSelf.locationBroadcastPanelSource {
                             case .none:
@@ -279,9 +279,9 @@ public class TelegramController: ViewController {
                                     let messages = locationBroadcastMessages.values.sorted(by: { MessageIndex($0) > MessageIndex($1) })
                                     
                                     if messages.count == 1 {
-                                        presentLiveLocationController(account: strongSelf.account, peerId: messages[0].id.peerId, controller: strongSelf)
+                                        presentLiveLocationController(context: strongSelf.context, peerId: messages[0].id.peerId, controller: strongSelf)
                                     } else {
-                                        let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                        let presentationData = strongSelf.context.currentPresentationData.with { $0 }
                                         let controller = ActionSheetController(presentationTheme: presentationData.theme)
                                         let dismissAction: () -> Void = { [weak controller] in
                                             controller?.dismissAnimated()
@@ -299,10 +299,10 @@ public class TelegramController: ViewController {
                                                     }
                                                     
                                                     if let beginTimeAndTimeout = beginTimeAndTimeout {
-                                                        items.append(LocationBroadcastActionSheetItem(account: strongSelf.account, peer: peer, title: peer.displayTitle, beginTimestamp: beginTimeAndTimeout.0, timeout: beginTimeAndTimeout.1, strings: presentationData.strings, action: {
+                                                        items.append(LocationBroadcastActionSheetItem(context: strongSelf.context, peer: peer, title: peer.displayTitle, beginTimestamp: beginTimeAndTimeout.0, timeout: beginTimeAndTimeout.1, strings: presentationData.strings, action: {
                                                             dismissAction()
                                                             if let strongSelf = self {
-                                                                presentLiveLocationController(account: strongSelf.account, peerId: peer.id, controller: strongSelf)
+                                                                presentLiveLocationController(context: strongSelf.context, peerId: peer.id, controller: strongSelf)
                                                             }
                                                         }))
                                                     }
@@ -312,7 +312,7 @@ public class TelegramController: ViewController {
                                                 dismissAction()
                                                 if let locationBroadcastPeers = strongSelf.locationBroadcastPeers {
                                                     for peer in locationBroadcastPeers {
-                                                        self?.account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: peer.id)
+                                                        self?.context.liveLocationManager?.cancelLiveLocation(peerId: peer.id)
                                                     }
                                                 }
                                             }))
@@ -326,7 +326,7 @@ public class TelegramController: ViewController {
                                     }
                                 }
                             case let .peer(peerId):
-                                presentLiveLocationController(account: strongSelf.account, peerId: peerId, controller: strongSelf)
+                                presentLiveLocationController(context: strongSelf.context, peerId: peerId, controller: strongSelf)
                         }
                     }
                 }, close: { [weak self] in
@@ -347,7 +347,7 @@ public class TelegramController: ViewController {
                             case let .peer(peerId):
                                 closePeerId = peerId
                         }
-                        let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        let presentationData = strongSelf.context.currentPresentationData.with { $0 }
                         let controller = ActionSheetController(presentationTheme: presentationData.theme)
                         let dismissAction: () -> Void = { [weak controller] in
                             controller?.dismissAnimated()
@@ -359,20 +359,20 @@ public class TelegramController: ViewController {
                                 items.append(ActionSheetButtonItem(title: peer.displayTitle, action: {
                                     dismissAction()
                                     if let strongSelf = self {
-                                        presentLiveLocationController(account: strongSelf.account, peerId: peer.id, controller: strongSelf)
+                                        presentLiveLocationController(context: strongSelf.context, peerId: peer.id, controller: strongSelf)
                                     }
                                 }))
                             }
                             items.append(ActionSheetButtonItem(title: presentationData.strings.LiveLocation_MenuStopAll, color: .destructive, action: {
                                 dismissAction()
                                 for peer in closePeers {
-                                    self?.account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: peer.id)
+                                    self?.context.liveLocationManager?.cancelLiveLocation(peerId: peer.id)
                                 }
                             }))
                         } else if let closePeerId = closePeerId {
                             items.append(ActionSheetButtonItem(title: presentationData.strings.Map_StopLiveLocation, color: .destructive, action: {
                                 dismissAction()
-                                self?.account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: closePeerId)
+                                self?.context.liveLocationManager?.cancelLiveLocation(peerId: closePeerId)
                             }))
                         }
                         controller.setItemGroups([
@@ -425,27 +425,25 @@ public class TelegramController: ViewController {
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
                 mediaAccessoryPanel.containerNode.headerNode.playbackItem = item
                
-                if let mediaManager = self.account.telegramApplicationContext.mediaManager {
-                    let delayedStatus = mediaManager.globalMediaPlayerState
-                    |> mapToSignal { value -> Signal<(SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> in
-                        guard let value = value else {
-                            return .single(nil)
-                        }
-                        switch value.0 {
-                            case .state:
-                                return .single(value)
-                            case .loading:
-                                return .single(value) |> delay(0.1, queue: .mainQueue())
-                        }
+                let delayedStatus = self.context.mediaManager.globalMediaPlayerState
+                |> mapToSignal { value -> Signal<(SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> in
+                    guard let value = value else {
+                        return .single(nil)
                     }
-                    
-                    mediaAccessoryPanel.containerNode.headerNode.playbackStatus = delayedStatus
-                    |> map { state -> MediaPlayerStatus in
-                        if let stateOrLoading = state?.0, case let .state(state) = stateOrLoading {
-                            return state.status
-                        } else {
-                            return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
-                        }
+                    switch value.0 {
+                        case .state:
+                            return .single(value)
+                        case .loading:
+                            return .single(value) |> delay(0.1, queue: .mainQueue())
+                    }
+                }
+                
+                mediaAccessoryPanel.containerNode.headerNode.playbackStatus = delayedStatus
+                |> map { state -> MediaPlayerStatus in
+                    if let stateOrLoading = state?.0, case let .state(state) = stateOrLoading {
+                        return state.status
+                    } else {
+                        return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
                     }
                 }
             } else {
@@ -460,11 +458,11 @@ public class TelegramController: ViewController {
                     })
                 }
                 
-                let mediaAccessoryPanel = MediaNavigationAccessoryPanel(account: self.account)
+                let mediaAccessoryPanel = MediaNavigationAccessoryPanel(context: self.context)
                 mediaAccessoryPanel.containerNode.headerNode.displayScrubber = type != .voice
                 mediaAccessoryPanel.close = { [weak self] in
                     if let strongSelf = self, let (_, _, type) = strongSelf.playlistStateAndType {
-                        strongSelf.account.telegramApplicationContext.mediaManager?.setPlaylist(nil, type: type)
+                        strongSelf.context.mediaManager.setPlaylist(nil, type: type)
                     }
                 }
                 mediaAccessoryPanel.toggleRate = {
@@ -472,7 +470,7 @@ public class TelegramController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = (strongSelf.account.postbox.transaction { transaction -> AudioPlaybackRate in
+                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> AudioPlaybackRate in
                         let settings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.musicPlaybackSettings) as? MusicPlaybackSettings ?? MusicPlaybackSettings.defaultSettings
                         
                         let nextRate: AudioPlaybackRate
@@ -490,12 +488,12 @@ public class TelegramController: ViewController {
                             return
                         }
                         
-                        strongSelf.account.telegramApplicationContext.mediaManager?.playlistControl(.setBaseRate(baseRate), type: type)
+                        strongSelf.context.mediaManager.playlistControl(.setBaseRate(baseRate), type: type)
                     })
                 }
                 mediaAccessoryPanel.togglePlayPause = { [weak self] in
                     if let strongSelf = self, let (_, _, type) = strongSelf.playlistStateAndType {
-                        strongSelf.account.telegramApplicationContext.mediaManager?.playlistControl(.playback(.togglePlayPause), type: type)
+                        strongSelf.context.mediaManager.playlistControl(.playback(.togglePlayPause), type: type)
                     }
                 }
                 mediaAccessoryPanel.tapAction = { [weak self] in
@@ -504,7 +502,7 @@ public class TelegramController: ViewController {
                     }
                     if let id = state.id as? PeerMessagesMediaPlaylistItemId {
                         if type == .music {
-                            let historyView = chatHistoryViewForLocation(.InitialSearch(location: .id(id.messageId), count: 60), account: strongSelf.account, chatLocation: .peer(id.messageId.peerId), fixedCombinedReadStates: nil, tagMask: MessageTags.music, additionalData: [])
+                            let historyView = chatHistoryViewForLocation(.InitialSearch(location: .id(id.messageId), count: 60), account: strongSelf.context.account, chatLocation: .peer(id.messageId.peerId), fixedCombinedReadStates: nil, tagMask: MessageTags.music, additionalData: [])
                             let signal = historyView
                             |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
                                 switch historyView {
@@ -526,7 +524,7 @@ public class TelegramController: ViewController {
                             })
                             
                             var cancelImpl: (() -> Void)?
-                            let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                            let presentationData = strongSelf.context.currentPresentationData.with { $0 }
                             let progressSignal = Signal<Never, NoError> { subscriber in
                                 let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
                                     cancelImpl?()
@@ -554,7 +552,7 @@ public class TelegramController: ViewController {
                                     return
                                 }
                                 if let _ = index.0 {
-                                    let controller = OverlayPlayerController(account: strongSelf.account, peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, parentNavigationController: strongSelf.navigationController as? NavigationController)
+                                    let controller = OverlayPlayerController(context: strongSelf.context, peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, parentNavigationController: strongSelf.navigationController as? NavigationController)
                                     strongSelf.displayNode.view.window?.endEditing(true)
                                     strongSelf.present(controller, in: .window(.root))
                                 } else if index.1 {
@@ -569,7 +567,7 @@ public class TelegramController: ViewController {
                                 self?.playlistPreloadDisposable?.dispose()
                             }
                         } else {
-                            navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(id.messageId.peerId), messageId: id.messageId)
+                            navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id.messageId.peerId), messageId: id.messageId)
                         }
                     }
                 }
@@ -584,14 +582,13 @@ public class TelegramController: ViewController {
                 self.mediaAccessoryPanel = (mediaAccessoryPanel, type)
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate)
                 mediaAccessoryPanel.containerNode.headerNode.playbackItem = item
-                if let mediaManager = self.account.telegramApplicationContext.mediaManager {
-                    mediaAccessoryPanel.containerNode.headerNode.playbackStatus = mediaManager.globalMediaPlayerState
-                    |> map { state -> MediaPlayerStatus in
-                        if let stateOrLoading = state?.0, case let .state(state) = stateOrLoading {
-                            return state.status
-                        } else {
-                            return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
-                        }
+                let mediaManager = self.context.mediaManager
+                mediaAccessoryPanel.containerNode.headerNode.playbackStatus = mediaManager.globalMediaPlayerState
+                |> map { state -> MediaPlayerStatus in
+                    if let stateOrLoading = state?.0, case let .state(state) = stateOrLoading {
+                        return state.status
+                    } else {
+                        return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
                     }
                 }
                 mediaAccessoryPanel.animateIn(transition: transition)

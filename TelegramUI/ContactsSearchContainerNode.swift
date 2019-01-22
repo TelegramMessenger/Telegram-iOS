@@ -123,7 +123,7 @@ struct ContactsSearchCategories: OptionSet {
 }
 
 final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
-    private let account: Account
+    private let context: AccountContext
     private let openPeer: (ContactListPeer) -> Void
     
     private let dimNode: ASDisplayNode
@@ -138,11 +138,11 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
     private var containerViewLayout: (ContainerViewLayout, CGFloat)?
     private var enqueuedTransitions: [ContactListSearchContainerTransition] = []
     
-    init(account: Account, onlyWriteable: Bool, categories: ContactsSearchCategories, filters: [ContactListFilter] = [.excludeSelf], openPeer: @escaping (ContactListPeer) -> Void) {
+    init(context: AccountContext, onlyWriteable: Bool, categories: ContactsSearchCategories, filters: [ContactListFilter] = [.excludeSelf], openPeer: @escaping (ContactListPeer) -> Void) {
         self.account = account
         self.openPeer = openPeer
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
         
@@ -187,7 +187,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                 let searchDeviceContacts = categories.contains(.deviceContacts)
                 let foundDeviceContacts: Signal<[DeviceContactStableId: DeviceContactBasicData]?, NoError>
                 if searchDeviceContacts {
-                    foundDeviceContacts = account.telegramApplicationContext.contactDataManager.search(query: query)
+                    foundDeviceContacts = context.contactDataManager.search(query: query)
                     |> map(Optional.init)
                 } else {
                     foundDeviceContacts = .single([:])
@@ -202,7 +202,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                     for filter in filters {
                         switch filter {
                             case .excludeSelf:
-                                existingPeerIds.insert(account.peerId)
+                                existingPeerIds.insert(context.account.peerId)
                             case let .exclude(peerIds):
                                 existingPeerIds = existingPeerIds.union(peerIds)
                             case let .disable(peerIds):
@@ -292,7 +292,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
             if let strongSelf = self {
                 let previousItems = previousSearchItems.swap(items ?? [])
                 
-                let transition = contactListSearchContainerPreparedRecentTransition(from: previousItems, to: items ?? [], isSearching: items != nil, account: account, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, timeFormat: strongSelf.presentationData.dateTimeFormat, openPeer: { peer in self?.listNode.clearHighlightAnimated(true)
+                let transition = contactListSearchContainerPreparedRecentTransition(from: previousItems, to: items ?? [], isSearching: items != nil, account: context.account, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, timeFormat: strongSelf.presentationData.dateTimeFormat, openPeer: { peer in self?.listNode.clearHighlightAnimated(true)
                     self?.openPeer(peer)
                 })
                 

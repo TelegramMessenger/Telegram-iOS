@@ -15,7 +15,7 @@ final class BotCheckoutWebInteractionController: ViewController {
         return self.displayNode as! BotCheckoutWebInteractionControllerNode
     }
     
-    private let account: Account
+    private let context: AccountContext
     private let url: String
     private let intent: BotCheckoutWebInteractionControllerIntent
     
@@ -23,14 +23,14 @@ final class BotCheckoutWebInteractionController: ViewController {
     
     private var didPlayPresentationAnimation = false
     
-    init(account: Account, url: String, intent: BotCheckoutWebInteractionControllerIntent) {
-        self.account = account
+    init(context: AccountContext, url: String, intent: BotCheckoutWebInteractionControllerIntent) {
+        self.context = context
         self.url = url
         self.intent = intent
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: (account.telegramApplicationContext.currentPresentationData.with { $0 })))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: (context.currentPresentationData.with { $0 })))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         

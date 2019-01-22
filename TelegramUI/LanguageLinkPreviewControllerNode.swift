@@ -6,7 +6,7 @@ import Postbox
 import TelegramCore
 
 final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let account: Account
+    private let context: AccountContext
     private var presentationData: PresentationData
     
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
@@ -43,9 +43,9 @@ final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScro
     
     private let disposable = MetaDisposable()
     
-    init(account: Account, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, openUrl: @escaping (String) -> Void) {
-        self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, openUrl: @escaping (String) -> Void) {
+        self.context = context
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         self.requestLayout = requestLayout
         self.openUrl = openUrl
@@ -463,7 +463,7 @@ final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScro
             self.actionButtonNode.setTitle(self.presentationData.strings.ApplyLanguage_ChangeLanguageAction, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.disabledActionTextColor, for: .disabled)
         }
         
-        self.transitionToContentNode(LanguageLinkPreviewContentNode(account: self.account, localizationInfo: localizationInfo, theme: self.presentationData.theme, strings: self.presentationData.strings, openTranslationUrl: { [weak self] url in
+        self.transitionToContentNode(LanguageLinkPreviewContentNode(context: self.context, localizationInfo: localizationInfo, theme: self.presentationData.theme, strings: self.presentationData.strings, openTranslationUrl: { [weak self] url in
             self?.openUrl(url)
         }))
     }

@@ -223,7 +223,7 @@ private final class ChatEmptyNodeGroupChatContent: ASDisplayNode, ChatEmptyNodeC
             self.subtitleNode.attributedText = NSAttributedString(string: interfaceState.strings.EmptyGroupInfo_Subtitle, font: messageFont, textColor: serviceColor.primaryText)
             
             let strings: [String] = [
-                interfaceState.strings.EmptyGroupInfo_Line1("100,000").0,
+                interfaceState.strings.EmptyGroupInfo_Line1("200,000").0,
                 interfaceState.strings.EmptyGroupInfo_Line2,
                 interfaceState.strings.EmptyGroupInfo_Line3,
                 interfaceState.strings.EmptyGroupInfo_Line4

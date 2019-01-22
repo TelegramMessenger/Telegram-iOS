@@ -253,7 +253,7 @@ struct TwoStepVerificationPasswordEntryResult {
     let pendingEmail: TwoStepVerificationPendingEmail?
 }
 
-func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepVerificationPasswordEntryMode, result: Promise<TwoStepVerificationPasswordEntryResult?>) -> ViewController {
+func twoStepVerificationPasswordEntryController(context: AccountContext, mode: TwoStepVerificationPasswordEntryMode, result: Promise<TwoStepVerificationPasswordEntryResult?>) -> ViewController {
     let initialStage: PasswordEntryStage
     switch mode {
         case .setup, .change:
@@ -323,7 +323,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                     if case let .change(current) = mode {
                         currentPassword = current
                     }
-                    updatePasswordDisposable.set((updateTwoStepVerificationPassword(network: account.network, currentPassword: currentPassword, updatedPassword: .password(password: password, hint: hint, email: email)) |> deliverOnMainQueue).start(next: { update in
+                    updatePasswordDisposable.set((updateTwoStepVerificationPassword(network: context.account.network, currentPassword: currentPassword, updatedPassword: .password(password: password, hint: hint, email: email)) |> deliverOnMainQueue).start(next: { update in
                         updateState {
                             $0.withUpdatedUpdating(false)
                         }
@@ -337,7 +337,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                         updateState {
                             $0.withUpdatedUpdating(false)
                         }
-                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        let presentationData = context.currentPresentationData.with { $0 }
                         let alertText: String
                         switch error {
                             case .generic:
@@ -348,7 +348,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                         presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }))
                 case let .setupEmail(password):
-                    updatePasswordDisposable.set((updateTwoStepVerificationEmail(account: account, currentPassword: password, updatedEmail: email) |> deliverOnMainQueue).start(next: { update in
+                    updatePasswordDisposable.set((updateTwoStepVerificationEmail(account: context.account, currentPassword: password, updatedEmail: email) |> deliverOnMainQueue).start(next: { update in
                         updateState {
                             $0.withUpdatedUpdating(false)
                         }
@@ -362,7 +362,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                         updateState {
                             $0.withUpdatedUpdating(false)
                         }
-                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        let presentationData = context.currentPresentationData.with { $0 }
                         let alertText: String
                         switch error {
                             case .generic:
@@ -374,7 +374,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
                     }))
             }
         } else if invalidReentry {
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = context.currentPresentationData.with { $0 }
             presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.TwoStepAuth_SetupPasswordConfirmFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }
@@ -387,7 +387,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
         checkPassword()
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get()) |> deliverOnMainQueue
+    let signal = combineLatest(context.presentationData, statePromise.get()) |> deliverOnMainQueue
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationPasswordEntryEntry>, TwoStepVerificationPasswordEntryEntry.ItemGenerationArguments)) in
             
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
@@ -432,7 +432,7 @@ func twoStepVerificationPasswordEntryController(account: Account, mode: TwoStepV
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)

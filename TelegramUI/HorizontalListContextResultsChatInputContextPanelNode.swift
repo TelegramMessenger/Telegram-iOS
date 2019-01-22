@@ -80,7 +80,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
     private var enqueuedTransitions: [(HorizontalListContextResultsChatInputContextPanelTransition, Bool)] = []
     private var hasValidLayout = false
     
-    override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.strings = strings
         
         self.separatorNode = ASDisplayNode()
@@ -94,7 +94,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         self.listView.transform = CATransform3DMakeRotation(-CGFloat(CGFloat.pi / 2.0), 0.0, 0.0, 1.0)
         self.listView.isHidden = true
         
-        super.init(account: account, theme: theme, strings: strings)
+        super.init(context: context, theme: theme, strings: strings)
         
         self.isOpaque = false
         self.clipsToBounds = true
@@ -143,7 +143,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                 }
                                 menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: {
                                     if let strongSelf = self {
-                                        let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: packReference, parentNavigationController: strongSelf.interfaceInteraction?.getNavigationController())
+                                        let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.interfaceInteraction?.getNavigationController())
                                                     controller.sendSticker = { file in
                                                         if let strongSelf = self {
                                                             strongSelf.interfaceInteraction?.sendSticker(file)
@@ -155,18 +155,18 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                     }
                                 }))
                             }
-                            selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems))
+                            selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.context.account, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems))
                         } else {
                             var menuItems: [PeekControllerMenuItem] = []
                             if case let .internalReference(internalReference) = item.result, let file = internalReference.file, file.isAnimated {
                                 menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.Preview_SaveGif, color: .accent, action: {
-                                    let _ = addSavedGif(postbox: strongSelf.account.postbox, fileReference: .standalone(media: file)).start()
+                                    let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: .standalone(media: file)).start()
                                 }))
                             }
                             menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
                                 item.resultSelected(item.result)
                             }))
-                            selectedItemNodeAndContent = (itemNode, ChatContextResultPeekContent(account: item.account, contextResult: item.result, menu: menuItems))
+                            selectedItemNodeAndContent = (itemNode, ChatContextResultPeekContent(account: item.context.account, contextResult: item.result, menu: menuItems))
                         }
                     }
                 }
@@ -202,7 +202,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
             return
         }
         self.isLoadingMore = true
-        self.loadMoreDisposable.set((requestChatContextResults(account: self.account, botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(currentProcessedResults.geoPoint), offset: nextOffset)
+        self.loadMoreDisposable.set((requestChatContextResults(account: self.context.account, botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(currentProcessedResults.geoPoint), offset: nextOffset)
         |> deliverOnMainQueue).start(next: { [weak self] nextResults in
             guard let strongSelf = self, let nextResults = nextResults else {
                 return
@@ -242,7 +242,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         }
         
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, hasMore: results.nextOffset != nil, account: self.account, resultSelected: { [weak self] result in
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, hasMore: results.nextOffset != nil, account: self.context.account, resultSelected: { [weak self] result in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 interfaceInteraction.sendContextResult(results, result)
             }

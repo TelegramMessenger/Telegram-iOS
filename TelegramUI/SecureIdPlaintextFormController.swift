@@ -11,26 +11,26 @@ enum SecureIdPlaintextFormType {
 }
 
 final class SecureIdPlaintextFormController: FormController<SecureIdPlaintextFormInnerState, SecureIdPlaintextFormControllerNodeInitParams, SecureIdPlaintextFormControllerNode> {
-    private let account: Account
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let updatedValue: (SecureIdValueWithContext?) -> Void
     
-    private let context: SecureIdAccessContext
+    private let secureIdContext: SecureIdAccessContext
     private let type: SecureIdPlaintextFormType
     private var immediatelyAvailableValue: SecureIdValue?
     
     private var nextItem: UIBarButtonItem?
     private var doneItem: UIBarButtonItem?
     
-    init(account: Account, context: SecureIdAccessContext, type: SecureIdPlaintextFormType, immediatelyAvailableValue: SecureIdValue?, updatedValue: @escaping (SecureIdValueWithContext?) -> Void) {
-        self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, secureIdContext: SecureIdAccessContext, type: SecureIdPlaintextFormType, immediatelyAvailableValue: SecureIdValue?, updatedValue: @escaping (SecureIdValueWithContext?) -> Void) {
         self.context = context
+        self.presentationData = context.currentPresentationData.with { $0 }
+        self.secureIdContext = secureIdContext
         self.type = type
         self.immediatelyAvailableValue = immediatelyAvailableValue
         self.updatedValue = updatedValue
         
-        super.init(initParams: SecureIdPlaintextFormControllerNodeInitParams(account: account, context: context), presentationData: self.presentationData)
+        super.init(initParams: SecureIdPlaintextFormControllerNodeInitParams(context: context, secureIdContext: secureIdContext), presentationData: self.presentationData)
         
         switch type {
             case .phone:

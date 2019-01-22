@@ -197,9 +197,9 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     
     var willDisappear: ((Bool) -> Void)?
     
-    convenience init(account: Account, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        self.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: account.telegramApplicationContext.presentationData |> map { ($0.theme, $0.strings) }, state: state, tabBarItem: tabBarItem)
+    convenience init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
+        let presentationData = context.currentPresentationData.with { $0 }
+        self.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.presentationData |> map { ($0.theme, $0.strings) }, state: state, tabBarItem: tabBarItem)
     }
     
     init(theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?) {

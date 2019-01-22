@@ -245,9 +245,7 @@ private struct NotificationExceptionPeerState : Equatable {
 }
 
 
-func notificationPeerExceptionController(account: Account, peerId: PeerId, mode: NotificationExceptionMode, updatePeerSound: @escaping(PeerId, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(PeerId, Int32?) -> Void) -> ViewController {
-    
-    
+func notificationPeerExceptionController(context: AccountContext, peerId: PeerId, mode: NotificationExceptionMode, updatePeerSound: @escaping(PeerId, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(PeerId, Int32?) -> Void) -> ViewController {
     let initialState = NotificationExceptionPeerState()
     let statePromise = Promise(initialState)
     let stateValue = Atomic(value: initialState)
@@ -260,10 +258,10 @@ func notificationPeerExceptionController(account: Account, peerId: PeerId, mode:
     let playSoundDisposable = MetaDisposable()
 
 
-    let arguments = NotificationPeerExceptionArguments(account: account, selectSound: { sound in
+    let arguments = NotificationPeerExceptionArguments(account: context.account, selectSound: { sound in
       
         updateState { state in
-            playSoundDisposable.set(playSound(account: account, sound: sound, defaultSound: state.defaultSound).start())
+            playSoundDisposable.set(playSound(account: context.account, sound: sound, defaultSound: state.defaultSound).start())
             return state.withUpdatedSound(sound)
         }
 
@@ -280,7 +278,7 @@ func notificationPeerExceptionController(account: Account, peerId: PeerId, mode:
     
     
     
-    statePromise.set(account.postbox.transaction { transaction -> NotificationExceptionPeerState in
+    statePromise.set(context.account.postbox.transaction { transaction -> NotificationExceptionPeerState in
         var state = NotificationExceptionPeerState(notifications: transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings)
         let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
         switch mode {
@@ -296,7 +294,7 @@ func notificationPeerExceptionController(account: Account, peerId: PeerId, mode:
     })
     
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> distinctUntilChanged)
+    let signal = combineLatest(context.presentationData, statePromise.get() |> distinctUntilChanged)
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<NotificationPeerExceptionEntry>, NotificationPeerExceptionEntry.ItemGenerationArguments)) in
             
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
@@ -313,7 +311,7 @@ func notificationPeerExceptionController(account: Account, peerId: PeerId, mode:
             return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(account: account, state: signal |> afterDisposed {
+    let controller = ItemListController(context: context, state: signal |> afterDisposed {
         playSoundDisposable.dispose()
     })
 

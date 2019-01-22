@@ -185,7 +185,7 @@ private func CreateChannelEntries(presentationData: PresentationData, state: Cre
     return entries
 }
 
-public func createChannelController(account: Account) -> ViewController {
+public func createChannelController(context: AccountContext) -> ViewController {
     let initialState = CreateChannelState(creating: false, editingName: ItemListAvatarAndNameInfoItemName.title(title: "", type: .channel), editingDescriptionText: "", avatar: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -203,7 +203,7 @@ public func createChannelController(account: Account) -> ViewController {
     
     let uploadedAvatar = Promise<UploadedPeerPhotoData>()
     
-    let arguments = CreateChannelArguments(account: account, updateEditingName: { editingName in
+    let arguments = CreateChannelArguments(account: context.account, updateEditingName: { editingName in
         updateState { current in
             var current = current
             switch editingName {
@@ -233,7 +233,7 @@ public func createChannelController(account: Account) -> ViewController {
             }
             
             endEditingImpl?()
-            actionsDisposable.add((createChannel(account: account, title: title, description: description.isEmpty ? nil : description) |> deliverOnMainQueue |> afterDisposed {
+            actionsDisposable.add((createChannel(account: context.account, title: title, description: description.isEmpty ? nil : description) |> deliverOnMainQueue |> afterDisposed {
                 Queue.mainQueue().async {
                     updateState { current in
                         var current = current
@@ -247,12 +247,12 @@ public func createChannelController(account: Account) -> ViewController {
                         return $0.avatar
                     }
                     if let _ = updatingAvatar {
-                        let _ = updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedAvatar.get(), mapResourceToAvatarSizes: { resource, representations in
-                            return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                        let _ = updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedAvatar.get(), mapResourceToAvatarSizes: { resource, representations in
+                            return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                         }).start()
                     }
                     
-                    let controller = channelVisibilityController(account: account, peerId: peerId, mode: .initialSetup, upgradedToSupergroup: { _, f in f() })
+                    let controller = channelVisibilityController(context: context, peerId: peerId, mode: .initialSetup, upgradedToSupergroup: { _, f in f() })
                     replaceControllerImpl?(controller)
                 }
             }, error: { _ in
@@ -267,9 +267,9 @@ public func createChannelController(account: Account) -> ViewController {
         }
         
         let _ = (account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
-            return (transaction.getPeer(account.peerId), currentSearchBotsConfiguration(transaction: transaction))
+            return (transaction.getPeer(context.account.peerId), currentSearchBotsConfiguration(transaction: transaction))
         } |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = context.currentPresentationData.with { $0 }
             
             let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
             legacyController.statusBar.statusBarStyle = .Ignore
@@ -335,7 +335,7 @@ public func createChannelController(account: Account) -> ViewController {
         })
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get())
+    let signal = combineLatest(context.presentationData, statePromise.get())
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<CreateChannelEntry>, CreateChannelEntry.ItemGenerationArguments)) in
             
             let rightNavigationButton: ItemListNavigationButton
@@ -355,7 +355,7 @@ public func createChannelController(account: Account) -> ViewController {
             actionsDisposable.dispose()
         }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     replaceControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)
     }

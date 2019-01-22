@@ -465,21 +465,21 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
 }
 
 public protocol SettingsController: class {
-    func updateAccount(account: Account)
+    func updateContext(context: AccountContext)
 }
 
 private final class SettingsControllerImpl: ItemListController<SettingsEntry>, SettingsController {
-    let accountValue: Promise<Account>
+    let contextValue: Promise<AccountContext>
     
-    init(currentAccount: Account, accountValue: Promise<Account>, state: Signal<(ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?) {
-        self.accountValue = accountValue
-        let presentationData = currentAccount.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(currentContext: AccountContext, contextValue: Promise<AccountContext>, state: Signal<(ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?) {
+        self.contextValue = contextValue
+        let presentationData = currentContext.currentPresentationData.with { $0 }
         
-        self.accountValue.set(.single(currentAccount))
+        self.contextValue.set(.single(currentContext))
         
-        let updatedPresentationData = self.accountValue.get()
-        |> mapToSignal { account -> Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError> in
-            return account.telegramApplicationContext.presentationData
+        let updatedPresentationData = self.contextValue.get()
+        |> mapToSignal { context -> Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError> in
+            return context.presentationData
             |> map { ($0.theme, $0.strings) }
         }
         
@@ -490,12 +490,12 @@ private final class SettingsControllerImpl: ItemListController<SettingsEntry>, S
         fatalError("init(coder:) has not been implemented")
     }
     
-    func updateAccount(account: Account) {
-        self.accountValue.set(.single(account))
+    func updateContext(context: AccountContext) {
+        self.contextValue.set(.single(context))
     }
 }
 
-public func settingsController(account currentAccount: Account, accountManager: AccountManager) -> SettingsController & ViewController {
+public func settingsController(context: AccountContext, accountManager: AccountManager) -> SettingsController & ViewController {
     let statePromise = ValuePromise(SettingsState(), ignoreRepeated: true)
     let stateValue = Atomic(value: SettingsState())
     let updateState: ((SettingsState) -> SettingsState) -> Void = { f in
@@ -534,11 +534,11 @@ public func settingsController(account currentAccount: Account, accountManager: 
     
     let archivedPacks = Promise<[ArchivedStickerPackItem]?>()
     
-    let accountValue = Promise<Account>()
+    let contextValue = Promise<AccountContext>()
     
-    let networkArguments = currentAccount.networkArguments
-    let auxiliaryMethods = currentAccount.auxiliaryMethods
-    let rootPath = rootPathForBasePath(currentAccount.telegramApplicationContext.applicationBindings.containerPath)
+    let networkArguments = context.account.networkArguments
+    let auxiliaryMethods = context.account.auxiliaryMethods
+    let rootPath = rootPathForBasePath(context.applicationBindings.containerPath)
     
     let accountsAndPeers: Signal<[(Account, Peer, Int32)], NoError> = accountManager.accountRecords()
     |> map { view -> [AccountRecordId] in
@@ -551,7 +551,7 @@ public func settingsController(account currentAccount: Account, accountManager: 
     }
     |> distinctUntilChanged
     |> mapToSignal { recordIds -> Signal<[(Account, Peer, Int32)], NoError> in
-        return accountValue.get()
+        return contextValue.get()
         |> mapToSignal { currentAccount -> Signal<[(Account, Peer, Int32)], NoError> in
             var accounts: [Signal<(Account, Peer, Int32)?, NoError>] = []
             func accountWithPeer(_ account: Signal<Account?, NoError>) -> Signal<(Account, Peer, Int32)?, NoError> {
@@ -598,10 +598,10 @@ public func settingsController(account currentAccount: Account, accountManager: 
     }
 
     let openFaq: (Promise<ResolvedUrl>) -> Void = { resolvedUrl in
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        |> take(1)).start(next: { context in
+            let presentationData = context.currentPresentationData.with { $0 }
             let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
             presentControllerImpl?(controller, nil)
             let _ = (resolvedUrl.get()
@@ -609,7 +609,7 @@ public func settingsController(account currentAccount: Account, accountManager: 
             |> deliverOnMainQueue).start(next: { [weak controller] resolvedUrl in
                 controller?.dismiss()
                 
-                openResolvedUrl(resolvedUrl, account: account, navigationController: getNavigationControllerImpl?(), openPeer: { peer, navigation in
+                openResolvedUrl(resolvedUrl, context: context, navigationController: getNavigationControllerImpl?(), openPeer: { peer, navigation in
                 }, present: { controller, arguments in
                     pushControllerImpl?(controller)
                 }, dismissInput: {})
@@ -617,14 +617,14 @@ public func settingsController(account currentAccount: Account, accountManager: 
         })
     }
     
-    let resolvedUrl = accountValue.get()
+    let resolvedUrl = contextValue.get()
     |> deliverOnMainQueue
-    |> mapToSignal { account -> Signal<ResolvedUrl, NoError> in
-        var faqUrl = account.telegramApplicationContext.currentPresentationData.with { $0 }.strings.Settings_FAQ_URL
+    |> mapToSignal { context -> Signal<ResolvedUrl, NoError> in
+        var faqUrl = context.currentPresentationData.with { $0 }.strings.Settings_FAQ_URL
         if faqUrl == "Settings.FAQ_URL" || faqUrl.isEmpty {
             faqUrl = "https://telegram.org/faq#general"
         }
-        return resolveInstantViewUrl(account: account, url: faqUrl)
+        return resolveInstantViewUrl(account: context.account, url: faqUrl)
     }
     
     var switchToAccountImpl: ((AccountRecordId) -> Void)?
@@ -640,14 +640,14 @@ public func settingsController(account currentAccount: Account, accountManager: 
             return
         }
         
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
-            let _ = (account.postbox.loadedPeerWithId(account.peerId)
+        |> take(1)).start(next: { context in
+            let _ = (context.account.postbox.loadedPeerWithId(account.peerId)
             |> take(1)
             |> deliverOnMainQueue).start(next: { peer in
                 if peer.smallProfileImage != nil {
-                    let galleryController = AvatarGalleryController(account: account, peer: peer, replaceRootController: { controller, ready in
+                    let galleryController = AvatarGalleryController(context: context, peer: peer, replaceRootController: { controller, ready in
                         
                     })
                     hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
@@ -665,86 +665,86 @@ public func settingsController(account currentAccount: Account, accountManager: 
     }, changeProfilePhoto: {
         changeProfilePhotoImpl?()
     }, openUsername: {
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
-            presentControllerImpl?(usernameSetupController(account: account), nil)
+        |> take(1)).start(next: { context in
+            presentControllerImpl?(usernameSetupController(context: context), nil)
         })
     }, openProxy: {
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { account in
-            pushControllerImpl?(proxySettingsController(account: account))
+            pushControllerImpl?(proxySettingsController(context: context))
         })
     }, openSavedMessages: {
         openSavedMessagesImpl?()
     }, openRecentCalls: {
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { account in
-            pushControllerImpl?(CallListController(account: account, mode: .navigation))
+            pushControllerImpl?(CallListController(context: context, mode: .navigation))
         })
     }, openPrivacyAndSecurity: {
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
-            pushControllerImpl?(privacyAndSecurityController(account: account, initialSettings: .single(nil) |> then(requestAccountPrivacySettings(account: account) |> map(Optional.init))))
+        |> take(1)).start(next: { context in
+            pushControllerImpl?(privacyAndSecurityController(context: context, initialSettings: .single(nil) |> then(requestAccountPrivacySettings(account: context.account) |> map(Optional.init))))
         })
     }, openDataAndStorage: {
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
-            pushControllerImpl?(dataAndStorageController(account: account))
+        |> take(1)).start(next: { context in
+            pushControllerImpl?(dataAndStorageController(context: context))
         })
     }, openStickerPacks: { archivedPacksValue in
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
-            pushControllerImpl?(installedStickerPacksController(account: account, mode: .general, archivedPacks: archivedPacksValue, updatedPacks: { packs in
+        |> take(1)).start(next: { context in
+            pushControllerImpl?(installedStickerPacksController(context: context, mode: .general, archivedPacks: archivedPacksValue, updatedPacks: { packs in
                 archivedPacks.set(.single(packs))
             }))
         })
     }, openNotificationsAndSounds: { exceptionsList in
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
-            pushControllerImpl?(notificationsAndSoundsController(account: account, exceptionsList: exceptionsList))
+        |> take(1)).start(next: { context in
+            pushControllerImpl?(notificationsAndSoundsController(context: context, exceptionsList: exceptionsList))
         })
     }, openThemes: {
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
-            pushControllerImpl?(themeSettingsController(account: account))
+        |> take(1)).start(next: { context in
+            pushControllerImpl?(themeSettingsController(context: context))
         })
     }, pushController: { controller in
         pushControllerImpl?(controller)
     }, openLanguage: {
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
-            pushControllerImpl?(LocalizationListController(account: account))
+        |> take(1)).start(next: { context in
+            pushControllerImpl?(LocalizationListController(context: context))
         })
     }, openPassport: {
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
-            let controller = SecureIdAuthController(account: account, mode: .list)
+        |> take(1)).start(next: { context in
+            let controller = SecureIdAuthController(context: context, mode: .list)
             presentControllerImpl?(controller, nil)
         })
     }, openWatch: {
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
-            let controller = watchSettingsController(account: account)
+        |> take(1)).start(next: { context in
+            let controller = watchSettingsController(context: context)
             pushControllerImpl?(controller)
         })
     }, openSupport: {
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
+        |> take(1)).start(next: { context in
             let supportPeer = Promise<PeerId?>()
-            supportPeer.set(supportPeerId(account: account))
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            supportPeer.set(supportPeerId(account: context.account))
+            let presentationData = context.currentPresentationData.with { $0 }
             
             let resolvedUrlPromise = Promise<ResolvedUrl>()
             resolvedUrlPromise.set(resolvedUrl)
@@ -768,11 +768,11 @@ public func settingsController(account currentAccount: Account, accountManager: 
         
         openFaq(resolvedUrlPromise)
     }, openEditing: {
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
+        |> take(1)).start(next: { context in
             var cancelImpl: (() -> Void)?
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = context.currentPresentationData.with { $0 }
             let progressSignal = Signal<Never, NoError> { subscriber in
                 let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
                     cancelImpl?()
@@ -788,14 +788,14 @@ public func settingsController(account currentAccount: Account, accountManager: 
             |> delay(0.15, queue: Queue.mainQueue())
             let progressDisposable = progressSignal.start()
             
-            let peerKey: PostboxViewKey = .peer(peerId: account.peerId, components: [])
+            let peerKey: PostboxViewKey = .peer(peerId: context.account.peerId, components: [])
             let cachedDataKey: PostboxViewKey = .cachedPeerData(peerId: account.peerId)
-            let signal = (account.postbox.combinedView(keys: [peerKey, cachedDataKey])
+            let signal = (context.account.postbox.combinedView(keys: [peerKey, cachedDataKey])
             |> mapToSignal { view -> Signal<(TelegramUser, CachedUserData), NoError> in
                 guard let cachedDataView = view.views[cachedDataKey] as? CachedPeerDataView, let cachedData = cachedDataView.cachedPeerData as? CachedUserData else {
                     return .complete()
                 }
-                guard let peerView = view.views[peerKey] as? PeerView, let peer = peerView.peers[account.peerId] as? TelegramUser else {
+                guard let peerView = view.views[peerKey] as? PeerView, let peer = peerView.peers[context.account.peerId] as? TelegramUser else {
                     return .complete()
                 }
                 return .single((peer, cachedData))
@@ -811,15 +811,15 @@ public func settingsController(account currentAccount: Account, accountManager: 
             }
             openEditingDisposable.set((signal
             |> deliverOnMainQueue).start(next: { peer, cachedData in
-                pushControllerImpl?(editSettingsController(account: account, currentName: .personName(firstName: peer.firstName ?? "", lastName: peer.lastName ?? ""), currentBioText: cachedData.about ?? "", accountManager: accountManager))
+                pushControllerImpl?(editSettingsController(context: context, currentName: .personName(firstName: peer.firstName ?? "", lastName: peer.lastName ?? ""), currentBioText: cachedData.about ?? "", accountManager: accountManager))
             }))
         })
     }, displayCopyContextMenu: {
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
-            let _ = (account.postbox.transaction { transaction -> (Peer?) in
-                return transaction.getPeer(account.peerId)
+        |> take(1)).start(next: { context in
+            let _ = (context.account.postbox.transaction { transaction -> (Peer?) in
+                return transaction.getPeer(context.account.peerId)
             }
             |> deliverOnMainQueue).start(next: { peer in
                 if let peer = peer {
@@ -830,10 +830,10 @@ public func settingsController(account currentAccount: Account, accountManager: 
     }, switchToAccount: { id in
         switchToAccountImpl?(id)
     }, addAccount: {
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
-            let isTestingEnvironment = account.testingEnvironment
+        |> take(1)).start(next: { context in
+            let isTestingEnvironment = context.account.testingEnvironment
             let _ = accountManager.transaction({ transaction -> Void in
                 let id = transaction.createRecord([AccountEnvironmentAttribute(environment: isTestingEnvironment ? .test : .production)])
                 transaction.setCurrentId(id)
@@ -842,14 +842,14 @@ public func settingsController(account currentAccount: Account, accountManager: 
     })
     
     changeProfilePhotoImpl = {
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
-            let _ = (account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
-                return (transaction.getPeer(account.peerId), currentSearchBotsConfiguration(transaction: transaction))
+        |> take(1)).start(next: { context in
+            let _ = (context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
+                return (transaction.getPeer(context.account.peerId), currentSearchBotsConfiguration(transaction: transaction))
             }
             |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let presentationData = context.currentPresentationData.with { $0 }
                 
                 let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
                 legacyController.statusBar.statusBarStyle = .Ignore
@@ -871,13 +871,13 @@ public func settingsController(account currentAccount: Account, accountManager: 
                 let completedImpl: (UIImage) -> Void = { image in
                     if let data = UIImageJPEGRepresentation(image, 0.6) {
                         let resource = LocalFileMediaResource(fileId: arc4random64())
-                        account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                        context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                         let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
                         updateState {
                             $0.withUpdatedUpdatingAvatar(.image(representation, true))
                         }
-                        updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: resource, mapResourceToAvatarSizes: { resource, representations in
-                            return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                        updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: resource, mapResourceToAvatarSizes: { resource, representations in
+                            return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                         }) |> deliverOnMainQueue).start(next: { result in
                             switch result {
                             case .complete:
@@ -894,7 +894,7 @@ public func settingsController(account currentAccount: Account, accountManager: 
                 let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
                 let _ = currentAvatarMixin.swap(mixin)
                 mixin.requestSearchController = { assetsController in
-                    let controller = WebSearchController(account: account, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: nil, completion: { result in
+                    let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: nil, completion: { result in
                         assetsController?.dismiss()
                         completedImpl(result)
                     }))
@@ -914,8 +914,8 @@ public func settingsController(account currentAccount: Account, accountManager: 
                             return $0.withUpdatedUpdatingAvatar(.none)
                         }
                     }
-                    updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: nil, mapResourceToAvatarSizes: { resource, representations in
-                        return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                    updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: nil, mapResourceToAvatarSizes: { resource, representations in
+                        return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                     }) |> deliverOnMainQueue).start(next: { result in
                         switch result {
                         case .complete:
@@ -941,17 +941,17 @@ public func settingsController(account currentAccount: Account, accountManager: 
         })
     }
     
-    let peerView = accountValue.get()
-    |> mapToSignal { account -> Signal<PeerView, NoError> in
-        return account.viewTracker.peerView(account.peerId)
+    let peerView = contextValue.get()
+    |> mapToSignal { context -> Signal<PeerView, NoError> in
+        return context.account.viewTracker.peerView(context.account.peerId)
     }
     
     archivedPacks.set(
         .single(nil)
         |> then(
-            accountValue.get()
-            |> mapToSignal { account -> Signal<[ArchivedStickerPackItem]?, NoError> in
-                archivedStickerPacks(account: account)
+            contextValue.get()
+            |> mapToSignal { context -> Signal<[ArchivedStickerPackItem]?, NoError> in
+                archivedStickerPacks(account: context.account)
                 |> map(Optional.init)
             }
         )
@@ -960,10 +960,10 @@ public func settingsController(account currentAccount: Account, accountManager: 
     let hasPassport = ValuePromise<Bool>(false)
     let updatePassport: () -> Void = {
         updatePassportDisposable.set((
-        accountValue.get()
+        contextValue.get()
         |> take(1)
-        |> mapToSignal { account -> Signal<Bool, NoError> in
-            return twoStepAuthData(account.network)
+        |> mapToSignal { context -> Signal<Bool, NoError> in
+            return twoStepAuthData(context.account.network)
             |> map { value -> Bool in
                 return value.hasSecretValues
             }
@@ -982,9 +982,9 @@ public func settingsController(account currentAccount: Account, accountManager: 
         notificationsAuthorizationStatus.set(
             .single(.allowed)
             |> then(
-                accountValue.get()
-                |> mapToSignal { account -> Signal<AccessType, NoError> in
-                    return DeviceAccess.authorizationStatus(account: account, subject: .notifications)
+                contextValue.get()
+                |> mapToSignal { context -> Signal<AccessType, NoError> in
+                    return DeviceAccess.authorizationStatus(account: context.account, subject: .notifications)
                 }
             )
         )
@@ -996,9 +996,9 @@ public func settingsController(account currentAccount: Account, accountManager: 
         notificationsWarningSuppressed.set(
             .single(true)
             |> then(
-                accountValue.get()
-                |> mapToSignal { account -> Signal<Bool, NoError> in
-                    return account.postbox.combinedView(keys: [warningKey])
+                contextValue.get()
+                |> mapToSignal { context -> Signal<Bool, NoError> in
+                    return context.account.postbox.combinedView(keys: [warningKey])
                     |> map { combined -> Bool in
                         let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                         if let timestamp = timestamp, timestamp > 0 {
@@ -1015,10 +1015,10 @@ public func settingsController(account currentAccount: Account, accountManager: 
     let notifyExceptions = Promise<NotificationExceptionsList?>(nil)
     let updateNotifyExceptions: () -> Void = {
         notifyExceptions.set(
-            accountValue.get()
+            contextValue.get()
             |> take(1)
-            |> mapToSignal { account -> Signal<NotificationExceptionsList?, NoError> in
-                return notificationExceptionsList(network: account.network)
+            |> mapToSignal { context -> Signal<NotificationExceptionsList?, NoError> in
+                return notificationExceptionsList(network: context.account.network)
                 |> map(Optional.init)
             }
         )
@@ -1026,9 +1026,9 @@ public func settingsController(account currentAccount: Account, accountManager: 
     
     let hasWatchApp = Promise<Bool>(false)
     hasWatchApp.set(
-        accountValue.get()
-        |> mapToSignal { account -> Signal<Bool, NoError> in
-            if let context = account.applicationContext as? TelegramApplicationContext, let watchManager = context.watchManager {
+        contextValue.get()
+        |> mapToSignal { context -> Signal<Bool, NoError> in
+            if let watchManager = context.watchManager {
                 return watchManager.watchAppInstalled
             } else {
                 return .single(false)
@@ -1036,23 +1036,23 @@ public func settingsController(account currentAccount: Account, accountManager: 
         }
     )
     
-    let updatedPresentationData = accountValue.get()
-    |> mapToSignal { account -> Signal<PresentationData, NoError> in
-        return account.telegramApplicationContext.presentationData
+    let updatedPresentationData = contextValue.get()
+    |> mapToSignal { context -> Signal<PresentationData, NoError> in
+        return context.presentationData
     }
     
-    let proxyPreferences = accountValue.get()
-    |> mapToSignal { account in
-        return account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings])
+    let proxyPreferences = contextValue.get()
+    |> mapToSignal { context in
+        return context.account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings])
     }
     
-    let featuredStickerPacks = accountValue.get()
-    |> mapToSignal { account in
-        return account.viewTracker.featuredStickerPacks()
+    let featuredStickerPacks = contextValue.get()
+    |> mapToSignal { context in
+        return context.account.viewTracker.featuredStickerPacks()
     }
     
-    let signal = combineLatest(queue: Queue.mainQueue(), accountValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), proxyPreferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()), accountsAndPeers)
-    |> map { account, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasPassportAndWatch, accountsAndPeers -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
+    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), proxyPreferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()), accountsAndPeers)
+    |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasPassportAndWatch, accountsAndPeers -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
         let proxySettings: ProxySettings = preferencesAndExceptions.0.values[PreferencesKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
     
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
@@ -1069,7 +1069,7 @@ public func settingsController(account currentAccount: Account, accountManager: 
         }
         
         let (hasPassport, hasWatchApp) = hasPassportAndWatch
-        let listState = ItemListNodeState(entries: settingsEntries(account: account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers), style: .blocks)
+        let listState = ItemListNodeState(entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }
@@ -1084,7 +1084,7 @@ public func settingsController(account currentAccount: Account, accountManager: 
         icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
     }
     
-    let controller = SettingsControllerImpl(currentAccount: currentAccount, accountValue: accountValue, state: signal, tabBarItem: combineLatest(updatedPresentationData, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()) |> map { presentationData, notificationsAuthorizationStatus, notificationsWarningSuppressed in
+    let controller = SettingsControllerImpl(currentContext: context, contextValue: contextValue, state: signal, tabBarItem: combineLatest(updatedPresentationData, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()) |> map { presentationData, notificationsAuthorizationStatus, notificationsWarningSuppressed in
         let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
         return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: icon, selectedImage: icon, badgeValue: notificationsWarning ? "!" : nil)
     })
@@ -1122,7 +1122,7 @@ public func settingsController(account currentAccount: Account, accountManager: 
         }
     }
     openSavedMessagesImpl = { [weak controller] in
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { account in
             if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
@@ -1131,7 +1131,7 @@ public func settingsController(account currentAccount: Account, accountManager: 
         })
     }
     controller.tabBarItemDebugTapAction = {
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { account in
             pushControllerImpl?(debugController(account: account, accountManager: accountManager))
@@ -1139,11 +1139,11 @@ public func settingsController(account currentAccount: Account, accountManager: 
     }
     
     displayCopyContextMenuImpl = { [weak controller] peer in
-        let _ = (accountValue.get()
+        let _ = (contextValue.get()
         |> take(1)
-        |> deliverOnMainQueue).start(next: { account in
+        |> deliverOnMainQueue).start(next: { context in
             if let strongController = controller {
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let presentationData = context.currentPresentationData.with { $0 }
                 var resultItemNode: ListViewItemNode?
                 let _ = strongController.frameForItemNode({ itemNode in
                     if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {

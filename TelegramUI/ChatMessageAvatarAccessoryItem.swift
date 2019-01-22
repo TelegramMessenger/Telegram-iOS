@@ -6,15 +6,15 @@ import TelegramCore
 private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
 
 final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
-    private let account: Account
+    private let context: AccountContext
     private let peerId: PeerId
     private let peer: Peer?
     private let messageReference: MessageReference?
     private let messageTimestamp: Int32
     private let emptyColor: UIColor
     
-    init(account: Account, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, messageTimestamp: Int32, emptyColor: UIColor) {
-        self.account = account
+    init(context: AccountContext, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, messageTimestamp: Int32, emptyColor: UIColor) {
+        self.context = context
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
@@ -34,7 +34,7 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
         let node = ChatMessageAvatarAccessoryItemNode()
         node.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
         if let peer = self.peer {
-            node.setPeer(account: account, peer: peer, authorOfMessage: self.messageReference, emptyColor: self.emptyColor)
+            node.setPeer(account: self.context.account, theme: self.context.currentPresentationData.with({ $0 }).theme, peer: peer, authorOfMessage: self.messageReference, emptyColor: self.emptyColor)
         }
         return node
     }
@@ -56,7 +56,7 @@ final class ChatMessageAvatarAccessoryItemNode: ListViewAccessoryItemNode {
         self.addSubnode(self.avatarNode)
     }
     
-    func setPeer(account: Account, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor) {
-        self.avatarNode.setPeer(account: account, peer: peer, authorOfMessage: authorOfMessage, emptyColor: emptyColor)
+    func setPeer(account: Account, theme: PresentationTheme, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor) {
+        self.avatarNode.setPeer(account: account, theme: theme, peer: peer, authorOfMessage: authorOfMessage, emptyColor: emptyColor)
     }
 }

@@ -296,7 +296,7 @@ private func groupStickerPackSetupControllerEntries(presentationData: Presentati
     return entries
 }
 
-public func groupStickerPackSetupController(account: Account, peerId: PeerId, currentPackInfo: StickerPackCollectionInfo?) -> ViewController {
+public func groupStickerPackSetupController(context: AccountContext, peerId: PeerId, currentPackInfo: StickerPackCollectionInfo?) -> ViewController {
     let initialState = GroupStickerPackSetupControllerState(isSaving: false)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -309,7 +309,7 @@ public func groupStickerPackSetupController(account: Account, peerId: PeerId, cu
     
     let initialData = Promise<InitialStickerPackData?>()
     if let currentPackInfo = currentPackInfo {
-        initialData.set(cachedStickerPack(postbox: account.postbox, network: account.network, reference: .id(id: currentPackInfo.id.id, accessHash: currentPackInfo.accessHash), forceRemote: false)
+        initialData.set(cachedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .id(id: currentPackInfo.id.id, accessHash: currentPackInfo.accessHash), forceRemote: false)
         |> map { result -> InitialStickerPackData? in
             switch result {
                 case .none:
@@ -325,7 +325,7 @@ public func groupStickerPackSetupController(account: Account, peerId: PeerId, cu
     }
     
     let stickerPacks = Promise<CombinedView>()
-    stickerPacks.set(account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]))
+    stickerPacks.set(context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]))
     
     let searchState = Promise<(String, GroupStickerPackSearchState)>()
     searchState.set(combineLatest(searchText.get(), initialData.get(), stickerPacks.get())
@@ -349,7 +349,7 @@ public func groupStickerPackSetupController(account: Account, peerId: PeerId, cu
                     }
                 }
                 return .single((searchText, .searching))
-                |> then((loadedStickerPack(postbox: account.postbox, network: account.network, reference: .name(searchText.lowercased()), forceActualized: false) |> delay(0.3, queue: Queue.concurrentDefaultQueue()))
+                |> then((loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .name(searchText.lowercased()), forceActualized: false) |> delay(0.3, queue: Queue.concurrentDefaultQueue()))
                 |> mapToSignal { value -> Signal<(String, GroupStickerPackSearchState), NoError> in
                     switch value {
                         case .fetching:
@@ -381,14 +381,14 @@ public func groupStickerPackSetupController(account: Account, peerId: PeerId, cu
     
     var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
     
-    let arguments = GroupStickerPackSetupControllerArguments(account: account, selectStickerPack: { info in
+    let arguments = GroupStickerPackSetupControllerArguments(account: context.account, selectStickerPack: { info in
         searchText.set(info.shortName)
     }, openStickerPack: { info in
         presentStickerPackController?(info)
     }, updateSearchText: { text in
         searchText.set(text)
     }, openStickersBot: {
-        resolveDisposable.set((resolvePeerByName(account: account, name: "stickers") |> deliverOnMainQueue).start(next: { peerId in
+        resolveDisposable.set((resolvePeerByName(account: context.account, name: "stickers") |> deliverOnMainQueue).start(next: { peerId in
             if let peerId = peerId {
                 dismissImpl?()
                 navigateToChatControllerImpl?(peerId)
@@ -398,7 +398,7 @@ public func groupStickerPackSetupController(account: Account, peerId: PeerId, cu
     
     let previousHadData = Atomic<Bool>(value: false)
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, initialData.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, searchState.get() |> deliverOnMainQueue)
+    let signal = combineLatest(context.presentationData, statePromise.get() |> deliverOnMainQueue, initialData.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, searchState.get() |> deliverOnMainQueue)
         |> map { presentationData, state, initialData, view, searchState -> (ItemListControllerState, (ItemListNodeState<GroupStickerPackEntry>, GroupStickerPackEntry.ItemGenerationArguments)) in
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
@@ -429,7 +429,7 @@ public func groupStickerPackSetupController(account: Account, peerId: PeerId, cu
                                 state.isSaving = true
                                 return state
                             }
-                            saveDisposable.set((updateGroupSpecificStickerset(postbox: account.postbox, network: account.network, peerId: peerId, info: info)
+                            saveDisposable.set((updateGroupSpecificStickerset(postbox: context.account.postbox, network: context.account.network, peerId: peerId, info: info)
                             |> deliverOnMainQueue).start(error: { _ in
                                 updateState { state in
                                     var state = state
@@ -460,7 +460,7 @@ public func groupStickerPackSetupController(account: Account, peerId: PeerId, cu
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
@@ -472,11 +472,11 @@ public func groupStickerPackSetupController(account: Account, peerId: PeerId, cu
     }
     presentStickerPackController = { [weak controller] info in
         dismissInputImpl?()
-        presentControllerImpl?(StickerPackPreviewController(account: account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: controller?.navigationController as? NavigationController), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(StickerPackPreviewController(context: context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: controller?.navigationController as? NavigationController), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
     navigateToChatControllerImpl = { [weak controller] peerId in
         if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
-            navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
+            navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId))
         }
     }
     dismissImpl = { [weak controller] in

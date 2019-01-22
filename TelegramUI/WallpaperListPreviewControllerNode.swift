@@ -51,7 +51,7 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
     let controlsColor = Promise<UIColor>(.white)
     let status = Promise<MediaResourceStatus>(.Local)
     
-    init(account: Account, wallpaper: WallpaperEntry) {
+    init(context: AccountContext, wallpaper: WallpaperEntry) {
         self.wallpaper = wallpaper
         self.wrapperNode = ASDisplayNode()
         self.imageNode = TransformImageNode()
@@ -82,7 +82,7 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
                     case .builtin:
                         displaySize = CGSize(width: 640.0, height: 1136.0)
                         contentSize = displaySize
-                        signal = settingsBuiltinWallpaperImage(account: account)
+                        signal = settingsBuiltinWallpaperImage(account: context.account)
                         fetchSignal = .complete()
                         statusSignal = .single(.Local)
                     case let .color(color):
@@ -102,23 +102,23 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
                             convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .standalone(resource: representation.resource)))
                         }
                         convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .standalone(resource: file.file.resource)))
-                        signal = chatMessageImageFile(account: account, fileReference: .standalone(media: file.file), thumbnail: false)
-                        fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
-                        statusSignal = account.postbox.mediaBox.resourceStatus(file.file.resource)
+                        signal = chatMessageImageFile(account: context.account, fileReference: .standalone(media: file.file), thumbnail: false)
+                        fetchSignal = fetchedMediaResource(postbox: context.account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
+                        statusSignal = context.account.postbox.mediaBox.resourceStatus(file.file.resource)
                     case let .image(representations):
                         if let largestSize = largestImageRepresentation(representations) {
                             contentSize = largestSize.dimensions
                             displaySize = largestSize.dimensions.dividedByScreenScale().integralFloor
                             
                             let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
-                            signal = chatAvatarGalleryPhoto(account: account, representations: convertedRepresentations)
+                            signal = chatAvatarGalleryPhoto(account: context.account, representations: convertedRepresentations)
                             
                             if let largestIndex = convertedRepresentations.index(where: { $0.representation == largestSize }) {
-                                fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[largestIndex].reference)
+                                fetchSignal = fetchedMediaResource(postbox: context.account.postbox, reference: convertedRepresentations[largestIndex].reference)
                             } else {
                                 fetchSignal = .complete()
                             }
-                            statusSignal = account.postbox.mediaBox.resourceStatus(largestSize.resource)
+                            statusSignal = context.account.postbox.mediaBox.resourceStatus(largestSize.resource)
                         } else {
                             displaySize = CGSize(width: 1.0, height: 1.0)
                             contentSize = displaySize
@@ -131,7 +131,7 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
                 let dimensions = CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
                 contentSize = dimensions
                 displaySize = dimensions.dividedByScreenScale().integralFloor
-                signal = photoWallpaper(postbox: account.postbox, photoLibraryResource: PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64()))
+                signal = photoWallpaper(postbox: context.account.postbox, photoLibraryResource: PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64()))
                 fetchSignal = .complete()
                 statusSignal = .single(.Local)
                 self.wrapperNode.addSubnode(self.cropNode)
@@ -176,9 +176,9 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
                     representations.append(TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: imageResource))
                     let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil)
                     
-                    signal = chatMessagePhoto(postbox: account.postbox, photoReference: .standalone(media: tmpImage))
-                    fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: .media(media: .standalone(media: tmpImage), resource: imageResource))
-                    statusSignal = account.postbox.mediaBox.resourceStatus(imageResource)
+                    signal = chatMessagePhoto(postbox: context.account.postbox, photoReference: .standalone(media: tmpImage))
+                    fetchSignal = fetchedMediaResource(postbox: context.account.postbox, reference: .media(media: .standalone(media: tmpImage), resource: imageResource))
+                    statusSignal = context.account.postbox.mediaBox.resourceStatus(imageResource)
                 } else {
                     displaySize = CGSize(width: 1.0, height: 1.0)
                     contentSize = displaySize
@@ -234,7 +234,7 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
         
         let controlsColorSignal: Signal<UIColor, NoError>
         if case let .wallpaper(wallpaper) = wallpaper {
-            controlsColorSignal = chatBackgroundContrastColor(wallpaper: wallpaper, postbox: account.postbox)
+            controlsColorSignal = chatBackgroundContrastColor(wallpaper: wallpaper, postbox: context.account.postbox)
         } else {
             controlsColorSignal = backgroundContrastColor(for: imagePromise.get())
         }
@@ -340,7 +340,7 @@ private final class WallpaperBackgroundNode: ASDisplayNode {
 }
 
 final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
-    private let account: Account
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let source: WallpaperListSource
     private let dismiss: () -> Void
@@ -380,8 +380,8 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
     }
     private var visibleBackgroundNodesOffset: CGFloat = 0.0
     
-    init(account: Account, presentationData: PresentationData, source: WallpaperListSource, dismiss: @escaping () -> Void, apply: @escaping (WallpaperEntry, WallpaperPresentationOptions, CGRect?) -> Void) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, source: WallpaperListSource, dismiss: @escaping () -> Void, apply: @escaping (WallpaperEntry, WallpaperPresentationOptions, CGRect?) -> Void) {
+        self.context = context
         self.presentationData = presentationData
         self.source = source
         self.dismiss = dismiss
@@ -611,7 +611,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
         
         var items: [ChatMessageItem] = []
         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 1)
-        let otherPeerId = self.account.peerId
+        let otherPeerId = self.context.account.peerId
         var peers = SimpleDictionary<PeerId, Peer>()
         let messages = SimpleDictionary<MessageId, Message>()
         peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
@@ -659,9 +659,9 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                 bottomMessageText = presentationData.strings.WallpaperPreview_CustomColorBottomText
         }
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
         if let messageNodes = self.messageNodes {
@@ -772,7 +772,7 @@ final class WallpaperListPreviewControllerNode: ViewControllerTracingNode {
                                 break inner
                             }
                         }
-                        let itemNode = currentItemNode ?? WallpaperBackgroundNode(account: self.account, wallpaper: wallpapers[j])
+                        let itemNode = currentItemNode ?? WallpaperBackgroundNode(account: self.context.account, wallpaper: wallpapers[j])
                         visibleBackgroundNodes.append(itemNode)
                         let itemNodeTransition: ContainedViewLayoutTransition
                         if itemNode.supernode == nil {

@@ -12,19 +12,19 @@ public final class JoinLinkPreviewController: ViewController {
     
     private var animatedIn = false
     
-    private let account: Account
+    private let context: AccountContext
     private let link: String
     private let navigateToPeer: (PeerId) -> Void
     private var presentationData: PresentationData
     
     private let disposable = MetaDisposable()
     
-    public init(account: Account, link: String, navigateToPeer: @escaping (PeerId) -> Void) {
-        self.account = account
+    public init(context: AccountContext, link: String, navigateToPeer: @escaping (PeerId) -> Void) {
+        self.context = context
         self.link = link
         self.navigateToPeer = navigateToPeer
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
     }
@@ -38,7 +38,7 @@ public final class JoinLinkPreviewController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = JoinLinkPreviewControllerNode(account: self.account, requestLayout: { [weak self] transition in
+        self.displayNode = JoinLinkPreviewControllerNode(context: self.context, requestLayout: { [weak self] transition in
             self?.requestLayout(transition: transition)
         })
         self.controllerNode.dismiss = { [weak self] in
@@ -51,7 +51,7 @@ public final class JoinLinkPreviewController: ViewController {
             self?.join()
         }
         self.displayNodeDidLoad()
-        self.disposable.set((joinLinkInformation(self.link, account: self.account)
+        self.disposable.set((joinLinkInformation(self.link, account: self.context.account)
         |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 switch result {
@@ -96,7 +96,7 @@ public final class JoinLinkPreviewController: ViewController {
     }
     
     private func join() {
-        self.disposable.set((joinChatInteractively(with: self.link, account: self.account) |> deliverOnMainQueue).start(next: { [weak self] peerId in
+        self.disposable.set((joinChatInteractively(with: self.link, account: self.context.account) |> deliverOnMainQueue).start(next: { [weak self] peerId in
             if let strongSelf = self {
                 if let peerId = peerId {
                     strongSelf.navigateToPeer(peerId)

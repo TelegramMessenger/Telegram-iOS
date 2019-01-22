@@ -32,7 +32,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
     private let peerNodes: [SelectablePeerNode]
     private let moreNode: MoreNode?
     
-    init(account: Account, image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [Peer], theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [Peer], theme: PresentationTheme, strings: PresentationStrings) {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.titleNode = ASTextNode()
         self.countNode = ASTextNode()
@@ -43,7 +43,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         
         self.peerNodes = members.map { peer in
             let node = SelectablePeerNode()
-            node.setup(account: account, strings: strings, peer: RenderedPeer(peer: peer), synchronousLoad: false)
+            node.setup(account: context.account, theme: theme, strings: strings, peer: RenderedPeer(peer: peer), synchronousLoad: false)
             node.theme = itemTheme
             return node
         }
@@ -59,7 +59,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         let peer = TelegramGroup(id: PeerId(namespace: 0, id: 0), title: title, photo: image.flatMap { [$0] } ?? [], participantCount: Int(memberCount), role: .member, membership: .Left, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
         
         self.addSubnode(self.avatarNode)
-        self.avatarNode.setPeer(account: account, peer: peer, emptyColor: theme.list.mediaPlaceholderColor)
+        self.avatarNode.setPeer(account: context.account, theme: theme, peer: peer, emptyColor: theme.list.mediaPlaceholderColor)
         
         self.addSubnode(self.titleNode)
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(16.0), textColor: theme.actionSheet.primaryTextColor)

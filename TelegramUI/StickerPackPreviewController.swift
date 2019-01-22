@@ -18,7 +18,7 @@ final class StickerPackPreviewController: ViewController {
     private var animatedIn = false
     private var dismissed = false
     
-    private let account: Account
+    private let context: AccountContext
     private let mode: StickerPackPreviewControllerMode
     private weak var parentNavigationController: NavigationController?
     
@@ -51,8 +51,8 @@ final class StickerPackPreviewController: ViewController {
         }
     }
     
-    init(account: Account, stickerPack: StickerPackReference, mode: StickerPackPreviewControllerMode = .default, parentNavigationController: NavigationController?) {
-        self.account = account
+    init(context: AccountContext, stickerPack: StickerPackReference, mode: StickerPackPreviewControllerMode = .default, parentNavigationController: NavigationController?) {
+        self.context = context
         self.mode = mode
         self.parentNavigationController = parentNavigationController
         
@@ -62,9 +62,9 @@ final class StickerPackPreviewController: ViewController {
         
         self.statusBar.statusBarStyle = .Ignore
         
-        self.stickerPackContents.set(loadedStickerPack(postbox: account.postbox, network: account.network, reference: stickerPack, forceActualized: true))
+        self.stickerPackContents.set(loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: stickerPack, forceActualized: true))
         
-        self.presentationDataDisposable = (self.account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 strongSelf.controllerNode.updatePresentationData(presentationData)
@@ -92,18 +92,18 @@ final class StickerPackPreviewController: ViewController {
                 }
                 
                 if let stickerPackContentsValue = strongSelf.stickerPackContentsValue, case let .result(info, _, _) = stickerPackContentsValue, !info.shortName.isEmpty {
-                    strongSelf.present(ShareController(account: strongSelf.account, subject: .url("https://t.me/addstickers/\(info.shortName)"), externalShare: true), in: .window(.root))
+                    strongSelf.present(ShareController(context: strongSelf.context, subject: .url("https://t.me/addstickers/\(info.shortName)"), externalShare: true), in: .window(.root))
                     strongSelf.dismiss()
                 }
             }
         }
-        self.displayNode = StickerPackPreviewControllerNode(account: self.account, openShare: openShareImpl, openMention: { [weak self] mention in
+        self.displayNode = StickerPackPreviewControllerNode(context: self.context, openShare: openShareImpl, openMention: { [weak self] mention in
             guard let strongSelf = self else {
                 return
             }
             
-            let account = strongSelf.account
-            strongSelf.openMentionDisposable.set((resolvePeerByName(account: strongSelf.account, name: mention)
+            let account = strongSelf.context.account
+            strongSelf.openMentionDisposable.set((resolvePeerByName(account: strongSelf.context.account, name: mention)
             |> mapToSignal { peerId -> Signal<Peer?, NoError> in
                 if let peerId = peerId {
                     return account.postbox.loadedPeerWithId(peerId)
@@ -118,7 +118,7 @@ final class StickerPackPreviewController: ViewController {
                 }
                 if let peer = peer {
                     strongSelf.dismiss()
-                    strongSelf.parentNavigationController?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peer.id), messageId: nil))
+                    strongSelf.parentNavigationController?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peer.id), messageId: nil))
                 }
             }))
         })
@@ -141,7 +141,7 @@ final class StickerPackPreviewController: ViewController {
         self.stickerPackDisposable.set((self.stickerPackContents.get() |> deliverOnMainQueue).start(next: { [weak self] next in
             if let strongSelf = self {
                 if case .none = next {
-                    let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    let presentationData = strongSelf.context.currentPresentationData.with { $0 }
                     strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.StickerPack_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     strongSelf.dismiss()
                 } else {

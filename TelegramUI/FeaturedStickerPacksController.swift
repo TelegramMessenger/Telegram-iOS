@@ -152,13 +152,8 @@ private func featuredStickerPacksControllerEntries(presentationData: Presentatio
     return entries
 }
 
-public func featuredStickerPacksController(account: Account) -> ViewController {
+public func featuredStickerPacksController(context: AccountContext) -> ViewController {
     let statePromise = ValuePromise(FeaturedStickerPacksControllerState(), ignoreRepeated: true)
-    //let stateValue = Atomic(value: FeaturedStickerPacksControllerState())
-    /*let updateState: ((FeaturedStickerPacksControllerState) -> FeaturedStickerPacksControllerState) -> Void = { f in
-        statePromise.set(stateValue.modify { f($0) })
-    }*/
- 
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -168,17 +163,17 @@ public func featuredStickerPacksController(account: Account) -> ViewController {
     
     var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
     
-    let arguments = FeaturedStickerPacksControllerArguments(account: account, openStickerPack: { info in
+    let arguments = FeaturedStickerPacksControllerArguments(account: context.account, openStickerPack: { info in
         presentStickerPackController?(info)
     }, addPack: { info in
-        let _ = (loadedStickerPack(postbox: account.postbox, network: account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+        let _ = (loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
         |> mapToSignal { result -> Signal<Void, NoError> in
             switch result {
                 case let .result(info, items, installed):
                     if installed {
                         return .complete()
                     } else {
-                        return addStickerPackInteractively(postbox: account.postbox, info: info, items: items)
+                        return addStickerPackInteractively(postbox: context.account.postbox, info: info, items: items)
                     }
                 case .fetching:
                     break
@@ -190,15 +185,15 @@ public func featuredStickerPacksController(account: Account) -> ViewController {
     })
     
     let stickerPacks = Promise<CombinedView>()
-    stickerPacks.set(account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]))
+    stickerPacks.set(context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]))
     
     let featured = Promise<[FeaturedStickerPackItem]>()
-    featured.set(account.viewTracker.featuredStickerPacks())
+    featured.set(context.account.viewTracker.featuredStickerPacks())
     
     var previousPackCount: Int?
     var initialUnreadPacks: [ItemCollectionId: Bool] = [:]
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, featured.get() |> deliverOnMainQueue)
+    let signal = combineLatest(context.presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, featured.get() |> deliverOnMainQueue)
         |> deliverOnMainQueue
         |> map { presentationData, state, view, featured -> (ItemListControllerState, (ItemListNodeState<FeaturedStickerPacksEntry>, FeaturedStickerPacksEntry.ItemGenerationArguments)) in
             let packCount: Int? = featured.count
@@ -221,7 +216,7 @@ public func featuredStickerPacksController(account: Account) -> ViewController {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     
     var alreadyReadIds = Set<ItemCollectionId>()
     

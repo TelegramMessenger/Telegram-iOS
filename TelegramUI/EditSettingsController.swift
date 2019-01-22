@@ -280,7 +280,7 @@ private func editSettingsEntries(presentationData: PresentationData, state: Edit
     return entries
 }
 
-func editSettingsController(account: Account, currentName: ItemListAvatarAndNameInfoItemName, currentBioText: String, accountManager: AccountManager) -> ViewController {
+func editSettingsController(context: AccountContext, currentName: ItemListAvatarAndNameInfoItemName, currentBioText: String, accountManager: AccountManager) -> ViewController {
     let initialState = EditSettingsState(editingName: currentName, editingBioText: currentBioText)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -313,7 +313,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
     var updateHiddenAvatarImpl: (() -> Void)?
     var changeProfilePhotoImpl: (() -> Void)?
         
-    let arguments = EditSettingsItemArguments(account: account, accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
+    let arguments = EditSettingsItemArguments(account: context.account, accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
         var updating = false
         updateState {
             updating = $0.updatingAvatar != nil
@@ -355,11 +355,11 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
         }
         var updateNameSignal: Signal<Void, NoError> = .complete()
         if let updateName = updateName, case let .personName(firstName, lastName) = updateName {
-            updateNameSignal = updateAccountPeerName(account: account, firstName: firstName, lastName: lastName)
+            updateNameSignal = updateAccountPeerName(account: context.account, firstName: firstName, lastName: lastName)
         }
         var updateBioSignal: Signal<Void, NoError> = .complete()
         if let updateBio = updateBio {
-            updateBioSignal = updateAbout(account: account, about: updateBio)
+            updateBioSignal = updateAbout(account: context.account, about: updateBio)
             |> `catch` { _ -> Signal<Void, NoError> in
                 return .complete()
             }
@@ -368,26 +368,26 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
             dismissImpl?()
         }))
     }, addAccount: {
-        let isTestingEnvironment = account.testingEnvironment
+        let isTestingEnvironment = context.account.testingEnvironment
         let _ = accountManager.transaction({ transaction -> Void in
             let id = transaction.createRecord([AccountEnvironmentAttribute(environment: isTestingEnvironment ? .test : .production)])
             transaction.setCurrentId(id)
         }).start()
     }, logout: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.currentPresentationData.with { $0 }
         let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Settings_LogoutConfirmationTitle, text: presentationData.strings.Settings_LogoutConfirmationText, actions: [
             TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
             }),
             TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-                let _ = logoutFromAccount(id: account.id, accountManager: accountManager).start()
+                let _ = logoutFromAccount(id: context.account.id, accountManager: accountManager).start()
             })
         ])
         presentControllerImpl?(alertController, nil)
     })
     
-    let peerView = account.viewTracker.peerView(account.peerId)
+    let peerView = context.account.viewTracker.peerView(context.account.peerId)
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView)
+    let signal = combineLatest(context.presentationData, statePromise.get(), peerView)
         |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
             let rightNavigationButton: ItemListNavigationButton
             if state.updatingName != nil || state.updatingBioText {
@@ -406,7 +406,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal, tabBarItem: nil)
+    let controller = ItemListController(context: context, state: signal, tabBarItem: nil)
     pushControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
     }
@@ -441,12 +441,12 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
         }
     }
     changeProfilePhotoImpl = { [weak controller] in
-        let _ = (account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
-            return (transaction.getPeer(account.peerId), currentSearchBotsConfiguration(transaction: transaction))
+        let _ = (context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
+            return (transaction.getPeer(context.account.peerId), currentSearchBotsConfiguration(transaction: transaction))
         } |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
             controller?.view.endEditing(true)
             
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = context.currentPresentationData.with { $0 }
             
             let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
             legacyController.statusBar.statusBarStyle = .Ignore
@@ -468,13 +468,13 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
             let completedImpl: (UIImage) -> Void = { image in
                 if let data = UIImageJPEGRepresentation(image, 0.6) {
                     let resource = LocalFileMediaResource(fileId: arc4random64())
-                    account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                    context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
                     updateState {
                         $0.withUpdatedUpdatingAvatar(.image(representation, true))
                     }
-                    updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: resource, mapResourceToAvatarSizes: { resource, representations in
-                        return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                    updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: resource, mapResourceToAvatarSizes: { resource, representations in
+                        return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                     }) |> deliverOnMainQueue).start(next: { result in
                         switch result {
                             case .complete:
@@ -491,7 +491,7 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: hasPhotos, personalPhoto: true, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { assetsController in
-                let controller = WebSearchController(account: account, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: nil, completion: { result in
+                let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: nil, completion: { result in
                     assetsController?.dismiss()
                     completedImpl(result)
                 }))
@@ -511,8 +511,8 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
                         return $0.withUpdatedUpdatingAvatar(.none)
                     }
                 }
-                updateAvatarDisposable.set((updateAccountPhoto(account: account, resource: nil, mapResourceToAvatarSizes: { resource, representations in
-                    return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
+                updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: nil, mapResourceToAvatarSizes: { resource, representations in
+                    return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                 }) |> deliverOnMainQueue).start(next: { result in
                     switch result {
                     case .complete:
@@ -527,11 +527,11 @@ func editSettingsController(account: Account, currentName: ItemListAvatarAndName
             mixin.didFinishWithView = {
                 let _ = currentAvatarMixin.swap(nil)
                 
-                let _ = (account.postbox.loadedPeerWithId(account.peerId)
+                let _ = (context.account.postbox.loadedPeerWithId(context.account.peerId)
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { peer in
                     if peer.smallProfileImage != nil {
-                        let galleryController = AvatarGalleryController(account: account, peer: peer, replaceRootController: { controller, ready in
+                        let galleryController = AvatarGalleryController(account: context.account, peer: peer, replaceRootController: { controller, ready in
                         })
                         /*hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
                             avatarAndNameInfoContext.hiddenAvatarRepresentation = entry?.representations.first

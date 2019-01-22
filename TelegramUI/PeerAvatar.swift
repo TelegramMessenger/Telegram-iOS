@@ -88,7 +88,7 @@ func peerAvatarImage(account: Account, peer: Peer, authorOfMessage: MessageRefer
             if synchronousLoad {
                 return generate
             } else {
-                return generate |> runOn(account.graphicsThreadPool)
+                return generate |> runOn(Queue.concurrentDefaultQueue())
             }
         }
     } else {

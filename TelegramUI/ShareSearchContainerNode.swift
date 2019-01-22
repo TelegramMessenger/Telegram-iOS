@@ -161,7 +161,7 @@ private func preparedRecentEntryTransition(account: Account, from fromEntries: [
 }
 
 final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
-    private let account: Account
+    private let context: AccountContext
     private let strings: PresentationStrings
     private let controllerInteraction: ShareControllerInteraction
     
@@ -191,8 +191,8 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let searchQuery = ValuePromise<String>("", ignoreRepeated: true)
     private let searchDisposable = MetaDisposable()
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction, recentPeers: [RenderedPeer]) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction, recentPeers: [RenderedPeer]) {
+        self.context = context
         self.strings = strings
         self.controllerInteraction = controllerInteraction
         
@@ -237,10 +237,13 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         let foundItems = searchQuery.get()
             |> mapToSignal { query -> Signal<[ShareSearchPeerEntry]?, NoError> in
                 if !query.isEmpty {
-                    let accountPeer = account.postbox.loadedPeerWithId(account.peerId) |> take(1)
-                    let foundLocalPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: nil)
-                    let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], [])) |> then(searchPeers(account: account, query: query)
-                        |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
+                    let accountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId) |> take(1)
+                    let foundLocalPeers = context.account.postbox.searchPeers(query: query.lowercased(), groupId: nil)
+                    let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], []))
+                    |> then(
+                        searchPeers(account: context.account, query: query)
+                        |> delay(0.2, queue: Queue.concurrentDefaultQueue())
+                    )
                     
                     return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers)
                     |> map { accountPeer, foundLocalPeers, foundRemotePeers -> [ShareSearchPeerEntry]? in
@@ -301,7 +304,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 strongSelf.entries = entries ?? []
                 
                 let firstTime = previousEntries == nil
-                let transition = preparedGridEntryTransition(account: account, from: previousEntries ?? [], to: entries ?? [], interfaceInteraction: controllerInteraction)
+                let transition = preparedGridEntryTransition(account: context.account, from: previousEntries ?? [], to: entries ?? [], interfaceInteraction: controllerInteraction)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
                 
                 if (previousEntries == nil) != (entries == nil) {
@@ -341,7 +344,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                     strongSelf.recentEntries = entries
                     
                     let firstTime = previousEntries == nil
-                    let transition = preparedRecentEntryTransition(account: account, from: previousEntries ?? [], to: entries, interfaceInteraction: controllerInteraction)
+                    let transition = preparedRecentEntryTransition(account: context.account, from: previousEntries ?? [], to: entries, interfaceInteraction: controllerInteraction)
                     strongSelf.enqueueRecentTransition(transition, firstTime: firstTime)
                 }
             }))

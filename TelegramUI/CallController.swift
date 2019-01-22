@@ -15,7 +15,7 @@ public final class CallController: ViewController {
         return self._ready
     }
     
-    private let account: Account
+    private let context: AccountContext
     public let call: PresentationCall
     
     private var presentationData: PresentationData
@@ -32,11 +32,11 @@ public final class CallController: ViewController {
     private var audioOutputStateDisposable: Disposable?
     private var audioOutputState: ([AudioSessionOutput], AudioSessionOutput?)?
     
-    public init(account: Account, call: PresentationCall) {
-        self.account = account
+    public init(context: AccountContext, call: PresentationCall) {
+        self.context = context
         self.call = call
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
         
@@ -89,7 +89,7 @@ public final class CallController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = CallControllerNode(account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit)
+        self.displayNode = CallControllerNode(context: self.context, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit)
         self.displayNodeDidLoad()
         
         self.controllerNode.toggleMute = { [weak self] in
@@ -167,7 +167,7 @@ public final class CallController: ViewController {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
-        self.peerDisposable = (account.postbox.peerView(id: self.call.peerId)
+        self.peerDisposable = (context.account.postbox.peerView(id: self.call.peerId)
         |> deliverOnMainQueue).start(next: { [weak self] view in
             if let strongSelf = self {
                 if let peer = view.peers[view.peerId] {

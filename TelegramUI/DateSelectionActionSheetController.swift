@@ -14,14 +14,14 @@ final class DateSelectionActionSheetController: ActionSheetController {
         return self._ready
     }
     
-    init(account: Account, title: String?, currentValue: Int32, minimumDate: Date? = nil, maximumDate: Date? = nil, emptyTitle: String? = nil, applyValue: @escaping (Int32?) -> Void) {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, title: String?, currentValue: Int32, minimumDate: Date? = nil, maximumDate: Date? = nil, emptyTitle: String? = nil, applyValue: @escaping (Int32?) -> Void) {
+        let presentationData = context.currentPresentationData.with { $0 }
         let theme = presentationData.theme
         let strings = presentationData.strings
         
         super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
         
-        self.presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak self] presentationData in
+        self.presentationDisposable = context.presentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
             }

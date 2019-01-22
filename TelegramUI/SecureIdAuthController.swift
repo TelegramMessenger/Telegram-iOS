@@ -63,7 +63,7 @@ final class SecureIdAuthController: ViewController {
         return self.displayNode as! SecureIdAuthControllerNode
     }
     
-    private let account: Account
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let mode: SecureIdAuthControllerMode
     
@@ -79,9 +79,9 @@ final class SecureIdAuthController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(account: Account, mode: SecureIdAuthControllerMode) {
-        self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, mode: SecureIdAuthControllerMode) {
+        self.context = context
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         self.mode = mode
         
@@ -107,12 +107,12 @@ final class SecureIdAuthController: ViewController {
         }
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationInfoIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.infoPressed))
         
-        self.challengeDisposable.set((twoStepAuthData(account.network)
+        self.challengeDisposable.set((twoStepAuthData(context.account.network)
         |> deliverOnMainQueue).start(next: { [weak self] data in
             if let strongSelf = self {
-                let storedPassword = strongSelf.account.telegramApplicationContext.getStoredSecureIdPassword()
+                let storedPassword = context.getStoredSecureIdPassword()
                 if data.currentPasswordDerivation != nil, let storedPassword = storedPassword {
-                    strongSelf.authenthicateDisposable.set((accessSecureId(network: strongSelf.account.network, password: storedPassword)
+                    strongSelf.authenthicateDisposable.set((accessSecureId(network: strongSelf.context.account.network, password: storedPassword)
                     |> deliverOnMainQueue).start(next: { context in
                         guard let strongSelf = self, strongSelf.state.verificationState == nil else {
                             return
@@ -184,7 +184,7 @@ final class SecureIdAuthController: ViewController {
                 if appUpdateRequired {
                     let errorText = strongSelf.presentationData.strings.Passport_UpdateRequiredError
                     strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Application_Update, action: {
-                        account.telegramApplicationContext.applicationBindings.openAppStorePage()
+                        context.applicationBindings.openAppStorePage()
                     })]), in: .window(.root))
                 } else if let callbackUrl = callbackUrl, let peerId = peerId {
                     let errorText = strongSelf.presentationData.strings.Login_UnknownError
@@ -200,10 +200,10 @@ final class SecureIdAuthController: ViewController {
         
         switch self.mode {
             case let .form(peerId, scope, publicKey, callbackUrl, _, _):
-                self.formDisposable = (combineLatest(requestSecureIdForm(postbox: account.postbox, network: account.network, peerId: peerId, scope: scope, publicKey: publicKey), secureIdConfiguration(postbox: account.postbox, network: account.network) |> introduceError(RequestSecureIdFormError.self))
+                self.formDisposable = (combineLatest(requestSecureIdForm(postbox: context.account.postbox, network: context.account.network, peerId: peerId, scope: scope, publicKey: publicKey), secureIdConfiguration(postbox: context.account.postbox, network: context.account.network) |> introduceError(RequestSecureIdFormError.self))
                 |> mapToSignal { form, configuration -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
-                    return account.postbox.transaction { transaction -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
-                        guard let accountPeer = transaction.getPeer(account.peerId), let servicePeer = transaction.getPeer(form.peerId) else {
+                    return context.account.postbox.transaction { transaction -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
+                        guard let accountPeer = transaction.getPeer(context.account.peerId), let servicePeer = transaction.getPeer(form.peerId) else {
                             return .fail(.generic)
                         }
                         
@@ -231,8 +231,8 @@ final class SecureIdAuthController: ViewController {
                     handleError(error, callbackUrl, peerId)
                 })
             case .list:
-                self.formDisposable = (combineLatest(getAllSecureIdValues(network: self.account.network), secureIdConfiguration(postbox: account.postbox, network: account.network) |> introduceError(GetAllSecureIdValuesError.self), account.postbox.transaction { transaction -> Signal<Peer, GetAllSecureIdValuesError> in
-                    guard let accountPeer = transaction.getPeer(account.peerId) else {
+                self.formDisposable = (combineLatest(getAllSecureIdValues(network: self.context.account.network), secureIdConfiguration(postbox: context.account.postbox, network: context.account.network) |> introduceError(GetAllSecureIdValuesError.self), context.account.postbox.transaction { transaction -> Signal<Peer, GetAllSecureIdValuesError> in
+                    guard let accountPeer = transaction.getPeer(context.account.peerId) else {
                         return .fail(.generic)
                     }
                     
@@ -307,7 +307,7 @@ final class SecureIdAuthController: ViewController {
             self?.grantAccess()
         }, openUrl: { [weak self] url in
             if let strongSelf = self {
-                openExternalUrl(account: strongSelf.account, url: url, presentationData: strongSelf.presentationData, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
+                openExternalUrl(context: strongSelf.context, url: url, presentationData: strongSelf.presentationData, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
                     self?.view.endEditing(true)
                 })
             }
@@ -315,12 +315,12 @@ final class SecureIdAuthController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            let _ = (strongSelf.account.postbox.loadedPeerWithId(mention.peerId)
+            let _ = (strongSelf.context.account.postbox.loadedPeerWithId(mention.peerId)
             |> deliverOnMainQueue).start(next: { peer in
                 guard let strongSelf = self else {
                     return
                 }
-                if let infoController = peerInfoController(account: strongSelf.account, peer: peer) {
+                if let infoController = peerInfoController(context: strongSelf.context, peer: peer) {
                     (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                 }
             })
@@ -331,7 +331,7 @@ final class SecureIdAuthController: ViewController {
             
             let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: strongSelf.presentationData.theme))
             strongSelf.navigationItem.rightBarButtonItem = item
-            strongSelf.deleteDisposable.set((deleteSecureIdValues(network: strongSelf.account.network, keys: Set(values.map({ $0.value.key })))
+            strongSelf.deleteDisposable.set((deleteSecureIdValues(network: strongSelf.context.account.network, keys: Set(values.map({ $0.value.key })))
             |> deliverOnMainQueue).start(completed: {
                 guard let strongSelf = self else {
                     return
@@ -347,7 +347,7 @@ final class SecureIdAuthController: ViewController {
             }))
         })
         
-        self.displayNode = SecureIdAuthControllerNode(account: self.account, presentationData: presentationData, requestLayout: { [weak self] transition in
+        self.displayNode = SecureIdAuthControllerNode(context: self.context, presentationData: presentationData, requestLayout: { [weak self] transition in
             self?.requestLayout(transition: transition)
         }, interaction: interaction)
         self.controllerNode.updateState(self.state, transition: .immediate)
@@ -394,7 +394,7 @@ final class SecureIdAuthController: ViewController {
     }
     
     private func openUrl(_ url: String) {
-        openExternalUrl(account: self.account, url: url, forceExternal: true, presentationData: self.presentationData, applicationContext: self.account.telegramApplicationContext, navigationController: nil, dismissInput: { [weak self] in
+        openExternalUrl(context: self.context, url: url, forceExternal: true, presentationData: self.presentationData, navigationController: nil, dismissInput: { [weak self] in
             self?.view.endEditing(true)
         })
     }
@@ -420,12 +420,12 @@ final class SecureIdAuthController: ViewController {
                 state.verificationState = .passwordChallenge(hint: hint, state: .checking, hasRecoveryEmail: hasRecoveryEmail)
                 return state
             })
-            self.challengeDisposable.set((accessSecureId(network: self.account.network, password: password)
+            self.challengeDisposable.set((accessSecureId(network: self.context.account.network, password: password)
             |> deliverOnMainQueue).start(next: { [weak self] context in
                 guard let strongSelf = self, let verificationState = strongSelf.state.verificationState, case .passwordChallenge(_, .checking, _) = verificationState else {
                     return
                 }
-                strongSelf.account.telegramApplicationContext.storeSecureIdPassword(password: password)
+                strongSelf.context.storeSecureIdPassword(password: password)
                 strongSelf.updateState(animated: !inBackground, { state in
                     var state = state
                     state.verificationState = .verified(context.context)
@@ -491,13 +491,13 @@ final class SecureIdAuthController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.recoveryDisposable.set((requestTwoStepVerificationPasswordRecoveryCode(network: strongSelf.account.network)
+                strongSelf.recoveryDisposable.set((requestTwoStepVerificationPasswordRecoveryCode(network: strongSelf.context.account.network)
                 |> deliverOnMainQueue).start(next: { emailPattern in
                     guard let strongSelf = self else {
                         return
                     }
                     var completionImpl: (() -> Void)?
-                    let controller = resetPasswordController(account: strongSelf.account, emailPattern: emailPattern, completion: {
+                    let controller = resetPasswordController(context: strongSelf.context, emailPattern: emailPattern, completion: {
                         completionImpl?()
                     })
                     completionImpl = { [weak controller] in
@@ -532,7 +532,7 @@ final class SecureIdAuthController: ViewController {
             case let .awaitingConfirmation(password, emailPattern, codeLength):
                 initialState = .confirmEmail(password: password, hasSecureValues: false, pattern: emailPattern, codeLength: codeLength)
         }
-        let controller = SetupTwoStepVerificationController(account: self.account, initialState: initialState, stateUpdated: { [weak self] update, shouldDismiss, controller in
+        let controller = SetupTwoStepVerificationController(context: self.context, initialState: initialState, stateUpdated: { [weak self] update, shouldDismiss, controller in
             guard let strongSelf = self else {
                 return
             }
@@ -621,7 +621,7 @@ final class SecureIdAuthController: ViewController {
                 if case let .form(reqForm) = self.mode, let encryptedFormData = form.encryptedFormData, let formData = form.formData {
                     let values = parseRequestedFormFields(formData.requestedFields, values: formData.values, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry).map({ $0.1 }).flatMap({ $0 })
                     
-                    let _ = (grantSecureIdAccess(network: self.account.network, peerId: encryptedFormData.servicePeer.id, publicKey: reqForm.publicKey, scope: reqForm.scope, opaquePayload: reqForm.opaquePayload, opaqueNonce: reqForm.opaqueNonce, values: values, requestedFields: formData.requestedFields)
+                    let _ = (grantSecureIdAccess(network: self.context.account.network, peerId: encryptedFormData.servicePeer.id, publicKey: reqForm.publicKey, scope: reqForm.scope, opaquePayload: reqForm.opaquePayload, opaqueNonce: reqForm.opaqueNonce, values: values, requestedFields: formData.requestedFields)
                     |> deliverOnMainQueue).start(completed: { [weak self] in
                         self?.dismiss()
                         self?.openUrl(secureIdCallbackUrl(with: reqForm.callbackUrl, peerId: reqForm.peerId, result: .success, parameters: [:]))
@@ -637,7 +637,7 @@ final class SecureIdAuthController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            openExternalUrl(account: strongSelf.account, url: strongSelf.presentationData.strings.Passport_InfoFAQ_URL, presentationData: strongSelf.presentationData, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
+            openExternalUrl(context: strongSelf.context, url: strongSelf.presentationData.strings.Passport_InfoFAQ_URL, presentationData: strongSelf.presentationData, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
                 self?.view.endEditing(true)
             })
         })]), in: .window(.root))

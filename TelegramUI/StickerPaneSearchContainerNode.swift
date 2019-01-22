@@ -134,7 +134,7 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, theme: 
 }
 
 final class StickerPaneSearchContainerNode: ASDisplayNode {
-    private let account: Account
+    private let context: AccountContext
     private let controllerInteraction: ChatControllerInteraction
     private let inputNodeInteraction: ChatMediaInputNodeInteraction
     
@@ -156,14 +156,14 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         return self._ready.get()
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, cancel: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, cancel: @escaping () -> Void) {
+        self.context = context
         self.controllerInteraction = controllerInteraction
         self.inputNodeInteraction = inputNodeInteraction
         
         self.backgroundNode = ASDisplayNode()
         
-        self.trendingPane = ChatMediaInputTrendingPane(account: account, controllerInteraction: controllerInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
+        self.trendingPane = ChatMediaInputTrendingPane(account: context.account, controllerInteraction: controllerInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
             return inputNodeInteraction?.previewedStickerPackItem == .pack(item)
         })
         
@@ -210,7 +210,7 @@ final class StickerPaneSearchContainerNode: ASDisplayNode {
         let interaction = StickerPaneSearchInteraction(open: { [weak self] info in
             if let strongSelf = self {
                 strongSelf.view.endEditing(true)
-                strongSelf.controllerInteraction.presentController(StickerPackPreviewController(account: strongSelf.account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController()), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                strongSelf.controllerInteraction.presentController(StickerPackPreviewController(context: strongSelf.context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController()), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
         }, install: { [weak self] info in
             if let strongSelf = self {

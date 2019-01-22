@@ -5,7 +5,7 @@ import Postbox
 import TelegramCore
 
 public class NotificationExceptionsController: ViewController {
-    private let account: Account
+    private let context: AccountContext
     
     private var controllerNode: NotificationExceptionsControllerNode {
         return self.displayNode as! NotificationExceptionsControllerNode
@@ -27,11 +27,11 @@ public class NotificationExceptionsController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(account: Account, mode: NotificationExceptionMode, updatedMode: @escaping(NotificationExceptionMode) -> Void) {
+    public init(context: AccountContext, mode: NotificationExceptionMode, updatedMode: @escaping(NotificationExceptionMode) -> Void) {
         self.account = account
         self.mode = mode
         self.updatedMode = updatedMode
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -53,7 +53,7 @@ public class NotificationExceptionsController: ViewController {
             }
         }
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -101,7 +101,7 @@ public class NotificationExceptionsController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = NotificationExceptionsControllerNode(account: self.account, presentationData: self.presentationData, navigationBar: self.navigationBar!, mode: self.mode, updatedMode: self.updatedMode, requestActivateSearch: { [weak self] in
+        self.displayNode = NotificationExceptionsControllerNode(context: self.context, presentationData: self.presentationData, navigationBar: self.navigationBar!, mode: self.mode, updatedMode: self.updatedMode, requestActivateSearch: { [weak self] in
             self?.activateSearch()
             }, requestDeactivateSearch: { [weak self] in
                 self?.deactivateSearch()

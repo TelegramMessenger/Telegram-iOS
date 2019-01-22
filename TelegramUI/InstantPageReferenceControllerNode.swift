@@ -6,7 +6,7 @@ import TelegramCore
 import SafariServices
 
 class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let account: Account
+    private let context: AccountContext
     private let theme: InstantPageTheme
     private var presentationData: PresentationData
     private let webPage: TelegramMediaWebpage
@@ -32,9 +32,9 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
     var dismiss: (() -> Void)?
     var close: (() -> Void)?
     
-    init(account: Account, theme: InstantPageTheme, webPage: TelegramMediaWebpage, item: InstantPageTextItem, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlIn: @escaping (InstantPageUrlItem) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, theme: InstantPageTheme, webPage: TelegramMediaWebpage, item: InstantPageTextItem, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlIn: @escaping (InstantPageUrlItem) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         self.theme = theme
         self.webPage = webPage
         self.item = item
@@ -196,7 +196,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
             
             let sideInset: CGFloat = 16.0
             let (_, items, contentSize) = layoutTextItemWithString(self.item.attributedString, boundingWidth: width - sideInset * 2.0, offset: CGPoint(x: sideInset, y: sideInset), media: media, webpage: self.webPage)
-            let contentNode = InstantPageContentNode(account: self.account, strings: self.presentationData.strings, theme: self.theme, items: items, contentSize: CGSize(width: width, height: contentSize.height), inOverlayPanel: true, openMedia: { _ in }, longPressMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in })
+            let contentNode = InstantPageContentNode(context: self.context, strings: self.presentationData.strings, theme: self.theme, items: items, contentSize: CGSize(width: width, height: contentSize.height), inOverlayPanel: true, openMedia: { _ in }, longPressMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in })
             transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: titleAreaHeight), size: CGSize(width: width, height: contentSize.height)))
             self.contentContainerNode.insertSubnode(contentNode, at: 0)
             self.contentNode = contentNode
@@ -335,7 +335,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
                             }
                         case .longTap:
                             if let url = self.urlForTapLocation(location) {
-                                let canOpenIn = availableOpenInOptions(applicationContext: self.account.telegramApplicationContext, item: .url(url: url.url)).count > 1
+                                let canOpenIn = availableOpenInOptions(context: self.context, item: .url(url: url.url)).count > 1
                                 let openText = canOpenIn ? self.presentationData.strings.Conversation_FileOpenIn : self.presentationData.strings.Conversation_LinkDialogOpen
                                 let actionSheet = ActionSheetController(instantPageTheme: self.theme)
                                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
@@ -407,7 +407,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
                 UIPasteboard.general.string = text
             }), ContextMenuAction(content: .text(self.presentationData.strings.Conversation_ContextMenuShare), action: { [weak self] in
                 if let strongSelf = self, case let .Loaded(content) = strongSelf.webPage.content {
-                    strongSelf.present(ShareController(account: strongSelf.account, subject: .quote(text: text, url: content.url)), nil)
+                    strongSelf.present(ShareController(context: strongSelf.context, subject: .quote(text: text, url: content.url)), nil)
                 }
             })])
             controller.dismissed = { [weak self] in

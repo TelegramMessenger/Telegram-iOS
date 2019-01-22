@@ -120,8 +120,8 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 updatedContactInfo = info
                 
-                titleString = NSAttributedString(string: displayName, font: titleFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingAccentTextColor : item.presentationData.theme.theme.chat.bubble.outgoingAccentTextColor)
-                textString = NSAttributedString(string: info, font: textFont, textColor: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingPrimaryTextColor : item.presentationData.theme.theme.chat.bubble.outgoingPrimaryTextColor)
+                titleString = NSAttributedString(string: displayName, font: titleFont, textColor: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingAccentTextColor : item.presentationData.theme.theme.chat.bubble.outgoingAccentTextColor)
+                textString = NSAttributedString(string: info, font: textFont, textColor: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingPrimaryTextColor : item.presentationData.theme.theme.chat.bubble.outgoingPrimaryTextColor)
             } else {
                 updatedContactInfo = nil
             }
@@ -156,7 +156,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
                     case .linear(_, .None):
-                        if item.message.effectivelyIncoming(item.account.peerId) {
+                        if item.message.effectivelyIncoming(item.context.account.peerId) {
                             statusType = .BubbleIncoming
                         } else {
                             if item.message.flags.contains(.Failed) {
@@ -185,7 +185,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 let titleColor: UIColor
                 let titleHighlightedColor: UIColor
                 let avatarPlaceholderColor: UIColor
-                if item.message.effectivelyIncoming(item.account.peerId) {
+                if item.message.effectivelyIncoming(item.context.account.peerId) {
                     buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonIncoming(item.presentationData.theme.theme)!
                     buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIncoming(item.presentationData.theme.theme)!
                     titleColor = item.presentationData.theme.theme.chat.bubble.incomingAccentTextColor
@@ -289,7 +289,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             
                             if let peerId = selectedContact?.peerId, let peer = item.message.peers[peerId] {
-                                strongSelf.avatarNode.setPeer(account: item.account, peer: peer, emptyColor: avatarPlaceholderColor)
+                                strongSelf.avatarNode.setPeer(account: item.context.account, theme: item.presentationData.theme.theme, peer: peer, emptyColor: avatarPlaceholderColor)
                             } else {
                                 strongSelf.avatarNode.setCustomLetters(customLetters)
                             }

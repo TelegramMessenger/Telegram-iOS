@@ -156,7 +156,7 @@ final class CommandChatInputPanelItemNode: ListViewItemNode {
                     
                     strongSelf.arrowNode.setImage(iconImage, for: [])
                     
-                    strongSelf.avatarNode.setPeer(account: item.account, peer: item.command.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
+                    strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.command.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
                     
                     let _ = textApply()
                     

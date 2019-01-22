@@ -83,8 +83,8 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
     
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
-    init(account: Account, listState: LocalizationListState, selectLocalization: @escaping (LocalizationInfo) -> Void, applyingCode: Signal<String?, NoError>) {
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, listState: LocalizationListState, selectLocalization: @escaping (LocalizationInfo) -> Void, applyingCode: Signal<String?, NoError>) {
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
         
@@ -138,7 +138,7 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
             strongSelf.enqueueTransition(transition)
         }))
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
             |> deliverOnMainQueue).start(next: { [weak self] presentationData in
                 if let strongSelf = self {
                     let previousTheme = strongSelf.presentationData.theme
@@ -271,7 +271,7 @@ private func preparedLanguageListNodeTransition(theme: PresentationTheme, string
 }
 
 final class LocalizationListControllerNode: ViewControllerTracingNode {
-    private let account: Account
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let navigationBar: NavigationBar
     private let requestActivateSearch: () -> Void
@@ -301,8 +301,8 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         }
     }
     
-    init(account: Account, presentationData: PresentationData, navigationBar: NavigationBar, requestActivateSearch: @escaping () -> Void, requestDeactivateSearch: @escaping () -> Void, updateCanStartEditing: @escaping (Bool?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, navigationBar: NavigationBar, requestActivateSearch: @escaping () -> Void, requestDeactivateSearch: @escaping () -> Void, updateCanStartEditing: @escaping (Bool?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+        self.context = context
         self.presentationData = presentationData
         self.presentationDataValue.set(.single((presentationData.theme, presentationData.strings)))
         self.navigationBar = navigationBar
@@ -332,7 +332,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         }
         
         let removeItem: (String) -> Void = { id in
-            let _ = (account.postbox.transaction { transaction -> LocalizationInfo? in
+            let _ = (context.account.postbox.transaction { transaction -> LocalizationInfo? in
                 removeSavedLocalization(transaction: transaction, languageCode: id)
                 if let settings = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings, let state = transaction.getPreferencesEntry(key: PreferencesKeys.localizationListState) as? LocalizationListState {
                     if settings.primaryComponent.languageCode == id {
@@ -358,7 +358,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         
         let preferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.localizationListState, PreferencesKeys.localizationSettings]))
         let previousEntriesHolder = Atomic<([LanguageListEntry], PresentationTheme, PresentationStrings)?>(value: nil)
-        self.listDisposable = combineLatest(queue: .mainQueue(), account.postbox.combinedView(keys: [preferencesKey]), self.presentationDataValue.get(), self.applyingCode.get(), revealedCode.get(), self.isEditing.get()).start(next: { [weak self] view, presentationData, applyingCode, revealedCode, isEditing in
+        self.listDisposable = combineLatest(queue: .mainQueue(), context.account.postbox.combinedView(keys: [preferencesKey]), self.presentationDataValue.get(), self.applyingCode.get(), revealedCode.get(), self.isEditing.get()).start(next: { [weak self] view, presentationData, applyingCode, revealedCode, isEditing in
             guard let strongSelf = self else {
                 return
             }
@@ -399,7 +399,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             let transition = preparedLanguageListNodeTransition(theme: presentationData.0, strings: presentationData.1, from: previousEntriesAndPresentationData?.0 ?? [], to: entries, openSearch: openSearch, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, setItemWithRevealedOptions: setItemWithRevealedOptions, removeItem: removeItem, firstTime: previousEntriesAndPresentationData == nil, forceUpdate: previousEntriesAndPresentationData?.1 !== presentationData.0 || previousEntriesAndPresentationData?.2 !== presentationData.1, animated: (previousEntriesAndPresentationData?.0.count ?? 0) >= entries.count)
             strongSelf.enqueueTransition(transition)
         })
-        self.updatedDisposable = synchronizedLocalizationListState(postbox: account.postbox, network: account.network).start()
+        self.updatedDisposable = synchronizedLocalizationListState(postbox: context.account.postbox, network: context.account.network).start()
     }
     
     deinit {
@@ -500,7 +500,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                 return
             }
             strongSelf.applyingCode.set(.single(info.languageCode))
-            strongSelf.applyDisposable.set((downloadAndApplyLocalization(postbox: strongSelf.account.postbox, network: strongSelf.account.network, languageCode: info.languageCode)
+            strongSelf.applyDisposable.set((downloadAndApplyLocalization(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, languageCode: info.languageCode)
                 |> deliverOnMainQueue).start(completed: {
                     self?.applyingCode.set(.single(nil))
                 }))
@@ -526,7 +526,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            let shareController = ShareController(account: strongSelf.account, subject: .url("https://t.me/setlanguage/\(info.languageCode)"))
+            let shareController = ShareController(context: strongSelf.context, subject: .url("https://t.me/setlanguage/\(info.languageCode)"))
             strongSelf.present(shareController, nil)
         }))
         controller.setItemGroups([
@@ -546,7 +546,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: LocalizationListSearchContainerNode(account: self.account, listState: self.currentListState ?? LocalizationListState.defaultSettings, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, applyingCode: self.applyingCode.get()), cancel: { [weak self] in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: LocalizationListSearchContainerNode(context: self.context, listState: self.currentListState ?? LocalizationListState.defaultSettings, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, applyingCode: self.applyingCode.get()), cancel: { [weak self] in
             self?.requestDeactivateSearch()
         })
         

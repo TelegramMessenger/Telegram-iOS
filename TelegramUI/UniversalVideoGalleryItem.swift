@@ -12,7 +12,7 @@ enum UniversalVideoGalleryItemContentInfo {
 }
 
 class UniversalVideoGalleryItem: GalleryItem {
-    let account: Account
+    let context: AccountContext
     let presentationData: PresentationData
     let content: UniversalVideoContent
     let originData: GalleryItemOriginData?
@@ -25,8 +25,8 @@ class UniversalVideoGalleryItem: GalleryItem {
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    init(account: Account, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+        self.context = context
         self.presentationData = presentationData
         self.content = content
         self.originData = originData
@@ -41,7 +41,7 @@ class UniversalVideoGalleryItem: GalleryItem {
     }
     
     func node() -> GalleryItemNode {
-        let node = UniversalVideoGalleryItemNode(account: self.account, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions)
+        let node = UniversalVideoGalleryItemNode(context: self.context, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions)
         
         if let indexData = self.indexData {
             node._title.set(.single("\(indexData.position + 1) \(self.presentationData.strings.Common_of) \(indexData.totalCount)"))
@@ -77,13 +77,13 @@ class UniversalVideoGalleryItem: GalleryItem {
                     }
                 }
                 if let mediaReference = mediaReference {
-                    if let item = ChatMediaGalleryThumbnailItem(account: self.account, mediaReference: mediaReference) {
+                    if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, mediaReference: mediaReference) {
                         return (Int64(id), item)
                     }
                 }
             }
         } else if case let .webPage(webPage, media) = contentInfo, let file = media as? TelegramMediaFile  {
-            if let item = ChatMediaGalleryThumbnailItem(account: self.account, mediaReference: .webPage(webPage: WebpageReference(webPage), media: file)) {
+            if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, mediaReference: .webPage(webPage: WebpageReference(webPage), media: file)) {
                 return (0, item)
             }
         }
@@ -134,7 +134,7 @@ private struct FetchControls {
 }
 
 final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let account: Account
+    private let context: AccountContext
     private let strings: PresentationStrings
     
     fileprivate let _ready = Promise<Void>()
@@ -167,12 +167,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     var playbackCompleted: (() -> Void)?
     
-    init(account: Account, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+        self.context = context
         self.strings = presentationData.strings
         self.scrubberView = ChatVideoGalleryItemScrubberView()
         
-        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, presentationData: presentationData)
+        self.footerContentNode = ChatItemGalleryFooterContentNode(context: context, presentationData: presentationData)
         self.footerContentNode.scrubberView = self.scrubberView
         self.footerContentNode.performAction = performAction
         self.footerContentNode.openActionOptions = openActionOptions
@@ -289,11 +289,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.footerContentNode.scrubberView = nil
             }
             
-            guard let mediaManager = item.account.telegramApplicationContext.mediaManager else {
-                preconditionFailure()
-            }
+            let mediaManager = item.context.mediaManager
             
-            let videoNode = UniversalVideoNode(postbox: item.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
+            let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
             let videoSize = CGSize(width: item.content.dimensions.width * 2.0, height: item.content.dimensions.height * 2.0)
             videoNode.updateLayout(size: videoSize, transition: .immediate)
             videoNode.ownsContentNodeUpdated = { [weak self] value in
@@ -333,7 +331,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 }
                 if let file = file {
-                    let status = messageMediaFileStatus(account: item.account, messageId: message.id, file: file)
+                    let status = messageMediaFileStatus(account: item.context.account, messageId: message.id, file: file)
                     if !isWebpage {
                         self.scrubberView.setFetchStatusSignal(status, strings: self.strings, fileSize: file.size)
                     }
@@ -342,10 +340,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     mediaFileStatus = status |> map(Optional.init)
                     self.fetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: item.account, message: message, file: file, userInitiated: true).start())
+                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: item.context.account, message: message, file: file, userInitiated: true).start())
                         }
                     }, cancel: {
-                        messageMediaFileCancelInteractiveFetch(account: item.account, messageId: message.id, file: file)
+                        messageMediaFileCancelInteractiveFetch(account: item.context.account, messageId: message.id, file: file)
                     })
                 }
             }
@@ -539,7 +537,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let transform = CATransform3DScale(videoNode.layer.transform, transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height, 1.0)
             videoNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: videoNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
             
-            self.account.telegramApplicationContext.mediaManager?.setOverlayVideoNode(nil)
+            self.context.mediaManager.setOverlayVideoNode(nil)
         } else {
             var transformedFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view)
             let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view.superview)
@@ -813,11 +811,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     @objc func pictureInPictureButtonPressed() {
         if let item = self.item, let _ = self.videoNode {
-            let account = self.account
+            let context = self.context
             let baseNavigationController = self.baseNavigationController()
-            let mediaManager = self.account.telegramApplicationContext.mediaManager!
+            let mediaManager = self.context.mediaManager
             var expandImpl: (() -> Void)?
-            let overlayNode = OverlayUniversalVideoNode(account: self.account, audioSession: self.account.telegramApplicationContext.mediaManager!.audioSession, manager: self.account.telegramApplicationContext.mediaManager!.universalVideoManager, content: item.content, expand: {
+            let overlayNode = OverlayUniversalVideoNode(postbox: self.context.account.postbox, audioSession: context.mediaManager.audioSession, manager: context.mediaManager.universalVideoManager, content: item.content, expand: {
                 expandImpl?()
             }, close: { [weak mediaManager] in
                 mediaManager?.setOverlayVideoNode(nil)
@@ -829,7 +827,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 switch contentInfo {
                     case let .message(message):
-                        let gallery = GalleryController(account: account, source: .peerMessagesAtId(message.id), replaceRootController: { controller, ready in
+                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(message.id), replaceRootController: { controller, ready in
                             if let baseNavigationController = baseNavigationController {
                                 baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
                             }
@@ -846,7 +844,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     overlaySupernode?.view.addSubview(view)
                                     overlayNode?.canAttachContent = false
                                 })
-                            } else if let info = account.telegramApplicationContext.mediaManager?.galleryHiddenMediaManager.findTarget(messageId: id, media: media) {
+                            } else if let info = context.mediaManager.galleryHiddenMediaManager.findTarget(messageId: id, media: media) {
                                 return GalleryTransitionArguments(transitionNode: (info.1, info.2), addToTransitionSurface: info.0)
                             }
                             return nil
@@ -855,7 +853,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         break
                 }
             }
-            account.telegramApplicationContext.mediaManager?.setOverlayVideoNode(overlayNode)
+            context.mediaManager.setOverlayVideoNode(overlayNode)
             if overlayNode.supernode != nil {
                 self.beginCustomDismiss()
                 self.animateOut(toOverlay: overlayNode, completion: { [weak self] in

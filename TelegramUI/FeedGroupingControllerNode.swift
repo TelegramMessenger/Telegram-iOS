@@ -244,7 +244,7 @@ private func preparedItemListNodeEntryTransition(from fromEntries: [FeedGrouping
 }
 
 final class FeedGroupingControllerNode: ViewControllerTracingNode {
-    private let account: Account
+    private let context: AccountContext
     private let groupId: PeerGroupId
     private var presentationData: PresentationData
     private let ungroupedAll: () -> Void
@@ -277,8 +277,8 @@ final class FeedGroupingControllerNode: ViewControllerTracingNode {
     
     private var transitionDisposable: Disposable?
     
-    init(account: Account, groupId: PeerGroupId, presentationData: PresentationData, ungroupedAll: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, groupId: PeerGroupId, presentationData: PresentationData, ungroupedAll: @escaping () -> Void) {
+        self.context = context
         self.groupId = groupId
         self.presentationData = presentationData
         self.ungroupedAll = ungroupedAll
@@ -314,7 +314,7 @@ final class FeedGroupingControllerNode: ViewControllerTracingNode {
         
         let previousState = Atomic<FeedGroupingEntriesState?>(value: nil)
         
-        let arguments = FeedGroupingControllerArguments(account: account, togglePeer: { [weak self] peer, value in
+        let arguments = FeedGroupingControllerArguments(account: context.account, togglePeer: { [weak self] peer, value in
             if let strongSelf = self {
                 strongSelf.updateState({ current in
                     var peers = current.peers
@@ -328,12 +328,12 @@ final class FeedGroupingControllerNode: ViewControllerTracingNode {
                     }
                     return current.withUpdatedPeers(peers)
                 })
-                let _ = updatePeerGroupIdInteractively(postbox: strongSelf.account.postbox, peerId: peer.id, groupId: value ? strongSelf.groupId : nil).start()
+                let _ = updatePeerGroupIdInteractively(postbox: strongSelf.context.account.postbox, peerId: peer.id, groupId: value ? strongSelf.groupId : nil).start()
             }
         }, ungroupAll: { [weak self] in
             if let strongSelf = self {
                 
-                let _ = (clearPeerGroupInteractively(postbox: strongSelf.account.postbox, groupId: strongSelf.groupId)
+                let _ = (clearPeerGroupInteractively(postbox: strongSelf.context.account.postbox, groupId: strongSelf.groupId)
                 |> deliverOnMainQueue).start(completed: {
                     self?.ungroupedAll()
                 })
@@ -363,7 +363,7 @@ final class FeedGroupingControllerNode: ViewControllerTracingNode {
             return state
         })
         
-        self.peersDisposable.set((availableGroupFeedPeers(postbox: self.account.postbox, network: self.account.network, groupId: groupId)
+        self.peersDisposable.set((availableGroupFeedPeers(postbox: self.context.account.postbox, network: self.context.account.network, groupId: groupId)
         |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.updateState({ state in

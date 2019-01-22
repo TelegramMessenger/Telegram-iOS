@@ -485,7 +485,7 @@ private extension PeerMuteState {
 }
 
 final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
-    private let account: Account
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let navigationBar: NavigationBar
     private let requestActivateSearch: () -> Void
@@ -514,8 +514,8 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         self.arguments?.selectPeer()
     }
     
-    init(account: Account, presentationData: PresentationData, navigationBar: NavigationBar, mode: NotificationExceptionMode, updatedMode:@escaping(NotificationExceptionMode)->Void, requestActivateSearch: @escaping () -> Void, requestDeactivateSearch: @escaping () -> Void, updateCanStartEditing: @escaping (Bool?) -> Void, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, navigationBar: NavigationBar, mode: NotificationExceptionMode, updatedMode:@escaping(NotificationExceptionMode)->Void, requestActivateSearch: @escaping () -> Void, requestDeactivateSearch: @escaping () -> Void, updateCanStartEditing: @escaping (Bool?) -> Void, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void) {
+        self.context = context
         self.presentationData = presentationData
         self.presentationDataValue.set(.single((presentationData.theme, presentationData.strings)))
         self.navigationBar = navigationBar
@@ -546,9 +546,9 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             updateState { current in
                 peerIds = peerIds.union(current.mode.peerIds)
                 let key: PostboxViewKey = .peerNotificationSettings(peerIds: peerIds)
-                updateNotificationsDisposable.set((account.postbox.combinedView(keys: [key]) |> deliverOnMainQueue).start(next: { view in
+                updateNotificationsDisposable.set((context.account.postbox.combinedView(keys: [key]) |> deliverOnMainQueue).start(next: { view in
                     if let view = view.views[key] as? PeerNotificationSettingsView {
-                        _ = account.postbox.transaction { transaction in
+                        _ = context.account.postbox.transaction { transaction in
                             updateState { current in
                                 var current = current
                                 for (key, value) in view.notificationSettings {
@@ -576,14 +576,14 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         
         var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
         
-        let presentationData = account.telegramApplicationContext.currentPresentationData.modify {$0}
+        let presentationData = context.currentPresentationData.modify {$0}
         
         let updatePeerSound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
-            return updatePeerNotificationSoundInteractive(account: account, peerId: peerId, sound: sound) |> deliverOnMainQueue
+            return updatePeerNotificationSoundInteractive(account: context.account, peerId: peerId, sound: sound) |> deliverOnMainQueue
         }
         
         let updatePeerNotificationInterval:(PeerId, Int32?) -> Signal<Void, NoError> = { peerId, muteInterval in
-            return updatePeerMuteSetting(account: account, peerId: peerId, muteInterval: muteInterval) |> deliverOnMainQueue
+            return updatePeerMuteSetting(account: context.account, peerId: peerId, muteInterval: muteInterval) |> deliverOnMainQueue
         }
         
         self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
@@ -593,18 +593,18 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             requestActivateSearch()
         }
         
-        let arguments = NotificationExceptionArguments(account: account, activateSearch: {
+        let arguments = NotificationExceptionArguments(account: context.account, activateSearch: {
             openSearch()
         }, openPeer: { [weak self] peer in
             if let strongSelf = self {
-                _ = (strongSelf.account.postbox.transaction { transaction in
+                _ = (strongSelf.context.account.postbox.transaction { transaction in
                     if transaction.getPeer(peer.id) == nil {
                         updatePeers(transaction: transaction, peers: [peer], update: { previousPeer, updatedPeer in
                             return updatedPeer
                         })
                     }
                 } |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
-                        if let strongSelf = strongSelf, let infoController = peerInfoController(account: strongSelf.account, peer: peer) {
+                        if let strongSelf = strongSelf, let infoController = peerInfoController(context: strongSelf.context, peer: peer) {
                             strongSelf.pushController(infoController)
                             strongSelf.requestDeactivateSearch()
                         }
@@ -623,14 +623,14 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                 case .channels:
                     filter.insert(.onlyChannels)
             }
-            let controller = PeerSelectionController(account: account, filter: filter, hasContactSelector: false, title: presentationData.strings.Notifications_AddExceptionTitle)
+            let controller = PeerSelectionController(context: context, filter: filter, hasContactSelector: false, title: presentationData.strings.Notifications_AddExceptionTitle)
             controller.peerSelected = { [weak controller] peerId in
                 controller?.dismiss()
                 
-                presentControllerImpl?(notificationPeerExceptionController(account: account, peerId: peerId, mode: mode, updatePeerSound: { peerId, sound in
+                presentControllerImpl?(notificationPeerExceptionController(context: context, peerId: peerId, mode: mode, updatePeerSound: { peerId, sound in
                     _ = updatePeerSound(peerId, sound).start(next: { _ in
                         updateNotificationsDisposable.set(nil)
-                       _ = combineLatest(updatePeerSound(peerId, sound), account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { _, peer in
+                       _ = combineLatest(updatePeerSound(peerId, sound), context.account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { _, peer in
                             updateState { value in
                                 return value.withUpdatedPeerSound(peer, sound)
                             }
@@ -640,7 +640,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                     })
                 }, updatePeerNotificationInterval: { peerId, muteInterval in
                     updateNotificationsDisposable.set(nil)
-                   _ = combineLatest(updatePeerNotificationInterval(peerId, muteInterval), account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { _, peer in
+                   _ = combineLatest(updatePeerNotificationInterval(peerId, muteInterval), context.account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { _, peer in
                         updateState { value in
                             return value.withUpdatedPeerMuteInterval(peer, muteInterval)
                         }
@@ -654,7 +654,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                 return current.withUpdatedRevealedPeerId(peerId)
             }
         }, deletePeer: { peer in
-            _ = (account.postbox.transaction { transaction in
+            _ = (context.account.postbox.transaction { transaction in
                 if transaction.getPeer(peer.id) == nil {
                     updatePeers(transaction: transaction, peers: [peer], update: { _, updated in return updated})
                 }
@@ -678,11 +678,11 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             self?.present(c, a)
         }
         
-        let preferences = account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications])
+        let preferences = context.account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications])
         
         let previousEntriesHolder = Atomic<([NotificationExceptionEntry], PresentationTheme, PresentationStrings)?>(value: nil)
 
-        self.listDisposable = (combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), preferences) |> deliverOnMainQueue).start(next: { [weak self] (presentationData, state, prefs) in
+        self.listDisposable = (combineLatest(context.presentationData, statePromise.get(), preferences) |> deliverOnMainQueue).start(next: { [weak self] (presentationData, state, prefs) in
             let entries = notificationsExceptionEntries(presentationData: presentationData, state: state)
             let previousEntriesAndPresentationData = previousEntriesHolder.swap((entries, presentationData.theme, presentationData.strings))
 
@@ -805,7 +805,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: NotificationExceptionsSearchContainerNode(account: self.account, mode: self.stateValue.modify {$0}.mode, arguments: self.arguments!), cancel: { [weak self] in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: NotificationExceptionsSearchContainerNode(context: self.context, mode: self.stateValue.modify {$0}.mode, arguments: self.arguments!), cancel: { [weak self] in
             self?.requestDeactivateSearch()
         })
         
@@ -867,8 +867,8 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
     private let updateNotificationsDisposable = MetaDisposable()
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
-    init(account: Account, mode: NotificationExceptionMode, arguments: NotificationExceptionArguments) {
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, mode: NotificationExceptionMode, arguments: NotificationExceptionArguments) {
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
         
@@ -898,9 +898,9 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         let updateNotificationsView:()->Void = {
             let key: PostboxViewKey = .peerNotificationSettings(peerIds: Set(mode.peerIds))
             
-            updateNotificationsDisposable.set(account.postbox.combinedView(keys: [key]).start(next: { view in
+            updateNotificationsDisposable.set(context.account.postbox.combinedView(keys: [key]).start(next: { view in
                 if let view = view.views[key] as? PeerNotificationSettingsView {
-                    _ = account.postbox.transaction { transaction in
+                    _ = context.account.postbox.transaction { transaction in
                         updateState { current in
                             var current = current
                             for (key, value) in view.notificationSettings {
@@ -929,12 +929,12 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
             
         }
         
-        let preferences = account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications])
+        let preferences = context.account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications])
         
         
         let previousEntriesHolder = Atomic<([NotificationExceptionEntry], PresentationTheme, PresentationStrings)?>(value: nil)
         
-        self.searchDisposable.set((combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, stateAndPeers, preferences) |> deliverOnMainQueue).start(next: { [weak self] (presentationData, state, prefs) in
+        self.searchDisposable.set((combineLatest(context.presentationData, stateAndPeers, preferences) |> deliverOnMainQueue).start(next: { [weak self] (presentationData, state, prefs) in
             let entries = notificationsExceptionEntries(presentationData: presentationData, state: state.0, query: state.1)
             let previousEntriesAndPresentationData = previousEntriesHolder.swap((entries, presentationData.theme, presentationData.strings))
             
@@ -944,7 +944,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         }))
         
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

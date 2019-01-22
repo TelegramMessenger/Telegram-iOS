@@ -296,9 +296,9 @@ public enum ProxySettingsControllerMode {
     case modal
 }
 
-public func proxySettingsController(account: Account, mode: ProxySettingsControllerMode = .default) -> ViewController {
-    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-    return proxySettingsController(postbox: account.postbox, network: account.network, mode: mode, theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: account.telegramApplicationContext.presentationData |> map { ($0.theme, $0.strings) })
+public func proxySettingsController(context: AccountContext, mode: ProxySettingsControllerMode = .default) -> ViewController {
+    let presentationData = context.currentPresentationData.with { $0 }
+    return proxySettingsController(postbox: context.account.postbox, network: context.account.network, mode: mode, theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.presentationData |> map { ($0.theme, $0.strings) })
 }
 
 public func proxySettingsController(postbox: Postbox, network: Network, mode: ProxySettingsControllerMode, theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>) -> ViewController {

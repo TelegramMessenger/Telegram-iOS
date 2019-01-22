@@ -16,7 +16,7 @@ final class ThemeGridController: ViewController {
         return self._ready
     }
     
-    private let account: Account
+    private let context: AccountContext
     
     private var presentationData: PresentationData
     private let presentationDataPromise = Promise<PresentationData>()
@@ -29,9 +29,9 @@ final class ThemeGridController: ViewController {
     
     private var validLayout: ContainerViewLayout?
     
-    init(account: Account) {
-        self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext) {
+        self.context = context
+        self.presentationData = context.currentPresentationData.with { $0 }
         self.presentationDataPromise.set(.single(self.presentationData))
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
@@ -49,7 +49,7 @@ final class ThemeGridController: ViewController {
             }
         }
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -101,9 +101,9 @@ final class ThemeGridController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ThemeGridControllerNode(account: self.account, presentationData: self.presentationData, presentPreviewController: { [weak self] source in
+        self.displayNode = ThemeGridControllerNode(context: self.context, presentationData: self.presentationData, presentPreviewController: { [weak self] source in
             if let strongSelf = self {
-                let controller = WallpaperGalleryController(account: strongSelf.account, source: source)
+                let controller = WallpaperGalleryController(context: strongSelf.context, source: source)
                 self?.present(controller, in: .window(.root), with: nil, blockInteraction: true)
 //                let controller = WallpaperListPreviewController(account: strongSelf.account, source: source)
 //                controller.apply = { [weak self, weak controller] wallpaper, mode, cropRect in
@@ -119,7 +119,7 @@ final class ThemeGridController: ViewController {
             }
         }, presentGallery: { [weak self] in
             if let strongSelf = self {
-                let _ = legacyWallpaperPicker(applicationContext: strongSelf.account.telegramApplicationContext, presentationData: strongSelf.presentationData).start(next: { generator in
+                let _ = legacyWallpaperPicker(context: strongSelf.context, presentationData: strongSelf.presentationData).start(next: { generator in
                     if let strongSelf = self {
                         let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: strongSelf.presentationData.theme, initialLayout: strongSelf.validLayout)
                         legacyController.statusBar.statusBarStyle = strongSelf.presentationData.theme.rootController.statusBar.style.style
@@ -129,7 +129,7 @@ final class ThemeGridController: ViewController {
                         legacyController.deferScreenEdgeGestures = [.top]
                         controller.selectionBlock = { [weak self, weak legacyController] asset, thumbnailImage in
                             if let strongSelf = self, let asset = asset {
-                                let controller = WallpaperListPreviewController(account: strongSelf.account, source: .asset(asset.backingAsset, thumbnailImage))
+                                let controller = WallpaperListPreviewController(context: strongSelf.context, source: .asset(asset.backingAsset, thumbnailImage))
                                 controller.apply = { [weak self, weak legacyController, weak controller] wallpaper, mode, cropRect in
                                     if let strongSelf = self, let legacyController = legacyController, let controller = controller {
                                         strongSelf.uploadCustomWallpaper(wallpaper, mode: mode, cropRect: cropRect, completion: { [weak legacyController, weak controller] in
@@ -154,7 +154,7 @@ final class ThemeGridController: ViewController {
             }
         }, presentColors: { [weak self] in
             if let strongSelf = self {
-                let controller = ThemeColorsGridController(account: strongSelf.account)
+                let controller = ThemeColorsGridController(context: strongSelf.context)
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
             }
         }, emptyStateUpdated: { [weak self] empty in
@@ -186,10 +186,10 @@ final class ThemeGridController: ViewController {
                     }
                     
                     for wallpaper in wallpapers {
-                        let _ = deleteWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
+                        let _ = deleteWallpaper(account: strongSelf.context.account, wallpaper: wallpaper).start()
                     }
                     
-                    let _ = telegramWallpapers(postbox: strongSelf.account.postbox, network: strongSelf.account.network).start()
+                    let _ = telegramWallpapers(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network).start()
                     strongSelf.donePressed()
                 }))
                 
@@ -272,7 +272,7 @@ final class ThemeGridController: ViewController {
                 }
                 
                 if let imageResource = imageResource {
-                    imageSignal = .single(self.account.postbox.mediaBox.completedResourcePath(imageResource))
+                    imageSignal = .single(self.context.account.postbox.mediaBox.completedResourcePath(imageResource))
                     |> mapToSignal { path -> Signal<UIImage, NoError> in
                         if let path = path, let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedIfSafe]), let image = UIImage(data: data) {
                             return .single(image)
@@ -303,9 +303,9 @@ final class ThemeGridController: ViewController {
             
             if let data = UIImageJPEGRepresentation(croppedImage, 0.85) {
                 let resource = LocalFileMediaResource(fileId: arc4random64())
-                self.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                 
-                let account = self.account
+                let account = self.context.account
                 let updateWallpaper: (TelegramWallpaper) -> Void = { wallpaper in
                     let _ = (updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
                         return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
@@ -332,7 +332,7 @@ final class ThemeGridController: ViewController {
                 }
                 
                 if mode.contains(.blur) {
-                    let _ = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+                    let _ = context.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
                         apply()
                     })
                 } else {
@@ -369,7 +369,7 @@ final class ThemeGridController: ViewController {
         } else {
             subject = .text(string)
         }
-        let shareController = ShareController(account: account, subject: subject)
+        let shareController = ShareController(context: context, subject: subject)
         self.present(shareController, in: .window(.root), blockInteraction: true)
         
         self.donePressed()

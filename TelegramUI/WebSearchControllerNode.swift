@@ -116,7 +116,7 @@ private func preparedWebSearchRecentTransition(from fromEntries: [WebSearchRecen
 }
 
 class WebSearchControllerNode: ASDisplayNode {
-    private let account: Account
+    private let context: AccountContext
     private let peer: Peer?
     private var theme: PresentationTheme
     private var strings: PresentationStrings
@@ -168,15 +168,15 @@ class WebSearchControllerNode: ASDisplayNode {
     var cancel: (() -> Void)?
     var dismissInput: (() -> Void)?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: WebSearchControllerInteraction, peer: Peer?, mode: WebSearchMode) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: WebSearchControllerInteraction, peer: Peer?, mode: WebSearchMode) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.controllerInteraction = controllerInteraction
         self.peer = peer
         self.mode = mode
         
-        self.webSearchInterfaceState = WebSearchInterfaceState(presentationData: account.telegramApplicationContext.currentPresentationData.with { $0 })
+        self.webSearchInterfaceState = WebSearchInterfaceState(presentationData: context.currentPresentationData.with { $0 })
         self.webSearchInterfaceStatePromise = ValuePromise(self.webSearchInterfaceState, ignoreRepeated: true)
         
         self.segmentedBackgroundNode = ASDisplayNode()
@@ -237,7 +237,7 @@ class WebSearchControllerNode: ASDisplayNode {
         }))
         
         let previousRecentItems = Atomic<[WebSearchRecentQueryEntry]?>(value: nil)
-        self.recentDisposable = (combineLatest(webSearchRecentQueries(postbox: self.account.postbox), self.webSearchInterfaceStatePromise.get())
+        self.recentDisposable = (combineLatest(webSearchRecentQueries(postbox: self.context.account.postbox), self.webSearchInterfaceStatePromise.get())
         |> deliverOnMainQueue).start(next: { [weak self] queries, interfaceState in
             if let strongSelf = self {
                 var entries: [WebSearchRecentQueryEntry] = []
@@ -246,12 +246,12 @@ class WebSearchControllerNode: ASDisplayNode {
                 }
                 
                 let header = ChatListSearchItemHeader(type: .recentPeers, theme: interfaceState.presentationData.theme, strings:interfaceState.presentationData.strings, actionTitle: strings.WebSearch_RecentSectionClear.uppercased(), action: {
-                    _ = clearRecentWebSearchQueries(postbox: strongSelf.account.postbox).start()
+                    _ = clearRecentWebSearchQueries(postbox: strongSelf.context.account.postbox).start()
                 })
                 
                 let previousEntries = previousRecentItems.swap(entries)
                 
-                let transition = preparedWebSearchRecentTransition(from: previousEntries ?? [], to: entries, account: strongSelf.account, theme: interfaceState.presentationData.theme, strings: interfaceState.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction, header: header)
+                let transition = preparedWebSearchRecentTransition(from: previousEntries ?? [], to: entries, account: strongSelf.context.account, theme: interfaceState.presentationData.theme, strings: interfaceState.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction, header: header)
                 strongSelf.enqueueRecentTransition(transition, firstTime: previousEntries == nil)
             }
         })
@@ -548,7 +548,7 @@ class WebSearchControllerNode: ASDisplayNode {
             return
         }
         self.isLoadingMore = true
-        self.loadMoreDisposable.set((requestChatContextResults(account: self.account, botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(currentProcessedResults.geoPoint), offset: nextOffset)
+        self.loadMoreDisposable.set((requestChatContextResults(account: self.context.account, botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(currentProcessedResults.geoPoint), offset: nextOffset)
             |> deliverOnMainQueue).start(next: { [weak self] nextResults in
                 guard let strongSelf = self, let nextResults = nextResults else {
                     return
@@ -594,7 +594,7 @@ class WebSearchControllerNode: ASDisplayNode {
         }
         
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, hasMore: hasMore, account: self.account, theme: interfaceState.presentationData.theme, interfaceState: interfaceState, controllerInteraction: self.controllerInteraction)
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, hasMore: hasMore, account: self.context.account, theme: interfaceState.presentationData.theme, interfaceState: interfaceState, controllerInteraction: self.controllerInteraction)
         self.currentEntries = entries
         
         self.enqueueTransition(transition, firstTime: firstTime)
@@ -656,7 +656,7 @@ class WebSearchControllerNode: ASDisplayNode {
     
     @objc private func indexChanged() {
         if let scope = WebSearchScope(rawValue: Int32(self.segmentedControl.selectedSegmentIndex)) {
-            let _ = updateWebSearchSettingsInteractively(postbox: self.account.postbox) { _ -> WebSearchSettings in
+            let _ = updateWebSearchSettingsInteractively(postbox: self.context.account.postbox) { _ -> WebSearchSettings in
                 return WebSearchSettings(scope: scope)
             }.start()
             self.requestUpdateInterfaceState(true) { current in
@@ -686,7 +686,7 @@ class WebSearchControllerNode: ASDisplayNode {
         if self.controllerInteraction.selectionState != nil {
             if let state = self.webSearchInterfaceState.state, state.scope == .images {
                 if let results = self.currentProcessedResults?.results {
-                    presentLegacyWebSearchGallery(account: self.account, peer: self.peer, theme: self.theme, results: results, current: currentResult, selectionContext: self.controllerInteraction.selectionState, editingContext: self.controllerInteraction.editingState, updateHiddenMedia: { [weak self] id in
+                    presentLegacyWebSearchGallery(context: self.context, peer: self.peer, theme: self.theme, results: results, current: currentResult, selectionContext: self.controllerInteraction.selectionState, editingContext: self.controllerInteraction.editingState, updateHiddenMedia: { [weak self] id in
                         self?.hiddenMediaId.set(.single(id))
                     }, initialLayout: self.containerLayout?.0, transitionHostView: { [weak self] in
                         return self?.gridNode.view
@@ -710,7 +710,7 @@ class WebSearchControllerNode: ASDisplayNode {
                         }
                     }
                     
-                    let controller = WebSearchGalleryController(account: self.account, peer: self.peer, selectionState: self.controllerInteraction.selectionState, editingState: self.controllerInteraction.editingState, entries: entries, centralIndex: centralIndex, replaceRootController: { (controller, _) in
+                    let controller = WebSearchGalleryController(context: self.context, peer: self.peer, selectionState: self.controllerInteraction.selectionState, editingState: self.controllerInteraction.editingState, entries: entries, centralIndex: centralIndex, replaceRootController: { (controller, _) in
                         
                     }, baseNavigationController: nil, sendCurrent: { [weak self] result in
                         if let strongSelf = self, let results = strongSelf.currentExternalResults {
@@ -745,7 +745,7 @@ class WebSearchControllerNode: ASDisplayNode {
                 }
             }
         } else {
-            presentLegacyWebSearchEditor(account: self.account, theme: self.theme, result: currentResult, initialLayout: self.containerLayout?.0, updateHiddenMedia: { [weak self] id in
+            presentLegacyWebSearchEditor(context: self.context, theme: self.theme, result: currentResult, initialLayout: self.containerLayout?.0, updateHiddenMedia: { [weak self] id in
                 self?.hiddenMediaId.set(.single(id))
             }, transitionHostView: { [weak self] in
                 return self?.gridNode.view

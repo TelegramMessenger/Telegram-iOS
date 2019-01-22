@@ -153,15 +153,15 @@ final class GridMessageItemSectionNode: ASDisplayNode {
 final class GridMessageItem: GridItem {
     fileprivate let theme: PresentationTheme
     private let strings: PresentationStrings
-    private let account: Account
+    private let context: AccountContext
     fileprivate let message: Message
     private let controllerInteraction: ChatControllerInteraction
     let section: GridSection?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, message: Message, controllerInteraction: ChatControllerInteraction) {
+    init(theme: PresentationTheme, strings: PresentationStrings, context: AccountContext, message: Message, controllerInteraction: ChatControllerInteraction) {
         self.theme = theme
         self.strings = strings
-        self.account = account
+        self.context = context
         self.message = message
         self.controllerInteraction = controllerInteraction
         self.section = GridMessageItemSection(timestamp: message.timestamp, theme: theme, strings: strings)
@@ -170,7 +170,7 @@ final class GridMessageItem: GridItem {
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = GridMessageItemNode()
         if let media = mediaForMessage(self.message) {
-            node.setup(account: self.account, item: self, media: media, messageId: self.message.id, controllerInteraction: self.controllerInteraction)
+            node.setup(context: self.context, item: self, media: media, messageId: self.message.id, controllerInteraction: self.controllerInteraction)
         }
         return node
     }
@@ -181,13 +181,13 @@ final class GridMessageItem: GridItem {
             return
         }
         if let media = mediaForMessage(self.message) {
-            node.setup(account: self.account, item: self, media: media, messageId: self.message.id, controllerInteraction: self.controllerInteraction)
+            node.setup(context: self.context, item: self, media: media, messageId: self.message.id, controllerInteraction: self.controllerInteraction)
         }
     }
 }
 
 final class GridMessageItemNode: GridItemNode {
-    private var currentState: (Account, Media, CGSize)?
+    private var currentState: (AccountContext, Media, CGSize)?
     private let imageNode: TransformImageNode
     private(set) var messageId: MessageId?
     private var item: GridMessageItem?
@@ -229,13 +229,13 @@ final class GridMessageItemNode: GridItemNode {
         self.imageNode.view.addGestureRecognizer(recognizer)
     }
     
-    func setup(account: Account, item: GridMessageItem, media: Media, messageId: MessageId, controllerInteraction: ChatControllerInteraction) {
-        if self.currentState == nil || self.currentState!.0 !== account || !self.currentState!.1.isEqual(to: media) {
+    func setup(context: AccountContext, item: GridMessageItem, media: Media, messageId: MessageId, controllerInteraction: ChatControllerInteraction) {
+        if self.currentState == nil || self.currentState!.0 !== context || !self.currentState!.1.isEqual(to: media) {
             var mediaDimensions: CGSize?
             if let image = media as? TelegramMediaImage, let largestSize = largestImageRepresentation(image.representations)?.dimensions {
                 mediaDimensions = largestSize
                
-                self.imageNode.setSignal(mediaGridMessagePhoto(account: account, photoReference: .message(message: MessageReference(item.message), media: image)), dispatchOnDisplayLink: true)
+                self.imageNode.setSignal(mediaGridMessagePhoto(account: context.account, photoReference: .message(message: MessageReference(item.message), media: image)), dispatchOnDisplayLink: true)
                 
                 self.fetchStatusDisposable.set(nil)
                 self.statusNode.transitionToState(.none, completion: { [weak self] in
@@ -245,7 +245,7 @@ final class GridMessageItemNode: GridItemNode {
                 self.resourceStatus = nil
             } else if let file = media as? TelegramMediaFile, file.isVideo {
                 mediaDimensions = file.dimensions
-                self.imageNode.setSignal(mediaGridMessageVideo(postbox: account.postbox, videoReference: .message(message: MessageReference(item.message), media: file)))
+                self.imageNode.setSignal(mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(item.message), media: file)))
                 
                 if let duration = file.duration {
                     self.videoAccessoryNode.setup(stringForDuration(duration))
@@ -255,7 +255,7 @@ final class GridMessageItemNode: GridItemNode {
                 }
                 
                 self.resourceStatus = nil
-                self.fetchStatusDisposable.set((messageMediaFileStatus(account: account, messageId: messageId, file: file) |> deliverOnMainQueue).start(next: { [weak self] status in
+                self.fetchStatusDisposable.set((messageMediaFileStatus(account: context.account, messageId: messageId, file: file) |> deliverOnMainQueue).start(next: { [weak self] status in
                     if let strongSelf = self {
                         strongSelf.resourceStatus = status
                         let statusState: RadialStatusNodeState
@@ -291,7 +291,7 @@ final class GridMessageItemNode: GridItemNode {
             }
             
             if let mediaDimensions = mediaDimensions {
-                self.currentState = (account, media, mediaDimensions)
+                self.currentState = (context, media, mediaDimensions)
                 self.setNeedsLayout()
             }
         }
@@ -416,16 +416,16 @@ final class GridMessageItemNode: GridItemNode {
                 if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
                         case .tap:
-                            if let (account, media, _) = self.currentState {
+                            if let (context, media, _) = self.currentState {
                                 if let file = media as? TelegramMediaFile {
                                     if let resourceStatus = self.resourceStatus {
                                         switch resourceStatus {
                                         case .Fetching:
-                                            messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: file)
+                                            messageMediaFileCancelInteractiveFetch(account: context.account, messageId: message.id, file: file)
                                         case .Local:
                                             let _ = controllerInteraction.openMessage(message, .default)
                                         case .Remote:
-                                            self.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: true).start())
+                                            self.fetchDisposable.set(messageMediaFileInteractiveFetched(account: context.account, message: message, file: file, userInitiated: true).start())
                                         }
                                     }
                                 } else {

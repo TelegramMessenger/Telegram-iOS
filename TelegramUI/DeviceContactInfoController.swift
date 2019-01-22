@@ -711,7 +711,7 @@ private final class DeviceContactInfoController: ItemListController<DeviceContac
     }
 }
 
-public func deviceContactInfoController(account: Account, subject: DeviceContactInfoSubject, completed: (() -> Void)? = nil, cancelled: (() -> Void)? = nil) -> ViewController {
+public func deviceContactInfoController(context: AccountContext, subject: DeviceContactInfoSubject, completed: (() -> Void)? = nil, cancelled: (() -> Void)? = nil) -> ViewController {
     var initialState = DeviceContactInfoState()
     if case let .create(peer, contactData, _) = subject {
         var peerPhoneNumber: String?
@@ -1176,8 +1176,8 @@ private func addContactToExisting(account: Account, parentController: ViewContro
     })
 }
 
-func addContactOptionsController(account: Account, peer: Peer?, contactData: DeviceContactExtendedData) -> ActionSheetController {
-    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+func addContactOptionsController(context: AccountContext, peer: Peer?, contactData: DeviceContactExtendedData) -> ActionSheetController {
+    let presentationData = context.currentPresentationData.with { $0 }
     let controller = ActionSheetController(presentationTheme: presentationData.theme)
     let dismissAction: () -> Void = { [weak controller] in
         controller?.dismissAnimated()
@@ -1186,7 +1186,7 @@ func addContactOptionsController(account: Account, peer: Peer?, contactData: Dev
     controller.setItemGroups([
         ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.Profile_CreateNewContact, action: { [weak controller] in
-                controller?.present(deviceContactInfoController(account: account, subject: .create(peer: peer, contactData: contactData, completion: { peer, stableId, contactData in
+                controller?.present(deviceContactInfoController(context: context, subject: .create(peer: peer, contactData: contactData, completion: { peer, stableId, contactData in
                     
                     if let peer = peer {
                         
@@ -1200,7 +1200,7 @@ func addContactOptionsController(account: Account, peer: Peer?, contactData: Dev
                 guard let controller = controller else {
                     return
                 }
-                addContactToExisting(account: account, parentController: controller, contactData: contactData, completion: { peer, contactId, contactData in
+                addContactToExisting(account: context.account, parentController: controller, contactData: contactData, completion: { peer, contactId, contactData in
                     
                 })
                 dismissAction()

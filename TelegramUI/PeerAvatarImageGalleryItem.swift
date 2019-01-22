@@ -34,14 +34,14 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class PeerAvatarImageGalleryItem: GalleryItem {
-    let account: Account
+    let context: AccountContext
     let peer: Peer
     let presentationData: PresentationData
     let entry: AvatarGalleryEntry
     let delete: (() -> Void)?
     
-    init(account: Account, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, delete: (() -> Void)?) {
-        self.account = account
+    init(context: AccountContext, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, delete: (() -> Void)?) {
+        self.context = context
         self.peer = peer
         self.presentationData = presentationData
         self.entry = entry
@@ -49,7 +49,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     }
     
     func node() -> GalleryItemNode {
-        let node = PeerAvatarImageGalleryItemNode(account: self.account, presentationData: self.presentationData, peer: self.peer)
+        let node = PeerAvatarImageGalleryItemNode(context: self.context, presentationData: self.presentationData, peer: self.peer)
         
         if let indexData = self.entry.indexData {
             node._title.set(.single("\(indexData.position + 1) \(self.presentationData.strings.Common_of) \(indexData.totalCount)"))
@@ -81,12 +81,12 @@ class PeerAvatarImageGalleryItem: GalleryItem {
                 content = representations
         }
         
-        return (0, PeerAvatarImageGalleryThumbnailItem(account: self.account, peer: self.peer, content: content))
+        return (0, PeerAvatarImageGalleryThumbnailItem(account: self.context.account, peer: self.peer, content: content))
     }
 }
 
 final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let account: Account
+    private let context: AccountContext
     private let peer: Peer
     
     private var entry: AvatarGalleryEntry?
@@ -102,12 +102,12 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(account: Account, presentationData: PresentationData, peer: Peer) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, peer: Peer) {
+        self.context = context
         self.peer = peer
         
         self.imageNode = TransformImageNode()
-        self.footerContentNode = AvatarGalleryItemFooterContentNode(account: account, presentationData: presentationData)
+        self.footerContentNode = AvatarGalleryItemFooterContentNode(context: context, presentationData: presentationData)
         
         self.statusNodeContainer = HighlightableButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
@@ -130,7 +130,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.footerContentNode.share = { [weak self] interaction in
             if let strongSelf = self, let entry = strongSelf.entry, !entry.representations.isEmpty {
-                let shareController = ShareController(account: strongSelf.account, subject: .image(entry.representations), preferredAction: .saveToCameraRoll)
+                let shareController = ShareController(context: strongSelf.context, subject: .image(entry.representations), preferredAction: .saveToCameraRoll)
                 interaction.presentController(shareController, nil)
             }
         }
@@ -169,13 +169,13 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     case let .image(_, imageRepresentations, _, _, _):
                         representations = imageRepresentations
                 }
-                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: representations), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
                 if let largestIndex = representations.index(where: { $0.representation == largestSize }) {
-                    self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: representations[largestIndex].reference).start())
+                    self.fetchDisposable.set(fetchedMediaResource(postbox: self.context.account.postbox, reference: representations[largestIndex].reference).start())
                 }
                 
-                self.statusDisposable.set((account.postbox.mediaBox.resourceStatus(largestSize.resource)
+                self.statusDisposable.set((self.context.account.postbox.mediaBox.resourceStatus(largestSize.resource)
                 |> deliverOnMainQueue).start(next: { [weak self] status in
                     if let strongSelf = self {
                         let previousStatus = strongSelf.status
@@ -328,7 +328,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         if let entry = self.entry, let largestSize = largestImageRepresentation(entry.representations.map({ $0.representation })), let status = self.status {
             switch status {
                 case .Fetching:
-                    self.account.postbox.mediaBox.cancelInteractiveResourceFetch(largestSize.resource)
+                    self.context.account.postbox.mediaBox.cancelInteractiveResourceFetch(largestSize.resource)
                 case .Remote:
                     let representations: [ImageRepresentationWithReference]
                     switch entry {
@@ -339,7 +339,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                     
                     if let largestIndex = representations.index(where: { $0.representation == largestSize }) {
-                        self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: representations[largestIndex].reference).start())
+                        self.fetchDisposable.set(fetchedMediaResource(postbox: self.context.account.postbox, reference: representations[largestIndex].reference).start())
                     }
                 default:
                     break

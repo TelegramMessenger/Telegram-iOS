@@ -229,7 +229,7 @@ private struct InviteContactsTransition {
 final class InviteContactsControllerNode: ASDisplayNode {
     let listNode: ListView
     
-    private let account: Account
+    private let context: AccountContext
     private var searchDisplayController: SearchDisplayController?
     
     private var validLayout: (ContainerViewLayout, CGFloat, CGFloat)?
@@ -283,10 +283,10 @@ final class InviteContactsControllerNode: ASDisplayNode {
     
     private let currentContactIds = Atomic<[String]>(value: [])
     
-    init(account: Account) {
-        self.account = account
+    init(context: AccountContext) {
+        self.context = context
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder))
         
@@ -308,7 +308,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
         self.addSubnode(self.listNode)
         self.addSubnode(self.countPanelNode)
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -350,7 +350,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
         }
         
         let currentSortedContacts = self.currentSortedContacts
-        let sortedContacts: Signal<[(DeviceContactStableId, DeviceContactBasicData, Int32)], NoError> = combineLatest(existingNumbers, account.telegramApplicationContext.contactDataManager.basicData() |> take(1))
+        let sortedContacts: Signal<[(DeviceContactStableId, DeviceContactBasicData, Int32)], NoError> = combineLatest(existingNumbers, context.contactDataManager.basicData() |> take(1))
         |> mapToSignal { existingNumbers, contacts -> Signal<[(DeviceContactStableId, DeviceContactBasicData, Int32)], NoError> in
             var mappedContacts: [(String, [DeviceContactNormalizedPhoneNumber])] = []
             for (id, basicData) in contacts {
@@ -358,7 +358,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
                     return DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phoneNumber.value))
                 })))
             }
-            return deviceContactsImportedByCount(postbox: account.postbox, contacts: mappedContacts)
+            return deviceContactsImportedByCount(postbox: context.account.postbox, contacts: mappedContacts)
             |> map { counts -> [(DeviceContactStableId, DeviceContactBasicData, Int32)] in
                 var result: [(DeviceContactStableId, DeviceContactBasicData, Int32)] = []
                 var contactValues: [DeviceContactStableId: DeviceContactBasicData] = [:]
@@ -409,7 +409,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
                 } else {
                     animated = false
                 }
-                return .single(preparedInviteContactsTransition(account: account, from: previous ?? [], to: entries, sortedContats: sortedContacts, interaction: interaction, firstTime: previous == nil, animated: animated))
+                return .single(preparedInviteContactsTransition(account: context.account, from: previous ?? [], to: entries, sortedContats: sortedContacts, interaction: interaction, firstTime: previous == nil, animated: animated))
             }
             
             if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
@@ -519,7 +519,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.deviceContacts], openPeer: { _ in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: [.deviceContacts], openPeer: { _ in
         }), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()

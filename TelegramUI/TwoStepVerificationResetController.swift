@@ -129,7 +129,7 @@ private func twoStepVerificationResetControllerEntries(presentationData: Present
     return entries
 }
 
-func twoStepVerificationResetController(account: Account, emailPattern: String, result: Promise<Bool>) -> ViewController {
+func twoStepVerificationResetController(context: AccountContext, emailPattern: String, result: Promise<Bool>) -> ViewController {
     let initialState = TwoStepVerificationResetControllerState(codeText: "", checking: false)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -157,11 +157,11 @@ func twoStepVerificationResetController(account: Account, emailPattern: String, 
             }
         }
         if let code = code {
-            resetPasswordDisposable.set((recoverTwoStepVerificationPassword(network: account.network, code: code) |> deliverOnMainQueue).start(error: { error in
+            resetPasswordDisposable.set((recoverTwoStepVerificationPassword(network: context.account.network, code: code) |> deliverOnMainQueue).start(error: { error in
                 updateState {
                     return $0.withUpdatedChecking(false)
                 }
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let presentationData = context.currentPresentationData.with { $0 }
                 let alertText: String
                 switch error {
                     case .generic:
@@ -190,11 +190,11 @@ func twoStepVerificationResetController(account: Account, emailPattern: String, 
     }, next: {
         checkCode()
     }, openEmailInaccessible: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.currentPresentationData.with { $0 }
         presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Your remaining options are either to remember your password or to reset your account.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get()) |> deliverOnMainQueue
+    let signal = combineLatest(context.presentationData, statePromise.get()) |> deliverOnMainQueue
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationResetEntry>, TwoStepVerificationResetEntry.ItemGenerationArguments)) in
             
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
@@ -222,7 +222,7 @@ func twoStepVerificationResetController(account: Account, emailPattern: String, 
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)

@@ -27,7 +27,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     let tokenListNode: EditableTokenListNode
     var searchResultsNode: ContactListNode?
     
-    private let account: Account
+    private let context: AccountContext
     
     private var containerLayout: (ContainerViewLayout, CGFloat, CGFloat)?
     
@@ -44,9 +44,9 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(account: Account, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter]) {
+    init(context: AccountContext, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter]) {
         self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         let placeholder: String
         switch mode {
@@ -56,7 +56,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 placeholder = self.presentationData.strings.Compose_TokenListPlaceholder
         }
         
-        self.contactListNode = ContactListNode(account: account, presentation: .single(.natural(options: options)), filters: filters, selectionState: ContactListNodeGroupSelectionState())
+        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options)), filters: filters, selectionState: ContactListNodeGroupSelectionState())
         self.tokenListNode = EditableTokenListNode(theme: EditableTokenListNodeTheme(backgroundColor: self.presentationData.theme.rootController.navigationBar.backgroundColor, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, selectedTextColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.chatList.searchBarKeyboardColor), placeholder: placeholder)
         
         super.init()
@@ -99,7 +99,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                         if case let .peerSelection(value) = mode {
                             searchChatList = value
                         }
-                        let searchResultsNode = ContactListNode(account: account, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false)), filters: filters, selectionState: selectionState)
+                        let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false)), filters: filters, selectionState: selectionState)
                         searchResultsNode.openPeer = { peer in
                             self?.tokenListNode.setText("")
                             self?.openPeer?(peer)
@@ -129,7 +129,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             }
         }
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

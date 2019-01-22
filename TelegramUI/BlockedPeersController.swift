@@ -190,7 +190,7 @@ private func blockedPeersControllerEntries(presentationData: PresentationData, s
     return entries
 }
 
-public func blockedPeersController(account: Account) -> ViewController {
+public func blockedPeersController(context: AccountContext) -> ViewController {
     let statePromise = ValuePromise(BlockedPeersControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: BlockedPeersControllerState())
     let updateState: ((BlockedPeersControllerState) -> BlockedPeersControllerState) -> Void = { f in
@@ -207,7 +207,7 @@ public func blockedPeersController(account: Account) -> ViewController {
     
     let peersPromise = Promise<[Peer]?>(nil)
     
-    let arguments = BlockedPeersControllerArguments(account: account, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
+    let arguments = BlockedPeersControllerArguments(account: context.account, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
         updateState { state in
             if (peerId == nil && fromPeerId == state.peerIdWithRevealedOptions) || (peerId != nil && fromPeerId == nil) {
                 return state.withUpdatedPeerIdWithRevealedOptions(peerId)
@@ -216,13 +216,13 @@ public func blockedPeersController(account: Account) -> ViewController {
             }
         }
     }, addPeer: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let controller = PeerSelectionController(account: account, filter: [.onlyPrivateChats, .excludeSavedMessages, .removeSearchHeader, .excludeRecent], title: presentationData.strings.BlockedUsers_SelectUserTitle)
+        let presentationData = context.currentPresentationData.with { $0 }
+        let controller = PeerSelectionController(context: context, filter: [.onlyPrivateChats, .excludeSavedMessages, .removeSearchHeader, .excludeRecent], title: presentationData.strings.BlockedUsers_SelectUserTitle)
         controller.peerSelected = { [weak controller] peerId in
             if let strongController = controller {
                 strongController.inProgress = true
                 
-                let _ = (account.viewTracker.peerView(peerId)
+                let _ = (context.account.viewTracker.peerView(peerId)
                 |> take(1)
                 |> map { view -> Peer? in
                     return peerViewMainPeer(view)
@@ -251,7 +251,7 @@ public func blockedPeersController(account: Account) -> ViewController {
                         return .complete()
                     }
                     if let peer = peer {
-                        removePeerDisposable.set((requestUpdatePeerIsBlocked(account: account, peerId: peer.id, isBlocked: true) |> then(applyPeers) |> deliverOnMainQueue).start(completed: {
+                        removePeerDisposable.set((requestUpdatePeerIsBlocked(account: context.account, peerId: peer.id, isBlocked: true) |> then(applyPeers) |> deliverOnMainQueue).start(completed: {
                             if let strongController = controller {
                                 strongController.inProgress = false
                                 strongController.dismiss()
@@ -285,7 +285,7 @@ public func blockedPeersController(account: Account) -> ViewController {
                 return .complete()
         }
         
-        removePeerDisposable.set((requestUpdatePeerIsBlocked(account: account, peerId: memberId, isBlocked: false) |> then(applyPeers) |> deliverOnMainQueue).start(error: { _ in
+        removePeerDisposable.set((requestUpdatePeerIsBlocked(account: context.account, peerId: memberId, isBlocked: false) |> then(applyPeers) |> deliverOnMainQueue).start(error: { _ in
             updateState {
                 return $0.withUpdatedRemovingPeerId(nil)
             }
@@ -295,18 +295,18 @@ public func blockedPeersController(account: Account) -> ViewController {
             }
         }))
     }, openPeer: { peer in
-        if let controller = peerInfoController(account: account, peer: peer) {
+        if let controller = peerInfoController(context: context, peer: peer) {
             pushControllerImpl?(controller)
         }
     })
     
-    let peersSignal: Signal<[Peer]?, NoError> = .single(nil) |> then(requestBlockedPeers(account: account) |> map(Optional.init))
+    let peersSignal: Signal<[Peer]?, NoError> = .single(nil) |> then(requestBlockedPeers(account: context.account) |> map(Optional.init))
     
     peersPromise.set(peersSignal)
     
     var previousPeers: [Peer]?
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peersPromise.get())
+    let signal = combineLatest(context.presentationData, statePromise.get(), peersPromise.get())
         |> deliverOnMainQueue
         |> map { presentationData, state, peers -> (ItemListControllerState, (ItemListNodeState<BlockedPeersEntry>, BlockedPeersEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
@@ -346,7 +346,7 @@ public func blockedPeersController(account: Account) -> ViewController {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     pushControllerImpl = { [weak controller] c in
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.pushViewController(c)

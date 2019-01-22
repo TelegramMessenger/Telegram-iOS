@@ -8,7 +8,7 @@ import TelegramCore
 final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRecognizerDelegate {
     let ready = Promise<Bool>()
     
-    private let account: Account
+    private let context: AccountContext
     private let peerId: PeerId
     private let presentationData: PresentationData
     private let type: MediaManagerPlayerType
@@ -33,10 +33,10 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
     
     private let replacementHistoryNodeReadyDisposable = MetaDisposable()
     
-    init(account: Account, peerId: PeerId, type: MediaManagerPlayerType,  initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, requestDismiss: @escaping () -> Void, requestShare: @escaping (MessageId) -> Void) {
-        self.account = account
+    init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType,  initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, requestDismiss: @escaping () -> Void, requestShare: @escaping (MessageId) -> Void) {
+        self.context = context
         self.peerId = peerId
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         self.type = type
         self.requestDismiss = requestDismiss
         self.requestShare = requestShare
@@ -81,7 +81,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         
         self.contentNode = ASDisplayNode()
         
-        self.controlsNode = OverlayPlayerControlsNode(postbox: account.postbox, theme: self.presentationData.theme, status: account.telegramApplicationContext.mediaManager!.musicMediaPlayerState)
+        self.controlsNode = OverlayPlayerControlsNode(postbox: context.account.postbox, theme: self.presentationData.theme, status: context.mediaManager.musicMediaPlayerState)
         
         self.historyBackgroundNode = ASDisplayNode()
         self.historyBackgroundNode.isLayerBacked = true
@@ -100,7 +100,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
                 tagMask = .voiceOrInstantVideo
         }
         
-        self.historyNode = ChatHistoryListNode(account: account, chatLocation: .peer(peerId), tagMask: tagMask, messageId: initialMessageId, controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: currentIsReversed))
+        self.historyNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: tagMask, messageId: initialMessageId, controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: currentIsReversed))
         
         super.init()
         
@@ -148,7 +148,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         
         self.controlsNode.control = { [weak self] action in
             if let strongSelf = self {
-                strongSelf.account.telegramApplicationContext.mediaManager?.playlistControl(action, type: strongSelf.type)
+                strongSelf.context.mediaManager.playlistControl(action, type: strongSelf.type)
             }
         }
         
@@ -164,7 +164,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         
         openMessageImpl = { [weak self] id in
             if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.historyNode.messageInCurrentHistoryView(id) {
-                return openChatMessage(account: strongSelf.account, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { }, present: { _, _ in }, transitionNode: { _, _ in return nil }, addToTransitionSurface: { _ in }, openUrl: { _ in }, openPeer: { _, _ in }, callPeer: { _ in }, enqueueMessage: { _ in }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in})
+                return openChatMessage(context: strongSelf.context, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { }, present: { _, _ in }, transitionNode: { _, _ in return nil }, addToTransitionSurface: { _ in }, openUrl: { _ in }, openPeer: { _, _ in }, callPeer: { _ in }, enqueueMessage: { _ in }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in})
             }
             return false
         }
@@ -403,7 +403,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
                 tagMask = .voiceOrInstantVideo
         }
         
-        let historyNode = ChatHistoryListNode(account: self.account, chatLocation: .peer(self.peerId), tagMask: tagMask, messageId: messageId, controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed))
+        let historyNode = ChatHistoryListNode(context: self.context, chatLocation: .peer(self.peerId), tagMask: tagMask, messageId: messageId, controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed))
         historyNode.preloadPages = true
         historyNode.stackFromBottom = true
         historyNode.updateFloatingHeaderOffset = { [weak self] offset, _ in

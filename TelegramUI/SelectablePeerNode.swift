@@ -109,7 +109,7 @@ final class SelectablePeerNode: ASDisplayNode {
         
     }
     
-    func setup(account: Account, strings: PresentationStrings, peer: RenderedPeer, numberOfLines: Int = 2, synchronousLoad: Bool) {
+    func setup(account: Account, theme: PresentationTheme, strings: PresentationStrings, peer: RenderedPeer, numberOfLines: Int = 2, synchronousLoad: Bool) {
         self.peer = peer
         guard let mainPeer = peer.chatMainPeer else {
             return
@@ -127,7 +127,7 @@ final class SelectablePeerNode: ASDisplayNode {
         }
         self.textNode.maximumNumberOfLines = UInt(numberOfLines)
         self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
-        self.avatarNode.setPeer(account: account, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, synchronousLoad: synchronousLoad)
+        self.avatarNode.setPeer(account: account, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, synchronousLoad: synchronousLoad)
         self.setNeedsLayout()
     }
     

@@ -7,14 +7,14 @@ import TelegramCore
 final class BotCheckoutPaymentShippingOptionSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?
     
-    init(account: Account, currency: String, options: [BotPaymentShippingOption], currentId: String?, applyValue: @escaping (String) -> Void) {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, currency: String, options: [BotPaymentShippingOption], currentId: String?, applyValue: @escaping (String) -> Void) {
+        let presentationData = context.currentPresentationData.with { $0 }
         let theme = presentationData.theme
         let strings = presentationData.strings
         
         super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
         
-        self.presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak self] presentationData in
+        self.presentationDisposable = context.presentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
             }

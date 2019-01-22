@@ -379,7 +379,7 @@ private final class CollectionListContainerNode: ASDisplayNode {
 }
 
 final class ChatMediaInputNode: ChatInputNode {
-    private let account: Account
+    private let context: AccountContext
     private let peerId: PeerId?
     private let controllerInteraction: ChatControllerInteraction
     private let gifPaneIsActiveUpdated: (Bool) -> Void
@@ -424,8 +424,8 @@ final class ChatMediaInputNode: ChatInputNode {
         return self._ready.get()
     }
     
-    init(account: Account, peerId: PeerId?, controllerInteraction: ChatControllerInteraction, theme: PresentationTheme, strings: PresentationStrings, gifPaneIsActiveUpdated: @escaping (Bool) -> Void) {
-        self.account = account
+    init(context: AccountContext, peerId: PeerId?, controllerInteraction: ChatControllerInteraction, theme: PresentationTheme, strings: PresentationStrings, gifPaneIsActiveUpdated: @escaping (Bool) -> Void) {
+        self.context = context
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction
         self.theme = theme
@@ -456,14 +456,14 @@ final class ChatMediaInputNode: ChatInputNode {
         }, fixPaneScroll: { pane, state in
             fixPaneScrollImpl?(pane, state)
         })
-        self.gifPane = ChatMediaInputGifPane(account: account, theme: theme, strings: strings, controllerInteraction: controllerInteraction, paneDidScroll: { pane, state, transition in
+        self.gifPane = ChatMediaInputGifPane(account: context.account, theme: theme, strings: strings, controllerInteraction: controllerInteraction, paneDidScroll: { pane, state, transition in
             paneDidScrollImpl?(pane, state, transition)
         }, fixPaneScroll: { pane, state in
             fixPaneScrollImpl?(pane, state)
         })
         
         var getItemIsPreviewedImpl: ((StickerPackItem) -> Bool)?
-        self.trendingPane = ChatMediaInputTrendingPane(account: account, controllerInteraction: controllerInteraction, getItemIsPreviewed: { item in
+        self.trendingPane = ChatMediaInputTrendingPane(context: context, controllerInteraction: controllerInteraction, getItemIsPreviewed: { item in
             return getItemIsPreviewedImpl?(item) ?? false
         })
         
@@ -507,7 +507,7 @@ final class ChatMediaInputNode: ChatInputNode {
             }
         }, openSettings: { [weak self] in
             if let strongSelf = self {
-                strongSelf.controllerInteraction.navigationController()?.pushViewController(installedStickerPacksController(account: account, mode: .modal))
+                strongSelf.controllerInteraction.navigationController()?.pushViewController(installedStickerPacksController(context: context, mode: .modal))
             }
         }, toggleSearch: { [weak self] value in
             if let strongSelf = self {
@@ -516,7 +516,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     if let current = strongSelf.stickerSearchContainerNode {
                         stickerSearchContainerNode = current
                     } else {
-                        stickerSearchContainerNode = StickerPaneSearchContainerNode(account: strongSelf.account, theme: strongSelf.theme, strings: strongSelf.strings, controllerInteraction: strongSelf.controllerInteraction, inputNodeInteraction: strongSelf.inputNodeInteraction, cancel: {
+                        stickerSearchContainerNode = StickerPaneSearchContainerNode(context: strongSelf.context, theme: strongSelf.theme, strings: strongSelf.strings, controllerInteraction: strongSelf.controllerInteraction, inputNodeInteraction: strongSelf.inputNodeInteraction, cancel: {
                             self?.stickerSearchContainerNode?.deactivate()
                             self?.inputNodeInteraction.toggleSearch(false)
                         })
@@ -551,14 +551,14 @@ final class ChatMediaInputNode: ChatInputNode {
                 return
             }
             
-            let _ = (account.postbox.transaction { transaction -> StickerPackCollectionInfo? in
+            let _ = (context.account.postbox.transaction { transaction -> StickerPackCollectionInfo? in
                 return (transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData)?.stickerPack
             }
             |> deliverOnMainQueue).start(next: { info in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.controllerInteraction.presentController(groupStickerPackSetupController(account: account, peerId: peerId, currentPackInfo: info), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                strongSelf.controllerInteraction.presentController(groupStickerPackSetupController(context: context, peerId: peerId, currentPackInfo: info), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             })
         }, dismissPeerSpecificSettings: { [weak self] in
             self?.dismissPeerSpecificPackSetup()
@@ -584,7 +584,7 @@ final class ChatMediaInputNode: ChatInputNode {
             switch position {
                 case .initial:
                     var firstTime = true
-                    return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: nil, count: 50)
+                    return context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: nil, count: 50)
                     |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
                         let update: StickerPacksCollectionUpdate
                         if firstTime {
@@ -597,7 +597,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     }
                 case let .scroll(aroundIndex):
                     var firstTime = true
-                    return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: aroundIndex, count: 300)
+                    return context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: aroundIndex, count: 300)
                     |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
                         let update: StickerPacksCollectionUpdate
                         if firstTime {
@@ -610,7 +610,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     }
                 case let .navigate(index, collectionId):
                     var firstTime = true
-                    return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: index, count: 300)
+                    return context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: index, count: 300)
                     |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
                         let update: StickerPacksCollectionUpdate
                         if firstTime {
@@ -629,7 +629,7 @@ final class ChatMediaInputNode: ChatInputNode {
         let inputNodeInteraction = self.inputNodeInteraction!
         let peerSpecificPack: Signal<(PeerSpecificPackData?, CanInstallPeerSpecificPack), NoError>
         if let peerId = peerId {
-            self.dismissedPeerSpecificStickerPack.set(account.postbox.transaction { transaction -> Bool in
+            self.dismissedPeerSpecificStickerPack.set(context.account.postbox.transaction { transaction -> Bool in
                 guard let state = transaction.getPeerChatInterfaceState(peerId) as? ChatInterfaceState else {
                     return false
                 }
@@ -639,7 +639,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 
                 return false
             })
-            peerSpecificPack = combineLatest(peerSpecificStickerPack(postbox: account.postbox, network: account.network, peerId: peerId), account.postbox.multiplePeersView([peerId]), self.dismissedPeerSpecificStickerPack.get())
+            peerSpecificPack = combineLatest(peerSpecificStickerPack(postbox: context.account.postbox, network: context.account.network, peerId: peerId), context.account.postbox.multiplePeersView([peerId]), self.dismissedPeerSpecificStickerPack.get())
             |> map { packData, peersView, dismissedPeerSpecificPack -> (PeerSpecificPackData?, CanInstallPeerSpecificPack) in
                 if let peer = peersView.peers[peerId] {
                     var canInstall: CanInstallPeerSpecificPack = .none
@@ -681,7 +681,7 @@ final class ChatMediaInputNode: ChatInputNode {
             let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme)
             let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, strings: strings, theme: theme)
             let (previousPanelEntries, previousGridEntries) = previousEntries.swap((panelEntries, gridEntries))
-            return (view, preparedChatMediaInputPanelEntryTransition(account: account, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: inputNodeInteraction), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction), previousGridEntries.isEmpty)
+            return (view, preparedChatMediaInputPanelEntryTransition(account: context.account, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: inputNodeInteraction), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction), previousGridEntries.isEmpty)
         }
         
         self.disposable.set((transitions
@@ -789,7 +789,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 if let stickerSearchContainerNode = strongSelf.stickerSearchContainerNode {
                     panes = []
                     if let (itemNode, item) = stickerSearchContainerNode.itemAt(point: point.offsetBy(dx: -stickerSearchContainerNode.frame.minX, dy: -stickerSearchContainerNode.frame.minY)) {
-                        return strongSelf.account.postbox.transaction { transaction -> Bool in
+                        return strongSelf.context.account.postbox.transaction { transaction -> Bool in
                             return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
                             }
                             |> deliverOnMainQueue
@@ -805,9 +805,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                         PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
                                             if let strongSelf = self {
                                                 if isStarred {
-                                                    let _ = removeSavedSticker(postbox: strongSelf.account.postbox, mediaId: item.file.fileId).start()
+                                                    let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
                                                 } else {
-                                                    let _ = addSavedSticker(postbox: strongSelf.account.postbox, network: strongSelf.account.network, file: item.file).start()
+                                                    let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                                 }
                                             }
                                         }),
@@ -817,7 +817,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     switch attribute {
                                                     case let .Sticker(_, packReference, _):
                                                         if let packReference = packReference {
-                                                            let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
+                                                            let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
                                                             controller.sendSticker = { file in
                                                                 if let strongSelf = self {
                                                                     strongSelf.controllerInteraction.sendSticker(file, false)
@@ -836,7 +836,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                         }),
                                         PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: {})
                                     ]
-                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.account, item: item, menu: menuItems))
+                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems))
                                 } else {
                                     return nil
                                 }
@@ -849,7 +849,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     if pane.supernode != nil, pane.frame.contains(point) {
                         if let pane = pane as? ChatMediaInputGifPane {
                             if let file = pane.fileAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY)) {
-                                return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.account, contextResult: .internalReference(queryId: 0, id: "", type: "gif", title: nil, description: nil, image: nil, file: file.media, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
+                                return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.context.account, contextResult: .internalReference(queryId: 0, id: "", type: "gif", title: nil, description: nil, image: nil, file: file.media, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
                                     PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
                                         if let strongSelf = self {
                                             strongSelf.controllerInteraction.sendGif(file)
@@ -857,7 +857,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                     }),
                                     PeekControllerMenuItem(title: strongSelf.strings.Common_Delete, color: .destructive, action: {
                                         if let strongSelf = self {
-                                            let _ = removeSavedGif(postbox: strongSelf.account.postbox, mediaId: file.media.fileId).start()
+                                            let _ = removeSavedGif(postbox: strongSelf.context.account.postbox, mediaId: file.media.fileId).start()
                                         }
                                     })
                                 ])))
@@ -871,7 +871,7 @@ final class ChatMediaInputNode: ChatInputNode {
                             }
                             
                             if let (itemNode, item) = itemNodeAndItem {
-                                return strongSelf.account.postbox.transaction { transaction -> Bool in
+                                return strongSelf.context.account.postbox.transaction { transaction -> Bool in
                                     return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
                                 }
                                 |> deliverOnMainQueue
@@ -887,9 +887,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                             PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
                                                 if let strongSelf = self {
                                                     if isStarred {
-                                                        let _ = removeSavedSticker(postbox: strongSelf.account.postbox, mediaId: item.file.fileId).start()
+                                                        let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
                                                     } else {
-                                                        let _ = addSavedSticker(postbox: strongSelf.account.postbox, network: strongSelf.account.network, file: item.file).start()
+                                                        let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                                     }
                                                 }
                                             }),
@@ -899,7 +899,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         switch attribute {
                                                             case let .Sticker(_, packReference, _):
                                                                 if let packReference = packReference {
-                                                                    let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
+                                                                    let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
                                                                     controller.sendSticker = { file in
                                                                         if let strongSelf = self {
                                                                             strongSelf.controllerInteraction.sendSticker(file, false)
@@ -918,7 +918,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                             }),
                                             PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: {})
                                         ]
-                                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.account, item: .pack(item), menu: menuItems))
+                                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                                     } else {
                                         return nil
                                     }
@@ -1523,7 +1523,7 @@ final class ChatMediaInputNode: ChatInputNode {
             return
         }
         self.dismissedPeerSpecificStickerPack.set(.single(true))
-        let _ = (self.account.postbox.transaction { transaction -> Void in
+        let _ = (self.context.account.postbox.transaction { transaction -> Void in
             transaction.updatePeerChatInterfaceState(peerId, update: { current in
                 if let current = current as? ChatInterfaceState {
                     return current.withUpdatedMessageActionsState({ $0.withUpdatedClosedPeerSpecificPackSetup(true) })

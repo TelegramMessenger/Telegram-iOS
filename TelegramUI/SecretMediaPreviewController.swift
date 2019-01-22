@@ -113,7 +113,7 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
 }
 
 public final class SecretMediaPreviewController: ViewController {
-    private let account: Account
+    private let context: AccountContext
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -140,9 +140,9 @@ public final class SecretMediaPreviewController: ViewController {
     
     private var screenCaptureEventsDisposable: Disposable?
     
-    public init(account: Account, messageId: MessageId) {
-        self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    public init(context: AccountContext, messageId: MessageId) {
+        self.context = context
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
@@ -153,7 +153,7 @@ public final class SecretMediaPreviewController: ViewController {
         
         
         
-        self.disposable.set((account.postbox.messageView(messageId) |> deliverOnMainQueue).start(next: { [weak self] view in
+        self.disposable.set((context.account.postbox.messageView(messageId) |> deliverOnMainQueue).start(next: { [weak self] view in
             if let strongSelf = self {
                 strongSelf.messageView = view
                 if strongSelf.isViewLoaded {
@@ -162,24 +162,23 @@ public final class SecretMediaPreviewController: ViewController {
             }
         }))
         
-        if let mediaManager = account.telegramApplicationContext.mediaManager {
-            self.hiddenMediaManagerIndex = mediaManager.galleryHiddenMediaManager.addSource(self._hiddenMedia.get()
-            |> map { messageIdAndMedia in
-                if let (messageId, media) = messageIdAndMedia {
-                    return .chat(messageId, media)
-                } else {
-                    return nil
-                }
-            })
-        }
+        let mediaManager = context.mediaManager
+        self.hiddenMediaManagerIndex = mediaManager.galleryHiddenMediaManager.addSource(self._hiddenMedia.get()
+        |> map { messageIdAndMedia in
+            if let (messageId, media) = messageIdAndMedia {
+                return .chat(messageId, media)
+            } else {
+                return nil
+            }
+        })
         
         self.screenCaptureEventsDisposable = (screenCaptureEvents()
         |> deliverOnMainQueue).start(next: { [weak self] _ in
             if let strongSelf = self, strongSelf.traceVisibility() {
                 if messageId.peerId.namespace == Namespaces.Peer.CloudUser {
-                    let _ = enqueueMessages(account: account, peerId: messageId.peerId, messages: [.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.historyScreenshot)), replyToMessageId: nil, localGroupingKey: nil)]).start()
+                    let _ = enqueueMessages(account: context.account, peerId: messageId.peerId, messages: [.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.historyScreenshot)), replyToMessageId: nil, localGroupingKey: nil)]).start()
                 } else if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
-                    let _ = addSecretChatMessageScreenshot(account: account, peerId: messageId.peerId).start()
+                    let _ = addSecretChatMessageScreenshot(account: context.account, peerId: messageId.peerId).start()
                 }
             }
         })
@@ -192,7 +191,8 @@ public final class SecretMediaPreviewController: ViewController {
     deinit {
         self.disposable.dispose()
         self.markMessageAsConsumedDisposable.dispose()
-        if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex, let mediaManager = self.account.telegramApplicationContext.mediaManager {
+        if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex {
+            let mediaManager = self.context.mediaManager
             mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
         }
         self.screenCaptureEventsDisposable?.dispose()
@@ -413,7 +413,7 @@ public final class SecretMediaPreviewController: ViewController {
                 var tempFilePath: String?
                 for media in message.media {
                     if let file = media as? TelegramMediaFile {
-                        if let path = self.account.postbox.mediaBox.completedResourcePath(file.resource) {
+                        if let path = self.context.account.postbox.mediaBox.completedResourcePath(file.resource) {
                             let tempFile = TempBox.shared.file(path: path, fileName: file.fileName ?? "file")
                             self.tempFile = tempFile
                             tempFilePath = tempFile.path
@@ -423,7 +423,7 @@ public final class SecretMediaPreviewController: ViewController {
                     }
                 }
                 
-                guard let item = galleryItemForEntry(account: self.account, presentationData: self.presentationData, entry: .MessageEntry(message, false, nil, nil), streamVideos: false, hideControls: true, tempFilePath: tempFilePath, playbackCompleted: { [weak self] in
+                guard let item = galleryItemForEntry(context: self.context, presentationData: self.presentationData, entry: .MessageEntry(message, false, nil, nil), streamVideos: false, hideControls: true, tempFilePath: tempFilePath, playbackCompleted: { [weak self] in
                     self?.dismiss(forceAway: false)
                     }) else {
                     self._ready.set(.single(true))
@@ -435,7 +435,7 @@ public final class SecretMediaPreviewController: ViewController {
                     self?.didSetReady = true
                 }
                 self._ready.set(ready |> map { true })
-                self.markMessageAsConsumedDisposable.set(markMessageContentAsConsumedInteractively(postbox: self.account.postbox, messageId: message.id).start())
+                self.markMessageAsConsumedDisposable.set(markMessageContentAsConsumedInteractively(postbox: self.context.account.postbox, messageId: message.id).start())
             } else {
                 var beginTimeAndTimeout: (Double, Double)?
                 var videoDuration: Int32?

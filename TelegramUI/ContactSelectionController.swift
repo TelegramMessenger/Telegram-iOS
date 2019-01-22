@@ -6,7 +6,7 @@ import SwiftSignalKit
 import TelegramCore
 
 class ContactSelectionController: ViewController {
-    private let account: Account
+    private let context: AccountContext
     private let autoDismiss: Bool
     
     private var contactsNode: ContactSelectionControllerNode {
@@ -61,15 +61,15 @@ class ContactSelectionController: ViewController {
         }
     }
     
-    init(account: Account, autoDismiss: Bool = true, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
-        self.account = account
+    init(context: AccountContext, autoDismiss: Bool = true, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
+        self.context = context
         self.autoDismiss = autoDismiss
         self.titleProducer = title
         self.options = options
         self.displayDeviceContacts = displayDeviceContacts
         self.confirmation = confirmation
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -133,7 +133,7 @@ class ContactSelectionController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactSelectionControllerNode(account: self.account, options: self.options, displayDeviceContacts: self.displayDeviceContacts)
+        self.displayNode = ContactSelectionControllerNode(context: self.context, options: self.options, displayDeviceContacts: self.displayDeviceContacts)
         self._ready.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.navigationBar = self.navigationBar
@@ -156,7 +156,7 @@ class ContactSelectionController: ViewController {
         
         self.contactsNode.contactListNode.suppressPermissionWarning = { [weak self] in
             if let strongSelf = self {
-                presentContactsWarningSuppression(account: strongSelf.account, present: { c, a in
+                presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
                     strongSelf.present(c, in: .window(.root), with: a)
                 })
             }

@@ -66,7 +66,7 @@ private final class BotCheckoutPasswordAlertActionNode: HighlightableButtonNode 
 }
 
 private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
-    private let account: Account
+    private let context: AccountContext
     private let period: Int32
     private let requiresBiometrics: Bool
     private let completion: (TemporaryTwoStepPasswordToken) -> Void
@@ -90,8 +90,8 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, cardTitle: String, period: Int32, requiresBiometrics: Bool, cancel: @escaping () -> Void, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, cardTitle: String, period: Int32, requiresBiometrics: Bool, cancel: @escaping () -> Void, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) {
+        self.context = context
         self.period = period
         self.requiresBiometrics = requiresBiometrics
         self.completion = completion
@@ -278,7 +278,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         }
         
         self.isVerifying = true
-        self.disposable.set((requestTemporaryTwoStepPasswordToken(account: self.account, password: text, period: self.period, requiresBiometrics: self.requiresBiometrics) |> deliverOnMainQueue).start(next: { [weak self] token in
+        self.disposable.set((requestTemporaryTwoStepPasswordToken(account: self.context.account, password: text, period: self.period, requiresBiometrics: self.requiresBiometrics) |> deliverOnMainQueue).start(next: { [weak self] token in
             if let strongSelf = self {
                 strongSelf.completion(token)
             }
@@ -295,10 +295,10 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
     }
 }
 
-func botCheckoutPasswordEntryController(account: Account, strings: PresentationStrings, cartTitle: String, period: Int32, requiresBiometrics: Bool, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) -> AlertController {
+func botCheckoutPasswordEntryController(context: AccountContext, strings: PresentationStrings, cartTitle: String, period: Int32, requiresBiometrics: Bool, completion: @escaping (TemporaryTwoStepPasswordToken) -> Void) -> AlertController {
     var dismissImpl: (() -> Void)?
-    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-    let controller = AlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), contentNode: BotCheckoutPasswordAlertContentNode(account: account, theme: presentationData.theme, strings: strings, cardTitle: cartTitle, period: period, requiresBiometrics: requiresBiometrics, cancel: {
+    let presentationData = context.currentPresentationData.with { $0 }
+    let controller = AlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), contentNode: BotCheckoutPasswordAlertContentNode(context: context, theme: presentationData.theme, strings: strings, cardTitle: cartTitle, period: period, requiresBiometrics: requiresBiometrics, cancel: {
         dismissImpl?()
     }, completion: { token in
         completion(token)

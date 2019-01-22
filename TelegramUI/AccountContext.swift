@@ -59,7 +59,9 @@ public final class TelegramApplicationBindings {
     }
 }
 
-public final class TelegramApplicationContext {
+public final class AccountContext {
+    public let account: Account
+    
     public let applicationBindings: TelegramApplicationBindings
     public let accountManager: AccountManager
     public let fetchManager: FetchManager
@@ -67,7 +69,7 @@ public final class TelegramApplicationContext {
     
     public var keyShortcutsController: KeyShortcutsController?
     
-    public let mediaManager: MediaManager?
+    public let mediaManager: MediaManager
     
     let locationManager: DeviceLocationManager?
     public let liveLocationManager: LiveLocationManager?
@@ -121,48 +123,40 @@ public final class TelegramApplicationContext {
     
     public var isCurrent: Bool = false {
         didSet {
-            self.mediaManager?.isCurrent = self.isCurrent
+            self.mediaManager.isCurrent = self.isCurrent
             if !self.isCurrent {
                 self.callManager = nil
             }
         }
     }
     
-    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, account: Account?, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, postbox: Postbox) {
-        if account != nil {
-            self.mediaManager = MediaManager(postbox: postbox, inForeground: applicationBindings.applicationInForeground)
-        } else {
-            self.mediaManager = nil
-        }
+    public init(account: Account, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, postbox: Postbox) {
+        self.account = account
+        
+        self.mediaManager = MediaManager(postbox: postbox, inForeground: applicationBindings.applicationInForeground)
         
         if applicationBindings.isMainApp {
             self.locationManager = DeviceLocationManager(queue: Queue.mainQueue())
         } else {
             self.locationManager = nil
         }
-        if let account = account, let locationManager = self.locationManager {
+        if let locationManager = self.locationManager {
             self.liveLocationManager = LiveLocationManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, viewTracker: account.viewTracker, stateManager: account.stateManager, locationManager: locationManager, inForeground: applicationBindings.applicationInForeground)
         } else {
             self.liveLocationManager = nil
         }
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
-        self.fetchManager = FetchManager(postbox: postbox, storeManager: self.mediaManager?.downloadedMediaStoreManager)
+        self.fetchManager = FetchManager(postbox: postbox, storeManager: self.mediaManager.downloadedMediaStoreManager)
         self.currentPresentationData = Atomic(value: initialPresentationDataAndSettings.presentationData)
         self.currentAutomaticMediaDownloadSettings = Atomic(value: initialPresentationDataAndSettings.automaticMediaDownloadSettings)
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)
        
-        if let account = account {
-            self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData)
-            |> then(updatedPresentationData(postbox: account.postbox, applicationBindings: applicationBindings)))
-            self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings) |> then(updatedAutomaticMediaDownloadSettings(postbox: account.postbox)))
-        } else {
-            self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData))
-            self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings))
-        }
+        self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData)
+        |> then(updatedPresentationData(postbox: account.postbox, applicationBindings: applicationBindings)))
+        self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings) |> then(updatedAutomaticMediaDownloadSettings(postbox: account.postbox)))
         
         self.currentInAppNotificationSettings = Atomic(value: initialPresentationDataAndSettings.inAppNotificationSettings)
-        
         
         let inAppPreferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.inAppNotificationSettings]))
         inAppNotificationSettingsDisposable = (postbox.combinedView(keys: [inAppPreferencesKey]) |> deliverOnMainQueue).start(next: { [weak self] views in
@@ -253,7 +247,7 @@ public final class TelegramApplicationContext {
     }
     
     public func attachOverlayMediaController(_ controller: OverlayMediaController) {
-        self.mediaManager?.overlayMediaManager.attachOverlayMediaController(controller)
+        self.mediaManager.overlayMediaManager.attachOverlayMediaController(controller)
     }
     
     public func storeSecureIdPassword(password: String) {
@@ -275,11 +269,5 @@ public final class TelegramApplicationContext {
         } else {
             return nil
         }
-    }
-}
-
-public extension Account {
-    public var telegramApplicationContext: TelegramApplicationContext {
-        return self.applicationContext as! TelegramApplicationContext
     }
 }

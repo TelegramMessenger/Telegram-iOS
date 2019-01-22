@@ -349,8 +349,8 @@ private func rateCallAndSendLogs(account: Account, callId: CallId, starsCount: I
     }
 }
 
-func callRatingController(account: Account, callId: CallId, present: @escaping (ViewController) -> Void) -> AlertController {
-    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+func callRatingController(context: AccountContext, callId: CallId, present: @escaping (ViewController) -> Void) -> AlertController {
+    let presentationData = context.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings
     
@@ -362,14 +362,14 @@ func callRatingController(account: Account, callId: CallId, present: @escaping (
         dismissImpl?(true)
         if let contentNode = contentNode, let rating = contentNode.rating {
             if rating < 4 {
-                let controller = textAlertController(account: account, title: strings.Call_ReportIncludeLog, text: strings.Call_ReportIncludeLogDescription, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Call_ReportSkip, action: {
-                    let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: contentNode.comment, includeLogs: false).start()
+                let controller = textAlertController(context: context, title: strings.Call_ReportIncludeLog, text: strings.Call_ReportIncludeLogDescription, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Call_ReportSkip, action: {
+                    let _ = rateCallAndSendLogs(account: context.account, callId: callId, starsCount: rating, comment: contentNode.comment, includeLogs: false).start()
                 }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Call_ReportSend, action: {
-                    let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: contentNode.comment, includeLogs: true).start()
+                    let _ = rateCallAndSendLogs(account: context.account, callId: callId, starsCount: rating, comment: contentNode.comment, includeLogs: true).start()
                 })])
                 present(controller)
             } else {
-                let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: contentNode.comment, includeLogs: false).start
+                let _ = rateCallAndSendLogs(account: context.account, callId: callId, starsCount: rating, comment: contentNode.comment, includeLogs: false).start
             }
         }
     })]

@@ -288,7 +288,7 @@ enum ChatListNodeEmtpyState: Equatable {
 
 final class ChatListNode: ListView {
     private let controlsHistoryPreload: Bool
-    private let account: Account
+    private let context: AccountContext
     private let mode: ChatListNodeMode
     
     private let _ready = ValuePromise<Bool>()
@@ -372,8 +372,8 @@ final class ChatListNode: ListView {
         let _ = self.currentRemovingPeerId.swap(peerId)
     }
     
-    init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
-        self.account = account
+    init(context: AccountContext, groupId: PeerGroupId?, controlsHistoryPreload: Bool, mode: ChatListNodeMode, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
+        self.context = context
         self.controlsHistoryPreload = controlsHistoryPreload
         self.mode = mode
         
@@ -426,7 +426,7 @@ final class ChatListNode: ListView {
                 }
             }
         }, setItemPinned: { [weak self] itemId, _ in
-            let _ = (toggleItemPinned(postbox: account.postbox, itemId: itemId) |> deliverOnMainQueue).start(next: { result in
+            let _ = (toggleItemPinned(postbox: context.account.postbox, itemId: itemId) |> deliverOnMainQueue).start(next: { result in
                 if let strongSelf = self {
                     switch result {
                         case .done:
@@ -437,7 +437,7 @@ final class ChatListNode: ListView {
                 }
             })
         }, setPeerMuted: { [weak self] peerId, _ in
-            let _ = (togglePeerMuted(account: account, peerId: peerId)
+            let _ = (togglePeerMuted(account: context.account, peerId: peerId)
             |> deliverOnMainQueue).start(completed: {
                 self?.updateState { state in
                     var state = state
@@ -449,12 +449,12 @@ final class ChatListNode: ListView {
             self?.deletePeerChat?(peerId)
         }, updatePeerGrouping: { [weak self] peerId, group in
             self?.updatePeerGrouping?(peerId, group)
-        }, togglePeerMarkedUnread: { [weak self, weak account] peerId, animated in
-            guard let account = account else {
+        }, togglePeerMarkedUnread: { [weak self, weak context] peerId, animated in
+            guard let context = context else {
                 return
             }
                         
-            let _ = (togglePeerUnreadMarkInteractively(postbox: account.postbox, viewTracker: account.viewTracker, peerId: peerId)
+            let _ = (togglePeerUnreadMarkInteractively(postbox: context.account.postbox, viewTracker: context.account.viewTracker, peerId: peerId)
             |> deliverOnMainQueue).start(completed: {
                 self?.updateState { state in
                     var state = state
@@ -469,7 +469,7 @@ final class ChatListNode: ListView {
         let chatListViewUpdate = self.chatListLocation.get()
         |> distinctUntilChanged
         |> mapToSignal { location in
-            return chatListViewForLocation(groupId: groupId, location: location, account: account)
+            return chatListViewForLocation(groupId: groupId, location: location, account: context.account)
         }
         
         let previousState = Atomic<ChatListNodeState>(value: self.currentState)
@@ -478,12 +478,12 @@ final class ChatListNode: ListView {
         
         let savedMessagesPeer: Signal<Peer?, NoError>
         if case let .peers(filter) = mode, filter == [.onlyWriteable] {
-            savedMessagesPeer = account.postbox.loadedPeerWithId(account.peerId) |> map(Optional.init)
+            savedMessagesPeer = context.account.postbox.loadedPeerWithId(context.account.peerId) |> map(Optional.init)
         } else {
             savedMessagesPeer = .single(nil)
         }
         
-        let currentPeerId: PeerId = account.peerId
+        let currentPeerId: PeerId = context.account.peerId
         
         let chatListNodeViewTransition = combineLatest(savedMessagesPeer, chatListViewUpdate, self.statePromise.get()) |> mapToQueue { (savedMessagesPeer, update, state) -> Signal<ChatListNodeListViewTransition, NoError> in
             
@@ -621,8 +621,8 @@ final class ChatListNode: ListView {
                 searchMode = true
             }
             
-            return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, disableAnimations: disableAnimations, account: account, scrollPosition: updatedScrollPosition, searchMode: searchMode)
-            |> map({ mappedChatListNodeViewListTransition(account: account, nodeInteraction: nodeInteraction, peerGroupId: groupId, mode: mode, transition: $0) })
+            return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, disableAnimations: disableAnimations, account: context.account, scrollPosition: updatedScrollPosition, searchMode: searchMode)
+            |> map({ mappedChatListNodeViewListTransition(account: context.account, nodeInteraction: nodeInteraction, peerGroupId: groupId, mode: mode, transition: $0) })
             |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
         }
         
@@ -698,100 +698,100 @@ final class ChatListNode: ListView {
         self.currentLocation = initialLocation
         self.chatListLocation.set(initialLocation)
         
-        let postbox = account.postbox
+        let postbox = context.account.postbox
         let previousPeerCache = Atomic<[PeerId: Peer]>(value: [:])
         let previousActivities = Atomic<ChatListNodePeerInputActivities?>(value: nil)
-        self.activityStatusesDisposable = (account.allPeerInputActivities()
-            |> mapToSignal { activitiesByPeerId -> Signal<[PeerId: [(Peer, PeerInputActivity)]], NoError> in
-                var foundAllPeers = true
-                var cachedResult: [PeerId: [(Peer, PeerInputActivity)]] = [:]
-                previousPeerCache.with { dict -> Void in
-                    for (chatPeerId, activities) in activitiesByPeerId {
-                        var cachedChatResult: [(Peer, PeerInputActivity)] = []
-                        for (peerId, activity) in activities {
-                            if let peer = dict[peerId] {
-                                cachedChatResult.append((peer, activity))
-                            } else {
-                                foundAllPeers = false
-                                break
-                            }
-                            cachedResult[chatPeerId] = cachedChatResult
+        self.activityStatusesDisposable = (context.account.allPeerInputActivities()
+        |> mapToSignal { activitiesByPeerId -> Signal<[PeerId: [(Peer, PeerInputActivity)]], NoError> in
+            var foundAllPeers = true
+            var cachedResult: [PeerId: [(Peer, PeerInputActivity)]] = [:]
+            previousPeerCache.with { dict -> Void in
+                for (chatPeerId, activities) in activitiesByPeerId {
+                    var cachedChatResult: [(Peer, PeerInputActivity)] = []
+                    for (peerId, activity) in activities {
+                        if let peer = dict[peerId] {
+                            cachedChatResult.append((peer, activity))
+                        } else {
+                            foundAllPeers = false
+                            break
                         }
-                    }
-                }
-                if foundAllPeers {
-                    return .single(cachedResult)
-                } else {
-                    return postbox.transaction { transaction -> [PeerId: [(Peer, PeerInputActivity)]] in
-                        var result: [PeerId: [(Peer, PeerInputActivity)]] = [:]
-                        var peerCache: [PeerId: Peer] = [:]
-                        for (chatPeerId, activities) in activitiesByPeerId {
-                            var chatResult: [(Peer, PeerInputActivity)] = []
-                            
-                            for (peerId, activity) in activities {
-                                if let peer = transaction.getPeer(peerId) {
-                                    chatResult.append((peer, activity))
-                                    peerCache[peerId] = peer
-                                }
-                            }
-                            
-                            result[chatPeerId] = chatResult
-                        }
-                        let _ = previousPeerCache.swap(peerCache)
-                        return result
+                        cachedResult[chatPeerId] = cachedChatResult
                     }
                 }
             }
-            |> map { activities -> ChatListNodePeerInputActivities? in
-                return previousActivities.modify { current in
-                    var updated = false
-                    let currentList: [PeerId: [(Peer, PeerInputActivity)]] = current?.activities ?? [:]
-                    if currentList.count != activities.count {
-                        updated = true
-                    } else {
-                        outer: for (peerId, currentValue) in currentList {
-                            if let value = activities[peerId] {
-                                if currentValue.count != value.count {
-                                    updated = true
-                                    break outer
-                                } else {
-                                    for i in 0 ..< currentValue.count {
-                                        if !arePeersEqual(currentValue[i].0, value[i].0) {
-                                            updated = true
-                                            break outer
-                                        }
-                                        if currentValue[i].1 != value[i].1 {
-                                            updated = true
-                                            break outer
-                                        }
-                                    }
-                                }
-                            } else {
+            if foundAllPeers {
+                return .single(cachedResult)
+            } else {
+                return postbox.transaction { transaction -> [PeerId: [(Peer, PeerInputActivity)]] in
+                    var result: [PeerId: [(Peer, PeerInputActivity)]] = [:]
+                    var peerCache: [PeerId: Peer] = [:]
+                    for (chatPeerId, activities) in activitiesByPeerId {
+                        var chatResult: [(Peer, PeerInputActivity)] = []
+                        
+                        for (peerId, activity) in activities {
+                            if let peer = transaction.getPeer(peerId) {
+                                chatResult.append((peer, activity))
+                                peerCache[peerId] = peer
+                            }
+                        }
+                        
+                        result[chatPeerId] = chatResult
+                    }
+                    let _ = previousPeerCache.swap(peerCache)
+                    return result
+                }
+            }
+        }
+        |> map { activities -> ChatListNodePeerInputActivities? in
+            return previousActivities.modify { current in
+                var updated = false
+                let currentList: [PeerId: [(Peer, PeerInputActivity)]] = current?.activities ?? [:]
+                if currentList.count != activities.count {
+                    updated = true
+                } else {
+                    outer: for (peerId, currentValue) in currentList {
+                        if let value = activities[peerId] {
+                            if currentValue.count != value.count {
                                 updated = true
                                 break outer
+                            } else {
+                                for i in 0 ..< currentValue.count {
+                                    if !arePeersEqual(currentValue[i].0, value[i].0) {
+                                        updated = true
+                                        break outer
+                                    }
+                                    if currentValue[i].1 != value[i].1 {
+                                        updated = true
+                                        break outer
+                                    }
+                                }
                             }
-                        }
-                    }
-                    if updated {
-                        if activities.isEmpty {
-                            return nil
                         } else {
-                            return ChatListNodePeerInputActivities(activities: activities)
+                            updated = true
+                            break outer
                         }
-                    } else {
-                        return current
                     }
+                }
+                if updated {
+                    if activities.isEmpty {
+                        return nil
+                    } else {
+                        return ChatListNodePeerInputActivities(activities: activities)
+                    }
+                } else {
+                    return current
                 }
             }
-            |> deliverOnMainQueue).start(next: { [weak self] activities in
-                if let strongSelf = self {
-                    strongSelf.updateState { state in
-                        var state = state
-                        state.peerInputActivities = activities
-                        return state
-                    }
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] activities in
+            if let strongSelf = self {
+                strongSelf.updateState { state in
+                    var state = state
+                    state.peerInputActivities = activities
+                    return state
                 }
-            })
+            }
+        })
         
         self.beganInteractiveDragging = { [weak self] in
             if let strongSelf = self {
@@ -826,7 +826,7 @@ final class ChatListNode: ListView {
                     }
                     
                     if let _ = fromEntry.index.pinningIndex {
-                        return strongSelf.account.postbox.transaction { transaction -> Bool in
+                        return strongSelf.context.account.postbox.transaction { transaction -> Bool in
                             var itemIds = transaction.getPinnedItemIds()
                             
                             var itemId: PinnedItemId?
@@ -879,7 +879,7 @@ final class ChatListNode: ListView {
         }
         
         self.scrollToTopOptionPromise.set(combineLatest(
-            renderedTotalUnreadCount(postbox: account.postbox) |> deliverOnMainQueue,
+            renderedTotalUnreadCount(postbox: self.context.account.postbox) |> deliverOnMainQueue,
             self.visibleUnreadCounts.get(),
             self.scrolledAtTop.get()
         ) |> map { badge, visibleUnreadCounts, scrolledAtTop -> ChatListGlobalScrollOption in
@@ -1089,14 +1089,14 @@ final class ChatListNode: ListView {
     }
     
     private func relativeUnreadChatListIndex(position: ChatListRelativePosition) -> Signal<ChatListIndex?, NoError> {
-        return self.account.postbox.transaction { transaction -> ChatListIndex? in
+        return self.context.account.postbox.transaction { transaction -> ChatListIndex? in
             var filter = true
             if let inAppNotificationSettings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.inAppNotificationSettings) as? InAppNotificationSettings {
                 switch inAppNotificationSettings.totalUnreadCountDisplayStyle {
-                case .raw:
-                    filter = false
-                case .filtered:
-                    filter = true
+                    case .raw:
+                        filter = false
+                    case .filtered:
+                        filter = true
                 }
             }
             return transaction.getRelativeUnreadChatListIndex(filtered: filter, position: position)

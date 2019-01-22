@@ -219,7 +219,7 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
     return entries
 }
 
-public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewController {
+public func createGroupController(context: AccountContext, peerIds: [PeerId]) -> ViewController {
     let initialState = CreateGroupState(creating: false, editingName: .title(title: "", type: .group), avatar: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -237,7 +237,7 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
     
     let uploadedAvatar = Promise<UploadedPeerPhotoData>()
     
-    let arguments = CreateGroupArguments(account: account, updateEditingName: { editingName in
+    let arguments = CreateGroupArguments(account: context.account, updateEditingName: { editingName in
         updateState { current in
             var current = current
             current.editingName = editingName
@@ -255,7 +255,7 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
                 return current
             }
             endEditingImpl?()
-            actionsDisposable.add((createGroup(account: account, title: title, peerIds: peerIds)
+            actionsDisposable.add((createGroup(account: context.account, title: title, peerIds: peerIds)
             |> deliverOnMainQueue
             |> afterDisposed {
                 Queue.mainQueue().async {
@@ -271,11 +271,11 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
                         return $0.avatar
                     }
                     if let _ = updatingAvatar {
-                        let _ = updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedAvatar.get(), mapResourceToAvatarSizes: { resource, representations in
+                        let _ = updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedAvatar.get(), mapResourceToAvatarSizes: { resource, representations in
                             return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                         }).start()
                     }
-                    let controller = ChatController(account: account, chatLocation: .peer(peerId))
+                    let controller = ChatController(context: context, chatLocation: .peer(peerId))
                     replaceControllerImpl?(controller)
                 }
             }))
@@ -287,10 +287,11 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
             return state.editingName.composedTitle
         }
         
-        let _ = (account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
+        let _ = (context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
             return (transaction.getPeer(account.peerId), currentSearchBotsConfiguration(transaction: transaction))
-        } |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        }
+        |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
+            let presentationData = context.currentPresentationData.with { $0 }
             
             let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
             legacyController.statusBar.statusBarStyle = .Ignore
@@ -308,9 +309,9 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
             let completedImpl: (UIImage) -> Void = { image in
                 if let data = UIImageJPEGRepresentation(image, 0.6) {
                     let resource = LocalFileMediaResource(fileId: arc4random64())
-                    account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                    context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
-                    uploadedAvatar.set(uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: resource))
+                    uploadedAvatar.set(uploadedPeerPhoto(postbox: context.account.postbox, network: context.account.network, resource: resource))
                     updateState { current in
                         var current = current
                         current.avatar = .image(representation, false)
@@ -322,7 +323,7 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: stateValue.with({ $0.avatar }) != nil, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { assetsController in
-                let controller = WebSearchController(account: account, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: title, completion: { result in
+                let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: title, completion: { result in
                     assetsController?.dismiss()
                     completedImpl(result)
                 }))
@@ -356,7 +357,7 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
         })
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), account.postbox.multiplePeersView(peerIds))
+    let signal = combineLatest(context.presentationData, statePromise.get(), context.account.postbox.multiplePeersView(peerIds))
     |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<CreateGroupEntry>, CreateGroupEntry.ItemGenerationArguments)) in
         
         let rightNavigationButton: ItemListNavigationButton
@@ -377,7 +378,7 @@ public func createGroupController(account: Account, peerIds: [PeerId]) -> ViewCo
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     replaceControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)
     }

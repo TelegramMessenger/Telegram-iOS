@@ -209,14 +209,14 @@ public func fileNameForNotificationSound(_ sound: PeerMessageSound, defaultSound
     }
 }
 
-func playSound(account: Account, sound: PeerMessageSound, defaultSound: PeerMessageSound?) -> Signal<Void, NoError> {
+func playSound(context: AccountContext, sound: PeerMessageSound, defaultSound: PeerMessageSound?) -> Signal<Void, NoError> {
     if case .none = sound {
         return .complete()
     } else {
         return Signal { subscriber in
             var currentPlayer: AudioPlayerWrapper?
             var deactivateImpl: (() -> Void)?
-            let session = account.telegramApplicationContext.mediaManager?.audioSession.push(audioSessionType: .play, activate: { _ in
+            let session = context.mediaManager.audioSession.push(audioSessionType: .play, activate: { _ in
                 if let url = Bundle.main.url(forResource: fileNameForNotificationSound(sound, defaultSound: defaultSound), withExtension: "m4a") {
                     currentPlayer = AudioPlayerWrapper(url: url, completed: {
                         deactivateImpl?()
@@ -241,7 +241,7 @@ func playSound(account: Account, sound: PeerMessageSound, defaultSound: PeerMess
     }
 }
 
-public func notificationSoundSelectionController(account: Account, isModal: Bool, currentSound: PeerMessageSound, defaultSound: PeerMessageSound?, completion: @escaping (PeerMessageSound) -> Void) -> ViewController {
+public func notificationSoundSelectionController(context: AccountContext, isModal: Bool, currentSound: PeerMessageSound, defaultSound: PeerMessageSound?, completion: @escaping (PeerMessageSound) -> Void) -> ViewController {
     let statePromise = ValuePromise(NotificationSoundSelectionState(selectedSound: currentSound), ignoreRepeated: true)
     let stateValue = Atomic(value: NotificationSoundSelectionState(selectedSound: currentSound))
     let updateState: ((NotificationSoundSelectionState) -> NotificationSoundSelectionState) -> Void = { f in
@@ -253,19 +253,19 @@ public func notificationSoundSelectionController(account: Account, isModal: Bool
     
     let playSoundDisposable = MetaDisposable()
     
-    let arguments = NotificationSoundSelectionArguments(account: account, selectSound: { sound in
+    let arguments = NotificationSoundSelectionArguments(account: context.account, selectSound: { sound in
         updateState { state in
             return NotificationSoundSelectionState(selectedSound: sound)
         }
         
-        playSoundDisposable.set(playSound(account: account, sound: sound, defaultSound: defaultSound).start())
+        playSoundDisposable.set(playSound(context: context, sound: sound, defaultSound: defaultSound).start())
     }, complete: {
         completeImpl?()
     }, cancel: {
         cancelImpl?()
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get())
+    let signal = combineLatest(context.presentationData, statePromise.get())
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<NotificationSoundSelectionEntry>, NotificationSoundSelectionEntry.ItemGenerationArguments)) in
             
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
@@ -282,7 +282,7 @@ public func notificationSoundSelectionController(account: Account, isModal: Bool
             return (controllerState, (listState, arguments))
         }
     
-    let controller = ItemListController(account: account, state: signal |> afterDisposed {
+    let controller = ItemListController(context: context, state: signal |> afterDisposed {
         playSoundDisposable.dispose()
     })
     controller.enableInteractiveDismiss = true

@@ -102,7 +102,7 @@ private func chatHistorySearchContainerPreparedTransition(from fromEntries: [Cha
 }
 
 final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
-    private let account: Account
+    private let context: AccountContext
     
     private let dimNode: ASDisplayNode
     private let listNode: ListView
@@ -132,10 +132,10 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
     
     private var enqueuedTransitions: [(ChatHistorySearchContainerTransition, Bool)] = []
     
-    init(account: Account, peerId: PeerId, tagMask: MessageTags, interfaceInteraction: ChatControllerInteraction) {
-        self.account = account
+    init(context: AccountContext, peerId: PeerId, tagMask: MessageTags, interfaceInteraction: ChatControllerInteraction) {
+        self.context = context
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat))
         

@@ -26,10 +26,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private var videoNode: UniversalVideoNode?
     private var statusNode: RadialStatusNode?
     private var badgeNode: ChatMessageInteractiveMediaBadge?
-    private var labelNode: ChatMessageInteractiveMediaLabelNode?
     private var tapRecognizer: UITapGestureRecognizer?
     
-    private var account: Account?
+    private var context: AccountContext?
     private var message: Message?
     private var media: Media?
     private var themeAndStrings: (PresentationTheme, PresentationStrings)?
@@ -100,15 +99,15 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
             
             switch fetchStatus {
                 case .Fetching:
-                    if let account = self.account, let message = self.message, message.flags.isSending {
-                       let _ = account.postbox.transaction({ transaction -> Void in
-                            deleteMessages(transaction: transaction, mediaBox: account.postbox.mediaBox, ids: [message.id])
+                    if let context = self.context, let message = self.message, message.flags.isSending {
+                       let _ = context.account.postbox.transaction({ transaction -> Void in
+                            deleteMessages(transaction: transaction, mediaBox: context.account.postbox.mediaBox, ids: [message.id])
                         }).start()
-                    } else if let media = media, let account = self.account, let message = message {
+                    } else if let media = media, let context = self.context, let message = message {
                         if let media = media as? TelegramMediaFile {
-                            messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: media)
+                            messageMediaFileCancelInteractiveFetch(account: context.account, messageId: message.id, file: media)
                         } else if let media = media as? TelegramMediaImage, let resource = largestImageRepresentation(media.representations)?.resource {
-                            messageMediaImageCancelInteractiveFetch(account: account, messageId: message.id, image: media, resource: resource)
+                            messageMediaImageCancelInteractiveFetch(account: context.account, messageId: message.id, image: media, resource: resource)
                         }
                     }
                     if let cancel = self.fetchControls.with({ return $0?.cancel }) {
@@ -141,7 +140,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
     }
     
-    func asyncLayout() -> (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ peerType: AutomaticMediaDownloadPeerType, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void))) {
+    func asyncLayout() -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ peerType: AutomaticMediaDownloadPeerType, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void))) {
         let currentMessage = self.message
         let currentMedia = self.media
         let imageLayout = self.imageNode.asyncLayout()
@@ -150,7 +149,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         let hasCurrentVideoNode = currentVideoNode != nil
         let previousAutomaticDownload = self.automaticDownload
         
-        return { [weak self] account, theme, strings, message, media, automaticDownload, peerType, automaticPlayback, sizeCalculation, layoutConstants in
+        return { [weak self] context, theme, strings, message, media, automaticDownload, peerType, automaticPlayback, sizeCalculation, layoutConstants in
             var nativeSize: CGSize
             
             let isSecretMedia = message.containsSecretMedia
@@ -280,7 +279,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             }
                             if isSecretMedia {
                                 updateImageSignal = { synchronousLoad in
-                                    return chatSecretPhoto(account: account, photoReference: .message(message: MessageReference(message), media: image))
+                                    return chatSecretPhoto(account: context.account, photoReference: .message(message: MessageReference(message), media: image))
                                 }
                             } else {
                                 let tinyThumbnailData: TinyThumbnailData?
@@ -290,22 +289,22 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     tinyThumbnailData = nil
                                 }
                                 updateImageSignal = { synchronousLoad in
-                                    return chatMessagePhoto(postbox: account.postbox, photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad, tinyThumbnailData: tinyThumbnailData)
+                                    return chatMessagePhoto(postbox: context.account.postbox, photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad, tinyThumbnailData: tinyThumbnailData)
                                 }
                             }
                             
                             updatedFetchControls = FetchControls(fetch: { manual in
                                 if let strongSelf = self {
                                     if !manual {
-                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: .message(message: MessageReference(message), media: image), storeToDownloadsPeerType: storeToDownloadsPeerType).start())
+                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: context.account, photoReference: .message(message: MessageReference(message), media: image), storeToDownloadsPeerType: storeToDownloadsPeerType).start())
                                     } else if let resource = largestRepresentationForPhoto(image)?.resource {
-                                        strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(account: account, message: message, image: image, resource: resource, storeToDownloadsPeerType: storeToDownloadsPeerType).start())
+                                        strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(account: context.account, message: message, image: image, resource: resource, storeToDownloadsPeerType: storeToDownloadsPeerType).start())
                                     }
                                 }
                             }, cancel: {
-                                chatMessagePhotoCancelInteractiveFetch(account: account, photoReference: .message(message: MessageReference(message), media: image))
+                                chatMessagePhotoCancelInteractiveFetch(account: context.account, photoReference: .message(message: MessageReference(message), media: image))
                                 if let resource = largestRepresentationForPhoto(image)?.resource {
-                                    messageMediaImageCancelInteractiveFetch(account: account, messageId: message.id, image: image, resource: resource)
+                                    messageMediaImageCancelInteractiveFetch(account: context.account, messageId: message.id, image: image, resource: resource)
                                 }
                             })
                         } else if let image = media as? TelegramMediaWebFile {
@@ -313,29 +312,29 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 replaceVideoNode = true
                             }
                             updateImageSignal = { synchronousLoad in
-                                return chatWebFileImage(account: account, file: image)
+                                return chatWebFileImage(account: context.account, file: image)
                             }
                             
                             updatedFetchControls = FetchControls(fetch: { _ in
                                 if let strongSelf = self {
-                                    strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: account, image: image).start())
+                                    strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, image: image).start())
                                 }
                             }, cancel: {
-                                chatMessageWebFileCancelInteractiveFetch(account: account, image: image)
+                                chatMessageWebFileCancelInteractiveFetch(account: context.account, image: image)
                             })
                         } else if let file = media as? TelegramMediaFile {
                             if isSecretMedia {
                                 updateImageSignal = { synchronousLoad in
-                                    return chatSecretMessageVideo(account: account, videoReference: .message(message: MessageReference(message), media: file))
+                                    return chatSecretMessageVideo(account: context.account, videoReference: .message(message: MessageReference(message), media: file))
                                 }
                             } else {
                                 if file.isSticker {
                                     updateImageSignal = { synchronousLoad in
-                                        return chatMessageSticker(account: account, file: file, small: false)
+                                        return chatMessageSticker(account: context.account, file: file, small: false)
                                     }
                                 } else {
                                     updateImageSignal = { synchronousLoad in
-                                        return mediaGridMessageVideo(postbox: account.postbox, videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile)
+                                        return mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile)
                                     }
                                 }
                             }
@@ -358,16 +357,16 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             updatedFetchControls = FetchControls(fetch: { manual in
                                 if let strongSelf = self {
                                     if file.isAnimated {
-                                        strongSelf.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).start())
+                                        strongSelf.fetchDisposable.set(fetchedMediaResource(postbox: context.account.postbox, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).start())
                                     } else {
-                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: manual).start())
+                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: context.account, message: message, file: file, userInitiated: manual).start())
                                     }
                                 }
                             }, cancel: {
                                 if file.isAnimated {
-                                    account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
+                                    context.account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
                                 } else {
-                                    messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: file)
+                                    messageMediaFileCancelInteractiveFetch(account: context.account, messageId: message.id, file: file)
                                 }
                             })
                         }
@@ -376,7 +375,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     if statusUpdated {
                         if let image = media as? TelegramMediaImage {
                             if message.flags.isSending {
-                                updatedStatusSignal = combineLatest(chatMessagePhotoStatus(account: account, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image)), account.pendingMessageManager.pendingMessageStatus(message.id))
+                                updatedStatusSignal = combineLatest(chatMessagePhotoStatus(account: context.account, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image)), context.account.pendingMessageManager.pendingMessageStatus(message.id))
                                 |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
                                     if let pendingStatus = pendingStatus {
                                         let adjustedProgress = max(pendingStatus.progress, 0.027)
@@ -386,10 +385,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     }
                                 }
                             } else {
-                                updatedStatusSignal = chatMessagePhotoStatus(account: account, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image))
+                                updatedStatusSignal = chatMessagePhotoStatus(account: context.account, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image))
                             }
                         } else if let file = media as? TelegramMediaFile {
-                            updatedStatusSignal = combineLatest(messageMediaFileStatus(account: account, messageId: message.id, file: file), account.pendingMessageManager.pendingMessageStatus(message.id))
+                            updatedStatusSignal = combineLatest(messageMediaFileStatus(account: context.account, messageId: message.id, file: file), account.pendingMessageManager.pendingMessageStatus(message.id))
                                 |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
                                     if let pendingStatus = pendingStatus {
                                         let adjustedProgress = max(pendingStatus.progress, 0.027)
@@ -401,7 +400,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         }
                     }
                     
-                    let arguments = TransformImageArguments(corners: corners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: isInlinePlayableVideo ? .fill(.black) : .blurBackground, emptyColor: message.effectivelyIncoming(account.peerId) ? theme.chat.bubble.incomingMediaPlaceholderColor : theme.chat.bubble.outgoingMediaPlaceholderColor)
+                    let arguments = TransformImageArguments(corners: corners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: isInlinePlayableVideo ? .fill(.black) : .blurBackground, emptyColor: message.effectivelyIncoming(context.account.peerId) ? theme.chat.bubble.incomingMediaPlaceholderColor : theme.chat.bubble.outgoingMediaPlaceholderColor)
                     
                     let imageFrame = CGRect(origin: CGPoint(x: -arguments.insets.left, y: -arguments.insets.top), size: arguments.drawingSize)
                     
@@ -409,7 +408,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     
                     return (boundingSize, { transition, synchronousLoads in
                         if let strongSelf = self {
-                            strongSelf.account = account
+                            strongSelf.context = context
                             strongSelf.message = message
                             strongSelf.media = media
                             strongSelf.themeAndStrings = (theme, strings)
@@ -443,9 +442,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     strongSelf.videoNode = nil
                                 }
                                 
-                                if replaceVideoNode, let updatedVideoFile = updateVideoFile, let mediaManager = account.telegramApplicationContext.mediaManager {
+                                if replaceVideoNode, let updatedVideoFile = updateVideoFile {
+                                    let mediaManager = context.mediaManager
                                     let cornerRadius: CGFloat = arguments.corners.topLeft.radius
-                                    let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(cornerRadius: cornerRadius, nativeSize: nativeSize, backgroudColor: arguments.emptyColor ?? .black), content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), enableSound: false, fetchAutomatically: false), priority: .embedded)
+                                    let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(cornerRadius: cornerRadius, nativeSize: nativeSize, backgroudColor: arguments.emptyColor ?? .black), content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), enableSound: false, fetchAutomatically: false), priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     
                                     strongSelf.videoNode = videoNode
@@ -497,10 +497,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     if let _ = media as? TelegramMediaImage {
                                         updatedFetchControls.fetch(false)
                                     } else if let image = media as? TelegramMediaWebFile {
-                                        strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: account, image: image).start())
+                                        strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, image: image).start())
                                     } else if let file = media as? TelegramMediaFile {
                                         if automaticPlayback || !file.isAnimated {
-                                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: false).start())
+                                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: context.account, message: message, file: file, userInitiated: false).start())
                                         }
                                     }
                                 }
@@ -792,12 +792,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ peerType: AutomaticMediaDownloadPeerType, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ peerType: AutomaticMediaDownloadPeerType, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
-        return { account, theme, strings, message, media, automaticDownload, peerType, automaticPlayback, sizeCalculation, layoutConstants in
+        return { context, theme, strings, message, media, automaticDownload, peerType, automaticPlayback, sizeCalculation, layoutConstants in
             var imageNode: ChatMessageInteractiveMediaNode
-            var imageLayout: (_ account: Account, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ peerType: AutomaticMediaDownloadPeerType, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void)))
+            var imageLayout: (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: Bool, _ peerType: AutomaticMediaDownloadPeerType, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 imageNode = node
@@ -807,7 +807,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 imageLayout = imageNode.asyncLayout()
             }
             
-            let (unboundSize, initialWidth, continueLayout) = imageLayout(account, theme, strings, message, media, automaticDownload, peerType, automaticPlayback, sizeCalculation, layoutConstants)
+            let (unboundSize, initialWidth, continueLayout) = imageLayout(context, theme, strings, message, media, automaticDownload, peerType, automaticPlayback, sizeCalculation, layoutConstants)
             
             return (unboundSize, initialWidth, { constrainedSize, corners in
                 let (finalWidth, finalLayout) = continueLayout(constrainedSize, corners)

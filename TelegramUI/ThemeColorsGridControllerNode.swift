@@ -58,7 +58,7 @@ private func preparedThemeColorsGridEntryTransition(account: Account, from fromE
 }
 
 final class ThemeColorsGridControllerNode: ASDisplayNode {
-    private let account: Account
+    private let context: AccountContext
     private var presentationData: PresentationData
     private var controllerInteraction: ThemeColorsGridControllerInteraction?
     private let present: (ViewController, Any?) -> Void
@@ -79,8 +79,8 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(account: Account, presentationData: PresentationData, colors: [Int32], present: @escaping (ViewController, Any?) -> Void, pop: @escaping () -> Void, presentColorPicker: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, colors: [Int32], present: @escaping (ViewController, Any?) -> Void, pop: @escaping () -> Void, presentColorPicker: @escaping () -> Void) {
+        self.context = context
         self.presentationData = presentationData
         self.present = present
         self.presentColorPicker = presentColorPicker
@@ -119,7 +119,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
                 let entries = previousEntries.with { $0 }
                 if let entries = entries, !entries.isEmpty {
                     let wallpapers = entries.map { $0.wallpaper }
-                    let controller = WallpaperGalleryController(account: account, source: .list(wallpapers: wallpapers, central: wallpaper, type: .colors))
+                    let controller = WallpaperGalleryController(context: context, source: .list(wallpapers: wallpapers, central: wallpaper, type: .colors))
                     controller.apply = {  _, _, _ in
                         pop()
                     }
@@ -131,7 +131,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         self.controllerInteraction = interaction
         
         let wallpapers = colors.map { TelegramWallpaper.color($0) }
-        let transition = account.telegramApplicationContext.presentationData
+        let transition = context.presentationData
         |> map { presentationData -> (ThemeColorsGridEntryTransition, Bool) in
             var entries: [ThemeColorsGridControllerEntry] = []
             var index = 0
@@ -143,7 +143,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
             }
             
             let previous = previousEntries.swap(entries)
-            return (preparedThemeColorsGridEntryTransition(account: account, from: previous ?? [], to: entries, interaction: interaction), previous == nil)
+            return (preparedThemeColorsGridEntryTransition(account: context.account, from: previous ?? [], to: entries, interaction: interaction), previous == nil)
         }
         self.disposable = (transition |> deliverOnMainQueue).start(next: { [weak self] (transition, _) in
             if let strongSelf = self {

@@ -7,16 +7,16 @@ import TelegramCore
 import LegacyComponents
 
 class WallpaperGalleryItem: GalleryItem {
-    let account: Account
+    let context: AccountContext
     let entry: WallpaperGalleryEntry
     
-    init(account: Account, entry: WallpaperGalleryEntry) {
-        self.account = account
+    init(context: AccountContext, entry: WallpaperGalleryEntry) {
+        self.context = context
         self.entry = entry
     }
     
     func node() -> GalleryItemNode {
-        let node = WallpaperGalleryItemNode(account: self.account)
+        let node = WallpaperGalleryItemNode(context: self.context)
         node.setEntry(self.entry)
         return node
     }
@@ -35,7 +35,7 @@ class WallpaperGalleryItem: GalleryItem {
 let progressDiameter: CGFloat = 50.0
 
 final class WallpaperGalleryItemNode: GalleryItemNode {
-    private let account: Account
+    private let context: AccountContext
     private var entry: WallpaperGalleryEntry?
     private var contentSize: CGSize?
     
@@ -52,8 +52,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     let controlsColor = Promise<UIColor>(.white)
     let status = Promise<MediaResourceStatus>(.Local)
     
-    init(account: Account) {
-        self.account = account
+    init(context: AccountContext) {
+        self.context = context
         
         self.wrapperNode = ASDisplayNode()
         self.imageNode = TransformImageNode()
@@ -118,7 +118,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         case .builtin:
                             displaySize = CGSize(width: 1308.0, height: 2688.0).fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                             contentSize = displaySize
-                            signal = settingsBuiltinWallpaperImage(account: account)
+                            signal = settingsBuiltinWallpaperImage(account: context.account)
                             fetchSignal = .complete()
                             statusSignal = .single(.Local)
                         case let .color(color):
@@ -138,23 +138,23 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .wallpaper(resource: representation.resource)))
                             }
                             convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .wallpaper(resource: file.file.resource)))
-                            signal = chatAvatarGalleryPhoto(account: account, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
-                            fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
-                            statusSignal = account.postbox.mediaBox.resourceStatus(file.file.resource)
+                            signal = chatAvatarGalleryPhoto(account: context.account, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
+                            fetchSignal = fetchedMediaResource(postbox: context.account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
+                            statusSignal = context.account.postbox.mediaBox.resourceStatus(file.file.resource)
                         case let .image(representations):
                             if let largestSize = largestImageRepresentation(representations) {
                                 contentSize = largestSize.dimensions
                                 displaySize = largestSize.dimensions.dividedByScreenScale().integralFloor
                                 
                                 let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
-                                signal = chatAvatarGalleryPhoto(account: account, representations: convertedRepresentations)
+                                signal = chatAvatarGalleryPhoto(account: context.account, representations: convertedRepresentations)
                                 
                                 if let largestIndex = convertedRepresentations.index(where: { $0.representation == largestSize }) {
-                                    fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[largestIndex].reference)
+                                    fetchSignal = fetchedMediaResource(postbox: context.account.postbox, reference: convertedRepresentations[largestIndex].reference)
                                 } else {
                                     fetchSignal = .complete()
                                 }
-                                statusSignal = account.postbox.mediaBox.resourceStatus(largestSize.resource)
+                                statusSignal = context.account.postbox.mediaBox.resourceStatus(largestSize.resource)
                             } else {
                                 displaySize = CGSize(width: 1.0, height: 1.0)
                                 contentSize = displaySize
@@ -168,7 +168,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     let dimensions = CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
                     contentSize = dimensions
                     displaySize = dimensions.dividedByScreenScale().integralFloor
-                    signal = photoWallpaper(postbox: account.postbox, photoLibraryResource: PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64()))
+                    signal = photoWallpaper(postbox: context.account.postbox, photoLibraryResource: PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64()))
                     fetchSignal = .complete()
                     statusSignal = .single(.Local)
                     self.wrapperNode.addSubnode(self.cropNode)
@@ -213,9 +213,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         representations.append(TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: imageResource))
                         let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil)
                         
-                        signal = chatMessagePhoto(postbox: account.postbox, photoReference: .standalone(media: tmpImage))
-                        fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: .media(media: .standalone(media: tmpImage), resource: imageResource))
-                        statusSignal = account.postbox.mediaBox.resourceStatus(imageResource)
+                        signal = chatMessagePhoto(postbox: context.account.postbox, photoReference: .standalone(media: tmpImage))
+                        fetchSignal = fetchedMediaResource(postbox: context.account.postbox, reference: .media(media: .standalone(media: tmpImage), resource: imageResource))
+                        statusSignal = context.account.postbox.mediaBox.resourceStatus(imageResource)
                     } else {
                         displaySize = CGSize(width: 1.0, height: 1.0)
                         contentSize = displaySize
@@ -271,7 +271,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             
             let controlsColorSignal: Signal<UIColor, NoError>
             if case let .wallpaper(wallpaper) = entry {
-                controlsColorSignal = chatBackgroundContrastColor(wallpaper: wallpaper, postbox: account.postbox)
+                controlsColorSignal = chatBackgroundContrastColor(wallpaper: wallpaper, postbox: context.account.postbox)
             } else {
                 controlsColorSignal = backgroundContrastColor(for: imagePromise.get())
             }

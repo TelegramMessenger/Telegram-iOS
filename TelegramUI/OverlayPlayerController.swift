@@ -5,7 +5,7 @@ import Display
 import SwiftSignalKit
 
 final class OverlayPlayerController: ViewController {
-    private let account: Account
+    private let context: AccountContext
     let peerId: PeerId
     let type: MediaManagerPlayerType
     let initialMessageId: MessageId
@@ -19,8 +19,8 @@ final class OverlayPlayerController: ViewController {
         return self.displayNode as! OverlayPlayerControllerNode
     }
     
-    init(account: Account, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, parentNavigationController: NavigationController?) {
-        self.account = account
+    init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, parentNavigationController: NavigationController?) {
+        self.context = context
         self.peerId = peerId
         self.type = type
         self.initialMessageId = initialMessageId
@@ -39,7 +39,7 @@ final class OverlayPlayerController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = OverlayPlayerControllerNode(account: self.account, peerId: self.peerId, type: self.type, initialMessageId: self.initialMessageId, initialOrder: self.initialOrder, requestDismiss: { [weak self] in
+        self.displayNode = OverlayPlayerControllerNode(context: self.context, peerId: self.peerId, type: self.type, initialMessageId: self.initialMessageId, initialOrder: self.initialOrder, requestDismiss: { [weak self] in
             self?.dismiss()
         }, requestShare: { [weak self] messageId in
             if let strongSelf = self {

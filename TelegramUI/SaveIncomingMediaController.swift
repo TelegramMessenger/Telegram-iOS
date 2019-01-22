@@ -89,9 +89,9 @@ private func saveIncomingMediaControllerEntries(presentationData: PresentationDa
     return entries
 }
 
-func saveIncomingMediaController(account: Account) -> ViewController {
+func saveIncomingMediaController(context: AccountContext) -> ViewController {
     let arguments = SaveIncomingMediaControllerArguments(toggle: { type in
-        let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateMediaDownloadSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             switch type {
                 case .contact:
@@ -107,7 +107,7 @@ func saveIncomingMediaController(account: Account) -> ViewController {
         }).start()
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings])) |> deliverOnMainQueue
+    let signal = combineLatest(context.presentationData, context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings])) |> deliverOnMainQueue
     |> map { presentationData, prefs -> (ItemListControllerState, (ItemListNodeState<SaveIncomingMediaEntry>, SaveIncomingMediaEntry.ItemGenerationArguments)) in
         let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
         if let value = prefs.values[ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
@@ -122,7 +122,7 @@ func saveIncomingMediaController(account: Account) -> ViewController {
         return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     return controller
 }
 

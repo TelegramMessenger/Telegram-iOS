@@ -83,7 +83,7 @@ private func preparedTransition(from fromEntries: [ChannelMembersSearchEntry]?, 
 }
 
 class ChannelMembersSearchControllerNode: ASDisplayNode {
-    private let account: Account
+    private let context: AccountContext
     private let peerId: PeerId
     private let mode: ChannelMembersSearchControllerMode
     private let filters: [ChannelMembersSearchFilter]
@@ -106,8 +106,8 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     private var disposable: Disposable?
     private var listControl: PeerChannelMemberCategoryControl?
     
-    init(account: Account, presentationData: PresentationData, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
+        self.context = context
         self.listNode = ListView()
         self.peerId = peerId
         self.mode = mode
@@ -133,7 +133,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         let disposableAndLoadMoreControl: (Disposable, PeerChannelMemberCategoryControl?)
         
         if peerId.namespace == Namespaces.Peer.CloudGroup {
-            let disposable = (account.postbox.peerView(id: peerId)
+            let disposable = (context.account.postbox.peerView(id: peerId)
             |> deliverOnMainQueue).start(next: { [weak self] peerView in
                 guard let strongSelf = self else {
                     return
@@ -166,7 +166,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     var enabled = true
                     switch mode {
                         case .ban:
-                            if peer.id == account.peerId {
+                            if peer.id == context.account.peerId {
                                 continue
                             }
                             for filter in filters {
@@ -180,7 +180,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                 }
                             }
                         case .promote:
-                            if peer.id == account.peerId {
+                            if peer.id == context.account.peerId {
                                 continue
                             }
                             for filter in filters {
@@ -206,7 +206,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                             var peers: [PeerId: Peer] = [:]
                             peers[creator.id] = creator
                             peers[peer.id] = peer
-                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == account.peerId), banInfo: nil), peer: peer, peers: peers)
+                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil), peer: peer, peers: peers)
                         case .member:
                             var peers: [PeerId: Peer] = [:]
                             peers[peer.id] = peer
@@ -218,11 +218,11 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 }
                 let previous = previousEntries.swap(entries)
                 
-                strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, interaction: interaction))
+                strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, interaction: interaction))
             })
             disposableAndLoadMoreControl = (disposable, nil)
         } else {
-            disposableAndLoadMoreControl = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, updated: { [weak self] state in
+            disposableAndLoadMoreControl = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { [weak self] state in
                 guard let strongSelf = self else {
                     return
                 }
@@ -234,7 +234,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     var enabled = true
                     switch mode {
                         case .ban:
-                            if participant.peer.id == account.peerId {
+                            if participant.peer.id == context.account.peerId {
                                 continue
                             }
                             for filter in filters {
@@ -248,7 +248,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                                 }
                             }
                         case .promote:
-                            if participant.peer.id == account.peerId {
+                            if participant.peer.id == context.account.peerId {
                                 continue
                             }
                             for filter in filters {
@@ -272,7 +272,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 
                 let previous = previousEntries.swap(entries)
                 
-                strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, interaction: interaction))
+                strongSelf.enqueueTransition(preparedTransition(from: previous, to: entries, account: context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, interaction: interaction))
             })
         }
         self.disposable = disposableAndLoadMoreControl.0
@@ -281,7 +281,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         if peerId.namespace == Namespaces.Peer.CloudChannel {
             self.listNode.visibleBottomContentOffsetChanged = { offset in
                 if case let .known(value) = offset, value < 40.0 {
-                    account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: disposableAndLoadMoreControl.1)
+                    context.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: disposableAndLoadMoreControl.1)
                 }
             }
         }
@@ -348,7 +348,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChannelMembersSearchContainerNode(account: self.account, peerId: self.peerId, mode: .banAndPromoteActions, filters: self.filters, openPeer: { [weak self] peer, participant in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChannelMembersSearchContainerNode(context: self.context, peerId: self.peerId, mode: .banAndPromoteActions, filters: self.filters, openPeer: { [weak self] peer, participant in
             self?.requestOpenPeerFromSearch?(peer, participant)
         }, updateActivity: { value in
             

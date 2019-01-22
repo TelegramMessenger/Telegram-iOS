@@ -167,7 +167,7 @@ final class ListMessageFileItemNode: ListMessageNode {
     private let progressNode: RadialProgressNode
     private var playbackOverlayNode: ListMessagePlaybackOverlayNode?
     
-    private var account: Account?
+    private var context: AccountContext?
     private (set) var message: Message?
     
     private var appliedItem: ListMessageItem?
@@ -413,18 +413,18 @@ final class ListMessageFileItemNode: ListMessageNode {
             
             if let selectedMedia = selectedMedia {
                 if mediaUpdated {
-                    let account = item.account
+                    let context = item.context
                     updatedFetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: selectedMedia, userInitiated: true).start())
+                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: context.account, message: message, file: selectedMedia, userInitiated: true).start())
                         }
                     }, cancel: {
-                        messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: selectedMedia)
+                        messageMediaFileCancelInteractiveFetch(account: context.account, messageId: message.id, file: selectedMedia)
                     })
                 }
                 
                 if statusUpdated {
-                    updatedStatusSignal = messageFileMediaResourceStatus(account: item.account, file: selectedMedia, message: message, isRecentActions: false)
+                    updatedStatusSignal = messageFileMediaResourceStatus(account: item.context.account, file: selectedMedia, message: message, isRecentActions: false)
                     
                     if isAudio {
                         if let currentUpdatedStatusSignal = updatedStatusSignal {
@@ -468,9 +468,9 @@ final class ListMessageFileItemNode: ListMessageNode {
                 if let iconImage = iconImage {
                     switch iconImage {
                         case let .imageRepresentation(file, representation):
-                            updateIconImageSignal = chatWebpageSnippetFile(account: item.account, fileReference: .message(message: MessageReference(message), media: file), representation: representation)
+                            updateIconImageSignal = chatWebpageSnippetFile(account: item.context.account, fileReference: .message(message: MessageReference(message), media: file), representation: representation)
                         case let .albumArt(file, albumArt):
-                            updateIconImageSignal = playerAlbumArt(postbox: item.account.postbox, fileReference: .message(message: MessageReference(message), media: file), albumArt: albumArt, thumbnail: true)
+                            updateIconImageSignal = playerAlbumArt(postbox: item.context.account.postbox, fileReference: .message(message: MessageReference(message), media: file), albumArt: albumArt, thumbnail: true)
                         
                     }
                 } else {
@@ -496,7 +496,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                     
                     strongSelf.currentMedia = selectedMedia
                     strongSelf.message = message
-                    strongSelf.account = item.account
+                    strongSelf.context = item.context
                     strongSelf.appliedItem = item
                     strongSelf.layoutParams = params
                     strongSelf.contentSizeValue = nodeLayout.contentSize

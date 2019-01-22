@@ -189,7 +189,7 @@ public final class ShareController: ViewController {
     
     private var animatedIn = false
     
-    private let account: Account
+    private let context: AccountContext
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
@@ -204,13 +204,13 @@ public final class ShareController: ViewController {
     
     public var dismissed: ((Bool) -> Void)?
     
-    public init(account: Account, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false) {
-        self.account = account
+    public init(context: AccountContext, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false) {
+        self.context = context
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare
         self.subject = subject
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
         
@@ -275,7 +275,7 @@ public final class ShareController: ViewController {
                     else if let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, messages.count == 1 || sameGroupingKey {
                         if message.id.namespace == Namespaces.Message.Cloud, let addressName = chatPeer.addressName, !addressName.isEmpty {
                             self.defaultAction = ShareControllerAction(title: self.presentationData.strings.ShareMenu_CopyShareLink, action: { [weak self] in
-                                let _ = (exportMessageLink(account: account, peerId: chatPeer.id, messageId: message.id)
+                                let _ = (exportMessageLink(account: context.account, peerId: chatPeer.id, messageId: message.id)
                                 |> map { result -> String in
                                     return result ?? "https://t.me/\(addressName)/\(message.id.id)"
                                 }
@@ -298,8 +298,8 @@ public final class ShareController: ViewController {
             })
         }
         
-        self.peers.set(combineLatest(account.postbox.loadedPeerWithId(account.peerId)
-        |> take(1), account.viewTracker.tailChatListView(groupId: nil, count: 150)
+        self.peers.set(combineLatest(context.account.postbox.loadedPeerWithId(context.account.peerId)
+        |> take(1), context.account.viewTracker.tailChatListView(groupId: nil, count: 150)
         |> take(1))
         |> map { accountPeer, view -> ([RenderedPeer], Peer) in
             var peers: [RenderedPeer] = []
@@ -316,7 +316,7 @@ public final class ShareController: ViewController {
             return (peers, accountPeer)
         })
         
-        self.presentationDataDisposable = (self.account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (self.context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 strongSelf.controllerNode.updatePresentationData(presentationData)
@@ -333,7 +333,7 @@ public final class ShareController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ShareControllerNode(account: self.account, defaultAction: self.defaultAction, requestLayout: { [weak self] transition in
+        self.displayNode = ShareControllerNode(context: self.context, defaultAction: self.defaultAction, requestLayout: { [weak self] transition in
             self?.requestLayout(transition: transition)
         }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare)
         self.controllerNode.dismiss = { [weak self] shared in
@@ -354,7 +354,7 @@ public final class ShareController: ViewController {
                                 messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                             }
                             messages.append(.message(text: url, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start()
+                            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
                     case let .text(string):
@@ -364,7 +364,7 @@ public final class ShareController: ViewController {
                                 messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                             }
                             messages.append(.message(text: string, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start()
+                            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
                     case let .quote(string, url):
@@ -377,7 +377,7 @@ public final class ShareController: ViewController {
                             attributedText.append(NSAttributedString(string: "\n\n\(url)"))
                             let entities = generateChatInputTextEntities(attributedText)
                             messages.append(.message(text: attributedText.string, attributes: [TextEntitiesMessageAttribute(entities: entities)], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start()
+                            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
                     case let .image(representations):
@@ -387,7 +387,7 @@ public final class ShareController: ViewController {
                                 messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                             }
                             messages.append(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil)), replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start()
+                            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
                     case let .media(mediaReference):
@@ -397,7 +397,7 @@ public final class ShareController: ViewController {
                                 messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                             }
                             messages.append(.message(text: "", attributes: [], mediaReference: mediaReference, replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start()
+                            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
                     case let .mapMedia(media):
@@ -407,7 +407,7 @@ public final class ShareController: ViewController {
                                 messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                             }
                             messages.append(.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messages).start()
+                            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
                     case let .messages(messages):
@@ -419,7 +419,7 @@ public final class ShareController: ViewController {
                             for message in messages {
                                 messagesToEnqueue.append(.forward(source: message.id, grouping: .auto))
                             }
-                            let _ = enqueueMessages(account: strongSelf.account, peerId: peerId, messages: messagesToEnqueue).start()
+                            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messagesToEnqueue).start()
                         }
                         return .single(.done)
                     case let .fromExternal(f):
@@ -473,7 +473,7 @@ public final class ShareController: ViewController {
                                                 selectedMedia = image
                                             }
                                         }
-                                    case let _ as TelegramMediaPoll:
+                                    case _ as TelegramMediaPoll:
                                         selectedMedia = media
                                         break loop
                                     default:
@@ -490,7 +490,7 @@ public final class ShareController: ViewController {
                     case .fromExternal:
                         break
                 }
-                return (collectExternalShareItems(strings: strongSelf.presentationData.strings, postbox: strongSelf.account.postbox, collectableItems: collectableItems) |> deliverOnMainQueue) |> map { state in
+                return (collectExternalShareItems(strings: strongSelf.presentationData.strings, postbox: strongSelf.context.account.postbox, collectableItems: collectableItems) |> deliverOnMainQueue) |> map { state in
                     switch state {
                         case .progress:
                             return .preparing
@@ -561,10 +561,10 @@ public final class ShareController: ViewController {
     }
     
     private func saveToCameraRoll(messages: [Message]) {
-        let postbox = self.account.postbox
+        let postbox = self.context.account.postbox
         let signals: [Signal<Float, NoError>] = messages.compactMap { message -> Signal<Float, NoError>? in
             if let media = message.media.first {
-                return TelegramUI.saveToCameraRoll(applicationContext: self.account.telegramApplicationContext, postbox: postbox, mediaReference: .message(message: MessageReference(message), media: media))
+                return TelegramUI.saveToCameraRoll(context: self.context, postbox: postbox, mediaReference: .message(message: MessageReference(message), media: media))
             } else {
                 return nil
             }
@@ -585,10 +585,10 @@ public final class ShareController: ViewController {
     
     private func saveToCameraRoll(representations: [ImageRepresentationWithReference]) {
         let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil)
-        self.controllerNode.transitionToProgressWithValue(signal: TelegramUI.saveToCameraRoll(applicationContext: self.account.telegramApplicationContext, postbox: self.account.postbox, mediaReference: .standalone(media: media)) |> map(Optional.init))
+        self.controllerNode.transitionToProgressWithValue(signal: TelegramUI.saveToCameraRoll(context: self.context, postbox: self.context.account.postbox, mediaReference: .standalone(media: media)) |> map(Optional.init))
     }
     
     private func saveToCameraRoll(mediaReference: AnyMediaReference) {
-        self.controllerNode.transitionToProgressWithValue(signal: TelegramUI.saveToCameraRoll(applicationContext: self.account.telegramApplicationContext, postbox: self.account.postbox, mediaReference: mediaReference) |> map(Optional.init))
+        self.controllerNode.transitionToProgressWithValue(signal: TelegramUI.saveToCameraRoll(context: self.context, postbox: self.context.account.postbox, mediaReference: mediaReference) |> map(Optional.init))
     }
 }

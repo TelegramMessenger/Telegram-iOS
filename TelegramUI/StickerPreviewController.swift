@@ -20,11 +20,11 @@ final class StickerPreviewController: ViewController {
     
     private var animatedIn = false
     
-    private let account: Account
+    private let context: AccountContext
     private var item: StickerPackItem
     
-    init(account: Account, item: StickerPackItem) {
-        self.account = account
+    init(context: AccountContext, item: StickerPackItem) {
+        self.context = context
         self.item = item
         
         super.init(navigationBarPresentationData: nil)
@@ -37,7 +37,7 @@ final class StickerPreviewController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = StickerPreviewControllerNode(account: self.account)
+        self.displayNode = StickerPreviewControllerNode(context: self.context)
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }

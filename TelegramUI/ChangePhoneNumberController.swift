@@ -9,7 +9,7 @@ final class ChangePhoneNumberController: ViewController {
         return self.displayNode as! ChangePhoneNumberControllerNode
     }
     
-    private let account: Account
+    private let context: AccountContext
     
     private var currentData: (Int32, String?, String)?
     private let requestDisposable = MetaDisposable()
@@ -31,9 +31,9 @@ final class ChangePhoneNumberController: ViewController {
     
     private var presentationData: PresentationData
     
-    init(account: Account) {
-        self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext) {
+        self.context = context
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -105,16 +105,16 @@ final class ChangePhoneNumberController: ViewController {
         }
         if !number.isEmpty {
             self.inProgress = true
-            self.requestDisposable.set((requestChangeAccountPhoneNumberVerification(account: self.account, phoneNumber: self.controllerNode.currentNumber) |> deliverOnMainQueue).start(next: { [weak self] next in
+            self.requestDisposable.set((requestChangeAccountPhoneNumberVerification(account: self.context.account, phoneNumber: self.controllerNode.currentNumber) |> deliverOnMainQueue).start(next: { [weak self] next in
                 if let strongSelf = self {
                     strongSelf.inProgress = false
-                    (strongSelf.navigationController as? NavigationController)?.pushViewController(changePhoneNumberCodeController(account: strongSelf.account, phoneNumber: strongSelf.controllerNode.currentNumber, codeData: next))
+                    (strongSelf.navigationController as? NavigationController)?.pushViewController(changePhoneNumberCodeController(context: strongSelf.context, phoneNumber: strongSelf.controllerNode.currentNumber, codeData: next))
                 }
             }, error: { [weak self] error in
                 if let strongSelf = self {
                     strongSelf.inProgress = false
                     
-                    let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    let presentationData = strongSelf.context.currentPresentationData.with { $0 }
                 
                     let text: String
                     switch error {

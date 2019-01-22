@@ -226,7 +226,7 @@ private func archivedStickerPacksControllerEntries(presentationData: Presentatio
     return entries
 }
 
-public func archivedStickerPacksController(account: Account, mode: ArchivedStickerPacksControllerMode, archived: [ArchivedStickerPackItem]?, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void) -> ViewController {
+public func archivedStickerPacksController(context: AccountContext, mode: ArchivedStickerPacksControllerMode, archived: [ArchivedStickerPackItem]?, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void) -> ViewController {
     let statePromise = ValuePromise(ArchivedStickerPacksControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ArchivedStickerPacksControllerState())
     let updateState: ((ArchivedStickerPacksControllerState) -> ArchivedStickerPacksControllerState) -> Void = { f in
@@ -251,18 +251,18 @@ public func archivedStickerPacksController(account: Account, mode: ArchivedStick
             namespace = .masks
     }
     let stickerPacks = Promise<[ArchivedStickerPackItem]?>()
-    stickerPacks.set(.single(archived) |> then(archivedStickerPacks(account: account, namespace: namespace) |> map(Optional.init)))
+    stickerPacks.set(.single(archived) |> then(archivedStickerPacks(account: context.account, namespace: namespace) |> map(Optional.init)))
     
     actionsDisposable.add(stickerPacks.get().start(next: { packs in
         updatedPacks(packs)
     }))
     
     let installedStickerPacks = Promise<CombinedView>()
-    installedStickerPacks.set(account.postbox.combinedView(keys: [.itemCollectionIds(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]))
+    installedStickerPacks.set(context.account.postbox.combinedView(keys: [.itemCollectionIds(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]))
     
     var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
     
-    let arguments = ArchivedStickerPacksControllerArguments(account: account, openStickerPack: { info in
+    let arguments = ArchivedStickerPacksControllerArguments(account: context.account, openStickerPack: { info in
         presentStickerPackController?(info)
     }, setPackIdWithRevealedOptions: { packId, fromPackId in
         updateState { state in
@@ -285,14 +285,14 @@ public func archivedStickerPacksController(account: Account, mode: ArchivedStick
         if !add {
             return
         }
-        let _ = (loadedStickerPack(postbox: account.postbox, network: account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+        let _ = (loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
         |> mapToSignal { result -> Signal<Void, NoError> in
             switch result {
                 case let .result(info, items, installed):
                     if installed {
                         return .complete()
                     } else {
-                        return addStickerPackInteractively(postbox: account.postbox, info: info, items: items)
+                        return addStickerPackInteractively(postbox: context.account.postbox, info: info, items: items)
                     }
                 case .fetching:
                     break
@@ -302,7 +302,7 @@ public func archivedStickerPacksController(account: Account, mode: ArchivedStick
             return .complete()
         }
         |> deliverOnMainQueue).start(completed: {
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = context.currentPresentationData.with { $0 }
             presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
             
             let applyPacks: Signal<Void, NoError> = stickerPacks.get()
@@ -355,7 +355,7 @@ public func archivedStickerPacksController(account: Account, mode: ArchivedStick
                     
                     return .complete()
             }
-            removePackDisposables.set((removeArchivedStickerPack(account: account, info: info) |> then(applyPacks) |> deliverOnMainQueue).start(completed: {
+            removePackDisposables.set((removeArchivedStickerPack(account: context.account, info: info) |> then(applyPacks) |> deliverOnMainQueue).start(completed: {
                 updateState { state in
                     var removingPackIds = state.removingPackIds
                     removingPackIds.remove(info.id)
@@ -367,7 +367,7 @@ public func archivedStickerPacksController(account: Account, mode: ArchivedStick
     
     var previousPackCount: Int?
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, installedStickerPacks.get() |> deliverOnMainQueue)
+    let signal = combineLatest(context.presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, installedStickerPacks.get() |> deliverOnMainQueue)
         |> deliverOnMainQueue
         |> map { presentationData, state, packs, installedView -> (ItemListControllerState, (ItemListNodeState<ArchivedStickerPacksEntry>, ArchivedStickerPacksEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
@@ -403,7 +403,7 @@ public func archivedStickerPacksController(account: Account, mode: ArchivedStick
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
@@ -411,7 +411,7 @@ public func archivedStickerPacksController(account: Account, mode: ArchivedStick
     }
     
     presentStickerPackController = { [weak controller] info in
-        presentControllerImpl?(StickerPackPreviewController(account: account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), mode: .settings, parentNavigationController: controller?.navigationController as? NavigationController), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(StickerPackPreviewController(context: context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), mode: .settings, parentNavigationController: controller?.navigationController as? NavigationController), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
     
     return controller

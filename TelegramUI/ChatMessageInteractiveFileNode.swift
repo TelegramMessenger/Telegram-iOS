@@ -41,7 +41,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     var activateLocalContent: () -> Void = { }
     var requestUpdateLayout: (Bool) -> Void = { _ in }
     
-    private var account: Account?
+    private var context: AccountContext?
     private var message: Message?
     private var themeAndStrings: (ChatPresentationThemeData, PresentationStrings)?
     private var file: TelegramMediaFile?
@@ -129,9 +129,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         if let resourceStatus = self.resourceStatus {
             switch resourceStatus.mediaStatus {
                 case let .fetchStatus(fetchStatus):
-                    if let account = self.account, let message = self.message, message.flags.isSending {
-                        let _ = account.postbox.transaction({ transaction -> Void in
-                            deleteMessages(transaction: transaction, mediaBox: account.postbox.mediaBox, ids: [message.id])
+                    if let context = self.context, let message = self.message, message.flags.isSending {
+                        let _ = context.account.postbox.transaction({ transaction -> Void in
+                            deleteMessages(transaction: transaction, mediaBox: context.account.postbox.mediaBox, ids: [message.id])
                         }).start()
                     } else {
                         switch fetchStatus {
@@ -148,8 +148,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         }
                     }
                 case .playbackStatus:
-                    if let account = self.account, let applicationContext = account.applicationContext as? TelegramApplicationContext, let message = self.message, let type = peerMessageMediaPlayerType(message) {
-                        applicationContext.mediaManager?.playlistControl(.playback(.togglePlayPause), type: type)
+                    if let context = context, let message = self.message, let type = peerMessageMediaPlayerType(message) {
+                        context.mediaManager.playlistControl(.playback(.togglePlayPause), type: type)
                     }
             }
         }
@@ -165,7 +165,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    func asyncLayout() -> (_ account: Account, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))) {
+    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))) {
         let currentFile = self.file
         
         let titleAsyncLayout = TextNode.asyncLayout(self.titleNode)
@@ -176,7 +176,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         let currentMessage = self.message
         let currentTheme = self.themeAndStrings?.0
         
-        return { account, presentationData, message, file, automaticDownload, incoming, isRecentActions, dateAndStatusType, constrainedSize in
+        return { context, presentationData, message, file, automaticDownload, incoming, isRecentActions, dateAndStatusType, constrainedSize in
             return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
                 var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
                 var updatedStatusSignal: Signal<FileMediaResourceStatus, NoError>?
@@ -199,21 +199,21 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 if mediaUpdated {
                     if largestImageRepresentation(file.previewRepresentations) != nil || file.immediateThumbnailData != nil {
-                        updateImageSignal = chatMessageImageFile(account: account, fileReference: .message(message: MessageReference(message), media: file), thumbnail: true)
+                        updateImageSignal = chatMessageImageFile(account: context.account, fileReference: .message(message: MessageReference(message), media: file), thumbnail: true)
                     }
                     
                     updatedFetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: true).start())
+                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: context.account, message: message, file: file, userInitiated: true).start())
                         }
                     }, cancel: {
-                        messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: file)
+                        messageMediaFileCancelInteractiveFetch(account: context.account, messageId: message.id, file: file)
                     })
                 }
                 
                 if statusUpdated {
-                    updatedStatusSignal = messageFileMediaResourceStatus(account: account, file: file, message: message, isRecentActions: isRecentActions)
-                    updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(account: account, file: file, message: message, isRecentActions: isRecentActions)
+                    updatedStatusSignal = messageFileMediaResourceStatus(account: context.account, file: file, message: message, isRecentActions: isRecentActions)
+                    updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(account: context.account, file: file, message: message, isRecentActions: isRecentActions)
                 }
                 
                 var statusSize: CGSize?
@@ -469,7 +469,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     
                     return (fittedLayoutSize, { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.account = account
+                            strongSelf.context = context
                             strongSelf.themeAndStrings = (presentationData.theme, presentationData.strings)
                             strongSelf.message = message
                             strongSelf.file = file
@@ -510,8 +510,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                     let waveformScrubbingNode = MediaPlayerScrubbingNode(content: .custom(backgroundNode: strongSelf.waveformNode, foregroundContentNode: strongSelf.waveformForegroundNode))
                                     waveformScrubbingNode.hitTestSlop = UIEdgeInsetsMake(-10.0, 0.0, -10.0, 0.0)
                                     waveformScrubbingNode.seek = { timestamp in
-                                        if let strongSelf = self, let account = strongSelf.account, let message = strongSelf.message, let type = peerMessageMediaPlayerType(message) {
-                                            account.telegramApplicationContext.mediaManager?.playlistControl(.seek(timestamp), type: type)
+                                        if let strongSelf = self, let context = strongSelf.context, let message = strongSelf.message, let type = peerMessageMediaPlayerType(message) {
+                                            context.mediaManager.playlistControl(.seek(timestamp), type: type)
                                         }
                                     }
                                     waveformScrubbingNode.status = strongSelf.playbackStatus.get()
@@ -625,7 +625,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         guard let message = self.message else {
             return
         }
-        guard let account = self.account else {
+        guard let context = self.context else {
             return
         }
         guard let presentationData = self.themeAndStrings?.0 else {
@@ -637,7 +637,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         guard let file = self.file else {
             return
         }
-        let incoming = message.effectivelyIncoming(account.peerId)
+        let incoming = message.effectivelyIncoming(context.account.peerId)
         let bubbleTheme = presentationData.theme.chat.bubble
         
         var isAudio = false
@@ -821,12 +821,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.fetchingCompactTextNode.frame = CGRect(origin: self.descriptionNode.frame.origin, size: fetchingCompactSize)
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ account: Account, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveFileNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveFileNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
-        return { account, presentationData, message, file, automaticDownload, incoming, isRecentActions, dateAndStatusType, constrainedSize in
+        return { context, presentationData, message, file, automaticDownload, incoming, isRecentActions, dateAndStatusType, constrainedSize in
             var fileNode: ChatMessageInteractiveFileNode
-            var fileLayout: (_ account: Account, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void)))
+            var fileLayout: (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 fileNode = node
@@ -836,7 +836,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 fileLayout = fileNode.asyncLayout()
             }
             
-            let (initialWidth, continueLayout) = fileLayout(account, presentationData, message, file, automaticDownload, incoming, isRecentActions, dateAndStatusType, constrainedSize)
+            let (initialWidth, continueLayout) = fileLayout(context, presentationData, message, file, automaticDownload, incoming, isRecentActions, dateAndStatusType, constrainedSize)
             
             return (initialWidth, { constrainedSize in
                 let (finalWidth, finalLayout) = continueLayout(constrainedSize)

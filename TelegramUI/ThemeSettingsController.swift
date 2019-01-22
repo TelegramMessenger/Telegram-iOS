@@ -247,14 +247,14 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
-public func themeSettingsController(account: Account) -> ViewController {
+public func themeSettingsController(context: AccountContext) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     
-    let _ = telegramWallpapers(postbox: account.postbox, network: account.network).start()
+    let _ = telegramWallpapers(postbox: context.account.postbox, network: context.account.network).start()
     
-    let arguments = ThemeSettingsControllerArguments(account: account, selectTheme: { index in
-        let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
+    let arguments = ThemeSettingsControllerArguments(account: context.account, selectTheme: { index in
+        let _ = updatePresentationThemeSettingsInteractively(postbox: context.account.postbox, { current in
             let wallpaper: TelegramWallpaper
             let theme: PresentationThemeReference
             if index == 0 {
@@ -273,32 +273,32 @@ public func themeSettingsController(account: Account) -> ViewController {
             return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: [], theme: theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
         }).start()
     }, selectFontSize: { size in
-        let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
+        let _ = updatePresentationThemeSettingsInteractively(postbox: context.account.postbox, { current in
             return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, chatWallpaperOptions: current.chatWallpaperOptions, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: size, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
         }).start()
     }, openWallpaperSettings: {
-        pushControllerImpl?(ThemeGridController(account: account))
+        pushControllerImpl?(ThemeGridController(context: context))
     }, openAccentColor: { color in
-        presentControllerImpl?(ThemeAccentColorActionSheet(account: account, currentValue: color, applyValue: { color in
-            let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
+        presentControllerImpl?(ThemeAccentColorActionSheet(context: context, currentValue: color, applyValue: { color in
+            let _ = updatePresentationThemeSettingsInteractively(postbox: context.account.postbox, { current in
                 return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, chatWallpaperOptions: current.chatWallpaperOptions, theme: current.theme, themeAccentColor: color, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
             }).start()
         }))
     }, openAutoNightTheme: {
-        pushControllerImpl?(themeAutoNightSettingsController(account: account))
+        pushControllerImpl?(themeAutoNightSettingsController(context: context))
     }, disableAnimations: { disabled in
-        let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
+        let _ = updatePresentationThemeSettingsInteractively(postbox: context.account.postbox, { current in
             return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, chatWallpaperOptions: current.chatWallpaperOptions, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: disabled)
         }).start()
     })
     
     let themeSettingsKey = ApplicationSpecificPreferencesKeys.presentationThemeSettings
     let localizationSettingsKey = PreferencesKeys.localizationSettings
-    let preferences = account.postbox.preferencesView(keys: [themeSettingsKey, localizationSettingsKey])
+    let preferences = context.account.postbox.preferencesView(keys: [themeSettingsKey, localizationSettingsKey])
     
     let previousTheme = Atomic<PresentationTheme?>(value: nil)
     
-    let signal = combineLatest(account.telegramApplicationContext.presentationData, preferences)
+    let signal = combineLatest(context.presentationData, preferences)
         |> deliverOnMainQueue
         |> map { presentationData, preferences -> (ItemListControllerState, (ItemListNodeState<ThemeSettingsControllerEntry>, ThemeSettingsControllerEntry.ItemGenerationArguments)) in
             let theme: PresentationTheme
@@ -346,7 +346,7 @@ public func themeSettingsController(account: Account) -> ViewController {
             return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }

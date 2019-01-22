@@ -142,7 +142,7 @@ private func fetchCachedStickerAJpegRepresentation(account: Account, resource: M
             }
         }
         return EmptyDisposable
-    }) |> runOn(account.graphicsThreadPool)
+    }) |> runOn(Queue.concurrentDefaultQueue())
 }
 
 private func fetchCachedScaledImageRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedScaledImageRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
@@ -184,7 +184,7 @@ private func fetchCachedScaledImageRepresentation(account: Account, resource: Me
             }
         }
         return EmptyDisposable
-    }) |> runOn(account.graphicsThreadPool)
+    }) |> runOn(Queue.concurrentDefaultQueue())
 }
 
 func generateVideoFirstFrame(_ path: String, maxDimensions: CGSize) -> UIImage? {
@@ -248,7 +248,7 @@ private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource
             }
         }
         return EmptyDisposable
-    } |> runOn(account.graphicsThreadPool)
+    } |> runOn(Queue.concurrentDefaultQueue())
 }
 
 private func fetchCachedScaledVideoFirstFrameRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedScaledVideoFirstFrameRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
@@ -286,7 +286,7 @@ private func fetchCachedScaledVideoFirstFrameRepresentation(account: Account, re
                     }
                 }
                 return EmptyDisposable
-            }) |> runOn(account.graphicsThreadPool)
+            }) |> runOn(Queue.concurrentDefaultQueue())
     }
 }
 
@@ -316,5 +316,5 @@ private func fetchCachedBlurredWallpaperRepresentation(account: Account, resourc
             }
         }
         return EmptyDisposable
-    }) |> runOn(account.graphicsThreadPool)
+    }) |> runOn(Queue.concurrentDefaultQueue())
 }

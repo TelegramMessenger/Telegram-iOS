@@ -11,7 +11,7 @@ struct JoinLinkPreviewData {
 }
 
 final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let account: Account
+    private let context: AccountContext
     private var presentationData: PresentationData
     
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
@@ -46,9 +46,9 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private let disposable = MetaDisposable()
     
-    init(account: Account, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void) {
-        self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void) {
+        self.context = context
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         self.requestLayout = requestLayout
         
@@ -452,6 +452,6 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             self.actionButtonNode.setTitle(data.isGroup ? self.presentationData.strings.Invitation_JoinGroup : self.presentationData.strings.Channel_JoinChannel, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
         }
         
-        self.transitionToContentNode(JoinLinkPreviewPeerContentNode(account: self.account, image: image, title: title, memberCount: memberCount, members: members, theme: self.presentationData.theme, strings: self.presentationData.strings))
+        self.transitionToContentNode(JoinLinkPreviewPeerContentNode(account: self.context.account, image: image, title: title, memberCount: memberCount, members: members, theme: self.presentationData.theme, strings: self.presentationData.strings))
     }
 }

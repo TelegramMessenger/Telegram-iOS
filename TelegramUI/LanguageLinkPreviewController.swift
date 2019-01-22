@@ -12,18 +12,18 @@ public final class LanguageLinkPreviewController: ViewController {
     
     private var animatedIn = false
     
-    private let account: Account
+    private let context: AccountContext
     private let identifier: String
     private var localizationInfo: LocalizationInfo?
     private var presentationData: PresentationData
     
     private let disposable = MetaDisposable()
     
-    public init(account: Account, identifier: String) {
-        self.account = account
+    public init(context: AccountContext, identifier: String) {
+        self.context = context
         self.identifier = identifier
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
     }
@@ -37,13 +37,13 @@ public final class LanguageLinkPreviewController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = LanguageLinkPreviewControllerNode(account: self.account, requestLayout: { [weak self] transition in
+        self.displayNode = LanguageLinkPreviewControllerNode(context: self.context, requestLayout: { [weak self] transition in
             self?.requestLayout(transition: transition)
         }, openUrl: { [weak self] url in
             guard let strongSelf = self else {
                 return
             }
-            openExternalUrl(account: strongSelf.account, url: url, presentationData: strongSelf.presentationData, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: nil, dismissInput: {
+            openExternalUrl(context: strongSelf.context, url: url, presentationData: strongSelf.presentationData, navigationController: nil, dismissInput: {
             })
         })
         self.controllerNode.dismiss = { [weak self] in
@@ -57,7 +57,7 @@ public final class LanguageLinkPreviewController: ViewController {
         }
         self.displayNodeDidLoad()
         
-        self.disposable.set((requestLocalizationPreview(network: self.account.network, identifier: self.identifier)
+        self.disposable.set((requestLocalizationPreview(network: self.context.account.network, identifier: self.identifier)
         |> deliverOnMainQueue).start(next: { [weak self] result in
             guard let strongSelf = self else {
                 return
@@ -109,7 +109,7 @@ public final class LanguageLinkPreviewController: ViewController {
             return
         }
         self.controllerNode.setInProgress(true)
-        self.disposable.set((downloadAndApplyLocalization(postbox: self.account.postbox, network: self.account.network, languageCode: localizationInfo.languageCode)
+        self.disposable.set((downloadAndApplyLocalization(postbox: self.context.account.postbox, network: self.context.account.network, languageCode: localizationInfo.languageCode)
         |> deliverOnMainQueue).start(error: { [weak self] _ in
             guard let strongSelf = self else {
                 return

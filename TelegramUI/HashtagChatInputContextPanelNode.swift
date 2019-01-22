@@ -59,14 +59,13 @@ private func preparedTransition(from fromEntries: [HashtagChatInputContextPanelE
 }
 
 final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
-    
     private let listView: ListView
     private var currentEntries: [HashtagChatInputContextPanelEntry]?
     
     private var enqueuedTransitions: [(HashtagChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
@@ -74,7 +73,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.limitHitTestToNodes = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         
-        super.init(account: account, theme: theme, strings: strings)
+        super.init(context: context, theme: theme, strings: strings)
         
         self.isOpaque = false
         self.clipsToBounds = true
@@ -100,7 +99,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     
     private func prepareTransition(from: [HashtagChatInputContextPanelEntry]? , to: [HashtagChatInputContextPanelEntry]) {
         let firstTime = from == nil
-        let transition = preparedTransition(from: from ?? [], to: to, account: self.account, hashtagSelected: { [weak self] text in
+        let transition = preparedTransition(from: from ?? [], to: to, account: self.context.account, hashtagSelected: { [weak self] text in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 interfaceInteraction.updateTextInputStateAndMode { textInputState, inputMode in
                     var hashtagQueryRange: NSRange?

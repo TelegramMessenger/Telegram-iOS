@@ -264,11 +264,11 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     return entries
 }
 
-public func debugController(account: Account, accountManager: AccountManager) -> ViewController {
+public func debugController(context: AccountContext, accountManager: AccountManager) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     
-    let arguments = DebugControllerArguments(account: account, accountManager: accountManager, presentController: { controller, arguments in
+    let arguments = DebugControllerArguments(account: context.account, accountManager: accountManager, presentController: { controller, arguments in
         presentControllerImpl?(controller, arguments)
     }, pushController: { controller in
         pushControllerImpl?(controller)
@@ -283,7 +283,7 @@ public func debugController(account: Account, accountManager: AccountManager) ->
         hasLegacyAppData = FileManager.default.fileExists(atPath: statusPath)
     }
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings])), account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.mediaInputSettings, ApplicationSpecificPreferencesKeys.experimentalUISettings]))
+    let signal = combineLatest(context.presentationData, accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings])), context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.mediaInputSettings, ApplicationSpecificPreferencesKeys.experimentalUISettings]))
         |> map { presentationData, sharedData, preferencesView -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
             let loggingSettings: LoggingSettings
             if let value = sharedData.entries [SharedDataKeys.loggingSettings] as? LoggingSettings {
@@ -307,7 +307,7 @@ public func debugController(account: Account, accountManager: AccountManager) ->
             return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }

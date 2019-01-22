@@ -10,10 +10,10 @@ struct PeerMediaCollectionMessageForGallery {
     let fromSearchResults: Bool
 }
 
-private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, account: Account, theme: PresentationTheme, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>) -> ChatHistoryNode & ASDisplayNode {
+private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, context: AccountContext, theme: PresentationTheme, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>) -> ChatHistoryNode & ASDisplayNode {
     switch mode {
         case .photoOrVideo:
-            let node = ChatHistoryGridNode(account: account, peerId: peerId, messageId: messageId, tagMask: .photoOrVideo, controllerInteraction: controllerInteraction)
+            let node = ChatHistoryGridNode(context: context, peerId: peerId, messageId: messageId, tagMask: .photoOrVideo, controllerInteraction: controllerInteraction)
             node.showVerticalScrollIndicator = true
             if theme.list.plainBackgroundColor.argb == 0xffffffff {
                 node.indicatorStyle = .default
@@ -22,7 +22,7 @@ private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, account: Ac
             }
             return node
         case .file:
-            let node = ChatHistoryListNode(account: account, chatLocation: .peer(peerId), tagMask: .file, messageId: messageId, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
+            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .file, messageId: messageId, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
             node.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
             node.didEndScrolling = { [weak node] in
                 guard let node = node else {
@@ -33,7 +33,7 @@ private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, account: Ac
             node.preloadPages = true
             return node
         case .music:
-            let node = ChatHistoryListNode(account: account, chatLocation: .peer(peerId), tagMask: .music, messageId: messageId, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
+            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .music, messageId: messageId, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
             node.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
             node.didEndScrolling = { [weak node] in
                 guard let node = node else {
@@ -44,7 +44,7 @@ private func historyNodeImplForMode(_ mode: PeerMediaCollectionMode, account: Ac
             node.preloadPages = true
             return node
         case .webpage:
-            let node = ChatHistoryListNode(account: account, chatLocation: .peer(peerId), tagMask: .webPage, messageId: messageId, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
+            let node = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: .webPage, messageId: messageId, controllerInteraction: controllerInteraction, selectedMessages: selectedMessages, mode: .list(search: true, reversed: false))
             node.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
             node.didEndScrolling = { [weak node] in
                 guard let node = node else {
@@ -90,7 +90,7 @@ private func tagMaskForMode(_ mode: PeerMediaCollectionMode) -> MessageTags {
 }
 
 class PeerMediaCollectionControllerNode: ASDisplayNode {
-    private let account: Account
+    private let context: AccountContext
     private let peerId: PeerId
     private let controllerInteraction: ChatControllerInteraction
     private let interfaceInteraction: ChatPanelInterfaceInteraction
@@ -130,8 +130,8 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
     
     private var presentationData: PresentationData
     
-    init(account: Account, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, interfaceInteraction: ChatPanelInterfaceInteraction, navigationBar: NavigationBar?, requestDeactivateSearch: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, interfaceInteraction: ChatPanelInterfaceInteraction, navigationBar: NavigationBar?, requestDeactivateSearch: @escaping () -> Void) {
+        self.context = context
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction
         self.interfaceInteraction = interfaceInteraction
@@ -139,16 +139,16 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         
         self.requestDeactivateSearch = requestDeactivateSearch
         
-        self.presentationData = (account.applicationContext as! TelegramApplicationContext).currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         self.mediaCollectionInterfaceState = PeerMediaCollectionInterfaceState(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
         self.sectionsNode = PeerMediaCollectionSectionsNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
-        self.historyNode = historyNodeImplForMode(self.mediaCollectionInterfaceState.mode, account: account, theme: self.presentationData.theme, peerId: peerId, messageId: messageId, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get())
+        self.historyNode = historyNodeImplForMode(self.mediaCollectionInterfaceState.mode, context: context, theme: self.presentationData.theme, peerId: peerId, messageId: messageId, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get())
         self.historyEmptyNode = PeerMediaCollectionEmptyNode(mode: self.mediaCollectionInterfaceState.mode, theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.historyEmptyNode.isHidden = true
         
-        self.chatPresentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, chatWallpaperMode: self.presentationData.chatWallpaperMode, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, fontSize: self.presentationData.fontSize, accountPeerId: account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId))
+        self.chatPresentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, chatWallpaperMode: self.presentationData.chatWallpaperMode, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, fontSize: self.presentationData.fontSize, accountPeerId: context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId))
         
         super.init()
         
@@ -267,7 +267,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
                 self.selectionPanelBackgroundNode = selectionPanelBackgroundNode
                 
                 let selectionPanel = ChatMessageSelectionInputPanelNode(theme: self.chatPresentationInterfaceState.theme)
-                selectionPanel.account = self.account
+                selectionPanel.account = self.context.account
                 selectionPanel.backgroundColor = self.presentationData.theme.chat.inputPanel.panelBackgroundColor
                 selectionPanel.interfaceInteraction = self.interfaceInteraction
                 selectionPanel.selectedMessages = selectionState.selectedIds
@@ -374,7 +374,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, contentNode: ChatHistorySearchContainerNode(account: self.account, peerId: self.peerId, tagMask: tagMaskForMode(self.mediaCollectionInterfaceState.mode), interfaceInteraction: self.controllerInteraction), cancel: { [weak self] in
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, contentNode: ChatHistorySearchContainerNode(context: self.context, peerId: self.peerId, tagMask: tagMaskForMode(self.mediaCollectionInterfaceState.mode), interfaceInteraction: self.controllerInteraction), cancel: { [weak self] in
                 self?.requestDeactivateSearch()
             })
             
@@ -409,7 +409,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
             if self.mediaCollectionInterfaceState.mode != mediaCollectionInterfaceState.mode {
                 let previousMode = self.mediaCollectionInterfaceState.mode
                 if let containerLayout = self.containerLayout, self.candidateHistoryNode == nil || self.candidateHistoryNode!.1 != mediaCollectionInterfaceState.mode {
-                    let node = historyNodeImplForMode(mediaCollectionInterfaceState.mode, account: self.account, theme: self.presentationData.theme, peerId: self.peerId, messageId: nil, controllerInteraction: self.controllerInteraction, selectedMessages: self.selectedMessagesPromise.get())
+                    let node = historyNodeImplForMode(mediaCollectionInterfaceState.mode, context: self.context, theme: self.presentationData.theme, peerId: self.peerId, messageId: nil, controllerInteraction: self.controllerInteraction, selectedMessages: self.selectedMessagesPromise.get())
                     node.backgroundColor = mediaCollectionInterfaceState.theme.list.plainBackgroundColor
                     self.candidateHistoryNode = (node, mediaCollectionInterfaceState.mode)
                     

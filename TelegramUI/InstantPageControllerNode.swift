@@ -7,7 +7,7 @@ import Display
 import SafariServices
 
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
-    private let account: Account
+    private let context: AccountContext
     private var settings: InstantPagePresentationSettings?
     private var presentationTheme: PresentationTheme
     private var strings: PresentationStrings
@@ -73,8 +73,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return InstantPageStoredState(contentOffset: Double(self.scrollNode.view.contentOffset.y), details: details)
     }
     
-    init(account: Account, settings: InstantPagePresentationSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, statusBar: StatusBar, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, settings: InstantPagePresentationSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, statusBar: StatusBar, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
+        self.context = context
         self.presentationTheme = presentationTheme
         self.dateTimeFormat = dateTimeFormat
         self.strings = strings
@@ -119,7 +119,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.navigationBar.back = navigateBack
         self.navigationBar.share = { [weak self] in
             if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                let shareController = ShareController(account: account, subject: .url(content.url))
+                let shareController = ShareController(context: context, subject: .url(content.url))
                 strongSelf.present(shareController, nil)
             }
         }
@@ -499,7 +499,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     let itemIndex = itemIndex
                     let embedIndex = embedIndex
                     let detailsIndex = detailsIndex
-                    if let newNode = item.node(account: self.account, strings: self.strings, theme: theme, openMedia: { [weak self] media in
+                    if let newNode = item.node(account: self.context.account, strings: self.strings, theme: theme, openMedia: { [weak self] media in
                         self?.openMedia(media)
                     }, longPressMedia: { [weak self] media in
                         self?.longPressMedia(media)
@@ -866,16 +866,16 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
             if let strongSelf = self, let image = media.media as? TelegramMediaImage {
                 let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil)
-                let _ = copyToPasteboard(applicationContext: strongSelf.account.telegramApplicationContext, postbox: strongSelf.account.postbox, mediaReference: .standalone(media: media)).start()
+                let _ = copyToPasteboard(context: strongSelf.context, postbox: strongSelf.account.postbox, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(self.strings.Conversation_LinkDialogSave), action: { [weak self] in
             if let strongSelf = self, let image = media.media as? TelegramMediaImage {
                 let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil)
-                let _ = saveToCameraRoll(applicationContext: strongSelf.account.telegramApplicationContext, postbox: strongSelf.account.postbox, mediaReference: .standalone(media: media)).start()
+                let _ = saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.account.postbox, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuShare), action: { [weak self] in
             if let strongSelf = self, let webPage = strongSelf.webPage, let image = media.media as? TelegramMediaImage {
-                strongSelf.present(ShareController(account: strongSelf.account, subject: .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.media(media: .webPage(webPage: WebpageReference(webPage), media: image), resource: $0.resource)) }))), nil)
+                strongSelf.present(ShareController(context: strongSelf.context, subject: .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.media(media: .webPage(webPage: WebpageReference(webPage), media: image), resource: $0.resource)) }))), nil)
             }
         })], catchTapsOutside: true)
         self.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
@@ -901,7 +901,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             }
                         case .longTap:
                             if let theme = self.theme, let url = self.urlForTapLocation(location) {
-                                let canOpenIn = availableOpenInOptions(applicationContext: self.account.telegramApplicationContext, item: .url(url: url.url)).count > 1
+                                let canOpenIn = availableOpenInOptions(context: self.context, item: .url(url: url.url)).count > 1
                                 let openText = canOpenIn ? self.strings.Conversation_FileOpenIn : self.strings.Conversation_LinkDialogOpen
                                 let actionSheet = ActionSheetController(instantPageTheme: theme)
                                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
@@ -972,7 +972,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 UIPasteboard.general.string = text
             }), ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuShare), action: { [weak self] in
                 if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                    strongSelf.present(ShareController(account: strongSelf.account, subject: .quote(text: text, url: content.url)), nil)
+                    strongSelf.present(ShareController(context: strongSelf.context, subject: .quote(text: text, url: content.url)), nil)
                 }
             })])
             controller.dismissed = { [weak self] in
@@ -1023,7 +1023,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         guard let theme = self.theme, let webPage = self.webPage else {
             return
         }
-        let controller = InstantPageReferenceController(account: self.account, theme: theme, webPage: webPage, item: item, openUrl: { [weak self] url in
+        let controller = InstantPageReferenceController(context: self.context, theme: theme, webPage: webPage, item: item, openUrl: { [weak self] url in
             self?.openUrl(url)
         }, openUrlIn: { [weak self] url in
             self?.openUrlIn(url)
@@ -1104,7 +1104,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.loadProgress.set(0.02)
     
         self.loadWebpageDisposable.set(nil)
-        self.resolveUrlDisposable.set((resolveUrl(account: self.account, url: url.url) |> deliverOnMainQueue).start(next: { [weak self] result in
+        self.resolveUrlDisposable.set((resolveUrl(account: self.context.account, url: url.url) |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.loadProgress.set(0.07)
                 switch result {
@@ -1114,14 +1114,14 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             if let anchorRange = externalUrl.range(of: "#") {
                                 anchor = String(externalUrl[anchorRange.upperBound...])
                             }
-                            strongSelf.loadWebpageDisposable.set((webpagePreviewWithProgress(account: strongSelf.account, url: externalUrl, webpageId: webpageId)
+                            strongSelf.loadWebpageDisposable.set((webpagePreviewWithProgress(account: strongSelf.context.account, url: externalUrl, webpageId: webpageId)
                             |> deliverOnMainQueue).start(next: { result in
                                 if let strongSelf = self {
                                     switch result {
                                         case let .result(webpage):
                                             if let webpage = webpage, case .Loaded = webpage.content {
                                                 strongSelf.loadProgress.set(1.0)
-                                                strongSelf.pushController(InstantPageController(account: strongSelf.account, webPage: webpage, anchor: anchor))
+                                                strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, anchor: anchor))
                                             }
                                             break
                                         case let .progress(progress):
@@ -1131,27 +1131,27 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             }))
                         } else {
                             strongSelf.loadProgress.set(1.0)
-                            openExternalUrl(account: strongSelf.account, url: externalUrl, presentationData: strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: strongSelf.getNavigationController(), dismissInput: {
+                            openExternalUrl(context: strongSelf.context, url: externalUrl, presentationData: context.currentPresentationData.with { $0 }, navigationController: strongSelf.getNavigationController(), dismissInput: {
                                 self?.view.endEditing(true)
                             })
                         }
                     default:
                         strongSelf.loadProgress.set(1.0)
-                        openResolvedUrl(result, account: strongSelf.account, navigationController: strongSelf.getNavigationController(), openPeer: { peerId, navigation in
+                        openResolvedUrl(result, context: strongSelf.context, navigationController: strongSelf.getNavigationController(), openPeer: { peerId, navigation in
                             switch navigation {
                                 case let .chat(_, messageId):
                                     if let navigationController = strongSelf.getNavigationController() {
-                                        navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), messageId: messageId)
+                                        navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId)
                                     }
                                 case let .withBotStartPayload(botStart):
                                     if let navigationController = strongSelf.getNavigationController() {
-                                        navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), botStart: botStart, keepStack: .always)
+                                        navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), botStart: botStart, keepStack: .always)
                                     }
                                 case .info:
-                                    let _ = (strongSelf.account.postbox.loadedPeerWithId(peerId)
+                                    let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peerId)
                                     |> deliverOnMainQueue).start(next: { peer in
                                         if let strongSelf = self {
-                                            if let controller = peerInfoController(account: strongSelf.account, peer: peer) {
+                                            if let controller = peerInfoController(context: strongSelf.context, peer: peer) {
                                                 strongSelf.getNavigationController()?.pushViewController(controller)
                                             }
                                         }
@@ -1170,15 +1170,13 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     private func openUrlIn(_ url: InstantPageUrlItem) {
-        if let applicationContext = self.account.applicationContext as? TelegramApplicationContext {
-            let presentationData = applicationContext.currentPresentationData.with { $0 }
-            let actionSheet = OpenInActionSheetController(account: self.account, item: .url(url: url.url), openUrl: { [weak self] url in
-                if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
-                    openExternalUrl(account: strongSelf.account, url: url, forceExternal: true, presentationData: presentationData, applicationContext: applicationContext, navigationController: navigationController, dismissInput: {})
-                }
-            })
-            self.present(actionSheet, nil)
-        }
+        let presentationData = self.context.currentPresentationData.with { $0 }
+        let actionSheet = OpenInActionSheetController(context: self.context, item: .url(url: url.url), openUrl: { [weak self] url in
+            if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
+                openExternalUrl(context: strongSelf.context, url: url, forceExternal: true, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+            }
+        })
+        self.present(actionSheet, nil)
     }
     
     private func mediasFromItems(_ items: [InstantPageItem]) -> [InstantPageMedia] {
@@ -1199,7 +1197,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let map = media.media as? TelegramMediaMap {
-            let controller = legacyLocationController(message: nil, mapMedia: map, account: self.account, isModal: false, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: { }, openUrl: { _ in })
+            let controller = legacyLocationController(message: nil, mapMedia: map, context: self.context, isModal: false, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: { }, openUrl: { _ in })
             self.pushController(controller)
             return
         }
@@ -1217,7 +1215,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
             }
-            self.account.telegramApplicationContext.mediaManager?.setPlaylist(InstantPageMediaPlaylist(webPage: webPage, items: medias, initialItemIndex: initialIndex), type: file.isVoice ? .voice : .music)
+            self.context.mediaManager.setPlaylist(InstantPageMediaPlaylist(webPage: webPage, items: medias, initialItemIndex: initialIndex), type: file.isVoice ? .voice : .music)
             return
         }
         
@@ -1246,7 +1244,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let centralIndex = centralIndex {
-            let controller = InstantPageGalleryController(account: self.account, webPage: webPage, entries: entries, centralIndex: centralIndex, replaceRootController: { _, _ in
+            let controller = InstantPageGalleryController(context: self.context, webPage: webPage, entries: entries, centralIndex: centralIndex, replaceRootController: { _, _ in
             }, baseNavigationController: self.getNavigationController())
             self.hiddenMediaDisposable.set((controller.hiddenMedia |> deliverOnMainQueue).start(next: { [weak self] entry in
                 if let strongSelf = self {
@@ -1309,13 +1307,13 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let settingsNode = InstantPageSettingsNode(strings: self.strings, settings: settings, currentThemeType: instantPageThemeTypeForSettingsAndTime(presentationTheme: self.presentationTheme, settings: settings, time: self.themeReferenceDate), applySettings: { [weak self] settings in
                 if let strongSelf = self {
                     strongSelf.update(settings: settings, strings: strongSelf.strings)
-                    let _ = updateInstantPagePresentationSettingsInteractively(postbox: strongSelf.account.postbox, { _ in
+                    let _ = updateInstantPagePresentationSettingsInteractively(postbox: strongSelf.context.account.postbox, { _ in
                         return settings
                     }).start()
                 }
             }, openInSafari: { [weak self] in
                 if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                    strongSelf.account.telegramApplicationContext.applicationBindings.openUrl(content.url)
+                    strongSelf.context.applicationBindings.openUrl(content.url)
                 }
             })
             self.addSubnode(settingsNode)

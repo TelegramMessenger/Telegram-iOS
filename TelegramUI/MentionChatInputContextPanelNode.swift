@@ -55,7 +55,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     private var enqueuedTransitions: [(CommandChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, mode: MentionChatInputContextPanelMode) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, mode: MentionChatInputContextPanelMode) {
         self.mode = mode
         
         self.listView = ListView()
@@ -65,7 +65,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.limitHitTestToNodes = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         
-        super.init(account: account, theme: theme, strings: strings)
+        super.init(context: context, theme: theme, strings: strings)
         
         self.isOpaque = false
         self.clipsToBounds = true
@@ -95,7 +95,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     
     private func updateToEntries(entries: [MentionChatInputContextPanelEntry], forceUpdate: Bool) {
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, theme: self.theme, inverted: self.mode == .search, forceUpdate: forceUpdate, peerSelected: { [weak self] peer in
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.context.account, theme: self.theme, inverted: self.mode == .search, forceUpdate: forceUpdate, peerSelected: { [weak self] peer in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 switch strongSelf.mode {
                     case .input:

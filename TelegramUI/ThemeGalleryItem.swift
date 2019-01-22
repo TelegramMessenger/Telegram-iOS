@@ -6,16 +6,16 @@ import Postbox
 import TelegramCore
 
 class ThemeGalleryItem: GalleryItem {
-    let account: Account
+    let context: AccountContext
     let entry: ThemeGalleryEntry
     
-    init(account: Account, entry: ThemeGalleryEntry) {
-        self.account = account
+    init(context: AccountContext, entry: ThemeGalleryEntry) {
+        self.context = context
         self.entry = entry
     }
     
     func node() -> GalleryItemNode {
-        let node = ThemeGalleryItemNode(account: self.account)
+        let node = ThemeGalleryItemNode(context: self.context)
         node.setEntry(self.entry)
         return node
     }
@@ -32,7 +32,7 @@ class ThemeGalleryItem: GalleryItem {
 }
 
 final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let account: Account
+    private let context: AccountContext
     
     private var entry: ThemeGalleryEntry?
     
@@ -42,8 +42,8 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private var fetchDisposable = MetaDisposable()
     
-    init(account: Account) {
-        self.account = account
+    init(context: AccountContext) {
+        self.context = context
         
         self.imageNode = TransformImageNode()
         
@@ -81,7 +81,7 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
                         case .builtin:
                             let displaySize = CGSize(width: 640.0, height: 1136.0)
                             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                            self.imageNode.setSignal(settingsBuiltinWallpaperImage(account: self.account), dispatchOnDisplayLink: false)
+                            self.imageNode.setSignal(settingsBuiltinWallpaperImage(account: self.context.account), dispatchOnDisplayLink: false)
                             self.zoomableContent = (displaySize, self.imageNode)
                         case let .color(color):
                             self.imageNode.isHidden = true
@@ -92,11 +92,11 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
                                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
                                 
                                 let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
-                                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: convertedRepresentations), dispatchOnDisplayLink: false)
+                                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: context.account, representations: convertedRepresentations), dispatchOnDisplayLink: false)
                                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
                                 
                                 if let largestIndex = convertedRepresentations.index(where: { $0.representation == largestSize }) {
-                                    self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: convertedRepresentations[largestIndex].reference).start())
+                                    self.fetchDisposable.set(fetchedMediaResource(postbox: self.context.account.postbox, reference: convertedRepresentations[largestIndex].reference).start())
                                 }
                             } else {
                                 self._ready.set(.single(Void()))
@@ -111,10 +111,10 @@ final class ThemeGalleryItemNode: ZoomableContentGalleryItemNode {
                                 convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .standalone(resource: representation.resource)))
                             }
                             convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .standalone(resource: file.file.resource)))
-                            self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: convertedRepresentations), dispatchOnDisplayLink: false)
+                            self.imageNode.setSignal(chatAvatarGalleryPhoto(account: context.account, representations: convertedRepresentations), dispatchOnDisplayLink: false)
                             self.zoomableContent = (dimensions, self.imageNode)
                             
-                            self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference).start())
+                            self.fetchDisposable.set(fetchedMediaResource(postbox: self.context.account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference).start())
                 }
             }
         }

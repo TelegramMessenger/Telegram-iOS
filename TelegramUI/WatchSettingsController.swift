@@ -105,13 +105,13 @@ private func watchSettingsControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
-public func watchSettingsController(account: Account) -> ViewController {
+public func watchSettingsController(context: AccountContext) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     
     let updateDisposable = MetaDisposable()
     let arguments = WatchSettingsControllerArguments(updatePreset: { identifier, text in
-        updateDisposable.set((.complete() |> delay(1.0, queue: Queue.mainQueue()) |> then(updateWatchPresetSettingsInteractively(postbox: account.postbox, { current in
+        updateDisposable.set((.complete() |> delay(1.0, queue: Queue.mainQueue()) |> then(updateWatchPresetSettingsInteractively(postbox: context.account.postbox, { current in
             var updatedPresets = current.customPresets
             if !text.isEmpty {
                 updatedPresets[identifier] = text
@@ -123,9 +123,9 @@ public func watchSettingsController(account: Account) -> ViewController {
     })
     
     let watchPresetSettingsKey = ApplicationSpecificPreferencesKeys.watchPresetSettings
-    let preferences = account.postbox.preferencesView(keys: [watchPresetSettingsKey])
+    let preferences = context.account.postbox.preferencesView(keys: [watchPresetSettingsKey])
     
-    let signal = combineLatest(account.telegramApplicationContext.presentationData, preferences)
+    let signal = combineLatest(context.presentationData, preferences)
         |> deliverOnMainQueue
         |> map { presentationData, preferences -> (ItemListControllerState, (ItemListNodeState<WatchSettingsControllerEntry>, WatchSettingsControllerEntry.ItemGenerationArguments)) in
             let settings = (preferences.values[watchPresetSettingsKey] as? WatchPresetSettings) ?? WatchPresetSettings.defaultSettings
@@ -136,7 +136,7 @@ public func watchSettingsController(account: Account) -> ViewController {
             return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }

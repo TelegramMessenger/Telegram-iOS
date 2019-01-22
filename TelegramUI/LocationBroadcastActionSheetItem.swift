@@ -5,7 +5,7 @@ import TelegramCore
 import Postbox
 
 public class LocationBroadcastActionSheetItem: ActionSheetItem {
-    public let account: Account
+    public let context: AccountContext
     public let peer: Peer
     public let title: String
     public let beginTimestamp: Double
@@ -13,8 +13,8 @@ public class LocationBroadcastActionSheetItem: ActionSheetItem {
     public let strings: PresentationStrings
     public let action: () -> Void
     
-    public init(account: Account, peer: Peer, title: String, beginTimestamp: Double, timeout: Double, strings: PresentationStrings, action: @escaping () -> Void) {
-        self.account = account
+    public init(context: AccountContext, peer: Peer, title: String, beginTimestamp: Double, timeout: Double, strings: PresentationStrings, action: @escaping () -> Void) {
+        self.context = context
         self.peer = peer
         self.title = title
         self.beginTimestamp = beginTimestamp
@@ -96,7 +96,7 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
         let textColor: UIColor = self.theme.primaryTextColor
         self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetButtonNode.defaultFont, textColor: textColor)
         
-        self.avatarNode.setPeer(account: item.account, peer: item.peer)
+        self.avatarNode.setPeer(account: item.context.account, theme: (item.context.currentPresentationData.with { $0 }).theme, peer: item.peer)
         
         self.timerNode.update(backgroundColor: self.theme.controlAccentColor.withAlphaComponent(0.4), foregroundColor: self.theme.controlAccentColor, textColor: self.theme.controlAccentColor, beginTimestamp: item.beginTimestamp, timeout: item.timeout, strings: item.strings)
         

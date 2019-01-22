@@ -27,7 +27,7 @@ private final class ChatButtonKeyboardInputButtonNode: ASButtonNode {
 }
 
 final class ChatButtonKeyboardInputNode: ChatInputNode {
-    private let account: Account
+    private let context: AccountContext
     private let controllerInteraction: ChatControllerInteraction
     
     private let separatorNode: ASDisplayNode
@@ -38,8 +38,8 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
     
     private var theme: PresentationTheme?
     
-    init(account: Account, controllerInteraction: ChatControllerInteraction) {
-        self.account = account
+    init(context: AccountContext, controllerInteraction: ChatControllerInteraction) {
+        self.context = context
         self.controllerInteraction = controllerInteraction
         
         self.scrollNode = ASScrollNode()

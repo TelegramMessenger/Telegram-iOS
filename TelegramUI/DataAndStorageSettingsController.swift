@@ -417,7 +417,7 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     return entries
 }
 
-func dataAndStorageController(account: Account) -> ViewController {
+func dataAndStorageController(context: AccountContext) -> ViewController {
     let initialState = DataAndStorageControllerState()
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     
@@ -427,7 +427,7 @@ func dataAndStorageController(account: Account) -> ViewController {
     let actionsDisposable = DisposableSet()
     
     let dataAndStorageDataPromise = Promise<DataAndStorageData>()
-    dataAndStorageDataPromise.set(account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings, ApplicationSpecificPreferencesKeys.generatedMediaStoreSettings, ApplicationSpecificPreferencesKeys.voiceCallSettings,
+    dataAndStorageDataPromise.set(context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings, ApplicationSpecificPreferencesKeys.generatedMediaStoreSettings, ApplicationSpecificPreferencesKeys.voiceCallSettings,
         PreferencesKeys.proxySettings])
         |> map { view -> DataAndStorageData in
             let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
@@ -460,28 +460,28 @@ func dataAndStorageController(account: Account) -> ViewController {
         })
     
     let arguments = DataAndStorageControllerArguments(openStorageUsage: {
-        pushControllerImpl?(storageUsageController(account: account))
+        pushControllerImpl?(storageUsageController(context: context))
     }, openNetworkUsage: {
-        pushControllerImpl?(networkUsageStatsController(account: account))
+        pushControllerImpl?(networkUsageStatsController(context: context))
     }, openProxy: {
-        pushControllerImpl?(proxySettingsController(account: account))
+        pushControllerImpl?(proxySettingsController(context: context))
     }, toggleAutomaticDownloadMaster: { value in
-        let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateMediaDownloadSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.masterEnabled = value
             return settings
         }).start()
     }, openAutomaticDownloadCategory: { category in
-        pushControllerImpl?(autodownloadMediaCategoryController(account: account, category: category))
+        pushControllerImpl?(autodownloadMediaCategoryController(context: context, category: category))
     }, resetAutomaticDownload: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
             ActionSheetTextItem(title: presentationData.strings.AutoDownloadSettings_ResetHelp),
             ActionSheetButtonItem(title: presentationData.strings.AutoDownloadSettings_Reset, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 
-                let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { settings in
+                let _ = updateMediaDownloadSettingsInteractively(postbox: context.account.postbox, { settings in
                     var settings = settings
                     let defaultSettings = AutomaticMediaDownloadSettings.defaultSettings
                     settings.masterEnabled = defaultSettings.masterEnabled
@@ -496,28 +496,28 @@ func dataAndStorageController(account: Account) -> ViewController {
         ])])
         presentControllerImpl?(actionSheet, nil)
     }, openVoiceUseLessData: {
-        pushControllerImpl?(voiceCallDataSavingController(account: account))
+        pushControllerImpl?(voiceCallDataSavingController(context: context))
     }, openSaveIncomingPhotos: {
-        pushControllerImpl?(saveIncomingMediaController(account: account))
+        pushControllerImpl?(saveIncomingMediaController(context: context))
     }, toggleSaveEditedPhotos: { value in
-        let _ = updateGeneratedMediaStoreSettingsInteractively(postbox: account.postbox, { current in
+        let _ = updateGeneratedMediaStoreSettingsInteractively(postbox: context.account.postbox, { current in
             return current.withUpdatedStoreEditedPhotos(value)
         }).start()
     }, toggleAutoplayGifs: { value in
-        let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateMediaDownloadSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.autoplayGifs = value
             return settings
         }).start()
     }, toggleDownloadInBackground: { value in
-        let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateMediaDownloadSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.downloadInBackground = value
             return settings
         }).start()
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), dataAndStorageDataPromise.get()) |> deliverOnMainQueue
+    let signal = combineLatest(context.presentationData, statePromise.get(), dataAndStorageDataPromise.get()) |> deliverOnMainQueue
         |> map { presentationData, state, dataAndStorageData -> (ItemListControllerState, (ItemListNodeState<DataAndStorageEntry>, DataAndStorageEntry.ItemGenerationArguments)) in
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ChatSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
@@ -528,7 +528,7 @@ func dataAndStorageController(account: Account) -> ViewController {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     
     pushControllerImpl = { [weak controller] c in
         if let controller = controller {

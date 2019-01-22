@@ -59,16 +59,16 @@ final class ThemeColorsGridController: ViewController {
         return self._ready
     }
     
-    private let account: Account
+    private let context: AccountContext
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
     private var validLayout: ContainerViewLayout?
     
-    init(account: Account) {
-        self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext) {
+        self.context = context
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -81,7 +81,7 @@ final class ThemeColorsGridController: ViewController {
             }
         }
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -115,7 +115,7 @@ final class ThemeColorsGridController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ThemeColorsGridControllerNode(account: self.account, presentationData: self.presentationData, colors: availableColors(), present: { [weak self] controller, arguments in
+        self.displayNode = ThemeColorsGridControllerNode(context: self.context, presentationData: self.presentationData, colors: availableColors(), present: { [weak self] controller, arguments in
             self?.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
         }, pop: { [weak self] in
             if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
@@ -123,7 +123,7 @@ final class ThemeColorsGridController: ViewController {
             }
         }, presentColorPicker: { [weak self] in
             if let strongSelf = self {
-                let controller = WallpaperListPreviewController(account: strongSelf.account, source: .customColor(randomColor()))
+                let controller = WallpaperListPreviewController(context: strongSelf.context, source: .customColor(randomColor()))
                 controller.apply = { _, _, _ in
                     if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
                         let _ = navigationController.popViewController(animated: true)

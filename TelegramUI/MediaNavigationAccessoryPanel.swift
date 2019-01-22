@@ -11,8 +11,8 @@ final class MediaNavigationAccessoryPanel: ASDisplayNode {
     var togglePlayPause: (() -> Void)?
     var tapAction: (() -> Void)?
     
-    init(account: Account) {
-        self.containerNode = MediaNavigationAccessoryContainerNode(account: account)
+    init(context: AccountContext) {
+        self.containerNode = MediaNavigationAccessoryContainerNode(context: context)
         
         super.init()
         

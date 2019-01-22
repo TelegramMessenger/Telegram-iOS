@@ -18,8 +18,8 @@ private enum PeerReportOption {
     case other
 }
 
-func peerReportOptionsController(account: Account, subject: PeerReportSubject, present: @escaping (ViewController, Any?) -> Void) -> ViewController {
-    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+func peerReportOptionsController(context: AccountContext, subject: PeerReportSubject, present: @escaping (ViewController, Any?) -> Void) -> ViewController {
+    let presentationData = context.currentPresentationData.with { $0 }
     let controller = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme))
     
     let options: [PeerReportOption] = [
@@ -68,7 +68,7 @@ func peerReportOptionsController(account: Account, subject: PeerReportSubject, p
             if let reportReason = reportReason {
                 switch subject {
                     case let .peer(peerId):
-                        let _ = (reportPeer(account: account, peerId: peerId, reason: reportReason)
+                        let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason)
                         |> deliverOnMainQueue).start(completed: {
                             let alert = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {
                                 
@@ -76,7 +76,7 @@ func peerReportOptionsController(account: Account, subject: PeerReportSubject, p
                             present(alert, nil)
                         })
                     case let .messages(messageIds):
-                        let _ = (reportPeerMessages(account: account, messageIds: messageIds, reason: reportReason)
+                        let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason)
                         |> deliverOnMainQueue).start(completed: {
                             let alert = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {
                                 
@@ -85,7 +85,7 @@ func peerReportOptionsController(account: Account, subject: PeerReportSubject, p
                         })
                 }
             } else {
-                controller?.present(peerReportController(account: account, subject: subject), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                controller?.present(peerReportController(account: context.account, subject: subject), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
             
             controller?.dismissAnimated()
@@ -189,7 +189,7 @@ private func peerReportControllerEntries(presentationData: PresentationData, sta
     return entries
 }
 
-private func peerReportController(account: Account, subject: PeerReportSubject) -> ViewController {
+private func peerReportController(context: AccountContext, subject: PeerReportSubject) -> ViewController {
     var dismissImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     
@@ -209,7 +209,7 @@ private func peerReportController(account: Account, subject: PeerReportSubject) 
     
     let reportDisposable = MetaDisposable()
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get())
+    let signal = combineLatest(context.presentationData, statePromise.get())
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<PeerReportControllerEntry>, PeerReportControllerEntry.ItemGenerationArguments)) in
             let rightButton: ItemListNavigationButton
             if state.isReporting {
@@ -228,7 +228,7 @@ private func peerReportController(account: Account, subject: PeerReportSubject) 
                     
                     if !text.isEmpty {
                         let completed: () -> Void = {
-                            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                            let presentationData = context.currentPresentationData.with { $0 }
                             
                             let alert = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {
                                 
@@ -238,12 +238,12 @@ private func peerReportController(account: Account, subject: PeerReportSubject) 
                         }
                         switch subject {
                         case let .peer(peerId):
-                            reportDisposable.set((reportPeer(account: account, peerId: peerId, reason: .custom(text))
+                            reportDisposable.set((reportPeer(account: context.account, peerId: peerId, reason: .custom(text))
                                 |> deliverOnMainQueue).start(completed: {
                                     completed()
                                 }))
                         case let .messages(messageIds):
-                            reportDisposable.set((reportPeerMessages(account: account, messageIds: messageIds, reason: .custom(text))
+                            reportDisposable.set((reportPeerMessages(account: context.account, messageIds: messageIds, reason: .custom(text))
                                 |> deliverOnMainQueue).start(completed: {
                                     completed()
                                 }))
@@ -263,7 +263,7 @@ private func peerReportController(account: Account, subject: PeerReportSubject) 
         reportDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }

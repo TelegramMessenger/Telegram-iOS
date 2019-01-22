@@ -48,13 +48,13 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         }
     }
     
-    private let account: Account
+    private let context: AccountContext
     var theme: PresentationTheme
     var strings: PresentationStrings
     var nameDisplayOrder: PresentationPersonNameOrder
     
-    init(account: Account, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
-        self.account = account
+    init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
+        self.context = context
         self.messageId = messageId
         self.theme = theme
         self.strings = strings
@@ -103,7 +103,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.activityIndicator)
         self.addSubnode(self.statusNode)
         self.addSubnode(self.tapNode)
-        self.messageDisposable.set((account.postbox.messageAtId(messageId)
+        self.messageDisposable.set((context.account.postbox.messageAtId(messageId)
         |> deliverOnMainQueue).start(next: { [weak self] message in
             self?.updateMessage(message)
         }))
@@ -129,7 +129,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             if let currentEditMediaReference = self.currentEditMediaReference {
                 effectiveMessage = effectiveMessage.withUpdatedMedia([currentEditMediaReference.media])
             }
-            (text, _) = descriptionStringForMessage(effectiveMessage, strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, accountPeerId: self.account.peerId)
+            (text, _) = descriptionStringForMessage(effectiveMessage, strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, accountPeerId: self.context.account.peerId)
         }
         
         var updatedMediaReference: AnyMediaReference?
@@ -179,12 +179,12 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         if mediaUpdated {
             if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
                 if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
-                    updateImageSignal = chatMessagePhotoThumbnail(account: self.account, photoReference: imageReference)
+                    updateImageSignal = chatMessagePhotoThumbnail(account: self.context.account, photoReference: imageReference)
                 } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
                     if fileReference.media.isVideo {
-                        updateImageSignal = chatMessageVideoThumbnail(account: self.account, fileReference: fileReference)
+                        updateImageSignal = chatMessageVideoThumbnail(account: self.context.account, fileReference: fileReference)
                     } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                        updateImageSignal = chatWebpageSnippetFile(account: account, fileReference: fileReference, representation: iconImageRepresentation)
+                        updateImageSignal = chatWebpageSnippetFile(account: self.context.account, fileReference: fileReference, representation: iconImageRepresentation)
                     }
                 }
             } else {
@@ -198,7 +198,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             if let currentEditMediaReference = self.currentEditMediaReference {
                 effectiveMessage = effectiveMessage.withUpdatedMedia([currentEditMediaReference.media])
             }
-            switch messageContentKind(effectiveMessage, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: self.account.peerId) {
+            switch messageContentKind(effectiveMessage, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: self.context.account.peerId) {
                 case .text:
                     isMedia = false
                 default:

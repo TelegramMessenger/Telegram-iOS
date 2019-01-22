@@ -28,7 +28,7 @@ struct InstantPageGalleryEntry: Equatable {
         return lhs.index == rhs.index && lhs.pageId == rhs.pageId && lhs.media == rhs.media && lhs.caption == rhs.caption && lhs.credit == rhs.credit && lhs.location == rhs.location
     }
     
-    func item(account: Account, webPage: TelegramMediaWebpage, presentationData: PresentationData, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) -> GalleryItem {
+    func item(context: AccountContext, webPage: TelegramMediaWebpage, presentationData: PresentationData, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) -> GalleryItem {
         let caption: NSAttributedString
         let credit: NSAttributedString
         
@@ -71,16 +71,16 @@ struct InstantPageGalleryEntry: Equatable {
         }
         
         if let image = self.media.media as? TelegramMediaImage {
-            return InstantImageGalleryItem(account: account, presentationData: presentationData, imageReference: .webPage(webPage: WebpageReference(webPage), media: image), caption: caption, credit: credit, location: self.location, openUrl: openUrl, openUrlOptions: openUrlOptions)
+            return InstantImageGalleryItem(context: context, presentationData: presentationData, imageReference: .webPage(webPage: WebpageReference(webPage), media: image), caption: caption, credit: credit, location: self.location, openUrl: openUrl, openUrlOptions: openUrlOptions)
         } else if let file = self.media.media as? TelegramMediaFile, file.isVideo {
             var indexData: GalleryItemIndexData?
             if let location = self.location {
                 indexData = GalleryItemIndexData(position: location.position, totalCount: location.totalCount)
             }
-            return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: .instantPage(self.pageId, file.fileId), fileReference: .webPage(webPage: WebpageReference(webPage), media: file)), originData: nil, indexData: indexData, contentInfo: .webPage(webPage, file), caption: caption, credit: credit, performAction: { _ in }, openActionOptions: { _ in })
+            return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: NativeVideoContent(id: .instantPage(self.pageId, file.fileId), fileReference: .webPage(webPage: WebpageReference(webPage), media: file)), originData: nil, indexData: indexData, contentInfo: .webPage(webPage, file), caption: caption, credit: credit, performAction: { _ in }, openActionOptions: { _ in })
         } else if let embedWebpage = self.media.media as? TelegramMediaWebpage, case let .Loaded(webpageContent) = embedWebpage.content {
             if let content = WebEmbedVideoContent(webPage: embedWebpage, webpageContent: webpageContent) {
-                return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: content, originData: nil, indexData: nil, contentInfo: .webPage(webPage, embedWebpage), caption: NSAttributedString(string: ""), performAction: { _ in }, openActionOptions: { _ in })
+                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: nil, indexData: nil, contentInfo: .webPage(webPage, embedWebpage), caption: NSAttributedString(string: ""), performAction: { _ in }, openActionOptions: { _ in })
             } else {
                 preconditionFailure()
             }
@@ -103,7 +103,7 @@ class InstantPageGalleryController: ViewController {
         return self.displayNode as! GalleryControllerNode
     }
     
-    private let account: Account
+    private let context: AccountContext
     private let webPage: TelegramMediaWebpage
     private var presentationData: PresentationData
     
@@ -136,13 +136,13 @@ class InstantPageGalleryController: ViewController {
     private var innerOpenUrl: (InstantPageUrlItem) -> Void
     private var openUrlOptions: (InstantPageUrlItem) -> Void
     
-    init(account: Account, webPage: TelegramMediaWebpage, entries: [InstantPageGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
-        self.account = account
+    init(context: AccountContext, webPage: TelegramMediaWebpage, entries: [InstantPageGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
+        self.context = context
         self.webPage = webPage
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         var openLinkImpl: ((InstantPageUrlItem) -> Void)?
         self.innerOpenUrl = { url in
@@ -168,7 +168,7 @@ class InstantPageGalleryController: ViewController {
                 strongSelf.centralEntryIndex = centralIndex
                 if strongSelf.isViewLoaded {
                     strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({
-                        $0.item(account: account, webPage: webPage, presentationData: strongSelf.presentationData, openUrl: strongSelf.innerOpenUrl, openUrlOptions: strongSelf.openUrlOptions)
+                        $0.item(context: context, webPage: webPage, presentationData: strongSelf.presentationData, openUrl: strongSelf.innerOpenUrl, openUrlOptions: strongSelf.openUrlOptions)
                     }), centralItemIndex: centralIndex, keepFirst: false)
                     
                     let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
@@ -202,7 +202,7 @@ class InstantPageGalleryController: ViewController {
         
         openLinkOptionsImpl = { [weak self] url in
             if let strongSelf = self {
-                let canOpenIn = availableOpenInOptions(applicationContext: account.telegramApplicationContext, item: .url(url: url.url)).count > 1
+                let canOpenIn = availableOpenInOptions(context: context, item: .url(url: url.url)).count > 1
                 let openText = canOpenIn ? strongSelf.presentationData.strings.Conversation_FileOpenIn : strongSelf.presentationData.strings.Conversation_LinkDialogOpen
                 let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
@@ -307,7 +307,7 @@ class InstantPageGalleryController: ViewController {
         }
         
         self.galleryNode.pager.replaceItems(self.entries.map({
-            $0.item(account: account, webPage: self.webPage, presentationData: self.presentationData, openUrl: self.innerOpenUrl, openUrlOptions: self.openUrlOptions)
+            $0.item(context: self.context, webPage: self.webPage, presentationData: self.presentationData, openUrl: self.innerOpenUrl, openUrlOptions: self.openUrlOptions)
         }), centralItemIndex: self.centralEntryIndex)
         
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in

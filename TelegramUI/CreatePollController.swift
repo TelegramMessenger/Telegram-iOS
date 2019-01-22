@@ -192,7 +192,7 @@ private func createPollControllerEntries(presentationData: PresentationData, sta
     return entries
 }
 
-public func createPollController(account: Account, peerId: PeerId, completion: @escaping (EnqueueMessage) -> Void) -> ViewController {
+public func createPollController(context: AccountContext, peerId: PeerId, completion: @escaping (EnqueueMessage) -> Void) -> ViewController {
     let statePromise = ValuePromise(CreatePollControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: CreatePollControllerState())
     let updateState: ((CreatePollControllerState) -> CreatePollControllerState) -> Void = { f in
@@ -299,7 +299,7 @@ public func createPollController(account: Account, peerId: PeerId, completion: @
     let previousOptionIds = Atomic<[Int]?>(value: nil)
     
     let limitsKey = PostboxViewKey.preferences(keys: Set([PreferencesKeys.limitsConfiguration]))
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, account.postbox.combinedView(keys: [limitsKey]))
+    let signal = combineLatest(context.presentationData, statePromise.get() |> deliverOnMainQueue, account.postbox.combinedView(keys: [limitsKey]))
     |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState<CreatePollEntry>, CreatePollEntry.ItemGenerationArguments)) in
         let limitsConfiguration: LimitsConfiguration = (combinedView.views[limitsKey] as? PreferencesView)?.values[PreferencesKeys.limitsConfiguration] as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
         
@@ -381,7 +381,7 @@ public func createPollController(account: Account, peerId: PeerId, completion: @
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }

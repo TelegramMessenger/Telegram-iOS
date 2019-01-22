@@ -27,7 +27,7 @@ final class BotCheckoutNativeCardEntryController: ViewController {
         return super.displayNode as! BotCheckoutNativeCardEntryControllerNode
     }
     
-    private let account: Account
+    private let context: AccountContext
     private let additionalFields: BotCheckoutNativeCardEntryAdditionalFields
     private let publishableKey: String
     private let completion: (BotCheckoutPaymentMethod) -> Void
@@ -39,13 +39,13 @@ final class BotCheckoutNativeCardEntryController: ViewController {
     private var doneItem: UIBarButtonItem?
     private var activityItem: UIBarButtonItem?
     
-    public init(account: Account, additionalFields: BotCheckoutNativeCardEntryAdditionalFields, publishableKey: String, completion: @escaping (BotCheckoutPaymentMethod) -> Void) {
-        self.account = account
+    public init(context: AccountContext, additionalFields: BotCheckoutNativeCardEntryAdditionalFields, publishableKey: String, completion: @escaping (BotCheckoutPaymentMethod) -> Void) {
+        self.context = context
         self.additionalFields = additionalFields
         self.publishableKey = publishableKey
         self.completion = completion
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style

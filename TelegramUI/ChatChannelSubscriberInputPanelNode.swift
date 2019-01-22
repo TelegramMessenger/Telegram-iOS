@@ -82,7 +82,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     }
     
     @objc func buttonPressed() {
-        guard let account = self.account, let action = self.action, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer else {
+        guard let context = self.context, let action = self.action, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer else {
             return
         }
         
@@ -90,7 +90,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             case .join:
                 self.activityIndicator.isHidden = false
                 self.activityIndicator.startAnimating()
-                self.actionDisposable.set((joinChannel(account: account, peerId: peer.id)
+                self.actionDisposable.set((joinChannel(account: context.account, peerId: peer.id)
                     |> afterDisposed { [weak self] in
                     Queue.mainQueue().async {
                         if let strongSelf = self {
@@ -102,8 +102,8 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             case .kicked:
                 break
             case .muteNotifications, .unmuteNotifications:
-                if let account = self.account, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer {
-                    self.actionDisposable.set(togglePeerMuted(account: account, peerId: peer.id).start())
+                if let context = self.context, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer {
+                    self.actionDisposable.set(togglePeerMuted(account: context.account, peerId: peer.id).start())
                 }
         }
     }

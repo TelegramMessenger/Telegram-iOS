@@ -179,7 +179,7 @@ private struct ChannelMembersSearchContainerState: Equatable {
 }
 
 final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNode {
-    private let account: Account
+    private let context: AccountContext
     private let openPeer: (Peer, RenderedChannelParticipant?) -> Void
     private let mode: ChannelMembersSearchMode
     
@@ -199,12 +199,12 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
     
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder, PresentationDateTimeFormat)>
     
-    init(account: Account, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
-        self.account = account
+    init(context: AccountContext, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+        self.context = context
         self.openPeer = openPeer
         self.mode = mode
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder, self.presentationData.dateTimeFormat))
         
         self.dimNode = ASDisplayNode()
@@ -238,13 +238,13 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                 return state
             }
         }, promotePeer: { participant in
-            present(channelAdminController(account: account, peerId: peerId, adminId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
+            present(channelAdminController(context: context, peerId: peerId, adminId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
             }, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }, restrictPeer: { participant in
-            present(channelBannedMemberController(account: account, peerId: peerId, memberId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
+            present(channelBannedMemberController(context: context, peerId: peerId, memberId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
             }, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }, removePeer: { memberId in
-            let signal = account.postbox.loadedPeerWithId(memberId)
+            let signal = context.account.postbox.loadedPeerWithId(memberId)
             |> deliverOnMainQueue
             |> mapToSignal { peer -> Signal<Bool, NoError> in
                 let result = ValuePromise<Bool>()
@@ -261,7 +261,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     
                     if peerId.namespace == Namespaces.Peer.CloudChannel {
                         if case .searchAdmins = mode {
-                            return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: account, peerId: peerId, memberId: memberId, adminRights: TelegramChatAdminRights(flags: []))
+                            return context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: memberId, adminRights: TelegramChatAdminRights(flags: []))
                             |> afterDisposed {
                                 Queue.mainQueue().async {
                                     updateState { state in
@@ -273,7 +273,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                             }
                         }
                         
-                        return account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
+                        return context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: context.account, peerId: peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
                         |> afterDisposed {
                             Queue.mainQueue().async {
                                 updateState { state in
@@ -286,7 +286,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     }
                     
                     if case .searchAdmins = mode {
-                        return removeGroupAdmin(account: account, peerId: peerId, adminId: memberId)
+                        return removeGroupAdmin(account: context.account, peerId: peerId, adminId: memberId)
                         |> `catch` { _ -> Signal<Void, NoError> in
                             return .complete()
                         }
@@ -300,7 +300,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         }
                     }
                     
-                    return removePeerMember(account: account, peerId: peerId, memberId: memberId)
+                    return removePeerMember(account: context.account, peerId: peerId, memberId: memberId)
                     |> deliverOnMainQueue
                     |> afterDisposed {
                         updateState { state in
@@ -317,7 +317,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         })
         
         let themeAndStringsPromise = self.themeAndStringsPromise
-        let foundItems = combineLatest(searchQuery.get(), account.postbox.peerView(id: peerId) |> take(1))
+        let foundItems = combineLatest(searchQuery.get(), context.account.postbox.peerView(id: peerId) |> take(1))
         |> mapToSignal { query, peerView -> Signal<[ChannelMembersSearchEntry]?, NoError> in
             guard let query = query, !query.isEmpty else {
                 return .single(nil)
@@ -330,7 +330,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                 switch mode {
                     case .searchMembers, .banAndPromoteActions:
                         foundGroupMembers = Signal { subscriber in
-                            let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
+                            let (disposable, _) = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, searchQuery: query, updated: { state in
                                 if case .ready = state.loadingState {
                                     subscriber.putNext(state.list)
                                 }
@@ -341,11 +341,11 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                         foundMembers = .single([])
                     case .inviteActions:
                         foundGroupMembers = .single([])
-                        foundMembers = channelMembers(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, category: .recent(.search(query)))
+                        foundMembers = channelMembers(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, category: .recent(.search(query)))
                         |> map { $0 ?? [] }
                 case .searchAdmins:
                     foundGroupMembers = Signal { subscriber in
-                        let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
+                        let (disposable, _) = context.peerChannelMemberCategoriesContextsManager.admins(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, searchQuery: query, updated: { state in
                             if case .ready = state.loadingState {
                                 subscriber.putNext(state.list)
                             }
@@ -355,7 +355,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     foundMembers = .single([])
                 case .searchBanned:
                     foundGroupMembers = Signal { subscriber in
-                        let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.restricted(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
+                        let (disposable, _) = context.peerChannelMemberCategoriesContextsManager.restricted(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, searchQuery: query, updated: { state in
                             if case .ready = state.loadingState {
                                 subscriber.putNext(state.list)
                                 subscriber.putCompletion()
@@ -365,10 +365,10 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     }
                     |> runOn(Queue.mainQueue())
                     foundMembers = Signal { subscriber in
-                        let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
+                        let (disposable, _) = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, searchQuery: query, updated: { state in
                             if case .ready = state.loadingState {
                                 subscriber.putNext(state.list.filter({ participant in
-                                    return participant.peer.id != account.peerId
+                                    return participant.peer.id != context.account.peerId
                                 }))
                             }
                         })
@@ -377,7 +377,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     |> runOn(Queue.mainQueue())
                 case .searchKicked:
                     foundGroupMembers = Signal { subscriber in
-                        let (disposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.banned(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, searchQuery: query, updated: { state in
+                        let (disposable, _) = context.peerChannelMemberCategoriesContextsManager.banned(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, searchQuery: query, updated: { state in
                             if case .ready = state.loadingState {
                                 subscriber.putNext(state.list)
                                 subscriber.putCompletion()
@@ -393,8 +393,8 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                 let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError>
                 switch mode {
                     case .inviteActions, .banAndPromoteActions:
-                        foundContacts = account.postbox.searchContacts(query: query.lowercased())
-                        foundRemotePeers = .single(([], [])) |> then(searchPeers(account: account, query: query)
+                        foundContacts = context.account.postbox.searchContacts(query: query.lowercased())
+                        foundRemotePeers = .single(([], [])) |> then(searchPeers(account: context.account, query: query)
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
                     case .searchMembers, .searchBanned, .searchKicked, .searchAdmins:
                         foundContacts = .single(([], [:]))
@@ -416,7 +416,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     }
                     switch mode {
                         case .inviteActions, .banAndPromoteActions:
-                            existingPeerIds.insert(account.peerId)
+                            existingPeerIds.insert(context.account.peerId)
                         case .searchMembers, .searchAdmins, .searchBanned, .searchKicked:
                             break
                     }
@@ -455,14 +455,14 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                     }
                                     if canPromote {
                                         if let bannedRights = bannedRights {
-                                            if bannedRights.restrictedBy != account.peerId && !channel.flags.contains(.isCreator) {
+                                            if bannedRights.restrictedBy != context.account.peerId && !channel.flags.contains(.isCreator) {
                                                 canPromote = false
                                             }
                                         }
                                     }
                                     if canRestrict {
                                         if let adminRights = adminRights {
-                                            if adminRights.promotedBy != account.peerId && !channel.flags.contains(.isCreator) {
+                                            if adminRights.promotedBy != context.account.peerId && !channel.flags.contains(.isCreator) {
                                                 canRestrict = false
                                             }
                                         }
@@ -648,7 +648,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                                             peers[creator.id] = creator
                                         }
                                         peers[peer.id] = peer
-                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creatorPeer?.id ?? account.peerId, canBeEditedByAccountPeer: creatorPeer?.id == account.peerId), banInfo: nil), peer: peer, peers: peers)
+                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creatorPeer?.id ?? context.account.peerId, canBeEditedByAccountPeer: creatorPeer?.id == context.account.peerId), banInfo: nil), peer: peer, peers: peers)
                                     case .member:
                                         var peers: [PeerId: Peer] = [:]
                                         peers[peer.id] = peer
@@ -688,7 +688,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     }
                     switch mode {
                         case .inviteActions, .banAndPromoteActions:
-                            existingPeerIds.insert(account.peerId)
+                            existingPeerIds.insert(context.account.peerId)
                         case .searchMembers, .searchAdmins, .searchBanned, .searchKicked:
                             break
                     }
@@ -865,12 +865,12 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                     let previousEntries = previousSearchItems.swap(entries)
                     updateActivity(false)
                     let firstTime = previousEntries == nil
-                    let transition = channelMembersSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, account: account, theme: themeAndStrings.0, strings: themeAndStrings.1, nameSortOrder: themeAndStrings.2, nameDisplayOrder: themeAndStrings.3, interaction: interaction)
+                    let transition = channelMembersSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries ?? [], isSearching: entries != nil, account: context.account, theme: themeAndStrings.0, strings: themeAndStrings.1, nameSortOrder: themeAndStrings.2, nameDisplayOrder: themeAndStrings.3, interaction: interaction)
                     strongSelf.enqueueTransition(transition, firstTime: firstTime)
                 }
             }))
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

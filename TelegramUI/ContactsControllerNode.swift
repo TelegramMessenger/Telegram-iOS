@@ -8,7 +8,7 @@ import SwiftSignalKit
 final class ContactsControllerNode: ASDisplayNode {
     let contactListNode: ContactListNode
     
-    private let account: Account
+    private let context: AccountContext
     private var searchDisplayController: SearchDisplayController?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
@@ -22,10 +22,10 @@ final class ContactsControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(account: Account, sortOrder: Signal<ContactsSortOrder, NoError>, present: @escaping (ViewController, Any?) -> Void) {
-        self.account = account
+    init(context: AccountContext, sortOrder: Signal<ContactsSortOrder, NoError>, present: @escaping (ViewController, Any?) -> Void) {
+        self.context = context
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         var inviteImpl: (() -> Void)?
         let options = [ContactListAdditionalOption(title: presentationData.strings.Contacts_InviteFriends, icon: .generic(UIImage(bundleImageName: "Contact List/AddMemberIcon")!), action: {
@@ -42,7 +42,7 @@ final class ContactsControllerNode: ASDisplayNode {
             }
         }
         
-        self.contactListNode = ContactListNode(account: account, presentation: presentation, displaySortOptions: true)
+        self.contactListNode = ContactListNode(context: context, presentation: presentation, displaySortOptions: true)
         
         super.init()
         
@@ -54,7 +54,7 @@ final class ContactsControllerNode: ASDisplayNode {
         
         self.addSubnode(self.contactListNode)
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -84,7 +84,7 @@ final class ContactsControllerNode: ASDisplayNode {
                     default:
                         let presentationData = strongSelf.presentationData
                         present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                            self?.account.telegramApplicationContext.applicationBindings.openSettings()
+                            self?.context.applicationBindings.openSettings()
                         })]), nil)
                 }
             })
@@ -123,7 +123,7 @@ final class ContactsControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.cloudContacts, .global, .deviceContacts], openPeer: { [weak self] peer in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: [.cloudContacts, .global, .deviceContacts], openPeer: { [weak self] peer in
             if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                 requestOpenPeerFromSearch(peer)
             }

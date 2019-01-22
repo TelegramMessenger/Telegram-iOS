@@ -195,7 +195,7 @@ private func selectivePrivacyPeersControllerEntries(presentationData: Presentati
     return entries
 }
 
-public func selectivePrivacyPeersController(account: Account, title: String, initialPeerIds: [PeerId], updated: @escaping ([PeerId]) -> Void) -> ViewController {
+public func selectivePrivacyPeersController(context: AccountContext, title: String, initialPeerIds: [PeerId], updated: @escaping ([PeerId]) -> Void) -> ViewController {
     let statePromise = ValuePromise(SelectivePrivacyPeersControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: SelectivePrivacyPeersControllerState())
     let updateState: ((SelectivePrivacyPeersControllerState) -> SelectivePrivacyPeersControllerState) -> Void = { f in
@@ -213,7 +213,7 @@ public func selectivePrivacyPeersController(account: Account, title: String, ini
     actionsDisposable.add(removePeerDisposable)
     
     let peersPromise = Promise<[Peer]>()
-    peersPromise.set(account.postbox.transaction { transaction -> [Peer] in
+    peersPromise.set(context.account.postbox.transaction { transaction -> [Peer] in
         var result: [Peer] = []
         for peerId in initialPeerIds {
             if let peer = transaction.getPeer(peerId) {
@@ -223,7 +223,7 @@ public func selectivePrivacyPeersController(account: Account, title: String, ini
         return result
     })
     
-    let arguments = SelectivePrivacyPeersControllerArguments(account: account, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
+    let arguments = SelectivePrivacyPeersControllerArguments(account: context.account, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
         updateState { state in
             if (peerId == nil && fromPeerId == state.peerIdWithRevealedOptions) || (peerId != nil && fromPeerId == nil) {
                 return state.withUpdatedPeerIdWithRevealedOptions(peerId)
@@ -251,12 +251,12 @@ public func selectivePrivacyPeersController(account: Account, title: String, ini
         
         removePeerDisposable.set(applyPeers.start())
     }, addPeer: {
-        let controller = ContactMultiselectionController(account: account, mode: .peerSelection(searchChatList: true), options: [])
+        let controller = ContactMultiselectionController(context: context, mode: .peerSelection(searchChatList: true), options: [])
         addPeerDisposable.set((controller.result |> take(1) |> deliverOnMainQueue).start(next: { [weak controller] peerIds in
             let applyPeers: Signal<Void, NoError> = peersPromise.get()
             |> take(1)
             |> mapToSignal { peers -> Signal<[Peer], NoError> in
-                return account.postbox.transaction { transaction -> [Peer] in
+                return context.account.postbox.transaction { transaction -> [Peer] in
                     var updatedPeers = peers
                     var existingIds = Set(updatedPeers.map { $0.id })
                     for peerId in peerIds {
@@ -286,7 +286,7 @@ public func selectivePrivacyPeersController(account: Account, title: String, ini
     
     var previousPeers: [Peer]?
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peersPromise.get())
+    let signal = combineLatest(context.presentationData, statePromise.get(), peersPromise.get())
         |> deliverOnMainQueue
         |> map { presentationData, state, peers -> (ItemListControllerState, (ItemListNodeState<SelectivePrivacyPeersEntry>, SelectivePrivacyPeersEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
@@ -317,7 +317,7 @@ public func selectivePrivacyPeersController(account: Account, title: String, ini
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)

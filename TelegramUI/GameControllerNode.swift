@@ -23,13 +23,13 @@ private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
 final class GameControllerNode: ViewControllerTracingNode {
     private var webView: WKWebView?
     
-    private let account: Account
+    private let context: AccountContext
     var presentationData: PresentationData
     private let present: (ViewController, Any?) -> Void
     private let message: Message
     
-    init(account: Account, presentationData: PresentationData, url: String, present: @escaping (ViewController, Any?) -> Void, message: Message) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, url: String, present: @escaping (ViewController, Any?) -> Void, message: Message) {
+        self.context = context
         self.presentationData = presentationData
         self.present = present
         self.message = message
@@ -129,9 +129,9 @@ final class GameControllerNode: ViewControllerTracingNode {
         if eventName == "share_game" || eventName == "share_score" {
             if let (botPeer, gameName) = self.shareData(), let addressName = botPeer.addressName, !addressName.isEmpty, !gameName.isEmpty {
                 if eventName == "share_score" {
-                    self.present(ShareController(account: self.account, subject: .fromExternal({ [weak self] peerIds, text in
+                    self.present(ShareController(context: self.context, subject: .fromExternal({ [weak self] peerIds, text in
                         if let strongSelf = self {
-                            let signals = peerIds.map { forwardGameWithScore(account: strongSelf.account, messageId: strongSelf.message.id, to: $0) }
+                            let signals = peerIds.map { forwardGameWithScore(account: strongSelf.context.account, messageId: strongSelf.message.id, to: $0) }
                             return .single(.preparing) |> then(combineLatest(signals)
                                 |> mapToSignal { _ -> Signal<ShareControllerExternalStatus, NoError> in return .complete() }) |> then(.single(.done))
                         } else {
@@ -148,7 +148,7 @@ final class GameControllerNode: ViewControllerTracingNode {
     func shareWithoutScore() {
         if let (botPeer, gameName) = self.shareData(), let addressName = botPeer.addressName, !addressName.isEmpty, !gameName.isEmpty {
             let url = "https://t.me/\(addressName)?game=\(gameName)"
-            self.present(ShareController(account: self.account, subject: .url(url), showInChat: nil, externalShare: true), nil)
+            self.present(ShareController(context: self.context, subject: .url(url), showInChat: nil, externalShare: true), nil)
         }
     }
 }

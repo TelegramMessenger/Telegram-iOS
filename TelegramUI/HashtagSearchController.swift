@@ -7,7 +7,7 @@ import SwiftSignalKit
 final class HashtagSearchController: TelegramController {
     private let queue = Queue()
     
-    private let account: Account
+    private let context: AccountContext
     private let peer: Peer?
     private let query: String
     private var transitionDisposable: Disposable?
@@ -19,14 +19,14 @@ final class HashtagSearchController: TelegramController {
         return self.displayNode as! HashtagSearchControllerNode
     }
     
-    init(account: Account, peer: Peer?, query: String) {
-        self.account = account
+    init(context: AccountContext, peer: Peer?, query: String) {
+        self.context = context
         self.peer = peer
         self.query = query
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
-        super.init(account: account, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none)
+        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
@@ -36,7 +36,7 @@ final class HashtagSearchController: TelegramController {
         let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
         
         let location: SearchMessagesLocation = .general
-        let search = searchMessages(account: account, location: location, query: query, state: nil)
+        let search = searchMessages(account: context.account, location: location, query: query, state: nil)
         let foundMessages: Signal<[ChatListSearchEntry], NoError> = search
         |> map { result, _ in
             return result.messages.map({ .message($0, result.readStates[$0.id.peerId], chatListPresentationData) })
@@ -46,9 +46,9 @@ final class HashtagSearchController: TelegramController {
         }, togglePeerSelected: { _ in
         }, messageSelected: { [weak self] peer, message, _ in
             if let strongSelf = self {
-                strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.account, peer: peer) |> deliverOnMainQueue).start(next: { actualPeerId in
-                    if let strongSelf = self {
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(actualPeerId), messageId: message.id.peerId == actualPeerId ? message.id : nil))
+                strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.context.account, peer: peer) |> deliverOnMainQueue).start(next: { actualPeerId in
+                    if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+                        navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), messageId: message.id.peerId == actualPeerId ? message.id : nil)
                     }
                 }))
                 strongSelf.controllerNode.listNode.clearHighlightAnimated(true)
@@ -69,7 +69,7 @@ final class HashtagSearchController: TelegramController {
                 let previousEntries = previousSearchItems.swap(entries)
                 
                 let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, account: account, enableHeaders: false, filter: [], interaction: interaction)
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, context: strongSelf.context, enableHeaders: false, filter: [], interaction: interaction)
                 strongSelf.controllerNode.enqueueTransition(transition, firstTime: firstTime)
             }
         })
@@ -85,7 +85,7 @@ final class HashtagSearchController: TelegramController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = HashtagSearchControllerNode(account: self.account, peer: self.peer, query: self.query, theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.displayNode = HashtagSearchControllerNode(context: self.context, peer: self.peer, query: self.query, theme: self.presentationData.theme, strings: self.presentationData.strings)
         if let chatController = self.controllerNode.chatController {
             chatController.parentController = self
         }

@@ -344,9 +344,9 @@ private func autodownloadMediaCategoryControllerEntries(presentationData: Presen
     return entries
 }
 
-func autodownloadMediaCategoryController(account: Account, category: AutomaticDownloadCategory) -> ViewController {
+func autodownloadMediaCategoryController(context: AccountContext, category: AutomaticDownloadCategory) -> ViewController {
     let arguments = AutodownloadMediaCategoryControllerArguments(toggle: { connection, type in
-        let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateMediaDownloadSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             switch category {
                 case .photo:
@@ -508,7 +508,7 @@ func autodownloadMediaCategoryController(account: Account, category: AutomaticDo
             return settings
         }).start()
     }, adjustSize: { size in
-        let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateMediaDownloadSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             switch category {
                 case .photo:
@@ -541,7 +541,7 @@ func autodownloadMediaCategoryController(account: Account, category: AutomaticDo
         }).start()
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings])) |> deliverOnMainQueue
+    let signal = combineLatest(context.presentationData, context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings])) |> deliverOnMainQueue
         |> map { presentationData, prefs -> (ItemListControllerState, (ItemListNodeState<AutodownloadMediaCategoryEntry>, AutodownloadMediaCategoryEntry.ItemGenerationArguments)) in
             let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
             if let value = prefs.values[ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
@@ -570,7 +570,7 @@ func autodownloadMediaCategoryController(account: Account, category: AutomaticDo
             return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     return controller
 }
 

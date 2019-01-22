@@ -9,18 +9,18 @@ final class SecretChatKeyController: ViewController {
         return self.displayNode as! SecretChatKeyControllerNode
     }
     
-    private let account: Account
+    private let context: AccountContext
     private let fingerprint: SecretChatKeyFingerprint
     private let peer: Peer
     
     private var presentationData: PresentationData
     
-    init(account: Account, fingerprint: SecretChatKeyFingerprint, peer: Peer) {
+    init(context: AccountContext, fingerprint: SecretChatKeyFingerprint, peer: Peer) {
         self.account = account
         self.fingerprint = fingerprint
         self.peer = peer
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -33,7 +33,7 @@ final class SecretChatKeyController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = SecretChatKeyControllerNode(account: self.account, presentationData: self.presentationData, fingerprint: self.fingerprint, peer: self.peer, getNavigationController: { [weak self] in
+        self.displayNode = SecretChatKeyControllerNode(context: self.context, presentationData: self.presentationData, fingerprint: self.fingerprint, peer: self.peer, getNavigationController: { [weak self] in
             return self?.navigationController as? NavigationController
         })
         self.displayNodeDidLoad()

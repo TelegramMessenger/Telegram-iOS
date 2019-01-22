@@ -261,9 +261,9 @@ private func stringForCategory(strings: PresentationStrings, category: PeerCache
     }
 }
 
-func storageUsageController(account: Account, isModal: Bool = false) -> ViewController {
+func storageUsageController(context: context, isModal: Bool = false) -> ViewController {
     let cacheSettingsPromise = Promise<CacheStorageSettings>()
-    cacheSettingsPromise.set(account.postbox.preferencesView(keys: [PreferencesKeys.cacheStorageSettings])
+    cacheSettingsPromise.set(context.account.postbox.preferencesView(keys: [PreferencesKeys.cacheStorageSettings])
         |> map { view -> CacheStorageSettings in
             let cacheSettings: CacheStorageSettings
             if let value = view.values[PreferencesKeys.cacheStorageSettings] as? CacheStorageSettings {
@@ -279,7 +279,7 @@ func storageUsageController(account: Account, isModal: Bool = false) -> ViewCont
     
     let statsPromise = Promise<CacheUsageStatsResult?>()
     let resetStats: () -> Void = {
-        let containerPath = account.telegramApplicationContext.applicationBindings.containerPath
+        let containerPath = context.applicationBindings.containerPath
         let additionalPaths: [String] = [
             NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)[0],
             containerPath + "/Documents/files",
@@ -289,7 +289,7 @@ func storageUsageController(account: Account, isModal: Bool = false) -> ViewCont
             containerPath + "/Documents/tempcache_v1/store",
         ]
         statsPromise.set(.single(nil)
-        |> then(collectCacheUsageStats(account: account, additionalCachePaths: additionalPaths, logFilesPath: account.telegramApplicationContext.applicationBindings.containerPath + "/telegram-data/logs")
+        |> then(collectCacheUsageStats(account: context.account, additionalCachePaths: additionalPaths, logFilesPath: context.applicationBindings.containerPath + "/telegram-data/logs")
         |> map(Optional.init)))
     }
     resetStats()
@@ -299,14 +299,14 @@ func storageUsageController(account: Account, isModal: Bool = false) -> ViewCont
     let clearDisposable = MetaDisposable()
     actionDisposables.add(clearDisposable)
     
-    let arguments = StorageUsageControllerArguments(account: account, updateKeepMedia: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    let arguments = StorageUsageControllerArguments(account: context.account, updateKeepMedia: {
+        let presentationData = context.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
         }
         let timeoutAction: (Int32) -> Void = { timeout in
-            let _ = updateCacheStorageSettingsInteractively(postbox: account.postbox, { current in
+            let _ = updateCacheStorageSettingsInteractively(postbox: context.account.postbox, { current in
                 return current.withUpdatedDefaultCacheStorageTimeout(timeout)
             }).start()
         }
@@ -335,7 +335,7 @@ func storageUsageController(account: Account, isModal: Bool = false) -> ViewCont
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak statsPromise] result in
             if let result = result, case let .result(stats) = result {
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let presentationData = context.currentPresentationData.with { $0 }
                 let controller = ActionSheetController(presentationTheme: presentationData.theme)
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()
@@ -464,7 +464,7 @@ func storageUsageController(account: Account, isModal: Bool = false) -> ViewCont
                             var updatedTempPaths = stats.tempPaths
                             var updatedTempSize = stats.tempSize
                             
-                            var signal: Signal<Void, NoError> = clearCachedMediaResources(account: account, mediaResourceIds: clearResourceIds)
+                            var signal: Signal<Void, NoError> = clearCachedMediaResources(account: context.account, mediaResourceIds: clearResourceIds)
                             if otherSize.0 {
                                 let removeTempFiles: Signal<Void, NoError> = Signal { subscriber in
                                     let fileManager = FileManager.default
@@ -476,7 +476,7 @@ func storageUsageController(account: Account, isModal: Bool = false) -> ViewCont
                                     return EmptyDisposable
                                 } |> runOn(Queue.concurrentDefaultQueue())
                                 signal = signal
-                                |> then(account.postbox.mediaBox.removeOtherCachedResources(paths: stats.otherPaths))
+                                |> then(context.account.postbox.mediaBox.removeOtherCachedResources(paths: stats.otherPaths))
                                 |> then(removeTempFiles)
                             }
                             
@@ -491,7 +491,7 @@ func storageUsageController(account: Account, isModal: Bool = false) -> ViewCont
                             let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: updatedOtherSize, otherPaths: updatedOtherPaths, cacheSize: updatedCacheSize, tempPaths: updatedTempPaths, tempSize: updatedTempSize, immutableSize: stats.immutableSize)
                             
                             var cancelImpl: (() -> Void)?
-                            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                            let presentationData = context.currentPresentationData.with { $0 }
                             let progressSignal = Signal<Never, NoError> { subscriber in
                                 let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
                                     cancelImpl?()
@@ -554,7 +554,7 @@ func storageUsageController(account: Account, isModal: Bool = false) -> ViewCont
                         }
                     }
                     
-                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    let presentationData = context.currentPresentationData.with { $0 }
                     let controller = ActionSheetController(presentationTheme: presentationData.theme)
                     let dismissAction: () -> Void = { [weak controller] in
                         controller?.dismissAnimated()
@@ -661,12 +661,12 @@ func storageUsageController(account: Account, isModal: Bool = false) -> ViewCont
                                     }
                                 }
                                 
-                                var signal = clearCachedMediaResources(account: account, mediaResourceIds: clearResourceIds)
+                                var signal = clearCachedMediaResources(account: context.account, mediaResourceIds: clearResourceIds)
                                 
                                 let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize)
                                 
                                 var cancelImpl: (() -> Void)?
-                                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                                let presentationData = context.currentPresentationData.with { $0 }
                                 let progressSignal = Signal<Never, NoError> { subscriber in
                                     let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
                                         cancelImpl?()
@@ -714,7 +714,7 @@ func storageUsageController(account: Account, isModal: Bool = false) -> ViewCont
     
     var dismissImpl: (() -> Void)?
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, cacheSettingsPromise.get(), statsPromise.get()) |> deliverOnMainQueue
+    let signal = combineLatest(context.presentationData, cacheSettingsPromise.get(), statsPromise.get()) |> deliverOnMainQueue
         |> map { presentationData, cacheSettings, cacheStats -> (ItemListControllerState, (ItemListNodeState<StorageUsageEntry>, StorageUsageEntry.ItemGenerationArguments)) in
             let leftNavigationButton = isModal ? ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
@@ -728,7 +728,7 @@ func storageUsageController(account: Account, isModal: Bool = false) -> ViewCont
             actionDisposables.dispose()
         }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }

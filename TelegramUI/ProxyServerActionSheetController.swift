@@ -16,9 +16,9 @@ public final class ProxyServerActionSheetController: ActionSheetController {
     
     private var isDismissed: Bool = false
     
-    convenience init(account: Account, server: ProxyServerSettings) {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        self.init(theme: presentationData.theme, strings: presentationData.strings, postbox: account.postbox, network: account.network, server: server, presentationData: account.telegramApplicationContext.presentationData)
+    convenience init(context: AccountContext, server: ProxyServerSettings) {
+        let presentationData = context.currentPresentationData.with { $0 }
+        self.init(theme: presentationData.theme, strings: context.presentationData.strings, postbox: context.account.postbox, network: context.account.network, server: server, presentationData: presentationData)
     }
     
     public init(theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, network: Network, server: ProxyServerSettings, presentationData: Signal<PresentationData, NoError>?) {

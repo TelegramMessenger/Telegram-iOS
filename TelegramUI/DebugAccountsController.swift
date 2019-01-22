@@ -95,17 +95,17 @@ private func debugAccountsControllerEntries(view: AccountRecordsView, presentati
     return entries
 }
 
-public func debugAccountsController(account: Account, accountManager: AccountManager) -> ViewController {
+public func debugAccountsController(context: AccountContext, accountManager: AccountManager) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     
-    let arguments = DebugAccountsControllerArguments(account: account, presentController: { controller, arguments in
+    let arguments = DebugAccountsControllerArguments(context: context, presentController: { controller, arguments in
         presentControllerImpl?(controller, arguments)
     }, switchAccount: { id in
         let _ = accountManager.transaction({ transaction -> Void in
             transaction.setCurrentId(id)
         }).start()
     }, loginNewAccount: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
@@ -132,7 +132,7 @@ public func debugAccountsController(account: Account, accountManager: AccountMan
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, accountManager.accountRecords())
+    let signal = combineLatest(context.presentationData, accountManager.accountRecords())
         |> map { presentationData, view -> (ItemListControllerState, (ItemListNodeState<DebugAccountsControllerEntry>, DebugAccountsControllerEntry.ItemGenerationArguments)) in
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Accounts"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
             let listState = ItemListNodeState(entries: debugAccountsControllerEntries(view: view, presentationData: presentationData), style: .blocks)
@@ -140,7 +140,7 @@ public func debugAccountsController(account: Account, accountManager: AccountMan
             return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }

@@ -16,7 +16,7 @@ final class WallpaperListPreviewController: ViewController {
         return self._ready
     }
     
-    private let account: Account
+    private let context: AccountContext
     private let source: WallpaperListSource
     
     private var presentationData: PresentationData
@@ -29,18 +29,18 @@ final class WallpaperListPreviewController: ViewController {
     
     var apply: ((WallpaperEntry, WallpaperPresentationOptions, CGRect?) -> Void)?
     
-    init(account: Account, source: WallpaperListSource) {
-        self.account = account
+    init(context: AccountContext, source: WallpaperListSource) {
+        self.context = context
         self.source = source
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -96,7 +96,7 @@ final class WallpaperListPreviewController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WallpaperListPreviewControllerNode(account: self.account, presentationData: self.presentationData, source: self.source, dismiss: { [weak self] in
+        self.displayNode = WallpaperListPreviewControllerNode(context: self.context, presentationData: self.presentationData, source: self.source, dismiss: { [weak self] in
             self?.dismiss()
         }, apply: { [weak self] wallpaper, mode, cropRect in
             guard let strongSelf = self else {
@@ -106,7 +106,7 @@ final class WallpaperListPreviewController: ViewController {
             switch wallpaper {
                 case let .wallpaper(wallpaper):
                     let completion: () -> Void = {
-                        let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in
+                        let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.context.account.postbox, { current in
                             return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                         })
                             |> deliverOnMainQueue).start(completed: {
@@ -114,9 +114,9 @@ final class WallpaperListPreviewController: ViewController {
                             })
                         
                         if case .wallpaper = strongSelf.source {
-                            let _ = saveWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
+                            let _ = saveWallpaper(account: strongSelf.context.account, wallpaper: wallpaper).start()
                         }
-                        let _ = installWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
+                        let _ = installWallpaper(account: strongSelf.context.account, wallpaper: wallpaper).start()
                     }
                     
                     if mode.contains(.blur) {
@@ -133,7 +133,7 @@ final class WallpaperListPreviewController: ViewController {
                         }
                         
                         if let resource = resource {
-                            let _ = strongSelf.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+                            let _ = strongSelf.context.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
                                 completion()
                             })
                         }
@@ -181,9 +181,9 @@ final class WallpaperListPreviewController: ViewController {
             var controller: ShareController?
             switch wallpaper {
                 case let .file(_, _, _, _, slug, _):
-                    controller = ShareController(account: account, subject: .url("https://t.me/bg/\(slug)"))
+                    controller = ShareController(context: context, subject: .url("https://t.me/bg/\(slug)"))
                 case let .color(color):
-                    controller = ShareController(account: account, subject: .url("https://t.me/bg/\(String(UInt32(bitPattern: color), radix: 16, uppercase: false).rightJustified(width: 6, pad: "0"))"))
+                    controller = ShareController(context: context, subject: .url("https://t.me/bg/\(String(UInt32(bitPattern: color), radix: 16, uppercase: false).rightJustified(width: 6, pad: "0"))"))
                 default:
                     break
             }

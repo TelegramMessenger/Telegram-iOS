@@ -43,17 +43,17 @@ final class OpenInOption {
     }
 }
 
-func availableOpenInOptions(applicationContext: TelegramApplicationContext, item: OpenInItem) -> [OpenInOption] {
-    return allOpenInOptions(applicationContext: applicationContext, item: item).filter { option in
+func availableOpenInOptions(context: AccountContext, item: OpenInItem) -> [OpenInOption] {
+    return allOpenInOptions(context: context, item: item).filter { option in
         if case let .other(_, _, scheme) = option.application {
-            return applicationContext.applicationBindings.canOpenUrl("\(scheme)://")
+            return context.applicationBindings.canOpenUrl("\(scheme)://")
         } else {
             return true
         }
     }
 }
 
-private func allOpenInOptions(applicationContext: TelegramApplicationContext, item: OpenInItem) -> [OpenInOption] {
+private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [OpenInOption] {
     var options: [OpenInOption] = []
     switch item {
         case let .url(url):

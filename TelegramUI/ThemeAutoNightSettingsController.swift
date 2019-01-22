@@ -321,7 +321,7 @@ private func areSettingsValid(_ settings: AutomaticThemeSwitchSetting) -> Bool {
     }
 }
 
-public func themeAutoNightSettingsController(account: Account) -> ViewController {
+public func themeAutoNightSettingsController(context: AccountContext) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     
@@ -331,7 +331,7 @@ public func themeAutoNightSettingsController(account: Account) -> ViewController
     let stagingSettingsPromise = ValuePromise<AutomaticThemeSwitchSetting?>(nil)
     let themeSettingsKey = ApplicationSpecificPreferencesKeys.presentationThemeSettings
     let localizationSettingsKey = PreferencesKeys.localizationSettings
-    let preferences = account.postbox.preferencesView(keys: [themeSettingsKey, localizationSettingsKey])
+    let preferences = context.account.postbox.preferencesView(keys: [themeSettingsKey, localizationSettingsKey])
     
     let updateLocationDisposable = MetaDisposable()
     actionsDisposable.add(updateLocationDisposable)
@@ -344,7 +344,7 @@ public func themeAutoNightSettingsController(account: Account) -> ViewController
             let updated = f(stagingSettings ?? settings.automaticThemeSwitchSetting)
             stagingSettingsPromise.set(updated)
             if areSettingsValid(updated) {
-                let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
+                let _ = updatePresentationThemeSettingsInteractively(postbox: context.account.postbox, { current in
                     var current = current
                     current.automaticThemeSwitchSetting = updated
                     return current
@@ -355,7 +355,7 @@ public func themeAutoNightSettingsController(account: Account) -> ViewController
     
     let forceUpdateLocation: () -> Void = {
         let locationCoordinates = Signal<(Double, Double), NoError> { subscriber in
-            return account.telegramApplicationContext.locationManager!.push(mode: DeviceLocationMode.precise, updated: { coordinate in
+            return context.locationManager!.push(mode: DeviceLocationMode.precise, updated: { coordinate in
                 subscriber.putNext((coordinate.latitude, coordinate.longitude))
                 subscriber.putCompletion()
             })
@@ -459,8 +459,8 @@ public func themeAutoNightSettingsController(account: Account) -> ViewController
                     break
             }
             
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(ThemeAutoNightTimeSelectionActionSheet(account: account, currentValue: currentValue, applyValue: { value in
+            let presentationData = context.currentPresentationData.with { $0 }
+            presentControllerImpl?(ThemeAutoNightTimeSelectionActionSheet(context: context, currentValue: currentValue, applyValue: { value in
                 guard let value = value else {
                     return
                 }
@@ -513,7 +513,7 @@ public func themeAutoNightSettingsController(account: Account) -> ViewController
         }
     })
     
-    let signal = combineLatest(account.telegramApplicationContext.presentationData, preferences, stagingSettingsPromise.get())
+    let signal = combineLatest(context.presentationData, preferences, stagingSettingsPromise.get())
     |> deliverOnMainQueue
     |> map { presentationData, preferences, stagingSettings -> (ItemListControllerState, (ItemListNodeState<ThemeAutoNightSettingsControllerEntry>, ThemeAutoNightSettingsControllerEntry.ItemGenerationArguments)) in
         let settings = (preferences.values[themeSettingsKey] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
@@ -527,7 +527,7 @@ public func themeAutoNightSettingsController(account: Account) -> ViewController
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }

@@ -679,7 +679,7 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
     return entries
 }
 
-public func notificationsAndSoundsController(account: Account, exceptionsList: NotificationExceptionsList?) -> ViewController {
+public func notificationsAndSoundsController(context: AccountContext, exceptionsList: NotificationExceptionsList?) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     
@@ -689,119 +689,119 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
         notificationExceptions.set(.single(value))
     }
     
-    let arguments = NotificationsAndSoundsArguments(account: account, presentController: { controller, arguments in
+    let arguments = NotificationsAndSoundsArguments(account: context.account, presentController: { controller, arguments in
         presentControllerImpl?(controller, arguments)
     }, pushController: { controller in
         pushControllerImpl?(controller)
     }, soundSelectionDisposable: MetaDisposable(), authorizeNotifications: {
-        let _ = (DeviceAccess.authorizationStatus(account: account, subject: .notifications)
+        let _ = (DeviceAccess.authorizationStatus(account: context.account, subject: .notifications)
         |> take(1)
         |> deliverOnMainQueue).start(next: { status in
             switch status {
                 case .notDetermined:
-                    DeviceAccess.authorizeAccess(to: .notifications, account: account)
+                    DeviceAccess.authorizeAccess(to: .notifications, account: context.account)
                 case .denied, .restricted:
-                    account.telegramApplicationContext.applicationBindings.openSettings()
+                    context.applicationBindings.openSettings()
                 case .unreachable:
-                    ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: account.postbox, value: Int32(Date().timeIntervalSince1970))
-                    account.telegramApplicationContext.applicationBindings.openSettings()
+                    ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: context.account.postbox, value: Int32(Date().timeIntervalSince1970))
+                    context.applicationBindings.openSettings()
                 default:
                     break
             }
         })
     }, suppressWarning: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(textAlertController(account: account, title: presentationData.strings.Notifications_PermissionsSuppressWarningTitle, text: presentationData.strings.Notifications_PermissionsSuppressWarningText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Notifications_PermissionsKeepDisabled, action: {
-            ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: account.postbox, value: Int32(Date().timeIntervalSince1970))
+        let presentationData = context.currentPresentationData.with { $0 }
+        presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Notifications_PermissionsSuppressWarningTitle, text: presentationData.strings.Notifications_PermissionsSuppressWarningText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Notifications_PermissionsKeepDisabled, action: {
+            ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: context.account.postbox, value: Int32(Date().timeIntervalSince1970))
         }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Notifications_PermissionsEnable, action: {
-            account.telegramApplicationContext.applicationBindings.openSettings()
+            context.applicationBindings.openSettings()
         })]), nil)
     }, updateMessageAlerts: { value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.privateChats.enabled = value
             return settings
         }).start()
     }, updateMessagePreviews: { value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.privateChats.displayPreviews = value
             return settings
         }).start()
     }, updateMessageSound: { value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.privateChats.sound = value
             return settings
         }).start()
     }, updateGroupAlerts: { value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.groupChats.enabled = value
             return settings
         }).start()
     }, updateGroupPreviews: { value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.groupChats.displayPreviews = value
             return settings
         }).start()
     }, updateGroupSound: {value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.groupChats.sound = value
             return settings
         }).start()
     }, updateChannelAlerts: { value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.channels.enabled = value
             return settings
         }).start()
     }, updateChannelPreviews: { value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.channels.displayPreviews = value
             return settings
         }).start()
     }, updateChannelSound: {value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.channels.sound = value
             return settings
         }).start()
     }, updateInAppSounds: { value in
-        let _ = updateInAppNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateInAppNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.playSounds = value
             return settings
         }).start()
     }, updateInAppVibration: { value in
-        let _ = updateInAppNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateInAppNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.vibrate = value
             return settings
         }).start()
     }, updateInAppPreviews: { value in
-        let _ = updateInAppNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateInAppNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.displayPreviews = value
             return settings
         }).start()
     }, updateDisplayNameOnLockscreen: { value in
-        let _ = updateInAppNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateInAppNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.displayNameOnLockscreen = value
             return settings
         }).start()
     }, updateTotalUnreadCountStyle: { value in
-        let _ = updateInAppNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateInAppNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.totalUnreadCountDisplayStyle = value ? .raw : .filtered
             return settings
         }).start()
     }, updateIncludeTag: { tag, value in
-        let _ = updateInAppNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateInAppNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             if !value {
                 settings.totalUnreadCountIncludeTags.remove(tag)
@@ -811,25 +811,25 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
             return settings
         }).start()
     }, updateTotalUnreadCountCategory: { value in
-        let _ = updateInAppNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateInAppNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.totalUnreadCountDisplayCategory = value ? .messages : .chats
             return settings
         }).start()
     }, resetNotifications: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.Notifications_Reset, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 
-                let modifyPeers = account.postbox.transaction { transaction -> Void in
+                let modifyPeers = context.account.postbox.transaction { transaction -> Void in
                     transaction.resetAllPeerNotificationSettings(TelegramPeerNotificationSettings.defaultSettings)
                 }
-                let updateGlobal = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { _ in
+                let updateGlobal = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { _ in
                     return GlobalNotificationSettingsSet.defaultSettings
                 })
-                let reset = resetPeerNotificationSettings(network: account.network)
+                let reset = resetPeerNotificationSettings(network: context.account.network)
                 let signal = combineLatest(modifyPeers, updateGlobal, reset)
                 let _ = signal.start()
             })
@@ -851,18 +851,18 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
             }
         })
     }, openAppSettings: {
-        account.telegramApplicationContext.applicationBindings.openSettings()
+        context.applicationBindings.openSettings()
     }, updateJoinedNotifications: { value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.contactsJoined = value
             return settings
         }).start()
     })
     
-    let preferences = account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications, ApplicationSpecificPreferencesKeys.inAppNotificationSettings])
+    let preferences = context.account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications, ApplicationSpecificPreferencesKeys.inAppNotificationSettings])
     
-    let exceptionsSignal = Signal<NotificationExceptionsList?, NoError>.single(exceptionsList) |> then(notificationExceptionsList(network: account.network) |> map(Optional.init))
+    let exceptionsSignal = Signal<NotificationExceptionsList?, NoError>.single(exceptionsList) |> then(notificationExceptionsList(network: context.account.network) |> map(Optional.init))
     
     notificationExceptions.set(exceptionsSignal |> map { list -> (NotificationExceptionMode, NotificationExceptionMode, NotificationExceptionMode) in
         var users:[PeerId : NotificationExceptionWrapper] = [:]
@@ -870,7 +870,7 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
         var channels:[PeerId : NotificationExceptionWrapper] = [:]
         if let list = list {
             for (key, value) in list.settings {
-                if  let peer = list.peers[key], !peer.debugDisplayTitle.isEmpty, peer.id != account.peerId {
+                if  let peer = list.peers[key], !peer.debugDisplayTitle.isEmpty, peer.id != context.account.peerId {
                     switch value.muteState {
                     case .default:
                         switch value.messageSound {
@@ -911,7 +911,7 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
     if #available(iOSApplicationExtension 10.0, *) {
         let warningKey = PostboxViewKey.noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())
         notificationsWarningSuppressed.set(.single(true)
-        |> then(account.postbox.combinedView(keys: [warningKey])
+        |> then(context.account.postbox.combinedView(keys: [warningKey])
             |> map { combined -> Bool in
                 let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                 if let timestamp = timestamp, timestamp > 0 {
@@ -922,7 +922,7 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
             }))
     }
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, preferences, notificationExceptions.get(), DeviceAccess.authorizationStatus(account: account, subject: .notifications), notificationsWarningSuppressed.get())
+    let signal = combineLatest(context.presentationData, preferences, notificationExceptions.get(), DeviceAccess.authorizationStatus(account: context.account, subject: .notifications), notificationsWarningSuppressed.get())
         |> map { presentationData, view, exceptions, authorizationStatus, warningSuppressed -> (ItemListControllerState, (ItemListNodeState<NotificationsAndSoundsEntry>, NotificationsAndSoundsEntry.ItemGenerationArguments)) in
             
             let viewSettings: GlobalNotificationSettingsSet
@@ -945,7 +945,7 @@ public func notificationsAndSoundsController(account: Account, exceptionsList: N
             return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }

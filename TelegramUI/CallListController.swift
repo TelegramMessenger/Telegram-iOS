@@ -20,7 +20,7 @@ public final class CallListController: ViewController {
         return self._ready
     }
     
-    private let account: Account
+    private let context: AccountContext
     private let mode: CallListControllerMode
     
     private var presentationData: PresentationData
@@ -35,10 +35,10 @@ public final class CallListController: ViewController {
     
     private let createActionDisposable = MetaDisposable()
     
-    public init(account: Account, mode: CallListControllerMode) {
-        self.account = account
+    public init(context: AccountContext, mode: CallListControllerMode) {
+        self.context = context
         self.mode = mode
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         self.segmentedTitleView = ItemListControllerSegmentedTitleView(segments: [self.presentationData.strings.Calls_All, self.presentationData.strings.Calls_Missed], index: 0, color: self.presentationData.theme.rootController.navigationBar.accentTextColor)
         
@@ -67,7 +67,7 @@ public final class CallListController: ViewController {
             }
         }
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -136,17 +136,17 @@ public final class CallListController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = CallListControllerNode(account: self.account, mode: self.mode, presentationData: self.presentationData, call: { [weak self] peerId in
+        self.displayNode = CallListControllerNode(context: self.context, mode: self.mode, presentationData: self.presentationData, call: { [weak self] peerId in
             if let strongSelf = self {
                 strongSelf.call(peerId)
             }
         }, openInfo: { [weak self] peerId, messages in
             if let strongSelf = self {
-                let _ = (strongSelf.account.postbox.loadedPeerWithId(peerId)
+                let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peerId)
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { peer in
                         if let strongSelf = self {
-                            let infoController = userInfoController(account: strongSelf.account, peerId: peer.id, mode: .calls(messages: messages))
+                            let infoController = userInfoController(context: strongSelf.context, peerId: peer.id, mode: .calls(messages: messages))
                             (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                         }
                     })
@@ -193,7 +193,7 @@ public final class CallListController: ViewController {
     }
     
     @objc func callPressed() {
-        let controller = ContactSelectionController(account: self.account, title: { $0.Calls_NewCall })
+        let controller = ContactSelectionController(context: self.context, title: { $0.Calls_NewCall })
         self.createActionDisposable.set((controller.result
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak controller, weak self] peer in
@@ -201,7 +201,7 @@ public final class CallListController: ViewController {
                 if let strongSelf = self, let contactPeer = peer, case let .peer(peer, _) = contactPeer {
                     strongSelf.call(peer.id, began: {
                         if let strongSelf = self {
-                            if let hasOngoingCall = strongSelf.account.telegramApplicationContext.hasOngoingCall {
+                            if let hasOngoingCall = strongSelf.context.hasOngoingCall {
                                 let _ = (hasOngoingCall
                                     |> filter { $0 }
                                     |> timeout(1.0, queue: Queue.mainQueue(), alternate: .single(true))
@@ -250,7 +250,7 @@ public final class CallListController: ViewController {
     }
     
     private func call(_ peerId: PeerId, began: (() -> Void)? = nil) {
-        self.peerViewDisposable.set((self.account.viewTracker.peerView(peerId)
+        self.peerViewDisposable.set((self.context.account.viewTracker.peerView(peerId)
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] view in
             if let strongSelf = self {
@@ -259,27 +259,27 @@ public final class CallListController: ViewController {
                 }
                 
                 if let cachedUserData = view.cachedData as? CachedUserData, cachedUserData.callsPrivate {
-                    let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    let presentationData = strongSelf.context.currentPresentationData.with { $0 }
                     
                     strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     return
                 }
             
-                let callResult = strongSelf.account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: false)
+                let callResult = strongSelf.context.callManager?.requestCall(peerId: peerId, endCurrentIfAny: false)
                 if let callResult = callResult {
                     if case let .alreadyInProgress(currentPeerId) = callResult {
                         if currentPeerId == peerId {
                             began?()
-                            strongSelf.account.telegramApplicationContext.navigateToCurrentCall?()
+                            strongSelf.context.navigateToCurrentCall?()
                         } else {
                             let presentationData = strongSelf.presentationData
-                            let _ = (strongSelf.account.postbox.transaction { transaction -> (Peer?, Peer?) in
+                            let _ = (strongSelf.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
                                 return (transaction.getPeer(peerId), transaction.getPeer(currentPeerId))
                                 } |> deliverOnMainQueue).start(next: { [weak self] peer, current in
                                     if let strongSelf = self, let peer = peer, let current = current {
                                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                             if let strongSelf = self {
-                                                let _ = strongSelf.account.telegramApplicationContext.callManager?.requestCall(peerId: peerId, endCurrentIfAny: true)
+                                                let _ = strongSelf.context.callManager?.requestCall(peerId: peerId, endCurrentIfAny: true)
                                                 began?()
                                             }
                                         })]), in: .window(.root))

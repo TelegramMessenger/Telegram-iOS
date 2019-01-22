@@ -101,7 +101,7 @@ private func trendingPaneEntries(trendingEntries: [FeaturedStickerPackItem], ins
 }
 
 final class ChatMediaInputTrendingPane: ChatMediaInputPane {
-    private let account: Account
+    private let context: AccountContext
     private let controllerInteraction: ChatControllerInteraction
     private let getItemIsPreviewed: (StickerPackItem) -> Bool
     
@@ -121,8 +121,8 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     
     var scrollingInitiated: (() -> Void)?
     
-    init(account: Account, controllerInteraction: ChatControllerInteraction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
-        self.account = account
+    init(context: AccountContext, controllerInteraction: ChatControllerInteraction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+        self.context = context
         self.controllerInteraction = controllerInteraction
         self.getItemIsPreviewed = getItemIsPreviewed
         
@@ -149,14 +149,14 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         
         let interaction = TrendingPaneInteraction(installPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
-                let _ = (loadedStickerPack(postbox: strongSelf.account.postbox, network: strongSelf.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+                let _ = (loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
                 |> mapToSignal { result -> Signal<Void, NoError> in
                     switch result {
                         case let .result(info, items, installed):
                             if installed {
                                 return .complete()
                             } else {
-                                return addStickerPackInteractively(postbox: strongSelf.account.postbox, info: info, items: items)
+                                return addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
                             }
                         case .fetching:
                             break
@@ -166,7 +166,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                     return .complete()
                 } |> deliverOnMainQueue).start(completed: {
                     if let strongSelf = self {
-                        let presentationData = strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        let presentationData = strongSelf.context.currentPresentationData.with { $0 }
                         strongSelf.controllerInteraction.presentController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
                     }
                 })
@@ -174,7 +174,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         }, openPack: { [weak self] info in
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
                 strongSelf.view.window?.endEditing(true)
-                let controller = StickerPackPreviewController(account: strongSelf.account, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController())
+                let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController())
                 controller.sendSticker = { fileReference in
                     if let strongSelf = self {
                         strongSelf.controllerInteraction.sendSticker(fileReference, false)
@@ -185,8 +185,8 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         }, getItemIsPreviewed: self.getItemIsPreviewed)
         
         let previousEntries = Atomic<[TrendingPaneEntry]?>(value: nil)
-        let account = self.account
-        self.disposable = (combineLatest(account.viewTracker.featuredStickerPacks(), account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]), account.telegramApplicationContext.presentationData)
+        let context = self.context
+        self.disposable = (combineLatest(context.account.viewTracker.featuredStickerPacks(), context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]), context.presentationData)
         |> map { trendingEntries, view, presentationData -> TrendingPaneTransition in
             var installedPacks = Set<ItemCollectionId>()
             if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionInfosView {

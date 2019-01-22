@@ -101,7 +101,7 @@ class AvatarGalleryController: ViewController {
         return self.displayNode as! GalleryControllerNode
     }
     
-    private let account: Account
+    private let context: AccountContext
     private let peer: Peer
     
     private var presentationData: PresentationData
@@ -132,10 +132,10 @@ class AvatarGalleryController: ViewController {
     
     private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
     
-    init(account: Account, peer: Peer, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, synchronousLoad: Bool = false) {
-        self.account = account
+    init(context: AccountContext, peer: Peer, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, synchronousLoad: Bool = false) {
+        self.context = context
         self.peer = peer
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         self.replaceRootController = replaceRootController
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
@@ -149,7 +149,7 @@ class AvatarGalleryController: ViewController {
         if let remoteEntries = remoteEntries {
             remoteEntriesSignal = remoteEntries.get()
         } else {
-            remoteEntriesSignal = fetchedAvatarGalleryEntries(account: account, peer: peer)
+            remoteEntriesSignal = fetchedAvatarGalleryEntries(account: context.account, peer: peer)
         }
         
         let entriesSignal: Signal<[AvatarGalleryEntry], NoError> = .single(initialAvatarGalleryEntries(peer: peer)) |> then(remoteEntriesSignal)
@@ -171,7 +171,7 @@ class AvatarGalleryController: ViewController {
                     strongSelf.entries = entries
                     strongSelf.centralEntryIndex = 0
                     if strongSelf.isViewLoaded {
-                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ entry in PeerAvatarImageGalleryItem(account: account, peer: peer, presentationData: presentationData, entry: entry, delete: strongSelf.peer.id == strongSelf.account.peerId ? {
+                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ entry in PeerAvatarImageGalleryItem(context: context, peer: peer, presentationData: presentationData, entry: entry, delete: strongSelf.peer.id == strongSelf.context.account.peerId ? {
                             self?.deleteEntry(entry)
                             } : nil) }), centralItemIndex: 0, keepFirst: true)
                         
@@ -307,7 +307,7 @@ class AvatarGalleryController: ViewController {
         }
         
         let presentationData = self.presentationData
-        self.galleryNode.pager.replaceItems(self.entries.map({ entry in PeerAvatarImageGalleryItem(account: self.account, peer: peer, presentationData: presentationData, entry: entry, delete: self.peer.id == self.account.peerId ? { [weak self] in
+        self.galleryNode.pager.replaceItems(self.entries.map({ entry in PeerAvatarImageGalleryItem(context: self.context, peer: peer, presentationData: presentationData, entry: entry, delete: self.peer.id == self.context.account.peerId ? { [weak self] in
             self?.deleteEntry(entry)
             } : nil) }), centralItemIndex: self.centralEntryIndex)
         
@@ -394,7 +394,7 @@ class AvatarGalleryController: ViewController {
                 break
             case let .image(reference, _, _, _, _):
                 if let reference = reference {
-                    let _ = removeAccountPhoto(network: self.account.network, reference: reference).start()
+                    let _ = removeAccountPhoto(network: self.context.account.network, reference: reference).start()
                 }
                 if entry == self.entries.first {
                     self.dismiss(forceAway: true)

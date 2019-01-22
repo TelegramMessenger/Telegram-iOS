@@ -110,7 +110,7 @@ private func groupPreHistorySetupEntries(isSupergroup: Bool, presentationData: P
     return entries
 }
 
-public func groupPreHistorySetupController(account: Account, peerId: PeerId, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void) -> ViewController {
+public func groupPreHistorySetupController(context: AccountContext, peerId: PeerId, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void) -> ViewController {
     let statePromise = ValuePromise(GroupPreHistorySetupState(), ignoreRepeated: true)
     let stateValue = Atomic(value: GroupPreHistorySetupState())
     let updateState: ((GroupPreHistorySetupState) -> GroupPreHistorySetupState) -> Void = { f in
@@ -132,7 +132,7 @@ public func groupPreHistorySetupController(account: Account, peerId: PeerId, upg
         }
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), account.viewTracker.peerView(peerId))
+    let signal = combineLatest(context.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId))
     |> deliverOnMainQueue
     |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<GroupPreHistorySetupEntry>, GroupPreHistorySetupEntry.ItemGenerationArguments)) in
         let defaultValue: Bool = (view.cachedData as? CachedChannelData)?.flags.contains(.preHistoryEnabled) ?? false
@@ -153,7 +153,7 @@ public func groupPreHistorySetupController(account: Account, peerId: PeerId, upg
                 }
                 if let value = value, value != defaultValue {
                     if peerId.namespace == Namespaces.Peer.CloudGroup {
-                        let signal = convertGroupToSupergroup(account: account, peerId: peerId)
+                        let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
                         |> map(Optional.init)
                         |> `catch` { _ -> Signal<PeerId?, NoError> in
                             return .single(nil)
@@ -162,7 +162,7 @@ public func groupPreHistorySetupController(account: Account, peerId: PeerId, upg
                             guard let upgradedPeerId = upgradedPeerId else {
                                 return .single(nil)
                             }
-                            return updateChannelHistoryAvailabilitySettingsInteractively(postbox: account.postbox, network: account.network, accountStateManager: account.stateManager, peerId: upgradedPeerId, historyAvailableForNewMembers: value)
+                            return updateChannelHistoryAvailabilitySettingsInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: upgradedPeerId, historyAvailableForNewMembers: value)
                             |> mapToSignal { _ -> Signal<PeerId?, NoError> in
                                 return .complete()
                             }
@@ -178,7 +178,7 @@ public func groupPreHistorySetupController(account: Account, peerId: PeerId, upg
                             }
                         }))
                     } else {
-                        applyDisposable.set((updateChannelHistoryAvailabilitySettingsInteractively(postbox: account.postbox, network: account.network, accountStateManager: account.stateManager, peerId: peerId, historyAvailableForNewMembers: value)
+                        applyDisposable.set((updateChannelHistoryAvailabilitySettingsInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: peerId, historyAvailableForNewMembers: value)
                         |> deliverOnMainQueue).start(completed: {
                             dismissImpl?()
                         }))
@@ -198,7 +198,7 @@ public func groupPreHistorySetupController(account: Account, peerId: PeerId, upg
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()

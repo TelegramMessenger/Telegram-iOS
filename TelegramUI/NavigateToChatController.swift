@@ -9,7 +9,7 @@ public enum NavigateToChatKeepStack {
     case never
 }
 
-public func navigateToChatController(navigationController: NavigationController, chatController: ChatController? = nil, account: Account, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, keepStack: NavigateToChatKeepStack = .default, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, animated: Bool = true, completion: @escaping () -> Void = {}) {
+public func navigateToChatController(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, keepStack: NavigateToChatKeepStack = .default, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, animated: Bool = true, completion: @escaping () -> Void = {}) {
     var found = false
     var isFirst = true
     for controller in navigationController.viewControllers.reversed() {
@@ -37,13 +37,13 @@ public func navigateToChatController(navigationController: NavigationController,
         if let chatController = chatController {
             controller = chatController
         } else {
-            controller = ChatController(account: account, chatLocation: chatLocation, messageId: messageId, botStart: botStart)
+            controller = ChatController(context: context, chatLocation: chatLocation, messageId: messageId, botStart: botStart)
         }
         controller.purposefulAction = purposefulAction
         let resolvedKeepStack: Bool
         switch keepStack {
             case .default:
-                resolvedKeepStack = account.telegramApplicationContext.immediateExperimentalUISettings.keepChatNavigationStack
+                resolvedKeepStack = context.immediateExperimentalUISettings.keepChatNavigationStack
             case .always:
                 resolvedKeepStack = true
             case .never:

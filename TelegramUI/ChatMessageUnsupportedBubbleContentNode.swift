@@ -33,7 +33,7 @@ final class ChatMessageUnsupportedBubbleContentNode: ChatMessageBubbleContentNod
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let message = item.message
-                let incoming = message.effectivelyIncoming(item.account.peerId)
+                let incoming = message.effectivelyIncoming(item.context.account.peerId)
                 let presentationData = item.presentationData
                 let insets = UIEdgeInsets(top: 0.0, left: 12.0, bottom: 9.0, right: 12.0)
                 

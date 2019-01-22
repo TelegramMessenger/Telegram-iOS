@@ -34,7 +34,7 @@ class ThemeGalleryController: ViewController {
         return self.displayNode as! GalleryControllerNode
     }
     
-    private let account: Account
+    private let context: AccountContext
     
     private let _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
@@ -65,9 +65,9 @@ class ThemeGalleryController: ViewController {
         return self._hiddenMedia.get()
     }
     
-    init(account: Account, wallpapers: [TelegramWallpaper], at centralWallpaper: TelegramWallpaper) {
+    init(context: AccountContext, wallpapers: [TelegramWallpaper], at centralWallpaper: TelegramWallpaper) {
         self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
         
@@ -83,7 +83,7 @@ class ThemeGalleryController: ViewController {
                 strongSelf.entries = entries
                 strongSelf.centralEntryIndex = wallpapers.index(of: centralWallpaper)!
                 if strongSelf.isViewLoaded {
-                    strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ ThemeGalleryItem(account: account, entry: $0) }), centralItemIndex: strongSelf.centralEntryIndex, keepFirst: true)
+                    strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ ThemeGalleryItem(context: context, entry: $0) }), centralItemIndex: strongSelf.centralEntryIndex, keepFirst: true)
                     
                     let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
                         strongSelf?.didSetReady = true
@@ -93,7 +93,7 @@ class ThemeGalleryController: ViewController {
             }
         }))
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -202,7 +202,7 @@ class ThemeGalleryController: ViewController {
         self.galleryNode.backgroundNode.isOpaque = false
         self.galleryNode.isBackgroundExtendedOverNavigationBar = true
         
-        let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = self.context.currentPresentationData.with { $0 }
         let toolbarNode = ThemeGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings)
         self.toolbarNode = toolbarNode
         self.galleryNode.addSubnode(toolbarNode)
@@ -219,7 +219,7 @@ class ThemeGalleryController: ViewController {
                             case let .wallpaper(value):
                                 wallpaper = value
                         }
-                        let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in                            
+                        let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.context.account.postbox, { current in
                             return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: [], theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                         }) |> deliverOnMainQueue).start(completed: {
                             self?.dismiss(forceAway: true)
@@ -254,7 +254,7 @@ class ThemeGalleryController: ViewController {
         self.validLayout = (layout, 0.0)
         
         if replace {
-            self.galleryNode.pager.replaceItems(self.entries.map({ ThemeGalleryItem(account: self.account, entry: $0) }), centralItemIndex: self.centralEntryIndex)
+            self.galleryNode.pager.replaceItems(self.entries.map({ ThemeGalleryItem(context: self.context, entry: $0) }), centralItemIndex: self.centralEntryIndex)
         }
     }
 }
