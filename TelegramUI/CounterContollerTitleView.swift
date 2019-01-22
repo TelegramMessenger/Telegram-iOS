@@ -15,7 +15,7 @@ final class CounterContollerTitleView: UIView {
     var title: CounterContollerTitle = CounterContollerTitle(title: "", counter: "") {
         didSet {
             if self.title != oldValue {
-                self.titleNode.attributedText = NSAttributedString(string: self.title.title, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: self.title.title, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                 self.subtitleNode.attributedText = NSAttributedString(string: self.title.counter, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                 
                 self.setNeedsLayout()

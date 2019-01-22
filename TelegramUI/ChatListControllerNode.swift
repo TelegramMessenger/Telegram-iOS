@@ -153,7 +153,7 @@ final class ChatListControllerNode: ASDisplayNode {
             listViewCurve = .Spring(duration: duration)
         } else {
             listViewCurve = .Default(duration: duration)
-        }
+        } 
         
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve)
         

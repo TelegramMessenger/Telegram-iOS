@@ -547,6 +547,7 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
             } else if parsedUrl.host == "bg" {
                 if let components = URLComponents(string: "/?" + query) {
                     var parameter: String?
+                    var mode = ""
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
@@ -554,12 +555,14 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
                                     parameter = value
                                 } else if queryItem.name == "color" {
                                     parameter = value
+                                } else if queryItem.name == "mode" {
+                                    mode = "?mode=\(value)"
                                 }
                             }
                         }
                     }
                     if let parameter = parameter {
-                        convertedUrl = "https://t.me/bg/\(parameter)"
+                        convertedUrl = "https://t.me/bg/\(parameter)\(mode)"
                     }
                 }
             }

@@ -86,7 +86,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     sizeCalculation = .unconstrained
             }
             
-            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData.theme.theme, item.presentationData.strings, item.message, selectedMedia!, automaticDownload, item.associatedData.automaticDownloadPeerType, item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs, sizeCalculation, layoutConstants)
+            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData.theme.theme, item.presentationData.strings, item.message, selectedMedia!, automaticDownload, item.associatedData.automaticDownloadPeerType, item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs, sizeCalculation, layoutConstants, .aspectFit)
             
             var forceFullCorners = false
             if let media = selectedMedia as? TelegramMediaFile, media.isAnimated {

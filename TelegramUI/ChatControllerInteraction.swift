@@ -142,4 +142,24 @@ public final class ChatControllerInteraction {
         
         self.pollActionState = pollActionState
     }
+    
+    static var `default`: ChatControllerInteraction {
+        return ChatControllerInteraction(openMessage: { _, _ in
+            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openWallpaper: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+        }, presentController: { _, _ in }, navigationController: {
+            return nil
+        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
+        }, canSetupReply: { _ in
+            return false
+        }, navigateToFirstDateMessage: { _ in
+        }, requestRedeliveryOfFailedMessages: { _ in
+        }, addContact: { _ in
+        }, rateCall: { _, _ in
+        }, requestSelectMessagePollOption: { _, _ in
+        }, openAppStorePage: {
+        }, requestMessageUpdate: { _ in
+        }, cancelInteractiveKeyboardGestures: {
+        }, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings.defaultSettings,
+           pollActionState: ChatInterfacePollActionState())
+    }
 }

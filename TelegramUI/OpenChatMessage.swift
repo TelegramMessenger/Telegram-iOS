@@ -409,14 +409,14 @@ func openChatWallpaper(context: AccountContext, message: Message, present: @esca
                 if case let .wallpaper(parameter) = resolvedUrl {
                     let source: WallpaperListSource
                     switch parameter {
-                        case let .slug(slug):
-                            source = .slug(slug, content.file)
+                        case let .slug(slug, options):
+                            source = .slug(slug, content.file, options)
                         case let .color(color):
-                            source = .wallpaper(.color(Int32(color.rgb)))
+                            source = .wallpaper(.color(Int32(color.rgb)), nil)
                     }
                     
-                    let controller = WallpaperListPreviewController(context: context, source: source)
-                    present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    let controller = WallpaperGalleryController(context: context, source: source)
+                    present(controller, nil)
                 }
             })
         }

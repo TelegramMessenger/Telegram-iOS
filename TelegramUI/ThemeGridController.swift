@@ -64,10 +64,10 @@ final class ThemeGridController: ViewController {
             }
         })
         
-//        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search, activate: { [weak self] in
-//            self?.activateSearch()
-//        })
-//        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search, activate: { [weak self] in
+            self?.activateSearch()
+        })
+        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -84,11 +84,11 @@ final class ThemeGridController: ViewController {
         
         if let isEmpty = self.isEmpty, isEmpty {
         } else {
-//            if self.editingMode {
-//                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
-//            } else {
-//                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
-//            }
+            if self.editingMode {
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+            } else {
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+            }
         }
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
@@ -104,18 +104,20 @@ final class ThemeGridController: ViewController {
         self.displayNode = ThemeGridControllerNode(context: self.context, presentationData: self.presentationData, presentPreviewController: { [weak self] source in
             if let strongSelf = self {
                 let controller = WallpaperGalleryController(context: strongSelf.context, source: source)
+                controller.apply = { [weak self, weak controller] wallpaper, mode, cropRect in
+                    if let strongSelf = self {
+                        strongSelf.uploadCustomWallpaper(wallpaper, mode: mode, cropRect: cropRect, completion: { [weak self, weak controller] in
+                            if let strongSelf = self {
+                                strongSelf.deactivateSearch(animated: false)
+                                strongSelf.controllerNode.scrollToTop(animated: false)
+                            }
+                            if let controller = controller {
+                                controller.dismiss(forceAway: true)
+                            }
+                        })
+                    }
+                }
                 self?.present(controller, in: .window(.root), with: nil, blockInteraction: true)
-//                let controller = WallpaperListPreviewController(account: strongSelf.account, source: source)
-//                controller.apply = { [weak self, weak controller] wallpaper, mode, cropRect in
-//                    if let strongSelf = self {
-//                        strongSelf.uploadCustomWallpaper(wallpaper, mode: mode, cropRect: cropRect)
-//                        if case .wallpaper = wallpaper {
-//                        } else if let controller = controller {
-//                            controller.dismiss()
-//                        }
-//                    }
-//                }
-//                self?.present(controller, in: .window(.root), with: nil, blockInteraction: true)
             }
         }, presentGallery: { [weak self] in
             if let strongSelf = self {
@@ -127,15 +129,15 @@ final class ThemeGridController: ViewController {
                         let controller = generator(legacyController.context)
                         legacyController.bind(controller: controller)
                         legacyController.deferScreenEdgeGestures = [.top]
-                        controller.selectionBlock = { [weak self, weak legacyController] asset, thumbnailImage in
+                        controller.selectionBlock = { [weak self, weak legacyController] asset, _ in
                             if let strongSelf = self, let asset = asset {
-                                let controller = WallpaperListPreviewController(context: strongSelf.context, source: .asset(asset.backingAsset, thumbnailImage))
+                                let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset.backingAsset))
                                 controller.apply = { [weak self, weak legacyController, weak controller] wallpaper, mode, cropRect in
                                     if let strongSelf = self, let legacyController = legacyController, let controller = controller {
                                         strongSelf.uploadCustomWallpaper(wallpaper, mode: mode, cropRect: cropRect, completion: { [weak legacyController, weak controller] in
                                             if let legacyController = legacyController, let controller = controller {
                                                 legacyController.dismiss()
-                                                controller.dismiss()
+                                                controller.dismiss(forceAway: true)
                                             }
                                         })
                                     }
@@ -165,11 +167,11 @@ final class ThemeGridController: ViewController {
                     if empty {
                         strongSelf.navigationItem.setRightBarButton(nil, animated: true)
                     } else {
-//                        if strongSelf.editingMode {
-//                            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed))
-//                        } else {
-//                            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed))
-//                        }
+                        if strongSelf.editingMode {
+                            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed))
+                        } else {
+                            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed))
+                        }
                     }
                 }
             }
@@ -178,11 +180,20 @@ final class ThemeGridController: ViewController {
                 let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                 var items: [ActionSheetItem] = []
                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Wallpaper_DeleteConfirmation(Int32(wallpapers.count)), color: .destructive, action: { [weak self, weak actionSheet] in
+   
                     actionSheet?.dismissAnimated()
                     completed()
                     
                     guard let strongSelf = self else {
                         return
+                    }
+                    for wallpaper in wallpapers {
+                        if wallpaper == strongSelf.presentationData.chatWallpaper {
+                            let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.context.account.postbox, { current in
+                                return PresentationThemeSettings(chatWallpaper: .builtin, chatWallpaperOptions: [], theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                            })).start()
+                            break
+                        }
                     }
                     
                     for wallpaper in wallpapers {
@@ -217,34 +228,30 @@ final class ThemeGridController: ViewController {
             self?.deactivateSearch(animated: true)
         }
         
-        self.controllerNode.gridNode.scrollingCompleted = {
-            
+        self.controllerNode.gridNode.visibleContentOffsetChanged = { [weak self] offset in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                searchContentNode.updateGridVisibleContentOffset(offset)
+            }
         }
-//        self.controllerNode.gridNode.scroll = { [weak self] offset in
-//            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
-//                searchContentNode.updateListVisibleContentOffset(offset)
-//            }
-//        }
-//
-//        self.controllerNode.gridNode.scrollingCompleted = { [weak self] in
-//            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
-//                return fixNavigationSearchableListNodeScrolling(listView, searchNode: searchContentNode)
-//            } else {
-//                return false
-//            }
-//        }
+
+        self.controllerNode.gridNode.scrollingCompleted = { [weak self] in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                let _ = fixNavigationSearchableGridNodeScrolling(strongSelf.controllerNode.gridNode, searchNode: searchContentNode)
+            }
+        }
         
         self._ready.set(self.controllerNode.ready.get())
         
         self.displayNodeDidLoad()
     }
     
-    private func uploadCustomWallpaper(_ wallpaper: WallpaperEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, completion: @escaping () -> Void) {
+    private func uploadCustomWallpaper(_ wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, completion: @escaping () -> Void) {
         let imageSignal: Signal<UIImage, NoError>
         switch wallpaper {
             case .wallpaper:
                 imageSignal = .complete()
-            case let .asset(asset, _):
+                completion()
+            case let .asset(asset):
                 imageSignal = fetchPhotoLibraryImage(localIdentifier: asset.localIdentifier, thumbnail: false)
                 |> filter { value in
                     return !(value?.1 ?? true)
@@ -291,44 +298,53 @@ final class ThemeGridController: ViewController {
             
             let finalCropRect: CGRect
             if let cropRect = cropRect {
-                finalCropRect = cropRect.insetBy(dx: -16.0, dy: 0.0)
+                finalCropRect = cropRect
             } else {
-                var screenSize = TGScreenSize()
-                screenSize.width += 32.0
+                let screenSize = TGScreenSize()
                 let fittedSize = TGScaleToFit(screenSize, image.size)
                 finalCropRect = CGRect(x: (image.size.width - fittedSize.width) / 2.0, y: (image.size.height - fittedSize.height) / 2.0, width: fittedSize.width, height: fittedSize.height)
             }
-        
-            croppedImage = TGPhotoEditorCrop(image, nil, .up, 0.0, finalCropRect, false, CGSize(width: 2048.0, height: 2048.0), image.size, false)
+            croppedImage = TGPhotoEditorCrop(image, nil, .up, 0.0, finalCropRect, false, CGSize(width: 1440.0, height: 2960.0), image.size, true)
             
-            if let data = UIImageJPEGRepresentation(croppedImage, 0.85) {
+            let thumbnailDimensions = finalCropRect.size.fitted(CGSize(width: 320.0, height: 320.0))
+            let thumbnailImage = generateScaledImage(image: croppedImage, size: thumbnailDimensions, scale: 1.0)
+            
+            if let data = UIImageJPEGRepresentation(croppedImage, 0.8), let thumbnailImage = thumbnailImage, let thumbnailData = UIImageJPEGRepresentation(thumbnailImage, 0.4) {
+                let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
+                self.context.account.postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
+                
                 let resource = LocalFileMediaResource(fileId: arc4random64())
                 self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                 
                 let account = self.context.account
-                let updateWallpaper: (TelegramWallpaper) -> Void = { wallpaper in
+                let updateWallpaper: (TelegramWallpaper) -> Void = { [weak self] wallpaper in
                     let _ = (updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
                         return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                     })).start()
+                    
+                    if let strongSelf = self, case .file = wallpaper {
+                        strongSelf.controllerNode.updateWallpapers()
+                    }
                 }
                 
                 let apply: () -> Void = {
-                    let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: croppedImage.size, resource: resource)])
+                    let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: thumbnailDimensions, resource: thumbnailResource), TelegramMediaImageRepresentation(dimensions: croppedImage.size, resource: resource)])
                     updateWallpaper(wallpaper)
                     DispatchQueue.main.async {
                         completion()
                     }
-//                    let _ = uploadWallpaper(account: account, resource: resource).start(next: { status in
-//                        if case let .complete(wallpaper) = status {
-//                            if mode.contains(.blur), case let .file(_, _, _, _, _, file) = wallpaper {
-//                                let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
-//                                    updateWallpaper(wallpaper)
-//                                })
-//                            } else {
-//                                updateWallpaper(wallpaper)
-//                            }
-//                        }
-//                    }).start()
+                    
+                    let _ = uploadWallpaper(account: account, resource: resource).start(next: { status in
+                        if case let .complete(wallpaper) = status {
+                            if mode.contains(.blur), case let .file(_, _, _, _, _, file) = wallpaper {
+                                let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+                                    updateWallpaper(wallpaper)
+                                })
+                            } else {
+                                updateWallpaper(wallpaper)
+                            }
+                        }
+                    })
                 }
                 
                 if mode.contains(.blur) {

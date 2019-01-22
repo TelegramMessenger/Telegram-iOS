@@ -242,7 +242,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         self.presentationData = context.currentPresentationData.with { $0 }
         self.automaticMediaDownloadSettings = context.currentAutomaticMediaDownloadSettings.with { $0 }
         
-        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, chatWallpaperMode: self.presentationData.chatWallpaperMode, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, fontSize: self.presentationData.fontSize, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation)
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, chatWallpaperMode: self.presentationData.chatWallpaperOptions, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, fontSize: self.presentationData.fontSize, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation)
         
         var mediaAccessoryPanelVisibility = MediaAccessoryPanelVisibility.none
         if case .standard = mode {
@@ -1098,9 +1098,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }, rateCall: { [weak self] message, callId in
             if let strongSelf = self {
-                let controller = callRatingController(context: strongSelf.context, callId: callId, present: { [weak self] controller in
+                let controller = callRatingController(context: strongSelf.context, callId: callId, present: { [weak self] c, a in
                     if let strongSelf = self {
-                        strongSelf.present(controller, in: .window(.root))
+                        strongSelf.present(c, in: .window(.root), with: a)
                     }
                 })
                 strongSelf.present(controller, in: .window(.root))
@@ -1658,7 +1658,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             state = state.updatedTheme(self.presentationData.theme)
             state = state.updatedStrings(self.presentationData.strings)
             state = state.updatedDateTimeFormat(self.presentationData.dateTimeFormat)
-            state = state.updatedChatWallpaper(self.presentationData.chatWallpaper, mode: self.presentationData.chatWallpaperMode)
+            state = state.updatedChatWallpaper(self.presentationData.chatWallpaper, mode: self.presentationData.chatWallpaperOptions)
             return state
         })
     }
@@ -5940,9 +5940,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             
             if true {
                 inputShortcuts.append(KeyShortcut(input: UIKeyInputUpArrow, action: { [weak self] in
-                    if let strongSelf = self {
-                       
-                    }
+                    
                 }))
             }
         }
@@ -5973,8 +5971,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }
             }),
             KeyShortcut(input: "W", modifiers: [.command], action: { [weak self] in
-                if let strongSelf = self {
-                }
+
             })
         ]
         

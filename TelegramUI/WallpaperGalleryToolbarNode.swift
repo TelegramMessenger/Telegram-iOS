@@ -2,7 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-final class ThemeGalleryToolbarNode: ASDisplayNode {
+final class WallpaperGalleryToolbarNode: ASDisplayNode {
     private let cancelButton = HighlightableButtonNode()
     private let doneButton = HighlightableButtonNode()
     private let separatorNode = ASDisplayNode()

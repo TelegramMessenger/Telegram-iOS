@@ -11,7 +11,7 @@ enum ParsedInternalPeerUrlParameter {
 }
 
 enum WallpaperUrlParameter {
-    case slug(String)
+    case slug(String, WallpaperPresentationOptions)
     case color(UIColor)
 }
 
@@ -180,7 +180,24 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     if component.count == 6, component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: component) {
                         parameter = .color(color)
                     } else {
-                        parameter = .slug(component)
+                        var options: WallpaperPresentationOptions = []
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value, queryItem.name == "mode" {
+                                    for option in value.components(separatedBy: "+") {
+                                        switch option.lowercased() {
+                                            case "motion":
+                                                options.insert(.motion)
+                                            case "blur":
+                                                options.insert(.blur)
+                                            default:
+                                                break
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        parameter = .slug(component, options)
                     }
                     return .wallpaper(parameter)
                 } else if let value = Int(pathComponents[1]) {

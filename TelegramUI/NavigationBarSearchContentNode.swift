@@ -52,6 +52,19 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
         self.updateExpansionProgress(progress)
     }
     
+    func updateGridVisibleContentOffset(_ offset: GridNodeVisibleContentOffset) {
+        var progress: CGFloat = 0.0
+        switch offset {
+            case let .known(offset):
+                progress = max(0.0, (self.nominalHeight - offset)) / self.nominalHeight
+            case .none:
+                progress = 1.0
+            default:
+                break
+        }
+        self.updateExpansionProgress(progress)
+    }
+    
     func updateExpansionProgress(_ progress: CGFloat, animated: Bool = false) {
         let newProgress = max(0.0, min(1.0, progress))
         if newProgress != self.expansionProgress {

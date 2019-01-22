@@ -934,18 +934,31 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                     canPromote = false
                     canRestrict = false
                 } else {
-                    switch sortedParticipants[i] {
+                    switch group.role {
                         case .creator:
+                            canPromote = true
+                            canRestrict = true
+                        case .member:
                             canPromote = false
-                            canRestrict = false
-                        case .admin, .member:
-                            switch group.role {
-                                case .creator:
-                                    canPromote = true
-                                    canRestrict = true
-                                default:
+                            switch sortedParticipants[i] {
+                                case .creator, .admin:
                                     canPromote = false
                                     canRestrict = false
+                                case let .member(member):
+                                    if member.invitedBy == account.peerId {
+                                        canRestrict = true
+                                    } else {
+                                        canRestrict = false
+                                    }
+                                }
+                        case .admin:
+                            switch sortedParticipants[i] {
+                                case .creator, .admin:
+                                    canPromote = false
+                                    canRestrict = false
+                                case .member:
+                                    canPromote = false
+                                    canRestrict = true
                             }
                     }
                 }

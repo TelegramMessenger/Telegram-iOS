@@ -198,9 +198,11 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
             var controller: OverlayStatusController?
             
             let signal: Signal<TelegramWallpaper, GetWallpaperError>
+            var options: WallpaperPresentationOptions?
             switch parameter {
-                case let .slug(slug):
+                case let .slug(slug, wallpaperOptions):
                     signal = getWallpaper(account: context.account, slug: slug)
+                    options = wallpaperOptions
                     controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
                     present(controller!, nil)
                 case let .color(color):
@@ -210,8 +212,8 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
             let _ = (signal
             |> deliverOnMainQueue).start(next: { [weak controller] wallpaper in
                 controller?.dismiss()
-                let wallpaperController = WallpaperListPreviewController(context: context, source: .wallpaper(wallpaper))
-                present(wallpaperController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options))
+                present(galleryController, nil)
             }, error: { [weak controller] error in
                 controller?.dismiss()
                 
