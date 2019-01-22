@@ -835,10 +835,6 @@ public class Account {
     private let managedOperationsDisposable = DisposableSet()
     private var storageSettingsDisposable: Disposable?
     
-    public let graphicsThreadPool = ThreadPool(threadCount: 3, threadPriority: 0.1)
-    
-    public var applicationContext: Any?
-    
     public let notificationToken = Promise<Data>()
     public let voipToken = Promise<Data>()
     
