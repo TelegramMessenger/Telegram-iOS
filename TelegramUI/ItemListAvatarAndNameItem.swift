@@ -597,17 +597,17 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                                 strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                             }
                             switch neighbors.top {
-                                case .sameSection:
+                                case .sameSection(false):
                                     strongSelf.topStripeNode.isHidden = true
-                                case .none, .otherSection:
+                                default:
                                     strongSelf.topStripeNode.isHidden = false
                             }
                             
                             let bottomStripeInset: CGFloat
                             switch neighbors.bottom {
-                                case .sameSection:
+                                case .sameSection(false):
                                     bottomStripeInset = params.leftInset + 16.0
-                                case .none, .otherSection:
+                                default:
                                     bottomStripeInset = 0.0
                             }
                         

@@ -14,16 +14,16 @@ enum WallpaperListType {
 
 enum WallpaperListSource {
     case list(wallpapers: [TelegramWallpaper], central: TelegramWallpaper, type: WallpaperListType)
-    case wallpaper(TelegramWallpaper)
-    case slug(String, TelegramMediaFile?)
-    case asset(PHAsset, UIImage?)
+    case wallpaper(TelegramWallpaper, WallpaperPresentationOptions?)
+    case slug(String, TelegramMediaFile?, WallpaperPresentationOptions?)
+    case asset(PHAsset)
     case contextResult(ChatContextResult)
     case customColor(Int32?)
 }
 
 enum WallpaperGalleryEntry: Equatable {
     case wallpaper(TelegramWallpaper)
-    case asset(PHAsset, UIImage?)
+    case asset(PHAsset)
     case contextResult(ChatContextResult)
     
     public static func ==(lhs: WallpaperGalleryEntry, rhs: WallpaperGalleryEntry) -> Bool {
@@ -34,8 +34,8 @@ enum WallpaperGalleryEntry: Equatable {
                 } else {
                     return false
                 }
-            case let .asset(lhsAsset, _):
-                if case let .asset(rhsAsset, _) = rhs, lhsAsset.localIdentifier == rhsAsset.localIdentifier {
+            case let .asset(lhsAsset):
+                if case let .asset(rhsAsset) = rhs, lhsAsset.localIdentifier == rhsAsset.localIdentifier {
                     return true
                 } else {
                     return false
@@ -61,6 +61,16 @@ class WallpaperGalleryOverlayNode: ASDisplayNode {
     }
 }
 
+class WallpaperGalleryControllerNode: GalleryControllerNode {
+    override func updateDistanceFromEquilibrium(_ value: CGFloat) {
+        guard let itemNode = self.pager.centralItemNode() as? WallpaperGalleryItemNode else {
+            return
+        }
+        
+        itemNode.updateDismissTransition(value)
+    }
+}
+
 class WallpaperGalleryController: ViewController {
     private var galleryNode: GalleryControllerNode {
         return self.displayNode as! GalleryControllerNode
@@ -81,18 +91,20 @@ class WallpaperGalleryController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
+    private var initialOptions: WallpaperPresentationOptions?
     private var entries: [WallpaperGalleryEntry] = []
     private var centralEntryIndex: Int?
     
-    private let centralItemControlsColor = Promise<UIColor>()
+    private let centralItemSubtitle = Promise<String?>()
     private let centralItemStatus = Promise<MediaResourceStatus>()
+    private let centralItemAction = Promise<UIBarButtonItem?>()
     private let centralItemAttributesDisposable = DisposableSet();
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
     private var overlayNode: WallpaperGalleryOverlayNode?
     private var messageNodes: [ListViewItemNode]?
-    private var toolbarNode: ThemeGalleryToolbarNode?
+    private var toolbarNode: WallpaperGalleryToolbarNode?
     
     init(account: Account, source: WallpaperListSource) {
         self.account = account
@@ -101,27 +113,30 @@ class WallpaperGalleryController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
         
-        self.title = self.presentationData.strings.Wallpaper_Title
+        self.title = self.presentationData.strings.WallpaperPreview_Title
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         switch source {
             case let .list(wallpapers, central, type):
                 self.entries = wallpapers.map { .wallpaper($0) }
                 self.centralEntryIndex = wallpapers.index(of: central)!
                 
-                //if case let .wallpapers(wallpaperMode) = type, let mode = wallpaperMode {
-                //   self.segmentedControl.selectedSegmentIndex = Int(clamping: mode.rawValue)
-                //}
-            case let .slug(slug, file):
+                if case let .wallpapers(wallpaperOptions) = type, let options = wallpaperOptions {
+                    self.initialOptions = options
+                }
+            case let .slug(slug, file, options):
                 if let file = file {
                     self.entries = [.wallpaper(.file(id: 0, accessHash: 0, isCreator: false, isDefault: false, slug: slug, file: file))]
                     self.centralEntryIndex = 0
+                    self.initialOptions = options
                 }
-            case let .wallpaper(wallpaper):
+            case let .wallpaper(wallpaper, options):
                 self.entries = [.wallpaper(wallpaper)]
                 self.centralEntryIndex = 0
-            case let .asset(asset, thumbnailImage):
-                self.entries = [.asset(asset, thumbnailImage)]
+                self.initialOptions = options
+            case let .asset(asset):
+                self.entries = [.asset(asset)]
                 self.centralEntryIndex = 0
             case let .contextResult(result):
                 self.entries = [.contextResult(result)]
@@ -133,17 +148,31 @@ class WallpaperGalleryController: ViewController {
         }
         
         self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-                if let strongSelf = self {
-                    let previousTheme = strongSelf.presentationData.theme
-                    let previousStrings = strongSelf.presentationData.strings
-                    
-                    strongSelf.presentationData = presentationData
-                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
-                        strongSelf.updateThemeAndStrings()
-                    }
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                let previousStrings = strongSelf.presentationData.strings
+                
+                strongSelf.presentationData = presentationData
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                    strongSelf.updateThemeAndStrings()
                 }
-            })
+            }
+        })
+       
+        self.centralItemAttributesDisposable.add(self.centralItemSubtitle.get().start(next: { [weak self] subtitle in
+            if let strongSelf = self {
+                if let subtitle = subtitle {
+                    let titleView = CounterContollerTitleView(theme: strongSelf.presentationData.theme)
+                    titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.WallpaperPreview_Title, counter: subtitle)
+                    strongSelf.navigationItem.titleView = titleView
+                    strongSelf.title = nil
+                } else {
+                    strongSelf.navigationItem.titleView = nil
+                    strongSelf.title = strongSelf.presentationData.strings.WallpaperPreview_Title
+                }
+            }
+        }))
         
         self.centralItemAttributesDisposable.add(self.centralItemStatus.get().start(next: { [weak self] status in
             if let strongSelf = self {
@@ -155,6 +184,12 @@ class WallpaperGalleryController: ViewController {
                         enabled = false
                 }
                 strongSelf.toolbarNode?.setDoneEnabled(enabled)
+            }
+        }))
+        
+        self.centralItemAttributesDisposable.add(self.centralItemAction.get().start(next: { [weak self] barButton in
+            if let strongSelf = self {
+                strongSelf.navigationItem.setRightBarButton(barButton, animated: true)
             }
         }))
     }
@@ -170,12 +205,14 @@ class WallpaperGalleryController: ViewController {
     }
     
     private func updateThemeAndStrings() {
-        self.title = self.presentationData.strings.Wallpaper_Title
+        if self.title != nil {
+            self.title = self.presentationData.strings.WallpaperPreview_Title
+        }
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         self.toolbarNode?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
     }
     
-    private func dismiss(forceAway: Bool) {
+    func dismiss(forceAway: Bool) {
         let completion: () -> Void = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
@@ -188,11 +225,11 @@ class WallpaperGalleryController: ViewController {
             if let strongSelf = self {
                 strongSelf.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
             }
-            }, dismissController: { [weak self] in
+        }, dismissController: { [weak self] in
                 self?.dismiss(forceAway: true)
-            }, replaceRootController: { controller, ready in
+        }, replaceRootController: { controller, ready in
         })
-        self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction, pageGap: 0.0)
+        self.displayNode = WallpaperGalleryControllerNode(controllerInteraction: controllerInteraction, pageGap: 0.0)
         self.displayNodeDidLoad()
         
         self.galleryNode.statusBar = self.statusBar
@@ -204,7 +241,16 @@ class WallpaperGalleryController: ViewController {
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in
             if let strongSelf = self {
                 if let node = strongSelf.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
+                    strongSelf.centralItemSubtitle.set(node.subtitle.get())
                     strongSelf.centralItemStatus.set(node.status.get())
+                    strongSelf.centralItemAction.set(node.actionButton.get())
+                    node.action = { [weak self] in
+                        self?.actionPressed()
+                    }
+                    
+                    if let (layout, _) = strongSelf.validLayout {
+                        strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.2, curve: .easeInOut))
+                    }
                 }
             }
         }
@@ -213,8 +259,15 @@ class WallpaperGalleryController: ViewController {
         self.galleryNode.backgroundNode.isOpaque = false
         self.galleryNode.isBackgroundExtendedOverNavigationBar = true
         
+        switch self.source {
+            case .asset, .contextResult, .customColor:
+                self.galleryNode.scrollView.isScrollEnabled = false
+            default:
+                break
+        }
+        
         let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let toolbarNode = ThemeGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings)
+        let toolbarNode = WallpaperGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings)
         let overlayNode = WallpaperGalleryOverlayNode()
         self.overlayNode = overlayNode
         self.galleryNode.overlayNode = overlayNode
@@ -228,20 +281,51 @@ class WallpaperGalleryController: ViewController {
         }
         toolbarNode.done = { [weak self] in
             if let strongSelf = self {
-                if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode() {
+                if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
+                    let options = centralItemNode.options
                     if !strongSelf.entries.isEmpty {
                         let entry = strongSelf.entries[centralItemNode.index]
                         switch entry {
                             case let .wallpaper(wallpaper):
-                                let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in
-                                    return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: [], theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
-                                }) |> deliverOnMainQueue).start(completed: {
-                                    self?.dismiss(forceAway: true)
-                                })
+                                let completion: () -> Void = {
+                                    let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in
+                                        return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: options, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                                    }) |> deliverOnMainQueue).start(completed: {
+                                        self?.dismiss(forceAway: true)
+                                    })
+                                    
+                                    if case .wallpaper = strongSelf.source {
+                                        let _ = saveWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
+                                    }
+                                    let _ = installWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
+                                }
+                                
+                                if options.contains(.blur) {
+                                    var resource: MediaResource?
+                                    switch wallpaper {
+                                    case let .file(file):
+                                        resource = file.file.resource
+                                    case let .image(representations):
+                                        if let largestSize = largestImageRepresentation(representations) {
+                                            resource = largestSize.resource
+                                        }
+                                    default:
+                                        break
+                                    }
+                                    
+                                    if let resource = resource {
+                                        let _ = strongSelf.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+                                            completion()
+                                        })
+                                    }
+                                } else {
+                                    completion()
+                                }
                             default:
                                 break
                         }
-                        strongSelf.apply?(entry, [], nil)
+
+                        strongSelf.apply?(entry, options, nil)
                     }
                 }
             }
@@ -253,17 +337,36 @@ class WallpaperGalleryController: ViewController {
         self._ready.set(ready |> map { true })
     }
     
+    private func currentEntry() -> WallpaperGalleryEntry? {
+        if let centralItemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
+            return centralItemNode.entry
+        } else {
+            return nil
+        }
+    }
+    
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         self.galleryNode.modalAnimateIn()
         
-        if let centralItemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
-            self.centralItemStatus.set(centralItemNode.status.get())
+        if let node = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
+            self.centralItemSubtitle.set(node.subtitle.get())
+            self.centralItemStatus.set(node.status.get())
+            self.centralItemAction.set(node.actionButton.get())
+            node.action = { [weak self] in
+                self?.actionPressed()
+            }
+            
+            if let (layout, _) = self.validLayout {
+                self.containerLayoutUpdated(layout, transition: .immediate)
+            }
         }
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        let hadLayout = self.validLayout != nil
+        
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.galleryNode.frame = CGRect(origin: CGPoint(), size: layout.size)
@@ -277,24 +380,27 @@ class WallpaperGalleryController: ViewController {
         let messages = SimpleDictionary<MessageId, Message>()
         peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
         peers[otherPeerId] = TelegramUser(id: otherPeerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-        let controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
-            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _ in  }, openWallpaper: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
-        }, presentController: { _, _ in }, navigationController: {
-            return nil
-        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
-        }, canSetupReply: { _ in
-            return false
-        }, navigateToFirstDateMessage: { _ in
-        }, requestRedeliveryOfFailedMessages: { _ in
-        }, addContact: { _ in
-        }, rateCall: { _, _ in
-        }, requestSelectMessagePollOption: { _, _ in
-        }, openAppStorePage: {
-        }, requestMessageUpdate: { _ in
-        }, cancelInteractiveKeyboardGestures: {
-        }, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings.defaultSettings,
-           pollActionState: ChatInterfacePollActionState())
         
+        let bottomInset = layout.intrinsicInsets.bottom + 49.0
+        var optionsAvailable = true
+        if let centralItemNode = self.galleryNode.pager.centralItemNode() {
+            if !self.entries.isEmpty {
+                let entry = self.entries[centralItemNode.index]
+                switch entry {
+                    case let .wallpaper(wallpaper):
+                        switch wallpaper {
+                            case .color:
+                                optionsAvailable = false
+                            default:
+                                break
+                        }
+                    default:
+                        break
+                }
+            }
+        }
+        
+        let controllerInteraction = ChatControllerInteraction.default
         let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper), fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: false)
         
         let topMessageText: String
@@ -320,9 +426,9 @@ class WallpaperGalleryController: ViewController {
                 bottomMessageText = presentationData.strings.WallpaperPreview_CustomColorBottomText
         }
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: false))
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: false))
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
         if let messageNodes = self.messageNodes {
@@ -357,45 +463,59 @@ class WallpaperGalleryController: ViewController {
             self.messageNodes = messageNodes
         }
         
-        var bottomInset = layout.intrinsicInsets.bottom + 49.0
-        
-        var optionsAvailable = true
-        if let centralItemNode = self.galleryNode.pager.centralItemNode() {
-            if !self.entries.isEmpty {
-                let entry = self.entries[centralItemNode.index]
-                switch entry {
-                    case let .wallpaper(wallpaper):
-                        switch wallpaper {
-                        case .color:
-                            optionsAvailable = false
-                        default:
-                            break
-                    }
-                    default:
-                        break
-                }
-            }
-        }
-        
         transition.updateFrame(node: self.toolbarNode!, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 49.0 - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: 49.0 + layout.intrinsicInsets.bottom)))
         self.toolbarNode!.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)
         
         if let messageNodes = self.messageNodes {
             var bottomOffset: CGFloat = layout.size.height - bottomInset - 9.0
-//            if optionsAvailable {
-//                bottomOffset -= segmentedControlSize.height + 37.0
-//            }
+            if optionsAvailable {
+                bottomOffset -= 66.0
+            }
             for itemNode in messageNodes {
                 transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: bottomOffset - itemNode.frame.height), size: itemNode.frame.size))
                 bottomOffset -= itemNode.frame.height
             }
         }
         
-        let replace = self.validLayout == nil
         self.validLayout = (layout, 0.0)
         
-        if replace {
+        if !hadLayout {
             self.galleryNode.pager.replaceItems(self.entries.map({ WallpaperGalleryItem(account: self.account, entry: $0) }), centralItemIndex: self.centralEntryIndex)
+            
+            if let initialOptions = self.initialOptions, let itemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
+                itemNode.options = initialOptions
+            }
+        }
+    }
+    
+    private func actionPressed() {
+        guard let entry = self.currentEntry(), case let .wallpaper(wallpaper) = entry, let itemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode else {
+            return
+        }
+        
+        var options = ""
+        if (itemNode.options.contains(.blur)) {
+            options = "?mode=blur"
+        }
+        if (itemNode.options.contains(.motion)) {
+            if options.isEmpty {
+                options = "?mode=motion"
+            } else {
+                options += "+motion"
+            }
+        }
+        
+        var controller: ShareController?
+        switch wallpaper {
+            case let .file(_, _, _, _, slug, _):
+                controller = ShareController(account: account, subject: .url("https://t.me/bg/\(slug)\(options)"))
+            case let .color(color):
+                controller = ShareController(account: account, subject: .url("https://t.me/bg/\(String(UInt32(bitPattern: color), radix: 16, uppercase: false).rightJustified(width: 6, pad: "0"))"))
+            default:
+                break
+        }
+        if let controller = controller {
+            self.present(controller, in: .window(.root), blockInteraction: true)
         }
     }
 }

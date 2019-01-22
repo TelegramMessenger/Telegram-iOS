@@ -123,7 +123,6 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
                     controller.apply = {  _, _, _ in
                         pop()
                     }
-                    //let controller = WallpaperListPreviewController(account: account, source: .list(wallpapers: wallpapers, central: wallpaper, type: .colors))
                     strongSelf.present(controller, nil)
                 }
             }
@@ -284,6 +283,13 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
     }
     
     func scrollToTop() {
+        let offset = self.gridNode.scrollView.contentOffset.y + self.gridNode.scrollView.contentInset.top
+        let duration: Double = 0.25
+        
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: GridNodeScrollToItem(index: 0, position: .top, transition: .animated(duration: 0.25, curve: .easeInOut), directionHint: .up, adjustForSection: true, adjustForTopInset: true), updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        
+        self.backgroundNode.layer.animatePosition(from: self.backgroundNode.layer.position.offsetBy(dx: 0.0, dy: -offset), to: self.backgroundNode.layer.position, duration: duration)
+        self.separatorNode.layer.animatePosition(from: self.separatorNode.layer.position.offsetBy(dx: 0.0, dy: -offset), to: self.separatorNode.layer.position, duration: duration)
+        self.customColorItemNode.layer.animatePosition(from: self.customColorItemNode.layer.position.offsetBy(dx: 0.0, dy: -offset), to: self.customColorItemNode.layer.position, duration: duration)
     }
 }

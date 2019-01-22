@@ -56,6 +56,18 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
                 }
         }
     }
+    
+    var index: Int64 {
+        let namespace: Int32
+        let id: Int32
+        switch self {
+            case let .builtin(reference):
+                namespace = 0
+                id = reference.rawValue
+        }
+        
+        return (Int64(namespace) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: id)))
+    }
 }
 
 public enum PresentationFontSize: Int32 {
@@ -166,7 +178,12 @@ public struct PresentationThemeSettings: PreferencesEntry {
     public var relatedResources: [MediaResourceId] {
         switch self.chatWallpaper {
             case let .image(representations):
-                return representations.map({ $0.resource.id })
+                return representations.map { $0.resource.id }
+            case let .file(_, _, _, _, _, file):
+                var resources: [MediaResourceId] = []
+                resources.append(file.resource.id)
+                resources.append(contentsOf: file.previewRepresentations.map { $0.resource.id })
+                return resources
             default:
                 return []
         }
@@ -223,6 +240,28 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
 }
 
+final class PresentationThemeSpecificSettings: PostboxCoding {
+    public let chatWallpaper: TelegramWallpaper
+    public let chatWallpaperOptions: WallpaperPresentationOptions
+    
+    init(chatWallpaper: TelegramWallpaper, chatWallpaperOptions: WallpaperPresentationOptions) {
+        self.chatWallpaper = chatWallpaper
+        self.chatWallpaperOptions = chatWallpaperOptions
+    }
+    
+    init(decoder: PostboxDecoder) {
+        self.chatWallpaper = (decoder.decodeObjectForKey("w", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper) ?? .builtin
+        self.chatWallpaperOptions = WallpaperPresentationOptions(rawValue: decoder.decodeInt32ForKey("o", orElse: 0))
+    }
+    
+    func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeObject(self.chatWallpaper, forKey: "w")
+        encoder.encodeInt32(self.chatWallpaperOptions.rawValue, forKey: "o")
+    }
+}
+
+private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 100, highWaterItemCount: 200)
+
 public func updatePresentationThemeSettingsInteractively(postbox: Postbox, _ f: @escaping (PresentationThemeSettings) -> PresentationThemeSettings) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings, { entry in
@@ -234,5 +273,14 @@ public func updatePresentationThemeSettingsInteractively(postbox: Postbox, _ f: 
             }
             return f(currentSettings)
         })
+        
+        if let preferences = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings) as? PresentationThemeSettings {
+            let themeSpecificSettings = PresentationThemeSpecificSettings(chatWallpaper: preferences.chatWallpaper, chatWallpaperOptions: preferences.chatWallpaperOptions)
+            
+            let key = ValueBoxKey(length: 8)
+            key.setInt64(0, value: preferences.theme.index)
+            let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.themeSpecificSettings, key: key)
+            transaction.putItemCacheEntry(id: id, entry: themeSpecificSettings, collectionSpec: collectionSpec)
+        }
     }
 }

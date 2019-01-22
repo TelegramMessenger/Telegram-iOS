@@ -529,7 +529,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         
         self.chatListDisplayNode.requestOpenRecentPeerOptions = { [weak self] peer in
             if let strongSelf = self {
-                strongSelf.chatListDisplayNode.view.endEditing(true)
+                strongSelf.view.window?.endEditing(true)
                 let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                 
                 actionSheet.setItemGroups([
@@ -556,7 +556,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         
         self.chatListDisplayNode.requestAddContact = { [weak self] phoneNumber in
             if let strongSelf = self {
-                strongSelf.chatListDisplayNode.view.endEditing(true)
+                strongSelf.view.endEditing(true)
                 openAddContact(account: strongSelf.account, phoneNumber: phoneNumber, present: { [weak self] controller, arguments in
                     self?.present(controller, in: .window(.root), with: arguments)
                 }, completed: {

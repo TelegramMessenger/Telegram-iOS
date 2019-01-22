@@ -1,13 +1,12 @@
 import Foundation
 import UIKit
+import SwiftSignalKit
 import AsyncDisplayKit
 import Accelerate
 
 private class BlurLayer: CALayer {
     private static let blurRadiusKey = "blurRadius"
-    private static let blurLayoutKey = "blurLayout"
     @NSManaged var blurRadius: CGFloat
-    @NSManaged private var blurLayout: CGFloat
     
     private var fromBlurRadius: CGFloat?
     var presentationRadius: CGFloat {
@@ -23,7 +22,7 @@ private class BlurLayer: CALayer {
     }
     
     override class func needsDisplay(forKey key: String) -> Bool {
-        if key == blurRadiusKey || key == blurLayoutKey {
+        if key == blurRadiusKey {
             return true
         }
         return super.needsDisplay(forKey: key)
@@ -42,13 +41,6 @@ private class BlurLayer: CALayer {
             }
         }
         
-        if event == BlurLayer.blurLayoutKey, let action = super.action(forKey: "opacity") as? CABasicAnimation {
-            action.keyPath = event
-            action.fromValue = 0
-            action.toValue = 1
-            return action
-        }
-        
         return super.action(forKey: event)
     }
     
@@ -56,17 +48,6 @@ private class BlurLayer: CALayer {
         self.contents = image.cgImage
         self.contentsScale = image.scale
         self.contentsGravity = kCAGravityResizeAspectFill
-    }
-    
-    func refresh() {
-        self.fromBlurRadius = nil
-    }
-    
-    func animate() {
-        UIView.performWithoutAnimation {
-            self.blurLayout = 0
-        }
-        self.blurLayout = 1
     }
     
     func render(in context: CGContext, for layer: CALayer) {
@@ -79,20 +60,14 @@ class BlurView: UIView {
         return BlurLayer.self
     }
     
-    private var displayLink: CADisplayLink?
     private var blurLayer: BlurLayer {
         return self.layer as! BlurLayer
     }
     
     var image: UIImage?
     
-    private let mainQueue = DispatchQueue.main
-    private let globalQueue: DispatchQueue = {
-        if #available (iOS 8.0, *) {
-            return .global(qos: .userInteractive)
-        } else {
-            return .global(priority: .high)
-        }
+    private let queue: Queue = {
+        return Queue(name: nil, qos: .userInteractive)
     }()
     
     open var blurRadius: CGFloat {
@@ -110,17 +85,6 @@ class BlurView: UIView {
         self.isUserInteractionEnabled = false
     }
     
-    open override func didMoveToSuperview() {
-        super.didMoveToSuperview()
-        
-        if self.superview == nil {
-            self.displayLink?.invalidate()
-            self.displayLink = nil
-        } else {
-            self.linkForDisplay()
-        }
-    }
-    
     private func async(on queue: DispatchQueue, actions: @escaping () -> Void) {
         queue.async(execute: actions)
     }
@@ -130,9 +94,9 @@ class BlurView: UIView {
     }
     
     private func draw(_ image: UIImage, blurRadius: CGFloat) {
-        async(on: globalQueue) { [weak self] in
+        self.queue.async { [weak self] in
             if let strongSelf = self, let blurredImage = blurredImage(image, radius: blurRadius) {
-                strongSelf.sync(on: strongSelf.mainQueue) {
+                Queue.mainQueue().sync {
                     strongSelf.blurLayer.draw(blurredImage)
                 }
             }
@@ -145,22 +109,13 @@ class BlurView: UIView {
             self.draw(image, blurRadius: blurRadius)
         }
     }
-    
-    private func linkForDisplay() {
-        self.displayLink?.invalidate()
-        self.displayLink = UIScreen.main.displayLink(withTarget: self, selector: #selector(BlurView.displayDidRefresh(_:)))
-        self.displayLink?.add(to: .main, forMode: RunLoop.Mode(rawValue: ""))
-    }
-    
-    @objc private func displayDidRefresh(_ displayLink: CADisplayLink) {
-        self.display(self.layer)
-    }
 }
 
 final class BlurredImageNode: ASDisplayNode {
     var image: UIImage? {
         didSet {
             self.blurView.image = self.image
+            self.blurView.layer.setNeedsDisplay()
         }
     }
     

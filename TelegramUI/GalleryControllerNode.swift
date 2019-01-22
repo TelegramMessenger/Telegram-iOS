@@ -300,6 +300,9 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
     func updateDismissTransition(_ value: CGFloat) {    
     }
     
+    func updateDistanceFromEquilibrium(_ value: CGFloat) {
+    }
+    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if self.isDismissed {
             return
@@ -318,6 +321,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
         }
         
         self.updateDismissTransition(transition)
+        self.updateDistanceFromEquilibrium(distanceFromEquilibrium)
         
         if let overlayNode = self.overlayNode {
             overlayNode.alpha = transition

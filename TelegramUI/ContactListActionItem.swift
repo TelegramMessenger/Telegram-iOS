@@ -73,8 +73,8 @@ class ContactListActionItem: ListViewItem {
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ContactListActionItemNode()
-            let (_, _, firstWithHeader) = ContactListActionItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-            let (layout, apply) = node.asyncLayout()(self, params, firstWithHeader)
+            let (_, last, firstWithHeader) = ContactListActionItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+            let (layout, apply) = node.asyncLayout()(self, params, firstWithHeader, last)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -93,8 +93,8 @@ class ContactListActionItem: ListViewItem {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (_, _, firstWithHeader) = ContactListActionItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
-                    let (layout, apply) = makeLayout(self, params, firstWithHeader)
+                    let (_, last, firstWithHeader) = ContactListActionItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+                    let (layout, apply) = makeLayout(self, params, firstWithHeader, last)
                     Queue.mainQueue().async {
                         completion(layout, { _ in
                             apply()
@@ -192,11 +192,11 @@ class ContactListActionItemNode: ListViewItemNode {
         self.addSubnode(self.titleNode)
     }
     
-    func asyncLayout() -> (_ item: ContactListActionItem, _ params: ListViewItemLayoutParams, _ firstWithHeader: Bool) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ContactListActionItem, _ params: ListViewItemLayoutParams, _ firstWithHeader: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let currentTheme = self.theme
         
-        return { item, params, firstWithHeader in
+        return { item, params, firstWithHeader, last in
             var updatedTheme: PresentationTheme?
             
             if currentTheme !== item.theme {
@@ -233,7 +233,7 @@ class ContactListActionItemNode: ListViewItemNode {
                     let _ = titleApply()
 
                     var titleOffset = leftInset
-                    var hideBottomStripe: Bool = false
+                    var hideBottomStripe: Bool = last
                     if let image = item.icon.image {
                         var iconFrame: CGRect
                         switch item.icon {
@@ -268,7 +268,7 @@ class ContactListActionItemNode: ListViewItemNode {
                     strongSelf.topStripeNode.isHidden = true
                     strongSelf.bottomStripeNode.isHidden = hideBottomStripe
                     
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height), size: CGSize(width: params.width - leftInset, height: separatorHeight))
+                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: titleOffset, y: floor((contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
                     

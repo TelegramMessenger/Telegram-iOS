@@ -39,7 +39,7 @@ struct ThemeGridControllerNodeState: Equatable {
     var selectedIndices: Set<Int>
     
     func withUpdatedEditing(_ editing: Bool) -> ThemeGridControllerNodeState {
-        return ThemeGridControllerNodeState(editing: editing, selectedIndices: self.selectedIndices)
+        return ThemeGridControllerNodeState(editing: editing, selectedIndices: editing ? self.selectedIndices : Set())
     }
     
     func withUpdatedSelectedIndices(_ selectedIndices: Set<Int>) -> ThemeGridControllerNodeState {
@@ -85,8 +85,21 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    var stableId: Int {
-        return self.index
+    var stableId: Int64 {
+        switch self.wallpaper {
+            case .builtin:
+                return 0
+            case let .color(color):
+                return (Int64(0) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: color)))
+            case let .file(id, _, _, _, _, _):
+                return (Int64(1) << 32) | id
+            case let .image(representations):
+                if let largest = largestImageRepresentation(representations) {
+                    return (Int64(2) << 32) | Int64(largest.resource.id.hashValue)
+                } else {
+                    return 0
+                }
+        }
     }
     
     func item(account: Account, interaction: ThemeGridControllerInteraction) -> ThemeGridControllerItem {
@@ -157,6 +170,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
     var requestDeactivateSearch: (() -> Void)?
     
     let ready = ValuePromise<Bool>()
+    let wallpapersPromise: Promise<[TelegramWallpaper]>
     
     private var backgroundNode: ASDisplayNode
     private var separatorNode: ASDisplayNode
@@ -221,6 +235,10 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.currentState = ThemeGridControllerNodeState(editing: false, selectedIndices: Set())
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
+        let wallpapersPromise: Promise<[TelegramWallpaper]> = Promise()
+        wallpapersPromise.set(telegramWallpapers(postbox: account.postbox, network: account.network))
+        self.wallpapersPromise = wallpapersPromise
+        
         super.init()
         
         self.setViewBlock({
@@ -233,25 +251,22 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.gridNode.addSubnode(self.separatorNode)
         self.gridNode.addSubnode(self.colorItemNode)
         self.gridNode.addSubnode(self.galleryItemNode)
-        //self.gridNode.addSubnode(self.descriptionItemNode)
+        self.gridNode.addSubnode(self.descriptionItemNode)
         self.addSubnode(self.gridNode)
         
-        let wallpapersPromise: Promise<[TelegramWallpaper]> = Promise()
-        wallpapersPromise.set(telegramWallpapers(postbox: account.postbox, network: account.network))
         let previousEntries = Atomic<[ThemeGridControllerEntry]?>(value: nil)
-        
         let interaction = ThemeGridControllerInteraction(openWallpaper: { [weak self] wallpaper in
             if let strongSelf = self, !strongSelf.currentState.editing {
                 let entries = previousEntries.with { $0 }
                 if let entries = entries, !entries.isEmpty {
                     let wallpapers = entries.map { $0.wallpaper }
                     
-                    var mode: WallpaperPresentationOptions?
+                    var options: WallpaperPresentationOptions?
                     if wallpaper == strongSelf.presentationData.chatWallpaper {
-                        mode = strongSelf.presentationData.chatWallpaperMode
+                        options = strongSelf.presentationData.chatWallpaperOptions
                     }
                     
-                    presentPreviewController(.list(wallpapers: wallpapers, central: wallpaper, type: .wallpapers(mode)))
+                    presentPreviewController(.list(wallpapers: wallpapers, central: wallpaper, type: .wallpapers(options)))
                 }
             }
         }, toggleWallpaperSelection: { [weak self] index, value in
@@ -277,7 +292,9 @@ final class ThemeGridControllerNode: ASDisplayNode {
                                 updatedWallpapers.append(entry.wallpaper)
                             }
                         }
-                        wallpapersPromise.set(.single(updatedWallpapers))
+
+                        wallpapersPromise.set(.single(updatedWallpapers)
+                        |> then(telegramWallpapers(postbox: account.postbox, network: account.network)))
                     }
                 })
             }
@@ -294,16 +311,14 @@ final class ThemeGridControllerNode: ASDisplayNode {
             var entries: [ThemeGridControllerEntry] = []
             var index = 1
             
-            var hasCurrent = false
+            entries.insert(ThemeGridControllerEntry(index: 0, wallpaper: presentationData.chatWallpaper, selected: true), at: 0)
+            
             for wallpaper in wallpapers {
                 let selected = areWallpapersEqual(presentationData.chatWallpaper, wallpaper)
-                entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: selected))
-                hasCurrent = hasCurrent || selected
+                if !selected {
+                    entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: false))
+                }
                 index += 1
-            }
-            
-            if !hasCurrent {
-                entries.insert(ThemeGridControllerEntry(index: 0, wallpaper: presentationData.chatWallpaper, selected: true), at: 0)
             }
             
             let previous = previousEntries.swap(entries)
@@ -368,6 +383,10 @@ final class ThemeGridControllerNode: ASDisplayNode {
             default:
                 break
         }
+    }
+    
+    func updateWallpapers() {
+        self.wallpapersPromise.set(telegramWallpapers(postbox: self.account.postbox, network: self.account.network))
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -471,7 +490,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         
         let buttonTopInset: CGFloat = 32.0
         let buttonHeight: CGFloat = 44.0
-        let buttonBottomInset: CGFloat = 35.0 //descriptionLayout.contentSize.height + 17.0
+        let buttonBottomInset: CGFloat = descriptionLayout.contentSize.height + 17.0
         
         let buttonInset: CGFloat = buttonTopInset + buttonHeight * 2.0 + buttonBottomInset
         let buttonOffset = buttonInset + 10.0
@@ -586,11 +605,23 @@ final class ThemeGridControllerNode: ASDisplayNode {
         }
     }
     
-    func scrollToTop() {
+    func scrollToTop(animated: Bool = true) {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.contentNode.scrollToTop()
         } else {
-             self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: GridNodeScrollToItem(index: 0, position: .top, transition: .animated(duration: 0.25, curve: .easeInOut), directionHint: .up, adjustForSection: true, adjustForTopInset: true), updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+            let offset = self.gridNode.scrollView.contentOffset.y + self.gridNode.scrollView.contentInset.top
+            let duration: Double = 0.25
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: duration, curve: .easeInOut) : .immediate
+            
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: GridNodeScrollToItem(index: 0, position: .top, transition: transition, directionHint: .up, adjustForSection: true, adjustForTopInset: true), updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+    
+            if animated {
+                self.backgroundNode.layer.animatePosition(from: self.backgroundNode.layer.position.offsetBy(dx: 0.0, dy: -offset), to: self.backgroundNode.layer.position, duration: duration)
+                self.separatorNode.layer.animatePosition(from: self.separatorNode.layer.position.offsetBy(dx: 0.0, dy: -offset), to: self.separatorNode.layer.position, duration: duration)
+                self.colorItemNode.layer.animatePosition(from: self.colorItemNode.layer.position.offsetBy(dx: 0.0, dy: -offset), to: self.colorItemNode.layer.position, duration: duration)
+                self.galleryItemNode.layer.animatePosition(from: self.galleryItemNode.layer.position.offsetBy(dx: 0.0, dy: -offset), to: self.galleryItemNode.layer.position, duration: duration)
+                self.descriptionItemNode.layer.animatePosition(from: self.descriptionItemNode.layer.position.offsetBy(dx: 0.0, dy: -offset), to: self.descriptionItemNode.layer.position, duration: duration)
+            }
         }
     }
 }

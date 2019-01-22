@@ -77,14 +77,13 @@ private final class CallRatingContentActionNode: HighlightableButtonNode {
 }
 
 private final class CallRatingAlertContentNode: AlertContentNode {
-    private var validLayout: CGSize?
     private let strings: PresentationStrings
+    private let apply: (Int) -> Void
     
     var rating: Int?
     
     private let titleNode: ASTextNode
     private let starNodes: [ASButtonNode]
-    private let inputFieldNode: ShareInputFieldNode
     
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [CallRatingContentActionNode]
@@ -92,12 +91,15 @@ private final class CallRatingAlertContentNode: AlertContentNode {
     
     private let disposable = MetaDisposable()
     
+    private var validLayout: CGSize?
+    
     override var dismissOnOutsideTap: Bool {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], dismiss: @escaping () -> Void) {
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], dismiss: @escaping () -> Void, apply: @escaping (Int) -> Void) {
         self.strings = strings
+        self.apply = apply
         
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 2
@@ -107,9 +109,6 @@ private final class CallRatingAlertContentNode: AlertContentNode {
             starNodes.append(ASButtonNode())
         }
         self.starNodes = starNodes
-        
-        self.inputFieldNode = ShareInputFieldNode(theme: ShareInputFieldNodeTheme(presentationTheme: ptheme), placeholder: strings.Calls_RatingFeedback)
-        self.inputFieldNode.alpha = 0.0
         
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
@@ -133,11 +132,10 @@ private final class CallRatingAlertContentNode: AlertContentNode {
         self.addSubnode(self.titleNode)
         
         for node in self.starNodes {
-            node.addTarget(self, action: #selector(self.starPressed(_:)), forControlEvents: .touchUpInside)
+            node.addTarget(self, action: #selector(self.starPressed(_:)), forControlEvents: .touchDown)
+            node.addTarget(self, action: #selector(self.starReleased(_:)), forControlEvents: .touchUpInside)
             self.addSubnode(node)
         }
-        
-        self.addSubnode(self.inputFieldNode)
         
         self.addSubnode(self.actionNodesSeparator)
         
@@ -149,23 +147,11 @@ private final class CallRatingAlertContentNode: AlertContentNode {
             self.addSubnode(separatorNode)
         }
         
-        self.inputFieldNode.updateHeight = { [weak self] in
-            if let strongSelf = self {
-                if let _ = strongSelf.validLayout {
-                    strongSelf.requestLayout?(.animated(duration: 0.15, curve: .spring))
-                }
-            }
-        }
-        
         self.updateTheme(theme)
     }
     
     deinit {
         self.disposable.dispose()
-    }
-    
-    var comment: String {
-        return self.inputFieldNode.text
     }
     
     @objc func starPressed(_ sender: ASButtonNode) {
@@ -175,12 +161,19 @@ private final class CallRatingAlertContentNode: AlertContentNode {
                 let node = self.starNodes[i]
                 node.isSelected = i <= index
             }
-            if index < 3 {
-                self.inputFieldNode.placeholder = self.strings.Call_ReportPlaceholder
-            } else {
-                self.inputFieldNode.placeholder = self.strings.Calls_RatingFeedback
+        }
+    }
+    
+    @objc func starReleased(_ sender: ASButtonNode) {
+        if let index = self.starNodes.firstIndex(of: sender) {
+            self.rating = index + 1
+            for i in 0 ..< self.starNodes.count {
+                let node = self.starNodes[i]
+                node.isSelected = i <= index
             }
-            self.requestLayout?(.animated(duration: 0.3, curve: .spring))
+            if let rating = self.rating {
+                self.apply(rating)
+            }
         }
     }
     
@@ -261,16 +254,7 @@ private final class CallRatingAlertContentNode: AlertContentNode {
         }
         origin.y += titleSize.height
         
-        let inputFieldWidth = resultWidth
-        let inputFieldHeight = self.inputFieldNode.updateLayout(width: inputFieldWidth, transition: transition)
-        var inputHeight: CGFloat = 0.0
-        if let rating = rating, rating < 5 {
-            inputHeight += inputFieldHeight
-        }
-        transition.updateFrame(node: self.inputFieldNode, frame: CGRect(x: 0.0, y: origin.y, width: resultWidth, height: inputFieldHeight))
-        transition.updateAlpha(node: self.inputFieldNode, alpha: inputHeight > 0.0 ? 1.0 : 0.0)
-        
-        let resultSize = CGSize(width: resultWidth, height: titleSize.height + actionsHeight + 56.0 + inputHeight + insets.top + insets.bottom)
+        let resultSize = CGSize(width: resultWidth, height: titleSize.height + actionsHeight + 56.0 + insets.top + insets.bottom)
         
         transition.updateFrame(node: self.actionNodesSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
         
@@ -321,35 +305,33 @@ private final class CallRatingAlertContentNode: AlertContentNode {
     }
 }
 
-private func rateCallAndSendLogs(account: Account, callId: CallId, starsCount: Int, comment: String, includeLogs: Bool) -> Signal<Void, NoError> {
+func rateCallAndSendLogs(account: Account, callId: CallId, starsCount: Int, comment: String, includeLogs: Bool) -> Signal<Void, NoError> {
     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 4244000)
-    
-    var rateSignal = rateCall(account: account, callId: callId, starsCount: Int32(starsCount), comment: comment)
-    if !comment.isEmpty {
-        rateSignal = rateSignal
-        |> then(enqueueMessages(account: account, peerId: peerId, messages: [.message(text: comment, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)])
-        |> mapToSignal({ _ -> Signal<Void, NoError> in
-            return .single(Void())
-        }))
-    }
+
+    let rate = rateCall(account: account, callId: callId, starsCount: Int32(starsCount), comment: comment)
     if includeLogs {
         let id = arc4random64()
         let name = "\(callId.id)_\(callId.accessHash).log"
         let path = callLogsPath(account: account) + "/" + name
         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
-        let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
-        
-        return rateSignal
+        let message = EnqueueMessage.message(text: comment, attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+        return rate
         |> then(enqueueMessages(account: account, peerId: peerId, messages: [message])
         |> mapToSignal({ _ -> Signal<Void, NoError> in
             return .single(Void())
         }))
+    } else if !comment.isEmpty {
+        return rate
+        |> then(enqueueMessages(account: account, peerId: peerId, messages: [.message(text: comment, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)])
+        |> mapToSignal({ _ -> Signal<Void, NoError> in
+            return .single(Void())
+        }))
     } else {
-        return rateSignal
+        return rate
     }
 }
 
-func callRatingController(account: Account, callId: CallId, present: @escaping (ViewController) -> Void) -> AlertController {
+func callRatingController(account: Account, callId: CallId, present: @escaping (ViewController, Any?) -> Void) -> AlertController {
     let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings
@@ -358,24 +340,18 @@ func callRatingController(account: Account, callId: CallId, present: @escaping (
     var contentNode: CallRatingAlertContentNode?
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_NotNow, action: {
         dismissImpl?(true)
-    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Calls_SubmitRating, action: {
-        dismissImpl?(true)
-        if let contentNode = contentNode, let rating = contentNode.rating {
-            if rating < 4 {
-                let controller = textAlertController(account: account, title: strings.Call_ReportIncludeLog, text: strings.Call_ReportIncludeLogDescription, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Call_ReportSkip, action: {
-                    let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: contentNode.comment, includeLogs: false).start()
-                }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Call_ReportSend, action: {
-                    let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: contentNode.comment, includeLogs: true).start()
-                })])
-                present(controller)
-            } else {
-                let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: contentNode.comment, includeLogs: false).start
-            }
-        }
     })]
     
     contentNode = CallRatingAlertContentNode(theme: AlertControllerTheme(presentationTheme: theme), ptheme: theme, strings: strings, actions: actions, dismiss: {
         dismissImpl?(true)
+    }, apply: { rating in
+        dismissImpl?(true)
+        if rating < 4 {
+            let controller = callFeedbackController(account: account, callId: callId, rating: rating)
+            present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        } else {
+            let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: "", includeLogs: false).start()
+        }
     })
     
     let controller = AlertController(theme: AlertControllerTheme(presentationTheme: theme), contentNode: contentNode!)

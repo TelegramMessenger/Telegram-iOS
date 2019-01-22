@@ -239,9 +239,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, mode: chatPresentationInterfaceState.chatWallpaperMode, postbox: account.postbox)
-        if chatPresentationInterfaceState.chatWallpaperMode.contains(.motion) {
-            self.backgroundNode.parallaxEnabled = true
-        }
+        self.backgroundNode.motionEnabled = chatPresentationInterfaceState.chatWallpaperMode.contains(.motion)
+
         self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
     
         self.addSubnode(self.backgroundNode)
@@ -1316,12 +1315,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             if self.chatPresentationInterfaceState.chatWallpaper != chatPresentationInterfaceState.chatWallpaper ||  self.chatPresentationInterfaceState.chatWallpaperMode != chatPresentationInterfaceState.chatWallpaperMode {
                 self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, mode: chatPresentationInterfaceState.chatWallpaperMode, postbox: account.postbox)
-
-                if chatPresentationInterfaceState.chatWallpaperMode.contains(.motion) {
-                    self.backgroundNode.parallaxEnabled = true
-                } else {
-                    self.backgroundNode.parallaxEnabled = false
-                }
+                self.backgroundNode.motionEnabled = chatPresentationInterfaceState.chatWallpaperMode.contains(.motion)
             }
             
             self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)

@@ -307,7 +307,11 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             
             for i in 0 ..< self.itemNodes.count {
-                transition.updateFrame(node: self.itemNodes[i], frame: CGRect(origin: CGPoint(x: CGFloat(i) * self.scrollView.bounds.size.width + self.pageGap, y: 0.0), size: CGSize(width: self.scrollView.bounds.size.width - self.pageGap * 2.0, height: self.scrollView.bounds.size.height)))
+                let node = self.itemNodes[i]
+                transition.updateFrame(node: node, frame: CGRect(origin: CGPoint(x: CGFloat(i) * self.scrollView.bounds.size.width + self.pageGap, y: 0.0), size: CGSize(width: self.scrollView.bounds.size.width - self.pageGap * 2.0, height: self.scrollView.bounds.size.height)))
+                
+                let screenFrame = node.convert(node.bounds, to: self.supernode)
+                node.screenFrameUpdated(screenFrame)
             }
             
             if resetOffsetToCentralItem {
@@ -352,7 +356,11 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
                 let previousCentralCandidateHorizontalOffset = self.scrollView.contentOffset.x - centralItemCandidateNode.frame.minX
                 
                 for i in 0 ..< self.itemNodes.count {
-                    transition.updateFrame(node: self.itemNodes[i], frame: CGRect(origin: CGPoint(x: CGFloat(i) * self.scrollView.bounds.size.width + self.pageGap, y: 0.0), size: CGSize(width: self.scrollView.bounds.size.width - self.pageGap * 2.0, height: self.scrollView.bounds.size.height)))
+                    let node = self.itemNodes[i]
+                    transition.updateFrame(node: node, frame: CGRect(origin: CGPoint(x: CGFloat(i) * self.scrollView.bounds.size.width + self.pageGap, y: 0.0), size: CGSize(width: self.scrollView.bounds.size.width - self.pageGap * 2.0, height: self.scrollView.bounds.size.height)))
+                    
+                    let screenFrame = node.convert(node.bounds, to: self.supernode)
+                    node.screenFrameUpdated(screenFrame)
                 }
                 
                 self.scrollView.contentOffset = CGPoint(x: centralItemCandidateNode.frame.minX + previousCentralCandidateHorizontalOffset, y: 0.0)

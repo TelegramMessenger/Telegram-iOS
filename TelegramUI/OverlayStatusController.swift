@@ -8,6 +8,7 @@ enum OverlayStatusControllerType {
     case success
     case shieldSuccess(String, Bool)
     case genericSuccess(String)
+    case starSuccess(String)
 }
 
 private enum OverlayStatusContentController {
@@ -15,6 +16,7 @@ private enum OverlayStatusContentController {
     case progress(TGProgressWindowController)
     case shieldSuccess(TGProxyWindowController, Bool)
     case genericSuccess(TGProxyWindowController)
+    case starSuccess(TGProxyWindowController)
     
     var view: UIView {
         switch self {
@@ -25,6 +27,8 @@ private enum OverlayStatusContentController {
             case let .shieldSuccess(controller, _):
                 return controller.view
             case let .genericSuccess(controller):
+                return controller.view
+            case let .starSuccess(controller):
                 return controller.view
         }
     }
@@ -39,6 +43,8 @@ private enum OverlayStatusContentController {
                 controller.updateLayout()
             case let .genericSuccess(controller):
                 controller.updateLayout()
+            case let .starSuccess(controller):
+                controller.updateLayout()
         }
     }
     
@@ -51,6 +57,8 @@ private enum OverlayStatusContentController {
             case let .shieldSuccess(controller, increasedDelay):
                 controller.dismiss(success: success, increasedDelay: increasedDelay)
             case let .genericSuccess(controller):
+                controller.dismiss(success: success, increasedDelay: false)
+            case let .starSuccess(controller):
                 controller.dismiss(success: success, increasedDelay: false)
         }
     }
@@ -83,9 +91,11 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
             case .success:
                 self.contentController = .progress(TGProgressWindowController(light: theme.actionSheet.backgroundType == .light))
             case let .shieldSuccess(text, increasedDelay):
-                self.contentController = .shieldSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: true), increasedDelay)
+                self.contentController = .shieldSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: true, star: false), increasedDelay)
             case let .genericSuccess(text):
-                self.contentController = .genericSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: false))
+                self.contentController = .genericSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: false, star: false))
+            case let .starSuccess(text):
+                self.contentController = .genericSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: false, star: true))
         }
         
         super.init()

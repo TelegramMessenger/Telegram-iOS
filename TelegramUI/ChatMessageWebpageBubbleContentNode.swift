@@ -187,6 +187,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             var text: String?
             var entities: [MessageTextEntity]?
             var mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)?
+            var badge: String?
             var actionIcon: ChatMessageAttachedContentActionIcon?
             var actionTitle: String?
             
@@ -233,7 +234,10 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             representations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: file.resource))
                         }
                         let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: file.immediateThumbnailData, reference: nil, partialReference: nil)
-                        mediaAndFlags = (tmpImage, [])
+                        mediaAndFlags = (tmpImage, [.preferMediaAspectFilled])
+                        if let fileSize = file.size {
+                            badge = dataSizeString(fileSize)
+                        }
                     } else {
                         mediaAndFlags = (file, [])
                     }
@@ -282,7 +286,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.account, item.controllerInteraction, item.message, item.read, title, subtitle, text, entities, mediaAndFlags, actionIcon, actionTitle, true, layoutConstants, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.account, item.controllerInteraction, item.message, item.read, title, subtitle, text, entities, mediaAndFlags, badge, actionIcon, actionTitle, true, layoutConstants, constrainedSize)
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             

@@ -90,7 +90,7 @@ public func isInlineControllerForChatNotificationOverlayPresentation(_ controlle
 }
 
 public func isOverlayControllerForChatNotificationOverlayPresentation(_ controller: ViewController) -> Bool {
-    if controller is GalleryController || controller is AvatarGalleryController || controller is ThemeGalleryController || controller is InstantPageGalleryController || controller is InstantVideoController {
+    if controller is GalleryController || controller is AvatarGalleryController || controller is WallpaperGalleryController || controller is InstantPageGalleryController || controller is InstantVideoController {
         return true
     }
     
