@@ -34,7 +34,7 @@ public func telegramWallpapers(postbox: Postbox, network: Network) -> Signal<[Te
         }
     }
     |> mapToSignal { list, hash -> Signal<[TelegramWallpaper], NoError> in
-        let remote = network.request(Api.functions.account.getWallPapers(hash: 0))
+        let remote = network.request(Api.functions.account.getWallPapers(hash: hash ?? 0))
         |> retryRequest
         |> mapToSignal { result -> Signal<[TelegramWallpaper], NoError> in
             switch result {
