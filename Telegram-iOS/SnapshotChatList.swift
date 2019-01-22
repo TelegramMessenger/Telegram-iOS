@@ -108,33 +108,33 @@ private let chatList: [SnapshotChat] = [
 ]
 
 func snapshotChatList(application: UIApplication, mainWindow: UIWindow, window: Window1, statusBarHost: StatusBarHost) {
-    let (account, _) = snapshotEnvironment(application: application, mainWindow: mainWindow, statusBarHost: statusBarHost, theme: .night)
-    account.network.mockConnectionStatus = .online(proxyAddress: nil)
+    let (context, _) = snapshotEnvironment(application: application, mainWindow: mainWindow, statusBarHost: statusBarHost, theme: .night)
+    context.account.network.mockConnectionStatus = .online(proxyAddress: nil)
     
-    let _ = (account.postbox.transaction { transaction -> Void in
-        if let hole = account.postbox.seedConfiguration.initializeChatListWithHole.topLevel {
+    let _ = (context.account.postbox.transaction { transaction -> Void in
+        if let hole = context.account.postbox.seedConfiguration.initializeChatListWithHole.topLevel {
             transaction.replaceChatListHole(groupId: nil, index: hole.index, hole: nil)
         }
         
-        let accountPeer = TelegramUser(id: account.peerId, accessHash: nil, firstName: "Alena", lastName: "Shy", username: "alenashy", phone: "44321456789", photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        let accountPeer = TelegramUser(id: context.account.peerId, accessHash: nil, firstName: "Alena", lastName: "Shy", username: "alenashy", phone: "44321456789", photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
         transaction.updatePeersInternal([accountPeer], update: { _, updated in
             return updated
         })
         
         let baseDate: Int32 = Int32(Date().timeIntervalSince1970) - 10000
         for item in chatList {
-            let peer = item.message.peer.peer(account.postbox)
+            let peer = item.message.peer.peer(context.account.postbox)
             
             transaction.updatePeersInternal([peer], update: { _, updated in
                 return updated
             })
-            if let additionalPeer = item.message.peer.additionalPeer(account.postbox) {
+            if let additionalPeer = item.message.peer.additionalPeer(context.account.postbox) {
                 transaction.updatePeersInternal([additionalPeer], update: { _, updated in
                     return updated
                 })
             }
             transaction.updatePeerChatListInclusion(peer.id, inclusion: .ifHasMessages)
-            let _ = transaction.addMessages([item.message.storeMessage(account.peerId, baseDate)], location: .UpperHistoryBlock)
+            let _ = transaction.addMessages([item.message.storeMessage(context.account.peerId, baseDate)], location: .UpperHistoryBlock)
             transaction.resetIncomingReadStates([peer.id: [Namespaces.Message.Cloud: .idBased(maxIncomingReadId: Int32.max - 1, maxOutgoingReadId: Int32.max - 1, maxKnownId: Int32.max - 1, count: item.unreadCount, markedUnread: false)]])
             if item.isMuted {
                 transaction.updateCurrentPeerNotificationSettings([peer.id: TelegramPeerNotificationSettings.defaultSettings.withUpdatedMuteState(.muted(until: Int32.max - 1))])
@@ -145,7 +145,7 @@ func snapshotChatList(application: UIApplication, mainWindow: UIWindow, window: 
         transaction.setPinnedItemIds(chatList.filter{ $0.isPinned }.map{ .peer($0.message.peer.peerId) })
     }).start()
     
-    let rootController = TelegramRootController(account: account)
+    let rootController = TelegramRootController(context: context)
     rootController.addRootControllers(showCallsTab: true)
     window.viewController = rootController
     rootController.rootTabController!.selectedIndex = 0

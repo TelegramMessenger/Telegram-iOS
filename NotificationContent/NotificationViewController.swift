@@ -164,7 +164,7 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
                         strongSelf.imageNode.setSignal(chatMessagePhoto(postbox: accountAndImage.0.postbox, photoReference: imageReference))
                         
                         accountAndImage.0.network.shouldExplicitelyKeepWorkerConnections.set(.single(true))
-                        strongSelf.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(account: accountAndImage.0, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
+                        strongSelf.fetchedDisposable.set(standaloneChatMessagePhotoInteractiveFetched(account: accountAndImage.0, photoReference: imageReference).start())
                     }
                 }))
             }

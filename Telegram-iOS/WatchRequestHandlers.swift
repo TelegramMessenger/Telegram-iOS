@@ -33,13 +33,13 @@ final class WatchChatListHandler: WatchRequestHandler {
         if let args = subscription as? TGBridgeChatListSubscription {
             let limit = Int(args.limit)
             return SSignal { subscriber in
-                let signal = manager.account.get()
+                let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ account -> Signal<(ChatListView, PresentationData), NoError> in
-                    if let account = account {
-                        return account.viewTracker.tailChatListView(groupId: nil, count: limit)
+                |> mapToSignal({ context -> Signal<(ChatListView, PresentationData), NoError> in
+                    if let context = context {
+                        return context.account.viewTracker.tailChatListView(groupId: nil, count: limit)
                         |> map { chatListView, _ -> (ChatListView, PresentationData) in
-                            return (chatListView, account.telegramApplicationContext.currentPresentationData.with { $0 })
+                            return (chatListView, context.currentPresentationData.with { $0 })
                         }
                     } else {
                         return .complete()
@@ -81,13 +81,13 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
         if let args = subscription as? TGBridgeChatMessageListSubscription, let peerId = makePeerIdFromBridgeIdentifier(args.peerId) {
             return SSignal { subscriber in
                 let limit = Int(args.rangeMessageCount)
-                let signal = manager.account.get()
+                let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ account -> Signal<(MessageHistoryView, Bool, PresentationData), NoError> in
-                    if let account = account {
-                        return account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId), index: .upperBound, anchorIndex: .upperBound, count: limit, fixedCombinedReadStates: nil)
+                |> mapToSignal({ context -> Signal<(MessageHistoryView, Bool, PresentationData), NoError> in
+                    if let context = context {
+                        return context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId), index: .upperBound, anchorIndex: .upperBound, count: limit, fixedCombinedReadStates: nil)
                         |> map { messageHistoryView, _, _ -> (MessageHistoryView, Bool, PresentationData) in
-                            return (messageHistoryView, peerId == account.peerId, account.telegramApplicationContext.currentPresentationData.with { $0 })
+                            return (messageHistoryView, peerId == context.account.peerId, context.currentPresentationData.with { $0 })
                         }
                     } else {
                         return .complete()
@@ -111,12 +111,12 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
             }
         } else if let args = subscription as? TGBridgeReadChatMessageListSubscription, let peerId = makePeerIdFromBridgeIdentifier(args.peerId)  {
             return SSignal { subscriber in
-                let signal = manager.account.get()
+                let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ account -> Signal<Void, NoError> in
-                    if let account = account {
+                |> mapToSignal({ context -> Signal<Void, NoError> in
+                    if let context = context {
                         let messageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: args.messageId)
-                        return applyMaxReadIndexInteractively(postbox: account.postbox, stateManager: account.stateManager, index: MessageIndex(id: messageId, timestamp: 0))
+                        return applyMaxReadIndexInteractively(postbox: context.account.postbox, stateManager: context.account.stateManager, index: MessageIndex(id: messageId, timestamp: 0))
                     } else {
                         return .complete()
                     }
@@ -133,14 +133,14 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
             }
         } else if let args = subscription as? TGBridgeChatMessageSubscription, let peerId = makePeerIdFromBridgeIdentifier(args.peerId)  {
             return SSignal { subscriber in
-                let signal = manager.account.get()
+                let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ account -> Signal<(Message, PresentationData)?, NoError> in
-                    if let account = account {
-                        let messageSignal = downloadMessage(postbox: account.postbox, network: account.network, messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: args.messageId))
+                |> mapToSignal({ context -> Signal<(Message, PresentationData)?, NoError> in
+                    if let context = context {
+                        let messageSignal = downloadMessage(postbox: context.account.postbox, network: context.account.network, messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: args.messageId))
                         |> map { message -> (Message, PresentationData)? in
                             if let message = message {
-                                return (message, account.telegramApplicationContext.currentPresentationData.with { $0 })
+                                return (message, context.currentPresentationData.with { $0 })
                             } else {
                                 return nil
                             }
@@ -182,10 +182,10 @@ final class WatchSendMessageHandler: WatchRequestHandler {
     
     static func handle(subscription: TGBridgeSubscription, manager: WatchCommunicationManager) -> SSignal {
         return SSignal { subscriber in
-            let signal = manager.account.get()
+            let signal = manager.accountContext.get()
             |> take(1)
-            |> mapToSignal({ account -> Signal<Bool, NoError> in
-                if let account = account {
+            |> mapToSignal({ context -> Signal<Bool, NoError> in
+                if let context = context {
                     var messageSignal: Signal<(EnqueueMessage?, PeerId?), NoError>?
                     if let args = subscription as? TGBridgeSendTextMessageSubscription {
                         let peerId = makePeerIdFromBridgeIdentifier(args.peerId)
@@ -200,7 +200,7 @@ final class WatchSendMessageHandler: WatchRequestHandler {
                         messageSignal = .single((.message(text: "", attributes: [], mediaReference: .standalone(media: map), replyToMessageId: nil, localGroupingKey: nil), peerId))
                     } else if let args = subscription as? TGBridgeSendStickerMessageSubscription {
                         let peerId = makePeerIdFromBridgeIdentifier(args.peerId)
-                        messageSignal = mediaForSticker(documentId: args.document.documentId, account: account)
+                        messageSignal = mediaForSticker(documentId: args.document.documentId, account: context.account)
                         |> map({ media -> (EnqueueMessage?, PeerId?) in
                             if let media = media {
                                 return (.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil), peerId)
@@ -218,7 +218,7 @@ final class WatchSendMessageHandler: WatchRequestHandler {
                     if let messageSignal = messageSignal {
                         return messageSignal |> mapToSignal({ message, peerId -> Signal<Bool, NoError> in
                             if let message = message, let peerId = peerId {
-                                return enqueueMessages(account: account, peerId: peerId, messages: [message]) |> mapToSignal({ _ in
+                                return enqueueMessages(account: context.account, peerId: peerId, messages: [message]) |> mapToSignal({ _ in
                                     return .single(true)
                                 })
                             } else {
@@ -255,11 +255,11 @@ final class WatchPeerInfoHandler: WatchRequestHandler {
     static func handle(subscription: TGBridgeSubscription, manager: WatchCommunicationManager) -> SSignal {
         if let args = subscription as? TGBridgeUserInfoSubscription {
             return SSignal { subscriber in
-                let signal = manager.account.get()
+                let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ account -> Signal<PeerView, NoError> in
-                    if let account = account, let userId = args.userIds.first as? Int64, let peerId = makePeerIdFromBridgeIdentifier(userId) {
-                        return account.viewTracker.peerView(peerId)
+                |> mapToSignal({ context -> Signal<PeerView, NoError> in
+                    if let context = context, let userId = args.userIds.first as? Int64, let peerId = makePeerIdFromBridgeIdentifier(userId) {
+                        return context.account.viewTracker.peerView(peerId)
                     } else {
                         return .complete()
                     }
@@ -279,7 +279,7 @@ final class WatchPeerInfoHandler: WatchRequestHandler {
         } else if let _ = subscription as? TGBridgeUserBotInfoSubscription {
             return SSignal.complete()
 //            return SSignal { subscriber in
-//                let signal = manager.account.get()
+//                let signal = manager.accountContext.get()
 //                    |> take(1)
 //                    |> mapToSignal({ account -> Signal<PeerView, NoError> in
 //                        if let account = account, let userId = args.userIds.first as? Int64, let peerId = makePeerIdFromBridgeIdentifier(userId) {
@@ -302,9 +302,9 @@ final class WatchPeerInfoHandler: WatchRequestHandler {
 //            }
         } else if let args = subscription as? TGBridgeConversationSubscription {
             return SSignal { subscriber in
-                let signal = manager.account.get() |> take(1) |> mapToSignal({ account -> Signal<PeerView, NoError> in
-                    if let account = account, let peerId = makePeerIdFromBridgeIdentifier(args.peerId) {
-                        return account.viewTracker.peerView(peerId)
+                let signal = manager.accountContext.get() |> take(1) |> mapToSignal({ context -> Signal<PeerView, NoError> in
+                    if let context = context, let peerId = makePeerIdFromBridgeIdentifier(args.peerId) {
+                        return context.account.viewTracker.peerView(peerId)
                     } else {
                         return .complete()
                     }
@@ -398,11 +398,11 @@ final class WatchMediaHandler: WatchRequestHandler {
             }
             
             return SSignal { subscriber in
-                let signal = manager.account.get()
+                let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ account -> Signal<UIImage?, NoError> in
-                    if let account = account {
-                        return account.postbox.transaction { transaction -> Peer? in
+                |> mapToSignal({ context -> Signal<UIImage?, NoError> in
+                    if let context = context {
+                        return context.account.postbox.transaction { transaction -> Peer? in
                             guard let peer = transaction.getPeer(peerId) else {
                                 return nil
                             }
@@ -413,9 +413,9 @@ final class WatchMediaHandler: WatchRequestHandler {
                             }
                         } |> mapToSignal({ peer -> Signal<UIImage?, NoError> in
                             if let peer = peer, let representation = peer.smallProfileImage {
-                                let imageData = peerAvatarImageData(account: account, peer: peer, authorOfMessage: nil, representation: representation, synchronousLoad: false)
+                                let imageData = peerAvatarImageData(account: context.account, peer: peer, authorOfMessage: nil, representation: representation, synchronousLoad: false)
                                 if let imageData = imageData {
-                                    return imageData |> deliverOn(account.graphicsThreadPool)
+                                    return imageData |> deliverOn(Queue.concurrentDefaultQueue())
                                     |> map { data -> UIImage? in
                                         if let data = data, let image = generateImage(targetSize, contextGenerator: { size, context -> Void in
                                             if let imageSource = CGImageSourceCreateWithData(data as CFData, nil), let dataImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
@@ -456,13 +456,13 @@ final class WatchMediaHandler: WatchRequestHandler {
         } else if let args = subscription as? TGBridgeMediaStickerSubscription {
             let key = "sticker_\(args.documentId)_\(Int(args.size.width))x\(Int(args.size.height))_\(args.notification ? 1 : 0)"
             return SSignal { subscriber in
-                let signal = manager.account.get()
+                let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ account -> Signal<UIImage?, NoError> in
-                    if let account = account {
+                |> mapToSignal({ context -> Signal<UIImage?, NoError> in
+                    if let context = context {
                         var mediaSignal: Signal<(TelegramMediaFile, FileMediaReference)?, NoError>? = nil
                         if args.stickerPackId != 0 {
-                            mediaSignal = mediaForSticker(documentId: args.documentId, account: account)
+                            mediaSignal = mediaForSticker(documentId: args.documentId, account: context.account)
                             |> map { media -> (TelegramMediaFile, FileMediaReference)? in
                                 if let media = media {
                                     return (media, .standalone(media: media))
@@ -471,7 +471,7 @@ final class WatchMediaHandler: WatchRequestHandler {
                                 }
                             }
                         } else if args.stickerPeerId != 0, let peerId = makePeerIdFromBridgeIdentifier(args.stickerPeerId) {
-                            mediaSignal = account.postbox.transaction { transaction -> Message? in
+                            mediaSignal = context.account.postbox.transaction { transaction -> Message? in
                                 return transaction.getMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: args.stickerMessageId))
                             }
                             |> map { message -> (TelegramMediaFile, FileMediaReference)? in
@@ -493,8 +493,8 @@ final class WatchMediaHandler: WatchRequestHandler {
                                     if let dimensions = media.dimensions {
                                         size = dimensions
                                     }
-                                    self.disposable.add(freeMediaFileInteractiveFetched(account: account, fileReference: fileReference).start())
-                                    return chatMessageSticker(account: account, file: media, small: false, fetched: true, onlyFullSize: true)
+                                    self.disposable.add(freeMediaFileInteractiveFetched(account: context.account, fileReference: fileReference).start())
+                                    return chatMessageSticker(account: context.account, file: media, small: false, fetched: true, onlyFullSize: true)
                                 }
                                 return .complete()
                             }
@@ -523,12 +523,12 @@ final class WatchMediaHandler: WatchRequestHandler {
         } else if let args = subscription as? TGBridgeMediaThumbnailSubscription {
             let key = "\(args.peerId)_\(args.messageId)"
             return SSignal { subscriber in
-                let signal = manager.account.get()
+                let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ account -> Signal<UIImage?, NoError> in
-                    if let account = account, let peerId = makePeerIdFromBridgeIdentifier(args.peerId) {
+                |> mapToSignal({ context -> Signal<UIImage?, NoError> in
+                    if let context = context, let peerId = makePeerIdFromBridgeIdentifier(args.peerId) {
                         var roundVideo = false
-                        return account.postbox.transaction { transaction -> Message? in
+                        return context.account.postbox.transaction { transaction -> Message? in
                             return transaction.getMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: args.messageId))
                         }
                         |> mapToSignal { message -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
@@ -539,14 +539,14 @@ final class WatchMediaHandler: WatchRequestHandler {
                                 var imageDimensions: CGSize?
                                 for media in message.media {
                                     if let image = media as? TelegramMediaImage, let resource = largestImageRepresentation(image.representations)?.resource {
-                                        self.disposable.add(messageMediaImageInteractiveFetched(account: account, message: message, image: image, resource: resource, storeToDownloadsPeerType: nil).start())
+                                        self.disposable.add(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: resource, storeToDownloadsPeerType: nil).start())
                                         candidateMediaReference = .message(message: MessageReference(message), media: media)
                                         break
                                     } else if let _ = media as? TelegramMediaFile {
                                         candidateMediaReference = .message(message: MessageReference(message), media: media)
                                         break
                                     } else if let webPage = media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content, let image = content.image, let resource = largestImageRepresentation(image.representations)?.resource  {
-                                        self.disposable.add(messageMediaImageInteractiveFetched(account: account, message: message, image: image, resource: resource, storeToDownloadsPeerType: nil).start())
+                                        self.disposable.add(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: resource, storeToDownloadsPeerType: nil).start())
                                         candidateMediaReference = .webPage(webPage: WebpageReference(webPage), media: image)
                                         break
                                     }
@@ -564,13 +564,13 @@ final class WatchMediaHandler: WatchRequestHandler {
                                 }
                                 if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
                                     if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
-                                        imageSignal = chatMessagePhotoThumbnail(account: account, photoReference: imageReference, onlyFullSize: true)
+                                        imageSignal = chatMessagePhotoThumbnail(account: context.account, photoReference: imageReference, onlyFullSize: true)
                                     } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
                                         if fileReference.media.isVideo {
-                                            imageSignal = chatMessageVideoThumbnail(account: account, fileReference: fileReference)
+                                            imageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)
                                             roundVideo = fileReference.media.isInstantVideo
                                         } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                                            imageSignal = chatWebpageSnippetFile(account: account, fileReference: fileReference, representation: iconImageRepresentation)
+                                            imageSignal = chatWebpageSnippetFile(account: context.account, fileReference: fileReference, representation: iconImageRepresentation)
                                         }
                                     }
                                 }
@@ -618,11 +618,11 @@ final class WatchStickersHandler: WatchRequestHandler {
     static func handle(subscription: TGBridgeSubscription, manager: WatchCommunicationManager) -> SSignal {
         if let args = subscription as? TGBridgeRecentStickersSubscription {
             return SSignal { subscriber in
-                let signal = manager.account.get()
+                let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ account -> Signal<ItemCollectionsView, NoError> in
-                    if let account = account {
-                        return account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: nil, count: 50) |> take(1)
+                |> mapToSignal({ context -> Signal<ItemCollectionsView, NoError> in
+                    if let context = context {
+                        return context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers], namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: nil, count: 50) |> take(1)
                     } else {
                         return .complete()
                     }
@@ -674,19 +674,19 @@ final class WatchAudioHandler: WatchRequestHandler {
         if let args = subscription as? TGBridgeAudioSubscription {
             let key = "audio_\(args.peerId)_\(args.messageId)"
             return SSignal { subscriber in
-                let signal = manager.account.get()
+                let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ account -> Signal<String, NoError> in
-                    if let account = account, let peerId = makePeerIdFromBridgeIdentifier(args.peerId) {
-                        return account.postbox.transaction { transaction -> Message? in
+                |> mapToSignal({ context -> Signal<String, NoError> in
+                    if let context = context, let peerId = makePeerIdFromBridgeIdentifier(args.peerId) {
+                        return context.account.postbox.transaction { transaction -> Message? in
                             return transaction.getMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: args.messageId))
                         }
                         |> mapToSignal { message -> Signal<String, NoError> in
                             if let message = message {
                                 for media in message.media {
                                     if let file = media as? TelegramMediaFile {
-                                        self.disposable.add(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: true).start())
-                                        return account.postbox.mediaBox.resourceData(file.resource)
+                                        self.disposable.add(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: true).start())
+                                        return context.account.postbox.mediaBox.resourceData(file.resource)
                                         |> mapToSignal({ data -> Signal<String, NoError> in
                                             if let tempPath = manager.watchTemporaryStorePath, data.complete {
                                                 let outputPath = tempPath + "/\(key).m4a"
@@ -729,20 +729,19 @@ final class WatchAudioHandler: WatchRequestHandler {
         let replyToMid = metadata[TGBridgeIncomingFileReplyToMidKey] as? Int32
         
         if let randomId = randomId, let id = peerId, let peerId = makePeerIdFromBridgeIdentifier(id) {
-            return combineLatest(manager.account.get() |> take(1), legacyEncodeOpusAudio(path: path))
-            |> map({ account, pathAndDuration -> Void in
+            return combineLatest(manager.accountContext.get() |> take(1), legacyEncodeOpusAudio(path: path))
+            |> map({ context, pathAndDuration -> Void in
                 let (path, duration) = pathAndDuration
-                if let account = account, let path = path, let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                if let context = context, let path = path, let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
                     let resource = LocalFileMediaResource(fileId: randomId)
-                    account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                    
+                    context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     
                     var replyMessageId: MessageId? = nil
                     if let replyToMid = replyToMid, replyToMid != 0 {
                         replyMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMid)
                     }
                     
-                    let _ = enqueueMessages(account: account, peerId: peerId, messages: [.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: data.count, attributes: [.Audio(isVoice: true, duration: Int(duration), title: nil, performer: nil, waveform: nil)])), replyToMessageId: replyMessageId, localGroupingKey: nil)]).start()
+                    let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: data.count, attributes: [.Audio(isVoice: true, duration: Int(duration), title: nil, performer: nil, waveform: nil)])), replyToMessageId: replyMessageId, localGroupingKey: nil)]).start()
                 }
             })
         } else {
@@ -759,23 +758,23 @@ final class WatchLocationHandler: WatchRequestHandler {
     static func handle(subscription: TGBridgeSubscription, manager: WatchCommunicationManager) -> SSignal {
         if let args = subscription as? TGBridgeNearbyVenuesSubscription  {
             return SSignal { subscriber in
-                let signal = manager.account.get()
+                let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ account -> Signal<[ChatContextResultMessage], NoError> in
-                    if let account = account {
-                        return resolvePeerByName(account: account, name: "foursquare")
-                            |> take(1)
-                            |> mapToSignal { peerId -> Signal<ChatContextResultCollection?, NoError> in
-                                guard let peerId = peerId else {
-                                    return .single(nil)
-                                }
-                                return requestChatContextResults(account: account, botId: peerId, peerId: account.peerId, query: "", location: .single((args.coordinate.latitude, args.coordinate.longitude)), offset: "")
+                |> mapToSignal({ context -> Signal<[ChatContextResultMessage], NoError> in
+                    if let context = context {
+                        return resolvePeerByName(account: context.account, name: "foursquare")
+                        |> take(1)
+                        |> mapToSignal { peerId -> Signal<ChatContextResultCollection?, NoError> in
+                            guard let peerId = peerId else {
+                                return .single(nil)
                             }
-                            |> mapToSignal { contextResult -> Signal<[ChatContextResultMessage], NoError> in
-                                guard let contextResult = contextResult else {
-                                    return .single([])
-                                }
-                                return .single(contextResult.results.map { $0.message })
+                            return requestChatContextResults(account: context.account, botId: peerId, peerId: context.account.peerId, query: "", location: .single((args.coordinate.latitude, args.coordinate.longitude)), offset: "")
+                        }
+                        |> mapToSignal { contextResult -> Signal<[ChatContextResultMessage], NoError> in
+                            guard let contextResult = contextResult else {
+                                return .single([])
+                            }
+                            return .single(contextResult.results.map { $0.message })
                         }
                     } else {
                         return .complete()
@@ -813,11 +812,11 @@ final class WatchPeerSettingsHandler: WatchRequestHandler {
     static func handle(subscription: TGBridgeSubscription, manager: WatchCommunicationManager) -> SSignal {
         if let args = subscription as? TGBridgePeerSettingsSubscription {
             return SSignal { subscriber in
-                let signal = manager.account.get()
+                let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ account -> Signal<PeerView, NoError> in
-                    if let account = account, let peerId = makePeerIdFromBridgeIdentifier(args.peerId) {
-                        return account.viewTracker.peerView(peerId)
+                |> mapToSignal({ context -> Signal<PeerView, NoError> in
+                    if let context = context, let peerId = makePeerIdFromBridgeIdentifier(args.peerId) {
+                        return context.account.viewTracker.peerView(peerId)
                     } else {
                         return .complete()
                     }
@@ -842,16 +841,16 @@ final class WatchPeerSettingsHandler: WatchRequestHandler {
             }
         } else {
             return SSignal { subscriber in
-                let signal = manager.account.get()
+                let signal = manager.accountContext.get()
                 |> take(1)
-                |> mapToSignal({ account -> Signal<Bool, NoError> in
-                    if let account = account {
+                |> mapToSignal({ context -> Signal<Bool, NoError> in
+                    if let context = context {
                         var signal: Signal<Void, NoError>?
                         
                         if let args = subscription as? TGBridgePeerUpdateNotificationSettingsSubscription, let peerId = makePeerIdFromBridgeIdentifier(args.peerId) {
-                            signal = togglePeerMuted(account: account, peerId: peerId)
+                            signal = togglePeerMuted(account: context.account, peerId: peerId)
                         } else if let args = subscription as? TGBridgePeerUpdateBlockStatusSubscription, let peerId = makePeerIdFromBridgeIdentifier(args.peerId) {
-                            signal = requestUpdatePeerIsBlocked(account: account, peerId: peerId, isBlocked: args.blocked)
+                            signal = requestUpdatePeerIsBlocked(account: context.account, peerId: peerId, isBlocked: args.blocked)
                         }
                         
                         if let signal = signal {

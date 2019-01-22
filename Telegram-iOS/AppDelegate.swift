@@ -627,7 +627,7 @@ private enum QueuedWakeup: Int32 {
             |> take(1)
             |> deliverOnMainQueue).start(next: { context in
                 if let context = context {
-                    self.registerForNotifications(account: context.account, authorize: true, completion: completion)
+                    self.registerForNotifications(context: context.context, authorize: true, completion: completion)
                 }
             })
         }, requestSiriAuthorization: { completion in
@@ -678,7 +678,7 @@ private enum QueuedWakeup: Int32 {
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { value in
                     if let value = value, case let .authorized(context) = value {
-                        self.registerForNotifications(account: context.account, authorize: false)
+                        self.registerForNotifications(context: context.context, authorize: false)
                     }
                 })
             })
@@ -694,7 +694,7 @@ private enum QueuedWakeup: Int32 {
                     case let .unauthorized(unauthorized):
                         network = unauthorized.account.network
                     case let .authorized(authorized):
-                        network = authorized.account.network
+                        network = authorized.context.account.network
                     default:
                         break
                 }
@@ -703,27 +703,26 @@ private enum QueuedWakeup: Int32 {
             Logger.shared.log("App \(self.episodeId)", "received context \(String(describing: context)) account \(String(describing: context?.accountId)) network \(String(describing: network))")
             
             if let contextValue = self.contextValue {
-                (contextValue.account?.applicationContext as? TelegramApplicationContext)?.isCurrent = false
                 switch contextValue {
                     case let .unauthorized(unauthorized):
                         unauthorized.account.shouldBeServiceTaskMaster.set(.single(.never))
                     case let .authorized(authorized):
-                        authorized.account.shouldBeServiceTaskMaster.set(.single(.never))
-                        authorized.account.shouldKeepOnlinePresence.set(.single(false))
-                        authorized.account.shouldExplicitelyKeepWorkerConnections.set(.single(false))
-                        authorized.account.shouldKeepBackgroundDownloadConnections.set(.single(false))
+                        authorized.context.isCurrent = false
+                        authorized.context.account.shouldBeServiceTaskMaster.set(.single(.never))
+                        authorized.context.account.shouldKeepOnlinePresence.set(.single(false))
+                        authorized.context.account.shouldExplicitelyKeepWorkerConnections.set(.single(false))
+                        authorized.context.account.shouldKeepBackgroundDownloadConnections.set(.single(false))
                     default:
                         break
                 }
             }
             self.contextValue = context
             if let context = context {
-                (context.account?.applicationContext as? TelegramApplicationContext)?.isCurrent = true
-                updateLegacyComponentsAccount(context.account)
-                
                 let isReady: Signal<Bool, NoError>
                 switch context {
                     case let .authorized(authorized):
+                        setupLegacyComponents(context: authorized.context)
+                        authorized.context.isCurrent = true
                         isReady = authorized.isReady.get()
                     default:
                         isReady = .single(true)
@@ -743,12 +742,10 @@ private enum QueuedWakeup: Int32 {
                             if #available(iOS 10.0, *) {
                                 authorizeNotifications = false
                             }
-                            self.registerForNotifications(account: context.account, authorize: authorizeNotifications)
-                            context.account.notificationToken.set(self.notificationTokenPromise.get())
-                            context.account.voipToken.set(self.voipTokenPromise.get())
+                            self.registerForNotifications(context: context.context, authorize: authorizeNotifications)
+                            context.context.account.notificationToken.set(self.notificationTokenPromise.get())
+                            context.context.account.voipToken.set(self.voipTokenPromise.get())
                         case .unauthorized:
-                            break
-                        case .upgrading:
                             break
                     }
                 }))
@@ -780,8 +777,6 @@ private enum QueuedWakeup: Int32 {
                         return context.applicationBadge
                     case .unauthorized:
                         return .single(0)
-                    case .upgrading:
-                        return .single(0)
                 }
             } else {
                 return .never()
@@ -797,11 +792,9 @@ private enum QueuedWakeup: Int32 {
                 if let context = context {
                     switch context {
                         case let .authorized(context):
-                            let presentationData = context.account.telegramApplicationContext.currentPresentationData.with { $0 }
+                            let presentationData = context.context.currentPresentationData.with { $0 }
                             return .single(applicationShortcutItems(strings: presentationData.strings))
                         case .unauthorized:
-                            return .single([])
-                        case .upgrading:
                             return .single([])
                     }
                 } else {
@@ -853,7 +846,7 @@ private enum QueuedWakeup: Int32 {
                 }
                 if let contextValue = strongSelf.contextValue {
                     if case let .authorized(context) = contextValue {
-                        let presentationData = context.applicationContext.currentPresentationData.with { $0 }
+                        let presentationData = context.context.currentPresentationData.with { $0 }
                         strongSelf.mainWindow.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: alert.title, text: alert.message ?? "", actions: actions), on: .root)
                     } else if case let .unauthorized(context) = contextValue {
                         strongSelf.mainWindow.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: context.rootController.theme), title: alert.title, text: alert.message ?? "", actions: actions), on: .root)
@@ -1213,7 +1206,7 @@ private enum QueuedWakeup: Int32 {
                     |> take(1)
                     |> mapToSignal { context -> Signal<Void, NoError> in
                         if let context = context {
-                            return context.account.postbox.transaction (ignoreDisabled: true, { transaction -> Void in
+                            return context.context.account.postbox.transaction (ignoreDisabled: true, { transaction -> Void in
                                 transaction.applyIncomingReadMaxId(readMessageId)
                             })
                         } else {
@@ -1228,7 +1221,7 @@ private enum QueuedWakeup: Int32 {
                     |> take(1)
                     |> mapToSignal { context -> Signal<Void, NoError> in
                         if let context = context {
-                            context.account.network.mergeBackupDatacenterAddress(datacenterId: datacenterId, host: host, port: port, secret: secret)
+                            context.context.account.network.mergeBackupDatacenterAddress(datacenterId: datacenterId, host: host, port: port, secret: secret)
                         }
                         return .complete()
                     }
@@ -1304,11 +1297,11 @@ private enum QueuedWakeup: Int32 {
                 case let .unauthorized(context):
                     if let proxyData = parseProxyUrl(url) {
                         context.rootController.view.endEditing(true)
-                        let strings = context.applicationContext.currentPresentationData.with({ $0 }).strings
+                        let strings = context.strings
                         let controller = ProxyServerActionSheetController(theme: defaultPresentationTheme, strings: strings, postbox: context.account.postbox, network: context.account.network, server: proxyData, presentationData: nil)
                         context.rootController.currentWindow?.present(controller, on: PresentationSurfaceLevel.root, blockInteraction: false, completion: {})
                     } else if let secureIdData = parseSecureIdUrl(url) {
-                        let strings = context.applicationContext.currentPresentationData.with({ $0 }).strings
+                        let strings = context.strings
                         let theme = context.rootController.theme
                         context.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: theme), title: nil, text: strings.Passport_NotLoggedInMessage, actions: [TextAlertAction(type: .genericAction, title: strings.Calls_NotNow, action: {
                             if let callbackUrl = URL(string: secureIdCallbackUrl(with: secureIdData.callbackUrl, peerId: secureIdData.peerId, result: .cancel, parameters: [:])) {
@@ -1331,7 +1324,7 @@ private enum QueuedWakeup: Int32 {
                     if let handle = contact.personHandle?.value {
                         if let userId = Int32(handle) {
                             if let contextValue = self.contextValue, case let .authorized(context) = contextValue {
-                                let _ = context.applicationContext.callManager?.requestCall(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
+                                let _ = context.context.callManager?.requestCall(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
                             }
                         }
                     }
@@ -1377,7 +1370,7 @@ private enum QueuedWakeup: Int32 {
                         case .camera:
                             context.openRootCamera()
                         case .savedMessages:
-                            self.openChatWhenReady(peerId: context.account.peerId)
+                            self.openChatWhenReady(peerId: context.context.account.peerId)
                     }
                 }
             }
@@ -1396,9 +1389,8 @@ private enum QueuedWakeup: Int32 {
         self.openUrlWhenReadyDisposable.set((self.authorizedContext()
         |> take(1)
         |> deliverOnMainQueue).start(next: { context in
-            let presentationData = context.account.telegramApplicationContext.currentPresentationData.with { $0 }
-            openExternalUrl(account: context.account, url: url, presentationData: presentationData, applicationContext: context.account.telegramApplicationContext, navigationController: context.rootController, dismissInput: {
-                
+            let presentationData = context.context.currentPresentationData.with { $0 }
+            openExternalUrl(context: context.context, url: url, presentationData: presentationData, navigationController: context.rootController, dismissInput: {
             })
         }))
     }
@@ -1423,9 +1415,9 @@ private enum QueuedWakeup: Int32 {
                 |> take(1)
                 |> mapToSignal { context -> Signal<Void, NoError> in
                     if let messageId = messageIdFromNotification(peerId: peerId, notification: response.notification) {
-                        let _ = applyMaxReadIndexInteractively(postbox: context.account.postbox, stateManager: context.account.stateManager, index: MessageIndex(id: messageId, timestamp: 0)).start()
+                        let _ = applyMaxReadIndexInteractively(postbox: context.context.account.postbox, stateManager: context.context.account.stateManager, index: MessageIndex(id: messageId, timestamp: 0)).start()
                     }
-                    return enqueueMessages(account: context.account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)])
+                    return enqueueMessages(account: context.context.account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)])
                     |> map { messageIds -> MessageId? in
                         if messageIds.isEmpty {
                             return nil
@@ -1435,7 +1427,7 @@ private enum QueuedWakeup: Int32 {
                     }
                     |> mapToSignal { messageId -> Signal<Void, NoError> in
                         if let messageId = messageId {
-                            return context.account.postbox.unsentMessageIdsView()
+                            return context.context.account.postbox.unsentMessageIdsView()
                             |> filter { view in
                                 return !view.ids.contains(messageId)
                             }
@@ -1482,9 +1474,9 @@ private enum QueuedWakeup: Int32 {
         }
     }
     
-    private func registerForNotifications(account: Account, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        let _ = (account.postbox.transaction { transaction -> Bool in
+    private func registerForNotifications(context: AccountContext, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
+        let presentationData = context.currentPresentationData.with { $0 }
+        let _ = (context.account.postbox.transaction { transaction -> Bool in
             let settings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.inAppNotificationSettings) as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
             return settings.displayNameOnLockscreen
         }
@@ -1559,7 +1551,7 @@ private enum QueuedWakeup: Int32 {
             let queuedNotifications = self.queuedNotifications
             self.queuedNotifications = []
             for payload in queuedNotifications {
-                self.processPushPayload(payload, account: context.account)
+                self.processPushPayload(payload, account: context.context.account)
             }
         }
     }
@@ -1571,7 +1563,7 @@ private enum QueuedWakeup: Int32 {
             let queuedMutePolling = self.queuedMutePolling
             self.queuedMutePolling = false
             
-            let _ = (context.account.postbox.transaction(ignoreDisabled: true, { transaction -> PostboxAccessChallengeData in
+            let _ = (context.context.account.postbox.transaction(ignoreDisabled: true, { transaction -> PostboxAccessChallengeData in
                 return transaction.getAccessChallengeData()
             })
             |> deliverOnMainQueue).start(next: { accessChallengeData in
@@ -1580,7 +1572,7 @@ private enum QueuedWakeup: Int32 {
                     return
                 }
                 
-                let strings = context.account.telegramApplicationContext.currentPresentationData.with({ $0 }).strings
+                let strings = context.context.currentPresentationData.with({ $0 }).strings
                 
                 for (title, body, apnsSound, requestId) in requests {
                     if handleVoipNotifications {
@@ -1620,9 +1612,9 @@ private enum QueuedWakeup: Int32 {
         if let contextValue = self.contextValue, case let .authorized(context) = contextValue, !self.queuedAnnouncements.isEmpty {
             let queuedAnnouncements = self.queuedAnnouncements
             self.queuedAnnouncements = []
-            let _ = (context.account.postbox.transaction(ignoreDisabled: true, { transaction -> [MessageId: String] in
+            let _ = (context.context.account.postbox.transaction(ignoreDisabled: true, { transaction -> [MessageId: String] in
                 var result: [MessageId: String] = [:]
-                let timestamp = Int32(context.account.network.globalTime)
+                let timestamp = Int32(context.context.account.network.globalTime)
                 let servicePeer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 777000), accessHash: nil, firstName: "Telegram", lastName: nil, username: nil, phone: "42777", photo: [], botInfo: nil, restrictionInfo: nil, flags: [.isVerified])
                 if transaction.getPeer(servicePeer.id) == nil {
                     transaction.updatePeersInternal([servicePeer], update: { _, updated in
@@ -1646,7 +1638,7 @@ private enum QueuedWakeup: Int32 {
             }) |> deliverOnMainQueue).start(next: { result in
                 if let contextValue = self.contextValue, case let .authorized(context) = contextValue {
                     for (id, text) in result {
-                        context.notificationManager.enqueueRemoteNotification(title: "", text: text, apnsSound: nil, requestId: .messageId(id), strings: context.account.telegramApplicationContext.currentPresentationData.with({ $0 }).strings, accessChallengeData: .none)
+                        context.notificationManager.enqueueRemoteNotification(title: "", text: text, apnsSound: nil, requestId: .messageId(id), strings: context.context.currentPresentationData.with({ $0 }).strings, accessChallengeData: .none)
                     }
                 }
             })
@@ -1663,7 +1655,7 @@ private enum QueuedWakeup: Int32 {
                 case .backgroundLocation:
                     if UIApplication.shared.applicationState == .background {
                         if let contextValue = self.contextValue, case let .authorized(context) = contextValue {
-                            context.applicationContext.liveLocationManager?.pollOnce()
+                            context.context.liveLocationManager?.pollOnce()
                         }
                     }
             }
@@ -1682,7 +1674,7 @@ private enum QueuedWakeup: Int32 {
     }
     
     override var next: UIResponder? {
-        if let contextValue = self.contextValue, case let .authorized(context) = contextValue, let controller = context.applicationContext.keyShortcutsController {
+        if let contextValue = self.contextValue, case let .authorized(context) = contextValue, let controller = context.context.keyShortcutsController {
             return controller
         }
         return super.next

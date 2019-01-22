@@ -83,12 +83,12 @@ private func processedSoundName(_ name: String) -> String {
 final class NotificationManager {
     private var processedMessages = Set<MessageId>()
     
-    var account: Account? {
+    var context: AccountContext? {
         didSet {
             assert(Queue.mainQueue().isCurrent())
             
-            if let account = self.account {
-                self.notificationMessagesDisposable.set((account.stateManager.notificationMessages
+            if let context = self.context {
+                self.notificationMessagesDisposable.set((context.account.stateManager.notificationMessages
                 |> deliverOn(Queue.mainQueue())).start(next: { [weak self] messages in
                     guard let strongSelf = self else {
                         return
@@ -265,8 +265,8 @@ final class NotificationManager {
     }
     
     func commitRemoteNotification(originalRequestId: NotificationManagedNotificationRequestId?, messageIds: [MessageId]) -> Signal<Void, NoError> {
-        if let account = self.account {
-            return account.postbox.transaction { transaction -> ([(MessageId, [Message], Bool, PeerMessageSound, Bool)], Bool) in
+        if let context = self.context {
+            return context.account.postbox.transaction { transaction -> ([(MessageId, [Message], Bool, PeerMessageSound, Bool)], Bool) in
                 var isLocked = false
                 if isAccessLocked(data: transaction.getAccessChallengeData(), at: Int32(CFAbsoluteTimeGetCurrent())) {
                     isLocked = true
@@ -304,7 +304,7 @@ final class NotificationManager {
             |> beforeNext {
                 [weak self] results, isLocked in
                 if let strongSelf = self {
-                    let delayUntilTimestamp: Int32 = strongSelf.account?.stateManager.getDelayNotificatonsUntil() ?? 0
+                    let delayUntilTimestamp: Int32 = strongSelf.context?.account.stateManager.getDelayNotificatonsUntil() ?? 0
                     
                     for (id, messages, notify, sound, displayContents) in results {
                         let requestId: NotificationManagedNotificationRequestId = .messageId(id)
@@ -352,11 +352,11 @@ final class NotificationManager {
     }
     
     private func processNotificationMessages(_ messageList: [([Message], PeerMessageSound, Bool, Bool)], isLocked: Bool) {
-        guard let account = self.account else {
-            Logger.shared.log("NotificationManager", "account missing")
+        guard let context = self.context else {
+            Logger.shared.log("NotificationManager", "context missing")
             return
         }
-        let presentationData = (account.telegramApplicationContext.currentPresentationData.with { $0 })
+        let presentationData = (context.currentPresentationData.with { $0 })
         let strings = presentationData.strings
         let nameDisplayOrder = presentationData.nameDisplayOrder
         
@@ -446,9 +446,9 @@ final class NotificationManager {
                                     }
                                 }
                             } else if messages[0].groupingKey != nil {
-                                var kind = messageContentKind(messages[0], strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: account.peerId).key
+                                var kind = messageContentKind(messages[0], strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: context.account.peerId).key
                                 for i in 1 ..< messages.count {
-                                    let nextKind = messageContentKind(messages[i], strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: account.peerId)
+                                    let nextKind = messageContentKind(messages[i], strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: context.account.peerId)
                                     if kind != nextKind.key {
                                         kind = .text
                                         break
@@ -548,21 +548,21 @@ final class NotificationManager {
                                 title = nil
                             }
                             let chatPeer = RenderedPeer(peerId: firstMessage.id.peerId, peers: additionalPeers)
-                            let (_, _, messageText) = chatListItemStrings(strings: strings, nameDisplayOrder: nameDisplayOrder, message: firstMessage, chatPeer: chatPeer, accountPeerId: account.peerId)
+                            let (_, _, messageText) = chatListItemStrings(strings: strings, nameDisplayOrder: nameDisplayOrder, message: firstMessage, chatPeer: chatPeer, accountPeerId: context.account.peerId)
                             body = messageText
                             
                             loop: for media in firstMessage.media {
                                 if let image = media as? TelegramMediaImage {
                                     mediaRepresentations = image.representations
-                                    if !firstMessage.containsSecretMedia, let account = self.account, let smallest = smallestImageRepresentation(image.representations), let largest = largestImageRepresentation(image.representations) {
+                                    if !firstMessage.containsSecretMedia, let context = self.context, let smallest = smallestImageRepresentation(image.representations), let largest = largestImageRepresentation(image.representations) {
                                         var imageInfo: [String: Any] = [:]
                                         
                                         var thumbnailInfo: [String: Any] = [:]
-                                        thumbnailInfo["path"] = account.postbox.mediaBox.resourcePath(smallest.resource)
+                                        thumbnailInfo["path"] = context.account.postbox.mediaBox.resourcePath(smallest.resource)
                                         imageInfo["thumbnail"] = thumbnailInfo
                                         
                                         var fullSizeInfo: [String: Any] = [:]
-                                        fullSizeInfo["path"] = account.postbox.mediaBox.resourcePath(largest.resource)
+                                        fullSizeInfo["path"] = context.account.postbox.mediaBox.resourcePath(largest.resource)
                                         imageInfo["fullSize"] = fullSizeInfo
                                         
                                         imageInfo["width"] = Int(largest.dimensions.width)
@@ -675,7 +675,7 @@ final class NotificationManager {
                         content.threadIdentifier = "peer_\(firstMessage.id.peerId.toInt64())"
                         
                         if mediaInfo != nil, let mediaRepresentations = mediaRepresentations {
-                            if let account = self.account, let smallest = smallestImageRepresentation(mediaRepresentations) {
+                            if let context = self.context, let smallest = smallestImageRepresentation(mediaRepresentations) {
                                 /*if let path = account.postbox.mediaBox.completedResourcePath(smallest.resource) {
                                     var randomId: Int64 = 0
                                     arc4random_buf(&randomId, 8)
@@ -769,10 +769,10 @@ final class NotificationManager {
         }
         self.currentNotificationCall = call
         
-        guard let account = self.account else {
+        guard let context = self.context else {
             return
         }
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.currentPresentationData.with { $0 }
         if let notificationCall = call {
             if #available(iOS 10.0, *) {
                 let content = UNMutableNotificationContent()
@@ -815,10 +815,10 @@ final class NotificationManager {
                 }
             }
         }
-        guard let account = self.account else {
+        guard let context = self.context else {
             return
         }
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.currentPresentationData.with { $0 }
        
         var userInfo: [AnyHashable : Any] = [:]
         userInfo["peerId"] = messageId.peerId.toInt64()

@@ -11,7 +11,7 @@ final class WatchCommunicationManager {
     private let contextDisposable = MetaDisposable()
     private let presetsDisposable = MetaDisposable()
     
-    let account = Promise<Account?>(nil)
+    let accountContext = Promise<AccountContext?>(nil)
     private let presets = Promise<WatchPresetSettings?>(nil)
     private let navigateToMessagePipe = ValuePipe<MessageId>()
     
@@ -58,20 +58,20 @@ final class WatchCommunicationManager {
                 return
             }
             if let appContext = appContext, case let .authorized(context) = appContext {
-                strongSelf.account.set(.single(context.account))
-                strongSelf.server.setAuthorized(true, userId: context.account.peerId.id)
+                strongSelf.accountContext.set(.single(context.context))
+                strongSelf.server.setAuthorized(true, userId: context.context.account.peerId.id)
                 strongSelf.server.setMicAccessAllowed(false)
                 strongSelf.server.pushContext()
                 strongSelf.server.setMicAccessAllowed(true)
                 strongSelf.server.pushContext()
                 
                 let watchPresetSettingsKey = ApplicationSpecificPreferencesKeys.watchPresetSettings
-                strongSelf.presets.set(context.account.postbox.preferencesView(keys: [watchPresetSettingsKey])
+                strongSelf.presets.set(context.context.account.postbox.preferencesView(keys: [watchPresetSettingsKey])
                 |> map({ preferences -> WatchPresetSettings in
                     return (preferences.values[watchPresetSettingsKey] as? WatchPresetSettings) ?? WatchPresetSettings.defaultSettings
                 }))
             } else {
-                strongSelf.account.set(.single(nil))
+                strongSelf.accountContext.set(.single(nil))
                 strongSelf.server.setAuthorized(false, userId: 0)
                 strongSelf.server.pushContext()
                 
@@ -83,7 +83,7 @@ final class WatchCommunicationManager {
             guard let strongSelf = self, let presets = presets, let appContext = appContext, case let .authorized(context) = appContext, appInstalled, let tempPath = strongSelf.watchTemporaryStorePath else {
                 return
             }
-            let presentationData = context.account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = context.context.currentPresentationData.with { $0 }
             let defaultSuggestions: [String : String] = [
                 "OK": presentationData.strings.Watch_Suggestion_OK,
                 "Thanks": presentationData.strings.Watch_Suggestion_Thanks,

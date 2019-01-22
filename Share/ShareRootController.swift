@@ -180,23 +180,21 @@ class ShareRootController: UIViewController {
             
             let shouldBeMaster = self.shouldBeMaster
             let applicationInterface = account
-            |> mapToSignal { account, accountManager -> Signal<(Account, PostboxAccessChallengeData), ShareAuthorizationError> in
+            |> mapToSignal { account, accountManager -> Signal<(AccountContext, PostboxAccessChallengeData), ShareAuthorizationError> in
                 return combineLatest(currentPresentationDataAndSettings(postbox: account.postbox), account.postbox.combinedView(keys: [.accessChallengeData, preferencesKey]) |> take(1))
                 |> deliverOnMainQueue
                 |> introduceError(ShareAuthorizationError.self)
-                |> map { dataAndSettings, data -> (Account, PostboxAccessChallengeData) in
+                |> map { dataAndSettings, data -> (AccountContext, PostboxAccessChallengeData) in
                     accountCache = (account, accountManager)
                     updateLegacyLocalization(strings: dataAndSettings.presentationData.strings)
-                    account.applicationContext = TelegramApplicationContext(applicationBindings: applicationBindings, accountManager: accountManager, account: account, initialPresentationDataAndSettings: dataAndSettings, postbox: account.postbox)
-                    return (account, (data.views[.accessChallengeData] as! AccessChallengeDataView).data)
+                    let context = AccountContext(account: account, applicationBindings: applicationBindings, accountManager: accountManager, initialPresentationDataAndSettings: dataAndSettings, postbox: account.postbox)
+                    return (context, (data.views[.accessChallengeData] as! AccessChallengeDataView).data)
                 }
             }
-            |> afterNext { account, _ in
-                setupAccount(account)
-            }
             |> deliverOnMainQueue
-            |> afterNext { [weak self] account, accessChallengeData in
-                updateLegacyComponentsAccount(account)
+            |> afterNext { [weak self] context, accessChallengeData in
+                setupAccount(context.account)
+                setupLegacyComponents(context: context)
                 initializeLegacyComponents(application: nil, currentSizeClassGetter: { return .compact }, currentHorizontalClassGetter: { return .compact }, documentsPath: "", currentApplicationBounds: { return CGRect() }, canOpenUrl: { _ in return false}, openUrl: { _ in })
                 
                 let displayShare: () -> Void = {
@@ -206,7 +204,7 @@ class ShareRootController: UIViewController {
                         return Signal { [weak self] subscriber in
                             switch content[0] {
                             case let .contact(data):
-                                let controller = deviceContactInfoController(account: account, subject: .filter(peer: nil, contactId: nil, contactData: data, completion: { peer, contactData in
+                                let controller = deviceContactInfoController(context: context, subject: .filter(peer: nil, contactId: nil, contactData: data, completion: { peer, contactData in
                                     let phone = contactData.basicData.phoneNumbers[0].value
                                     if let vCardData = contactData.serializedVCard() {
                                         subscriber.putNext([.media(.media(.standalone(media: TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: nil, vCardData: vCardData))))])
@@ -229,7 +227,7 @@ class ShareRootController: UIViewController {
                     }
                     
                     let sentItems: ([PeerId], [PreparedShareItemContent]) -> Signal<ShareControllerExternalStatus, NoError> = { peerIds, contents in
-                        let sentItems = sentShareItems(account: account, to: peerIds, items: contents)
+                        let sentItems = sentShareItems(account: context.account, to: peerIds, items: contents)
                         |> `catch` { _ -> Signal<
                             Float, NoError> in
                             return .complete()
@@ -241,10 +239,10 @@ class ShareRootController: UIViewController {
                         |> then(.single(.done))
                     }
                     
-                    let shareController = ShareController(account: account, subject: .fromExternal({ peerIds, additionalText in
+                    let shareController = ShareController(context: context, subject: .fromExternal({ peerIds, additionalText in
                         if let strongSelf = self, let inputItems = strongSelf.extensionContext?.inputItems, !inputItems.isEmpty, !peerIds.isEmpty {
                             let rawSignals = TGItemProviderSignals.itemSignals(forInputItems: inputItems)!
-                            return preparedShareItems(account: account, to: peerIds[0], dataItems: rawSignals, additionalText: additionalText)
+                            return preparedShareItems(account: context.account, to: peerIds[0], dataItems: rawSignals, additionalText: additionalText)
                             |> map(Optional.init)
                             |> `catch` { _ -> Signal<PreparedShareItems?, NoError> in
                                 return .single(nil)
@@ -288,12 +286,12 @@ class ShareRootController: UIViewController {
                         strongSelf.mainWindow?.present(shareController, on: .root)
                     }
                     
-                    account.resetStateManagement()
-                    account.network.shouldKeepConnection.set(shouldBeMaster.get()
+                    context.account.resetStateManagement()
+                    context.account.network.shouldKeepConnection.set(shouldBeMaster.get()
                     |> map({ $0 }))
                 }
                 
-                let _ = passcodeEntryController(account: account, animateIn: true, completion: { value in
+                let _ = passcodeEntryController(context: context, animateIn: true, completion: { value in
                     if value {
                         displayShare()
                     } else {
