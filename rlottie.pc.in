@@ -4,9 +4,9 @@ apiversion=@player_version@
 libdir=@LIBDIR@
 includedir=@INCDIR@
 
-Name: lottie-player
-Description: A lottie-player library
+Name: rlottie
+Description: A rlottie library
 Version: @player_version@
 Requires:
-Libs: -L${libdir} -llottie-player
+Libs: -L${libdir} -lrlottie
 Cflags: -I${includedir} -std=c++14
