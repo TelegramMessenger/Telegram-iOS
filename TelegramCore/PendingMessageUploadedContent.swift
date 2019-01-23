@@ -626,6 +626,11 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                             }
                         }
                         
+                        if !file.isAnimated {
+                            flags |= 1 << 3
+                        }
+                        
+                        
                         if ttlSeconds != nil  {
                             return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaUploadedDocument(flags: flags, file: inputFile, thumb: thumbnailFile, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), stickers: nil, ttlSeconds: ttlSeconds), text), reuploadInfo: nil)))
                         }
