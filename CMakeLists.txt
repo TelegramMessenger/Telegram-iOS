@@ -1,26 +1,26 @@
 cmake_minimum_required( VERSION 3.2 )
 
 #declare project
-project( rlottie VERSION 0.0.1 LANGUAGES C CXX ASM)
+project( lottie-player VERSION 0.0.1 LANGUAGES C CXX ASM)
 
 #declare target
-add_library( rlottie SHARED  "" )
+add_library( lottie-player SHARED  "" )
 
 #declare version of the target
-set(rlottie_version_major 0)
-set(rlottie_version_minor 0)
-set(rlottie_version_patch 1)
-set(rlottie_version ${rlottie_version_major}.${rlottie_version_minor}.${rlottie_version_patch} )
-set_target_properties(rlottie PROPERTIES
-                        VERSION    ${rlottie_version}
-                        SOVERSION  ${rlottie_version_major}
+set(player_version_major 0)
+set(player_version_minor 0)
+set(player_version_patch 1)
+set(player_version ${player_version_major}.${player_version_minor}.${player_version_patch} )
+set_target_properties(lottie-player PROPERTIES
+                        VERSION    ${player_version}
+                        SOVERSION  ${player_version_major}
                       )
 
 #declare alias so that library can be used inside the build tree, e.g. when testing
-add_library(rlottie::rlottie ALIAS rlottie)
+add_library(lottie-player::lottie-player ALIAS lottie-player)
 
 #declare target compilation options
-target_compile_options(rlottie
+target_compile_options(lottie-player
                     PUBLIC
                         -std=c++14
                     PRIVATE
@@ -30,17 +30,17 @@ target_compile_options(rlottie
 set( CMAKE_THREAD_PREFER_PTHREAD TRUE )
 find_package( Threads )
 
-target_link_libraries(rlottie
+target_link_libraries(lottie-player
                     PUBLIC
                         "${CMAKE_THREAD_LIBS_INIT}"
                      )
 
 # for dlopen, dlsym and dlclose dependancy
-target_link_libraries(rlottie
+target_link_libraries(lottie-player
                     PRIVATE
                     ${CMAKE_DL_LIBS})
 
-target_link_libraries(rlottie
+target_link_libraries(lottie-player
                     PUBLIC
                          "-Wl,--no-undefined"
                       )
@@ -67,7 +67,7 @@ install(FILES
         DESTINATION include)
 
 #install lib
-install( TARGETS rlottie EXPORT rlottie-targets
+install( TARGETS lottie-player EXPORT lottie-player-targets
          LIBRARY     DESTINATION    ${LIB_INSTALL_DIR}
          ARCHIVE     DESTINATION    ${LIB_INSTALL_DIR}
          INCLUDES    DESTINATION    include
@@ -75,36 +75,36 @@ install( TARGETS rlottie EXPORT rlottie-targets
 
 #install config file.
 
-install( EXPORT rlottie-targets
-         FILE          rlottieTargets.cmake
-         NAMESPACE     rlottie::
-         DESTINATION   ${LIB_INSTALL_DIR}/cmake/rlottie
+install( EXPORT lottie-player-targets
+         FILE          lottie-playerTargets.cmake
+         NAMESPACE     lottie-player::
+         DESTINATION   ${LIB_INSTALL_DIR}/cmake/lottie-player
        )
 
 
 #Create a ConfigVersion.cmake file
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/rlottieConfigVersion.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/lottie-playerConfigVersion.cmake
     VERSION ${PROJECT_VERSION}
     COMPATIBILITY AnyNewerVersion
 )
 
-configure_package_config_file(${CMAKE_CURRENT_LIST_DIR}/cmake/rlottieConfig.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/rlottieConfig.cmake
-    INSTALL_DESTINATION ${LIB_INSTALL_DIR}/cmake/rlottie
+configure_package_config_file(${CMAKE_CURRENT_LIST_DIR}/cmake/lottie-playerConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/lottie-playerConfig.cmake
+    INSTALL_DESTINATION ${LIB_INSTALL_DIR}/cmake/lottie-player
 )
 
 #Install the config, configversion and custom find modules
 install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/rlottieConfig.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/rlottieConfigVersion.cmake
-    DESTINATION ${LIB_INSTALL_DIR}/cmake/rlottie
+    ${CMAKE_CURRENT_BINARY_DIR}/lottie-playerConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/lottie-playerConfigVersion.cmake
+    DESTINATION ${LIB_INSTALL_DIR}/cmake/lottie-player
 )
 
 
-export(EXPORT rlottie-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/rlottieTargets.cmake NAMESPACE rlottie::)
+export(EXPORT lottie-player-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/lottie-playerTargets.cmake NAMESPACE lottie-player::)
 
 #Register package in user's package registry
-export(PACKAGE rlottie)
+export(PACKAGE lottie-player)
 

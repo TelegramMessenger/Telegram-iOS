@@ -5,10 +5,10 @@ class AnimationTest : public ::testing::Test {
 public:
     void SetUp()
     {
-        animationInvalid = rlottie::Animation::loadFromFile("wrong_file.json");
+        animationInvalid = lottie::Animation::loadFromFile("wrong_file.json");
         std::string filePath = DEMO_DIR;
         filePath +="mask.json";
-        animation = rlottie::Animation::loadFromFile(filePath);
+        animation = lottie::Animation::loadFromFile(filePath);
 
     }
     void TearDown()
@@ -16,8 +16,8 @@ public:
 
     }
 public:
-    std::unique_ptr<rlottie::Animation> animationInvalid;
-    std::unique_ptr<rlottie::Animation> animation;
+    std::unique_ptr<lottie::Animation> animationInvalid;
+    std::unique_ptr<lottie::Animation> animation;
 };
 
 TEST_F(AnimationTest, loadFromFile_N) {

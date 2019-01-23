@@ -1,5 +1,5 @@
-Name:       rlottie
-Summary:    lottie rendering library
+Name:       lottie-player
+Summary:    lottie player library
 Version:    0.0.1
 Release:    1
 Group:      UI Framework/Services
@@ -15,13 +15,13 @@ lottie player library
 
 
 %package devel
-Summary:    lottie rendering library (devel)
+Summary:    lottie player library (devel)
 Group:      Development/Libraries
 Requires:   %{name} = %{version}-%{release}
 
 
 %description devel
-lottie rendering library (devel)
+lottie player library (devel)
 
 
 %prep
@@ -54,13 +54,13 @@ make %{?jobs:-j%jobs}
 
 %files
 %defattr(-,root,root,-)
-%{_libdir}/librlottie.so.*
-%manifest packaging/%{name}.manifest
+%{_libdir}/liblottie-player.so.*
+%manifest %{name}.manifest
 %license COPYING licenses/COPYING*
 
 %files devel
 %defattr(-,root,root,-)
 %{_includedir}/*.h
-%{_libdir}/librlottie.so
-%{_libdir}/cmake/rlottie/*.cmake
-%{_libdir}/pkgconfig/rlottie.pc
+%{_libdir}/liblottie-player.so
+%{_libdir}/cmake/lottie-player/*.cmake
+%{_libdir}/pkgconfig/lottie-player.pc

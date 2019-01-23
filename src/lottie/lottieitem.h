@@ -56,7 +56,7 @@ public:
    VSize size() const;
    void buildRenderTree();
    const LOTLayerNode * renderTree()const;
-   bool render(const rlottie::Surface &surface);
+   bool render(const lottie::Surface &surface);
 private:
    VMatrix                                    mScaleMatrix;
    VSize                                      mViewSize;

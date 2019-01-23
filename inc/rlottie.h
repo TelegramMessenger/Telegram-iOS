@@ -49,7 +49,7 @@ class AnimationImpl;
 struct LOTNode;
 struct LOTLayerNode;
 
-namespace rlottie {
+namespace lottie {
 
 class LOT_EXPORT Surface {
 public:

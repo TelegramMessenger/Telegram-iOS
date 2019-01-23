@@ -1,5 +1,5 @@
 
-target_sources(rlottie
+target_sources(lottie-player
     PRIVATE
         "${CMAKE_CURRENT_LIST_DIR}/lottieitem.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/lottieloader.cpp"
@@ -8,7 +8,7 @@ target_sources(rlottie
         "${CMAKE_CURRENT_LIST_DIR}/lottieanimation.cpp"
     )
 
-target_include_directories(rlottie
+target_include_directories(lottie-player
     PRIVATE
         "${CMAKE_CURRENT_LIST_DIR}"
     )

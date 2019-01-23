@@ -23,7 +23,7 @@
 
 #include <fstream>
 
-using namespace rlottie;
+using namespace lottie;
 
 struct RenderTask {
     RenderTask() { receiver = sender.get_future(); }

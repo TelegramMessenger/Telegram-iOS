@@ -21,7 +21,7 @@ RUN TESTS
 
 BUILD WITH CMAKE
 ================
-librlottie can also be built using the cmake build system.
+liblottie-player can also be built using the cmake build system.
 
 1. install cmake.  (Follow instructions at https://cmake.org/download/)
 2. create a new build/ directory
