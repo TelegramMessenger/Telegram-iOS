@@ -15,6 +15,7 @@ public:
     }
 
     VBitmap load(const char *fileName);
+    VBitmap load(const char *data, int len);
     ~VImageLoader();
 private:
     VImageLoader();

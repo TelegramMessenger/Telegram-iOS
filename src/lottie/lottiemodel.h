@@ -339,12 +339,12 @@ public:
 class LOTLayerData;
 struct LOTAsset
 {
-    enum class Type {
+    enum class Type : unsigned char{
         Precomp,
         Image,
         Char
     };
-
+    VBitmap  bitmap() const;
     Type                                      mAssetType{Type::Precomp};
     std::string                               mRefId; // ref id
     std::vector<std::shared_ptr<LOTData>>     mLayers;
@@ -352,6 +352,7 @@ struct LOTAsset
     int                                       mWidth{0};
     int                                       mHeight{0};
     std::string                               mImagePath;
+    std::string                               mImageData;
 };
 
 class LOTLayerData : public LOTGroupData

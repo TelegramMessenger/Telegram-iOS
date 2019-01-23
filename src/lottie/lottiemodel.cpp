@@ -18,6 +18,7 @@
 
 #include "lottiemodel.h"
 #include "vline.h"
+#include "vimageloader.h"
 #include <cassert>
 #include <stack>
 
@@ -315,5 +316,17 @@ void LOTGradient::update(std::unique_ptr<VGradient> &grad, int frameNo)
             grad->radial.cy + std::sin(angle) * progress * grad->radial.cradius;
         // Lottie dosen't have any focal radius concept.
         grad->radial.fradius = 0;
+    }
+}
+
+VBitmap
+LOTAsset::bitmap() const
+{
+    if (!mImageData.empty()) {
+        return VImageLoader::instance().load(mImageData.c_str(), mImageData.length());
+    } else if (!mImagePath.empty()) {
+        return VImageLoader::instance().load(mImagePath.c_str());
+    } else {
+        return VBitmap();
     }
 }

@@ -23,7 +23,6 @@
 #include "vdasher.h"
 #include "vpainter.h"
 #include "vraster.h"
-#include "vimageloader.h"
 
 /* Lottie Layer Rules
  * 1. time stretch is pre calculated and applied to all the properties of the
@@ -703,11 +702,8 @@ void LOTImageLayerItem::updateContent()
         // load image
         //@TODO find a better way to load
         // so that can be shared by multiple layers
-        if (!mLayerData->mAsset->mImagePath.empty()) {
-            VBitmap img = VImageLoader::instance().load(mLayerData->mAsset->mImagePath.c_str());
-            VBrush brush(img);
-            mRenderNode->setBrush(brush);
-        }
+        VBrush brush(mLayerData->mAsset->bitmap());
+        mRenderNode->setBrush(brush);
     }
 
     if (flag() & DirtyFlagBit::Matrix) {
