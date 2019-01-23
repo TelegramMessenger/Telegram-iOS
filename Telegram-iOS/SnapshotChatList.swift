@@ -98,7 +98,7 @@ private struct SnapshotChat {
 
 private let chatList: [SnapshotChat] = [
     .init(.init(100, .user(1, .id(7), "Jane", ""), "Well I do help animals. Maybe I'll have a few cats in my new luxury apartment. 😊", false), isPinned: true),
-    .init(.init(90, .user(3, .none, "Tyrion", "Lannister"), "Sometimes posession is an abstract concept. They took my purse, but the gold is still mine.", false), unreadCount: 1),
+    .init(.init(90, .user(3, .none, "Tyrion", "Lannister"), "Sometimes possession is an abstract concept. They took my purse, but the gold is still mine.", false), unreadCount: 1),
     .init(.init(80, .user(2, .id(1), "Alena", "Shy"), "😍 Sticker", true)),
     .init(.init(70, .secretChat(4, 4, .id(8), "Heisenberg", ""), "Thanks, Telegram helps me a lot. You have my financial support if you need more servers.", false)),
     .init(.init(60, .user(5, .id(9), "Bender", ""), "I looove new iPhones! In fact, they invited me to a focus group.", false)),
