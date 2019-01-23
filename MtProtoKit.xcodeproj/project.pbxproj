@@ -40,6 +40,12 @@
 		D020FAFD1D994E3100F279AA /* MTHttpRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D020FAF91D994E3100F279AA /* MTHttpRequestOperation.m */; };
 		D020FAFE1D994E3100F279AA /* MTHttpRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D020FAF91D994E3100F279AA /* MTHttpRequestOperation.m */; };
 		D020FAFF1D994E3100F279AA /* MTHttpRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D020FAF91D994E3100F279AA /* MTHttpRequestOperation.m */; };
+		D0529D2B21A434BF00D7C3C4 /* MTTransportSchemeStats.h in Headers */ = {isa = PBXBuildFile; fileRef = D0529D2921A434BF00D7C3C4 /* MTTransportSchemeStats.h */; };
+		D0529D2C21A434BF00D7C3C4 /* MTTransportSchemeStats.h in Headers */ = {isa = PBXBuildFile; fileRef = D0529D2921A434BF00D7C3C4 /* MTTransportSchemeStats.h */; };
+		D0529D2D21A434BF00D7C3C4 /* MTTransportSchemeStats.h in Headers */ = {isa = PBXBuildFile; fileRef = D0529D2921A434BF00D7C3C4 /* MTTransportSchemeStats.h */; };
+		D0529D2E21A434BF00D7C3C4 /* MTTransportSchemeStats.m in Sources */ = {isa = PBXBuildFile; fileRef = D0529D2A21A434BF00D7C3C4 /* MTTransportSchemeStats.m */; };
+		D0529D2F21A434BF00D7C3C4 /* MTTransportSchemeStats.m in Sources */ = {isa = PBXBuildFile; fileRef = D0529D2A21A434BF00D7C3C4 /* MTTransportSchemeStats.m */; };
+		D0529D3021A434BF00D7C3C4 /* MTTransportSchemeStats.m in Sources */ = {isa = PBXBuildFile; fileRef = D0529D2A21A434BF00D7C3C4 /* MTTransportSchemeStats.m */; };
 		D0580AC21B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = D0580AC01B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h */; };
 		D0580AC31B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D0580AC11B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m */; };
 		D073D2D81FB5E493009E1DA2 /* MTBindingTempAuthKeyContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D0C0EAE51FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.m */; };
@@ -614,6 +620,8 @@
 		D0503AD918B027F80074C3FE /* MTOutputStream.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTOutputStream.m; path = MTProtoKit/MTOutputStream.m; sourceTree = "<group>"; };
 		D0503ADC18B029480074C3FE /* MTInputStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTInputStream.h; path = MTProtoKit/MTInputStream.h; sourceTree = "<group>"; };
 		D0503ADD18B029480074C3FE /* MTInputStream.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTInputStream.m; path = MTProtoKit/MTInputStream.m; sourceTree = "<group>"; };
+		D0529D2921A434BF00D7C3C4 /* MTTransportSchemeStats.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MTTransportSchemeStats.h; sourceTree = "<group>"; };
+		D0529D2A21A434BF00D7C3C4 /* MTTransportSchemeStats.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MTTransportSchemeStats.m; sourceTree = "<group>"; };
 		D0580ABE1B0F3E7100E8235B /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegraph-dzhgyeoibunjpxfckifwvbawfdmi/Build/Products/Debug-iphoneos/SSignalKit.framework"; sourceTree = "<group>"; };
 		D0580AC01B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTDiscoverConnectionSignals.h; sourceTree = "<group>"; };
 		D0580AC11B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTDiscoverConnectionSignals.m; sourceTree = "<group>"; };
@@ -1170,6 +1178,8 @@
 			children = (
 				D05A839E18AFB75B007F1076 /* MTContext.h */,
 				D05A839C18AFB75B007F1076 /* MTContext.m */,
+				D0529D2921A434BF00D7C3C4 /* MTTransportSchemeStats.h */,
+				D0529D2A21A434BF00D7C3C4 /* MTTransportSchemeStats.m */,
 				9389BC4F18DA1EDB00F9C1A6 /* Transport Scheme */,
 				D05A843518AFB941007F1076 /* Discover Address */,
 				D05A843618AFB955007F1076 /* Authorization */,
@@ -1527,6 +1537,7 @@
 				D0CD98641D74B9D700F41187 /* MTFileBasedKeychain.h in Headers */,
 				D0CD98A01D74BA6500F41187 /* MTSessionInfo.h in Headers */,
 				D0CD97D61D74B91E00F41187 /* MTTimer.h in Headers */,
+				D0529D2C21A434BF00D7C3C4 /* MTTransportSchemeStats.h in Headers */,
 				D0CD98F81D75C0E400F41187 /* MTRequestErrorContext.h in Headers */,
 				D0CD98A51D74BA6500F41187 /* MTMessageEncryptionKey.h in Headers */,
 				D0CD981D1D74B99400F41187 /* MTPingMessage.h in Headers */,
@@ -1617,6 +1628,7 @@
 				D0D1A0401ADD983C007D9ED6 /* MTExportedAuthorizationData.h in Headers */,
 				D0CB063C1ADC4591005E298F /* MTOutgoingMessage.h in Headers */,
 				D0D1A0361ADD983C007D9ED6 /* MTBadMsgNotificationMessage.h in Headers */,
+				D0529D2B21A434BF00D7C3C4 /* MTTransportSchemeStats.h in Headers */,
 				D0CB06581ADC45CE005E298F /* MTNetworkAvailability.h in Headers */,
 				D0CB06211ADC454C005E298F /* MTKeychain.h in Headers */,
 				D0580AC21B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h in Headers */,
@@ -1723,6 +1735,7 @@
 				D0CD98651D74B9D800F41187 /* MTFileBasedKeychain.h in Headers */,
 				D0CD98991D74BA6500F41187 /* MTSessionInfo.h in Headers */,
 				D0CD97D71D74B92000F41187 /* MTTimer.h in Headers */,
+				D0529D2D21A434BF00D7C3C4 /* MTTransportSchemeStats.h in Headers */,
 				D0CD98FD1D75C0E500F41187 /* MTRequestErrorContext.h in Headers */,
 				D0CD989E1D74BA6500F41187 /* MTMessageEncryptionKey.h in Headers */,
 				D0CD982B1D74B99500F41187 /* MTPingMessage.h in Headers */,
@@ -2027,6 +2040,7 @@
 				D0E9B9F11F0176DA00F079A4 /* MTBackupAddressSignals.m in Sources */,
 				D0CD982F1D74B9AA00F41187 /* MTFutureSaltsMessage.m in Sources */,
 				D0CD98A61D74BA6E00F41187 /* MTProto.m in Sources */,
+				D0529D2F21A434BF00D7C3C4 /* MTTransportSchemeStats.m in Sources */,
 				D0CD98331D74B9AA00F41187 /* MTMsgContainerMessage.m in Sources */,
 				D0CD980A1D74B96C00F41187 /* MTDropRpcResultMessage.m in Sources */,
 				D0CD98511D74B9B700F41187 /* MTServerDhParamsMessage.m in Sources */,
@@ -2124,6 +2138,7 @@
 				D0E9B9F01F0176DA00F079A4 /* MTBackupAddressSignals.m in Sources */,
 				D0CAF2D41D75E26D0011F558 /* MTSubscriber.m in Sources */,
 				D0CB06531ADC45BA005E298F /* MTRequestContext.m in Sources */,
+				D0529D2E21A434BF00D7C3C4 /* MTTransportSchemeStats.m in Sources */,
 				D0D1A03F1ADD983C007D9ED6 /* MTDropRpcResultMessage.m in Sources */,
 				D0D1A0651ADD983C007D9ED6 /* MTServerDhParamsMessage.m in Sources */,
 				D0CAF2D81D75E2840011F558 /* MTDisposable.m in Sources */,
@@ -2221,6 +2236,7 @@
 				D0E9B9F21F0176DA00F079A4 /* MTBackupAddressSignals.m in Sources */,
 				D0CD983E1D74B9AA00F41187 /* MTFutureSaltsMessage.m in Sources */,
 				D0CD98AD1D74BA6F00F41187 /* MTProto.m in Sources */,
+				D0529D3021A434BF00D7C3C4 /* MTTransportSchemeStats.m in Sources */,
 				D0CD98421D74B9AA00F41187 /* MTMsgContainerMessage.m in Sources */,
 				D0CD980F1D74B96C00F41187 /* MTDropRpcResultMessage.m in Sources */,
 				D0CD98561D74B9B700F41187 /* MTServerDhParamsMessage.m in Sources */,
@@ -2569,7 +2585,7 @@
 			};
 			name = Release;
 		};
-		D013CAD5209C3BE2009A0B6F /* Debug Fork AppStore */ = {
+		D013CAD5209C3BE2009A0B6F /* DebugForkAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -2612,9 +2628,9 @@
 				PRODUCT_MODULE_NAME = "$(PRODUCT_NAME:c99extidentifier)";
 				SDKROOT = iphoneos;
 			};
-			name = "Debug Fork AppStore";
+			name = DebugForkAppStore;
 		};
-		D013CAD6209C3BE2009A0B6F /* Debug Fork AppStore */ = {
+		D013CAD6209C3BE2009A0B6F /* DebugForkAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -2670,9 +2686,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Fork AppStore";
+			name = DebugForkAppStore;
 		};
-		D013CAD7209C3BE2009A0B6F /* Debug Fork AppStore */ = {
+		D013CAD7209C3BE2009A0B6F /* DebugForkAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -2713,9 +2729,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Fork AppStore";
+			name = DebugForkAppStore;
 		};
-		D013CAD8209C3BE2009A0B6F /* Debug Fork AppStore */ = {
+		D013CAD8209C3BE2009A0B6F /* DebugForkAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -2767,9 +2783,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Fork AppStore";
+			name = DebugForkAppStore;
 		};
-		D013CAD9209C3BE2009A0B6F /* Debug Fork AppStore */ = {
+		D013CAD9209C3BE2009A0B6F /* DebugForkAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -2793,9 +2809,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug Fork AppStore";
+			name = DebugForkAppStore;
 		};
-		D013CADA209C3BE2009A0B6F /* Debug Fork AppStore */ = {
+		D013CADA209C3BE2009A0B6F /* DebugForkAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -2812,9 +2828,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.MtProtoKitStabilityTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug Fork AppStore";
+			name = DebugForkAppStore;
 		};
-		D021D4FC219CB1CD0064BEBA /* Debug Fork */ = {
+		D021D4FC219CB1CD0064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -2857,9 +2873,9 @@
 				PRODUCT_MODULE_NAME = "$(PRODUCT_NAME:c99extidentifier)";
 				SDKROOT = iphoneos;
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D021D4FD219CB1CD0064BEBA /* Debug Fork */ = {
+		D021D4FD219CB1CD0064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -2915,9 +2931,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D021D4FE219CB1CD0064BEBA /* Debug Fork */ = {
+		D021D4FE219CB1CD0064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -2959,9 +2975,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D021D4FF219CB1CD0064BEBA /* Debug Fork */ = {
+		D021D4FF219CB1CD0064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -3013,9 +3029,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D021D500219CB1CD0064BEBA /* Debug Fork */ = {
+		D021D500219CB1CD0064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -3039,9 +3055,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
-		D021D501219CB1CD0064BEBA /* Debug Fork */ = {
+		D021D501219CB1CD0064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -3058,7 +3074,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.MtProtoKitStabilityTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug Fork";
+			name = DebugFork;
 		};
 		D05A833A18AFB3F9007F1076 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -3221,7 +3237,7 @@
 			};
 			name = Release;
 		};
-		D079FD101F06BE440038FADE /* Debug Hockeyapp */ = {
+		D079FD101F06BE440038FADE /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -3264,9 +3280,9 @@
 				PRODUCT_MODULE_NAME = "$(PRODUCT_NAME:c99extidentifier)";
 				SDKROOT = iphoneos;
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D079FD111F06BE440038FADE /* Debug Hockeyapp */ = {
+		D079FD111F06BE440038FADE /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -3322,9 +3338,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D079FD121F06BE440038FADE /* Debug Hockeyapp */ = {
+		D079FD121F06BE440038FADE /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -3366,9 +3382,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D079FD131F06BE440038FADE /* Debug Hockeyapp */ = {
+		D079FD131F06BE440038FADE /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -3420,9 +3436,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D079FD141F06BE440038FADE /* Debug Hockeyapp */ = {
+		D079FD141F06BE440038FADE /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -3446,9 +3462,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D079FD151F06BE440038FADE /* Debug Hockeyapp */ = {
+		D079FD151F06BE440038FADE /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -3465,9 +3481,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.MtProtoKitStabilityTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		D079FD161F06BE4D0038FADE /* Release AppStore */ = {
+		D079FD161F06BE4D0038FADE /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -3503,9 +3519,9 @@
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D079FD171F06BE4D0038FADE /* Release AppStore */ = {
+		D079FD171F06BE4D0038FADE /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -3556,9 +3572,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D079FD181F06BE4D0038FADE /* Release AppStore */ = {
+		D079FD181F06BE4D0038FADE /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -3595,9 +3611,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D079FD191F06BE4D0038FADE /* Release AppStore */ = {
+		D079FD191F06BE4D0038FADE /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -3643,9 +3659,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D079FD1A1F06BE4D0038FADE /* Release AppStore */ = {
+		D079FD1A1F06BE4D0038FADE /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -3665,9 +3681,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D079FD1B1F06BE4D0038FADE /* Release AppStore */ = {
+		D079FD1B1F06BE4D0038FADE /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -3683,9 +3699,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.MtProtoKitStabilityTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D079FD1C1F06BE540038FADE /* Release Hockeyapp */ = {
+		D079FD1C1F06BE540038FADE /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -3721,9 +3737,9 @@
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D079FD1D1F06BE540038FADE /* Release Hockeyapp */ = {
+		D079FD1D1F06BE540038FADE /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -3774,9 +3790,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D079FD1E1F06BE540038FADE /* Release Hockeyapp */ = {
+		D079FD1E1F06BE540038FADE /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -3813,9 +3829,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D079FD1F1F06BE540038FADE /* Release Hockeyapp */ = {
+		D079FD1F1F06BE540038FADE /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -3861,9 +3877,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D079FD201F06BE540038FADE /* Release Hockeyapp */ = {
+		D079FD201F06BE540038FADE /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -3883,9 +3899,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D079FD211F06BE540038FADE /* Release Hockeyapp */ = {
+		D079FD211F06BE540038FADE /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -3901,9 +3917,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.MtProtoKitStabilityTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D0924FDC1FE52BFE003F693F /* Release Hockeyapp Internal */ = {
+		D0924FDC1FE52BFE003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -3939,9 +3955,9 @@
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0924FDD1FE52BFE003F693F /* Release Hockeyapp Internal */ = {
+		D0924FDD1FE52BFE003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -3992,9 +4008,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0924FDE1FE52BFE003F693F /* Release Hockeyapp Internal */ = {
+		D0924FDE1FE52BFE003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -4030,9 +4046,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0924FDF1FE52BFE003F693F /* Release Hockeyapp Internal */ = {
+		D0924FDF1FE52BFE003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -4078,9 +4094,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0924FE01FE52BFE003F693F /* Release Hockeyapp Internal */ = {
+		D0924FE01FE52BFE003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -4100,9 +4116,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
-		D0924FE11FE52BFE003F693F /* Release Hockeyapp Internal */ = {
+		D0924FE11FE52BFE003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -4118,7 +4134,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.MtProtoKitStabilityTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release Hockeyapp Internal";
+			name = ReleaseHockeyappInternal;
 		};
 		D096C2D21CC3C664006D814E /* Hockeyapp */ = {
 			isa = XCBuildConfiguration;
@@ -4337,7 +4353,7 @@
 			};
 			name = Hockeyapp;
 		};
-		D0ADF928212B3ACC00310BBC /* Debug AppStore LLC */ = {
+		D0ADF928212B3ACC00310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -4380,9 +4396,9 @@
 				PRODUCT_MODULE_NAME = "$(PRODUCT_NAME:c99extidentifier)";
 				SDKROOT = iphoneos;
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0ADF929212B3ACC00310BBC /* Debug AppStore LLC */ = {
+		D0ADF929212B3ACC00310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -4438,9 +4454,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0ADF92A212B3ACC00310BBC /* Debug AppStore LLC */ = {
+		D0ADF92A212B3ACC00310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -4482,9 +4498,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0ADF92B212B3ACC00310BBC /* Debug AppStore LLC */ = {
+		D0ADF92B212B3ACC00310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -4536,9 +4552,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0ADF92C212B3ACC00310BBC /* Debug AppStore LLC */ = {
+		D0ADF92C212B3ACC00310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -4562,9 +4578,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
-		D0ADF92D212B3ACC00310BBC /* Debug AppStore LLC */ = {
+		D0ADF92D212B3ACC00310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -4581,7 +4597,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.MtProtoKitStabilityTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug AppStore LLC";
+			name = DebugAppStoreLLC;
 		};
 		D0CB060A1ADC4483005E298F /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -4694,7 +4710,7 @@
 			};
 			name = Release;
 		};
-		D0CE6EE9213DC2F900BCD44B /* Release AppStore LLC */ = {
+		D0CE6EE9213DC2F900BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -4730,9 +4746,9 @@
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0CE6EEA213DC2F900BCD44B /* Release AppStore LLC */ = {
+		D0CE6EEA213DC2F900BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -4783,9 +4799,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0CE6EEB213DC2F900BCD44B /* Release AppStore LLC */ = {
+		D0CE6EEB213DC2F900BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -4822,9 +4838,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0CE6EEC213DC2F900BCD44B /* Release AppStore LLC */ = {
+		D0CE6EEC213DC2F900BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -4870,9 +4886,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0CE6EED213DC2F900BCD44B /* Release AppStore LLC */ = {
+		D0CE6EED213DC2F900BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -4892,9 +4908,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
-		D0CE6EEE213DC2F900BCD44B /* Release AppStore LLC */ = {
+		D0CE6EEE213DC2F900BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -4910,7 +4926,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.MtProtoKitStabilityTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Release AppStore LLC";
+			name = ReleaseAppStoreLLC;
 		};
 		D0D2251E1B4D817B0085E26D /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -5062,7 +5078,7 @@
 			};
 			name = Release;
 		};
-		D0DB57B01E5C4B470071854C /* Debug AppStore */ = {
+		D0DB57B01E5C4B470071854C /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -5105,9 +5121,9 @@
 				PRODUCT_MODULE_NAME = "$(PRODUCT_NAME:c99extidentifier)";
 				SDKROOT = iphoneos;
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D0DB57B11E5C4B470071854C /* Debug AppStore */ = {
+		D0DB57B11E5C4B470071854C /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -5163,9 +5179,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D0DB57B21E5C4B470071854C /* Debug AppStore */ = {
+		D0DB57B21E5C4B470071854C /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -5207,9 +5223,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D0DB57B31E5C4B470071854C /* Debug AppStore */ = {
+		D0DB57B31E5C4B470071854C /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -5261,9 +5277,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D0DB57B41E5C4B470071854C /* Debug AppStore */ = {
+		D0DB57B41E5C4B470071854C /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -5287,9 +5303,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D0DB57B51E5C4B470071854C /* Debug AppStore */ = {
+		D0DB57B51E5C4B470071854C /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_WARN_UNREACHABLE_CODE = YES;
@@ -5306,7 +5322,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.MtProtoKitStabilityTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
 /* End XCBuildConfiguration section */
 
@@ -5315,18 +5331,18 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D003546D1C173BF0006610DA /* Debug */,
-				D079FD151F06BE440038FADE /* Debug Hockeyapp */,
-				D021D501219CB1CD0064BEBA /* Debug Fork */,
-				D0DB57B51E5C4B470071854C /* Debug AppStore */,
-				D0ADF92D212B3ACC00310BBC /* Debug AppStore LLC */,
-				D013CADA209C3BE2009A0B6F /* Debug Fork AppStore */,
+				D079FD151F06BE440038FADE /* DebugHockeyapp */,
+				D021D501219CB1CD0064BEBA /* DebugFork */,
+				D0DB57B51E5C4B470071854C /* DebugAppStore */,
+				D0ADF92D212B3ACC00310BBC /* DebugAppStoreLLC */,
+				D013CADA209C3BE2009A0B6F /* DebugForkAppStore */,
 				D003546E1C173BF0006610DA /* Release */,
 				C22069C71E8EB4B300E82730 /* AppStore */,
-				D079FD1B1F06BE4D0038FADE /* Release AppStore */,
-				D0CE6EEE213DC2F900BCD44B /* Release AppStore LLC */,
+				D079FD1B1F06BE4D0038FADE /* ReleaseAppStore */,
+				D0CE6EEE213DC2F900BCD44B /* ReleaseAppStoreLLC */,
 				D096C2D71CC3C664006D814E /* Hockeyapp */,
-				D079FD211F06BE540038FADE /* Release Hockeyapp */,
-				D0924FE11FE52BFE003F693F /* Release Hockeyapp Internal */,
+				D079FD211F06BE540038FADE /* ReleaseHockeyapp */,
+				D0924FE11FE52BFE003F693F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -5335,18 +5351,18 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D05A833A18AFB3F9007F1076 /* Debug */,
-				D079FD101F06BE440038FADE /* Debug Hockeyapp */,
-				D021D4FC219CB1CD0064BEBA /* Debug Fork */,
-				D0DB57B01E5C4B470071854C /* Debug AppStore */,
-				D0ADF928212B3ACC00310BBC /* Debug AppStore LLC */,
-				D013CAD5209C3BE2009A0B6F /* Debug Fork AppStore */,
+				D079FD101F06BE440038FADE /* DebugHockeyapp */,
+				D021D4FC219CB1CD0064BEBA /* DebugFork */,
+				D0DB57B01E5C4B470071854C /* DebugAppStore */,
+				D0ADF928212B3ACC00310BBC /* DebugAppStoreLLC */,
+				D013CAD5209C3BE2009A0B6F /* DebugForkAppStore */,
 				D05A833B18AFB3F9007F1076 /* Release */,
 				C22069C21E8EB4B300E82730 /* AppStore */,
-				D079FD161F06BE4D0038FADE /* Release AppStore */,
-				D0CE6EE9213DC2F900BCD44B /* Release AppStore LLC */,
+				D079FD161F06BE4D0038FADE /* ReleaseAppStore */,
+				D0CE6EE9213DC2F900BCD44B /* ReleaseAppStoreLLC */,
 				D096C2D21CC3C664006D814E /* Hockeyapp */,
-				D079FD1C1F06BE540038FADE /* Release Hockeyapp */,
-				D0924FDC1FE52BFE003F693F /* Release Hockeyapp Internal */,
+				D079FD1C1F06BE540038FADE /* ReleaseHockeyapp */,
+				D0924FDC1FE52BFE003F693F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -5355,18 +5371,18 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D079ABAA1AF39B8000076F59 /* Debug */,
-				D079FD121F06BE440038FADE /* Debug Hockeyapp */,
-				D021D4FE219CB1CD0064BEBA /* Debug Fork */,
-				D0DB57B21E5C4B470071854C /* Debug AppStore */,
-				D0ADF92A212B3ACC00310BBC /* Debug AppStore LLC */,
-				D013CAD7209C3BE2009A0B6F /* Debug Fork AppStore */,
+				D079FD121F06BE440038FADE /* DebugHockeyapp */,
+				D021D4FE219CB1CD0064BEBA /* DebugFork */,
+				D0DB57B21E5C4B470071854C /* DebugAppStore */,
+				D0ADF92A212B3ACC00310BBC /* DebugAppStoreLLC */,
+				D013CAD7209C3BE2009A0B6F /* DebugForkAppStore */,
 				D079ABAB1AF39B8000076F59 /* Release */,
 				C22069C41E8EB4B300E82730 /* AppStore */,
-				D079FD181F06BE4D0038FADE /* Release AppStore */,
-				D0CE6EEB213DC2F900BCD44B /* Release AppStore LLC */,
+				D079FD181F06BE4D0038FADE /* ReleaseAppStore */,
+				D0CE6EEB213DC2F900BCD44B /* ReleaseAppStoreLLC */,
 				D096C2D41CC3C664006D814E /* Hockeyapp */,
-				D079FD1E1F06BE540038FADE /* Release Hockeyapp */,
-				D0924FDE1FE52BFE003F693F /* Release Hockeyapp Internal */,
+				D079FD1E1F06BE540038FADE /* ReleaseHockeyapp */,
+				D0924FDE1FE52BFE003F693F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -5375,18 +5391,18 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D0CB060A1ADC4483005E298F /* Debug */,
-				D079FD111F06BE440038FADE /* Debug Hockeyapp */,
-				D021D4FD219CB1CD0064BEBA /* Debug Fork */,
-				D0DB57B11E5C4B470071854C /* Debug AppStore */,
-				D0ADF929212B3ACC00310BBC /* Debug AppStore LLC */,
-				D013CAD6209C3BE2009A0B6F /* Debug Fork AppStore */,
+				D079FD111F06BE440038FADE /* DebugHockeyapp */,
+				D021D4FD219CB1CD0064BEBA /* DebugFork */,
+				D0DB57B11E5C4B470071854C /* DebugAppStore */,
+				D0ADF929212B3ACC00310BBC /* DebugAppStoreLLC */,
+				D013CAD6209C3BE2009A0B6F /* DebugForkAppStore */,
 				D0CB060B1ADC4483005E298F /* Release */,
 				C22069C31E8EB4B300E82730 /* AppStore */,
-				D079FD171F06BE4D0038FADE /* Release AppStore */,
-				D0CE6EEA213DC2F900BCD44B /* Release AppStore LLC */,
+				D079FD171F06BE4D0038FADE /* ReleaseAppStore */,
+				D0CE6EEA213DC2F900BCD44B /* ReleaseAppStoreLLC */,
 				D096C2D31CC3C664006D814E /* Hockeyapp */,
-				D079FD1D1F06BE540038FADE /* Release Hockeyapp */,
-				D0924FDD1FE52BFE003F693F /* Release Hockeyapp Internal */,
+				D079FD1D1F06BE540038FADE /* ReleaseHockeyapp */,
+				D0924FDD1FE52BFE003F693F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -5395,18 +5411,18 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D0D2251E1B4D817B0085E26D /* Debug */,
-				D079FD131F06BE440038FADE /* Debug Hockeyapp */,
-				D021D4FF219CB1CD0064BEBA /* Debug Fork */,
-				D0DB57B31E5C4B470071854C /* Debug AppStore */,
-				D0ADF92B212B3ACC00310BBC /* Debug AppStore LLC */,
-				D013CAD8209C3BE2009A0B6F /* Debug Fork AppStore */,
+				D079FD131F06BE440038FADE /* DebugHockeyapp */,
+				D021D4FF219CB1CD0064BEBA /* DebugFork */,
+				D0DB57B31E5C4B470071854C /* DebugAppStore */,
+				D0ADF92B212B3ACC00310BBC /* DebugAppStoreLLC */,
+				D013CAD8209C3BE2009A0B6F /* DebugForkAppStore */,
 				D0D2251F1B4D817B0085E26D /* Release */,
 				C22069C51E8EB4B300E82730 /* AppStore */,
-				D079FD191F06BE4D0038FADE /* Release AppStore */,
-				D0CE6EEC213DC2F900BCD44B /* Release AppStore LLC */,
+				D079FD191F06BE4D0038FADE /* ReleaseAppStore */,
+				D0CE6EEC213DC2F900BCD44B /* ReleaseAppStoreLLC */,
 				D096C2D51CC3C664006D814E /* Hockeyapp */,
-				D079FD1F1F06BE540038FADE /* Release Hockeyapp */,
-				D0924FDF1FE52BFE003F693F /* Release Hockeyapp Internal */,
+				D079FD1F1F06BE540038FADE /* ReleaseHockeyapp */,
+				D0924FDF1FE52BFE003F693F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -5415,18 +5431,18 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D0D225201B4D817B0085E26D /* Debug */,
-				D079FD141F06BE440038FADE /* Debug Hockeyapp */,
-				D021D500219CB1CD0064BEBA /* Debug Fork */,
-				D0DB57B41E5C4B470071854C /* Debug AppStore */,
-				D0ADF92C212B3ACC00310BBC /* Debug AppStore LLC */,
-				D013CAD9209C3BE2009A0B6F /* Debug Fork AppStore */,
+				D079FD141F06BE440038FADE /* DebugHockeyapp */,
+				D021D500219CB1CD0064BEBA /* DebugFork */,
+				D0DB57B41E5C4B470071854C /* DebugAppStore */,
+				D0ADF92C212B3ACC00310BBC /* DebugAppStoreLLC */,
+				D013CAD9209C3BE2009A0B6F /* DebugForkAppStore */,
 				D0D225211B4D817B0085E26D /* Release */,
 				C22069C61E8EB4B300E82730 /* AppStore */,
-				D079FD1A1F06BE4D0038FADE /* Release AppStore */,
-				D0CE6EED213DC2F900BCD44B /* Release AppStore LLC */,
+				D079FD1A1F06BE4D0038FADE /* ReleaseAppStore */,
+				D0CE6EED213DC2F900BCD44B /* ReleaseAppStoreLLC */,
 				D096C2D61CC3C664006D814E /* Hockeyapp */,
-				D079FD201F06BE540038FADE /* Release Hockeyapp */,
-				D0924FE01FE52BFE003F693F /* Release Hockeyapp Internal */,
+				D079FD201F06BE540038FADE /* ReleaseHockeyapp */,
+				D0924FE01FE52BFE003F693F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

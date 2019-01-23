@@ -87,7 +87,7 @@
             
             MTContext *proxyContext = [[MTContext alloc] initWithSerialization:context.serialization apiEnvironment:[[context apiEnvironment] withUpdatedSocksProxySettings:settings]  isTestingEnvironment:context.isTestingEnvironment useTempAuthKeys:context.useTempAuthKeys];
             
-            MTTcpConnection *connection = [[MTTcpConnection alloc] initWithContext:proxyContext datacenterId:datacenterId address:address interface:nil usageCalculationInfo:nil];
+            MTTcpConnection *connection = [[MTTcpConnection alloc] initWithContext:proxyContext datacenterId:datacenterId scheme:[[MTTransportScheme alloc] initWithTransportClass:[MTTcpConnection class] address:address media:false] interface:nil usageCalculationInfo:nil];
             __weak MTTcpConnection *weakConnection = connection;
             __block NSTimeInterval startTime = CFAbsoluteTimeGetCurrent();
             connection.connectionOpened = ^ {

@@ -60,6 +60,7 @@ FOUNDATION_EXPORT const unsigned char MtProtoKitVersionString[];
 #import <MTProtoKit/MTNetworkAvailability.h>
 #import <MTProtoKit/MTTransport.h>
 #import <MTProtoKit/MTTransportTransaction.h>
+#import <MTProtoKit/MTTcpTransport.h>
 #import <MTProtoKit/MTHttpRequestOperation.h>
 #import <MTProtoKit/MTAtomic.h>
 #import <MTProtoKit/MTBag.h>

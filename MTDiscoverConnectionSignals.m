@@ -116,7 +116,7 @@
         MTPayloadData payloadData;
         NSData *data = [self payloadData:&payloadData context:context address:address];
         
-        MTTcpConnection *connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:datacenterId address:address interface:nil usageCalculationInfo:nil];
+        MTTcpConnection *connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:datacenterId scheme:[[MTTransportScheme alloc] initWithTransportClass:[MTTcpTransport class] address:address media:false] interface:nil usageCalculationInfo:nil];
         __weak MTTcpConnection *weakConnection = connection;
         connection.connectionOpened = ^
         {
@@ -218,7 +218,7 @@
             }];
             [bestTcp4Signals addObject:signal];
             
-            NSArray *alternatePorts = @[@80, /*@5222*/];
+            NSArray *alternatePorts = @[@80, @5222];
             for (NSNumber *nPort in alternatePorts) {
                 NSSet *ipsWithPort = tcpIpsByPort[nPort];
                 if (![ipsWithPort containsObject:address.ip]) {

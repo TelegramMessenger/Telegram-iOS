@@ -1,5 +1,3 @@
-
-
 #import <Foundation/Foundation.h>
 
 @class MTDatacenterAddress;
@@ -7,19 +5,14 @@
 @class MTQueue;
 @class MTTcpConnection;
 @class MTNetworkUsageCalculationInfo;
-
-/*!
- MTTcpConnection delegate protocol
- 
- Note: messages could be sent to the receiver from an arbitrary thread, do not make assumtions.
- */
+@class MTTransportScheme;
 
 @protocol MTTcpConnectionDelegate <NSObject>
 
 @optional
 
 - (void)tcpConnectionOpened:(MTTcpConnection *)connection;
-- (void)tcpConnectionClosed:(MTTcpConnection *)connection;
+- (void)tcpConnectionClosed:(MTTcpConnection *)connection error:(bool)error;
 - (void)tcpConnectionReceivedData:(MTTcpConnection *)connection data:(NSData *)data;
 - (void)tcpConnectionReceivedQuickAck:(MTTcpConnection *)connection quickAck:(int32_t)quickAck;
 - (void)tcpConnectionDecodePacketProgressToken:(MTTcpConnection *)connection data:(NSData *)data token:(int64_t)token completion:(void (^)(int64_t token, id packetProgressToken))completion;
@@ -36,12 +29,12 @@
 @property (nonatomic, copy) void (^connectionReceivedData)(NSData *);
 
 @property (nonatomic, strong, readonly) id internalId;
-@property (nonatomic, strong, readonly) MTDatacenterAddress *address;
+@property (nonatomic, strong, readonly) MTTransportScheme *scheme;
 @property (nonatomic, strong, readonly) NSString *interface;
 
 + (MTQueue *)tcpQueue;
 
-- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address interface:(NSString *)interface usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
+- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId scheme:(MTTransportScheme *)scheme interface:(NSString *)interface usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
 
 - (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
 

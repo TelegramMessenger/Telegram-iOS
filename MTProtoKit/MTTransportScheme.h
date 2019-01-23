@@ -20,6 +20,4 @@
 - (BOOL)isOptimal;
 - (NSComparisonResult)compareToScheme:(MTTransportScheme *)other;
 
-- (MTTransport *)createTransportWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId delegate:(id<MTTransportDelegate>)delegate usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo;
-
 @end

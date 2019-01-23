@@ -52,12 +52,20 @@
     [aCoder encodeObject:_secret forKey:@"secret"];
 }
 
+- (instancetype)copyWithZone:(NSZone *)__unused zone {
+    return self;
+}
+
 - (BOOL)isEqual:(id)object
 {
     if (![object isKindOfClass:[MTDatacenterAddress class]])
         return false;
     
     return [self isEqualToAddress:object];
+}
+
+- (NSUInteger)hash {
+    return [_ip hash] * 31 + ((NSUInteger)_port);
 }
 
 - (BOOL)isEqualToAddress:(MTDatacenterAddress *)other

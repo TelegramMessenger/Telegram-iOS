@@ -36,9 +36,8 @@
 
 - (void)requestConnection
 {
-    if (_backoffTimer == nil)
-    {
-        [self timerEvent];
+    if (_backoffTimer == nil) {
+        [self timerEvent:false];
     }
 }
 
@@ -63,7 +62,7 @@
         _backoffCount++;
         
         if (_backoffCount == 1)
-            [self timerEvent];
+            [self timerEvent:true];
         else
         {
             NSTimeInterval delay = 1.0;
@@ -106,21 +105,21 @@
         _backoffTimer = [[MTTimer alloc] initWithTimeout:timeout repeat:false completion:^
         {
             __strong MTTcpConnectionBehaviour *strongSelf = weakSelf;
-            [strongSelf timerEvent];
+            [strongSelf timerEvent:true];
         } queue:[_queue nativeQueue]];
         [_backoffTimer start];
     }];
 }
 
-- (void)timerEvent
+- (void)timerEvent:(bool)error
 {
     [self invalidateTimer];
     
     [_queue dispatchOnQueue:^
     {
         id<MTTcpConnectionBehaviourDelegate> delegate = _delegate;
-        if ([delegate respondsToSelector:@selector(tcpConnectionBehaviourRequestsReconnection:)])
-            [delegate tcpConnectionBehaviourRequestsReconnection:self];
+        if ([delegate respondsToSelector:@selector(tcpConnectionBehaviourRequestsReconnection:error:)])
+            [delegate tcpConnectionBehaviourRequestsReconnection:self error:error];
     }];
 }
 

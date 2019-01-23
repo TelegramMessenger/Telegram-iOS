@@ -2,7 +2,7 @@
 
 #import <Foundation/Foundation.h>
 
-@interface MTDatacenterAddress : NSObject <NSCoding>
+@interface MTDatacenterAddress : NSObject <NSCoding, NSCopying>
 
 @property (nonatomic, strong, readonly) NSString *host;
 @property (nonatomic, strong, readonly) NSString *ip;
