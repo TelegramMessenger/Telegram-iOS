@@ -11,17 +11,17 @@ Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 
 %description
-lottie player library
+rlottie library
 
 
 %package devel
-Summary:    lottie player library (devel)
+Summary:    rlottie library (devel)
 Group:      Development/Libraries
 Requires:   %{name} = %{version}-%{release}
 
 
 %description devel
-lottie player library (devel)
+rlottie library (devel)
 
 
 %prep
