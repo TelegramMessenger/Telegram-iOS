@@ -2875,7 +2875,7 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		697B6FCC2136DBA4004C8E54 /* Debug Hockeyapp */ = {
+		697B6FCC2136DBA4004C8E54 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -2950,7 +2950,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
 		697B6FCD2136DBA4004C8E54 /* Debug Auto Test */ = {
 			isa = XCBuildConfiguration;
@@ -3029,7 +3029,7 @@
 			};
 			name = "Debug Auto Test";
 		};
-		697B6FCE2136DBA4004C8E54 /* Debug AppStore */ = {
+		697B6FCE2136DBA4004C8E54 /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -3104,9 +3104,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		697B6FCF2136DBA4004C8E54 /* Release Hockeyapp */ = {
+		697B6FCF2136DBA4004C8E54 /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -3174,9 +3174,9 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		697B6FD02136DBA4004C8E54 /* Release AppStore */ = {
+		697B6FD02136DBA4004C8E54 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -3244,7 +3244,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
 		69EBC7982136D55A003CFE90 /* Debug Auto Test */ = {
 			isa = XCBuildConfiguration;
@@ -3335,7 +3335,7 @@
 			};
 			name = "Debug Auto Test";
 		};
-		69F8423C1E67540700C110F7 /* Debug Hockeyapp */ = {
+		69F8423C1E67540700C110F7 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -3384,9 +3384,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		69F8423D1E67540700C110F7 /* Release Hockeyapp */ = {
+		69F8423D1E67540700C110F7 /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -3429,9 +3429,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		69F8423F1E67540700C110F7 /* Debug Hockeyapp */ = {
+		69F8423F1E67540700C110F7 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
@@ -3469,9 +3469,9 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};
-			name = "Debug Hockeyapp";
+			name = DebugHockeyapp;
 		};
-		69F842401E67540700C110F7 /* Release Hockeyapp */ = {
+		69F842401E67540700C110F7 /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
@@ -3509,9 +3509,9 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};
-			name = "Release Hockeyapp";
+			name = ReleaseHockeyapp;
 		};
-		D04D01C31E678C0D0086DDC0 /* Debug AppStore */ = {
+		D04D01C31E678C0D0086DDC0 /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -3560,9 +3560,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D04D01C41E678C0D0086DDC0 /* Debug AppStore */ = {
+		D04D01C41E678C0D0086DDC0 /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
@@ -3600,9 +3600,9 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};
-			name = "Debug AppStore";
+			name = DebugAppStore;
 		};
-		D04D01CB1E678C230086DDC0 /* Release AppStore */ = {
+		D04D01CB1E678C230086DDC0 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -3645,9 +3645,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
-		D04D01CC1E678C230086DDC0 /* Release AppStore */ = {
+		D04D01CC1E678C230086DDC0 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
@@ -3685,7 +3685,7 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};
-			name = "Release AppStore";
+			name = ReleaseAppStore;
 		};
 /* End XCBuildConfiguration section */
 
@@ -3693,38 +3693,38 @@
 		697B6FD12136DBA4004C8E54 /* Build configuration list for PBXNativeTarget "libtgvoipTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				697B6FCC2136DBA4004C8E54 /* Debug Hockeyapp */,
+				697B6FCC2136DBA4004C8E54 /* DebugHockeyapp */,
 				697B6FCD2136DBA4004C8E54 /* Debug Auto Test */,
-				697B6FCE2136DBA4004C8E54 /* Debug AppStore */,
-				697B6FCF2136DBA4004C8E54 /* Release Hockeyapp */,
-				697B6FD02136DBA4004C8E54 /* Release AppStore */,
+				697B6FCE2136DBA4004C8E54 /* DebugAppStore */,
+				697B6FCF2136DBA4004C8E54 /* ReleaseHockeyapp */,
+				697B6FD02136DBA4004C8E54 /* ReleaseAppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release Hockeyapp";
+			defaultConfigurationName = ReleaseHockeyapp;
 		};
 		69F842301E67540700C110F7 /* Build configuration list for PBXProject "libtgvoip_osx" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				69F8423C1E67540700C110F7 /* Debug Hockeyapp */,
+				69F8423C1E67540700C110F7 /* DebugHockeyapp */,
 				69EBC7982136D55A003CFE90 /* Debug Auto Test */,
-				D04D01C31E678C0D0086DDC0 /* Debug AppStore */,
-				69F8423D1E67540700C110F7 /* Release Hockeyapp */,
-				D04D01CB1E678C230086DDC0 /* Release AppStore */,
+				D04D01C31E678C0D0086DDC0 /* DebugAppStore */,
+				69F8423D1E67540700C110F7 /* ReleaseHockeyapp */,
+				D04D01CB1E678C230086DDC0 /* ReleaseAppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release Hockeyapp";
+			defaultConfigurationName = ReleaseHockeyapp;
 		};
 		69F8423E1E67540700C110F7 /* Build configuration list for PBXNativeTarget "libtgvoip" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				69F8423F1E67540700C110F7 /* Debug Hockeyapp */,
+				69F8423F1E67540700C110F7 /* DebugHockeyapp */,
 				69EBC7992136D55A003CFE90 /* Debug Auto Test */,
-				D04D01C41E678C0D0086DDC0 /* Debug AppStore */,
-				69F842401E67540700C110F7 /* Release Hockeyapp */,
-				D04D01CC1E678C230086DDC0 /* Release AppStore */,
+				D04D01C41E678C0D0086DDC0 /* DebugAppStore */,
+				69F842401E67540700C110F7 /* ReleaseHockeyapp */,
+				D04D01CC1E678C230086DDC0 /* ReleaseAppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = "Release Hockeyapp";
+			defaultConfigurationName = ReleaseHockeyapp;
 		};
 /* End XCConfigurationList section */
 	};
