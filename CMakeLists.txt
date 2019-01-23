@@ -62,8 +62,6 @@ install(FILES
         inc/rlottie_capi.h
         inc/rlottiecommon.h
         inc/lottieanimation.h
-        inc/lottieanimation_capi.h
-        inc/lottiecommon.h
         DESTINATION include)
 
 #install lib

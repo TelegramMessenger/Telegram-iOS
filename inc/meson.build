@@ -3,6 +3,4 @@ install_headers([
                  'rlottie_capi.h',
                  'rlottiecommon.h',
                  'lottieanimation.h',
-                 'lottiecommon.h',
-                 'lottieanimation_capi.h'
                 ])
