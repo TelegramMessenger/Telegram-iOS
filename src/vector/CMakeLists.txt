@@ -1,6 +1,7 @@
-
 add_subdirectory(freetype)
 add_subdirectory(pixman)
+add_subdirectory(stb)
+
 
 target_sources(rlottie
     PRIVATE

@@ -55,6 +55,7 @@ make %{?jobs:-j%jobs}
 %files
 %defattr(-,root,root,-)
 %{_libdir}/librlottie.so.*
+%{_libdir}/librlottie-image-loader.so*
 %manifest packaging/rlottie.manifest
 %license COPYING licenses/COPYING*
 
@@ -62,6 +63,7 @@ make %{?jobs:-j%jobs}
 %defattr(-,root,root,-)
 %{_includedir}/*.h
 %{_libdir}/librlottie.so
+%{_libdir}/librlottie-image-loader.so
 
 %{_libdir}/cmake/rlottie/*.cmake
 %{_libdir}/pkgconfig/rlottie.pc
