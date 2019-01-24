@@ -1,12 +1,6 @@
-prefix=@PREFIX@
-exec_prefix=@EXEC_DIR@
-apiversion=@player_version@
-libdir=@LIBDIR@
-includedir=@INCDIR@
-
 Name: rlottie
 Description: A rlottie library
 Version: @player_version@
 Requires:
-Libs: -L${libdir} -lrlottie
-Cflags: -I${includedir} -std=c++14
+Libs: -L@LIBDIR@ -lrlottie
+Cflags: -I@INCDIR@ -std=c++14
