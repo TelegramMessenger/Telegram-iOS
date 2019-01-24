@@ -56,17 +56,12 @@ SET(INCDIR ${PREFIX}/include)
 CONFIGURE_FILE(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 
-#temporary for lottie-player dependency.
-CONFIGURE_FILE(${PROJECT_NAME}.pc.in lottie-player.pc)
-INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/lottie-player.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
-
 
 #install header
 install(FILES
         inc/rlottie.h
         inc/rlottie_capi.h
         inc/rlottiecommon.h
-        inc/lottieanimation.h
         DESTINATION include)
 
 #install lib

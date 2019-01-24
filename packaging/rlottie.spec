@@ -1,4 +1,4 @@
-Name:       rlottie
+Name:       lotti-player
 Summary:    rlottie ibrary
 Version:    0.0.1
 Release:    1
@@ -55,7 +55,7 @@ make %{?jobs:-j%jobs}
 %files
 %defattr(-,root,root,-)
 %{_libdir}/librlottie.so.*
-%manifest %{name}.manifest
+%manifest packaging/rlottie.manifest
 %license COPYING licenses/COPYING*
 
 %files devel
@@ -64,5 +64,4 @@ make %{?jobs:-j%jobs}
 %{_libdir}/librlottie.so
 
 %{_libdir}/cmake/rlottie/*.cmake
-%{_libdir}/pkgconfig/lottie-player.pc
 %{_libdir}/pkgconfig/rlottie.pc

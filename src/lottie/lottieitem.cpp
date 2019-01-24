@@ -121,7 +121,7 @@ const LOTLayerNode * LOTCompItem::renderTree() const
     return mRootLayer->layerNode();
 }
 
-bool LOTCompItem::render(const lottie::Surface &surface)
+bool LOTCompItem::render(const rlottie::Surface &surface)
 {
     VBitmap bitmap(reinterpret_cast<uchar *>(surface.buffer()),
                    surface.width(), surface.height(),
