@@ -16,7 +16,7 @@ public struct LimitsConfiguration: Equatable, PreferencesEntry {
     public var canRemoveIncomingMessagesInPrivateChats: Bool
     
     public static var defaultValue: LimitsConfiguration {
-        return LimitsConfiguration(maxGroupMemberCount: 200, maxSupergroupMemberCount: 5000, maxMessageForwardBatchSize: 50, maxSavedGifCount: 200, maxRecentStickerCount: 20, maxMessageEditingInterval: 2 * 24 * 60 * 60, maxMediaCaptionLength: 1000, canRemoveIncomingMessagesInPrivateChats: false)
+        return LimitsConfiguration(maxGroupMemberCount: 200, maxSupergroupMemberCount: 200000, maxMessageForwardBatchSize: 50, maxSavedGifCount: 200, maxRecentStickerCount: 20, maxMessageEditingInterval: 2 * 24 * 60 * 60, maxMediaCaptionLength: 1000, canRemoveIncomingMessagesInPrivateChats: false)
     }
     
     init(maxGroupMemberCount: Int32, maxSupergroupMemberCount: Int32, maxMessageForwardBatchSize: Int32, maxSavedGifCount: Int32, maxRecentStickerCount: Int32, maxMessageEditingInterval: Int32, maxMediaCaptionLength: Int32, canRemoveIncomingMessagesInPrivateChats: Bool) {
