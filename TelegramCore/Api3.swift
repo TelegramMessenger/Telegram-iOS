@@ -5079,12 +5079,27 @@ extension Api {
                     })
                 }
             
-                static func uploadWallPaper(file: Api.InputFile, mimeType: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WallPaper>) {
+                static func getWallPapers(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.WallPapers>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-944071859)
+                    buffer.appendInt32(-1430579357)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.getWallPapers", parameters: [("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.WallPapers? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.WallPapers?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.WallPapers
+                        }
+                        return result
+                    })
+                }
+            
+                static func uploadWallPaper(file: Api.InputFile, mimeType: String, settings: Api.WallPaperSettings) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WallPaper>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-578472351)
                     file.serialize(buffer, true)
                     serializeString(mimeType, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "account.uploadWallPaper", parameters: [("file", file), ("mimeType", mimeType)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WallPaper? in
+                    settings.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.uploadWallPaper", parameters: [("file", file), ("mimeType", mimeType), ("settings", settings)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WallPaper? in
                         let reader = BufferReader(buffer)
                         var result: Api.WallPaper?
                         if let signature = reader.readInt32() {
@@ -5108,12 +5123,13 @@ extension Api {
                     })
                 }
             
-                static func saveWallPaper(wallpaper: Api.InputWallPaper, unsave: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func saveWallPaper(wallpaper: Api.InputWallPaper, unsave: Api.Bool, settings: Api.WallPaperSettings) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(412451251)
+                    buffer.appendInt32(1817860919)
                     wallpaper.serialize(buffer, true)
                     unsave.serialize(buffer, true)
-                    return (FunctionDescription(name: "account.saveWallPaper", parameters: [("wallpaper", wallpaper), ("unsave", unsave)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    settings.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.saveWallPaper", parameters: [("wallpaper", wallpaper), ("unsave", unsave), ("settings", settings)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -5123,29 +5139,16 @@ extension Api {
                     })
                 }
             
-                static func installWallPaper(wallpaper: Api.InputWallPaper) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func installWallPaper(wallpaper: Api.InputWallPaper, settings: Api.WallPaperSettings) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1241741518)
+                    buffer.appendInt32(-18000023)
                     wallpaper.serialize(buffer, true)
-                    return (FunctionDescription(name: "account.installWallPaper", parameters: [("wallpaper", wallpaper)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    settings.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.installWallPaper", parameters: [("wallpaper", wallpaper), ("settings", settings)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
-                static func getWallPapers(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.WallPapers>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1430579357)
-                    serializeInt32(hash, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "account.getWallPapers", parameters: [("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.WallPapers? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.account.WallPapers?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.account.WallPapers
                         }
                         return result
                     })

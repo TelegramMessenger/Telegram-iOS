@@ -2795,6 +2795,48 @@ extension Api {
         }
     
     }
+    enum WallPaperSettings: TypeConstructorDescription {
+        case wallPaperSettings(flags: Int32, backgroundColor: Int32?, intensity: Int32?)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .wallPaperSettings(let flags, let backgroundColor, let intensity):
+                    if boxed {
+                        buffer.appendInt32(-1590738760)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(backgroundColor!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(intensity!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .wallPaperSettings(let flags, let backgroundColor, let intensity):
+                return ("wallPaperSettings", [("flags", flags), ("backgroundColor", backgroundColor), ("intensity", intensity)])
+    }
+    }
+    
+        static func parse_wallPaperSettings(_ reader: BufferReader) -> WallPaperSettings? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 3) != 0 {_3 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 3) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.WallPaperSettings.wallPaperSettings(flags: _1!, backgroundColor: _2, intensity: _3)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     enum InputCheckPasswordSRP: TypeConstructorDescription {
         case inputCheckPasswordEmpty
         case inputCheckPasswordSRP(srpId: Int64, A: Buffer, M1: Buffer)
@@ -11374,27 +11416,28 @@ extension Api {
     
     }
     enum WallPaper: TypeConstructorDescription {
-        case wallPaper(id: Int64, flags: Int32, accessHash: Int64, slug: String, document: Api.Document)
+        case wallPaper(id: Int64, flags: Int32, accessHash: Int64, slug: String, document: Api.Document, settings: Api.WallPaperSettings?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .wallPaper(let id, let flags, let accessHash, let slug, let document):
+                case .wallPaper(let id, let flags, let accessHash, let slug, let document, let settings):
                     if boxed {
-                        buffer.appendInt32(-263220756)
+                        buffer.appendInt32(-1539849235)
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     serializeString(slug, buffer: buffer, boxed: false)
                     document.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 2) != 0 {settings!.serialize(buffer, true)}
                     break
     }
     }
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .wallPaper(let id, let flags, let accessHash, let slug, let document):
-                return ("wallPaper", [("id", id), ("flags", flags), ("accessHash", accessHash), ("slug", slug), ("document", document)])
+                case .wallPaper(let id, let flags, let accessHash, let slug, let document, let settings):
+                return ("wallPaper", [("id", id), ("flags", flags), ("accessHash", accessHash), ("slug", slug), ("document", document), ("settings", settings)])
     }
     }
     
@@ -11411,13 +11454,18 @@ extension Api {
             if let signature = reader.readInt32() {
                 _5 = Api.parse(reader, signature: signature) as? Api.Document
             }
+            var _6: Api.WallPaperSettings?
+            if Int(_2!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.WallPaperSettings
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.WallPaper.wallPaper(id: _1!, flags: _2!, accessHash: _3!, slug: _4!, document: _5!)
+            let _c6 = (Int(_2!) & Int(1 << 2) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.WallPaper.wallPaper(id: _1!, flags: _2!, accessHash: _3!, slug: _4!, document: _5!, settings: _6)
             }
             else {
                 return nil

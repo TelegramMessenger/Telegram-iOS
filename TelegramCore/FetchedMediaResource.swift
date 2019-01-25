@@ -990,12 +990,19 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
             return revalidationContext.wallpapers(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation)
             |> mapToSignal { wallpapers -> Signal<Data, RevalidateMediaReferenceError> in
                 for wallpaper in wallpapers {
-                    if case let .image(representations) = wallpaper {
-                        for representation in representations {
-                            if representation.resource.id.isEqual(to: resource.id), let representationResource = representation.resource as? CloudFileMediaResource, let fileReference = representationResource.fileReference {
+                    switch wallpaper {
+                        case let .image(representations, _):
+                            for representation in representations {
+                                if representation.resource.id.isEqual(to: resource.id), let representationResource = representation.resource as? CloudFileMediaResource, let fileReference = representationResource.fileReference {
+                                    return .single(fileReference)
+                                }
+                            }
+                        case let .file(_, _, _, _, _, _, file, _):
+                            if let fileReference = findMediaResourceReference(media: file, resource: resource) {
                                 return .single(fileReference)
                             }
-                        }
+                        default:
+                            break
                     }
                 }
                 return .fail(.generic)

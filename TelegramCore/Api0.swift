@@ -103,6 +103,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1987579119] = { return Api.help.AppUpdate.parse_appUpdate($0) }
     dict[-1000708810] = { return Api.help.AppUpdate.parse_noAppUpdate($0) }
     dict[-209337866] = { return Api.LangPackDifference.parse_langPackDifference($0) }
+    dict[-1590738760] = { return Api.WallPaperSettings.parse_wallPaperSettings($0) }
     dict[-791039645] = { return Api.channels.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1736378792] = { return Api.InputCheckPasswordSRP.parse_inputCheckPasswordEmpty($0) }
     dict[-763367294] = { return Api.InputCheckPasswordSRP.parse_inputCheckPasswordSRP($0) }
@@ -453,7 +454,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1160215659] = { return Api.InputMessage.parse_inputMessageReplyTo($0) }
     dict[-2037963464] = { return Api.InputMessage.parse_inputMessagePinned($0) }
     dict[-1564789301] = { return Api.PhoneCallProtocol.parse_phoneCallProtocol($0) }
-    dict[-263220756] = { return Api.WallPaper.parse_wallPaper($0) }
+    dict[-1539849235] = { return Api.WallPaper.parse_wallPaper($0) }
     dict[-1938715001] = { return Api.messages.Messages.parse_messages($0) }
     dict[1951620897] = { return Api.messages.Messages.parse_messagesNotModified($0) }
     dict[-1497072982] = { return Api.messages.Messages.parse_messagesSlice($0) }
@@ -836,6 +837,8 @@ struct Api {
             case let _1 as Api.help.AppUpdate:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.LangPackDifference:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.WallPaperSettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.channels.ChannelParticipant:
                 _1.serialize(buffer, boxed)
