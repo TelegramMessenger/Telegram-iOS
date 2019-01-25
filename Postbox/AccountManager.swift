@@ -10,6 +10,9 @@ public struct AccountManagerModifier {
     public let updateRecord: (AccountRecordId, (AccountRecord?) -> (AccountRecord?)) -> Void
     public let getCurrent: () -> (AccountRecordId, [AccountRecordAttribute])?
     public let setCurrentId: (AccountRecordId) -> Void
+    public let getCurrentAuth: () -> AuthAccountRecord?
+    public let createAuth: ([AccountRecordAttribute]) -> AuthAccountRecord?
+    public let removeAuth: () -> Void
     public let createRecord: ([AccountRecordAttribute]) -> AccountRecordId
     public let getSharedData: (ValueBoxKey) -> AccountSharedData?
     public let updateSharedData: (ValueBoxKey, (AccountSharedData?) -> AccountSharedData?) -> Void
@@ -46,6 +49,8 @@ final class AccountManagerImpl {
         self.recordTable = AccountManagerRecordTable(valueBox: self.valueBox, table: AccountManagerRecordTable.tableSpec(1))
         self.sharedDataTable = AccountManagerSharedDataTable(valueBox: self.valueBox, table: AccountManagerSharedDataTable.tableSpec(2))
         
+        postboxLog("AccountManager: currentAccountId = \(String(describing: self.metadataTable.getCurrentAccountId()))")
+        
         self.tables.append(self.metadataTable)
         self.tables.append(self.recordTable)
         self.tables.append(self.sharedDataTable)
@@ -77,6 +82,18 @@ final class AccountManagerImpl {
                     }
                 }, setCurrentId: { id in
                     self.metadataTable.setCurrentAccountId(id, operations: &self.currentMetadataOperations)
+                }, getCurrentAuth: {
+                    if let id = self.metadataTable.getCurrentAuthAccount() {
+                        return id
+                    } else {
+                        return nil
+                    }
+                }, createAuth: { attributes in
+                    let record = AuthAccountRecord(id: generateAccountRecordId(), attributes: attributes)
+                    self.metadataTable.setCurrentAuthAccount(record, operations: &self.currentMetadataOperations)
+                    return record
+                }, removeAuth: {
+                    self.metadataTable.setCurrentAuthAccount(nil, operations: &self.currentMetadataOperations)
                 }, createRecord: { attributes in
                     let id = generateAccountRecordId()
                     let record = AccountRecord(id: id, attributes: attributes, temporarySessionId: nil)
@@ -145,7 +162,7 @@ final class AccountManagerImpl {
     private func accountRecordsInternal(transaction: AccountManagerModifier) -> Signal<AccountRecordsView, NoError> {
         let mutableView = MutableAccountRecordsView(getRecords: {
             return self.recordTable.getRecords()
-        }, currentId: self.metadataTable.getCurrentAccountId())
+        }, currentId: self.metadataTable.getCurrentAccountId(), currentAuth: self.metadataTable.getCurrentAuthAccount())
         let pipe = ValuePipe<AccountRecordsView>()
         let index = self.recordsViews.add((mutableView, pipe))
         

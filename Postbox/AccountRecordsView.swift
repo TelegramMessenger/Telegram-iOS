@@ -3,10 +3,12 @@ import Foundation
 final class MutableAccountRecordsView {
     fileprivate var records: [AccountRecord]
     fileprivate var currentId: AccountRecordId?
+    fileprivate var currentAuth: AuthAccountRecord?
     
-    init(getRecords: () -> [AccountRecord], currentId: AccountRecordId?) {
+    init(getRecords: () -> [AccountRecord], currentId: AccountRecordId?, currentAuth: AuthAccountRecord?) {
         self.records = getRecords()
         self.currentId = currentId
+        self.currentAuth = currentAuth
     }
     
     func replay(operations: [AccountManagerRecordOperation], metadataOperations: [AccountManagerMetadataOperation]) -> Bool {
@@ -49,6 +51,9 @@ final class MutableAccountRecordsView {
                 case let .updateCurrentAccountId(id):
                     updated = true
                     self.currentId = id
+                case let .updateCurrentAuthAccountRecord(record):
+                    updated = true
+                    self.currentAuth = record
             }
         }
         
@@ -59,6 +64,7 @@ final class MutableAccountRecordsView {
 public final class AccountRecordsView {
     public let records: [AccountRecord]
     public let currentRecord: AccountRecord?
+    public let currentAuthAccount: AuthAccountRecord?
     
     init(_ view: MutableAccountRecordsView) {
         self.records = view.records
@@ -74,5 +80,6 @@ public final class AccountRecordsView {
         } else {
             self.currentRecord = nil
         }
+        self.currentAuthAccount = view.currentAuth
     }
 }

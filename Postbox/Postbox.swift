@@ -2889,7 +2889,10 @@ public final class Postbox {
             var additionalChatPeerIds: [PeerId] = []
             for peerId in chatPeerIds {
                 for associatedId in self.reverseAssociatedPeerTable.get(peerId: peerId) {
-                    additionalChatPeerIds.append(associatedId)
+                    let inclusionIndex = self.chatListIndexTable.get(peerId: associatedId)
+                    if inclusionIndex.includedIndex(peerId: associatedId) != nil {
+                        additionalChatPeerIds.append(associatedId)
+                    }
                 }
             }
             chatPeerIds.append(contentsOf: additionalChatPeerIds)
