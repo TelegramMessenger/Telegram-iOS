@@ -134,7 +134,7 @@ private enum QueuedWakeup: Int32 {
     private var isActiveValue = false
     let hasActiveAudioSession = Promise<Bool>(false)
     
-    private let accountManagerPromise = Promise<AccountManager>()
+    private let sharedContextPromise = Promise<SharedAccountContext>()
     private let watchCommunicationManagerPromise = Promise<WatchCommunicationManager?>()
     
     private var contextValue: ApplicationContext?
@@ -444,86 +444,6 @@ private enum QueuedWakeup: Int32 {
         self.hasActiveAudioSession.set(MediaManager.globalAudioSession.isActive())
         
         initializeAccountManagement()
-        self.accountManagerPromise.set(accountManager(basePath: rootPath + "/accounts-metadata")
-        |> mapToSignal { accountManager -> Signal<(AccountManager, LoggingSettings), NoError> in
-            return accountManager.transaction { transaction -> (AccountManager, LoggingSettings) in
-                return (accountManager, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
-            }
-        }
-        |> mapToSignal { accountManager, loggingSettings -> Signal<AccountManager, NoError> in
-            AccountStore.initialize(accountManager: accountManager)
-            
-            Logger.shared.logToFile = loggingSettings.logToFile
-            Logger.shared.logToConsole = loggingSettings.logToConsole
-            Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
-            
-            return importedLegacyAccount(basePath: appGroupUrl.path, accountManager: accountManager, present: { controller in
-                self.window?.rootViewController?.present(controller, animated: true, completion: nil)
-            })
-            |> `catch` { _ -> Signal<ImportedLegacyAccountEvent, NoError> in
-                return Signal { subscriber in
-                    let alertView = UIAlertView(title: "", message: "An error occured while trying to upgrade application data. Would you like to logout?", delegate: self, cancelButtonTitle: "No", otherButtonTitles: "Yes")
-                    self.alertActions = (primary: {
-                        let statusPath = appGroupUrl.path + "/Documents/importcompleted"
-                        let _ = try? FileManager.default.createDirectory(atPath: appGroupUrl.path + "/Documents", withIntermediateDirectories: true, attributes: nil)
-                        let _ = try? Data().write(to: URL(fileURLWithPath: statusPath))
-                        subscriber.putNext(.result(nil))
-                        subscriber.putCompletion()
-                    }, other: {
-                        exit(0)
-                    })
-                    alertView.show()
-                    
-                    return EmptyDisposable
-                } |> runOn(Queue.mainQueue())
-            }
-            |> mapToSignal { event -> Signal<AccountManager, NoError> in
-                switch event {
-                    case let .progress(type, value):
-                        Queue.mainQueue().async {
-                            if self.dataImportSplash == nil {
-                                self.dataImportSplash = LegacyDataImportSplash()
-                                self.dataImportSplash?.serviceAction = {
-                                    self.debugPressed()
-                                }
-                                self.mainWindow.coveringView = self.dataImportSplash
-                            }
-                            self.dataImportSplash?.progress = (type, value)
-                        }
-                        return .complete()
-                    case let .result(temporaryId):
-                        Queue.mainQueue().async {
-                            if let _ = self.dataImportSplash {
-                                self.dataImportSplash = nil
-                                self.mainWindow.coveringView = nil
-                            }
-                        }
-                        if let temporaryId = temporaryId {
-                            Queue.mainQueue().after(1.0, {
-                                let statusPath = appGroupUrl.path + "/Documents/importcompleted"
-                                let _ = try? FileManager.default.createDirectory(atPath: appGroupUrl.path + "/Documents", withIntermediateDirectories: true, attributes: nil)
-                                let _ = try? Data().write(to: URL(fileURLWithPath: statusPath))
-                            })
-                            return accountManager.transaction { transaction -> AccountManager in
-                                transaction.setCurrentId(temporaryId)
-                                transaction.updateRecord(temporaryId, { record in
-                                    if let record = record {
-                                        return AccountRecord(id: record.id, attributes: record.attributes, temporarySessionId: nil)
-                                    }
-                                    return record
-                                })
-                                return accountManager
-                            }
-                        }
-                        return .single(accountManager)
-                }
-            }
-        })
-        
-        let _ = (self.accountManagerPromise.get()
-        |> mapToSignal { manager in
-            return managedCleanupAccounts(networkArguments: networkArguments, accountManager: manager, rootPath: rootPath, auxiliaryMethods: telegramAccountAuxiliaryMethods)
-        }).start()
         
         let applicationBindings = TelegramApplicationBindings(isMainApp: true, containerPath: appGroupUrl.path, appSpecificScheme: BuildConfig.shared().appSpecificUrlScheme, openUrl: { url in
             var parsedUrl = URL(string: url)
@@ -663,25 +583,143 @@ private enum QueuedWakeup: Int32 {
             self.window?.rootViewController?.dismiss(animated: true, completion: nil)
         })
         
-        let watchManagerArgumentsPromise = Promise<WatchManagerArguments?>()
-            
-        self.context.set(self.accountManagerPromise.get()
+        self.sharedContextPromise.set(accountManager(basePath: rootPath + "/accounts-metadata")
         |> deliverOnMainQueue
-        |> mapToSignal { accountManager -> Signal<ApplicationContext?, NoError> in
-            let replyFromNotificationsActive = self.replyFromNotificationsTokensPromise.get()
-            |> map {
-                !$0.isEmpty
+        |> mapToSignal { accountManager -> Signal<(SharedAccountContext, LoggingSettings), NoError> in
+            let sharedContext = SharedAccountContext(accountManager: accountManager, applicationBindings: applicationBindings, networkArguments: networkArguments, rootPath: rootPath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init))
+            return accountManager.transaction { transaction -> (SharedAccountContext, LoggingSettings) in
+                return (sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
             }
-            |> distinctUntilChanged
-            return applicationContext(networkArguments: networkArguments, applicationBindings: applicationBindings, replyFromNotificationsActive: replyFromNotificationsActive, backgroundAudioActive: self.hasActiveAudioSession.get() |> distinctUntilChanged, watchManagerArguments: watchManagerArgumentsPromise.get(), accountManager: accountManager, rootPath: rootPath, legacyBasePath: appGroupUrl.path, mainWindow: self.mainWindow, reinitializedNotificationSettings: {
-                let _ = (self.context.get()
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { value in
-                    if let value = value, case let .authorized(context) = value {
-                        self.registerForNotifications(context: context.context, authorize: false)
-                    }
-                })
+        }
+        |> mapToSignal { sharedContext, loggingSettings -> Signal<SharedAccountContext, NoError> in
+            Logger.shared.logToFile = loggingSettings.logToFile
+            Logger.shared.logToConsole = loggingSettings.logToConsole
+            Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
+            
+            return importedLegacyAccount(basePath: appGroupUrl.path, accountManager: sharedContext.accountManager, present: { controller in
+                self.window?.rootViewController?.present(controller, animated: true, completion: nil)
             })
+            |> `catch` { _ -> Signal<ImportedLegacyAccountEvent, NoError> in
+                return Signal { subscriber in
+                    let alertView = UIAlertView(title: "", message: "An error occured while trying to upgrade application data. Would you like to logout?", delegate: self, cancelButtonTitle: "No", otherButtonTitles: "Yes")
+                    self.alertActions = (primary: {
+                        let statusPath = appGroupUrl.path + "/Documents/importcompleted"
+                        let _ = try? FileManager.default.createDirectory(atPath: appGroupUrl.path + "/Documents", withIntermediateDirectories: true, attributes: nil)
+                        let _ = try? Data().write(to: URL(fileURLWithPath: statusPath))
+                        subscriber.putNext(.result(nil))
+                        subscriber.putCompletion()
+                    }, other: {
+                        exit(0)
+                    })
+                    alertView.show()
+                    
+                    return EmptyDisposable
+                } |> runOn(Queue.mainQueue())
+            }
+            |> mapToSignal { event -> Signal<SharedAccountContext, NoError> in
+                switch event {
+                    case let .progress(type, value):
+                        Queue.mainQueue().async {
+                            if self.dataImportSplash == nil {
+                                self.dataImportSplash = LegacyDataImportSplash()
+                                self.dataImportSplash?.serviceAction = {
+                                    self.debugPressed()
+                                }
+                                self.mainWindow.coveringView = self.dataImportSplash
+                            }
+                            self.dataImportSplash?.progress = (type, value)
+                        }
+                        return .complete()
+                    case let .result(temporaryId):
+                        Queue.mainQueue().async {
+                            if let _ = self.dataImportSplash {
+                                self.dataImportSplash = nil
+                                self.mainWindow.coveringView = nil
+                            }
+                        }
+                        if let temporaryId = temporaryId {
+                            Queue.mainQueue().after(1.0, {
+                                let statusPath = appGroupUrl.path + "/Documents/importcompleted"
+                                let _ = try? FileManager.default.createDirectory(atPath: appGroupUrl.path + "/Documents", withIntermediateDirectories: true, attributes: nil)
+                                let _ = try? Data().write(to: URL(fileURLWithPath: statusPath))
+                            })
+                            return sharedContext.accountManager.transaction { transaction -> SharedAccountContext in
+                                transaction.setCurrentId(temporaryId)
+                                transaction.updateRecord(temporaryId, { record in
+                                    if let record = record {
+                                        return AccountRecord(id: record.id, attributes: record.attributes, temporarySessionId: nil)
+                                    }
+                                    return record
+                                })
+                                return sharedContext
+                            }
+                        } else {
+                            return .single(sharedContext)
+                        }
+                }
+            }
+        })
+        
+        let watchManagerArgumentsPromise = Promise<WatchManagerArguments?>()
+        
+        let replyFromNotificationsActive = self.replyFromNotificationsTokensPromise.get()
+        |> map {
+            !$0.isEmpty
+        }
+        |> distinctUntilChanged
+        
+        let backgroundAudioActive = self.hasActiveAudioSession.get()
+        |> distinctUntilChanged
+            
+        self.context.set(self.sharedContextPromise.get()
+        |> deliverOnMainQueue
+        |> mapToSignal { sharedContext -> Signal<ApplicationContext?, NoError> in
+            return sharedContext.activeAccounts
+            |> map { primary, _, auth -> (AnyObject?, Bool) in
+                return (auth ?? primary, primary != nil)
+            }
+            |> distinctUntilChanged(isEqual: { lhs, rhs in
+                if lhs.0 !== rhs.0 {
+                    return false
+                }
+                return true
+            })
+            |> mapToSignal { account, hasOther -> Signal<(AnyObject, InitialPresentationDataAndSettings, Bool)?, NoError> in
+                if let account = account as? Account {
+                    return currentPresentationDataAndSettings(postbox: account.postbox)
+                    |> map { initialSettings in
+                        return (account, initialSettings, hasOther)
+                    }
+                } else if let account = account as? UnauthorizedAccount {
+                    return currentPresentationDataAndSettings(postbox: account.postbox)
+                    |> map { initialSettings in
+                        return (account, initialSettings, hasOther)
+                    }
+                } else {
+                    return .single(nil)
+                }
+            }
+            |> deliverOnMainQueue
+            |> map { accountAndSettings -> ApplicationContext? in
+                return accountAndSettings.flatMap { account, initialSettings, hasOther in
+                    if let account = account as? Account {
+                        let context = AccountContext(sharedContext: sharedContext, account: account, initialPresentationDataAndSettings: initialSettings)
+                        return ApplicationContext.authorized(AuthorizedApplicationContext(mainWindow: self.mainWindow, replyFromNotificationsActive: replyFromNotificationsActive, backgroundAudioActive: backgroundAudioActive, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedContext.accountManager, legacyBasePath: appGroupUrl.path, showCallsTab: initialSettings.callListSettings.showTab, reinitializedNotificationSettings: {
+                            let _ = (self.context.get()
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { value in
+                                if let value = value, case let .authorized(context) = value {
+                                    self.registerForNotifications(context: context.context, authorize: false)
+                                }
+                            })
+                        }))
+                    } else if let account = account as? UnauthorizedAccount {
+                        return ApplicationContext.unauthorized(UnauthorizedApplicationContext(sharedContext: sharedContext, account: account, hasOtherAccounts: hasOther))
+                    } else {
+                        return nil
+                    }
+                }
+            }
         })
         
         let contextReadyDisposable = MetaDisposable()
@@ -695,8 +733,6 @@ private enum QueuedWakeup: Int32 {
                         network = unauthorized.account.network
                     case let .authorized(authorized):
                         network = authorized.context.account.network
-                    default:
-                        break
                 }
             }
             
@@ -712,8 +748,6 @@ private enum QueuedWakeup: Int32 {
                         authorized.context.account.shouldKeepOnlinePresence.set(.single(false))
                         authorized.context.account.shouldExplicitelyKeepWorkerConnections.set(.single(false))
                         authorized.context.account.shouldKeepBackgroundDownloadConnections.set(.single(false))
-                    default:
-                        break
                 }
             }
             self.contextValue = context
@@ -743,14 +777,13 @@ private enum QueuedWakeup: Int32 {
                                 authorizeNotifications = false
                             }
                             self.registerForNotifications(context: context.context, authorize: authorizeNotifications)
-                            context.context.account.notificationToken.set(self.notificationTokenPromise.get())
-                            context.context.account.voipToken.set(self.voipTokenPromise.get())
                         case .unauthorized:
                             break
                     }
                 }))
             } else {
                 self.mainWindow.viewController = nil
+                self.mainWindow.topLevelOverlayControllers = []
                 contextReadyDisposable.set(nil)
             }
         }))
@@ -1311,8 +1344,6 @@ private enum QueuedWakeup: Int32 {
                     } else if let confirmationCode = parseConfirmationCodeUrl(url) {
                         context.rootController.applyConfirmationCode(confirmationCode)
                     }
-                default:
-                    break
             }
         })
     }
@@ -1324,7 +1355,7 @@ private enum QueuedWakeup: Int32 {
                     if let handle = contact.personHandle?.value {
                         if let userId = Int32(handle) {
                             if let contextValue = self.contextValue, case let .authorized(context) = contextValue {
-                                let _ = context.context.callManager?.requestCall(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
+                                let _ = context.context.callManager?.requestCall(account: context.context.account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
                             }
                         }
                     }
@@ -1582,9 +1613,9 @@ private enum QueuedWakeup: Int32 {
                     context.wakeupManager.wakeupForIncomingMessages(completion: { messageIds -> Signal<Void, NoError> in
                         if let contextValue = self.contextValue, case let .authorized(context) = contextValue {
                             if handleVoipNotifications {
-                                return context.notificationManager.commitRemoteNotification(originalRequestId: requestId, messageIds: messageIds)
+                                return context.notificationManager.commitRemoteNotification(context: context.context, originalRequestId: requestId, messageIds: messageIds)
                             } else {
-                                return context.notificationManager.commitRemoteNotification(originalRequestId: nil, messageIds: [])
+                                return context.notificationManager.commitRemoteNotification(context: context.context, originalRequestId: nil, messageIds: [])
                             }
                         } else {
                             Logger.shared.log("App \(self.episodeId)", "Couldn't process remote notifications wakeup result")

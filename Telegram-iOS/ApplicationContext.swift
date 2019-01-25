@@ -7,7 +7,7 @@ import TelegramCore
 import Display
 import LegacyComponents
 
-func applicationContext(networkArguments: NetworkInitializationArguments, applicationBindings: TelegramApplicationBindings, replyFromNotificationsActive: Signal<Bool, NoError>, backgroundAudioActive: Signal<Bool, NoError>, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, accountManager: AccountManager, rootPath: String, legacyBasePath: String, mainWindow: Window1, reinitializedNotificationSettings: @escaping () -> Void) -> Signal<ApplicationContext?, NoError> {
+/*func applicationContext(networkArguments: NetworkInitializationArguments, applicationBindings: TelegramApplicationBindings, replyFromNotificationsActive: Signal<Bool, NoError>, backgroundAudioActive: Signal<Bool, NoError>, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, sharedContext: SharedAccountContext, accountManager: AccountManager, rootPath: String, legacyBasePath: String, mainWindow: Window1, reinitializedNotificationSettings: @escaping () -> Void) -> Signal<ApplicationContext?, NoError> {
     return currentAccount(allocateIfNotExists: true, networkArguments: networkArguments, supplementary: false, manager: accountManager, rootPath: rootPath, auxiliaryMethods: telegramAccountAuxiliaryMethods)
     |> filter { $0 != nil }
     |> deliverOnMainQueue
@@ -26,14 +26,14 @@ func applicationContext(networkArguments: NetworkInitializationArguments, applic
                     return currentPresentationDataAndSettings(postbox: account.postbox)
                     |> deliverOnMainQueue
                     |> map { dataAndSettings -> ApplicationContext? in
-                        return .authorized(AuthorizedApplicationContext(mainWindow: mainWindow, replyFromNotificationsActive: replyFromNotificationsActive, backgroundAudioActive: backgroundAudioActive, watchManagerArguments: watchManagerArguments, context: AccountContext(account: account, applicationBindings: applicationBindings, accountManager: accountManager, initialPresentationDataAndSettings: dataAndSettings, postbox: account.postbox), accountManager: accountManager, legacyBasePath: legacyBasePath, showCallsTab: dataAndSettings.callListSettings.showTab, reinitializedNotificationSettings: reinitializedNotificationSettings))
+                        return .authorized(AuthorizedApplicationContext(mainWindow: mainWindow, replyFromNotificationsActive: replyFromNotificationsActive, backgroundAudioActive: backgroundAudioActive, watchManagerArguments: watchManagerArguments, context: AccountContext(sharedContext: sharedContext, account: account, initialPresentationDataAndSettings: dataAndSettings), accountManager: accountManager, legacyBasePath: legacyBasePath, showCallsTab: dataAndSettings.callListSettings.showTab, reinitializedNotificationSettings: reinitializedNotificationSettings))
                     }
             }
         } else {
             return .single(nil)
         }
     }
-}
+}*/
 
 func isAccessLocked(data: PostboxAccessChallengeData, at timestamp: Int32) -> Bool {
     if data.isLockable, let autolockDeadline = data.autolockDeadline, autolockDeadline <= timestamp {
@@ -85,18 +85,20 @@ enum ApplicationContext {
 }
 
 final class UnauthorizedApplicationContext {
+    let sharedContext: SharedAccountContext
     let account: UnauthorizedAccount
     var strings: PresentationStrings
     
     let rootController: AuthorizationSequenceController
     
-    init(account: UnauthorizedAccount, applicationBindings: TelegramApplicationBindings) {
+    init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, hasOtherAccounts: Bool) {
+        self.sharedContext = sharedContext
         self.account = account
         self.strings = defaultPresentationStrings
         
-        self.rootController = AuthorizationSequenceController(account: account, strings: self.strings, openUrl: applicationBindings.openUrl, apiId: BuildConfig.shared().apiId, apiHash: BuildConfig.shared().apiHash)
+        self.rootController = AuthorizationSequenceController(sharedContext: sharedContext, account: account, hasOtherAccounts: hasOtherAccounts, strings: self.strings, openUrl: sharedContext.applicationBindings.openUrl, apiId: BuildConfig.shared().apiId, apiHash: BuildConfig.shared().apiHash)
         
-        account.shouldBeServiceTaskMaster.set(applicationBindings.applicationInForeground |> map { value -> AccountServiceTaskMasterMode in
+        account.shouldBeServiceTaskMaster.set(sharedContext.applicationBindings.applicationInForeground |> map { value -> AccountServiceTaskMasterMode in
             if value {
                 return .always
             } else {
@@ -234,13 +236,12 @@ final class AuthorizedApplicationContext {
         }
         |> distinctUntilChanged
         
-        self.wakeupManager = WakeupManager(inForeground: context.applicationBindings.applicationInForeground, runningServiceTasks: context.account.importantTasksRunning, runningBackgroundLocationTasks: runningBackgroundLocationTasks, runningWatchTasks: runningWatchTasksPromise.get(), runningDownloadTasks: runningDownloadTasks)
+        self.wakeupManager = WakeupManager(inForeground: context.sharedContext.applicationBindings.applicationInForeground, runningServiceTasks: context.account.importantTasksRunning, runningBackgroundLocationTasks: runningBackgroundLocationTasks, runningWatchTasks: runningWatchTasksPromise.get(), runningDownloadTasks: runningDownloadTasks)
         self.wakeupManager.account = context.account
         
         self.showCallsTab = showCallsTab
         
         self.notificationManager = NotificationManager()
-        self.notificationManager.context = context
         self.notificationManager.isApplicationInForeground = false
         
         self.overlayMediaController = OverlayMediaController()
@@ -254,11 +255,11 @@ final class AuthorizedApplicationContext {
             }, {
                 openSettingsImpl?()
             })
-        }, networkType: context.account.networkType, audioSession: context.mediaManager.audioSession, callSessionManager: context.account.callSessionManager)
+        }, networkType: context.account.networkType, audioSession: context.sharedContext.mediaManager.audioSession, activeAccounts: .single([context.account]))
         context.callManager = callManager
         context.hasOngoingCall = self.hasOngoingCall.get()
         
-        let shouldBeServiceTaskMaster = combineLatest(context.applicationBindings.applicationInForeground, self.wakeupManager.isWokenUp, replyFromNotificationsActive, backgroundAudioActive, callManager.hasActiveCalls)
+        let shouldBeServiceTaskMaster = combineLatest(context.sharedContext.applicationBindings.applicationInForeground, self.wakeupManager.isWokenUp, replyFromNotificationsActive, backgroundAudioActive, callManager.hasActiveCalls)
         |> map { foreground, wokenUp, replyFromNotificationsActive, backgroundAudioActive, hasActiveCalls -> AccountServiceTaskMasterMode in
             if foreground || wokenUp || replyFromNotificationsActive || hasActiveCalls {
                 return .always
@@ -288,7 +289,7 @@ final class AuthorizedApplicationContext {
         })
         context.account.shouldExplicitelyKeepWorkerConnections.set(backgroundAudioActive)
         context.account.shouldKeepBackgroundDownloadConnections.set(context.fetchManager.hasUserInitiatedEntries)
-        context.account.shouldKeepOnlinePresence.set(context.applicationBindings.applicationInForeground)
+        context.account.shouldKeepOnlinePresence.set(context.sharedContext.applicationBindings.applicationInForeground)
         
         let cache = TGCache(cachesPath: legacyBasePath + "/Caches")!
         
@@ -324,7 +325,7 @@ final class AuthorizedApplicationContext {
             context.keyShortcutsController = keyShortcutsController
         }
         
-        self.applicationInForegroundDisposable = context.applicationBindings.applicationInForeground.start(next: { [weak self] value in
+        self.applicationInForegroundDisposable = context.sharedContext.applicationBindings.applicationInForeground.start(next: { [weak self] value in
             Queue.mainQueue().async {
                 self?.notificationManager.isApplicationInForeground = value
             }
@@ -372,14 +373,14 @@ final class AuthorizedApplicationContext {
             self?.mainWindow.present(c, on: .root)
         }
         openSettingsImpl = { [weak context] in
-            context?.applicationBindings.openSettings()
+            context?.sharedContext.applicationBindings.openSettings()
         }
         
         let previousPasscodeState = Atomic<PasscodeState?>(value: nil)
         
         let preferencesKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([ApplicationSpecificPreferencesKeys.presentationPasscodeSettings]))
         
-        self.passcodeStatusDisposable.set((combineLatest(queue: Queue.mainQueue(), context.account.postbox.combinedView(keys: [.accessChallengeData, preferencesKey]), context.applicationBindings.applicationIsActive)
+        self.passcodeStatusDisposable.set((combineLatest(queue: Queue.mainQueue(), context.account.postbox.combinedView(keys: [.accessChallengeData, preferencesKey]), context.sharedContext.applicationBindings.applicationIsActive)
         |> map { view, isActive -> (PostboxAccessChallengeData, PresentationPasscodeSettings?, Bool) in
             let accessChallengeData = (view.views[.accessChallengeData] as? AccessChallengeDataView)?.data ?? PostboxAccessChallengeData.none
             let passcodeSettings = (view.views[preferencesKey] as! PreferencesView).values[ApplicationSpecificPreferencesKeys.presentationPasscodeSettings] as? PresentationPasscodeSettings
@@ -669,11 +670,20 @@ final class AuthorizedApplicationContext {
                     }
                     
                     if !strongSelf.isLocked {
-                        if inAppNotificationSettings.playSounds {
-                            serviceSoundManager.playIncomingMessageSound()
-                        }
-                        if inAppNotificationSettings.vibrate {
-                            serviceSoundManager.playVibrationSound()
+                        let isMuted = firstMessage.attributes.contains(where: { attribute in
+                            if let attribute = attribute as? NotificationInfoMessageAttribute {
+                                return attribute.flags.contains(.muted)
+                            } else {
+                                return false
+                            }
+                        })
+                        if !isMuted {
+                            if inAppNotificationSettings.playSounds {
+                                serviceSoundManager.playIncomingMessageSound()
+                            }
+                            if inAppNotificationSettings.vibrate {
+                                serviceSoundManager.playVibrationSound()
+                            }
                         }
                     }
                     
@@ -913,7 +923,8 @@ final class AuthorizedApplicationContext {
             }))
         }
         
-        self.displayAlertsDisposable = (context.account.stateManager.displayAlerts |> deliverOnMainQueue).start(next: { [weak self] alerts in
+        self.displayAlertsDisposable = (context.account.stateManager.displayAlerts
+        |> deliverOnMainQueue).start(next: { [weak self] alerts in
             if let strongSelf = self{
                 for text in alerts {
                     let presentationData = strongSelf.context.currentPresentationData.with { $0 }
@@ -926,7 +937,7 @@ final class AuthorizedApplicationContext {
         self.removeNotificationsDisposable = (context.account.stateManager.appliedIncomingReadMessages
         |> deliverOnMainQueue).start(next: { [weak self] ids in
             if let strongSelf = self {
-                strongSelf.context.applicationBindings.clearMessageNotifications(ids)
+                strongSelf.context.sharedContext.applicationBindings.clearMessageNotifications(ids)
             }
         })
         
@@ -946,11 +957,11 @@ final class AuthorizedApplicationContext {
                         strongSelf.callState.set(call.state
                         |> map(Optional.init))
                         strongSelf.hasOngoingCall.set(true)
-                        strongSelf.notificationManager.notificationCall = call
+                        strongSelf.notificationManager.setNotificationCall(call, strings: strongSelf.context.currentPresentationData.with({ $0 }).strings)
                     } else {
                         strongSelf.callState.set(.single(nil))
                         strongSelf.hasOngoingCall.set(false)
-                        strongSelf.notificationManager.notificationCall = nil
+                        strongSelf.notificationManager.setNotificationCall(nil, strings: strongSelf.context.currentPresentationData.with({ $0 }).strings)
                     }
                 }
             }
@@ -1004,7 +1015,7 @@ final class AuthorizedApplicationContext {
         self.context.account.resetStateManagement()
         let contactSynchronizationPreferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
        
-        let importableContacts = self.context.contactDataManager.importable()
+        let importableContacts = self.context.sharedContext.contactDataManager?.importable() ?? .single([:])
         self.context.account.importableContacts.set(self.context.account.postbox.combinedView(keys: [contactSynchronizationPreferencesKey])
         |> mapToSignal { preferences -> Signal<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData], NoError> in
             let settings: ContactSynchronizationSettings = ((preferences.views[contactSynchronizationPreferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings) ?? .defaultSettings
@@ -1054,7 +1065,7 @@ final class AuthorizedApplicationContext {
             strongSelf.context.watchManager = watchManager
             runningWatchTasksPromise.set(watchManager.runningTasks)
             
-            strongSelf.watchNavigateToMessageDisposable.set((strongSelf.context.applicationBindings.applicationInForeground |> mapToSignal({ applicationInForeground -> Signal<(Bool, MessageId), NoError> in
+            strongSelf.watchNavigateToMessageDisposable.set((strongSelf.context.sharedContext.applicationBindings.applicationInForeground |> mapToSignal({ applicationInForeground -> Signal<(Bool, MessageId), NoError> in
                 return watchManager.navigateToMessageRequested
                 |> map { messageId in
                     return (applicationInForeground, messageId)
@@ -1080,7 +1091,7 @@ final class AuthorizedApplicationContext {
                             (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                         }
                     } else {
-                        strongSelf.notificationManager.presentWatchContinuityNotification(messageId: messageId)
+                        strongSelf.notificationManager.presentWatchContinuityNotification(context: strongSelf.context, messageId: messageId)
                     }
                 }
             }))

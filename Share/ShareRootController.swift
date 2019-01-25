@@ -5,7 +5,7 @@ import TelegramUI
 import SwiftSignalKit
 import Postbox
 
-private var accountCache: (Account, AccountManager)?
+private var accountCache: (SharedAccountContext, Account)?
 
 private var installedSharedLogger = false
 
@@ -136,7 +136,7 @@ class ShareRootController: UIViewController {
             }, dismissNativeController: {
             })
             
-            let account: Signal<(Account, AccountManager), ShareAuthorizationError>
+            let account: Signal<(SharedAccountContext, Account), ShareAuthorizationError>
             if let accountCache = accountCache {
                 account = .single(accountCache)
             } else {
@@ -145,33 +145,38 @@ class ShareRootController: UIViewController {
                 initializeAccountManagement()
                 account = accountManager(basePath: rootPath + "/accounts-metadata")
                 |> take(1)
-                |> mapToSignal { accountManager -> Signal<(AccountManager, LoggingSettings), NoError> in
-                    return accountManager.transaction { transaction -> (AccountManager, LoggingSettings) in
-                        return (accountManager, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
+                |> mapToSignal { accountManager -> Signal<(SharedAccountContext, LoggingSettings), NoError> in
+                    let sharedContext = SharedAccountContext(accountManager: accountManager, applicationBindings: applicationBindings, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), rootPath: rootPath, apsNotificationToken: .never(), voipNotificationToken: .never())
+                    
+                    return accountManager.transaction { transaction -> (SharedAccountContext, LoggingSettings) in
+                        return (sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
                     }
                 }
                 |> introduceError(ShareAuthorizationError.self)
-                |> mapToSignal { accountManager, loggingSettings -> Signal<(Account, AccountManager), ShareAuthorizationError> in
+                |> mapToSignal { sharedContext, loggingSettings -> Signal<(SharedAccountContext, Account), ShareAuthorizationError> in
                     Logger.shared.logToFile = loggingSettings.logToFile
                     Logger.shared.logToConsole = loggingSettings.logToConsole
                     
                     Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
                     
-                    return currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: telegramAccountAuxiliaryMethods)
-                     |> introduceError(ShareAuthorizationError.self) |> mapToSignal { account -> Signal<(Account, AccountManager), ShareAuthorizationError> in
+                    preconditionFailure()
+                    
+                    /*return currentAccount(allocateIfNotExists: false, networkArguments: , supplementary: true, manager: sharedContext.accountManager, rootPath: rootPath, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+                    |> introduceError(ShareAuthorizationError.self)
+                    |> mapToSignal { account -> Signal<(SharedAccountContext, Account), ShareAuthorizationError> in
                         if let account = account {
                             switch account {
                                 case .upgrading:
                                     return .complete()
                                 case let .authorized(account):
-                                    return .single((account, accountManager))
+                                    return .single((sharedContext, account))
                                 case .unauthorized:
                                     return .fail(.unauthorized)
                             }
                         } else {
                             return .complete()
                         }
-                    }
+                    }*/
                 }
                 |> take(1)
             }
@@ -180,14 +185,14 @@ class ShareRootController: UIViewController {
             
             let shouldBeMaster = self.shouldBeMaster
             let applicationInterface = account
-            |> mapToSignal { account, accountManager -> Signal<(AccountContext, PostboxAccessChallengeData), ShareAuthorizationError> in
+            |> mapToSignal { sharedContext, account -> Signal<(AccountContext, PostboxAccessChallengeData), ShareAuthorizationError> in
                 return combineLatest(currentPresentationDataAndSettings(postbox: account.postbox), account.postbox.combinedView(keys: [.accessChallengeData, preferencesKey]) |> take(1))
                 |> deliverOnMainQueue
                 |> introduceError(ShareAuthorizationError.self)
                 |> map { dataAndSettings, data -> (AccountContext, PostboxAccessChallengeData) in
-                    accountCache = (account, accountManager)
+                    accountCache = (sharedContext, account)
                     updateLegacyLocalization(strings: dataAndSettings.presentationData.strings)
-                    let context = AccountContext(account: account, applicationBindings: applicationBindings, accountManager: accountManager, initialPresentationDataAndSettings: dataAndSettings, postbox: account.postbox)
+                    let context = AccountContext(sharedContext: sharedContext, account: account, initialPresentationDataAndSettings: dataAndSettings)
                     return (context, (data.views[.accessChallengeData] as! AccessChallengeDataView).data)
                 }
             }
