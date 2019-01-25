@@ -15,7 +15,13 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
             if let _ = media as? TelegramMediaImage {
                 result.append((message, ChatMessageMediaBubbleContentNode.self))
             } else if let file = media as? TelegramMediaFile {
-                if file.isVideo || (file.isAnimated && file.dimensions != nil) {
+                var isVideo = file.isVideo || (file.isAnimated && file.dimensions != nil)
+                #if DEBUG
+                if let fileName = file.fileName, fileName.hasSuffix(".mkv") {
+                    isVideo = true
+                }
+                #endif
+                if isVideo {
                     result.append((message, ChatMessageMediaBubbleContentNode.self))
                 } else {
                     result.append((message, ChatMessageFileBubbleContentNode.self))

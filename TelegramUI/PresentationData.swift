@@ -166,14 +166,16 @@ private func currentPersonNameSortOrder() -> PresentationPersonNameOrder {
 public final class InitialPresentationDataAndSettings {
     public let presentationData: PresentationData
     public let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
+    public let limitsConfiguration: LimitsConfiguration
     public let callListSettings: CallListSettings
     public let inAppNotificationSettings: InAppNotificationSettings
     public let mediaInputSettings: MediaInputSettings
     public let experimentalUISettings: ExperimentalUISettings
     
-    init(presentationData: PresentationData, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, callListSettings: CallListSettings, inAppNotificationSettings: InAppNotificationSettings, mediaInputSettings: MediaInputSettings, experimentalUISettings: ExperimentalUISettings) {
+    init(presentationData: PresentationData, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, limitsConfiguration: LimitsConfiguration, callListSettings: CallListSettings, inAppNotificationSettings: InAppNotificationSettings, mediaInputSettings: MediaInputSettings, experimentalUISettings: ExperimentalUISettings) {
         self.presentationData = presentationData
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
+        self.limitsConfiguration = limitsConfiguration
         self.callListSettings = callListSettings
         self.inAppNotificationSettings = inAppNotificationSettings
         self.mediaInputSettings = mediaInputSettings
@@ -182,7 +184,7 @@ public final class InitialPresentationDataAndSettings {
 }
 
 public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<InitialPresentationDataAndSettings, NoError> {
-    return postbox.transaction { transaction -> (PresentationThemeSettings, LocalizationSettings?, AutomaticMediaDownloadSettings, CallListSettings, InAppNotificationSettings, MediaInputSettings, ExperimentalUISettings, ContactSynchronizationSettings) in
+    return postbox.transaction { transaction -> (PresentationThemeSettings, LocalizationSettings?, AutomaticMediaDownloadSettings, LimitsConfiguration, CallListSettings, InAppNotificationSettings, MediaInputSettings, ExperimentalUISettings, ContactSynchronizationSettings) in
         let themeSettings: PresentationThemeSettings
         if let current = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings) as? PresentationThemeSettings {
             themeSettings = current
@@ -202,6 +204,13 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
             automaticMediaDownloadSettings = value
         } else {
             automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
+        }
+        
+        let limitsConfiguration: LimitsConfiguration
+        if let value = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration {
+            limitsConfiguration = value
+        } else {
+            limitsConfiguration = LimitsConfiguration.defaultValue
         }
         
         let callListSettings: CallListSettings
@@ -229,9 +238,9 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
         
         let contactSettings: ContactSynchronizationSettings = (transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.contactSynchronizationSettings) as? ContactSynchronizationSettings) ?? ContactSynchronizationSettings.defaultSettings
         
-        return (themeSettings, localizationSettings, automaticMediaDownloadSettings, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings, contactSettings)
+        return (themeSettings, localizationSettings, automaticMediaDownloadSettings, limitsConfiguration, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings, contactSettings)
     }
-    |> map { (themeSettings, localizationSettings, automaticMediaDownloadSettings, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings, contactSettings) -> InitialPresentationDataAndSettings in
+    |> map { (themeSettings, localizationSettings, automaticMediaDownloadSettings, limitsConfiguration, callListSettings, inAppNotificationSettings, mediaInputSettings, experimentalUISettings, contactSettings) -> InitialPresentationDataAndSettings in
         let themeValue: PresentationTheme
         
         let effectiveTheme: PresentationThemeReference
@@ -281,7 +290,7 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
         let dateTimeFormat = currentDateTimeFormat()
         let nameDisplayOrder = contactSettings.nameDisplayOrder
         let nameSortOrder = currentPersonNameSortOrder()
-        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, chatWallpaperOptions: effectiveChatWallpaperOptions, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations), automaticMediaDownloadSettings: automaticMediaDownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
+        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, chatWallpaperOptions: effectiveChatWallpaperOptions, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations), automaticMediaDownloadSettings: automaticMediaDownloadSettings, limitsConfiguration: limitsConfiguration, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
     }
 }
 

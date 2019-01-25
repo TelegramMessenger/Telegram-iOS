@@ -26,5 +26,10 @@ func isMediaStreamable(message: Message, media: TelegramMediaFile) -> Bool {
             break
         }
     }
+    #if DEBUG
+    if let fileName = media.fileName, fileName.hasSuffix(".mkv") {
+        return true
+    }
+    #endif
     return false
 }

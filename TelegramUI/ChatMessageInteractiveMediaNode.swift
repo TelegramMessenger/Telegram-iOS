@@ -716,8 +716,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     }
                 case .Remote:
                     state = .download(bubbleTheme.mediaOverlayControlForegroundColor)
-                    if let file = self.media as? TelegramMediaFile, let duration = file.duration, !file.isAnimated {
-                        let durationString = stringForDuration(duration)
+                    if let file = self.media as? TelegramMediaFile, !file.isAnimated {
+                        let durationString = stringForDuration(file.duration ?? 0)
                         if case .constrained = sizeCalculation {
                             if isMediaStreamable(message: message, media: file) {
                                 state = .play(bubbleTheme.mediaOverlayControlForegroundColor)

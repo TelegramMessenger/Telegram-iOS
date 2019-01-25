@@ -89,6 +89,12 @@ public final class AccountContext {
         return self._automaticMediaDownloadSettings.get()
     }
     
+    public let currentLimitsConfiguration: Atomic<LimitsConfiguration>
+    private let _limitsConfiguration = Promise<LimitsConfiguration>()
+    public var limitsConfiguration: Signal<LimitsConfiguration, NoError> {
+        return self._limitsConfiguration.get()
+    }
+    
     public let currentMediaInputSettings: Atomic<MediaInputSettings>
     private var mediaInputSettingsDisposable: Disposable?
     
@@ -139,6 +145,7 @@ public final class AccountContext {
         self.fetchManager = FetchManager(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager)
         self.currentPresentationData = Atomic(value: initialPresentationDataAndSettings.presentationData)
         self.currentAutomaticMediaDownloadSettings = Atomic(value: initialPresentationDataAndSettings.automaticMediaDownloadSettings)
+        self.currentLimitsConfiguration = Atomic(value: initialPresentationDataAndSettings.limitsConfiguration)
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)
        
         self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData)
