@@ -235,14 +235,14 @@ func importLegacyPreferences(account: TemporaryAccount, documentsPath: String, d
                 } else if let wallpaperInfo = wallpaperInfo as? TGRemoteWallpaperInfo, let data = try? Data(contentsOf: URL(fileURLWithPath: documentsPath + "/wallpaper-data/_currentWallpaper.jpg")), let image = UIImage(data: data) {
                     let url = wallpaperInfo.fullscreenUrl()!
                     if let resource = resourceFromLegacyImageUrl(url) {
-                        settings.chatWallpaper = .image([TelegramMediaImageRepresentation(dimensions: image.size, resource: resource)])
+                        settings.chatWallpaper = .image([TelegramMediaImageRepresentation(dimensions: image.size, resource: resource)], WallpaperSettings())
                         account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     }
                 } else if let wallpaperInfo = wallpaperInfo as? TGColorWallpaperInfo {
                     settings.chatWallpaper = .color(Int32(bitPattern: wallpaperInfo.color))
                 } else if let data = try? Data(contentsOf: URL(fileURLWithPath: documentsPath + "/wallpaper-data/_currentWallpaper.jpg")), let image = UIImage(data: data) {
                     let resource = LocalFileMediaResource(fileId: arc4random64())
-                    settings.chatWallpaper = .image([TelegramMediaImageRepresentation(dimensions: image.size, resource: resource)])
+                    settings.chatWallpaper = .image([TelegramMediaImageRepresentation(dimensions: image.size, resource: resource)], WallpaperSettings())
                     account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                 }
                 
