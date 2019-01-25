@@ -100,3 +100,48 @@ final class CachedBlurredWallpaperRepresentation: CachedMediaResourceRepresentat
         }
     }
 }
+
+final class CachedPatternWallpaperMaskRepresentation: CachedMediaResourceRepresentation {
+    let size: CGSize?
+    
+    var uniqueId: String {
+        if let size = self.size {
+            return "pattern-wallpaper-mask-\(Int(size.width))x\(Int(size.height))"
+        } else {
+            return "pattern-wallpaper-mask"
+        }
+    }
+    
+    init(size: CGSize?) {
+        self.size = size
+    }
+    
+    func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
+        if let to = to as? CachedPatternWallpaperMaskRepresentation {
+            return self.size == to.size
+        } else {
+            return false
+        }
+    }
+}
+
+
+final class CachedPatternWallpaperRepresentation: CachedMediaResourceRepresentation {
+    let color: Int32
+    
+    var uniqueId: String {
+        return "pattern-wallpaper-\(self.color)"
+    }
+    
+    init(color: Int32) {
+        self.color = color
+    }
+    
+    func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
+        if let to = to as? CachedPatternWallpaperRepresentation {
+            return self.color == to.color
+        } else {
+            return false
+        }
+    }
+}

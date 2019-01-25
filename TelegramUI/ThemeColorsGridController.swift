@@ -123,7 +123,7 @@ final class ThemeColorsGridController: ViewController {
             }
         }, presentColorPicker: { [weak self] in
             if let strongSelf = self {
-                let controller = WallpaperListPreviewController(account: strongSelf.account, source: .customColor(randomColor()))
+                let controller = WallpaperGalleryController(account: strongSelf.account, source: .customColor(randomColor()))
                 controller.apply = { _, _, _ in
                     if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
                         let _ = navigationController.popViewController(animated: true)

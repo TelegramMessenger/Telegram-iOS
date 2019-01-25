@@ -391,7 +391,6 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         
         let interaction = ThemeGridSearchInteraction(openResult: { [weak self] result in
             openResult(result)
-            
             if let strongSelf = self {
                 strongSelf.dismissInput?()
                 
@@ -403,6 +402,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         }, selectColor: { [weak self] color in
             self?.updateQuery({ $0.updatedWithColor(color) }, updateInterface: true)
         }, setSearchQuery: { [weak self] query in
+            self?.dismissInput?()
             self?.updateQuery({ _ in
                 return query
             }, updateInterface: true)
@@ -512,8 +512,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
-                //let previousStrings = strongSelf.presentationData.strings
-                
+            
                 strongSelf.presentationData = presentationData
                 strongSelf.presentationDataPromise.set(.single(presentationData))
                 

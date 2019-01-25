@@ -188,6 +188,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             var entities: [MessageTextEntity]?
             var mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)?
             var badge: String?
+            
             var actionIcon: ChatMessageAttachedContentActionIcon?
             var actionTitle: String?
             
@@ -259,6 +260,14 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                         mediaAndFlags = (image, flags)
                     }
+                } else if let type = webpage.type, type == "telegram_background" {
+                    if let text = webpage.text, let colorCodeRange = text.range(of: "#") {
+                        let colorCode = String(text[colorCodeRange.upperBound...])
+                        if colorCode.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: colorCode) {
+                            let color = SolidColorMedia(color: color)
+                            mediaAndFlags = (color, ChatMessageAttachedContentNodeMediaFlags())
+                        }
+                    }
                 }
                 
                 if let _ = webpage.instantPage {
@@ -279,6 +288,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             actionTitle = item.presentationData.strings.Conversation_ViewMessage
                         case "telegram_background":
                             title = item.presentationData.strings.Conversation_ChatBackground
+                            subtitle = nil
+                            text = nil
                             actionTitle = item.presentationData.strings.Conversation_ViewBackground
                         default:
                             break

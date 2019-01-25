@@ -75,6 +75,7 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
     }
     
     @objc func donePressed() {
+        self.doneButton.isUserInteractionEnabled = false
         self.done?()
     }
 }

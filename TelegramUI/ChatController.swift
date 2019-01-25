@@ -702,6 +702,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }, openWallpaper: { [weak self] message in
             if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
+                strongSelf.chatDisplayNode.dismissInput()
                 openChatWallpaper(account: strongSelf.account, message: message, present: { [weak self] c, a in
                     self?.present(c, in: .window(.root), with: a, blockInteraction: true)
                 })
@@ -5984,10 +5985,6 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     private func processQRCode(_ code: String) {
         if let (host, port, username, password, secret) = parseProxyUrl(code) {
             self.openResolved(ResolvedUrl.proxy(host: host, port: port, username: username, password: password, secret: secret))
-        } else {
-            let _ = resolveUrl(account: self.account, url: code).start(next: { [weak self] resolved in
-                self?.openResolved(resolved)
-            })
         }
     }
     

@@ -112,7 +112,12 @@ final class ThemeGridController: ViewController {
                                 strongSelf.controllerNode.scrollToTop(animated: false)
                             }
                             if let controller = controller {
-                                controller.dismiss(forceAway: true)
+                                switch wallpaper {
+                                    case .asset, .contextResult:
+                                        controller.dismiss(forceAway: true)
+                                    default:
+                                        break
+                                }
                             }
                         })
                     }
@@ -328,7 +333,7 @@ final class ThemeGridController: ViewController {
                 }
                 
                 let apply: () -> Void = {
-                    let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: thumbnailDimensions, resource: thumbnailResource), TelegramMediaImageRepresentation(dimensions: croppedImage.size, resource: resource)])
+                    let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: thumbnailDimensions, resource: thumbnailResource), TelegramMediaImageRepresentation(dimensions: croppedImage.size, resource: resource)], WallpaperSettings())
                     updateWallpaper(wallpaper)
                     DispatchQueue.main.async {
                         completion()
@@ -336,7 +341,7 @@ final class ThemeGridController: ViewController {
                     
                     let _ = uploadWallpaper(account: account, resource: resource).start(next: { status in
                         if case let .complete(wallpaper) = status {
-                            if mode.contains(.blur), case let .file(_, _, _, _, _, file) = wallpaper {
+                            if mode.contains(.blur), case let .file(_, _, _, _, _, _, file, _) = wallpaper {
                                 let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
                                     updateWallpaper(wallpaper)
                                 })
@@ -365,7 +370,7 @@ final class ThemeGridController: ViewController {
         for wallpaper in wallpapers {
             var item: String?
             switch wallpaper {
-                case let .file(_, _, _, _, slug, _):
+                case let .file(_, _, _, _, _, slug, _, _):
                     item = slug
                 case let .color(color):
                     item = "\(String(UInt32(bitPattern: color), radix: 16, uppercase: false))"

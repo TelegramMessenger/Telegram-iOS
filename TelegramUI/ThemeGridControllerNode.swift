@@ -19,14 +19,14 @@ private func areWallpapersEqual(_ lhs: TelegramWallpaper, _ rhs: TelegramWallpap
             } else {
                 return false
             }
-        case let .image(representations):
-            if case .image(representations) = rhs {
+        case let .image(representations, _):
+            if case .image(representations, _) = rhs {
                 return true
             } else {
                 return false
             }
-        case let .file(lhsId, _, _, _, lhsSlug, _):
-            if case let .file(rhsId, _, _, _, rhsSlug, _) = rhs, lhsId == rhsId, lhsSlug == rhsSlug {
+        case let .file(lhsId, _, _, _, _, lhsSlug, _, _):
+            if case let .file(rhsId, _, _, _, _, rhsSlug, _, _) = rhs, lhsId == rhsId, lhsSlug == rhsSlug {
                 return true
             } else {
                 return false
@@ -91,9 +91,9 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
                 return 0
             case let .color(color):
                 return (Int64(0) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: color)))
-            case let .file(id, _, _, _, _, _):
+            case let .file(id, _, _, _, _, _, _, _):
                 return (Int64(1) << 32) | id
-            case let .image(representations):
+            case let .image(representations, _):
                 if let largest = largestImageRepresentation(representations) {
                     return (Int64(2) << 32) | Int64(largest.resource.id.hashValue)
                 } else {

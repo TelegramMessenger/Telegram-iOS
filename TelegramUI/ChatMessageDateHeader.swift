@@ -84,7 +84,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     
     private var flashingOnScrolling = false
     private var stickDistanceFactor: CGFloat = 0.0
-    private var action:((Int32) -> Void)? = nil
+    private var action: ((Int32) -> Void)? = nil
     
     init(localTimestamp: Int32, presentationData: ChatPresentationData, action:((Int32) -> Void)? = nil) {
         self.presentationData = presentationData

@@ -10,9 +10,8 @@
         return nil;
     }
     
-    // `WebPGetInfo` weill return image width and height
     int width = 0, height = 0;
-    if(!WebPGetInfo([imgData bytes], [imgData length], &width, &height)) {
+    if (!WebPGetInfo([imgData bytes], [imgData length], &width, &height)) {
         NSMutableDictionary *errorDetail = [NSMutableDictionary dictionary];
         [errorDetail setValue:@"Header formatting error." forKey:NSLocalizedDescriptionKey];
         return nil;
@@ -33,16 +32,13 @@
     
     CGColorSpaceRelease(colorSpace);
     
-    if (WebPDecodeBGRAInto(imgData.bytes, imgData.length, targetMemory, targetBytesPerRow * targetContextSize.height, (int)targetBytesPerRow) == NULL)
-    {
+    if (WebPDecodeBGRAInto(imgData.bytes, imgData.length, targetMemory, targetBytesPerRow * targetContextSize.height, (int)targetBytesPerRow) == NULL) {
         //[BridgingTrace objc_trace:@"WebP" what:@"error decoding webp"];
         return nil;
     }
     
-    for (int y = 0; y < targetContextSize.height; y++)
-    {
-        for (int x = 0; x < targetContextSize.width; x++)
-        {
+    for (int y = 0; y < targetContextSize.height; y++) {
+        for (int x = 0; x < targetContextSize.width; x++) {
             uint32_t *color = ((uint32_t *)&targetMemory[y * targetBytesPerRow + x * 4]);
             
             uint32_t a = (*color >> 24) & 0xff;
@@ -57,8 +53,7 @@
             *color = (a << 24) | (r << 16) | (g << 8) | b;
         }
         
-        for (size_t i = y * targetBytesPerRow + targetContextSize.width * 4; i < (targetBytesPerRow >> 2); i++)
-        {
+        for (size_t i = y * targetBytesPerRow + targetContextSize.width * 4; i < (targetBytesPerRow >> 2); i++) {
             *((uint32_t *)&targetMemory[i]) = 0;
         }
     }
@@ -125,8 +120,13 @@
     pic.height = (int)webPImageHeight;
     pic.colorspace = WEBP_YUV420;
     
-    //WebPPictureImportBGRA(&pic, webPImageData, (int)webPBytesPerRow);
-    WebPPictureImportRGBA(&pic, webPImageData, (int)webPBytesPerRow);
+    
+    if ([[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){12, 0, 0}]) {
+        WebPPictureImportRGBA(&pic, webPImageData, (int)webPBytesPerRow);
+    } else {
+        WebPPictureImportBGRA(&pic, webPImageData, (int)webPBytesPerRow);
+    }
+
     WebPPictureARGBToYUVA(&pic, WEBP_YUV420);
     WebPCleanupTransparentArea(&pic);
     

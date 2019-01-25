@@ -13,6 +13,9 @@
 		0902838D2194AEB90067EFBD /* ImageTransparency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0902838C2194AEB90067EFBD /* ImageTransparency.swift */; };
 		090E63E62195880F00E3C035 /* ContactAddItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E63E52195880F00E3C035 /* ContactAddItem.swift */; };
 		090E63EE2196FE3A00E3C035 /* OpenAddContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E63ED2196FE3A00E3C035 /* OpenAddContact.swift */; };
+		0910B0ED21FA178C00F8F87D /* SolidColorMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0910B0EC21FA178C00F8F87D /* SolidColorMedia.swift */; };
+		0910B0EF21FA532D00F8F87D /* WallpaperResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0910B0EE21FA532D00F8F87D /* WallpaperResources.swift */; };
+		0910B0F121FB3DE100F8F87D /* WallpaperPatternPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0910B0F021FB3DE100F8F87D /* WallpaperPatternPanelNode.swift */; };
 		091346962183496900846E49 /* InstantPageArticleItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091346952183496900846E49 /* InstantPageArticleItem.swift */; };
 		091346982183498A00846E49 /* InstantPageArticleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091346972183498A00846E49 /* InstantPageArticleNode.swift */; };
 		0913469A218528D200846E49 /* InstantPageTableItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09134699218528D200846E49 /* InstantPageTableItem.swift */; };
@@ -132,8 +135,6 @@
 		D000CABA21EE130D0011B15D /* MapResourceToAvatarSizes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D000CAB921EE130D0011B15D /* MapResourceToAvatarSizes.swift */; };
 		D000CABC21F158AD0011B15D /* PrepareSecretThumbnailData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D000CABB21F158AD0011B15D /* PrepareSecretThumbnailData.swift */; };
 		D005808B21CAB8F000CB7CD3 /* VoipDerivedState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D005808A21CAB8F000CB7CD3 /* VoipDerivedState.swift */; };
-		D00580A021DCF0A200CB7CD3 /* WallpaperListPreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D005809F21DCF0A200CB7CD3 /* WallpaperListPreviewController.swift */; };
-		D00580A221DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580A121DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift */; };
 		D00580B121E3DEF200CB7CD3 /* MergedItemListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580B021E3DEF200CB7CD3 /* MergedItemListItem.swift */; };
 		D00580B321E4B51600CB7CD3 /* DeleteChatPeerActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580B221E4B51600CB7CD3 /* DeleteChatPeerActionSheetItem.swift */; };
 		D00580B621E4C02100CB7CD3 /* UndoOverlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580B521E4C02100CB7CD3 /* UndoOverlayController.swift */; };
@@ -753,7 +754,6 @@
 		D0EC6D1E1EB9F58800EBF1C3 /* MediaPlayerScrubbingNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03922A61DF70E3F000F2CE9 /* MediaPlayerScrubbingNode.swift */; };
 		D0EC6D1F1EB9F58800EBF1C3 /* MediaPlayerTimeTextNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0177B7F1DFAE18500A5083A /* MediaPlayerTimeTextNode.swift */; };
 		D0EC6D201EB9F58800EBF1C3 /* PeerAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69CDE1D6B87D30046BCD6 /* PeerAvatar.swift */; };
-		D0EC6D211EB9F58800EBF1C3 /* FileResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E9E1D6B8E380046BCD6 /* FileResources.swift */; };
 		D0EC6D221EB9F58800EBF1C3 /* PhotoResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E9F1D6B8E380046BCD6 /* PhotoResources.swift */; };
 		D0EC6D231EB9F58800EBF1C3 /* StickerResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69EA01D6B8E380046BCD6 /* StickerResources.swift */; };
 		D0EC6D241EB9F58800EBF1C3 /* CachedResourceRepresentations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06879541DB8F1FC00424BBD /* CachedResourceRepresentations.swift */; };
@@ -1143,6 +1143,9 @@
 		0902838C2194AEB90067EFBD /* ImageTransparency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTransparency.swift; sourceTree = "<group>"; };
 		090E63E52195880F00E3C035 /* ContactAddItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactAddItem.swift; sourceTree = "<group>"; };
 		090E63ED2196FE3A00E3C035 /* OpenAddContact.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAddContact.swift; sourceTree = "<group>"; };
+		0910B0EC21FA178C00F8F87D /* SolidColorMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolidColorMedia.swift; sourceTree = "<group>"; };
+		0910B0EE21FA532D00F8F87D /* WallpaperResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperResources.swift; sourceTree = "<group>"; };
+		0910B0F021FB3DE100F8F87D /* WallpaperPatternPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperPatternPanelNode.swift; sourceTree = "<group>"; };
 		091346952183496900846E49 /* InstantPageArticleItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageArticleItem.swift; sourceTree = "<group>"; };
 		091346972183498A00846E49 /* InstantPageArticleNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageArticleNode.swift; sourceTree = "<group>"; };
 		09134699218528D200846E49 /* InstantPageTableItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageTableItem.swift; sourceTree = "<group>"; };
@@ -1276,8 +1279,6 @@
 		D003702F1DA43077004308D3 /* ItemListItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListItem.swift; sourceTree = "<group>"; };
 		D00370311DA46C06004308D3 /* ItemListTextWithLabelItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListTextWithLabelItem.swift; sourceTree = "<group>"; };
 		D005808A21CAB8F000CB7CD3 /* VoipDerivedState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoipDerivedState.swift; sourceTree = "<group>"; };
-		D005809F21DCF0A200CB7CD3 /* WallpaperListPreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperListPreviewController.swift; sourceTree = "<group>"; };
-		D00580A121DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperListPreviewControllerNode.swift; sourceTree = "<group>"; };
 		D00580B021E3DEF200CB7CD3 /* MergedItemListItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MergedItemListItem.swift; sourceTree = "<group>"; };
 		D00580B221E4B51600CB7CD3 /* DeleteChatPeerActionSheetItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteChatPeerActionSheetItem.swift; sourceTree = "<group>"; };
 		D00580B521E4C02100CB7CD3 /* UndoOverlayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoOverlayController.swift; sourceTree = "<group>"; };
@@ -2317,7 +2318,6 @@
 		D0F69E941D6B8C9B0046BCD6 /* WebP.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WebP.swift; sourceTree = "<group>"; };
 		D0F69E981D6B8D200046BCD6 /* UIImage+WebP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIImage+WebP.h"; sourceTree = "<group>"; };
 		D0F69E991D6B8D200046BCD6 /* UIImage+WebP.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIImage+WebP.m"; sourceTree = "<group>"; };
-		D0F69E9E1D6B8E380046BCD6 /* FileResources.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FileResources.swift; sourceTree = "<group>"; };
 		D0F69E9F1D6B8E380046BCD6 /* PhotoResources.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoResources.swift; sourceTree = "<group>"; };
 		D0F69EA01D6B8E380046BCD6 /* StickerResources.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerResources.swift; sourceTree = "<group>"; };
 		D0F69EA51D6B8F3E0046BCD6 /* TelegramUIIncludes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TelegramUIIncludes.h; sourceTree = "<group>"; };
@@ -3154,8 +3154,6 @@
 				09F664C721EB4A2600AB7E26 /* ThemeGridSearchItem.swift */,
 				09F664C921EB4F2700AB7E26 /* ThemeGridSearchColorsItem.swift */,
 				09F664CB21EB552C00AB7E26 /* WallpaperSearchRecentQueries.swift */,
-				D005809F21DCF0A200CB7CD3 /* WallpaperListPreviewController.swift */,
-				D00580A121DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift */,
 				09F664CF21EBCFB900AB7E26 /* WallpaperCropNode.swift */,
 				09DD5D5121ED175300D7007A /* WallpaperColorPickerNode.swift */,
 				0900678C21ED5EA800530762 /* WallpaperColorPanelNode.swift */,
@@ -3163,6 +3161,7 @@
 				09749BCC21F23139008FDDE9 /* WallpaperGalleryDecorationNode.swift */,
 				091417F321EF4F5F00C8325A /* WallpaperGalleryItem.swift */,
 				D05174AA1EAA5B4700A1BF36 /* WallpaperGalleryToolbarNode.swift */,
+				0910B0F021FB3DE100F8F87D /* WallpaperPatternPanelNode.swift */,
 			);
 			name = Themes;
 			sourceTree = "<group>";
@@ -4253,6 +4252,7 @@
 				D0FA08BF20483F9600DD23FC /* ExtractVideoData.swift */,
 				D0ADF965212E05A300310BBC /* TonePlayer.swift */,
 				D0105D672182680E007C04A7 /* IsMediaStreamable.swift */,
+				0910B0EC21FA178C00F8F87D /* SolidColorMedia.swift */,
 			);
 			name = Media;
 			sourceTree = "<group>";
@@ -4767,7 +4767,6 @@
 		D0F69E9D1D6B8E240046BCD6 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				D0F69E9E1D6B8E380046BCD6 /* FileResources.swift */,
 				D0F69E9F1D6B8E380046BCD6 /* PhotoResources.swift */,
 				D0F69EA01D6B8E380046BCD6 /* StickerResources.swift */,
 				D06879541DB8F1FC00424BBD /* CachedResourceRepresentations.swift */,
@@ -4785,6 +4784,7 @@
 				0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */,
 				D01FB436217CEC62009C6134 /* FetchVideoThumbnail.swift */,
 				099529AB21CDBBB200805E13 /* QRCode.swift */,
+				0910B0EE21FA532D00F8F87D /* WallpaperResources.swift */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -5297,7 +5297,6 @@
 				D048B339203C532800038D05 /* ChatMediaInputPane.swift in Sources */,
 				D0E817502012027900B82BBB /* ChatMessageEventLogPreviousLinkContentNode.swift in Sources */,
 				D0EC6CFD1EB9F58800EBF1C3 /* AudioWaveform.swift in Sources */,
-				D00580A221DCF0B700CB7CD3 /* WallpaperListPreviewControllerNode.swift in Sources */,
 				D0EC6CFF1EB9F58800EBF1C3 /* OverlayMediaController.swift in Sources */,
 				D0EC6D001EB9F58800EBF1C3 /* OverlayMediaControllerNode.swift in Sources */,
 				D02C81712177729000CD1006 /* NotificationExceptions.swift in Sources */,
@@ -5307,6 +5306,7 @@
 				D0EC6D031EB9F58800EBF1C3 /* opus_header.c in Sources */,
 				D093D7DF2062F3F000BC3599 /* SecureIdDocumentFormController.swift in Sources */,
 				D0E9BA371F05585000F079A4 /* STPPhoneNumberValidator.m in Sources */,
+				0910B0EF21FA532D00F8F87D /* WallpaperResources.swift in Sources */,
 				D069F5D0212700B90000565A /* StickerPanePeerSpecificSetupGridItem.swift in Sources */,
 				D0EC6D041EB9F58800EBF1C3 /* opusenc.m in Sources */,
 				D0A8998D217A294100759EE6 /* SaveIncomingMediaController.swift in Sources */,
@@ -5359,7 +5359,6 @@
 				D0C0B59B1EE019E5000F4D2C /* ChatSearchNavigationContentNode.swift in Sources */,
 				D0EC6D1F1EB9F58800EBF1C3 /* MediaPlayerTimeTextNode.swift in Sources */,
 				D0EC6D201EB9F58800EBF1C3 /* PeerAvatar.swift in Sources */,
-				D0EC6D211EB9F58800EBF1C3 /* FileResources.swift in Sources */,
 				09F664CC21EB552C00AB7E26 /* WallpaperSearchRecentQueries.swift in Sources */,
 				D0461439200514F000EC0EF2 /* LiveLocationSummaryManager.swift in Sources */,
 				D056CD781FF2A6EE00880D28 /* ChatMessageSwipeToReplyNode.swift in Sources */,
@@ -5557,6 +5556,7 @@
 				D0AD02E81FFFDE5F00C1DCFF /* ChatMessageLiveLocationTimerNode.swift in Sources */,
 				D0EC6D7D1EB9F58800EBF1C3 /* ChatListSearchRecentPeersNode.swift in Sources */,
 				D0EC6D7E1EB9F58800EBF1C3 /* ChatListSearchItemHeader.swift in Sources */,
+				0910B0ED21FA178C00F8F87D /* SolidColorMedia.swift in Sources */,
 				D0EC6D7F1EB9F58800EBF1C3 /* HashtagSearchController.swift in Sources */,
 				D0EC6D801EB9F58800EBF1C3 /* HashtagSearchControllerNode.swift in Sources */,
 				D0EC6D811EB9F58800EBF1C3 /* ChatController.swift in Sources */,
@@ -5636,7 +5636,6 @@
 				D0EC6D9D1EB9F58900EBF1C3 /* ChatMessageTextBubbleContentNode.swift in Sources */,
 				D0E9BA2B1F0557A600F079A4 /* STPFormEncoder.m in Sources */,
 				D01BAA1C1ECC92F700295217 /* CallListViewTransition.swift in Sources */,
-				D00580A021DCF0A200CB7CD3 /* WallpaperListPreviewController.swift in Sources */,
 				09F664D021EBCFB900AB7E26 /* WallpaperCropNode.swift in Sources */,
 				D097C26C20DD1EA5007BB4B8 /* OverlayStatusController.swift in Sources */,
 				D0EC6D9E1EB9F58900EBF1C3 /* ChatMessageWebpageBubbleContentNode.swift in Sources */,
@@ -5695,6 +5694,7 @@
 				D0EC6DBA1EB9F58900EBF1C3 /* ChatMediaInputNode.swift in Sources */,
 				D0E9BA2F1F0557D400F079A4 /* STPAddress.m in Sources */,
 				D0EC6DBB1EB9F58900EBF1C3 /* ChatMediaInputStickerPane.swift in Sources */,
+				0910B0F121FB3DE100F8F87D /* WallpaperPatternPanelNode.swift in Sources */,
 				D08984EE2114964700918162 /* GroupPreHistorySetupController.swift in Sources */,
 				D0EC6DBC1EB9F58900EBF1C3 /* ChatMediaInputGifPane.swift in Sources */,
 				D0EC6DBD1EB9F58900EBF1C3 /* ChatMediaInputPanelEntries.swift in Sources */,

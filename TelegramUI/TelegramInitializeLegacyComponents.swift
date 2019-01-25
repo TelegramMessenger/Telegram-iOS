@@ -244,7 +244,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                     return TGBuiltinWallpaperInfo()
                 case let .color(color):
                     return TGColorWallpaperInfo(color: UInt32(bitPattern: color))
-                case let .image(representations):
+                case let .image(representations, _):
                     if let resource = largestImageRepresentation(representations)?.resource, let path = account.postbox.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
                         return TGCustomImageWallpaperInfo(image: image)
                     } else {
@@ -277,7 +277,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                         }
                         context.fill(CGRect(origin: CGPoint(), size: size))
                     })
-                case let .image(representations):
+                case let .image(representations, _):
                     if let resource = largestImageRepresentation(representations)?.resource, let path = account.postbox.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
                         return image
                     } else {

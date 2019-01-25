@@ -121,7 +121,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                             context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
                             context.fill(CGRect(origin: CGPoint(), size: size))
                         })
-                    case let .image(representations):
+                    case let .image(representations, _):
                         if let largest = largestImageRepresentation(representations) {
                             if item.wallpaperMode.contains(.blur) {
                                 var image: UIImage?
@@ -137,7 +137,15 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                             }
                         }
                     case let .file(file):
-                        if item.wallpaperMode.contains(.blur) {
+                        if file.isPattern, let color = file.settings.color {
+                            var image: UIImage?
+                            let _ = item.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                                if data.complete {
+                                    image = UIImage(contentsOfFile: data.path)?.precomposed()
+                                }
+                            })
+                            updatedBackgroundImage = image
+                        } else if item.wallpaperMode.contains(.blur) {
                             var image: UIImage?
                             let _ = item.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                                 if data.complete {

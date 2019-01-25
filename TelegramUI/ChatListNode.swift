@@ -1167,21 +1167,18 @@ final class ChatListNode: ListView {
                             return
                         }
 
-                        let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: self?.currentlyVisibleLatestChatListIndex() ?? ChatListIndex.absoluteUpperBound
-                            , scrollPosition: .center(.top), animated: true)
+                        let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: self?.currentlyVisibleLatestChatListIndex() ?? ChatListIndex.absoluteUpperBound, scrollPosition: .center(.top), animated: true)
                         strongSelf.currentLocation = location
                         strongSelf.chatListLocation.set(location)
                         strongSelf.peerSelected?(index.messageIndex.id.peerId, false, false)
                     })
                     break
                 case .previous(unread: false), .next(unread: false):
-                    if current.2 != entryCount - range.firstIndex - 1 && entryCount > 2 {
-                        if case let .PeerEntry(index, _, _, _, _, _, peer, _, _, _, _, _, _) = chatListView.filteredEntries[current.2 - 1] {
+                    if entryCount > 1 {
+                        if current.2 > 0, case let .PeerEntry(index, _, _, _, _, _, peer, _, _, _, _, _, _) = chatListView.filteredEntries[current.2 - 1] {
                             next = (index, peer.peerId)
                         }
-                    }
-                    if current.2 != entryCount - range.lastIndex - 2 && entryCount > 2 {
-                        if case let .PeerEntry(index, _, _, _, _, _, peer, _, _, _, _, _, _) = chatListView.filteredEntries[current.2 + 1] {
+                        if current.2 <= entryCount - 2, case let .PeerEntry(index, _, _, _, _, _, peer, _, _, _, _, _, _) = chatListView.filteredEntries[current.2 + 1] {
                             previous = (index, peer.peerId)
                         }
                     }

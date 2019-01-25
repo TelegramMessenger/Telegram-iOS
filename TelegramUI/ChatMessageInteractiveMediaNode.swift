@@ -200,6 +200,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 isInlinePlayableVideo = file.isVideo && file.isAnimated && !isSecretMedia && automaticPlayback
             } else if let image = media as? TelegramMediaWebFile, let dimensions = image.dimensions {
                 unboundSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5))
+            } else if media is SolidColorMedia {
+                unboundSize = CGSize(width: 128.0, height: 128.0)
             } else {
                 unboundSize = CGSize(width: 54.0, height: 54.0)
             }
@@ -380,6 +382,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: file)
                                 }
                             })
+                        } else if let color = media as? SolidColorMedia {
+                            updateImageSignal = { synchronousLoad in
+                                return solidColor(color.color)
+                            }
+                            boundingSize = CGSize(width: boundingSize.width, height: boundingSize.width)
                         }
                     }
                     
@@ -408,6 +415,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                         return resourceStatus
                                     }
                             }
+                        } else if media is SolidColorMedia {
+                            updatedStatusSignal = .single(.Local)
                         }
                     }
                     

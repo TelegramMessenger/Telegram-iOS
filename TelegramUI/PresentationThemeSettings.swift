@@ -177,9 +177,9 @@ public struct PresentationThemeSettings: PreferencesEntry {
     
     public var relatedResources: [MediaResourceId] {
         switch self.chatWallpaper {
-            case let .image(representations):
+            case let .image(representations, _):
                 return representations.map { $0.resource.id }
-            case let .file(_, _, _, _, _, file):
+            case let .file(_, _, _, _, _, _, file, _):
                 var resources: [MediaResourceId] = []
                 resources.append(file.resource.id)
                 resources.append(contentsOf: file.previewRepresentations.map { $0.resource.id })

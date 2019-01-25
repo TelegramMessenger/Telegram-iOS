@@ -216,6 +216,7 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         }
     }
     var colorChanged: ((UIColor) -> Void)?
+    var colorChangeEnded: ((UIColor) -> Void)?
 
     override init() {
         self.brightnessNode = WallpaperColorBrightnessNode()
@@ -303,13 +304,15 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         self.updateKnobLayout(size: size, panningColor: false, transition: .immediate)
         
         self.update()
-        self.colorChanged?(self.color)
+        self.colorChangeEnded?(self.color)
     }
     
     @objc private func colorPan(_ recognizer: UIPanGestureRecognizer) {
         guard let size = self.validLayout else {
             return
         }
+        
+        let previousColor = self.color
         
         let location = recognizer.location(in: recognizer.view)
         let transition = recognizer.translation(in: recognizer.view)
@@ -325,6 +328,7 @@ final class WallpaperColorPickerNode: ASDisplayNode {
             self.colorHSV.1 = newSaturation
         }
         
+        var ended = false
         switch recognizer.state {
             case .began:
                 self.updateKnobLayout(size: size, panningColor: true, transition: .immediate)
@@ -333,12 +337,19 @@ final class WallpaperColorPickerNode: ASDisplayNode {
                 recognizer.setTranslation(CGPoint(), in: recognizer.view)
             case .ended:
                 self.updateKnobLayout(size: size, panningColor: false, transition: .animated(duration: 0.3, curve: .easeInOut))
+                ended = true
             default:
                 break
         }
         
-        self.update()
-        self.colorChanged?(self.color)
+        if self.color != previousColor || ended {
+            self.update()
+            if ended {
+                self.colorChangeEnded?(self.color)
+            } else {
+                self.colorChanged?(self.color)
+            }
+        }
     }
     
     @objc private func brightnessPan(_ recognizer: UIPanGestureRecognizer) {
@@ -346,22 +357,32 @@ final class WallpaperColorPickerNode: ASDisplayNode {
             return
         }
         
+        let previousColor = self.color
+        
         let transition = recognizer.translation(in: recognizer.view)
         let brightnessWidth: CGFloat = size.width - 42.0 * 2.0
         let newValue = max(0.0, min(1.0, self.colorHSV.2 - transition.x / brightnessWidth))
         self.colorHSV.2 = newValue
         
+        var ended = false
         switch recognizer.state {
             case .changed:
                 self.updateKnobLayout(size: size, panningColor: false, transition: .immediate)
                 recognizer.setTranslation(CGPoint(), in: recognizer.view)
             case .ended:
                 self.updateKnobLayout(size: size, panningColor: false, transition: .immediate)
+                ended = true
             default:
                 break
         }
         
-        self.update()
-        self.colorChanged?(self.color)
+        if self.color != previousColor || ended {
+            self.update()
+            if ended {
+                self.colorChangeEnded?(self.color)
+            } else {
+                self.colorChanged?(self.color)
+            }
+        }
     }
 }

@@ -181,6 +181,8 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         parameter = .color(color)
                     } else {
                         var options: WallpaperPresentationOptions = []
+                        var intensity: Int32?
+                        var color: Int32?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value, queryItem.name == "mode" {
@@ -190,6 +192,10 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                                 options.insert(.motion)
                                             case "blur":
                                                 options.insert(.blur)
+                                            case "intensity":
+                                                intensity = Int32(value)
+                                            case "color":
+                                                color = Int32(value)
                                             default:
                                                 break
                                         }

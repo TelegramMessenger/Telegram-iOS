@@ -4,36 +4,67 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 
+enum WallpaperOptionButtonValue {
+    case check(Bool)
+    case color(Bool, UIColor)
+}
+
 final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     private let backgroundNode: ASDisplayNode
     private let checkNode: ModernCheckNode
+    private let colorNode: ASImageNode
     private let textNode: ASTextNode
     
-    private var _isSelected: Bool = false
+    private var _value: WallpaperOptionButtonValue
     override var isSelected: Bool {
         get {
-            return self._isSelected
+            switch self._value {
+                case let .check(selected), let .color(selected, _):
+                    return selected
+            }
         }
         set {
-            self._isSelected = newValue
+            switch self._value {
+                case .check:
+                    self._value = .check(newValue)
+                case let .color(_, color):
+                    self._value = .color(newValue, color)
+            }
             self.checkNode.setSelected(newValue, animated: false)
         }
     }
     
-    init(title: String) {
+    init(title: String, value: WallpaperOptionButtonValue) {
+        self._value = value
+        
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
         self.backgroundNode.cornerRadius = 6.0
         
         self.checkNode = ModernCheckNode(theme: CheckNodeTheme(backgroundColor: .white, strokeColor: .clear, borderColor: .white, hasShadow: false))
         self.checkNode.isUserInteractionEnabled = false
+        
+        self.colorNode = ASImageNode()
+        
         self.textNode = ASTextNode()
         self.textNode.attributedText = NSAttributedString(string: title, font: Font.medium(13), textColor: .white)
         
         super.init()
         
+        switch value {
+            case let .check(selected):
+                self.checkNode.isHidden = false
+                self.colorNode.isHidden = true
+                self.checkNode.selected = selected
+            case let .color(_, color):
+                self.checkNode.isHidden = true
+                self.colorNode.isHidden = false
+                self.colorNode.image = generateFilledCircleImage(diameter: 18.0, color: color)
+        }
+        
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.checkNode)
+        self.addSubnode(self.colorNode)
         self.addSubnode(self.textNode)
         
         self.highligthedChanged = { [weak self] highlighted in
@@ -45,6 +76,9 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
                     strongSelf.checkNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.checkNode.alpha = 0.4
                     
+                    strongSelf.colorNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.colorNode.alpha = 0.4
+                    
                     strongSelf.textNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.textNode.alpha = 0.4
                 } else {
@@ -54,6 +88,9 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
                     strongSelf.checkNode.alpha = 1.0
                     strongSelf.checkNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     
+                    strongSelf.colorNode.alpha = 1.0
+                    strongSelf.colorNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    
                     strongSelf.textNode.alpha = 1.0
                     strongSelf.textNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
@@ -61,19 +98,45 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         }
     }
     
-    var color: UIColor = UIColor(rgb: 0x000000, alpha: 0.3) {
+    var buttonColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.3) {
         didSet {
-            self.backgroundNode.backgroundColor = self.color
+            self.backgroundNode.backgroundColor = self.buttonColor
+        }
+    }
+    
+    var color: UIColor? {
+        get {
+            switch self._value {
+                case let .color(_, color):
+                    return color
+                default:
+                    return nil
+            }
+        }
+        set {
+            if let color = newValue {
+                switch self._value {
+                    case let .color(selected, _):
+                        self._value = .color(selected, color)
+                        self.colorNode.image = generateFilledCircleImage(diameter: 18.0, color: color)
+                    default:
+                        break
+                }
+            }
         }
     }
     
     func setSelected(_ selected: Bool, animated: Bool = false) {
-        self._isSelected = selected
+        self.isSelected = selected
         self.checkNode.setSelected(selected, animated: animated)
     }
     
     func setEnabled(_ enabled: Bool) {
-        self.alpha = enabled ? 1.0 : 0.3
+        let alpha: CGFloat = enabled ? 1.0 : 0.3
+        self.backgroundNode.alpha = alpha
+        self.checkNode.alpha = alpha
+        self.colorNode.alpha = alpha
+        self.textNode.alpha = alpha
         self.isUserInteractionEnabled = enabled
     }
     
@@ -89,6 +152,7 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         
         let checkSize = CGSize(width: 18.0, height: 18.0)
         self.checkNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 6.0), size: checkSize)
+        self.colorNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 6.0), size: checkSize)
         
         self.textNode.frame = CGRect(x: 39.0, y: 6.0 + UIScreenPixel, width: 100.0, height: 20.0)
     }

@@ -557,7 +557,7 @@ private func tailContext(_ tail: Tail) -> DrawingContext {
     }
 }
 
-private func addCorners(_ context: DrawingContext, arguments: TransformImageArguments) {
+func addCorners(_ context: DrawingContext, arguments: TransformImageArguments) {
     let corners = arguments.corners
     let drawingRect = arguments.drawingRect
     if case let .Corner(radius) = corners.topLeft, radius > CGFloat.ulpOfOne {
@@ -2196,55 +2196,33 @@ func instantPageImageFile(account: Account, fileReference: FileMediaReference, f
     }
 }
 
-private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, scaled: Bool = false, autoFetchFullSize: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
+private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], autoFetchFullSize: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
     if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = largestImageRepresentation(representations.map({ $0.representation })), let smallestIndex = representations.index(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.index(where: { $0.representation == largestRepresentation }) {
        
-        let maybeFullSize: Signal<MediaResourceData, NoError>
-        if scaled {
-            maybeFullSize = account.postbox.mediaBox.cachedResourceRepresentation(largestRepresentation.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 320.0, height: 320.0), mode: .aspectFit), complete: false, fetch: false)
-        } else {
-            maybeFullSize = account.postbox.mediaBox.resourceData(largestRepresentation.resource)
-        }
-        let decodedThumbnailData = fileReference?.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
-        
+        let maybeFullSize = account.postbox.mediaBox.resourceData(largestRepresentation.resource)
+    
         let signal = maybeFullSize
         |> take(1)
         |> mapToSignal { maybeData -> Signal<(Data?, Data?, Bool), NoError> in
             if maybeData.complete {
                 let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
-                if alwaysShowThumbnailFirst, let decodedThumbnailData = decodedThumbnailData {
-                    return .single((decodedThumbnailData, nil, false))
-                    |> then(.single((nil, loadedData, true)))
-                } else {
-                    return .single((nil, loadedData, true))
-                }
+                return .single((nil, loadedData, true))
             } else {
-                let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
-                if let _ = decodedThumbnailData {
-                    fetchedThumbnail = .complete()
-                } else {
-                    fetchedThumbnail = fetchedMediaResource(postbox: account.postbox, reference: representations[smallestIndex].reference)
-                }
-                
+                let fetchedThumbnail = fetchedMediaResource(postbox: account.postbox, reference: representations[smallestIndex].reference)
                 let fetchedFullSize = fetchedMediaResource(postbox: account.postbox, reference: representations[largestIndex].reference)
                 
-                let thumbnail: Signal<Data?, NoError>
-                if let decodedThumbnailData = decodedThumbnailData {
-                    thumbnail = .single(decodedThumbnailData)
-                } else {
-                    thumbnail = Signal<Data?, NoError> { subscriber in
-                        let fetchedDisposable = fetchedThumbnail.start()
-                        let thumbnailDisposable = account.postbox.mediaBox.resourceData(smallestRepresentation.resource).start(next: { next in
-                            subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
-                        }, error: subscriber.putError, completed: subscriber.putCompletion)
-                        
-                        return ActionDisposable {
-                            fetchedDisposable.dispose()
-                            thumbnailDisposable.dispose()
-                        }
+                let thumbnail = Signal<Data?, NoError> { subscriber in
+                    let fetchedDisposable = fetchedThumbnail.start()
+                    let thumbnailDisposable = account.postbox.mediaBox.resourceData(smallestRepresentation.resource).start(next: { next in
+                        subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+                    }, error: subscriber.putError, completed: subscriber.putCompletion)
+                    
+                    return ActionDisposable {
+                        fetchedDisposable.dispose()
+                        thumbnailDisposable.dispose()
                     }
                 }
-                
+    
                 let fullSizeData: Signal<(Data?, Bool), NoError>
                 
                 if autoFetchFullSize {
@@ -2261,8 +2239,8 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
                     }
                 } else {
                     fullSizeData = account.postbox.mediaBox.resourceData(largestRepresentation.resource)
-                        |> map { next -> (Data?, Bool) in
-                            return (next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete)
+                    |> map { next -> (Data?, Bool) in
+                        return (next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete)
                     }
                 }
                 
@@ -2280,8 +2258,8 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
     }
 }
 
-func chatAvatarGalleryPhoto(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, scaled: Bool = false, autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = avatarGalleryPhotoDatas(account: account, fileReference: fileReference, representations: representations, alwaysShowThumbnailFirst: alwaysShowThumbnailFirst, scaled: scaled, autoFetchFullSize: autoFetchFullSize)
+func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentationWithReference], autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = avatarGalleryPhotoDatas(account: account, representations: representations, autoFetchFullSize: autoFetchFullSize)
     
     return signal
     |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
@@ -2390,48 +2368,6 @@ func chatAvatarGalleryPhoto(account: Account, fileReference: FileMediaReference?
                 if let fullSizeImage = fullSizeImage {
                     c.interpolationQuality = .medium
                     drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
-                }
-            }
-            
-            addCorners(context, arguments: arguments)
-            
-            return context
-        }
-    }
-}
-
-private func builtinWallpaperData() -> Signal<UIImage, NoError> {
-    return Signal { subscriber in
-        if let filePath = frameworkBundle.path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg"), let image = UIImage(contentsOfFile: filePath) {
-            subscriber.putNext(image)
-        }
-        subscriber.putCompletion()
-        
-        return EmptyDisposable
-    } |> runOn(Queue.concurrentDefaultQueue())
-}
-
-func settingsBuiltinWallpaperImage(account: Account) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    return builtinWallpaperData() |> map { fullSizeImage in
-        return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, clear: true)
-            
-            let drawingRect = arguments.drawingRect
-            var fittedSize = fullSizeImage.size.aspectFilled(drawingRect.size)
-            if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
-                fittedSize.width = arguments.boundingSize.width
-            }
-            if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
-                fittedSize.height = arguments.boundingSize.height
-            }
-            
-            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
-            
-            context.withFlippedContext { c in
-                c.setBlendMode(.copy)
-                if let fullSizeImage = fullSizeImage.cgImage {
-                    c.interpolationQuality = .medium
-                    drawImage(context: c, image: fullSizeImage, orientation: .up, in: fittedRect)
                 }
             }
             

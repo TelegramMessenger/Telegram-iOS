@@ -51,10 +51,16 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
     
-    func setWallpaper(account: Account, wallpaper: TelegramWallpaper, selected: Bool, size: CGSize) {
+    func setSelected(_ selected: Bool) {
+        let state: RadialStatusNodeState = selected ? .check(.white) : .none
+        self.statusNode.transitionToState(state, animated: false, completion: {})
+    }
+    
+    func setWallpaper(account: Account, wallpaper: TelegramWallpaper, selected: Bool, size: CGSize, cornerRadius: CGFloat = 0.0) {
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.cornerRadius = 0.0
         
         let state: RadialStatusNodeState = selected ? .check(.white) : .none
         self.statusNode.transitionToState(state, animated: false, completion: {})
@@ -62,6 +68,8 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         let progressDiameter: CGFloat = 50.0
         self.statusNode.frame = CGRect(x: floorToScreenPixels((size.width - progressDiameter) / 2.0), y: floorToScreenPixels((size.height - progressDiameter) / 2.0), width: progressDiameter, height: progressDiameter)
         
+        let corners = ImageCorners(radius: cornerRadius)
+    
         if self.wallpaper != wallpaper {
             self.wallpaper = wallpaper
             switch wallpaper {
@@ -69,54 +77,69 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     self.imageNode.isHidden = false
                     self.backgroundNode.isHidden = true
                     self.imageNode.setSignal(settingsBuiltinWallpaperImage(account: account))
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                 case let .color(color):
                     if color == 0x00ffffff {
                         self.imageNode.isHidden = false
                         self.backgroundNode.isHidden = true
                         self.imageNode.setSignal(whiteColorImage(theme: account.telegramApplicationContext.currentPresentationData.with { $0 }.theme))
-                        let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+                        let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                         apply()
                     } else {
                         self.imageNode.isHidden = true
                         self.backgroundNode.isHidden = false
                         self.backgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                        self.cornerRadius = cornerRadius
                     }
-                case let .image(representations):
+                case let .image(representations, _):
                     self.imageNode.isHidden = false
                     self.backgroundNode.isHidden = true
                     
                     let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
-                    self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, representations: convertedRepresentations, scaled: true, autoFetchFullSize: true))
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: largestImageRepresentation(representations)!.dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+                    self.imageNode.setSignal(wallpaperImage(account: account, representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true))
+                  
+                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: largestImageRepresentation(representations)!.dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                 case let .file(file):
                     self.imageNode.isHidden = false
-                    self.backgroundNode.isHidden = true
                     
-                    var convertedRepresentations: [ImageRepresentationWithReference] = []
-                    for representation in file.file.previewRepresentations {
-                        convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .wallpaper(resource: representation.resource)))
+                    let convertedRepresentations : [ImageRepresentationWithReference] = file.file.previewRepresentations.map {
+                        ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource))
                     }
+                    
+                    let imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
+                    if file.isPattern {
+                        self.backgroundNode.isHidden = false
+                        
+                        var patternColor = UIColor(rgb: 0xd6e2ee)
+                        if let color = file.settings.color {
+                            patternColor = UIColor(rgb: UInt32(bitPattern: color))
+                        }
+                        self.backgroundNode.backgroundColor = patternColor
+                        imageSignal = patternWallpaperImage(account: account, representations: convertedRepresentations, color: patternColor, mode: .thumbnail, autoFetchFullSize: true)
+                    } else {
+                        self.backgroundNode.isHidden = true
+                        
+                        imageSignal = wallpaperImage(account: account, fileReference: .standalone(media: file.file), representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true)
+                    }
+                    self.imageNode.setSignal(imageSignal)
+                    
                     let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
-                    self.imageNode.setSignal(chatAvatarGalleryPhoto(account: account, fileReference: .standalone(media: file.file), representations: convertedRepresentations, scaled: true, autoFetchFullSize: true))
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
             }
         } else if let wallpaper = self.wallpaper {
             switch wallpaper {
-                case .builtin:
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+                case .builtin, .color:
+                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
-                case .color:
-                    break
-                case let .image(representations):
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: largestImageRepresentation(representations)!.dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+                case let .image(representations, _):
+                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: largestImageRepresentation(representations)!.dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                 case let .file(file):
                     let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
             }
         }
