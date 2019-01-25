@@ -19,7 +19,31 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
                         updatedAttributes[i] = ConsumableContentMessageAttribute(consumed: true)
                         updateMessage = true
                         
-                        addSynchronizeConsumeMessageContentsOperation(transaction: transaction, messageIds: [message.id])
+                        if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                            if let state = transaction.getPeerChatState(message.id.peerId) as? SecretChatState {
+                                var layer: SecretChatLayer?
+                                switch state.embeddedState {
+                                    case .terminated, .handshake:
+                                        break
+                                    case .basicLayer:
+                                        layer = .layer8
+                                    case let .sequenceBasedLayer(sequenceState):
+                                        layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
+                                }
+                                if let layer = layer {
+                                    var globallyUniqueIds: [Int64] = []
+                                    if let globallyUniqueId = message.globallyUniqueId {
+                                        globallyUniqueIds.append(globallyUniqueId)
+                                        let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: message.id.peerId, operation: SecretChatOutgoingOperationContents.readMessagesContent(layer: layer, actionGloballyUniqueId: arc4random64(), globallyUniqueIds: globallyUniqueIds), state: state)
+                                        if updatedState != state {
+                                            transaction.setPeerChatState(message.id.peerId, state: updatedState)
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            addSynchronizeConsumeMessageContentsOperation(transaction: transaction, messageIds: [message.id])
+                        }
                     }
                 } else if let attribute = updatedAttributes[i] as? ConsumablePersonalMentionMessageAttribute, !attribute.consumed {
                     transaction.setPendingMessageAction(type: .consumeUnseenPersonalMessage, id: messageId, action: ConsumePersonalMessageAction())

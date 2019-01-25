@@ -728,9 +728,13 @@ public struct AccountRunningImportantTasks: OptionSet {
     public static let pendingMessages = AccountRunningImportantTasks(rawValue: 1 << 1)
 }
 
-private struct MasterNotificationKey {
-    let id: Data
-    let data: Data
+struct MasterNotificationKey {
+    public let id: Data
+    public let data: Data
+}
+
+func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
+    return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: ignoreDisabled)
 }
 
 private func masterNotificationsKey(masterNotificationKeyValue: Atomic<MasterNotificationKey?>, postbox: Postbox, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
@@ -834,21 +838,6 @@ public class Account {
     private let managedServiceViewsDisposable = MetaDisposable()
     private let managedOperationsDisposable = DisposableSet()
     private var storageSettingsDisposable: Disposable?
-    
-    public let notificationToken = Promise<Data>()
-    public let voipToken = Promise<Data>()
-    
-    private var notificationTokensVersionValue = 0 {
-        didSet {
-            self.notificationTokensVersionPromise.set(self.notificationTokensVersionValue)
-        }
-    }
-    func updateNotificationTokensVersion() {
-        self.notificationTokensVersionValue += 1
-    }
-    private let notificationTokensVersionPromise = ValuePromise<Int>(0)
-    private let notificationTokenDisposable = MetaDisposable()
-    private let voipTokenDisposable = MetaDisposable()
     
     public let importableContacts = Promise<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData]>()
     
@@ -1007,62 +996,6 @@ public class Account {
         
         self.networkTypeValue.set(currentNetworkType())
         
-        let masterNotificationKey = self.masterNotificationKey
-        
-        let appliedNotificationToken = combineLatest(self.notificationToken.get(), self.notificationTokensVersionPromise.get())
-        |> distinctUntilChanged(isEqual: { $0 == $1 })
-        |> mapToSignal { token, _ -> Signal<Void, NoError> in
-            var tokenString = ""
-            token.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                for i in 0 ..< token.count {
-                    let byte = bytes.advanced(by: i).pointee
-                    tokenString = tokenString.appendingFormat("%02x", Int32(byte))
-                }
-            }
-            
-            var appSandbox: Api.Bool = .boolFalse
-            #if DEBUG
-                appSandbox = .boolTrue
-            #endif
-            
-            return masterNotificationsKey(masterNotificationKeyValue: masterNotificationKey, postbox: postbox, ignoreDisabled: false)
-            |> mapToSignal { secret -> Signal<Void, NoError> in
-                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, appSandbox: appSandbox, secret: Buffer(/*data: secret.data*/), otherUids: []))
-                |> retryRequest
-                |> mapToSignal { _ -> Signal<Void, NoError> in
-                    return .complete()
-                }
-            }
-        }
-        self.notificationTokenDisposable.set(appliedNotificationToken.start())
-        
-        let appliedVoipToken = combineLatest(self.voipToken.get(), self.notificationTokensVersionPromise.get())
-        |> distinctUntilChanged(isEqual: { $0 == $1 })
-        |> mapToSignal { token, _ -> Signal<Void, NoError> in
-            var tokenString = ""
-            token.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                for i in 0 ..< token.count {
-                    let byte = bytes.advanced(by: i).pointee
-                    tokenString = tokenString.appendingFormat("%02x", Int32(byte))
-                }
-            }
-            
-            var appSandbox: Api.Bool = .boolFalse
-            #if DEBUG
-                appSandbox = .boolTrue
-            #endif
-            
-            return masterNotificationsKey(masterNotificationKeyValue: masterNotificationKey, postbox: postbox, ignoreDisabled: false)
-            |> mapToSignal { secret -> Signal<Void, NoError> in
-                return network.request(Api.functions.account.registerDevice(tokenType: 9, token: tokenString, appSandbox: appSandbox, secret: Buffer(data: secret.data), otherUids: []))
-                |> retryRequest
-                |> mapToSignal { _ -> Signal<Void, NoError> in
-                    return .complete()
-                }
-            }
-        }
-        self.voipTokenDisposable.set(appliedVoipToken.start())
-        
         let serviceTasksMasterBecomeMaster = shouldBeServiceTaskMaster.get()
             |> distinctUntilChanged
             |> deliverOn(self.serviceQueue)
@@ -1169,8 +1102,6 @@ public class Account {
     deinit {
         self.managedContactsDisposable.dispose()
         self.managedStickerPacksDisposable.dispose()
-        self.notificationTokenDisposable.dispose()
-        self.voipTokenDisposable.dispose()
         self.managedServiceViewsDisposable.dispose()
         self.managedOperationsDisposable.dispose()
         self.storageSettingsDisposable?.dispose()

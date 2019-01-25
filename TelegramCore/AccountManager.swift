@@ -15,6 +15,7 @@ private enum AccountKind {
 }
 
 private var declaredEncodables: Void = {
+    declareEncodable(AuthAccountRecord.self, f: { AuthAccountRecord(decoder: $0) })
     declareEncodable(UnauthorizedAccountState.self, f: { UnauthorizedAccountState(decoder: $0) })
     declareEncodable(AuthorizedAccountState.self, f: { AuthorizedAccountState(decoder: $0) })
     declareEncodable(TelegramUser.self, f: { TelegramUser(decoder: $0) })
@@ -345,6 +346,9 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                 if let temporarySessionId = record.temporarySessionId, temporarySessionId != currentTemporarySessionId {
                     continue
                 }
+                validPaths.insert("\(accountRecordIdPathName(record.id))")
+            }
+            if let record = view.currentAuthAccount {
                 validPaths.insert("\(accountRecordIdPathName(record.id))")
             }
             

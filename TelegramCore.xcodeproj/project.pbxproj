@@ -175,6 +175,8 @@
 		D02ABC7F1E3109F000CAE539 /* CloudChatRemoveMessagesOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02ABC7D1E3109F000CAE539 /* CloudChatRemoveMessagesOperation.swift */; };
 		D02ABC811E310E5D00CAE539 /* ManagedCloudChatRemoveMessagesOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02ABC801E310E5D00CAE539 /* ManagedCloudChatRemoveMessagesOperations.swift */; };
 		D02ABC821E310E5D00CAE539 /* ManagedCloudChatRemoveMessagesOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02ABC801E310E5D00CAE539 /* ManagedCloudChatRemoveMessagesOperations.swift */; };
+		D02B199021FB1D520094A764 /* RegisterNotificationToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02B198F21FB1D520094A764 /* RegisterNotificationToken.swift */; };
+		D02B199121FB1D520094A764 /* RegisterNotificationToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02B198F21FB1D520094A764 /* RegisterNotificationToken.swift */; };
 		D02D60A7206BA5F900FEFE1E /* SecureIdValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60A6206BA5F900FEFE1E /* SecureIdValue.swift */; };
 		D02D60A8206BA5F900FEFE1E /* SecureIdValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60A6206BA5F900FEFE1E /* SecureIdValue.swift */; };
 		D02D60AB206BA64100FEFE1E /* VerifySecureIdValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60AA206BA64100FEFE1E /* VerifySecureIdValue.swift */; };
@@ -872,6 +874,7 @@
 		D02ABC7A1E30058F00CAE539 /* DeleteMessagesInteractively.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeleteMessagesInteractively.swift; sourceTree = "<group>"; };
 		D02ABC7D1E3109F000CAE539 /* CloudChatRemoveMessagesOperation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CloudChatRemoveMessagesOperation.swift; sourceTree = "<group>"; };
 		D02ABC801E310E5D00CAE539 /* ManagedCloudChatRemoveMessagesOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedCloudChatRemoveMessagesOperations.swift; sourceTree = "<group>"; };
+		D02B198F21FB1D520094A764 /* RegisterNotificationToken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterNotificationToken.swift; sourceTree = "<group>"; };
 		D02D60A6206BA5F900FEFE1E /* SecureIdValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdValue.swift; sourceTree = "<group>"; };
 		D02D60AA206BA64100FEFE1E /* VerifySecureIdValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifySecureIdValue.swift; sourceTree = "<group>"; };
 		D02DADC02139A1FC00116225 /* ContactSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactSyncManager.swift; sourceTree = "<group>"; };
@@ -1605,6 +1608,7 @@
 				D06ECFC720B810D300C576C2 /* TermsOfService.swift */,
 				D051DB16215ECC4D00F30F92 /* AppChangelog.swift */,
 				D01843A72190C28100278AFF /* ConfirmTwoStepRecoveryEmail.swift */,
+				D02B198F21FB1D520094A764 /* RegisterNotificationToken.swift */,
 			);
 			name = Account;
 			sourceTree = "<group>";
@@ -2317,6 +2321,7 @@
 				D0BC38791E40BAF20044D6FE /* SynchronizePinnedChatsOperation.swift in Sources */,
 				D0FC195B2020D1CA00FEDBB2 /* PeerGroupMessageStateVersionAttribute.swift in Sources */,
 				D0B1671D1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift in Sources */,
+				D02B199021FB1D520094A764 /* RegisterNotificationToken.swift in Sources */,
 				D050F2101E48AB0600988324 /* InteractivePhoneFormatter.swift in Sources */,
 				D0C48F3C1E8142EF0075317D /* LoadedPeerFromMessage.swift in Sources */,
 				D042C6831E8D9DF800C863B0 /* Unixtime.swift in Sources */,
@@ -2692,6 +2697,7 @@
 				D0448C8F1E22993C005A61A7 /* ProcessSecretChatIncomingDecryptedOperations.swift in Sources */,
 				D093D7F620641A4900BC3599 /* SecureIdPhoneValue.swift in Sources */,
 				D0C26D6D1FE286C3004ABF18 /* FetchChatList.swift in Sources */,
+				D02B199121FB1D520094A764 /* RegisterNotificationToken.swift in Sources */,
 				D073CE6E1DCBCF17007511FD /* ForwardSourceInfoAttribute.swift in Sources */,
 				D093D7FA20641AA500BC3599 /* SecureIdEmailValue.swift in Sources */,
 				D05A32E21E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift in Sources */,

@@ -218,49 +218,49 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
             }
             
             return combineLatest(signal
-                |> map { result -> Api.Updates? in
-                    return result
-                }
-                |> `catch` { _ in
-                    return .single(nil)
-                }, reportSignal)
-                |> mapToSignal { updates, _ in
-                    if let updates = updates {
-                        stateManager.addUpdates(updates)
-                    }
-                    return .complete()
-                }
-        } else {
-            return .complete()
-        }
-    } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
-        let deleteUser: Signal<Void, NoError> = network.request(Api.functions.messages.deleteChatUser(chatId: peer.id.id, userId: Api.InputUser.inputUserSelf))
             |> map { result -> Api.Updates? in
                 return result
             }
             |> `catch` { _ in
                 return .single(nil)
-            }
-            |> mapToSignal { updates in
+            }, reportSignal)
+            |> mapToSignal { updates, _ in
                 if let updates = updates {
                     stateManager.addUpdates(updates)
                 }
                 return .complete()
             }
+        } else {
+            return .complete()
+        }
+    } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
+        let deleteUser: Signal<Void, NoError> = network.request(Api.functions.messages.deleteChatUser(chatId: peer.id.id, userId: Api.InputUser.inputUserSelf))
+        |> map { result -> Api.Updates? in
+            return result
+        }
+        |> `catch` { _ in
+            return .single(nil)
+        }
+        |> mapToSignal { updates in
+            if let updates = updates {
+                stateManager.addUpdates(updates)
+            }
+            return .complete()
+        }
         let reportSignal: Signal<Void, NoError>
         if let inputPeer = apiInputPeer(peer), operation.reportChatSpam {
             reportSignal = network.request(Api.functions.messages.reportSpam(peer: inputPeer))
-                |> mapToSignal { _ -> Signal<Void, MTRpcError> in
-                    return .complete()
-                }
-                |> `catch` { _ -> Signal<Void, NoError> in
-                    return .complete()
-                }
+            |> mapToSignal { _ -> Signal<Void, MTRpcError> in
+                return .complete()
+            }
+            |> `catch` { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
         } else {
             reportSignal = .complete()
         }
         let deleteMessages: Signal<Void, NoError>
-        if let inputPeer = apiInputPeer(peer), let topMessageId = transaction.getTopPeerMessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud) {
+        if let inputPeer = apiInputPeer(peer), let topMessageId = operation.topMessageId ?? transaction.getTopPeerMessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud) {
             deleteMessages = requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: topMessageId.id, justClear: false)
         } else {
             deleteMessages = .complete()
@@ -276,12 +276,12 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
             let reportSignal: Signal<Void, NoError>
             if let inputPeer = apiInputPeer(peer), operation.reportChatSpam {
                 reportSignal = network.request(Api.functions.messages.reportSpam(peer: inputPeer))
-                    |> mapToSignal { _ -> Signal<Void, MTRpcError> in
-                        return .complete()
-                    }
-                    |> `catch` { _ -> Signal<Void, NoError> in
-                        return .complete()
-                    }
+                |> mapToSignal { _ -> Signal<Void, MTRpcError> in
+                    return .complete()
+                }
+                |> `catch` { _ -> Signal<Void, NoError> in
+                    return .complete()
+                }
             } else {
                 reportSignal = .complete()
             }
@@ -300,26 +300,26 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
 
 private func requestClearHistory(postbox: Postbox, network: Network, stateManager: AccountStateManager, inputPeer: Api.InputPeer, maxId: Int32, justClear: Bool) -> Signal<Void, NoError> {
     let signal = network.request(Api.functions.messages.deleteHistory(flags: justClear ? 1 : 0, peer: inputPeer, maxId: maxId))
-        |> map { result -> Api.messages.AffectedHistory? in
-            return result
-        }
-        |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, Bool> in
+    |> map { result -> Api.messages.AffectedHistory? in
+        return result
+    }
+    |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, Bool> in
+        return .fail(true)
+    }
+    |> mapToSignal { result -> Signal<Void, Bool> in
+        if let result = result {
+            switch result {
+                case let .affectedHistory(pts, ptsCount, offset):
+                    stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                    if offset == 0 {
+                        return .fail(true)
+                    } else {
+                        return .complete()
+                    }
+            }
+        } else {
             return .fail(true)
         }
-        |> mapToSignal { result -> Signal<Void, Bool> in
-            if let result = result {
-                switch result {
-                    case let .affectedHistory(pts, ptsCount, offset):
-                        stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
-                        if offset == 0 {
-                            return .fail(true)
-                        } else {
-                            return .complete()
-                        }
-                }
-            } else {
-                return .fail(true)
-            }
     }
     return (signal |> restart)
     |> `catch` { _ -> Signal<Void, NoError> in
@@ -336,12 +336,12 @@ private func clearHistory(transaction: Transaction, postbox: Postbox, network: N
         }
     } else if peer.id.namespace == Namespaces.Peer.CloudChannel, let inputChannel = apiInputChannel(peer) {
         return network.request(Api.functions.channels.deleteHistory(channel: inputChannel, maxId: operation.topMessageId.id))
-            |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                return .single(.boolFalse)
-            }
-            |> mapToSignal { _ -> Signal<Void, NoError> in
-                return .complete()
-            }
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            return .complete()
+        }
     } else {
         assertionFailure()
         return .complete()
