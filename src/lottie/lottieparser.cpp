@@ -1888,7 +1888,12 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
                 EnterArray();
                 while (NextArrayValue()) {
                     RAPIDJSON_ASSERT(PeekType() == kStringType);
-                    interpolatorKey = GetString();
+                    if (!interpolatorKey) {
+                        interpolatorKey = GetString();
+                    } else {
+                        //skip rest of the string
+                        GetString();
+                    }
                 }
             }
             continue;
