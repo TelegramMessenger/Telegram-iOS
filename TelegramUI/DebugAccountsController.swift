@@ -114,17 +114,11 @@ public func debugAccountsController(context: AccountContext, accountManager: Acc
             ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: "Production", color: .accent, action: {
                     dismissAction()
-                    let _ = accountManager.transaction({ transaction -> Void in
-                        let id = transaction.createRecord([AccountEnvironmentAttribute(environment: .production)])
-                        transaction.setCurrentId(id)
-                    }).start()
+                    context.sharedContext.beginNewAuth(testingEnvironment: false)
                 }),
                 ActionSheetButtonItem(title: "Test", color: .accent, action: {
                     dismissAction()
-                    let _ = accountManager.transaction({ transaction -> Void in
-                        let id = transaction.createRecord([AccountEnvironmentAttribute(environment: .test)])
-                        transaction.setCurrentId(id)
-                    }).start()
+                    context.sharedContext.beginNewAuth(testingEnvironment: true)
                 })
             ]),
         ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])

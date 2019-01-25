@@ -369,10 +369,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
         }))
     }, addAccount: {
         let isTestingEnvironment = context.account.testingEnvironment
-        let _ = accountManager.transaction({ transaction -> Void in
-            let id = transaction.createRecord([AccountEnvironmentAttribute(environment: isTestingEnvironment ? .test : .production)])
-            transaction.setCurrentId(id)
-        }).start()
+        context.sharedContext.beginNewAuth(testingEnvironment: isTestingEnvironment)
     }, logout: {
         let presentationData = context.currentPresentationData.with { $0 }
         let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Settings_LogoutConfirmationTitle, text: presentationData.strings.Settings_LogoutConfirmationText, actions: [
