@@ -701,10 +701,10 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
                 case .notDetermined:
                     DeviceAccess.authorizeAccess(to: .notifications, context: context)
                 case .denied, .restricted:
-                    context.applicationBindings.openSettings()
+                    context.sharedContext.applicationBindings.openSettings()
                 case .unreachable:
                     ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: context.account.postbox, value: Int32(Date().timeIntervalSince1970))
-                    context.applicationBindings.openSettings()
+                    context.sharedContext.applicationBindings.openSettings()
                 default:
                     break
             }
@@ -714,7 +714,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
         presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Notifications_PermissionsSuppressWarningTitle, text: presentationData.strings.Notifications_PermissionsSuppressWarningText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Notifications_PermissionsKeepDisabled, action: {
             ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: context.account.postbox, value: Int32(Date().timeIntervalSince1970))
         }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Notifications_PermissionsEnable, action: {
-            context.applicationBindings.openSettings()
+            context.sharedContext.applicationBindings.openSettings()
         })]), nil)
     }, updateMessageAlerts: { value in
         let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
@@ -851,7 +851,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
             }
         })
     }, openAppSettings: {
-        context.applicationBindings.openSettings()
+        context.sharedContext.applicationBindings.openSettings()
     }, updateJoinedNotifications: { value in
         let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings

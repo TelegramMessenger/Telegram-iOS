@@ -641,7 +641,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                     let badgeWidth = max(badgeDiameter, labelLayout.size.width + 10.0)
                     let labelFrame: CGRect
                     if case .badge = item.label {
-                        labelFrame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - badgeWidth + (badgeWidth - labelLayout.size.width) / 2.0, y: 13.0), size: labelLayout.size)
+                        labelFrame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - badgeWidth + (badgeWidth - labelLayout.size.width) / 2.0, y: floor((contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
                         strongSelf.labelNode.frame = labelFrame
                     } else {
                         labelFrame = CGRect(origin: CGPoint(x: revealOffset + params.width - labelLayout.size.width - rightLabelInset - rightInset, y: floor((contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
@@ -659,7 +659,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.labelBadgeNode.removeFromSupernode()
                     }
                     
-                    strongSelf.labelBadgeNode.frame = CGRect(origin: CGPoint(x: params.width - rightLabelInset - badgeWidth, y: 12.0), size: CGSize(width: badgeWidth, height: badgeDiameter))
+                    strongSelf.labelBadgeNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - badgeWidth, y: labelFrame.minY - 1.0), size: CGSize(width: badgeWidth, height: badgeDiameter))
                     
                     transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: 5.0), size: CGSize(width: 40.0, height: 40.0)))
                     
@@ -733,7 +733,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
     override func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         super.updateRevealOffset(offset: offset, transition: transition)
         
-        guard let params = self.layoutParams?.1 else {
+        guard let item = self.layoutParams?.0, let params = self.layoutParams?.1 else {
             return
         }
         
@@ -762,7 +762,19 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
             }
         }
         
-        transition.updateFrame(node: self.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + params.width - self.labelNode.bounds.size.width - rightLabelInset, y: self.labelNode.frame.minY), size: self.labelNode.bounds.size))
+        let badgeDiameter: CGFloat = 20.0
+        let labelSize = self.labelNode.frame.size
+        
+        let badgeWidth = max(badgeDiameter, labelSize.width + 10.0)
+        let labelFrame: CGRect
+        if case .badge = item.label {
+            labelFrame = CGRect(origin: CGPoint(x: offset + params.width - rightLabelInset - badgeWidth + (badgeWidth - labelSize.width) / 2.0, y: self.labelNode.frame.minY), size: labelSize)
+        } else {
+            labelFrame = CGRect(origin: CGPoint(x: offset + params.width - self.labelNode.bounds.size.width - rightLabelInset, y: self.labelNode.frame.minY), size: self.labelNode.bounds.size)
+        }
+        transition.updateFrame(node: self.labelNode, frame: labelFrame)
+        
+        transition.updateFrame(node: self.labelBadgeNode, frame: CGRect(origin: CGPoint(x: offset + params.width - rightLabelInset - badgeWidth, y: self.labelBadgeNode.frame.minY), size: CGSize(width: badgeWidth, height: badgeDiameter)))
         
         transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + editingOffset + params.leftInset + 15.0, y: self.avatarNode.frame.minY), size: CGSize(width: 40.0, height: 40.0)))
     }

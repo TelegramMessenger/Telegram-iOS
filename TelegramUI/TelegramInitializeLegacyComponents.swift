@@ -64,7 +64,7 @@ private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponent
             subject = .send
         }
         if let context = self.context {
-            DeviceAccess.authorizeAccess(to: .location(subject), presentationData: context.currentPresentationData.with { $0 }, present: context.presentGlobalController, openSettings: context.applicationBindings.openSettings, { value in
+            DeviceAccess.authorizeAccess(to: .location(subject), presentationData: context.currentPresentationData.with { $0 }, present: context.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
                 if !value {
                     alertDismissCompletion?()
                 }
@@ -218,7 +218,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                 default:
                     convertedType = .play
             }
-            let disposable = legacyContext.mediaManager.audioSession.push(audioSessionType: convertedType, once: true, activate: { _ in
+            let disposable = legacyContext.sharedContext.mediaManager.audioSession.push(audioSessionType: convertedType, once: true, activate: { _ in
             }, deactivate: {
                 interrupted?()
                 return .complete()

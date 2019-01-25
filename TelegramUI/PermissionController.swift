@@ -81,7 +81,7 @@ public final class PermissionController : ViewController {
     }
     
     private func openAppSettings() {
-        self.context.applicationBindings.openSettings()
+        self.context.sharedContext.applicationBindings.openSettings()
     }
     
     public func setState(_ state: PermissionState, animated: Bool) {

@@ -46,7 +46,7 @@ final class OpenInOption {
 func availableOpenInOptions(context: AccountContext, item: OpenInItem) -> [OpenInOption] {
     return allOpenInOptions(context: context, item: item).filter { option in
         if case let .other(_, _, scheme) = option.application {
-            return context.applicationBindings.canOpenUrl("\(scheme)://")
+            return context.sharedContext.applicationBindings.canOpenUrl("\(scheme)://")
         } else {
             return true
         }

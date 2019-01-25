@@ -216,7 +216,7 @@ func playSound(context: AccountContext, sound: PeerMessageSound, defaultSound: P
         return Signal { subscriber in
             var currentPlayer: AudioPlayerWrapper?
             var deactivateImpl: (() -> Void)?
-            let session = context.mediaManager.audioSession.push(audioSessionType: .play, activate: { _ in
+            let session = context.sharedContext.mediaManager.audioSession.push(audioSessionType: .play, activate: { _ in
                 if let url = Bundle.main.url(forResource: fileNameForNotificationSound(sound, defaultSound: defaultSound), withExtension: "m4a") {
                     currentPlayer = AudioPlayerWrapper(url: url, completed: {
                         deactivateImpl?()

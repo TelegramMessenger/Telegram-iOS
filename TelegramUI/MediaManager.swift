@@ -1,8 +1,8 @@
 import Foundation
 import SwiftSignalKit
-import Postbox
 import AVFoundation
 import MobileCoreServices
+import Postbox
 import TelegramCore
 import MediaPlayer
 
@@ -62,7 +62,6 @@ public final class MediaManager: NSObject {
     
     private let queue = Queue.mainQueue()
     
-    private let postbox: Postbox
     private let inForeground: Signal<Bool, NoError>
     
     public let audioSession: ManagedAudioSession
@@ -75,15 +74,16 @@ public final class MediaManager: NSObject {
         didSet {
             if self.voiceMediaPlayer !== oldValue {
                 if let voiceMediaPlayer = self.voiceMediaPlayer {
+                    let account = voiceMediaPlayer.account
                     self.voiceMediaPlayerStateValue.set(voiceMediaPlayer.playbackState
-                    |> map { state -> SharedMediaPlayerItemPlaybackStateOrLoading? in
+                    |> map { state -> (Account, SharedMediaPlayerItemPlaybackStateOrLoading)? in
                         guard let state = state else {
                             return nil
                         }
                         if case let .item(item) = state {
-                            return .state(item)
+                            return (account, .state(item))
                         } else {
-                            return .loading
+                            return (account, .loading)
                         }
                     } |> deliverOnMainQueue)
                 } else {
@@ -92,8 +92,8 @@ public final class MediaManager: NSObject {
             }
         }
     }
-    private let voiceMediaPlayerStateValue = Promise<SharedMediaPlayerItemPlaybackStateOrLoading?>(nil)
-    var voiceMediaPlayerState: Signal<SharedMediaPlayerItemPlaybackStateOrLoading?, NoError> {
+    private let voiceMediaPlayerStateValue = Promise<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?>(nil)
+    var voiceMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError> {
         return self.voiceMediaPlayerStateValue.get()
     }
     
@@ -101,15 +101,16 @@ public final class MediaManager: NSObject {
         didSet {
             if self.musicMediaPlayer !== oldValue {
                 if let musicMediaPlayer = self.musicMediaPlayer {
+                    let account = musicMediaPlayer.account
                     self.musicMediaPlayerStateValue.set(musicMediaPlayer.playbackState
-                    |> map { state -> SharedMediaPlayerItemPlaybackStateOrLoading? in
+                    |> map { state -> (Account, SharedMediaPlayerItemPlaybackStateOrLoading)? in
                         guard let state = state else {
                             return nil
                         }
                         if case let .item(item) = state {
-                            return .state(item)
+                            return (account, .state(item))
                         } else {
-                            return .loading
+                            return (account, .loading)
                         }
                     } |> deliverOnMainQueue)
                 } else {
@@ -118,13 +119,13 @@ public final class MediaManager: NSObject {
             }
         }
     }
-    private let musicMediaPlayerStateValue = Promise<SharedMediaPlayerItemPlaybackStateOrLoading?>(nil)
-    var musicMediaPlayerState: Signal<SharedMediaPlayerItemPlaybackStateOrLoading?, NoError> {
+    private let musicMediaPlayerStateValue = Promise<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?>(nil)
+    var musicMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError> {
         return self.musicMediaPlayerStateValue.get()
     }
     
-    private let globalMediaPlayerStateValue = Promise<(SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?>()
-    var globalMediaPlayerState: Signal<(SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> {
+    private let globalMediaPlayerStateValue = Promise<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?>()
+    var globalMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> {
         return self.globalMediaPlayerStateValue.get()
     }
     
@@ -137,7 +138,7 @@ public final class MediaManager: NSObject {
     
     private let globalControlsDisposable = MetaDisposable()
     private let globalControlsArtworkDisposable = MetaDisposable()
-    private let globalControlsArtwork = Promise<SharedMediaPlaybackAlbumArt?>(nil)
+    private let globalControlsArtwork = Promise<(Account, SharedMediaPlaybackAlbumArt)?>(nil)
     private let globalControlsStatusDisposable = MetaDisposable()
     private let globalAudioSessionForegroundDisposable = MetaDisposable()
     
@@ -145,64 +146,29 @@ public final class MediaManager: NSObject {
     
     let galleryHiddenMediaManager = GalleryHiddenMediaManager()
     
-    let downloadedMediaStoreManager: DownloadedMediaStoreManager
-    
-    init(postbox: Postbox, inForeground: Signal<Bool, NoError>) {
-        self.postbox = postbox
+    init(inForeground: Signal<Bool, NoError>) {
         self.inForeground = inForeground
         
         self.audioSession = sharedAudioSession
         
-        self.downloadedMediaStoreManager = DownloadedMediaStoreManager(postbox: postbox)
-        
         super.init()
        
-        let combinedPlayersSignal: Signal<(SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> = combineLatest(queue: Queue.mainQueue(), self.voiceMediaPlayerState, self.musicMediaPlayerState)
-        |> map { voice, music -> (SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)? in
+        let combinedPlayersSignal: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> = combineLatest(queue: Queue.mainQueue(), self.voiceMediaPlayerState, self.musicMediaPlayerState)
+        |> map { voice, music -> (Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)? in
             if let voice = voice {
-                return (voice, .voice)
+                return (voice.0, voice.1, .voice)
             } else if let music = music {
-                return (music, .music)
+                return (music.0, music.1, .music)
             } else {
                 return nil
             }
         }
         self.globalMediaPlayerStateValue.set(combinedPlayersSignal
         |> distinctUntilChanged(isEqual: { lhs, rhs in
-            return lhs?.0 == rhs?.0 && lhs?.1 == rhs?.1
+            return lhs?.0 === rhs?.0 && lhs?.1 == rhs?.1 && lhs?.2 == rhs?.2
         }))
         
-        /*let commandCenter = MPRemoteCommandCenter.shared()
-        
-        commandCenter.playCommand.isEnabled = false*/
-        
-        /*commandCenter.pauseCommand.isEnabled = false
-        commandCenter.pauseCommand.addTarget(self, action: #selector(pauseCommandEvent(_:)))
-        
-        commandCenter.previousTrackCommand.isEnabled = false
-        commandCenter.previousTrackCommand.addTarget(self, action: #selector(previousTrackCommandEvent(_:)))
-        
-        commandCenter.nextTrackCommand.isEnabled = false
-        commandCenter.nextTrackCommand.addTarget(self, action: #selector(nextTrackCommandEvent(_:)))
-        
-        commandCenter.togglePlayPauseCommand.isEnabled = false
-        commandCenter.togglePlayPauseCommand.addTarget(self, action: #selector(togglePlayPauseCommandEvent(_:)))*/
-        
         var baseNowPlayingInfo: [String: Any]?
-        
-        /*if #available(iOSApplicationExtension 9.1, *) {
-            commandCenter.changePlaybackPositionCommand.isEnabled = false
-            commandCenter.changePlaybackPositionCommand.addTarget(handler: { [weak self] event in
-                if let strongSelf = self, let event = event as? MPChangePlaybackPositionCommandEvent {
-                    strongSelf.playlistControl(.seek(event.positionTime))
-                }
-                if baseNowPlayingInfo != nil {
-                    return .success
-                } else {
-                    return .noActionableNowPlayingItem
-                }
-            })
-        }*/
         
         var previousState: SharedMediaPlayerItemPlaybackState?
         var previousDisplayData: SharedMediaPlaybackDisplayData?
@@ -214,7 +180,7 @@ public final class MediaManager: NSObject {
         self.globalControlsDisposable.set((self.globalMediaPlayerState
         |> deliverOnMainQueue).start(next: { stateAndType in
             var updatedGlobalControlOptions = GlobalControlOptions()
-            if let (stateOrLoading, type) = stateAndType, case let .state(state) = stateOrLoading {
+            if let (_, stateOrLoading, type) = stateAndType, case let .state(state) = stateOrLoading {
                 if type == .music {
                     updatedGlobalControlOptions.insert(.previous)
                     updatedGlobalControlOptions.insert(.next)
@@ -228,7 +194,7 @@ public final class MediaManager: NSObject {
                 }
             }
             
-            if let (stateOrLoading, type) = stateAndType, type == .music, case let .state(state) = stateOrLoading, let displayData = state.item.displayData {
+            if let (account, stateOrLoading, type) = stateAndType, type == .music, case let .state(state) = stateOrLoading, let displayData = state.item.displayData {
                 if previousDisplayData != displayData {
                     previousDisplayData = displayData
                     
@@ -255,7 +221,7 @@ public final class MediaManager: NSObject {
                             nowPlayingInfo[MPMediaItemPropertyTitle] = titleText
                     }
                     
-                    globalControlsArtwork.set(.single(artwork))
+                    globalControlsArtwork.set(.single(artwork.flatMap({ (account, $0) })))
                     
                     baseNowPlayingInfo = nowPlayingInfo
                     
@@ -311,12 +277,12 @@ public final class MediaManager: NSObject {
         }))
         
         self.globalControlsArtworkDisposable.set((self.globalControlsArtwork.get()
-        |> distinctUntilChanged(isEqual: { $0 == $1 })
+        |> distinctUntilChanged(isEqual: { $0?.0 === $1?.0 && $0?.1 == $1?.1 })
         |> mapToSignal { value -> Signal<UIImage?, NoError> in
-            if let value = value {
+            if let (account, value) = value {
                 return Signal { subscriber in
-                    let fetched = postbox.mediaBox.fetchedResource(value.fullSizeResource, parameters: nil).start()
-                    let data = postbox.mediaBox.resourceData(value.fullSizeResource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false)).start(next: { data in
+                    let fetched = account.postbox.mediaBox.fetchedResource(value.fullSizeResource, parameters: nil).start()
+                    let data = account.postbox.mediaBox.resourceData(value.fullSizeResource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false)).start(next: { data in
                         if data.complete, let value = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                             subscriber.putNext(UIImage(data: value))
                             subscriber.putCompletion()
@@ -370,7 +336,7 @@ public final class MediaManager: NSObject {
         let shouldKeepAudioSession: Signal<Bool, NoError> = combineLatest(queue: Queue.mainQueue(), self.globalMediaPlayerState, inForeground)
         |> map { stateAndType, inForeground -> Bool in
             var isPlaying = false
-            if let (stateOrLoading, _) = stateAndType, case let .state(state) = stateOrLoading {
+            if let (_, stateOrLoading, _) = stateAndType, case let .state(state) = stateOrLoading {
                 switch state.status.status {
                     case .playing:
                         isPlaying = true
@@ -432,21 +398,30 @@ public final class MediaManager: NSObject {
         }
     }
     
-    func setPlaylist(_ playlist: SharedMediaPlaylist?, type: MediaManagerPlayerType) {
+    func setPlaylist(_ playlist: (Account, SharedMediaPlaylist)?, type: MediaManagerPlayerType) {
         assert(Queue.mainQueue().isCurrent())
-        self.setPlaylistByTypeDisposables.set((self.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.musicPlaybackSettings])
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] view in
-            if let strongSelf = self {
+        let inputData: Signal<(Account, SharedMediaPlaylist, MusicPlaybackSettings)?, NoError>
+        if let (account, playlist) = playlist {
+            inputData = account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.musicPlaybackSettings])
+            |> take(1)
+            |> map { view in
                 let settings = (view.values[ApplicationSpecificPreferencesKeys.musicPlaybackSettings] as? MusicPlaybackSettings) ?? MusicPlaybackSettings.defaultSettings
+                return (account, playlist, settings)
+            }
+        } else {
+            inputData = .single(nil)
+        }
+        self.setPlaylistByTypeDisposables.set((inputData
+        |> deliverOnMainQueue).start(next: { [weak self] inputData in
+            if let strongSelf = self {
                 let nextPlayerIndex = strongSelf.nextPlayerIndex
                 strongSelf.nextPlayerIndex += 1
                 switch type {
                     case .voice:
                         strongSelf.musicMediaPlayer?.control(.playback(.pause))
                         strongSelf.voiceMediaPlayer?.stop()
-                        if let playlist = playlist {
-                            let voiceMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, postbox: strongSelf.postbox, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: .reversed, initialLooping: .none, initialPlaybackRate: settings.voicePlaybackRate, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: true)
+                        if let (account, playlist, settings) = inputData {
+                            let voiceMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, account: account, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: .reversed, initialLooping: .none, initialPlaybackRate: settings.voicePlaybackRate, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: true)
                             strongSelf.voiceMediaPlayer = voiceMediaPlayer
                             voiceMediaPlayer.playedToEnd = { [weak voiceMediaPlayer] in
                                 if let strongSelf = self, let voiceMediaPlayer = voiceMediaPlayer, voiceMediaPlayer === strongSelf.voiceMediaPlayer {
@@ -467,8 +442,8 @@ public final class MediaManager: NSObject {
                     case .music:
                         strongSelf.musicMediaPlayer?.stop()
                         strongSelf.voiceMediaPlayer?.control(.playback(.pause))
-                        if let playlist = playlist {
-                            let musicMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, postbox: strongSelf.postbox, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: settings.order, initialLooping: settings.looping, initialPlaybackRate: .x1, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: false)
+                        if let (account, playlist, settings) = inputData {
+                            let musicMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, account: account, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: settings.order, initialLooping: settings.looping, initialPlaybackRate: .x1, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: false)
                             strongSelf.musicMediaPlayer = musicMediaPlayer
                             musicMediaPlayer.cancelled = { [weak musicMediaPlayer] in
                                 if let strongSelf = self, let musicMediaPlayer = musicMediaPlayer, musicMediaPlayer === strongSelf.musicMediaPlayer {
@@ -511,8 +486,8 @@ public final class MediaManager: NSObject {
         }
     }
     
-    func filteredPlaylistState(playlistId: SharedMediaPlaylistId, itemId: SharedMediaPlaylistItemId, type: MediaManagerPlayerType) -> Signal<SharedMediaPlayerItemPlaybackState?, NoError> {
-        let signal: Signal<SharedMediaPlayerItemPlaybackStateOrLoading?, NoError>
+    func filteredPlaylistState(accountId: AccountRecordId, playlistId: SharedMediaPlaylistId, itemId: SharedMediaPlaylistItemId, type: MediaManagerPlayerType) -> Signal<SharedMediaPlayerItemPlaybackState?, NoError> {
+        let signal: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError>
         switch type {
             case .voice:
                 signal = self.voiceMediaPlayerState
@@ -520,8 +495,8 @@ public final class MediaManager: NSObject {
                 signal = self.musicMediaPlayerState
         }
         return signal
-        |> map { stateOrLoading in
-            if let stateOrLoading = stateOrLoading, case let .state(state) = stateOrLoading {
+        |> map { stateOrLoading -> SharedMediaPlayerItemPlaybackState? in
+            if let (account, stateOrLoading) = stateOrLoading, account.id == accountId, case let .state(state) = stateOrLoading {
                 if state.playlistId.isEqual(to: playlistId) && state.item.id.isEqual(to: itemId) {
                     return state
                 }

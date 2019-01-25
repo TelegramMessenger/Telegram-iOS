@@ -81,7 +81,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         
         self.contentNode = ASDisplayNode()
         
-        self.controlsNode = OverlayPlayerControlsNode(postbox: context.account.postbox, theme: self.presentationData.theme, status: context.mediaManager.musicMediaPlayerState)
+        self.controlsNode = OverlayPlayerControlsNode(account: context.account, theme: self.presentationData.theme, status: context.sharedContext.mediaManager.musicMediaPlayerState)
         
         self.historyBackgroundNode = ASDisplayNode()
         self.historyBackgroundNode.isLayerBacked = true
@@ -148,7 +148,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         
         self.controlsNode.control = { [weak self] action in
             if let strongSelf = self {
-                strongSelf.context.mediaManager.playlistControl(action, type: strongSelf.type)
+                strongSelf.context.sharedContext.mediaManager.playlistControl(action, type: strongSelf.type)
             }
         }
         

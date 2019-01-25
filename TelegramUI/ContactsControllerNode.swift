@@ -84,7 +84,7 @@ final class ContactsControllerNode: ASDisplayNode {
                     default:
                         let presentationData = strongSelf.presentationData
                         present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                            self?.context.applicationBindings.openSettings()
+                            self?.context.sharedContext.applicationBindings.openSettings()
                         })]), nil)
                 }
             })

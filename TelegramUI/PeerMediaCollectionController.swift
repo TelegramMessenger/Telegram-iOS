@@ -218,7 +218,7 @@ public class PeerMediaCollectionController: TelegramController {
                                 ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                     if let strongSelf = self {
-                                        strongSelf.context.applicationBindings.openUrl(url)
+                                        strongSelf.context.sharedContext.applicationBindings.openUrl(url)
                                     }
                                 }),
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.ShareMenu_CopyShareLink, color: .accent, action: { [weak actionSheet] in
@@ -405,13 +405,13 @@ public class PeerMediaCollectionController: TelegramController {
             self?.deactivateSearch()
         })
     
-        let mediaManager = self.context.mediaManager
+        let mediaManager = self.context.sharedContext.mediaManager
         self.galleryHiddenMesageAndMediaDisposable.set(mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                 var messageIdAndMedia: [MessageId: [Media]] = [:]
                 
                 for id in ids {
-                    if case let .chat(messageId, media) = id {
+                    if case let .chat(accountId, messageId, media) = id, accountId == strongSelf.context.account.id {
                         messageIdAndMedia[messageId] = [media]
                     }
                 }

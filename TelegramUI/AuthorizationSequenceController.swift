@@ -18,7 +18,9 @@ public final class AuthorizationSequenceController: NavigationController {
         return NavigationBarTheme(buttonColor: theme.accentColor, disabledButtonColor: UIColor(rgb: 0xd0d0d0), primaryTextColor: .black, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
     }
     
+    private let sharedContext: SharedAccountContext
     private var account: UnauthorizedAccount
+    private let hasOtherAccounts: Bool
     private let apiId: Int32
     private let apiHash: String
     private var strings: PresentationStrings
@@ -28,8 +30,10 @@ public final class AuthorizationSequenceController: NavigationController {
     private var stateDisposable: Disposable?
     private let actionDisposable = MetaDisposable()
     
-    public init(account: UnauthorizedAccount, strings: PresentationStrings, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String) {
+    public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, hasOtherAccounts: Bool, strings: PresentationStrings, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String) {
+        self.sharedContext = sharedContext
         self.account = account
+        self.hasOtherAccounts = hasOtherAccounts
         self.apiId = apiId
         self.apiHash = apiHash
         self.strings = strings
@@ -112,15 +116,21 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequencePhoneEntryController(network: self.account.network, strings: self.strings, theme: self.theme, openUrl: { [weak self] url in
+            controller = AuthorizationSequencePhoneEntryController(hasOtherAccounts: self.hasOtherAccounts, network: self.account.network, strings: self.strings, theme: self.theme, openUrl: { [weak self] url in
                 self?.openUrl(url)
             }, back: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
-                let _ = strongSelf.account.postbox.transaction({ transaction -> Void in
-                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .empty))
-                }).start()
+                if strongSelf.hasOtherAccounts {
+                    let _ = (strongSelf.sharedContext.accountManager.transaction { transaction -> Void in
+                        transaction.removeAuth()
+                    }).start()
+                } else {
+                    let _ = strongSelf.account.postbox.transaction({ transaction -> Void in
+                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .empty))
+                    }).start()
+                }
             })
             controller.loginWithNumber = { [weak self, weak controller] number in
                 if let strongSelf = self {
@@ -243,7 +253,7 @@ public final class AuthorizationSequenceController: NavigationController {
                 if let strongSelf = self {
                     controller?.inProgress = true
                     
-                    strongSelf.actionDisposable.set((authorizeWithCode(account: strongSelf.account, code: code, termsOfService: termsOfService?.0)
+                    strongSelf.actionDisposable.set((authorizeWithCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, code: code, termsOfService: termsOfService?.0)
                     |> deliverOnMainQueue).start(next: { result in
                         guard let strongSelf = self else {
                             return
@@ -420,7 +430,7 @@ public final class AuthorizationSequenceController: NavigationController {
                 if let strongSelf = self {
                     controller?.inProgress = true
                     
-                    strongSelf.actionDisposable.set((authorizeWithPassword(account: strongSelf.account, password: password) |> deliverOnMainQueue).start(error: { error in
+                    strongSelf.actionDisposable.set((authorizeWithPassword(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, password: password) |> deliverOnMainQueue).start(error: { error in
                         Queue.mainQueue().async {
                             if let strongSelf = self, let controller = controller {
                                 controller.inProgress = false
@@ -528,7 +538,7 @@ public final class AuthorizationSequenceController: NavigationController {
                 if let strongSelf = self {
                     controller?.inProgress = true
                     
-                    strongSelf.actionDisposable.set((performPasswordRecovery(account: strongSelf.account, code: code) |> deliverOnMainQueue).start(error: { error in
+                    strongSelf.actionDisposable.set((performPasswordRecovery(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, code: code) |> deliverOnMainQueue).start(error: { error in
                         Queue.mainQueue().async {
                             if let strongSelf = self, let controller = controller {
                                 controller.inProgress = false
@@ -655,7 +665,7 @@ public final class AuthorizationSequenceController: NavigationController {
                 if let strongSelf = self {
                     controller?.inProgress = true
                     
-                    strongSelf.actionDisposable.set((signUpWithName(account: strongSelf.account, firstName: firstName, lastName: lastName, avatarData: avatarData)
+                    strongSelf.actionDisposable.set((signUpWithName(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, firstName: firstName, lastName: lastName, avatarData: avatarData)
                     |> deliverOnMainQueue).start(error: { error in
                         Queue.mainQueue().async {
                             if let strongSelf = self, let controller = controller {
@@ -695,20 +705,57 @@ public final class AuthorizationSequenceController: NavigationController {
                     case .empty:
                         if let _ = self.viewControllers.last as? AuthorizationSequenceSplashController {
                         } else {
-                            self.setViewControllers([self.splashController()], animated: !self.viewControllers.isEmpty)
+                            var controllers: [ViewController] = []
+                            if !self.hasOtherAccounts {
+                                controllers.append(self.splashController())
+                            } else {
+                                controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: ""))
+                            }
+                            self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                         }
                     case let .phoneEntry(countryCode, number):
-                        self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: countryCode, number: number)], animated: !self.viewControllers.isEmpty)
+                        var controllers: [ViewController] = []
+                        if !self.hasOtherAccounts {
+                            controllers.append(self.splashController())
+                        }
+                        controllers.append(self.phoneEntryController(countryCode: countryCode, number: number))
+                        self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                     case let .confirmationCodeEntry(number, type, _, timeout, nextType, termsOfService):
-                        self.setViewControllers([self.splashController(), self.phoneEntryController(countryCode: defaultCountryCode(), number: ""), self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
+                        var controllers: [ViewController] = []
+                        if !self.hasOtherAccounts {
+                            controllers.append(self.splashController())
+                        }
+                        controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: ""))
+                        controllers.append(self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService))
+                        self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                     case let .passwordEntry(hint, _, _, suggestReset):
-                        self.setViewControllers([self.splashController(), self.passwordEntryController(hint: hint, suggestReset: suggestReset)], animated: !self.viewControllers.isEmpty)
+                        var controllers: [ViewController] = []
+                        if !self.hasOtherAccounts {
+                            controllers.append(self.splashController())
+                        }
+                        controllers.append(self.passwordEntryController(hint: hint, suggestReset: suggestReset))
+                        self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                     case let .passwordRecovery(_, _, _, emailPattern):
-                        self.setViewControllers([self.splashController(), self.passwordRecoveryController(emailPattern: emailPattern)], animated: !self.viewControllers.isEmpty)
+                        var controllers: [ViewController] = []
+                        if !self.hasOtherAccounts {
+                            controllers.append(self.splashController())
+                        }
+                        controllers.append(self.passwordRecoveryController(emailPattern: emailPattern))
+                        self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                     case let .awaitingAccountReset(protectedUntil, number):
-                        self.setViewControllers([self.splashController(), self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number)], animated: !self.viewControllers.isEmpty)
+                        var controllers: [ViewController] = []
+                        if !self.hasOtherAccounts {
+                            controllers.append(self.splashController())
+                        }
+                        controllers.append(self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number))
+                        self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                     case let .signUp(_, _, _, firstName, lastName, termsOfService):
-                        self.setViewControllers([self.splashController(), self.signUpController(firstName: firstName, lastName: lastName, termsOfService: termsOfService)], animated: !self.viewControllers.isEmpty)
+                        var controllers: [ViewController] = []
+                        if !self.hasOtherAccounts {
+                            controllers.append(self.splashController())
+                        }
+                        controllers.append(self.signUpController(firstName: firstName, lastName: lastName, termsOfService: termsOfService))
+                        self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                 }
         }
     }

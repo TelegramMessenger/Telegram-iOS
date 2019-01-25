@@ -62,11 +62,11 @@ public final class TelegramRootController: NavigationController {
         }
         controllers.append(chatListController)
         
-        let restoreSettignsController = AccountStore.switchingSettingsController
+        let restoreSettignsController = self.context.sharedContext.switchingSettingsController
         restoreSettignsController?.updateContext(context: self.context)
-        AccountStore.switchingSettingsController = nil
+        self.context.sharedContext.switchingSettingsController = nil
         
-        let accountSettingsController = restoreSettignsController ?? settingsController(context: self.context, accountManager: context.accountManager)
+        let accountSettingsController = restoreSettignsController ?? settingsController(context: self.context, accountManager: context.sharedContext.accountManager)
         controllers.append(accountSettingsController)
         
         tabBarController.setControllers(controllers, selectedIndex: restoreSettignsController != nil ? (controllers.count - 1) : (controllers.count - 2))

@@ -130,7 +130,7 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
         self.scrubbingNode.seek = { [weak self] timestamp in
             if let strongSelf = self {
                 if let _ = strongSelf.playbackState {
-                    strongSelf.context.mediaManager.playlistControl(.seek(timestamp), type: strongSelf.playlistType)
+                    strongSelf.context.sharedContext.mediaManager.playlistControl(.seek(timestamp), type: strongSelf.playlistType)
                 }
             }
         }
@@ -174,12 +174,12 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
                 }
             })*/
         
-        self.scrubbingNode.status = context.mediaManager.filteredPlaylistState(playlistId: InstantPageMediaPlaylistId(webpageId: webPage.webpageId), itemId: InstantPageMediaPlaylistItemId(index: self.media.index), type: self.playlistType)
+        self.scrubbingNode.status = context.sharedContext.mediaManager.filteredPlaylistState(accountId: context.account.id, playlistId: InstantPageMediaPlaylistId(webpageId: webPage.webpageId), itemId: InstantPageMediaPlaylistItemId(index: self.media.index), type: self.playlistType)
         |> map { playbackState -> MediaPlayerStatus in
             return playbackState?.status ?? MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
         }
             
-        self.playerStatusDisposable = (context.mediaManager.filteredPlaylistState(playlistId: InstantPageMediaPlaylistId(webpageId: webPage.webpageId), itemId: InstantPageMediaPlaylistItemId(index: self.media.index), type: playlistType)
+        self.playerStatusDisposable = (context.sharedContext.mediaManager.filteredPlaylistState(accountId: context.account.id, playlistId: InstantPageMediaPlaylistId(webpageId: webPage.webpageId), itemId: InstantPageMediaPlaylistItemId(index: self.media.index), type: playlistType)
         |> deliverOnMainQueue).start(next: { [weak self] playbackState in
             guard let strongSelf = self else {
                 return
@@ -249,7 +249,7 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
     
     @objc func buttonPressed() {
         if let _ = self.playbackState {
-            self.context.mediaManager.playlistControl(.playback(.togglePlayPause), type: self.playlistType)
+            self.context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: self.playlistType)
         } else {
             self.openMedia(self.media)
         }

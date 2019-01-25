@@ -125,7 +125,7 @@ public final class DeviceAccess {
                         }
                     })
                 if let context = context {
-                    return context.applicationBindings.applicationInForeground
+                    return context.sharedContext.applicationBindings.applicationInForeground
                     |> distinctUntilChanged
                     |> mapToSignal { inForeground -> Signal<AccessType, NoError> in
                         return status
@@ -198,7 +198,7 @@ public final class DeviceAccess {
             case .siri:
                 if let context = context {
                     return Signal { subscriber in
-                        let status = context.applicationBindings.siriAuthorization()
+                        let status = context.sharedContext.applicationBindings.siriAuthorization()
                         subscriber.putNext(status)
                         subscriber.putCompletion()
                         return EmptyDisposable
@@ -405,14 +405,14 @@ public final class DeviceAccess {
                     })
                 case .notifications:
                     if let context = context {
-                        context.applicationBindings.registerForNotifications { result in
+                        context.sharedContext.applicationBindings.registerForNotifications { result in
                             self.notificationsPromise.set(.single(result))
                             completion(result)
                         }
                     }
                 case .siri:
                     if let context = context {
-                        context.applicationBindings.requestSiriAuthorization { result in
+                        context.sharedContext.applicationBindings.requestSiriAuthorization { result in
                             self.siriPromise.set(.single(result))
                             completion(result)
                         }

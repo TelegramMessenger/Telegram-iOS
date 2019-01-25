@@ -2223,7 +2223,7 @@ func handlePeerInfoAboutTextAction(context: AccountContext, peerId: PeerId, navi
             if let controller = controller {
                 switch result {
                 case let .externalUrl(url):
-                    context.applicationBindings.openUrl(url)
+                    context.sharedContext.applicationBindings.openUrl(url)
                 case let .peer(peerId, _):
                     openResolvedPeerImpl(peerId, .default)
                 case let .channelMessage(peerId, messageId):

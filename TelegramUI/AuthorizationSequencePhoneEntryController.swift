@@ -14,6 +14,8 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     private let theme: AuthorizationTheme
     private let openUrl: (String) -> Void
     
+    private let back: () -> Void
+    
     private var currentData: (Int32, String?, String)?
     
     var inProgress: Bool = false {
@@ -33,11 +35,12 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(network: Network, strings: PresentationStrings, theme: AuthorizationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+    init(hasOtherAccounts: Bool, network: Network, strings: PresentationStrings, theme: AuthorizationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
         self.network = network
         self.strings = strings
         self.theme = theme
         self.openUrl = openUrl
+        self.back = back
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
@@ -53,6 +56,9 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
             back()
         }
         
+        if hasOtherAccounts {
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        }
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
     }
     
@@ -62,6 +68,10 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     
     deinit {
         self.termsDisposable.dispose()
+    }
+    
+    @objc private func cancelPressed() {
+        self.back()
     }
     
     func updateData(countryCode: Int32, countryName: String?, number: String) {

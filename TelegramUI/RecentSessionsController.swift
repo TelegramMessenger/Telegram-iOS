@@ -477,6 +477,7 @@ public func recentSessionsController(context: AccountContext) -> ViewController 
                         updateState {
                             return $0.withUpdatedRemovingSessionId(nil)
                         }
+                        context.sharedContext.updateNotificationTokensRegistration()
                     }))
                 })
             ]),
@@ -519,6 +520,7 @@ public func recentSessionsController(context: AccountContext) -> ViewController 
                         updateState {
                             return $0.withUpdatedTerminatingOtherSessions(false)
                         }
+                        context.sharedContext.updateNotificationTokensRegistration()
                     }))
                 })
             ]),

@@ -39,7 +39,7 @@ func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions:
         carouselItem.recipientName = peer.displayTitle
         carouselItem.cameraPressed = { [weak controller] cameraView in
             if let controller = controller {
-                DeviceAccess.authorizeAccess(to: .camera, presentationData: context.currentPresentationData.with { $0 }, present: context.presentGlobalController, openSettings: context.applicationBindings.openSettings, { value in
+                DeviceAccess.authorizeAccess(to: .camera, presentationData: context.currentPresentationData.with { $0 }, present: context.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
                     if value {
                         openCamera(cameraView, controller)
                     }

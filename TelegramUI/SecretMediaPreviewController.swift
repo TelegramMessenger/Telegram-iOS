@@ -162,11 +162,10 @@ public final class SecretMediaPreviewController: ViewController {
             }
         }))
         
-        let mediaManager = context.mediaManager
-        self.hiddenMediaManagerIndex = mediaManager.galleryHiddenMediaManager.addSource(self._hiddenMedia.get()
+        self.hiddenMediaManagerIndex = self.context.sharedContext.mediaManager.galleryHiddenMediaManager.addSource(self._hiddenMedia.get()
         |> map { messageIdAndMedia in
             if let (messageId, media) = messageIdAndMedia {
-                return .chat(messageId, media)
+                return .chat(context.account.id, messageId, media)
             } else {
                 return nil
             }
@@ -192,8 +191,7 @@ public final class SecretMediaPreviewController: ViewController {
         self.disposable.dispose()
         self.markMessageAsConsumedDisposable.dispose()
         if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex {
-            let mediaManager = self.context.mediaManager
-            mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
+            self.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
         }
         self.screenCaptureEventsDisposable?.dispose()
         if let tempFile = self.tempFile {

@@ -24,8 +24,7 @@ private func internalMessageFileMediaPlaybackStatus(context: AccountContext, fil
     }
     
     if let (playlistId, itemId) = peerMessagesMediaPlaylistAndItemId(message, isRecentActions: isRecentActions) {
-        let mediaManager = context.mediaManager
-        return mediaManager.filteredPlaylistState(playlistId: playlistId, itemId: itemId, type: playerType)
+        return context.sharedContext.mediaManager.filteredPlaylistState(accountId: context.account.id, playlistId: playlistId, itemId: itemId, type: playerType)
         |> mapToSignal { state -> Signal<MediaPlayerStatus?, NoError> in
             return .single(state?.status)
         }

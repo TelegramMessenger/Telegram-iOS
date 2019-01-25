@@ -966,7 +966,7 @@ final class ContactListNode: ASDisplayNode {
                     )
                     let foundDeviceContacts: Signal<[DeviceContactStableId: DeviceContactBasicData], NoError>
                     if searchDeviceContacts {
-                        foundDeviceContacts = context.contactDataManager.search(query: query)
+                        foundDeviceContacts = context.sharedContext.contactDataManager?.search(query: query) ?? .single([:])
                     } else {
                         foundDeviceContacts = .single([:])
                     }
@@ -1188,7 +1188,7 @@ final class ContactListNode: ASDisplayNode {
                     case .notDetermined:
                         DeviceAccess.authorizeAccess(to: .contacts)
                     case .denied, .restricted:
-                        context.applicationBindings.openSettings()
+                        context.sharedContext.applicationBindings.openSettings()
                     default:
                         break
                 }

@@ -51,6 +51,8 @@ private struct SettingsItemArguments {
     let displayCopyContextMenu: () -> Void
     let switchToAccount: (AccountRecordId) -> Void
     let addAccount: () -> Void
+    let setAccountIdWithRevealedOptions: (AccountRecordId?, AccountRecordId?) -> Void
+    let removeAccount: (AccountRecordId) -> Void
 }
 
 private enum SettingsSection: Int32 {
@@ -68,7 +70,7 @@ private enum SettingsEntry: ItemListNodeEntry {
     case setProfilePhoto(PresentationTheme, String)
     case setUsername(PresentationTheme, String)
     
-    case account(Int, Account, PresentationTheme, PresentationStrings, Peer, Int32)
+    case account(Int, Account, PresentationTheme, PresentationStrings, Peer, Int32, Bool)
     case addAccount(PresentationTheme, String)
     
     case proxy(PresentationTheme, UIImage?, String, String)
@@ -188,8 +190,8 @@ private enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .account(lhsIndex, lhsAccount, lhsTheme, lhsStrings, lhsPeer, lhsBadgeCount):
-                if case let .account(rhsIndex, rhsAccount, rhsTheme, rhsStrings, rhsPeer, rhsBadgeCount) = rhs, lhsIndex == rhsIndex, lhsAccount === rhsAccount, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsPeer.isEqual(rhsPeer), lhsBadgeCount == rhsBadgeCount {
+            case let .account(lhsIndex, lhsAccount, lhsTheme, lhsStrings, lhsPeer, lhsBadgeCount, lhsRevealed):
+                if case let .account(rhsIndex, rhsAccount, rhsTheme, rhsStrings, rhsPeer, rhsBadgeCount, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsAccount === rhsAccount, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsPeer.isEqual(rhsPeer), lhsBadgeCount == rhsBadgeCount, lhsRevealed == rhsRevealed {
                     return true
                 } else {
                     return false
@@ -316,11 +318,21 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openUsername()
                 })
-            case let .account(_, account, theme, strings, peer, badgeCount):
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: "."), nameDisplayOrder: .firstLast, account: account, peer: peer, aliasHandling: .standard, presence: nil, text: .none, label: .badge("\(badgeCount)"), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, sectionId: self.section, action: {
+            case let .account(_, account, theme, strings, peer, badgeCount, revealed):
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: "."), nameDisplayOrder: .firstLast, account: account, peer: peer, aliasHandling: .standard, presence: nil, text: .none, label: .badge("\(badgeCount)"), editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, sectionId: self.section, action: {
                     arguments.switchToAccount(account.id)
                 }, setPeerIdWithRevealedOptions: { lhs, rhs in
+                    var lhsAccountId: AccountRecordId?
+                    if lhs == peer.id {
+                        lhsAccountId = account.id
+                    }
+                    var rhsAccountId: AccountRecordId?
+                    if rhs == peer.id {
+                        rhsAccountId = account.id
+                    }
+                    arguments.setAccountIdWithRevealedOptions(lhsAccountId, rhsAccountId)
                 }, removePeer: { _ in
+                    arguments.removeAccount(account.id)
                 })
             case let .addAccount(theme, text):
                 return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, alwaysPlain: false, sectionId: self.section, editing: false, action: {
@@ -383,22 +395,8 @@ private enum SettingsEntry: ItemListNodeEntry {
 }
 
 private struct SettingsState: Equatable {
-    let updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?
-    
-    init(updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar? = nil) {
-        self.updatingAvatar = updatingAvatar
-    }
-    
-    func withUpdatedUpdatingAvatar(_ updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?) -> SettingsState {
-        return SettingsState(updatingAvatar: updatingAvatar)
-    }
-    
-    static func ==(lhs: SettingsState, rhs: SettingsState) -> Bool {
-        if lhs.updatingAvatar != rhs.updatingAvatar {
-            return false
-        }
-        return true
-    }
+    var updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?
+    var accountIdWithRevealedOptions: AccountRecordId?
 }
 
 private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)]) -> [SettingsEntry] {
@@ -417,7 +415,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         if !accountsAndPeers.isEmpty {
             var index = 0
             for (peerAccount, peer, badgeCount) in accountsAndPeers {
-                entries.append(.account(index, peerAccount, presentationData.theme, presentationData.strings, peer, badgeCount))
+                entries.append(.account(index, peerAccount, presentationData.theme, presentationData.strings, peer, badgeCount, state.accountIdWithRevealedOptions == peerAccount.id))
                 index += 1
             }
             entries.append(.addAccount(presentationData.theme, presentationData.strings.Settings_AddAccount))
@@ -538,62 +536,36 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     let networkArguments = context.account.networkArguments
     let auxiliaryMethods = context.account.auxiliaryMethods
-    let rootPath = rootPathForBasePath(context.applicationBindings.containerPath)
+    let rootPath = rootPathForBasePath(context.sharedContext.applicationBindings.containerPath)
     
-    let accountsAndPeers: Signal<[(Account, Peer, Int32)], NoError> = accountManager.accountRecords()
-    |> map { view -> [AccountRecordId] in
-        return view.records.compactMap { record -> AccountRecordId? in
-            if record.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) {
-                return nil
+    let accountsAndPeers: Signal<[(Account, Peer, Int32)], NoError> = context.sharedContext.activeAccounts
+    |> mapToSignal { primary, activeAccounts, _ -> Signal<[(Account, Peer, Int32)], NoError> in
+        var accounts: [Signal<(Account, Peer, Int32)?, NoError>] = []
+        func accountWithPeer(_ account: Account) -> Signal<(Account, Peer, Int32)?, NoError> {
+            return combineLatest(account.postbox.peerView(id: account.peerId), renderedTotalUnreadCount(postbox: account.postbox))
+            |> map { view, totalUnreadCount -> (Peer?, Int32) in
+                return (view.peers[view.peerId], totalUnreadCount.0)
             }
-            return record.id
-        }
-    }
-    |> distinctUntilChanged
-    |> mapToSignal { recordIds -> Signal<[(Account, Peer, Int32)], NoError> in
-        return contextValue.get()
-        |> mapToSignal { currentContext -> Signal<[(Account, Peer, Int32)], NoError> in
-            var accounts: [Signal<(Account, Peer, Int32)?, NoError>] = []
-            func accountWithPeer(_ account: Signal<Account?, NoError>) -> Signal<(Account, Peer, Int32)?, NoError> {
-                return account
-                |> mapToSignal { account -> Signal<(Account, Peer, Int32)?, NoError> in
-                    guard let account = account else {
-                        return .single(nil)
-                    }
-                    return combineLatest(account.postbox.peerView(id: account.peerId), renderedTotalUnreadCount(postbox: account.postbox))
-                    |> map { view, totalUnreadCount -> (Peer?, Int32) in
-                        return (view.peers[view.peerId], totalUnreadCount.0)
-                    }
-                    |> distinctUntilChanged { lhs, rhs in
-                        return arePeersEqual(lhs.0, rhs.0) && lhs.1 == rhs.1
-                    }
-                    |> map { peer, totalUnreadCount -> (Account, Peer, Int32)? in
-                        if let peer = peer {
-                            return (account, peer, totalUnreadCount)
-                        } else {
-                            return nil
-                        }
-                    }
-                }
+            |> distinctUntilChanged { lhs, rhs in
+                return arePeersEqual(lhs.0, rhs.0) && lhs.1 == rhs.1
             }
-            for id in recordIds {
-                if id == currentContext.account.id {
-                    continue
+            |> map { peer, totalUnreadCount -> (Account, Peer, Int32)? in
+                if let peer = peer {
+                    return (account, peer, totalUnreadCount)
                 } else {
-                    accounts.append(accountWithPeer(accountWithId(networkArguments: networkArguments, id: id, supplementary: true, rootPath: rootPath, beginWithTestingEnvironment: false, auxiliaryMethods: auxiliaryMethods)
-                    |> map { result -> Account? in
-                        if case let .authorized(account) = result {
-                            return account
-                        } else {
-                            return nil
-                        }
-                    }))
+                    return nil
                 }
             }
-            return combineLatest(accounts)
-            |> map { accounts -> [(Account, Peer, Int32)] in
-                return accounts.compactMap({ $0 })
+        }
+        for (_, account) in activeAccounts {
+            if account.id != primary?.id {
+                accounts.append(accountWithPeer(account))
             }
+        }
+        
+        return combineLatest(accounts)
+        |> map { accounts -> [(Account, Peer, Int32)] in
+            return accounts.compactMap({ $0 })
         }
     }
 
@@ -835,9 +807,38 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> take(1)).start(next: { context in
             let isTestingEnvironment = context.account.testingEnvironment
             let _ = accountManager.transaction({ transaction -> Void in
-                let id = transaction.createRecord([AccountEnvironmentAttribute(environment: isTestingEnvironment ? .test : .production)])
-                transaction.setCurrentId(id)
+                let _ = transaction.createAuth([AccountEnvironmentAttribute(environment: isTestingEnvironment ? .test : .production)])
             }).start()
+        })
+    }, setAccountIdWithRevealedOptions: { accountId, fromAccountId in
+        updateState { state in
+            var state = state
+            if (accountId == nil && fromAccountId == state.accountIdWithRevealedOptions) || (accountId != nil && fromAccountId == nil) {
+                state.accountIdWithRevealedOptions = accountId
+            }
+            return state
+        }
+    }, removeAccount: { id in
+        let _ = (contextValue.get()
+        |> deliverOnMainQueue
+        |> take(1)).start(next: { context in
+            let presentationData = context.currentPresentationData.with { $0 }
+            let controller = ActionSheetController(presentationTheme: presentationData.theme)
+            let dismissAction: () -> Void = { [weak controller] in
+                controller?.dismissAnimated()
+            }
+            
+            var items: [ActionSheetItem] = []
+            items.append(ActionSheetTextItem(title: presentationData.strings.Settings_LogoutConfirmationText.trimmingCharacters(in: .whitespacesAndNewlines)))
+            items.append(ActionSheetButtonItem(title: presentationData.strings.Settings_Logout, color: .destructive, action: {
+                dismissAction()
+                let _ = logoutFromAccount(id: id, accountManager: context.sharedContext.accountManager).start()
+            }))
+            controller.setItemGroups([
+                ActionSheetItemGroup(items: items),
+                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+            ])
+            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })
     })
     
@@ -873,16 +874,20 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                         let resource = LocalFileMediaResource(fileId: arc4random64())
                         context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                         let representation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: resource)
-                        updateState {
-                            $0.withUpdatedUpdatingAvatar(.image(representation, true))
+                        updateState { state in
+                            var state = state
+                            state.updatingAvatar = .image(representation, true)
+                            return state
                         }
                         updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: resource, mapResourceToAvatarSizes: { resource, representations in
                             return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                         }) |> deliverOnMainQueue).start(next: { result in
                             switch result {
                             case .complete:
-                                updateState {
-                                    $0.withUpdatedUpdatingAvatar(nil)
+                                updateState { state in
+                                    var state = state
+                                    state.updatingAvatar = nil
+                                    return state
                                 }
                             case .progress:
                                 break
@@ -907,20 +912,24 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 }
                 mixin.didFinishWithDelete = {
                     let _ = currentAvatarMixin.swap(nil)
-                    updateState {
+                    updateState { state in
+                        var state = state
                         if let profileImage = peer?.smallProfileImage {
-                            return $0.withUpdatedUpdatingAvatar(.image(profileImage, false))
+                            state.updatingAvatar = .image(profileImage, false)
                         } else {
-                            return $0.withUpdatedUpdatingAvatar(.none)
+                            state.updatingAvatar = .none
                         }
+                        return state
                     }
                     updateAvatarDisposable.set((updateAccountPhoto(account: context.account, resource: nil, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                     }) |> deliverOnMainQueue).start(next: { result in
                         switch result {
                         case .complete:
-                            updateState {
-                                $0.withUpdatedUpdatingAvatar(nil)
+                            updateState { state in
+                                var state = state
+                                state.updatingAvatar = nil
+                                return state
                             }
                         case .progress:
                             break
@@ -1180,7 +1189,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         })
     }
     switchToAccountImpl = { [weak controller] id in
-        AccountStore.switchToAccount(id: id, fromSettingsController: controller)
+        context.sharedContext.switchToAccount(id: id, fromSettingsController: controller)
     }
     controller.didAppear = { _ in
         updatePassport()

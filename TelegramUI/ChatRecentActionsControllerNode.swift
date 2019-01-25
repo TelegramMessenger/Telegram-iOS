@@ -360,7 +360,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, requestSelectMessagePollOption: { _, _ in
         }, openAppStorePage: { [weak self] in
             if let strongSelf = self {
-                strongSelf.context.applicationBindings.openAppStorePage()
+                strongSelf.context.sharedContext.applicationBindings.openAppStorePage()
             }
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
@@ -413,13 +413,13 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.historyDisposable = appliedTransition.start()
         
        
-        let mediaManager = self.context.mediaManager
+        let mediaManager = self.context.sharedContext.mediaManager
         self.galleryHiddenMesageAndMediaDisposable.set(mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                 var messageIdAndMedia: [MessageId: [Media]] = [:]
                 
                 for id in ids {
-                    if case let .chat(messageId, media) = id {
+                    if case let .chat(accountId, messageId, media) = id, accountId == strongSelf.context.account.id {
                         messageIdAndMedia[messageId] = [media]
                     }
                 }

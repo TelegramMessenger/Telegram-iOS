@@ -186,8 +186,8 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                 }
                 let searchDeviceContacts = categories.contains(.deviceContacts)
                 let foundDeviceContacts: Signal<[DeviceContactStableId: DeviceContactBasicData]?, NoError>
-                if searchDeviceContacts {
-                    foundDeviceContacts = context.contactDataManager.search(query: query)
+                if searchDeviceContacts, let contactDataManager = context.sharedContext.contactDataManager {
+                    foundDeviceContacts = contactDataManager.search(query: query)
                     |> map(Optional.init)
                 } else {
                     foundDeviceContacts = .single([:])

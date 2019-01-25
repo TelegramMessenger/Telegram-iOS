@@ -189,7 +189,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
                     }
                 }
                 if let navigationController = navigationController {
-                    context.applicationBindings.dismissNativeController()
+                    context.sharedContext.applicationBindings.dismissNativeController()
                     (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
                 }
             }

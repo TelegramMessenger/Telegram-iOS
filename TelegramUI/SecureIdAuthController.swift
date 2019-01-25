@@ -184,7 +184,7 @@ final class SecureIdAuthController: ViewController {
                 if appUpdateRequired {
                     let errorText = strongSelf.presentationData.strings.Passport_UpdateRequiredError
                     strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Application_Update, action: {
-                        context.applicationBindings.openAppStorePage()
+                        context.sharedContext.applicationBindings.openAppStorePage()
                     })]), in: .window(.root))
                 } else if let callbackUrl = callbackUrl, let peerId = peerId {
                     let errorText = strongSelf.presentationData.strings.Login_UnknownError

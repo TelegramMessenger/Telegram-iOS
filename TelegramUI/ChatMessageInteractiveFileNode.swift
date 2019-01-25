@@ -148,8 +148,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         }
                     }
                 case .playbackStatus:
-                    if let context = context, let message = self.message, let type = peerMessageMediaPlayerType(message) {
-                        context.mediaManager.playlistControl(.playback(.togglePlayPause), type: type)
+                    if let context = self.context, let message = self.message, let type = peerMessageMediaPlayerType(message) {
+                        context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: type)
                     }
             }
         }
@@ -511,7 +511,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                     waveformScrubbingNode.hitTestSlop = UIEdgeInsetsMake(-10.0, 0.0, -10.0, 0.0)
                                     waveformScrubbingNode.seek = { timestamp in
                                         if let strongSelf = self, let context = strongSelf.context, let message = strongSelf.message, let type = peerMessageMediaPlayerType(message) {
-                                            context.mediaManager.playlistControl(.seek(timestamp), type: type)
+                                            context.sharedContext.mediaManager.playlistControl(.seek(timestamp), type: type)
                                         }
                                     }
                                     waveformScrubbingNode.status = strongSelf.playbackStatus.get()

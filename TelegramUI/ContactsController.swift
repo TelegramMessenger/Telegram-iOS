@@ -219,7 +219,7 @@ public class ContactsController: ViewController {
                     case let .peer(peer, _):
                         (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peer.id)))
                     case let .deviceContact(id, _):
-                        let _ = (strongSelf.context.contactDataManager.extendedData(stableId: id)
+                        let _ = ((strongSelf.context.sharedContext.contactDataManager?.extendedData(stableId: id) ?? .single(nil))
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { value in
                             guard let strongSelf = self, let value = value else {
@@ -362,7 +362,7 @@ public class ContactsController: ViewController {
                 default:
                     let presentationData = strongSelf.presentationData
                     strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                        self?.context.applicationBindings.openSettings()
+                        self?.context.sharedContext.applicationBindings.openSettings()
                     })]), in: .window(.root))
             }
         })

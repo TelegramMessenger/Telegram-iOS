@@ -792,7 +792,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                 return
             }
             
-            let callResult = context.callManager?.requestCall(peerId: peer.id, endCurrentIfAny: false)
+            let callResult = context.callManager?.requestCall(account: context.account, peerId: peer.id, endCurrentIfAny: false)
             if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                 if currentPeerId == peer.id {
                     context.navigateToCurrentCall?()
@@ -803,7 +803,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                         } |> deliverOnMainQueue).start(next: { peer, current in
                             if let peer = peer, let current = current {
                                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                    let _ = context.callManager?.requestCall(peerId: peer.id, endCurrentIfAny: true)
+                                    let _ = context.callManager?.requestCall(account: context.account, peerId: peer.id, endCurrentIfAny: true)
                                 })]), nil)
                             }
                         })
@@ -968,14 +968,14 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                         }),
                         ActionSheetButtonItem(title: presentationData.strings.UserInfo_PhoneCall, action: {
                             dismissAction()
-                            context.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
+                            context.sharedContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
                         }),
                     ]),
                     ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
                     ])
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             } else {
-                context.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
+                context.sharedContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
             }
         })
     }, aboutLinkAction: { action, itemLink in
@@ -1035,7 +1035,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
         if number.isEmpty {
             return .single([])
         } else {
-            return context.contactDataManager.basicDataForNormalizedPhoneNumber(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(number)))
+            return context.sharedContext.contactDataManager?.basicDataForNormalizedPhoneNumber(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(number))) ?? .single([])
         }
     }
     
@@ -1112,12 +1112,14 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                                     guard let peer = peer as? TelegramUser, let phone = peer.phone, !phone.isEmpty else {
                                         return .complete()
                                     }
-                                    return context.contactDataManager.basicDataForNormalizedPhoneNumber(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
+                                    return (context.sharedContext.contactDataManager?.basicDataForNormalizedPhoneNumber(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone))) ?? .single([]))
                                     |> take(1)
                                     |> mapToSignal { records -> Signal<Void, NoError> in
                                         var signals: [Signal<DeviceContactExtendedData?, NoError>] = []
-                                        for (id, basicData) in records {
-                                            signals.append(context.contactDataManager.appendContactData(DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: basicData.phoneNumbers), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: []), to: id))
+                                        if let contactDataManager = context.sharedContext.contactDataManager {
+                                            for (id, basicData) in records {
+                                                signals.append(contactDataManager.appendContactData(DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: basicData.phoneNumbers), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: []), to: id))
+                                            }
                                         }
                                         return combineLatest(signals)
                                         |> mapToSignal { _ -> Signal<Void, NoError> in

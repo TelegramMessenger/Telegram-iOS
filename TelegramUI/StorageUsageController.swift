@@ -279,7 +279,7 @@ func storageUsageController(context: AccountContext, isModal: Bool = false) -> V
     
     let statsPromise = Promise<CacheUsageStatsResult?>()
     let resetStats: () -> Void = {
-        let containerPath = context.applicationBindings.containerPath
+        let containerPath = context.sharedContext.applicationBindings.containerPath
         let additionalPaths: [String] = [
             NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)[0],
             containerPath + "/Documents/files",
@@ -289,7 +289,7 @@ func storageUsageController(context: AccountContext, isModal: Bool = false) -> V
             containerPath + "/Documents/tempcache_v1/store",
         ]
         statsPromise.set(.single(nil)
-        |> then(collectCacheUsageStats(account: context.account, additionalCachePaths: additionalPaths, logFilesPath: context.applicationBindings.containerPath + "/telegram-data/logs")
+        |> then(collectCacheUsageStats(account: context.account, additionalCachePaths: additionalPaths, logFilesPath: context.sharedContext.applicationBindings.containerPath + "/telegram-data/logs")
         |> map(Optional.init)))
     }
     resetStats()

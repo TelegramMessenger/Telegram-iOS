@@ -249,7 +249,7 @@ func openChatMessage(context: AccountContext, message: Message, standalone: Bool
                     }
                     playerType = (file.isVoice || file.isInstantVideo) ? .voice : .music
                 }
-                context.mediaManager.setPlaylist(PeerMessagesMediaPlaylist(postbox: context.account.postbox, network: context.account.network, location: location), type: playerType)
+                context.sharedContext.mediaManager.setPlaylist((context.account, PeerMessagesMediaPlaylist(postbox: context.account.postbox, network: context.account.network, location: location)), type: playerType)
                 return true
             case let .gallery(gallery):
                 dismissInput()
@@ -319,7 +319,7 @@ func openChatMessage(context: AccountContext, message: Message, standalone: Bool
                         }
                         items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_PhoneCall, action: {
                             dismissAction()
-                            account.telegramApplicationContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(contact.phoneNumber).replacingOccurrences(of: " ", with: ""))")
+                            account.telegramApplicationcontext.sharedContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(contact.phoneNumber).replacingOccurrences(of: " ", with: ""))")
                         }))
                         controller.setItemGroups([
                             ActionSheetItemGroup(items: items),

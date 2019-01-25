@@ -100,8 +100,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat)?
     
-    init(postbox: Postbox, theme: PresentationTheme, status: Signal<SharedMediaPlayerItemPlaybackStateOrLoading?, NoError>) {
-        self.postbox = postbox
+    init(account: Account, theme: PresentationTheme, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError>) {
+        self.postbox = account.postbox
         self.theme = theme
         
         self.backgroundNode = ASImageNode()
@@ -180,21 +180,23 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         self.addSubnode(self.separatorNode)
         
+        let accountId = account.id
         let delayedStatus = status
-        |> mapToSignal { value -> Signal<SharedMediaPlayerItemPlaybackStateOrLoading?, NoError> in
-            guard let value = value else {
+        |> mapToSignal { value -> Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError> in
+            guard let value = value, value.0.id == accountId else {
                 return .single(nil)
             }
-            switch value {
+            switch value.1 {
                 case .state:
                     return .single(value)
                 case .loading:
-                    return .single(value) |> delay(0.1, queue: .mainQueue())
+                    return .single(value)
+                    |> delay(0.1, queue: .mainQueue())
             }
         }
         
         let mappedStatus = combineLatest(delayedStatus, self.scrubberNode.scrubbingTimestamp) |> map { value, scrubbingTimestamp -> MediaPlayerStatus in
-            if let valueOrLoading = value, case let .state(value) = valueOrLoading {
+            if let (_, valueOrLoading) = value, case let .state(value) = valueOrLoading {
                 return MediaPlayerStatus(generationTimestamp: value.status.generationTimestamp, duration: value.status.duration, dimensions: value.status.dimensions, timestamp: scrubbingTimestamp ?? value.status.timestamp, baseRate: value.status.baseRate, seekId: value.status.seekId, status: value.status.status)
             } else {
                 return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
@@ -208,7 +210,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
                 var valueItemId: SharedMediaPlaylistItemId?
-                if let value = value, case let .state(state) = value {
+                if let (_, value) = value, case let .state(state) = value {
                     valueItemId = state.item.id
                 }
                 if !areSharedMediaPlaylistItemIdsEqual(valueItemId, strongSelf.currentItemId) {
@@ -217,7 +219,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 }
                 strongSelf.shareNode.isHidden = false
                 var displayData: SharedMediaPlaybackDisplayData?
-                if let valueOrLoading = value, case let .state(value) = valueOrLoading {
+                if let (_, valueOrLoading) = value, case let .state(value) = valueOrLoading {
                     let isPaused: Bool
                     switch value.status.status {
                         case .playing:
@@ -278,12 +280,12 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 if strongSelf.displayData != displayData {
                     strongSelf.displayData = displayData
                     
-                    if let valueOrLoading = value, case let .state(value) = valueOrLoading, let source = value.item.playbackData?.source {
+                    if let (_, valueOrLoading) = value, case let .state(value) = valueOrLoading, let source = value.item.playbackData?.source {
                         switch source {
                             case let .telegramFile(fileReference):
                                 strongSelf.currentFileReference = fileReference
                                 if let size = fileReference.media.size {
-                                    strongSelf.scrubberNode.bufferingStatus = postbox.mediaBox.resourceRangesStatus(fileReference.media.resource)
+                                    strongSelf.scrubberNode.bufferingStatus = strongSelf.postbox.mediaBox.resourceRangesStatus(fileReference.media.resource)
                                     |> map { ranges -> (IndexSet, Int) in
                                         return (ranges, size)
                                     }

@@ -289,7 +289,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.footerContentNode.scrubberView = nil
             }
             
-            let mediaManager = item.context.mediaManager
+            let mediaManager = item.context.sharedContext.mediaManager
             
             let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
             let videoSize = CGSize(width: item.content.dimensions.width * 2.0, height: item.content.dimensions.height * 2.0)
@@ -537,7 +537,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let transform = CATransform3DScale(videoNode.layer.transform, transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height, 1.0)
             videoNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: videoNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
             
-            self.context.mediaManager.setOverlayVideoNode(nil)
+            self.context.sharedContext.mediaManager.setOverlayVideoNode(nil)
         } else {
             var transformedFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view)
             let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view.superview)
@@ -813,9 +813,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         if let item = self.item, let _ = self.videoNode {
             let context = self.context
             let baseNavigationController = self.baseNavigationController()
-            let mediaManager = self.context.mediaManager
+            let mediaManager = self.context.sharedContext.mediaManager
             var expandImpl: (() -> Void)?
-            let overlayNode = OverlayUniversalVideoNode(postbox: self.context.account.postbox, audioSession: context.mediaManager.audioSession, manager: context.mediaManager.universalVideoManager, content: item.content, expand: {
+            let overlayNode = OverlayUniversalVideoNode(postbox: self.context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, content: item.content, expand: {
                 expandImpl?()
             }, close: { [weak mediaManager] in
                 mediaManager?.setOverlayVideoNode(nil)
@@ -844,7 +844,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     overlaySupernode?.view.addSubview(view)
                                     overlayNode?.canAttachContent = false
                                 })
-                            } else if let info = context.mediaManager.galleryHiddenMediaManager.findTarget(messageId: id, media: media) {
+                            } else if let info = context.sharedContext.mediaManager.galleryHiddenMediaManager.findTarget(messageId: id, media: media) {
                                 return GalleryTransitionArguments(transitionNode: (info.1, info.2), addToTransitionSurface: info.0)
                             }
                             return nil
@@ -853,7 +853,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         break
                 }
             }
-            context.mediaManager.setOverlayVideoNode(overlayNode)
+            context.sharedContext.mediaManager.setOverlayVideoNode(overlayNode)
             if overlayNode.supernode != nil {
                 self.beginCustomDismiss()
                 self.animateOut(toOverlay: overlayNode, completion: { [weak self] in

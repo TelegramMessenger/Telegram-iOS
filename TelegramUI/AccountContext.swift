@@ -60,21 +60,17 @@ public final class TelegramApplicationBindings {
 }
 
 public final class AccountContext {
+    public let sharedContext: SharedAccountContext
     public let account: Account
     
-    public let applicationBindings: TelegramApplicationBindings
-    public let accountManager: AccountManager
     public let fetchManager: FetchManager
     public var callManager: PresentationCallManager?
     
     public var keyShortcutsController: KeyShortcutsController?
     
-    public let mediaManager: MediaManager
+    let downloadedMediaStoreManager: DownloadedMediaStoreManager
     
-    let locationManager: DeviceLocationManager?
     public let liveLocationManager: LiveLocationManager?
-    
-    public let contactDataManager = DeviceContactDataManager()
     
     let peerChannelMemberCategoriesContextsManager = PeerChannelMemberCategoriesContextsManager()
     
@@ -123,43 +119,36 @@ public final class AccountContext {
     
     public var isCurrent: Bool = false {
         didSet {
-            self.mediaManager.isCurrent = self.isCurrent
             if !self.isCurrent {
                 self.callManager = nil
             }
         }
     }
     
-    public init(account: Account, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, postbox: Postbox) {
+    public init(sharedContext: SharedAccountContext, account: Account, initialPresentationDataAndSettings: InitialPresentationDataAndSettings) {
+        self.sharedContext = sharedContext
         self.account = account
         
-        self.mediaManager = MediaManager(postbox: postbox, inForeground: applicationBindings.applicationInForeground)
+        self.downloadedMediaStoreManager = DownloadedMediaStoreManager(postbox: account.postbox)
         
-        if applicationBindings.isMainApp {
-            self.locationManager = DeviceLocationManager(queue: Queue.mainQueue())
-        } else {
-            self.locationManager = nil
-        }
-        if let locationManager = self.locationManager {
-            self.liveLocationManager = LiveLocationManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, viewTracker: account.viewTracker, stateManager: account.stateManager, locationManager: locationManager, inForeground: applicationBindings.applicationInForeground)
+        if let locationManager = self.sharedContext.locationManager {
+            self.liveLocationManager = LiveLocationManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, viewTracker: account.viewTracker, stateManager: account.stateManager, locationManager: locationManager, inForeground: self.sharedContext.applicationBindings.applicationInForeground)
         } else {
             self.liveLocationManager = nil
         }
-        self.applicationBindings = applicationBindings
-        self.accountManager = accountManager
-        self.fetchManager = FetchManager(postbox: postbox, storeManager: self.mediaManager.downloadedMediaStoreManager)
+        self.fetchManager = FetchManager(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager)
         self.currentPresentationData = Atomic(value: initialPresentationDataAndSettings.presentationData)
         self.currentAutomaticMediaDownloadSettings = Atomic(value: initialPresentationDataAndSettings.automaticMediaDownloadSettings)
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)
        
         self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData)
-        |> then(updatedPresentationData(postbox: account.postbox, applicationBindings: applicationBindings)))
+        |> then(updatedPresentationData(postbox: account.postbox, applicationBindings: self.sharedContext.applicationBindings)))
         self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings) |> then(updatedAutomaticMediaDownloadSettings(postbox: account.postbox)))
         
         self.currentInAppNotificationSettings = Atomic(value: initialPresentationDataAndSettings.inAppNotificationSettings)
         
         let inAppPreferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.inAppNotificationSettings]))
-        inAppNotificationSettingsDisposable = (postbox.combinedView(keys: [inAppPreferencesKey]) |> deliverOnMainQueue).start(next: { [weak self] views in
+        inAppNotificationSettingsDisposable = (account.postbox.combinedView(keys: [inAppPreferencesKey]) |> deliverOnMainQueue).start(next: { [weak self] views in
             if let strongSelf = self {
                 if let view = views.views[inAppPreferencesKey] as? PreferencesView {
                     if let settings = view.values[ApplicationSpecificPreferencesKeys.inAppNotificationSettings] as? InAppNotificationSettings {
@@ -170,7 +159,7 @@ public final class AccountContext {
         })
         
         let mediaInputSettingsPreferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.mediaInputSettings]))
-        self.mediaInputSettingsDisposable = (postbox.combinedView(keys: [mediaInputSettingsPreferencesKey]) |> deliverOnMainQueue).start(next: { [weak self] views in
+        self.mediaInputSettingsDisposable = (account.postbox.combinedView(keys: [mediaInputSettingsPreferencesKey]) |> deliverOnMainQueue).start(next: { [weak self] views in
             if let strongSelf = self {
                 if let view = views.views[mediaInputSettingsPreferencesKey] as? PreferencesView {
                     if let settings = view.values[ApplicationSpecificPreferencesKeys.mediaInputSettings] as? MediaInputSettings {
@@ -223,15 +212,15 @@ public final class AccountContext {
         
         let immediateExperimentalUISettingsValue = self.immediateExperimentalUISettingsValue
         let _ = immediateExperimentalUISettingsValue.swap(initialPresentationDataAndSettings.experimentalUISettings)
-        self.experimentalUISettingsDisposable = (postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.experimentalUISettings])
+        self.experimentalUISettingsDisposable = (account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.experimentalUISettings])
         |> deliverOnMainQueue).start(next: { view in
             if let settings = view.values[ApplicationSpecificPreferencesKeys.experimentalUISettings] as? ExperimentalUISettings {
                 let _ = immediateExperimentalUISettingsValue.swap(settings)
             }
         })
         
-        let _ = self.contactDataManager.personNameDisplayOrder().start(next: { order in
-            let _ = updateContactSettingsInteractively(postbox: postbox, { settings in
+        let _ = self.sharedContext.contactDataManager?.personNameDisplayOrder().start(next: { order in
+            let _ = updateContactSettingsInteractively(postbox: account.postbox, { settings in
                 var settings = settings
                 settings.nameDisplayOrder = order
                 return settings
@@ -247,7 +236,7 @@ public final class AccountContext {
     }
     
     public func attachOverlayMediaController(_ controller: OverlayMediaController) {
-        self.mediaManager.overlayMediaManager.attachOverlayMediaController(controller)
+        self.sharedContext.mediaManager.overlayMediaManager.attachOverlayMediaController(controller)
     }
     
     public func storeSecureIdPassword(password: String) {

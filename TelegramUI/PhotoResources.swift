@@ -1705,7 +1705,7 @@ public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoRef
         return fetchedMediaResource(postbox: context.account.postbox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image, reportResultStatus: true)
         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
             if case .remote = type, let peerType = storeToDownloadsPeerType {
-                return storeDownloadedMedia(storeManager: context.mediaManager.downloadedMediaStoreManager, media: photoReference.abstract, peerType: peerType)
+                return storeDownloadedMedia(storeManager: context.downloadedMediaStoreManager, media: photoReference.abstract, peerType: peerType)
                 |> introduceError(FetchResourceError.self)
                 |> mapToSignal { _ -> Signal<FetchResourceSourceType, FetchResourceError> in
                     return .complete()

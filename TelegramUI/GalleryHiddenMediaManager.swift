@@ -4,12 +4,12 @@ import SwiftSignalKit
 import AsyncDisplayKit
 
 enum GalleryHiddenMediaId: Hashable {
-    case chat(MessageId, Media)
+    case chat(AccountRecordId, MessageId, Media)
     
     static func ==(lhs: GalleryHiddenMediaId, rhs: GalleryHiddenMediaId) -> Bool {
         switch lhs {
-            case let .chat(lhsMessageId, lhsMedia):
-                if case let .chat(rhsMessageId, rhsMedia) = rhs, lhsMessageId == rhsMessageId, lhsMedia.isEqual(to: rhsMedia) {
+            case let .chat(lhsAccountId ,lhsMessageId, lhsMedia):
+                if case let .chat(rhsAccountId, rhsMessageId, rhsMedia) = rhs, lhsAccountId == rhsAccountId, lhsMessageId == rhsMessageId, lhsMedia.isEqual(to: rhsMedia) {
                         return true
                     } else {
                         return false
@@ -19,7 +19,7 @@ enum GalleryHiddenMediaId: Hashable {
     
     var hashValue: Int {
         switch self {
-            case let .chat(messageId, _):
+            case let .chat(_, messageId, _):
                 return messageId.hashValue
         }
     }

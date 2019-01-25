@@ -16,7 +16,7 @@ func presentContactsWarningSuppression(context: AccountContext, present: (ViewCo
                 case .notDetermined:
                     DeviceAccess.authorizeAccess(to: .contacts, context: context)
                 case .denied, .restricted:
-                    context.applicationBindings.openSettings()
+                    context.sharedContext.applicationBindings.openSettings()
                 default:
                     break
             }

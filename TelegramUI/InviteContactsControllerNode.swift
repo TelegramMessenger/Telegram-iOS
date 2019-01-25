@@ -350,7 +350,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
         }
         
         let currentSortedContacts = self.currentSortedContacts
-        let sortedContacts: Signal<[(DeviceContactStableId, DeviceContactBasicData, Int32)], NoError> = combineLatest(existingNumbers, context.contactDataManager.basicData() |> take(1))
+        let sortedContacts: Signal<[(DeviceContactStableId, DeviceContactBasicData, Int32)], NoError> = combineLatest(existingNumbers, (context.sharedContext.contactDataManager?.basicData() ?? .single([:])) |> take(1))
         |> mapToSignal { existingNumbers, contacts -> Signal<[(DeviceContactStableId, DeviceContactBasicData, Int32)], NoError> in
             var mappedContacts: [(String, [DeviceContactNormalizedPhoneNumber])] = []
             for (id, basicData) in contacts {

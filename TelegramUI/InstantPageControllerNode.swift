@@ -1215,7 +1215,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
             }
-            self.context.mediaManager.setPlaylist(InstantPageMediaPlaylist(webPage: webPage, items: medias, initialItemIndex: initialIndex), type: file.isVoice ? .voice : .music)
+            self.context.sharedContext.mediaManager.setPlaylist((self.context.account, InstantPageMediaPlaylist(webPage: webPage, items: medias, initialItemIndex: initialIndex)), type: file.isVoice ? .voice : .music)
             return
         }
         
@@ -1313,7 +1313,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }, openInSafari: { [weak self] in
                 if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                    strongSelf.context.applicationBindings.openUrl(content.url)
+                    strongSelf.context.sharedContext.applicationBindings.openUrl(content.url)
                 }
             })
             self.addSubnode(settingsNode)

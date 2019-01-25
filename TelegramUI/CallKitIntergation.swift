@@ -2,6 +2,7 @@ import Foundation
 import CallKit
 import AVFoundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 private var sharedProviderDelegate: AnyObject?
@@ -24,7 +25,7 @@ public final class CallKitIntegration {
         return self.audioSessionActivePromise.get()
     }
     
-    init?(startCall: @escaping (UUID, String) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
+    init?(startCall: @escaping (Account, UUID, String) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
         if !CallKitIntegration.isAvailable {
             return nil
         }
@@ -44,9 +45,9 @@ public final class CallKitIntegration {
         #endif
     }
     
-    func startCall(peerId: PeerId, displayTitle: String) {
+    func startCall(account: Account, peerId: PeerId, displayTitle: String) {
         if #available(iOSApplicationExtension 10.0, *) {
-            (sharedProviderDelegate as? CallKitProviderDelegate)?.startCall(peerId: peerId, displayTitle: displayTitle)
+            (sharedProviderDelegate as? CallKitProviderDelegate)?.startCall(account: account, peerId: peerId, displayTitle: displayTitle)
         }
     }
     
@@ -80,7 +81,9 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     private let provider: CXProvider
     private let callController = CXCallController()
     
-    private var startCall: ((UUID, String) -> Signal<Bool, NoError>)?
+    private var currentStartCallAccount: (UUID, Account)?
+    
+    private var startCall: ((Account, UUID, String) -> Signal<Bool, NoError>)?
     private var answerCall: ((UUID) -> Void)?
     private var endCall: ((UUID) -> Signal<Bool, NoError>)?
     private var setCallMuted: ((UUID, Bool) -> Void)?
@@ -98,7 +101,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         self.provider.setDelegate(self, queue: nil)
     }
     
-    func setup(audioSessionActivePromise: ValuePromise<Bool>, startCall: @escaping (UUID, String) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
+    func setup(audioSessionActivePromise: ValuePromise<Bool>, startCall: @escaping (Account, UUID, String) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
         self.audioSessionActivePromise = audioSessionActivePromise
         self.startCall = startCall
         self.answerCall = answerCall
@@ -144,8 +147,9 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         
     }
     
-    func startCall(peerId: PeerId, displayTitle: String) {
+    func startCall(account: Account, peerId: PeerId, displayTitle: String) {
         let uuid = UUID()
+        self.currentStartCallAccount = (uuid, account)
         let handle = CXHandle(type: .generic, value: "\(peerId.id)")
         let startCallAction = CXStartCallAction(call: uuid, handle: handle)
         startCallAction.contactIdentifier = displayTitle
@@ -192,13 +196,14 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     func provider(_ provider: CXProvider, perform action: CXStartCallAction) {
-        guard let startCall = self.startCall else {
+        guard let startCall = self.startCall, let (uuid, account) = self.currentStartCallAccount, uuid == action.callUUID else {
             action.fail()
             return
         }
+        self.currentStartCallAccount = nil
         let disposable = MetaDisposable()
         self.disposableSet.add(disposable)
-        disposable.set((startCall(action.callUUID, action.handle.value)
+        disposable.set((startCall(account, action.callUUID, action.handle.value)
         |> deliverOnMainQueue
         |> afterDisposed { [weak self, weak disposable] in
             if let strongSelf = self, let disposable = disposable {

@@ -772,7 +772,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                     ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.UserInfo_TelegramCall, action: {
                             dismissAction()
-                            let callResult = context.callManager?.requestCall(peerId: user.id, endCurrentIfAny: false)
+                            let callResult = context.callManager?.requestCall(account: context.account, peerId: user.id, endCurrentIfAny: false)
                             if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                                 if currentPeerId == user.id {
                                     context.navigateToCurrentCall?()
@@ -783,7 +783,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                                         } |> deliverOnMainQueue).start(next: { peer, current in
                                             if let peer = peer, let current = current {
                                                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                                    let _ = context.callManager?.requestCall(peerId: peer.id, endCurrentIfAny: true)
+                                                    let _ = context.callManager?.requestCall(account: context.account, peerId: peer.id, endCurrentIfAny: true)
                                                 })]), nil)
                                             }
                                         })
@@ -792,14 +792,14 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                         }),
                         ActionSheetButtonItem(title: presentationData.strings.UserInfo_PhoneCall, action: {
                             dismissAction()
-                            context.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
+                            context.sharedContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
                         }),
                     ]),
                     ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
                 ])
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             } else {
-                context.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
+                context.sharedContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
             }
         })
     }
@@ -968,19 +968,21 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                         state.savingData = true
                         return state
                     }
-                    let _ = (context.contactDataManager.createContactWithData(composedContactData)
-                    |> deliverOnMainQueue).start(next: { contactIdAndData in
-                        updateState { state in
-                            var state = state
-                            state.savingData = false
-                            return state
-                        }
-                        if let contactIdAndData = contactIdAndData {
-                            //completion(nil, contactIdAndData.0, contactIdAndData.1)
-                        }
-                        completed?()
-                        dismissImpl?(true)
-                    })
+                    if let contactDataManager = context.sharedContext.contactDataManager {
+                        let _ = (contactDataManager.createContactWithData(composedContactData)
+                        |> deliverOnMainQueue).start(next: { contactIdAndData in
+                            updateState { state in
+                                var state = state
+                                state.savingData = false
+                                return state
+                            }
+                            if let contactIdAndData = contactIdAndData {
+                                //completion(nil, contactIdAndData.0, contactIdAndData.1)
+                            }
+                            completed?()
+                            dismissImpl?(true)
+                        })
+                    }
                 }
             })
         }
@@ -1121,7 +1123,7 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
                     guard let contact = contact as? TelegramUser, let phoneNumber = contact.phone else {
                         return
                     }
-                    dataSignal = context.contactDataManager.basicData()
+                    dataSignal = (context.sharedContext.contactDataManager?.basicData() ?? .single([:]))
                     |> take(1)
                     |> mapToSignal { basicData -> Signal<(Peer?, DeviceContactStableId?), NoError> in
                         var stableId: String?
@@ -1147,30 +1149,32 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
                     })), in: .window(.root))
                     return
                 }
-                let _ = (context.contactDataManager.appendContactData(contactData, to: stableId)
-                |> deliverOnMainQueue).start(next: { contactData in
-                    guard let contactData = contactData else {
-                        return
-                    }
-                    let _ = (context.account.postbox.contactPeersView(accountPeerId: nil, includePresences: false)
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { view in
-                        let phones = Set<String>(contactData.basicData.phoneNumbers.map {
-                            return formatPhoneNumber($0.value)
-                        })
-                        var foundPeer: Peer?
-                        for peer in view.peers {
-                            if let user = peer as? TelegramUser, let phone = user.phone {
-                                let phone = formatPhoneNumber(phone)
-                                if phones.contains(phone) {
-                                    foundPeer = peer
-                                    break
+                if let contactDataManager = context.sharedContext.contactDataManager {
+                    let _ = (contactDataManager.appendContactData(contactData, to: stableId)
+                    |> deliverOnMainQueue).start(next: { contactData in
+                        guard let contactData = contactData else {
+                            return
+                        }
+                        let _ = (context.account.postbox.contactPeersView(accountPeerId: nil, includePresences: false)
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { view in
+                            let phones = Set<String>(contactData.basicData.phoneNumbers.map {
+                                return formatPhoneNumber($0.value)
+                            })
+                            var foundPeer: Peer?
+                            for peer in view.peers {
+                                if let user = peer as? TelegramUser, let phone = user.phone {
+                                    let phone = formatPhoneNumber(phone)
+                                    if phones.contains(phone) {
+                                        foundPeer = peer
+                                        break
+                                    }
                                 }
                             }
-                        }
-                        completion(foundPeer, stableId, contactData)
+                            completion(foundPeer, stableId, contactData)
+                        })
                     })
-                })
+                }
             })
         }
     })

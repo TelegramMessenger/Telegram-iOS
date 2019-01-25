@@ -151,7 +151,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 videoNode.removeFromSupernode()
             }
             
-            let mediaManager = item.context.mediaManager
+            let mediaManager = item.context.sharedContext.mediaManager
             
             let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
             let videoSize = CGSize(width: item.content.dimensions.width * 2.0, height: item.content.dimensions.height * 2.0)
@@ -293,7 +293,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let transform = CATransform3DScale(videoNode.layer.transform, transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height, 1.0)
             videoNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: videoNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
             
-            self.context.mediaManager.setOverlayVideoNode(nil)
+            self.context.sharedContext.mediaManager.setOverlayVideoNode(nil)
         } else {
             var transformedFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view)
             let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view.superview)

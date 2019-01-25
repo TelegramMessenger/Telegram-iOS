@@ -859,7 +859,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                         }
                 case .playbackStatus:
                     if let context = self.context {
-                        context.mediaManager.playlistControl(.playback(.togglePlayPause))
+                        context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause))
                     }
             }
         }
