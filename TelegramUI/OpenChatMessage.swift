@@ -109,7 +109,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                     }
                     #if DEBUG
                     if ext == "mkv" {
-                        let gallery = GalleryController(account: account, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                        let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                             navigationController?.replaceTopController(controller, animated: false, ready: ready)
                             }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
                         return .gallery(gallery)
