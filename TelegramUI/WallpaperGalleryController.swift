@@ -15,7 +15,7 @@ enum WallpaperListType {
 enum WallpaperListSource {
     case list(wallpapers: [TelegramWallpaper], central: TelegramWallpaper, type: WallpaperListType)
     case wallpaper(TelegramWallpaper, WallpaperPresentationOptions?)
-    case slug(String, TelegramMediaFile?, WallpaperPresentationOptions?)
+    case slug(String, TelegramMediaFile?, WallpaperPresentationOptions?, UIColor?, Int32?)
     case asset(PHAsset)
     case contextResult(ChatContextResult)
     case customColor(Int32?)
@@ -129,9 +129,19 @@ class WallpaperGalleryController: ViewController {
                 if case let .wallpapers(wallpaperOptions) = type, let options = wallpaperOptions {
                     self.initialOptions = options
                 }
-            case let .slug(slug, file, options):
+            case let .slug(slug, file, options, color, intensity):
                 if let file = file {
-                    self.entries = [.wallpaper(.file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: false, slug: slug, file: file, settings: WallpaperSettings()))]
+                    let isPattern = file.mimeType == "image/png"
+                    var colorValue: Int32?
+                    var intensityValue: Int32?
+                    if let color = color {
+                        colorValue = Int32(bitPattern: color.rgb)
+                        intensityValue = intensity
+                    } else {
+                        colorValue = 0xd6e2ee
+                        intensityValue = 50
+                    }
+                    self.entries = [.wallpaper(.file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: isPattern, slug: slug, file: file, settings: WallpaperSettings(blur: false, motion: false, color: colorValue, intensity: intensityValue)))]
                     self.centralEntryIndex = 0
                     self.initialOptions = options
                 }
@@ -193,7 +203,7 @@ class WallpaperGalleryController: ViewController {
         
         self.centralItemAttributesDisposable.add(self.centralItemAction.get().start(next: { [weak self] barButton in
             if let strongSelf = self {
-                strongSelf.navigationItem.setRightBarButton(barButton, animated: true)
+                strongSelf.navigationItem.rightBarButtonItem = barButton
             }
         }))
     }
@@ -225,11 +235,6 @@ class WallpaperGalleryController: ViewController {
     }
     
     private func updateTransaction(entries: [WallpaperGalleryEntry], arguments: WallpaperGalleryItemArguments) -> GalleryPagerTransaction {
-        var colors = false
-        if case let .list(_, _, type) = self.source, case .colors = type {
-            colors = true
-        }
-        
         var i: Int = 0
         var updateItems: [GalleryPagerUpdateItem] = []
         for entry in entries {
@@ -315,39 +320,6 @@ class WallpaperGalleryController: ViewController {
         self.colorPanelNode = colorPanelNode
         overlayNode.addSubnode(colorPanelNode)
         
-        let patternPanelNode = WallpaperPatternPanelNode(account: self.account, theme: presentationData.theme)
-        patternPanelNode.patternChanged = { [weak self] pattern in
-            if let strongSelf = self, strongSelf.validLayout != nil {
-                var updatedEntries: [WallpaperGalleryEntry] = []
-                for entry in strongSelf.entries {
-                    var entryColor: Int32?
-                    if case let .wallpaper(wallpaper) = entry {
-                        if case let .color(color) = wallpaper {
-                            entryColor = color
-                        } else if case let .file(file) = wallpaper {
-                            entryColor = file.settings.color
-                        }
-                    }
-                    
-                    if let entryColor = entryColor {
-                        if case let .file(file) = pattern {
-                            let newSettings = WallpaperSettings(blur: file.settings.blur, motion: file.settings.motion, color: entryColor, intensity: 100)
-                            let newWallpaper = TelegramWallpaper.file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, slug: file.slug, file: file.file, settings: newSettings)
-                            updatedEntries.append(.wallpaper(newWallpaper))
-                        } else {
-                            let newWallpaper = TelegramWallpaper.color(entryColor)
-                            updatedEntries.append(.wallpaper(newWallpaper))
-                        }
-                    }
-                }
-                
-                strongSelf.entries = updatedEntries
-                strongSelf.galleryNode.pager.transaction(strongSelf.updateTransaction(entries: updatedEntries, arguments: WallpaperGalleryItemArguments(colorPreview: false, isColorsList: true, patternEnabled: strongSelf.patternPanelEnabled)))
-            }
-        }
-        self.patternPanelNode = patternPanelNode
-        overlayNode.addSubnode(patternPanelNode)
-        
         let toolbarNode = WallpaperGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings)
         self.toolbarNode = toolbarNode
         overlayNode.addSubnode(toolbarNode)
@@ -395,8 +367,8 @@ class WallpaperGalleryController: ViewController {
                                         })
                                     }
                                 } else {
-                                    if case let .file(file) = wallpaper, file.isPattern, let color = file.settings.color {
-                                        let _ = strongSelf.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color), complete: true, fetch: true).start(completed: {
+                                    if case let .file(file) = wallpaper, file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
+                                        let _ = strongSelf.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true).start(completed: {
                                             completion()
                                         })
                                     } else {
@@ -447,6 +419,11 @@ class WallpaperGalleryController: ViewController {
                     strongSelf.patternPanelEnabled = enabled
                     strongSelf.galleryNode.scrollView.isScrollEnabled = !enabled
                     strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
+                    if enabled {
+                        strongSelf.patternPanelNode?.didAppear()
+                    } else {
+                        strongSelf.updateEntries(pattern: .color(0), preview: false)
+                    }
                 }
             }
             node.requestColorPanel = { [weak self] color in
@@ -458,10 +435,49 @@ class WallpaperGalleryController: ViewController {
                 }
             }
             
-//            if let (layout, _) = self.validLayout {
-//                self.containerLayoutUpdated(layout, transition: animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate)
-//            }
+            if let entry = node.entry, case let .wallpaper(wallpaper) = entry {
+                var entryColor: UIColor = .white
+                switch wallpaper {
+                    case let .color(color):
+                        entryColor = UIColor(rgb: UInt32(bitPattern: color))
+                    case let .file(file):
+                        if let color = file.settings.color {
+                            entryColor = UIColor(rgb: UInt32(bitPattern: color))
+                        }
+                    default:
+                        break
+                }
+                self.patternPanelNode?.color = entryColor
+            }
         }
+    }
+    
+    private func updateEntries(pattern: TelegramWallpaper, intensity: Int32? = nil, preview: Bool = false) {
+        var updatedEntries: [WallpaperGalleryEntry] = []
+        for entry in self.entries {
+            var entryColor: Int32?
+            if case let .wallpaper(wallpaper) = entry {
+                if case let .color(color) = wallpaper {
+                    entryColor = color
+                } else if case let .file(file) = wallpaper {
+                    entryColor = file.settings.color
+                }
+            }
+            
+            if let entryColor = entryColor {
+                if case let .file(file) = pattern {
+                    let newSettings = WallpaperSettings(blur: file.settings.blur, motion: file.settings.motion, color: entryColor, intensity: intensity)
+                    let newWallpaper = TelegramWallpaper.file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, slug: file.slug, file: file.file, settings: newSettings)
+                    updatedEntries.append(.wallpaper(newWallpaper))
+                } else {
+                    let newWallpaper = TelegramWallpaper.color(entryColor)
+                    updatedEntries.append(.wallpaper(newWallpaper))
+                }
+            }
+        }
+        
+        self.entries = updatedEntries
+        self.galleryNode.pager.transaction(self.updateTransaction(entries: updatedEntries, arguments: WallpaperGalleryItemArguments(colorPreview: preview, isColorsList: true, patternEnabled: self.patternPanelEnabled)))
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -570,17 +586,30 @@ class WallpaperGalleryController: ViewController {
             colorPanelNode.updateLayout(size: colorPanelFrame.size, keyboardHeight: layout.inputHeight ?? 0.0, transition: transition)
         }
         
+        let currentPatternPanelNode: WallpaperPatternPanelNode
         if let patternPanelNode = self.patternPanelNode {
-            let panelHeight: CGFloat = 114.0
-            var patternPanelFrame = CGRect(x: 0.0, y: layout.size.height, width: layout.size.width, height: panelHeight)
-            if self.patternPanelEnabled {
-                patternPanelFrame.origin = CGPoint(x: 0.0, y: layout.size.height - bottomInset - panelHeight)
-                bottomInset += panelHeight
+            currentPatternPanelNode = patternPanelNode
+        } else {
+            let patternPanelNode = WallpaperPatternPanelNode(account: self.account, theme: presentationData.theme, strings: presentationData.strings)
+            patternPanelNode.patternChanged = { [weak self] pattern, intensity, preview in
+                if let strongSelf = self, strongSelf.validLayout != nil {
+                    strongSelf.updateEntries(pattern: pattern, intensity: intensity, preview: preview)
+                }
             }
-            
-            transition.updateFrame(node: patternPanelNode, frame: patternPanelFrame)
-            patternPanelNode.updateLayout(size: patternPanelFrame.size, transition: transition)
+            self.patternPanelNode = patternPanelNode
+            currentPatternPanelNode = patternPanelNode
+            self.overlayNode?.insertSubnode(patternPanelNode, belowSubnode: self.toolbarNode!)
         }
+        
+        let panelHeight: CGFloat = 190.0
+        var patternPanelFrame = CGRect(x: 0.0, y: layout.size.height, width: layout.size.width, height: panelHeight)
+        if self.patternPanelEnabled {
+            patternPanelFrame.origin = CGPoint(x: 0.0, y: layout.size.height - bottomInset - panelHeight)
+            bottomInset += panelHeight
+        }
+        
+        transition.updateFrame(node: currentPatternPanelNode, frame: patternPanelFrame)
+        currentPatternPanelNode.updateLayout(size: patternPanelFrame.size, transition: transition)
         
         if let messageNodes = self.messageNodes {
             var bottomOffset: CGFloat = layout.size.height - bottomInset - 9.0
@@ -615,24 +644,37 @@ class WallpaperGalleryController: ViewController {
             return
         }
         
-        var options = ""
-        if (itemNode.options.contains(.blur)) {
-            options = "?mode=blur"
-        }
-        if (itemNode.options.contains(.motion)) {
-            if options.isEmpty {
-                options = "?mode=motion"
-            } else {
-                options += "+motion"
-            }
-        }
-        
         var controller: ShareController?
         switch wallpaper {
-            case let .file(_, _, _, _, _, slug, _, _):
-                controller = ShareController(account: account, subject: .url("https://t.me/bg/\(slug)\(options)"))
+            case let .file(_, _, _, _, isPattern, slug, _, settings):
+                var options: [String] = []
+                if (itemNode.options.contains(.blur) && !isPattern) {
+                    if (itemNode.options.contains(.motion)) {
+                        options.append("mode=blur+motion")
+                    } else {
+                        options.append("mode=blur")
+                    }
+                } else if (itemNode.options.contains(.motion)) {
+                    options.append("mode=motion")
+                }
+                
+                if isPattern {
+                    if let color = settings.color {
+                        options.append("bg_color=\(UIColor(rgb: UInt32(bitPattern: color)).hexString)")
+                    }
+                    if let intensity = settings.intensity {
+                        options.append("intensity=\(intensity)")
+                    }
+                }
+                
+                var optionsString = ""
+                if !options.isEmpty {
+                    optionsString = "?\(options.joined(separator: "&"))"
+                }
+                
+                controller = ShareController(account: account, subject: .url("https://t.me/bg/\(slug)\(optionsString)"))
             case let .color(color):
-                controller = ShareController(account: account, subject: .url("https://t.me/bg/\(String(UInt32(bitPattern: color), radix: 16, uppercase: false).rightJustified(width: 6, pad: "0"))"))
+                controller = ShareController(account: account, subject: .url("https://t.me/bg/\(UIColor(rgb: UInt32(bitPattern: color)).hexString)"))
             default:
                 break
         }

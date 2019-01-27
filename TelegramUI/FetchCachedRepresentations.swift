@@ -338,7 +338,7 @@ private func fetchCachedBlurredWallpaperRepresentation(account: Account, resourc
 private func fetchCachedPatternWallpaperMaskRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedPatternWallpaperMaskRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            if let image = UIImage.convert(fromWebP: data) {
+            if let image = UIImage(data: data) {
                 var randomId: Int64 = 0
                 arc4random_buf(&randomId, 8)
                 let path = NSTemporaryDirectory() + "\(randomId)"
@@ -377,7 +377,7 @@ private func fetchCachedPatternWallpaperMaskRepresentation(account: Account, res
 private func fetchCachedPatternWallpaperRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedPatternWallpaperRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            if let image = UIImage.convert(fromWebP: data) {
+            if let image = UIImage(data: data) {
                 var randomId: Int64 = 0
                 arc4random_buf(&randomId, 8)
                 let path = NSTemporaryDirectory() + "\(randomId)"
@@ -386,7 +386,7 @@ private func fetchCachedPatternWallpaperRepresentation(account: Account, resourc
                 let size = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
                 
                 let backgroundColor = UIColor(rgb: UInt32(bitPattern: representation.color))
-                let foregroundColor = patternColor(for: backgroundColor)
+                let foregroundColor = patternColor(for: backgroundColor, intensity: CGFloat(representation.intensity) / 100.0)
                 
                 let colorImage = generateImage(size, contextGenerator: { size, c in
                     let rect = CGRect(origin: CGPoint(), size: size)

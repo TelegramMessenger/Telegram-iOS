@@ -277,7 +277,7 @@ private func patternWallpaperDatas(account: Account, representations: [ImageRepr
     }
 }
 
-func patternWallpaperImage(account: Account, representations: [ImageRepresentationWithReference], color: UIColor, mode: PatternWallpaperDrawMode, autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+func patternWallpaperImage(account: Account, representations: [ImageRepresentationWithReference], mode: PatternWallpaperDrawMode, autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = patternWallpaperDatas(account: account, representations: representations, mode: mode, autoFetchFullSize: autoFetchFullSize)
     
     var prominent = false
@@ -313,39 +313,49 @@ func patternWallpaperImage(account: Account, representations: [ImageRepresentati
                 }
             }
             
-            if fullSizeImage == nil {
-                let context = DrawingContext(size: arguments.drawingSize, scale: 1.0, clear: true)
+            if let combinedColor = arguments.emptyColor {
+                let color = combinedColor.withAlphaComponent(1.0)
+                let intensity = combinedColor.alpha
+                
+                if fullSizeImage == nil {
+                    let context = DrawingContext(size: arguments.drawingSize, scale: 1.0, clear: true)
+                    context.withFlippedContext { c in
+                        c.setBlendMode(.copy)
+                        c.setFillColor(color.cgColor)
+                        c.fill(arguments.drawingRect)
+                    }
+                    
+                    addCorners(context, arguments: arguments)
+                    
+                    return context
+                }
+                
+                let context = DrawingContext(size: arguments.drawingSize, scale: scale, clear: true)
                 context.withFlippedContext { c in
                     c.setBlendMode(.copy)
                     c.setFillColor(color.cgColor)
                     c.fill(arguments.drawingRect)
+                    
+                    if let fullSizeImage = fullSizeImage {
+                        c.setBlendMode(.normal)
+                        c.interpolationQuality = .medium
+                        c.clip(to: fittedRect, mask: fullSizeImage)
+                        c.setFillColor(patternColor(for: color, intensity: intensity, prominent: prominent).cgColor)
+                        c.fill(arguments.drawingRect)
+                    }
                 }
-                return context
-            }
-            
-            let context = DrawingContext(size: arguments.drawingSize, scale: scale, clear: true)
-            context.withFlippedContext { c in
-                c.setBlendMode(.copy)
-                c.setFillColor(color.cgColor)
-                c.fill(arguments.drawingRect)
                 
-                if let fullSizeImage = fullSizeImage {
-                    c.setBlendMode(.normal)
-                    c.interpolationQuality = .medium
-                    c.clip(to: fittedRect, mask: fullSizeImage)
-                    c.setFillColor(patternColor(for: color, prominent: prominent).cgColor)
-                    c.fill(arguments.drawingRect)
-                }
+                addCorners(context, arguments: arguments)
+                
+                return context
+            } else {
+                return nil
             }
-            
-            addCorners(context, arguments: arguments)
-            
-            return context
         }
     }
 }
 
-func patternColor(for color: UIColor, prominent: Bool = false) -> UIColor {
+func patternColor(for color: UIColor, intensity: CGFloat, prominent: Bool = false) -> UIColor {
     var hue:  CGFloat = 0.0
     var saturation: CGFloat = 0.0
     var brightness: CGFloat = 0.0
@@ -357,7 +367,7 @@ func patternColor(for color: UIColor, prominent: Bool = false) -> UIColor {
             brightness = max(0.0, min(1.0, 1.0 - brightness * 0.65))
         }
         saturation = min(1.0, saturation + 0.05 + 0.1 * (1.0 - saturation))
-        alpha = prominent ? 0.5 : 0.4
+        alpha = (prominent ? 0.5 : 0.4) * intensity
         return UIColor(hue: hue, saturation: saturation, brightness: brightness, alpha: alpha)
     }
     return .black

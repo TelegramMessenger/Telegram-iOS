@@ -11,7 +11,7 @@ enum ParsedInternalPeerUrlParameter {
 }
 
 enum WallpaperUrlParameter {
-    case slug(String, WallpaperPresentationOptions)
+    case slug(String, WallpaperPresentationOptions, UIColor?, Int32?)
     case color(UIColor)
 }
 
@@ -182,28 +182,30 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     } else {
                         var options: WallpaperPresentationOptions = []
                         var intensity: Int32?
-                        var color: Int32?
+                        var color: UIColor?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
-                                if let value = queryItem.value, queryItem.name == "mode" {
-                                    for option in value.components(separatedBy: "+") {
-                                        switch option.lowercased() {
-                                            case "motion":
-                                                options.insert(.motion)
-                                            case "blur":
-                                                options.insert(.blur)
-                                            case "intensity":
-                                                intensity = Int32(value)
-                                            case "color":
-                                                color = Int32(value)
-                                            default:
-                                                break
+                                if let value = queryItem.value{
+                                    if queryItem.name == "mode" {
+                                        for option in value.components(separatedBy: "+") {
+                                            switch option.lowercased() {
+                                                case "motion":
+                                                    options.insert(.motion)
+                                                case "blur":
+                                                    options.insert(.blur)
+                                                default:
+                                                    break
+                                            }
                                         }
+                                    } else if queryItem.name == "bg_color" {
+                                        color = UIColor(hexString: value)
+                                    } else if queryItem.name == "intensity" {
+                                        intensity = Int32(value)
                                     }
                                 }
                             }
                         }
-                        parameter = .slug(component, options)
+                        parameter = .slug(component, options, color, intensity)
                     }
                     return .wallpaper(parameter)
                 } else if let value = Int(pathComponents[1]) {

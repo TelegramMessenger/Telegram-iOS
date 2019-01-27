@@ -14,12 +14,25 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     private let topSeparatorNode: ASDisplayNode
     
     private let scrollNode: ASScrollNode
+    private let intensityNode: WallpaperIntensityPickerNode
     
     private var disposable: Disposable?
+    private var wallpapers: [TelegramWallpaper] = []
+    private var currentWallpaper: TelegramWallpaper?
     
-    var patternChanged: ((TelegramWallpaper) -> Void)?
+    var color: UIColor = .white {
+        didSet {
+            let color = patternColor(for: self.color, intensity: 1.0)
+            var min = self.color.hsv
+            var max = patternColor(for: self.color, intensity: 1.0).hsv
 
-    init(account: Account, theme: PresentationTheme) {
+            self.intensityNode.updateExtrema(min: min, max: max)
+        }
+    }
+    
+    var patternChanged: ((TelegramWallpaper, Int32?, Bool) -> Void)?
+
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
         
         self.backgroundNode = ASDisplayNode()
@@ -30,22 +43,27 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
      
         self.scrollNode = ASScrollNode()
         
+        self.intensityNode = WallpaperIntensityPickerNode(theme: theme, title: strings.WallpaperPreview_PatternIntensity, bordered: false)
+        self.intensityNode.value = 0.4
+            
         super.init()
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.topSeparatorNode)
         self.addSubnode(self.scrollNode)
+        self.addSubnode(self.intensityNode)
         
         self.disposable = ((telegramWallpapers(postbox: account.postbox, network: account.network)
         |> map { wallpapers in
             return wallpapers.filter { wallpaper in
-                if case let .file(file) = wallpaper, file.isPattern {
+                if case let .file(file) = wallpaper, file.isPattern, file.file.mimeType != "image/webp" {
                     return true
                 } else {
                     return false
                 }
             }
-        } |> deliverOnMainQueue).start(next: { [weak self] wallpapers in
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] wallpapers in
             if let strongSelf = self {
                 if let subnodes = strongSelf.scrollNode.subnodes {
                     for node in subnodes {
@@ -53,38 +71,52 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
                     }
                 }
                 
-                var wallpapers = wallpapers
-                wallpapers.insert(.color(0xd6e2ee), at: 0)
-                
+                var selected = true
                 for wallpaper in wallpapers {
-                    let node = SettingsThemeWallpaperNode()
+                    let node = SettingsThemeWallpaperNode(overlayBackgroundColor: UIColor(rgb: 0x748698, alpha: 0.4))
+                    node.clipsToBounds = true
+                    node.cornerRadius = 5.0
                     
                     var updatedWallpaper = wallpaper
-                    var isColor = false
                     if case let .file(file) = updatedWallpaper {
                         let settings = WallpaperSettings(blur: false, motion: false, color: 0xd6e2ee, intensity: 100)
                         updatedWallpaper = .file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, slug: file.slug, file: file.file, settings: settings)
-                    } else {
-                        isColor = true
                     }
                     
-                    node.setWallpaper(account: account, wallpaper: updatedWallpaper, selected: isColor, size: itemSize, cornerRadius: 5.0)
+                    node.setWallpaper(account: account, wallpaper: updatedWallpaper, selected: selected, size: itemSize)
                     node.pressed = { [weak self, weak node] in
                         if let strongSelf = self {
-                            strongSelf.patternChanged?(updatedWallpaper)
+                            strongSelf.currentWallpaper = updatedWallpaper
+                            strongSelf.patternChanged?(updatedWallpaper, Int32(strongSelf.intensityNode.value * 100), false)
                             if let subnodes = strongSelf.scrollNode.subnodes {
                                 for case let subnode as SettingsThemeWallpaperNode in subnodes {
-                                    subnode.setSelected(node === subnode)
+                                    subnode.setSelected(node === subnode, animated: true)
                                 }
                             }
                         }
                     }
                     strongSelf.scrollNode.addSubnode(node)
+                    
+                    selected = false
                 }
-                strongSelf.scrollNode.view.contentSize = CGSize(width: (itemSize.width + inset) * CGFloat(wallpapers.count) + inset, height: 114.0)
+                strongSelf.scrollNode.view.contentSize = CGSize(width: (itemSize.width + inset) * CGFloat(wallpapers.count) + inset, height: 190.0)
                 strongSelf.layoutItemNodes(transition: .immediate)
+                
+                strongSelf.wallpapers = wallpapers
             }
         }))
+        
+        self.intensityNode.valueChanged = { [weak self] value in
+            if let strongSelf = self, let wallpaper = strongSelf.currentWallpaper {
+                strongSelf.patternChanged?(wallpaper, strongSelf.intensityNode.intensity, true)
+            }
+        }
+        
+        self.intensityNode.valueChangeEnded = { [weak self] value in
+            if let strongSelf = self, let wallpaper = strongSelf.currentWallpaper {
+                strongSelf.patternChanged?(wallpaper, strongSelf.intensityNode.intensity, false)
+            }
+        }
     }
     
     deinit {
@@ -94,14 +126,26 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     override func didLoad() {
         super.didLoad()
         
+        self.scrollNode.view.showsHorizontalScrollIndicator = false
+        self.scrollNode.view.showsVerticalScrollIndicator = false
         self.scrollNode.view.alwaysBounceHorizontal = true
+    }
+    
+    func didAppear() {
+        if let wallpaper = self.wallpapers.first {
+            self.currentWallpaper = wallpaper
+            self.intensityNode.value = 0.4
+            
+            self.patternChanged?(wallpaper, self.intensityNode.intensity, false)
+        }
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         let separatorHeight = UIScreenPixel
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
         transition.updateFrame(node: self.topSeparatorNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: separatorHeight))
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+        transition.updateFrame(node: self.scrollNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: 114.0))
+        transition.updateFrame(node: self.intensityNode, frame: CGRect(x: 16.0, y: 114.0 + 13.0, width: size.width - 16.0 * 2.0, height: 50.0))
     
         self.layoutItemNodes(transition: transition)
     }

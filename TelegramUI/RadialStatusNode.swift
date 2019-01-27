@@ -207,6 +207,10 @@ public final class RadialStatusNode: ASControlNode {
                 contentNode.frame = self.bounds
                 contentNode.prepareAnimateIn(from: nil)
                 self.addSubnode(contentNode)
+                if animated, case .check = state, self.isNodeLoaded {
+                    contentNode.layout()
+                    contentNode.animateIn(from: fromState, delay: 0.0)
+                }
             }
             self.transitionToBackgroundColor(backgroundColor, previousContentNode: nil, animated: animated, completion: completion)
         }
@@ -232,7 +236,15 @@ public final class RadialStatusNode: ASControlNode {
                     backgroundNode.frame = self.bounds
                     self.backgroundNode = backgroundNode
                     self.insertSubnode(backgroundNode, at: 0)
-                    completion()
+                    
+                    if animated {
+                        backgroundNode.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2, removeOnCompletion: false)
+                        backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                            completion()
+                        })
+                    } else {
+                        completion()
+                    }
                 }
             } else if let backgroundNode = self.backgroundNode {
                 self.backgroundNode = nil

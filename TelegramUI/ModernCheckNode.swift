@@ -54,6 +54,9 @@ class ModernCheckNode: ASDisplayNode {
     
     var selected = false
     func setSelected(_ selected: Bool, animated: Bool = false) {
+        guard self.selected != selected else {
+            return
+        }
         self.selected = selected
         
         if selected && animated {
@@ -74,6 +77,7 @@ class ModernCheckNode: ASDisplayNode {
             animation.duration = 0.21
             self.pop_add(animation, forKey: "progress")
         } else {
+            self.pop_removeAllAnimations()
             self.animationProgress = selected ? 1.0 : 0.0
             self.setNeedsDisplay()
         }

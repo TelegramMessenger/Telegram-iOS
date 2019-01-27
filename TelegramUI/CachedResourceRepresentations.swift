@@ -128,18 +128,20 @@ final class CachedPatternWallpaperMaskRepresentation: CachedMediaResourceReprese
 
 final class CachedPatternWallpaperRepresentation: CachedMediaResourceRepresentation {
     let color: Int32
+    let intensity: Int32
     
     var uniqueId: String {
-        return "pattern-wallpaper-\(self.color)"
+        return "pattern-wallpaper-\(self.color)-\(self.intensity)"
     }
     
-    init(color: Int32) {
+    init(color: Int32, intensity: Int32) {
         self.color = color
+        self.intensity = intensity
     }
     
     func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
         if let to = to as? CachedPatternWallpaperRepresentation {
-            return self.color == to.color
+            return self.color == to.color && self.intensity == intensity
         } else {
             return false
         }

@@ -200,7 +200,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
             let signal: Signal<TelegramWallpaper, GetWallpaperError>
             var options: WallpaperPresentationOptions?
             switch parameter {
-                case let .slug(slug, wallpaperOptions):
+                case let .slug(slug, wallpaperOptions, color, intensity):
                     signal = getWallpaper(account: account, slug: slug)
                     options = wallpaperOptions
                     controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))

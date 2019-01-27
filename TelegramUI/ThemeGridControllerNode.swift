@@ -36,13 +36,13 @@ private func areWallpapersEqual(_ lhs: TelegramWallpaper, _ rhs: TelegramWallpap
 
 struct ThemeGridControllerNodeState: Equatable {
     let editing: Bool
-    var selectedIndices: Set<Int>
+    var selectedIndices: Set<Int64>
     
     func withUpdatedEditing(_ editing: Bool) -> ThemeGridControllerNodeState {
         return ThemeGridControllerNodeState(editing: editing, selectedIndices: editing ? self.selectedIndices : Set())
     }
     
-    func withUpdatedSelectedIndices(_ selectedIndices: Set<Int>) -> ThemeGridControllerNodeState {
+    func withUpdatedSelectedIndices(_ selectedIndices: Set<Int64>) -> ThemeGridControllerNodeState {
         return ThemeGridControllerNodeState(editing: self.editing, selectedIndices: selectedIndices)
     }
     
@@ -59,12 +59,12 @@ struct ThemeGridControllerNodeState: Equatable {
 
 final class ThemeGridControllerInteraction {
     let openWallpaper: (TelegramWallpaper) -> Void
-    let toggleWallpaperSelection: (Int, Bool) -> Void
+    let toggleWallpaperSelection: (Int64, Bool) -> Void
     let deleteSelectedWallpapers: () -> Void
     let shareSelectedWallpapers: () -> Void
-    var selectionState: (Bool, Set<Int>) = (false, Set())
+    var selectionState: (Bool, Set<Int64>) = (false, Set())
     
-    init(openWallpaper: @escaping (TelegramWallpaper) -> Void, toggleWallpaperSelection: @escaping (Int, Bool) -> Void, deleteSelectedWallpapers: @escaping () -> Void, shareSelectedWallpapers: @escaping () -> Void) {
+    init(openWallpaper: @escaping (TelegramWallpaper) -> Void, toggleWallpaperSelection: @escaping (Int64, Bool) -> Void, deleteSelectedWallpapers: @escaping () -> Void, shareSelectedWallpapers: @escaping () -> Void) {
         self.openWallpaper = openWallpaper
         self.toggleWallpaperSelection = toggleWallpaperSelection
         self.deleteSelectedWallpapers = deleteSelectedWallpapers
@@ -143,19 +143,52 @@ private func selectedWallpapers(entries: [ThemeGridControllerEntry]?, state: The
         return []
     }
 
-    var i = 0
-    if let entry = entries.first {
-        i = entry.index
-    }
-    
     var wallpapers: [TelegramWallpaper] = []
     for entry in entries {
-        if state.selectedIndices.contains(i) {
-            wallpapers.append(entry.wallpaper)
+        if case let .file(file) = entry.wallpaper {
+            if state.selectedIndices.contains(file.id) {
+                wallpapers.append(entry.wallpaper)
+            }
         }
-        i += 1
     }
     return wallpapers
+}
+
+private func isDarkWallpaper(_ wallpaper: TelegramWallpaper) -> Bool {
+    if case let .file(file) = wallpaper {
+        if let data = file.file.immediateThumbnailData {
+            let options = NSMutableDictionary()
+            options.setValue(1 as NSNumber, forKey: kCGImageSourceThumbnailMaxPixelSize as String)
+            options.setValue(true as NSNumber, forKey: kCGImageSourceCreateThumbnailFromImageAlways as String)
+            
+            let thumbnailData = decodeTinyThumbnail(data: data)
+            if let thumbnailData = thumbnailData, let imageSource = CGImageSourceCreateWithData(thumbnailData as CFData, nil), let image = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary) {
+                let pixelData = image.dataProvider!.data
+                let data: UnsafePointer<UInt8> = CFDataGetBytePtr(pixelData)
+                
+                let point = CGPoint()
+                let pixelInfo: Int = ((Int(image.width) * Int(point.y)) + Int(point.x)) * 4
+                let r = CGFloat(data[pixelInfo+1]) / CGFloat(255.0)
+                let g = CGFloat(data[pixelInfo+2]) / CGFloat(255.0)
+                let b = CGFloat(data[pixelInfo+3]) / CGFloat(255.0)
+                
+                let color = UIColor(red: r, green: g, blue: b, alpha: 1.0)
+                
+                var hue:  CGFloat = 0.0
+                var saturation: CGFloat = 0.0
+                var brightness: CGFloat = 0.0
+                var alpha: CGFloat = 0.0
+                if color.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) {
+                    if brightness > 0.5 {
+                        return false
+                    } else {
+                        return true
+                    }
+                }
+            }
+        }
+    }
+    return false
 }
 
 final class ThemeGridControllerNode: ASDisplayNode {
@@ -269,14 +302,14 @@ final class ThemeGridControllerNode: ASDisplayNode {
                     presentPreviewController(.list(wallpapers: wallpapers, central: wallpaper, type: .wallpapers(options)))
                 }
             }
-        }, toggleWallpaperSelection: { [weak self] index, value in
+        }, toggleWallpaperSelection: { [weak self] id, value in
             if let strongSelf = self {
                 strongSelf.updateState { current in
                     var updated = current.selectedIndices
                     if value {
-                        updated.insert(index)
+                        updated.insert(id)
                     } else {
-                        updated.remove(index)
+                        updated.remove(id)
                     }
                     return current.withUpdatedSelectedIndices(updated)
                 }
@@ -288,7 +321,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
                     if let strongSelf = self {
                         var updatedWallpapers: [TelegramWallpaper] = []
                         for entry in entries {
-                            if !strongSelf.currentState.selectedIndices.contains(entry.index) {
+                            if case let .file(file) = entry.wallpaper, strongSelf.currentState.selectedIndices.contains(file.id) {
+                            } else {
                                 updatedWallpapers.append(entry.wallpaper)
                             }
                         }
@@ -313,7 +347,22 @@ final class ThemeGridControllerNode: ASDisplayNode {
             
             entries.insert(ThemeGridControllerEntry(index: 0, wallpaper: presentationData.chatWallpaper, selected: true), at: 0)
             
-            for wallpaper in wallpapers {
+            var sortedWallpapers: [TelegramWallpaper] = []
+            if presentationData.theme.overallDarkAppearance {
+                var darkWallpapers: [TelegramWallpaper] = []
+                for wallpaper in wallpapers {
+                    if isDarkWallpaper(wallpaper) {
+                        darkWallpapers.append(wallpaper)
+                    } else {
+                        sortedWallpapers.append(wallpaper)
+                    }
+                }
+                sortedWallpapers = darkWallpapers + sortedWallpapers
+            } else {
+                sortedWallpapers = wallpapers
+            }
+            
+            for wallpaper in sortedWallpapers {
                 let selected = areWallpapersEqual(presentationData.chatWallpaper, wallpaper)
                 if !selected {
                     entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: false))

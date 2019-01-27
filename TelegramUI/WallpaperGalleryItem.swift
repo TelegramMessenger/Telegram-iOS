@@ -80,6 +80,7 @@ private let motionAmount: CGFloat = 32.0
 final class WallpaperGalleryItemNode: GalleryItemNode {
     private let account: Account
     var entry: WallpaperGalleryEntry?
+    private var colorPreview: Bool = false
     private var contentSize: CGSize?
     private var arguments = WallpaperGalleryItemArguments()
     
@@ -198,6 +199,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
         
         if self.entry != entry || self.arguments.colorPreview != previousArguments.colorPreview {
+            let previousEntry = self.entry
             self.entry = entry
             
             self.patternButtonNode.isSelected = self.arguments.patternEnabled
@@ -210,6 +212,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             let subtitleSignal: Signal<String?, NoError>
             var actionSignal: Signal<UIBarButtonItem?, NoError> = .single(nil)
             var colorSignal: Signal<UIColor, NoError> = serviceColor(from: imagePromise.get())
+            var color: UIColor?
             
             let displaySize: CGSize
             let contentSize: CGSize
@@ -254,16 +257,31 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .wallpaper(resource: file.file.resource)))
                             
                             if file.isPattern {
-                                var patternColor = UIColor(rgb: 0xd6e2ee)
+                                var patternColor = UIColor(rgb: 0xd6e2ee, alpha: 0.5)
+                                var patternIntensity: CGFloat = 0.5
                                 if let color = file.settings.color {
-                                    patternColor = UIColor(rgb: UInt32(bitPattern: color))
+                                    if let intensity = file.settings.intensity {
+                                        patternIntensity = CGFloat(intensity) / 100.0
+                                    }
+                                    patternColor = UIColor(rgb: UInt32(bitPattern: color), alpha: patternIntensity)
                                 }
                                 
+                                self.colorButtonNode.color = patternColor
                                 self.backgroundColor = patternColor
-                                signal = patternWallpaperImage(account: account, representations: convertedRepresentations, color: patternColor, mode: self.arguments.colorPreview ? .fastScreen : .screen, autoFetchFullSize: true)
+                                
+                                if let previousEntry = previousEntry, case let .wallpaper(wallpaper) = previousEntry, case let .file(previousFile) = wallpaper, file.id == previousFile.id && file.settings.color != previousFile.settings.color && self.colorPreview == self.arguments.colorPreview {
+                                    
+                                    self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: patternColor))()
+                                    return
+                                } else {
+                                    color = patternColor
+                                }
+                                
+                                self.colorPreview = self.arguments.colorPreview
+                                
+                                signal = patternWallpaperImage(account: account, representations: convertedRepresentations, mode: self.arguments.colorPreview ? .fastScreen : .screen, autoFetchFullSize: true)
                                 colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, postbox: self.account.postbox)
                                 
-                                self.colorButtonNode.color = patternColor
                                 isBlurrable = false
                             } else {
                                 signal = wallpaperImage(account: account, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
@@ -373,7 +391,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             }
             
             self.imageNode.setSignal(signal, dispatchOnDisplayLink: false)
-            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
+            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: color))()
             self.imageNode.imageUpdated = { [weak self] image in
                 if let strongSelf = self {
                     var image = isBlurrable ? image : nil
@@ -430,7 +448,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             }))
             
             if let layout = self.validLayout {
-                self.updateButtonsLayout(layout: layout, offset: CGPoint(), transition: animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate)
+                //self.updateButtonsLayout(layout: layout, offset: CGPoint(), transition: animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate)
             }
         } else if self.arguments.patternEnabled != previousArguments.patternEnabled {
             self.patternButtonNode.isSelected = self.arguments.patternEnabled
@@ -443,6 +461,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     
     override func screenFrameUpdated(_ frame: CGRect) {
         let offset = -frame.minX
+        guard self.validOffset != offset else {
+            return
+        }
         self.validOffset = offset
         if let layout = self.validLayout {
             self.updateWrapperLayout(layout: layout, offset: offset, transition: .immediate)
@@ -536,10 +557,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.patternButtonNode.setSelected(value, animated: true)
         
         self.requestPatternPanel?(value)
-        
-        if let layout = self.validLayout {
-            self.updateButtonsLayout(layout: layout, offset: CGPoint(), transition: .animated(duration: 0.3, curve: .spring))
-        }
     }
     
     var isColorEnabled: Bool {
@@ -608,7 +625,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         var additionalYOffset: CGFloat = 0.0
         if self.patternButtonNode.isSelected {
-            additionalYOffset = -114.0
+            additionalYOffset = -190.0
         }
         
         let leftButtonFrame = CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0 - buttonSize.width - 10.0) + offset.x, y: layout.size.height - 49.0 - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
@@ -647,6 +664,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             motionAlpha = 1.0
                         case .color:
                             patternAlpha = 1.0
+                            if self.patternButtonNode.isSelected {
+                                patternFrame = leftButtonFrame
+                                motionAlpha = 1.0
+                                motionFrame = rightButtonFrame
+                            }
                         case .image:
                             blurAlpha = 1.0
                             blurFrame = leftButtonFrame
@@ -656,13 +678,17 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             if file.isPattern {
                                 if self.arguments.isColorsList {
                                     patternAlpha = 1.0
-                                    patternFrame = leftButtonFrame
+                                    if self.patternButtonNode.isSelected {
+                                        patternFrame = leftButtonFrame
+                                    }
                                 } else {
                                     colorAlpha = 1.0
                                     colorFrame = leftButtonFrame
                                 }
-                                motionAlpha = 1.0
-                                motionFrame = rightButtonFrame
+                                if !self.arguments.isColorsList || self.patternButtonNode.isSelected {
+                                    motionAlpha = 1.0
+                                    motionFrame = rightButtonFrame
+                                }
                             } else {
                                 blurAlpha = 1.0
                                 blurFrame = leftButtonFrame

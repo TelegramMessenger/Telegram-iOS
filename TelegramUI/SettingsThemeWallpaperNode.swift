@@ -25,6 +25,7 @@ private func whiteColorImage(theme: PresentationTheme) -> Signal<(TransformImage
 
 final class SettingsThemeWallpaperNode: ASDisplayNode {
     private var wallpaper: TelegramWallpaper?
+    private var color: UIColor?
     
     let buttonNode = HighlightTrackingButtonNode()
     let backgroundNode = ASDisplayNode()
@@ -33,10 +34,10 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
     
     var pressed: (() -> Void)?
     
-    override init() {
+    init(overlayBackgroundColor: UIColor = UIColor(white: 0.0, alpha: 0.3)) {
         self.imageNode.contentAnimations = [.subsequentUpdates]
         
-        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.3))
+        self.statusNode = RadialStatusNode(backgroundNodeColor: overlayBackgroundColor)
         let progressDiameter: CGFloat = 50.0
         self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
         self.statusNode.isUserInteractionEnabled = false
@@ -51,16 +52,15 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
     
-    func setSelected(_ selected: Bool) {
+    func setSelected(_ selected: Bool, animated: Bool = false) {
         let state: RadialStatusNodeState = selected ? .check(.white) : .none
-        self.statusNode.transitionToState(state, animated: false, completion: {})
+        self.statusNode.transitionToState(state, animated: animated, completion: {})
     }
     
     func setWallpaper(account: Account, wallpaper: TelegramWallpaper, selected: Bool, size: CGSize, cornerRadius: CGFloat = 0.0) {
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.cornerRadius = 0.0
         
         let state: RadialStatusNodeState = selected ? .check(.white) : .none
         self.statusNode.transitionToState(state, animated: false, completion: {})
@@ -90,7 +90,6 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                         self.imageNode.isHidden = true
                         self.backgroundNode.isHidden = false
                         self.backgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
-                        self.cornerRadius = cornerRadius
                     }
                 case let .image(representations, _):
                     self.imageNode.isHidden = false
@@ -112,12 +111,17 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     if file.isPattern {
                         self.backgroundNode.isHidden = false
                         
-                        var patternColor = UIColor(rgb: 0xd6e2ee)
+                        var patternColor = UIColor(rgb: 0xd6e2ee, alpha: 0.5)
+                        var patternIntensity: CGFloat = 0.5
                         if let color = file.settings.color {
-                            patternColor = UIColor(rgb: UInt32(bitPattern: color))
+                            if let intensity = file.settings.intensity {
+                                patternIntensity = CGFloat(intensity) / 100.0
+                            }
+                            patternColor = UIColor(rgb: UInt32(bitPattern: color), alpha: patternIntensity)
                         }
                         self.backgroundNode.backgroundColor = patternColor
-                        imageSignal = patternWallpaperImage(account: account, representations: convertedRepresentations, color: patternColor, mode: .thumbnail, autoFetchFullSize: true)
+                        self.color = patternColor
+                        imageSignal = patternWallpaperImage(account: account, representations: convertedRepresentations, mode: .thumbnail, autoFetchFullSize: true)
                     } else {
                         self.backgroundNode.isHidden = true
                         
@@ -126,7 +130,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     self.imageNode.setSignal(imageSignal)
                     
                     let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets(), emptyColor: self.color))
                     apply()
             }
         } else if let wallpaper = self.wallpaper {
@@ -139,7 +143,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     apply()
                 case let .file(file):
                     let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets(), emptyColor: self.color))
                     apply()
             }
         }

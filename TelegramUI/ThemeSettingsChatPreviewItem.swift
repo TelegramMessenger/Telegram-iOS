@@ -137,9 +137,9 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                             }
                         }
                     case let .file(file):
-                        if file.isPattern, let color = file.settings.color {
+                        if file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
                             var image: UIImage?
-                            let _ = item.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                            let _ = item.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                                 if data.complete {
                                     image = UIImage(contentsOfFile: data.path)?.precomposed()
                                 }

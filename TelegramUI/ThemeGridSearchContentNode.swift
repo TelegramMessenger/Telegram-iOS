@@ -269,6 +269,8 @@ struct ThemeGridSearchContainerTransition {
     let insertions: [GridNodeInsertItem]
     let updates: [GridNodeUpdateItem]
     let displayingResults: Bool
+    let isEmpty: Bool
+    let query: String
 }
 
 private func themeGridSearchContainerPreparedRecentTransition(from fromEntries: [ThemeGridRecentEntry], to toEntries: [ThemeGridRecentEntry], account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: ThemeGridSearchInteraction, header: ListViewItemHeader) -> ThemeGridSearchContainerRecentTransition {
@@ -281,14 +283,14 @@ private func themeGridSearchContainerPreparedRecentTransition(from fromEntries: 
     return ThemeGridSearchContainerRecentTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
-private func themeGridSearchContainerPreparedTransition(from fromEntries: [ThemeGridSearchEntry], to toEntries: [ThemeGridSearchEntry], displayingResults: Bool, account: Account, theme: PresentationTheme, interaction: ThemeGridSearchInteraction) -> ThemeGridSearchContainerTransition {
+private func themeGridSearchContainerPreparedTransition(from fromEntries: [ThemeGridSearchEntry], to toEntries: [ThemeGridSearchEntry], displayingResults: Bool, account: Account, theme: PresentationTheme, isEmpty: Bool, query: String, interaction: ThemeGridSearchInteraction) -> ThemeGridSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
 
     let deletions = deleteIndices
     let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, theme: theme, interaction: interaction), previousIndex: $0.2) }
     let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, interaction: interaction)) }
     
-    return ThemeGridSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, displayingResults: displayingResults)
+    return ThemeGridSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, displayingResults: displayingResults, isEmpty: isEmpty, query: query)
 }
 
 private struct ThemeGridSearchResult {
@@ -308,9 +310,13 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
     private let recentListNode: ListView
     private let gridNode: GridNode
     private let dimNode: ASDisplayNode
+    
+    private let emptyResultsTitleNode: ImmediateTextNode
+    private let emptyResultsTextNode: ImmediateTextNode
+    
     private var enqueuedRecentTransitions: [(ThemeGridSearchContainerRecentTransition, Bool)] = []
     private var enqueuedTransitions: [(ThemeGridSearchContainerTransition, Bool)] = []
-    private var validLayout: ContainerViewLayout?
+    private var validLayout: (ContainerViewLayout, CGFloat)?
 
     private var queryValue: WallpaperSearchQuery = .generic("")
     private let queryPromise: Promise<WallpaperSearchQuery>
@@ -339,6 +345,17 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         self.gridNode = GridNode()
         
+        
+        self.emptyResultsTitleNode = ImmediateTextNode()
+        self.emptyResultsTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.SharedMedia_SearchNoResults, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.freeTextColor)
+        self.emptyResultsTitleNode.textAlignment = .center
+        self.emptyResultsTitleNode.isHidden = true
+        
+        self.emptyResultsTextNode = ImmediateTextNode()
+        self.emptyResultsTextNode.maximumNumberOfLines = 0
+        self.emptyResultsTextNode.textAlignment = .center
+        self.emptyResultsTextNode.isHidden = true
+        
         super.init()
         
         self.dimNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
@@ -348,6 +365,9 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         self.addSubnode(self.dimNode)
         self.addSubnode(self.recentListNode)
         self.addSubnode(self.gridNode)
+        
+        self.addSubnode(self.emptyResultsTitleNode)
+        self.addSubnode(self.emptyResultsTextNode)
         
         let searchContext = Promise<ThemeGridSearchContext?>(nil)
         let searchContextValue = Atomic<ThemeGridSearchContext?>(value: nil)
@@ -368,21 +388,22 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         }
         
         self.gridNode.isHidden = true
-//        self.listNode.visibleBottomContentOffsetChanged = { offset in
-//            guard case let .known(value) = offset, value < 100.0 else {
-//                return
-//            }
-//            updateSearchContext { previous in
-//                guard let previous = previous else {
-//                    return (nil, false)
+//        self.gridNode.visibleItemsUpdated = { [weak self] visibleItems in
+//            if let strongSelf = self, let bottom = visibleItems.bottom {
+//                if let context = searchContextValue.with({ $0 }), bottom.0 >= context.result.items.count - 8 {
+//                    updateSearchContext { previous in
+//                        guard let previous = previous else {
+//                            return (nil, false)
+//                        }
+//                        if previous.loadMoreIndex != nil {
+//                            return (previous, false)
+//                        }
+//                        guard let last = previous.result.items.last else {
+//                            return (previous, false)
+//                        }
+//                        return (ThemeGridSearchContext(result: previous.result, loadMoreIndex: MessageIndex(last)), true)
+//                    }
 //                }
-//                if previous.loadMoreIndex != nil {
-//                    return (previous, false)
-//                }
-//                guard let last = previous.result.messages.last else {
-//                    return (previous, false)
-//                }
-//                return (ChatListSearchMessagesContext(result: previous.result, loadMoreIndex: MessageIndex(last)), true)
 //            }
 //        }
         self.recentListNode.isHidden = false
@@ -495,15 +516,20 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
             }
         })
         
-        self.searchDisposable.set((combineLatest(foundItems, self.presentationDataPromise.get())
-        |> deliverOnMainQueue).start(next: { [weak self] entriesAndFlags, presentationData in
+        self.searchDisposable.set((combineLatest(foundItems, self.presentationDataPromise.get(), self.queryPromise.get())
+        |> deliverOnMainQueue).start(next: { [weak self] entriesAndFlags, presentationData, query in
             if let strongSelf = self {
                 strongSelf._isSearching.set(entriesAndFlags?.1 ?? false)
                 
                 let previousEntries = previousSearchItems.swap(entriesAndFlags?.0)
                 
+                var isEmpty = false
+                if let entriesAndFlags = entriesAndFlags {
+                    isEmpty = entriesAndFlags.0.isEmpty && !entriesAndFlags.1
+                }
+                
                 let firstTime = previousEntries == nil
-                let transition = themeGridSearchContainerPreparedTransition(from: previousEntries ?? [], to: entriesAndFlags?.0 ?? [], displayingResults: entriesAndFlags?.0 != nil, account: account, theme: presentationData.theme, interaction: interaction)
+                let transition = themeGridSearchContainerPreparedTransition(from: previousEntries ?? [], to: entriesAndFlags?.0 ?? [], displayingResults: entriesAndFlags?.0 != nil, account: account, theme: presentationData.theme, isEmpty: isEmpty, query: query.query, interaction: interaction)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
         }))
@@ -634,6 +660,16 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                     strongSelf.recentListNode.isHidden = displayingResults
                     strongSelf.dimNode.isHidden = displayingResults
                     strongSelf.backgroundColor = strongSelf.presentationData.theme.chatList.backgroundColor
+                    
+                    strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.WebSearch_SearchNoResultsDescription(transition.query).0, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
+                    
+                    let emptyResults = displayingResults && transition.isEmpty
+                    strongSelf.emptyResultsTitleNode.isHidden = !emptyResults
+                    strongSelf.emptyResultsTextNode.isHidden = !emptyResults
+                    
+                    if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                        strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                    }
                 }
             })
         }
@@ -643,7 +679,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
         let hadValidLayout = self.validLayout != nil
-        self.validLayout = layout
+        self.validLayout = (layout, navigationBarHeight)
         
         let minSpacing: CGFloat = 8.0
         let referenceImageSize: CGSize
@@ -687,6 +723,18 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         
         self.gridNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: UIEdgeInsets(top: navigationBarHeight + spacing, left: layout.safeInsets.left, bottom: layout.insets(options: [.input]).bottom, right: layout.safeInsets.right), preloadSize: 300.0, type: .fixed(itemSize: imageSize, fillWidth: nil, lineSpacing: spacing, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        
+        let padding: CGFloat = 16.0
+        let emptyTitleSize = self.emptyResultsTitleNode.updateLayout(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let emptyTextSize = self.emptyResultsTextNode.updateLayout(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        
+        let insets = layout.insets(options: [.input])
+        let emptyTextSpacing: CGFloat = 8.0
+        let emptyTotalHeight = emptyTitleSize.height + emptyTextSize.height + emptyTextSpacing
+        let emptyTitleY = navigationBarHeight + floorToScreenPixels((layout.size.height - navigationBarHeight - max(insets.bottom, layout.intrinsicInsets.bottom) - emptyTotalHeight) / 2.0)
+        
+        transition.updateFrame(node: self.emptyResultsTitleNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + padding + (layout.size.width - layout.safeInsets.left - layout.safeInsets.right - padding * 2.0 - emptyTitleSize.width) / 2.0, y: emptyTitleY), size: emptyTitleSize))
+        transition.updateFrame(node: self.emptyResultsTextNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + padding + (layout.size.width - layout.safeInsets.left - layout.safeInsets.right - padding * 2.0 - emptyTextSize.width) / 2.0, y: emptyTitleY + emptyTitleSize.height + emptyTextSpacing), size: emptyTextSize))
         
         if !hadValidLayout {
             while !self.enqueuedRecentTransitions.isEmpty {

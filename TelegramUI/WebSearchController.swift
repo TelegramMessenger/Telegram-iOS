@@ -10,6 +10,7 @@ func requestContextResults(account: Account, botId: PeerId, query: String, peerI
     return requestChatContextResults(account: account, botId: botId, peerId: peerId, query: query, offset: offset)
     |> mapToSignal { results -> Signal<ChatContextResultCollection?, NoError> in
         var collection = existingResults
+        var updated: Bool = false
         if let existingResults = existingResults, let results = results {
             var newResults: [ChatContextResult] = []
             var existingIds = Set<String>()
@@ -21,13 +22,15 @@ func requestContextResults(account: Account, botId: PeerId, query: String, peerI
                 if !existingIds.contains(result.id) {
                     newResults.append(result)
                     existingIds.insert(result.id)
+                    updated = true
                 }
             }
             collection = ChatContextResultCollection(botId: existingResults.botId, peerId: existingResults.peerId, query: existingResults.query, geoPoint: existingResults.geoPoint, queryId: results.queryId, nextOffset: results.nextOffset, presentation: existingResults.presentation, switchPeer: existingResults.switchPeer, results: newResults, cacheTimeout: existingResults.cacheTimeout)
         } else {
             collection = results
+            updated = true
         }
-        if let collection = collection, collection.results.count < limit, let nextOffset = collection.nextOffset {
+        if let collection = collection, collection.results.count < limit, let nextOffset = collection.nextOffset, updated {
             let nextResults = requestContextResults(account: account, botId: botId, query: query, peerId: peerId, offset: nextOffset, existingResults: collection, limit: limit)
             if collection.results.count > 10 {
                 return .single(collection)

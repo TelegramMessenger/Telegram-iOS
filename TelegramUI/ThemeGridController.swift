@@ -370,10 +370,24 @@ final class ThemeGridController: ViewController {
         for wallpaper in wallpapers {
             var item: String?
             switch wallpaper {
-                case let .file(_, _, _, _, _, slug, _, _):
-                    item = slug
+                case let .file(_, _, _, _, isPattern, slug, _, settings):
+                    var options: [String] = []
+                    if isPattern {
+                        if let color = settings.color {
+                            options.append("bg_color=\(UIColor(rgb: UInt32(bitPattern: color)).hexString)")
+                        }
+                        if let intensity = settings.intensity {
+                            options.append("intensity=\(intensity)")
+                        }
+                    }
+                    
+                    var optionsString = ""
+                    if !options.isEmpty {
+                        optionsString = "?\(options.joined(separator: "&"))"
+                    }
+                    item = slug + optionsString
                 case let .color(color):
-                    item = "\(String(UInt32(bitPattern: color), radix: 16, uppercase: false))"
+                    item = "\(UIColor(rgb: UInt32(bitPattern: color)).hexString)"
                 default:
                     break
             }

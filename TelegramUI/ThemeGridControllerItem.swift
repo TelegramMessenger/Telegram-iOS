@@ -24,7 +24,7 @@ final class ThemeGridControllerItem: GridItem {
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = ThemeGridControllerItemNode()
-        node.setup(account: self.account, wallpaper: self.wallpaper, index: self.index, selected: self.selected, interaction: self.interaction)
+        node.setup(account: self.account, wallpaper: self.wallpaper, selected: self.selected, interaction: self.interaction)
         return node
     }
     
@@ -33,7 +33,7 @@ final class ThemeGridControllerItem: GridItem {
             assertionFailure()
             return
         }
-        node.setup(account: self.account, wallpaper: self.wallpaper, index: self.index, selected: self.selected, interaction: self.interaction)
+        node.setup(account: self.account, wallpaper: self.wallpaper, selected: self.selected, interaction: self.interaction)
     }
 }
 
@@ -41,7 +41,7 @@ final class ThemeGridControllerItemNode: GridItemNode {
     private let wallpaperNode: SettingsThemeWallpaperNode
     private var selectionNode: GridMessageSelectionNode?
     
-    private var currentState: (Account, TelegramWallpaper, Int, Bool)?
+    private var currentState: (Account, TelegramWallpaper, Bool)?
     private var interaction: ThemeGridControllerInteraction?
     
     override init() {
@@ -57,38 +57,39 @@ final class ThemeGridControllerItemNode: GridItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    func setup(account: Account, wallpaper: TelegramWallpaper, index: Int, selected: Bool, interaction: ThemeGridControllerInteraction) {
+    func setup(account: Account, wallpaper: TelegramWallpaper, selected: Bool, interaction: ThemeGridControllerInteraction) {
         self.interaction = interaction
         
-        if self.currentState == nil || self.currentState!.0 !== account || wallpaper != self.currentState!.1 || index != self.currentState!.2 || selected != self.currentState!.3 {
-            self.currentState = (account, wallpaper, index, selected)
+        if self.currentState == nil || self.currentState!.0 !== account || wallpaper != self.currentState!.1 || selected != self.currentState!.2 {
+            self.currentState = (account, wallpaper, selected)
+            self.updateSelectionState(animated: false)
             self.setNeedsLayout()
         }
     }
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            if let (_, wallpaper, _, _) = self.currentState {
+            if let (_, wallpaper, _) = self.currentState {
                 self.interaction?.openWallpaper(wallpaper)
             }
         }
     }
     
     func updateSelectionState(animated: Bool) {
-        if let (account, wallpaper, index, _) = self.currentState {
+        if let (account, wallpaper, _) = self.currentState {
             var editing = false
-            var selectable = false
-            if case .file = wallpaper {
-                selectable = true
+            var id: Int64?
+            if case let .file(file) = wallpaper {
+                id = file.id
             }
-            var selectedIndices = Set<Int>()
+            var selectedIndices = Set<Int64>()
             if let interaction = self.interaction {
                 let (active, indices) = interaction.selectionState
                 editing = active
                 selectedIndices = indices
             }
-            if editing && selectable {
-                let selected = selectedIndices.contains(index)
+            if let id = id, editing {
+                let selected = selectedIndices.contains(id)
                 
                 if let selectionNode = self.selectionNode {
                     selectionNode.updateSelected(selected, animated: animated)
@@ -97,7 +98,7 @@ final class ThemeGridControllerItemNode: GridItemNode {
                     let theme = account.telegramApplicationContext.currentPresentationData.with { $0 }.theme
                     let selectionNode = GridMessageSelectionNode(theme: theme, toggle: { [weak self] value in
                         if let strongSelf = self {
-                            strongSelf.interaction?.toggleWallpaperSelection(index, value)
+                            strongSelf.interaction?.toggleWallpaperSelection(id, value)
                         }
                     })
                     
@@ -129,7 +130,7 @@ final class ThemeGridControllerItemNode: GridItemNode {
         super.layout()
         
         let bounds = self.bounds
-        if let (account, wallpaper, _, selected) = self.currentState {
+        if let (account, wallpaper, selected) = self.currentState {
             self.wallpaperNode.setWallpaper(account: account, wallpaper: wallpaper, selected: selected, size: bounds.size)
             self.selectionNode?.frame = CGRect(origin: CGPoint(), size: bounds.size)
         }
