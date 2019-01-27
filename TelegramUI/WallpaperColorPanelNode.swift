@@ -51,9 +51,23 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
             self.setColor(newValue)
         }
     }
-    var colorChanged: ((UIColor, Bool) -> Void)?
+    var intensity: Int32 {
+        get {
+            return self.colorPickerNode.intensity
+        }
+        set {
+            self.colorPickerNode.intensity = newValue
+        }
+    }
+    var colorChanged: ((UIColor, Int32?, Bool) -> Void)?
+    
+    var adjustingPattern: Bool = false {
+        didSet {
+             self.colorPickerNode.adjustingPattern = self.adjustingPattern
+        }
+    }
 
-    init(theme: PresentationTheme) {
+    init(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
         
         self.backgroundNode = ASDisplayNode()
@@ -77,7 +91,7 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         self.doneButton = HighlightableButtonNode()
         self.doneButton.setImage(PresentationResourcesChat.chatInputPanelApplyButtonImage(theme), for: .normal)
         
-        self.colorPickerNode = WallpaperColorPickerNode()
+        self.colorPickerNode = WallpaperColorPickerNode(strings: strings)
     
         super.init()
         
@@ -95,6 +109,16 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         }
         self.colorPickerNode.colorChangeEnded = { [weak self] color in
             self?.setColor(color, updatePicker: false, ended: true)
+        }
+        self.colorPickerNode.intensityChanged = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.colorChanged?(strongSelf.color, value, false)
+            }
+        }
+        self.colorPickerNode.intensityChangeEnded = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.colorChanged?(strongSelf.color, value, true)
+            }
         }
     }
     
@@ -118,7 +142,7 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         if updatePicker {
             self.colorPickerNode.color = color
         }
-        self.colorChanged?(color, ended)
+        self.colorChanged?(color, self.intensity, ended)
     }
     
     func updateLayout(size: CGSize, keyboardHeight: CGFloat, transition: ContainedViewLayoutTransition) {

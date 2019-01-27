@@ -25,8 +25,8 @@ private func areWallpapersEqual(_ lhs: TelegramWallpaper, _ rhs: TelegramWallpap
             } else {
                 return false
             }
-        case let .file(lhsId, _, _, _, _, lhsSlug, _, _):
-            if case let .file(rhsId, _, _, _, _, rhsSlug, _, _) = rhs, lhsId == rhsId, lhsSlug == rhsSlug {
+        case let .file(_, _, _, _, _, lhsSlug, _, _):
+            if case let .file(_, _, _, _, _, rhsSlug, _, _) = rhs, lhsSlug == rhsSlug {
                 return true
             } else {
                 return false
@@ -268,9 +268,12 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.currentState = ThemeGridControllerNodeState(editing: false, selectedIndices: Set())
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
-        let wallpapersPromise: Promise<[TelegramWallpaper]> = Promise()
+        let wallpapersPromise = Promise<[TelegramWallpaper]>()
         wallpapersPromise.set(telegramWallpapers(postbox: account.postbox, network: account.network))
         self.wallpapersPromise = wallpapersPromise
+        
+        let deletedWallpaperSlugsValue = Atomic<Set<String>>(value: Set())
+        let deletedWallpaperSlugsPromise = ValuePromise<Set<String>>(Set())
         
         super.init()
         
@@ -319,16 +322,16 @@ final class ThemeGridControllerNode: ASDisplayNode {
             if let strongSelf = self, let entries = entries {
                 deleteWallpapers(selectedWallpapers(entries: entries, state: strongSelf.currentState), { [weak self] in
                     if let strongSelf = self {
-                        var updatedWallpapers: [TelegramWallpaper] = []
+                        var updatedDeletedSlugs = deletedWallpaperSlugsValue.with { $0 }
+                        
                         for entry in entries {
                             if case let .file(file) = entry.wallpaper, strongSelf.currentState.selectedIndices.contains(file.id) {
-                            } else {
-                                updatedWallpapers.append(entry.wallpaper)
+                                updatedDeletedSlugs.insert(file.slug)
                             }
                         }
-
-                        wallpapersPromise.set(.single(updatedWallpapers)
-                        |> then(telegramWallpapers(postbox: account.postbox, network: account.network)))
+                        
+                        let _ = deletedWallpaperSlugsValue.swap(updatedDeletedSlugs)
+                        deletedWallpaperSlugsPromise.set(updatedDeletedSlugs)
                     }
                 })
             }
@@ -340,8 +343,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
         })
         self.controllerInteraction = interaction
         
-        let transition = combineLatest(wallpapersPromise.get(), account.telegramApplicationContext.presentationData)
-        |> map { wallpapers, presentationData -> (ThemeGridEntryTransition, Bool) in
+        let transition = combineLatest(wallpapersPromise.get(), deletedWallpaperSlugsPromise.get(), account.telegramApplicationContext.presentationData)
+        |> map { wallpapers, deletedWallpaperSlugs, presentationData -> (ThemeGridEntryTransition, Bool) in
             var entries: [ThemeGridControllerEntry] = []
             var index = 1
             
@@ -363,6 +366,9 @@ final class ThemeGridControllerNode: ASDisplayNode {
             }
             
             for wallpaper in sortedWallpapers {
+                if case let .file(file) = wallpaper, deletedWallpaperSlugs.contains(file.slug) {
+                    continue
+                }
                 let selected = areWallpapersEqual(presentationData.chatWallpaper, wallpaper)
                 if !selected {
                     entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: false))

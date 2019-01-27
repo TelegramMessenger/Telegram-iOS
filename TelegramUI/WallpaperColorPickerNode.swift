@@ -288,9 +288,16 @@ final class WallpaperIntensityPickerNode: ASDisplayNode {
         return Int32(self.value * 100.0)
     }
     
-    init(theme: PresentationTheme, title: String, bordered: Bool) {
+    private var bordered: Bool
+    
+    init(theme: PresentationTheme?, title: String, bordered: Bool) {
+        self.bordered = bordered
         self.labelNode = ASTextNode()
-        self.labelNode.attributedText = NSAttributedString(string: title.uppercased(), font: Font.regular(14.0), textColor: bordered ? .black : theme.rootController.navigationBar.secondaryTextColor)
+        var color: UIColor = .black
+        if let theme = theme {
+            color = theme.rootController.navigationBar.secondaryTextColor
+        }
+        self.labelNode.attributedText = NSAttributedString(string: title.uppercased(), font: Font.regular(14.0), textColor: color)
         self.sliderNode = WallpaperIntensitySliderNode(bordered: bordered)
         self.sliderNode.hitTestSlop = UIEdgeInsetsMake(-16.0, -16.0, -16.0, -16.0)
         self.knobNode = WallpaperColorKnobNode()
@@ -374,6 +381,10 @@ final class WallpaperIntensityPickerNode: ASDisplayNode {
 final class WallpaperColorPickerNode: ASDisplayNode {
     private let brightnessNode: WallpaperColorBrightnessNode
     private let brightnessKnobNode: ASImageNode
+    
+    private let backgroundNode: WallpaperIntensityPickerNode
+    private let intensityNode: WallpaperIntensityPickerNode
+
     private let colorNode: WallpaperColorHueSaturationNode
     private let colorKnobNode: WallpaperColorKnobNode
     
@@ -398,14 +409,37 @@ final class WallpaperColorPickerNode: ASDisplayNode {
             
             if newHSV != self.colorHSV {
                 self.colorHSV = newHSV
+                self.backgroundNode.value = 1.0 - self.colorHSV.2
                 self.update()
             }
         }
     }
     var colorChanged: ((UIColor) -> Void)?
     var colorChangeEnded: ((UIColor) -> Void)?
+    
+    var intensity: Int32 {
+        get {
+            return self.intensityNode.intensity
+        }
+        set {
+            self.intensityNode.value = CGFloat(newValue) / 100.0
+        }
+    }
+    var intensityChanged: ((Int32) -> Void)?
+    var intensityChangeEnded: ((Int32) -> Void)?
+    
+    var adjustingPattern: Bool = false {
+        didSet {
+            let value = self.adjustingPattern
+            self.brightnessNode.isHidden = value
+            self.brightnessKnobNode.isHidden = value
+            self.backgroundNode.isHidden = !value
+            self.intensityNode.isHidden = !value
+            self.setNeedsLayout()
+        }
+    }
 
-    override init() {
+    init(strings: PresentationStrings) {
         self.brightnessNode = WallpaperColorBrightnessNode()
         self.brightnessNode.hitTestSlop = UIEdgeInsetsMake(-16.0, -16.0, -16.0, -16.0)
         self.brightnessKnobNode = ASImageNode()
@@ -413,6 +447,12 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         self.colorNode = WallpaperColorHueSaturationNode()
         self.colorNode.hitTestSlop = UIEdgeInsetsMake(-16.0, -16.0, -16.0, -16.0)
         self.colorKnobNode = WallpaperColorKnobNode()
+        
+        self.backgroundNode = WallpaperIntensityPickerNode(theme: nil, title: strings.WallpaperPreview_PatternColor, bordered: true)
+        self.backgroundNode.isHidden = true
+        
+        self.intensityNode = WallpaperIntensityPickerNode(theme: nil, title: strings.WallpaperPreview_PatternIntensity, bordered: true)
+        self.intensityNode.isHidden = true
         
         super.init()
         
@@ -422,6 +462,44 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         self.addSubnode(self.brightnessKnobNode)
         self.addSubnode(self.colorNode)
         self.addSubnode(self.colorKnobNode)
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.intensityNode)
+        
+        let valueChanged: (CGFloat, Bool) -> Void = { [weak self] value, ended in
+            if let strongSelf = self {
+                let previousColor = strongSelf.color
+                strongSelf.colorHSV.2 = 1.0 - value
+                
+                if strongSelf.color != previousColor || ended {
+                    strongSelf.update()
+                    if ended {
+                        strongSelf.colorChangeEnded?(strongSelf.color)
+                    } else {
+                        strongSelf.colorChanged?(strongSelf.color)
+                    }
+                }
+            }
+        }
+
+        self.backgroundNode.valueChanged = { value in
+            valueChanged(value, false)
+        }
+        
+        self.backgroundNode.valueChangeEnded = { value in
+            valueChanged(value, true)
+        }
+        
+        self.intensityNode.valueChanged = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.intensityChanged?(Int32(value * 100.0))
+            }
+        }
+        
+        self.intensityNode.valueChangeEnded = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.intensityChangeEnded?(Int32(value * 100.0))
+            }
+        }
         
         self.update()
     }
@@ -444,12 +522,17 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         self.colorNode.value = self.colorHSV.2
         self.brightnessNode.hsv = self.colorHSV
         self.colorKnobNode.hsv = self.colorHSV
+        
+        let min = self.colorHSV
+        let max = patternColor(for: self.color, intensity: 1.0).hsv
+        self.intensityNode.updateExtrema(min: min, max: max)
+        self.backgroundNode.updateExtrema(min: self.colorHSV, max: (self.colorHSV.0, self.colorHSV.1, 0.0))
     }
     
     func updateKnobLayout(size: CGSize, panningColor: Bool, transition: ContainedViewLayoutTransition) {
         let knobSize = CGSize(width: 45.0, height: 45.0)
         
-        let colorHeight: CGFloat = size.height - 66.0
+        let colorHeight = self.adjustingPattern ? size.height - 120.0 : size.height - 66.0
         var colorKnobFrame = CGRect(x: -knobSize.width / 2.0 + size.width * self.colorHSV.0, y: -knobSize.height / 2.0 + (colorHeight * (1.0 - self.colorHSV.1)), width: knobSize.width, height: knobSize.height)
         var origin = colorKnobFrame.origin
         if !panningColor {
@@ -469,10 +552,14 @@ final class WallpaperColorPickerNode: ASDisplayNode {
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         
-        transition.updateFrame(node: self.colorNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height - 66.0))
+        let colorHeight = self.adjustingPattern ? size.height - 120.0 : size.height - 66.0
+        transition.updateFrame(node: self.colorNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: colorHeight))
         
         let inset: CGFloat = 42.0
         transition.updateFrame(node: self.brightnessNode, frame: CGRect(x: inset, y: size.height - 55.0, width: size.width - inset * 2.0, height: 29.0))
+        
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: 16.0, y: size.height - 108.0, width: size.width - 16.0 * 2.0, height: 50.0))
+        transition.updateFrame(node: self.intensityNode, frame: CGRect(x: 16.0, y: size.height - 56.0, width: size.width - 16.0 * 2.0, height: 50.0))
         
         self.updateKnobLayout(size: size, panningColor: false, transition: transition)
     }
@@ -482,9 +569,11 @@ final class WallpaperColorPickerNode: ASDisplayNode {
             return
         }
         
+        let colorHeight = self.adjustingPattern ? size.height - 120.0 : size.height - 66.0
+        
         let location = recognizer.location(in: recognizer.view)
         let newHue = max(0.0, min(1.0, location.x / size.width))
-        let newSaturation = max(0.0, min(1.0, (1.0 - location.y / (size.height - 66.0))))
+        let newSaturation = max(0.0, min(1.0, (1.0 - location.y / colorHeight)))
         self.colorHSV.0 = newHue
         self.colorHSV.1 = newSaturation
         
@@ -501,11 +590,13 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         
         let previousColor = self.color
         
+        let colorHeight = self.adjustingPattern ? size.height - 120.0 : size.height - 66.0
+        
         let location = recognizer.location(in: recognizer.view)
         let transition = recognizer.translation(in: recognizer.view)
         if recognizer.state == .began {
             let newHue = max(0.0, min(1.0, location.x / size.width))
-            let newSaturation = max(0.0, min(1.0, (1.0 - location.y / (size.height - 66.0))))
+            let newSaturation = max(0.0, min(1.0, (1.0 - location.y / colorHeight)))
             self.colorHSV.0 = newHue
             self.colorHSV.1 = newSaturation
         } else {

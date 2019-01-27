@@ -266,8 +266,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                     patternColor = UIColor(rgb: UInt32(bitPattern: color), alpha: patternIntensity)
                                 }
                                 
-                                self.colorButtonNode.color = patternColor
-                                self.backgroundColor = patternColor
+                                self.colorButtonNode.color = patternColor.withAlphaComponent(1.0)
+                                self.backgroundColor = patternColor.withAlphaComponent(1.0)
                                 
                                 if let previousEntry = previousEntry, case let .wallpaper(wallpaper) = previousEntry, case let .file(previousFile) = wallpaper, file.id == previousFile.id && (file.settings.color != previousFile.settings.color || file.settings.intensity != previousFile.settings.intensity) && self.colorPreview == self.arguments.colorPreview {
                                     
@@ -509,6 +509,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     func setBlurEnabled(_ enabled: Bool, animated: Bool) {
         let blurRadius: CGFloat = 45.0
         
+        var animated = animated
+        if animated, let layout = self.validLayout {
+            animated = min(layout.size.width, layout.size.height) > 321.0
+        } else {
+            animated = false
+        }
+        
         if enabled {
             if self.blurredNode.supernode == nil {
                 if self.cropNode.supernode != nil {
@@ -748,5 +755,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.updateButtonsLayout(layout: layout, offset: CGPoint(x: offset, y: 0.0), transition: transition)
         
         self.validLayout = layout
+    }
+    
+    override func visibilityUpdated(isVisible: Bool) {
+        super.visibilityUpdated(isVisible: isVisible)
     }
 }

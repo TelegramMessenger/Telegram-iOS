@@ -1,32 +1,37 @@
 import Foundation
 import Postbox
+import TelegramCore
 
-final class SolidColorMedia: Media  {
+enum WallpaperPreviewMediaContent: Equatable {
+    case file(TelegramMediaFile, UIColor?)
+    case color(UIColor)
+}
+
+final class WallpaperPreviewMedia: Media {
     var id: MediaId? {
         return nil
     }
     let peerIds: [PeerId] = []
     
-    let color: UIColor
+    let content: WallpaperPreviewMediaContent
     
-    init(color: UIColor) {
-        self.color = color
+    init(content: WallpaperPreviewMediaContent) {
+        self.content = content
     }
     
     init(decoder: PostboxDecoder) {
-        self.color = UIColor(argb: UInt32(bitPattern: decoder.decodeInt32ForKey("c", orElse: 0)))
+        self.content = .color(.clear)
     }
     
     func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(Int32(bitPattern: self.color.rgb), forKey: "c")
     }
     
     public func isEqual(to other: Media) -> Bool {
-        guard let other = other as? SolidColorMedia else {
+        guard let other = other as? WallpaperPreviewMedia else {
             return false
         }
         
-        if self.color != other.color {
+        if self.content != other.content {
             return false
         }
         

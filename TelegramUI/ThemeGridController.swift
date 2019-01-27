@@ -201,11 +201,18 @@ final class ThemeGridController: ViewController {
                         }
                     }
                     
+                    var deleteWallpapers: [Signal<Void, NoError>] = []
                     for wallpaper in wallpapers {
-                        let _ = deleteWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
+                        deleteWallpapers.append(deleteWallpaper(account: strongSelf.account, wallpaper: wallpaper))
                     }
                     
-                    let _ = telegramWallpapers(postbox: strongSelf.account.postbox, network: strongSelf.account.network).start()
+                    let _ = (combineLatest(deleteWallpapers)
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.controllerNode.updateWallpapers()
+                        }
+                    })
+                    
                     strongSelf.donePressed()
                 }))
                 

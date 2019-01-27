@@ -287,7 +287,7 @@ func patternWallpaperImage(account: Account, representations: [ImageRepresentati
     
     var scale: CGFloat = 0.0
     if case .fastScreen = mode {
-        scale = 1.0
+        scale = max(1.0, UIScreenScale - 1.0)
     }
     
     return signal

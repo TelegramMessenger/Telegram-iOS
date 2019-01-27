@@ -230,12 +230,12 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     if let embedUrl = webpage.embedUrl, !embedUrl.isEmpty {
                         mediaAndFlags = (webpage.image ?? file, [.preferMediaBeforeText])
                     } else if webpage.type == "telegram_background" {
-                        var representations: [TelegramMediaImageRepresentation] = file.previewRepresentations
-                        if let dimensions = file.dimensions {
-                            representations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: file.resource))
+                        var patternColor: UIColor?
+                        if let wallpaper = parseWallpaperUrl(webpage.url), case let .slug(_, _, color, intensity) = wallpaper {
+                            patternColor = color?.withAlphaComponent(CGFloat(intensity ?? 50) / 100.0)
                         }
-                        let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: file.immediateThumbnailData, reference: nil, partialReference: nil)
-                        mediaAndFlags = (tmpImage, [.preferMediaAspectFilled])
+                        let media = WallpaperPreviewMedia(content: .file(file, patternColor))
+                        mediaAndFlags = (media, [.preferMediaAspectFilled])
                         if let fileSize = file.size {
                             badge = dataSizeString(fileSize)
                         }
@@ -264,8 +264,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     if let text = webpage.text, let colorCodeRange = text.range(of: "#") {
                         let colorCode = String(text[colorCodeRange.upperBound...])
                         if colorCode.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: colorCode) {
-                            let color = SolidColorMedia(color: color)
-                            mediaAndFlags = (color, ChatMessageAttachedContentNodeMediaFlags())
+                            let media = WallpaperPreviewMedia(content: .color(color))
+                            mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
                         }
                     }
                 }

@@ -372,21 +372,23 @@ public func updatedPresentationData(postbox: Postbox, applicationBindings: Teleg
         
         let contactSettings: ContactSynchronizationSettings = (view.views[preferencesKey] as! PreferencesView).values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings ?? ContactSynchronizationSettings.defaultSettings
         
-        let themeSpecificSettings = postbox.transaction { transaction -> PresentationThemeSpecificSettings? in
-            let key = ValueBoxKey(length: 8)
-            key.setInt64(0, value: themeSettings.theme.index)
-            if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.themeSpecificSettings, key: key)) as? PresentationThemeSpecificSettings {
-                return entry
-            } else {
-                return nil
+        let themeSpecificSettings: (PresentationThemeReference) -> Signal<PresentationThemeSpecificSettings?, NoError> = { theme in
+            return postbox.transaction { transaction -> PresentationThemeSpecificSettings? in
+                let key = ValueBoxKey(length: 8)
+                key.setInt64(0, value: theme.index)
+                if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.themeSpecificSettings, key: key)) as? PresentationThemeSpecificSettings {
+                    return entry
+                } else {
+                    return nil
+                }
             }
         }
         
-        return themeSpecificSettings
-        |> mapToSignal { themeSpecificSettings in
+        return themeSpecificSettings(themeSettings.theme)
+        |> mapToSignal { specificSettings in
             let currentWallpaper: TelegramWallpaper
-            if let themeSpecificSettings = themeSpecificSettings {
-                currentWallpaper = themeSpecificSettings.chatWallpaper
+            if let specificSettings = specificSettings {
+                currentWallpaper = specificSettings.chatWallpaper
             } else {
                 currentWallpaper = themeSettings.chatWallpaper
             }
@@ -399,32 +401,41 @@ public func updatedPresentationData(postbox: Postbox, applicationBindings: Teleg
                     if inForeground {
                         return automaticThemeShouldSwitch(themeSettings.automaticThemeSwitchSetting, currentTheme: themeSettings.theme)
                         |> distinctUntilChanged
-                        |> map { shouldSwitch in
-                            let themeValue: PresentationTheme
-                            let effectiveTheme: PresentationThemeReference
-                            var effectiveChatWallpaper: TelegramWallpaper = currentWallpaper
-                            var effectiveChatWallpaperOptions: WallpaperPresentationOptions = themeSettings.chatWallpaperOptions
-                            
+                        |> mapToSignal { shouldSwitch -> Signal<(PresentationThemeReference, TelegramWallpaper, WallpaperPresentationOptions), NoError> in
                             if shouldSwitch {
-                                effectiveTheme = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
-                                switch effectiveChatWallpaper {
-                                    case .builtin, .color:
-                                        switch themeSettings.automaticThemeSwitchSetting.theme {
-                                            case .nightAccent:
-                                                effectiveChatWallpaper = .color(0x18222d)
-                                                effectiveChatWallpaperOptions = []
-                                            case .nightGrayscale:
-                                                effectiveChatWallpaper = .color(0x000000)
-                                                effectiveChatWallpaperOptions = []
+                                let automaticTheme = PresentationThemeReference.builtin(themeSettings.automaticThemeSwitchSetting.theme)
+                                return themeSpecificSettings(automaticTheme)
+                                |> map { specificSettings in
+                                    var effectiveChatWallpaper: TelegramWallpaper = currentWallpaper
+                                    var effectiveChatWallpaperOptions: WallpaperPresentationOptions = themeSettings.chatWallpaperOptions
+                                    if let specificSettings = specificSettings {
+                                        effectiveChatWallpaper = specificSettings.chatWallpaper
+                                        effectiveChatWallpaperOptions = specificSettings.chatWallpaperOptions
+                                    } else {
+                                        switch effectiveChatWallpaper {
+                                            case .builtin, .color:
+                                                switch themeSettings.automaticThemeSwitchSetting.theme {
+                                                    case .nightAccent:
+                                                        effectiveChatWallpaper = .color(0x18222d)
+                                                        effectiveChatWallpaperOptions = []
+                                                    case .nightGrayscale:
+                                                        effectiveChatWallpaper = .color(0x000000)
+                                                        effectiveChatWallpaperOptions = []
+                                                    default:
+                                                        break
+                                                }
                                             default:
                                                 break
                                         }
-                                    default:
-                                        break
+                                    }
+                                    return (automaticTheme, effectiveChatWallpaper, effectiveChatWallpaperOptions)
                                 }
                             } else {
-                                effectiveTheme = themeSettings.theme
+                                return .single((themeSettings.theme, currentWallpaper, themeSettings.chatWallpaperOptions))
                             }
+                        }
+                        |> map { effectiveTheme, effectiveChatWallpaper, effectiveChatWallpaperOptions in
+                            let themeValue: PresentationTheme
                             switch effectiveTheme {
                                 case let .builtin(reference):
                                     switch reference {
@@ -456,7 +467,7 @@ public func updatedPresentationData(postbox: Postbox, applicationBindings: Teleg
                             let dateTimeFormat = currentDateTimeFormat()
                             let nameDisplayOrder = contactSettings.nameDisplayOrder
                             let nameSortOrder = currentPersonNameSortOrder()
-
+                            
                             return PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, chatWallpaperOptions: effectiveChatWallpaperOptions, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations)
                         }
                     } else {

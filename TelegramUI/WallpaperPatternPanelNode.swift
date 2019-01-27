@@ -22,10 +22,8 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     
     var color: UIColor = .white {
         didSet {
-            let color = patternColor(for: self.color, intensity: 1.0)
-            var min = self.color.hsv
-            var max = patternColor(for: self.color, intensity: 1.0).hsv
-
+            let min = self.color.hsv
+            let max = patternColor(for: self.color, intensity: 1.0).hsv
             self.intensityNode.updateExtrema(min: min, max: max)
         }
     }

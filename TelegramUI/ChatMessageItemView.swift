@@ -51,6 +51,10 @@ struct ChatMessageItemFileLayoutConstants {
     let bubbleInsets: UIEdgeInsets
 }
 
+struct ChatMessageItemWallpaperLayoutConstants {
+    let maxTextWidth: CGFloat
+}
+
 struct ChatMessageItemLayoutConstants {
     let avatarDiameter: CGFloat
     let timestampHeaderHeight: CGFloat
@@ -60,6 +64,7 @@ struct ChatMessageItemLayoutConstants {
     let text: ChatMessageItemTextLayoutConstants
     let file: ChatMessageItemFileLayoutConstants
     let instantVideo: ChatMessageItemInstantVideoConstants
+    let wallpapers: ChatMessageItemWallpaperLayoutConstants
     
     init() {
         self.avatarDiameter = 37.0
@@ -70,6 +75,7 @@ struct ChatMessageItemLayoutConstants {
         self.image = ChatMessageItemImageLayoutConstants(bubbleInsets: UIEdgeInsets(top: 1.0 + UIScreenPixel, left: 1.0 + UIScreenPixel, bottom: 1.0 + UIScreenPixel, right: 1.0 + UIScreenPixel), statusInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 6.0, right: 6.0), defaultCornerRadius: 17.0, mergedCornerRadius: 5.0, contentMergedCornerRadius: 5.0, maxDimensions: CGSize(width: 300.0, height: 300.0), minDimensions: CGSize(width: 74.0, height: 74.0))
         self.file = ChatMessageItemFileLayoutConstants(bubbleInsets: UIEdgeInsets(top: 15.0, left: 9.0, bottom: 15.0, right: 12.0))
         self.instantVideo = ChatMessageItemInstantVideoConstants(insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0), dimensions: CGSize(width: 212.0, height: 212.0))
+        self.wallpapers = ChatMessageItemWallpaperLayoutConstants(maxTextWidth: 180.0)
     }
 }
 

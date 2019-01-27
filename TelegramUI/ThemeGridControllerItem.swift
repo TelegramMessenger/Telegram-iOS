@@ -54,6 +54,7 @@ final class ThemeGridControllerItemNode: GridItemNode {
     override func didLoad() {
         super.didLoad()
         
+        self.view.isExclusiveTouch = true
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     

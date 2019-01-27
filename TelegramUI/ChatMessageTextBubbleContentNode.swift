@@ -68,8 +68,16 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let incoming = item.message.effectivelyIncoming(item.account.peerId)
                 
+                var maxTextWidth = CGFloat.greatestFiniteMagnitude
+                for media in item.message.media {
+                    if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.type == "telegram_background" {
+                        maxTextWidth = layoutConstants.wallpapers.maxTextWidth
+                        break
+                    }
+                }
+                
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
-                let textConstrainedSize = CGSize(width: constrainedSize.width - horizontalInset, height: constrainedSize.height)
+                let textConstrainedSize = CGSize(width: min(maxTextWidth, constrainedSize.width - horizontalInset), height: constrainedSize.height)
                 
                 var edited = false
                 var sentViaBot = false

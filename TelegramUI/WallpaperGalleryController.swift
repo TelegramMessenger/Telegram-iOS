@@ -286,32 +286,10 @@ class WallpaperGalleryController: ViewController {
         self.galleryNode.overlayNode = overlayNode
         self.galleryNode.addSubnode(overlayNode)
         
-        let colorPanelNode = WallpaperColorPanelNode(theme: presentationData.theme)
-        colorPanelNode.colorChanged = { [weak self] color, finished in
-            if let strongSelf = self, strongSelf.validLayout != nil, let centralEntryIndex = strongSelf.galleryNode.pager.centralItemNode()?.index {
-                var entries = strongSelf.entries
-                var currentEntry = entries[centralEntryIndex]
-                switch currentEntry {
-                    case let .wallpaper(wallpaper):
-                        switch wallpaper {
-                            case .color:
-                                currentEntry = .wallpaper(.color(Int32(color.rgb)))
-                            case let .file(file):
-                                if file.isPattern {
-                                    let newSettings = WallpaperSettings(blur: file.settings.blur, motion: file.settings.motion, color: Int32(bitPattern: color.rgb), intensity: 100)
-                                    let newWallpaper = TelegramWallpaper.file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, slug: file.slug, file: file.file, settings: newSettings)
-                                    currentEntry = .wallpaper(newWallpaper)
-                                }
-                            default:
-                                break
-                        }
-                    default:
-                        break
-                }
-                entries[centralEntryIndex] = currentEntry
-                strongSelf.entries = entries
-                
-                strongSelf.galleryNode.pager.transaction(strongSelf.updateTransaction(entries: entries, arguments: WallpaperGalleryItemArguments(colorPreview: !finished, isColorsList: false, patternEnabled: strongSelf.patternPanelEnabled)))
+        let colorPanelNode = WallpaperColorPanelNode(theme: presentationData.theme, strings: presentationData.strings)
+        colorPanelNode.colorChanged = { [weak self] color, intensity, ended in
+            if let strongSelf = self {
+                strongSelf.updateEntries(color: color, intensity: intensity, preview: !ended)
             }
         }
         if case let .customColor(colorValue) = self.source, let color = colorValue {
@@ -428,6 +406,8 @@ class WallpaperGalleryController: ViewController {
             }
             node.requestColorPanel = { [weak self] color in
                 if let strongSelf = self, let (layout, _) = strongSelf.validLayout {
+                    strongSelf.colorPanelNode?.adjustingPattern = true
+                    strongSelf.colorPanelNode?.intensity = 40
                     strongSelf.colorPanelNode?.color = color
                     strongSelf.galleryNode.scrollView.isScrollEnabled = false
                     strongSelf.galleryNode.pager.isScrollEnabled = false
@@ -450,6 +430,36 @@ class WallpaperGalleryController: ViewController {
                 self.patternPanelNode?.color = entryColor
             }
         }
+    }
+    
+    private func updateEntries(color: UIColor, intensity: Int32? = nil, preview: Bool = false) {
+        guard self.validLayout != nil, let centralEntryIndex = self.galleryNode.pager.centralItemNode()?.index else {
+            return
+        }
+        
+        var entries = self.entries
+        var currentEntry = entries[centralEntryIndex]
+        switch currentEntry {
+            case let .wallpaper(wallpaper):
+                switch wallpaper {
+                    case .color:
+                        currentEntry = .wallpaper(.color(Int32(color.rgb)))
+                    case let .file(file):
+                        if file.isPattern {
+                            let newSettings = WallpaperSettings(blur: file.settings.blur, motion: file.settings.motion, color: Int32(bitPattern: color.rgb), intensity: intensity)
+                            let newWallpaper = TelegramWallpaper.file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, slug: file.slug, file: file.file, settings: newSettings)
+                            currentEntry = .wallpaper(newWallpaper)
+                        }
+                    default:
+                        break
+                }
+            default:
+                break
+        }
+        entries[centralEntryIndex] = currentEntry
+        self.entries = entries
+        
+        self.galleryNode.pager.transaction(self.updateTransaction(entries: entries, arguments: WallpaperGalleryItemArguments(colorPreview: preview, isColorsList: false, patternEnabled: self.patternPanelEnabled)))
     }
     
     private func updateEntries(pattern: TelegramWallpaper, intensity: Int32? = nil, preview: Bool = false) {

@@ -315,6 +315,28 @@ func parseProxyUrl(_ url: String) -> (host: String, port: Int32, username: Strin
     return nil
 }
 
+func parseWallpaperUrl(_ url: String) -> WallpaperUrlParameter? {
+    let schemes = ["http://", "https://", ""]
+    let baseTelegramMePaths = ["telegram.me", "t.me"]
+    for basePath in baseTelegramMePaths {
+        for scheme in schemes {
+            let basePrefix = scheme + basePath + "/"
+            if url.lowercased().hasPrefix(basePrefix) {
+                if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])), case let .wallpaper(wallpaper) = internalUrl {
+                    return wallpaper
+                }
+            }
+        }
+    }
+    if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
+        if let internalUrl = parseInternalUrl(query: host + "?" + query), case let .wallpaper(wallpaper) = internalUrl {
+            return wallpaper
+        }
+    }
+    
+    return nil
+}
+
 func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
     let schemes = ["http://", "https://", ""]
     let baseTelegramMePaths = ["telegram.me", "t.me"]

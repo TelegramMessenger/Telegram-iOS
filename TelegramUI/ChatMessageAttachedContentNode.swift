@@ -431,8 +431,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     let (_, initialImageWidth, refineLayout) = contentImageLayout(account, presentationData.theme.theme, presentationData.strings, message, image, automaticDownload, associatedData.automaticDownloadPeerType, automaticDownloadSettings.autoplayGifs, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                     initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                     refineContentImageLayout = refineLayout
-                } else if let color = media as? SolidColorMedia {
-                    let (_, initialImageWidth, refineLayout) = contentImageLayout(account, presentationData.theme.theme, presentationData.strings, message, color, true, associatedData.automaticDownloadPeerType, automaticDownloadSettings.autoplayGifs, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                } else if let wallpaper = media as? WallpaperPreviewMedia {
+                    let (_, initialImageWidth, refineLayout) = contentImageLayout(account, presentationData.theme.theme, presentationData.strings, message, wallpaper, true, associatedData.automaticDownloadPeerType, automaticDownloadSettings.autoplayGifs, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                     initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                     refineContentImageLayout = refineLayout
                 }

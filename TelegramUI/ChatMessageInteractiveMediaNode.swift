@@ -200,8 +200,22 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 isInlinePlayableVideo = file.isVideo && file.isAnimated && !isSecretMedia && automaticPlayback
             } else if let image = media as? TelegramMediaWebFile, let dimensions = image.dimensions {
                 unboundSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5))
-            } else if media is SolidColorMedia {
-                unboundSize = CGSize(width: 128.0, height: 128.0)
+            } else if let wallpaper = media as? WallpaperPreviewMedia {
+                switch wallpaper.content {
+                    case let .file(file, _):
+                        if let thumbnail = file.previewRepresentations.first, var dimensions = file.dimensions {
+                            let dimensionsVertical = dimensions.width < dimensions.height
+                            let thumbnailVertical = thumbnail.dimensions.width < thumbnail.dimensions.height
+                            if dimensionsVertical != thumbnailVertical {
+                                dimensions = CGSize(width: dimensions.height, height: dimensions.width)
+                            }
+                            unboundSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5)).fitted(CGSize(width: 240.0, height: 240.0))
+                        } else {
+                            unboundSize = CGSize(width: 54.0, height: 54.0)
+                        }
+                    case .color:
+                        unboundSize = CGSize(width: 128.0, height: 128.0)
+                }
             } else {
                 unboundSize = CGSize(width: 54.0, height: 54.0)
             }
@@ -284,6 +298,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     
                     var replaceVideoNode: Bool?
                     var updateVideoFile: TelegramMediaFile?
+                    
+                    var emptyColor: UIColor = message.effectivelyIncoming(account.peerId) ? theme.chat.bubble.incomingMediaPlaceholderColor : theme.chat.bubble.outgoingMediaPlaceholderColor
                     
                     if mediaUpdated {
                         if let image = media as? TelegramMediaImage {
@@ -382,11 +398,33 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: file)
                                 }
                             })
-                        } else if let color = media as? SolidColorMedia {
+                        } else if let wallpaper = media as? WallpaperPreviewMedia {
                             updateImageSignal = { synchronousLoad in
-                                return solidColor(color.color)
+                                switch wallpaper.content {
+                                    case let .file(file, _):
+                                        let representations: [ImageRepresentationWithReference] = file.previewRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference($0.resource)) })
+                                        if file.mimeType == "image/png" {
+                                            return patternWallpaperImage(account: account, representations: representations, mode: .thumbnail)
+                                        } else {
+                                            return wallpaperImage(account: account, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), representations: representations, alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true)
+                                        }
+                                    case let .color(color):
+                                        return solidColor(color)
+                                }
                             }
-                            boundingSize = CGSize(width: boundingSize.width, height: boundingSize.width)
+                            
+                            if case let .file(file, patternColor) = wallpaper.content {
+                                emptyColor = patternColor ?? UIColor(rgb: 0xd6e2ee, alpha: 0.5)
+                                updatedFetchControls = FetchControls(fetch: { manual in
+                                    if let strongSelf = self {
+                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: manual).start())
+                                    }
+                                }, cancel: {
+                                    messageMediaFileCancelInteractiveFetch(account: account, messageId: message.id, file: file)
+                                })
+                            } else {
+                                boundingSize = CGSize(width: boundingSize.width, height: boundingSize.width)
+                            }
                         }
                     }
                     
@@ -415,12 +453,25 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                         return resourceStatus
                                     }
                             }
-                        } else if media is SolidColorMedia {
-                            updatedStatusSignal = .single(.Local)
+                        } else if let wallpaper = media as? WallpaperPreviewMedia {
+                            switch wallpaper.content {
+                                case let .file(file, _):
+                                    updatedStatusSignal = combineLatest(messageMediaFileStatus(account: account, messageId: message.id, file: file), account.pendingMessageManager.pendingMessageStatus(message.id))
+                                        |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
+                                            if let pendingStatus = pendingStatus {
+                                                let adjustedProgress = max(pendingStatus.progress, 0.027)
+                                                return .Fetching(isActive: pendingStatus.isRunning, progress: adjustedProgress)
+                                            } else {
+                                                return resourceStatus
+                                            }
+                                    }
+                                case .color:
+                                    updatedStatusSignal = .single(.Local)
+                            }
                         }
                     }
                     
-                    let arguments = TransformImageArguments(corners: corners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: isInlinePlayableVideo ? .fill(.black) : .blurBackground, emptyColor: message.effectivelyIncoming(account.peerId) ? theme.chat.bubble.incomingMediaPlaceholderColor : theme.chat.bubble.outgoingMediaPlaceholderColor)
+                    let arguments = TransformImageArguments(corners: corners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: isInlinePlayableVideo ? .fill(.black) : .blurBackground, emptyColor: emptyColor)
                     
                     let imageFrame = CGRect(origin: CGPoint(x: -arguments.insets.left, y: -arguments.insets.top), size: arguments.drawingSize)
                     
@@ -584,7 +635,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     }
                 case .Remote, .Fetching:
                     if let webpage = webpage, let automaticDownload = self.automaticDownload, automaticDownload, case let .Loaded(content) = webpage.content {
-                        if content.embedUrl != nil {
+                        if content.type == "telegram_background" {
+                            progressRequired = true
+                        } else if content.embedUrl != nil {
                             progressRequired = true
                         } else if let file = content.file, file.isVideo, !file.isAnimated {
                             progressRequired = true
@@ -689,7 +742,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 }
                             }
                         }
-                    } else if let webpage = webpage, let automaticDownload = self.automaticDownload, automaticDownload, case .Loaded = webpage.content {
+                    } else if let webpage = webpage, let automaticDownload = self.automaticDownload, automaticDownload, case let .Loaded(content) = webpage.content, content.type != "telegram_background" {
                         state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
                     }
                 case .Local:
@@ -744,7 +797,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                             }
                         }
-                    } else if let webpage = webpage, let automaticDownload = self.automaticDownload, automaticDownload, case .Loaded = webpage.content {
+                    } else if let webpage = webpage, let automaticDownload = self.automaticDownload, automaticDownload, case let .Loaded(content) = webpage.content, content.type != "telegram_background" {
                         state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
                     }
             }
