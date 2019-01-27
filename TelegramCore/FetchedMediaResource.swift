@@ -843,7 +843,7 @@ final class MediaReferenceRevalidationContext {
     
     func wallpapers(postbox: Postbox, network: Network, background: Bool) -> Signal<[TelegramWallpaper], RevalidateMediaReferenceError> {
         return self.genericItem(key: .wallpapers, background: background, request: { next, error in
-            return (telegramWallpapers(postbox: postbox, network: network)
+            return (telegramWallpapers(postbox: postbox, network: network, forceUpdate: true)
             |> last
             |> mapError { _ -> RevalidateMediaReferenceError in
                 return .generic
