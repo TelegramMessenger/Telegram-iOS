@@ -3956,3 +3956,9 @@ Unused sets are archived when you add more.";
 "CallFeedback.Send" = "Send";
 "CallFeedback.Success" = "Thanks for\nyour feedback";
 
+"WebSearch.SearchNoResults" = "No Results";
+"WebSearch.SearchNoResultsDescription" = "There were no results for \"%@\".\nTry a new search.";
+
+"WallpaperPreview.PatternColor" = "Background";
+"WallpaperPreview.PatternIntensity" = "Intensity";
+
