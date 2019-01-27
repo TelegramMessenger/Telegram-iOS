@@ -196,10 +196,20 @@ public func installWallpaper(account: Account, wallpaper: TelegramWallpaper) -> 
         return .complete()
     }
     return account.network.request(Api.functions.account.installWallPaper(wallpaper: Api.InputWallPaper.inputWallPaperSlug(slug: slug), settings: apiWallpaperSettings(settings)))
-        |> `catch` { _ -> Signal<Api.Bool, NoError> in
-            return .complete()
-        }
-        |> mapToSignal { _ -> Signal<Void, NoError> in
-            return .complete()
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .complete()
+    }
+    |> mapToSignal { _ -> Signal<Void, NoError> in
+        return .complete()
+    }
+}
+
+public func resetWallpapers(account: Account) -> Signal<Void, NoError> {
+    return account.network.request(Api.functions.account.resetWallPapers())
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .complete()
+    }
+    |> mapToSignal { _ -> Signal<Void, NoError> in
+        return .complete()
     }
 }
