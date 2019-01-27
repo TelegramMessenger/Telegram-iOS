@@ -94,7 +94,7 @@ private final class WallpaperColorKnobNode: ASDisplayNode {
         super.init()
         
         self.isOpaque = false
-        self.displaysAsynchronously = true
+        self.displaysAsynchronously = false
         self.isUserInteractionEnabled = false
     }
     
@@ -140,7 +140,7 @@ private final class WallpaperColorHueSaturationNode: ASDisplayNode {
         super.init()
         
         self.isOpaque = true
-        self.displaysAsynchronously = true
+        self.displaysAsynchronously = false
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
@@ -180,7 +180,7 @@ private final class WallpaperColorBrightnessNode: ASDisplayNode {
         super.init()
         
         self.isOpaque = true
-        self.displaysAsynchronously = true
+        self.displaysAsynchronously = false
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
@@ -228,7 +228,7 @@ final class WallpaperIntensitySliderNode: ASDisplayNode {
         super.init()
         
         self.isOpaque = bordered
-        self.displaysAsynchronously = true
+        self.displaysAsynchronously = false
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
