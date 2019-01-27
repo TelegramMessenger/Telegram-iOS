@@ -3932,7 +3932,7 @@ Unused sets are archived when you add more.";
 "Undo.DeletedChannel" = "Deleted channel";
 "Undo.DeletedGroup" = "Deleted group";
 
-"AccessDenied.Wallpapers" = "Telegram needs access to your photo library to set a custom wallpaper.\n\nPlease go to Settings > Privacy > Photos and set Telegram to ON.";
+"AccessDenied.Wallpapers" = "Telegram needs access to your photo library to set a custom chat background.\n\nPlease go to Settings > Privacy > Photos and set Telegram to ON.";
 
 "Conversation.ChatBackground" = "Chat Background";
 "Conversation.ViewBackground" = "VIEW BACKGROUND";
@@ -3962,3 +3962,4 @@ Unused sets are archived when you add more.";
 "WallpaperPreview.PatternColor" = "Background";
 "WallpaperPreview.PatternIntensity" = "Intensity";
 
+"Message.Wallpaper" = "Chat Background";
