@@ -25,8 +25,8 @@ private func areWallpapersEqual(_ lhs: TelegramWallpaper, _ rhs: TelegramWallpap
             } else {
                 return false
             }
-        case let .file(_, _, _, _, _, lhsSlug, _, _):
-            if case let .file(_, _, _, _, _, rhsSlug, _, _) = rhs, lhsSlug == rhsSlug {
+        case let .file(_, _, _, _, _, lhsSlug, _, lhsSettings):
+            if case let .file(_, _, _, _, _, rhsSlug, _, rhsSettings) = rhs, lhsSlug == rhsSlug, lhsSettings.color == rhsSettings.color && lhsSettings.intensity == rhsSettings.intensity {
                 return true
             } else {
                 return false
@@ -91,8 +91,11 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
                 return 0
             case let .color(color):
                 return (Int64(0) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: color)))
-            case let .file(id, _, _, _, _, _, _, _):
-                return (Int64(1) << 32) | id
+            case let .file(id, _, _, _, _, _, _, settings):
+                var hash: Int = id.hashValue
+                hash = hash &* 31 &+ (settings.color?.hashValue ?? 0)
+                hash = hash &* 31 &+ (settings.intensity?.hashValue ?? 0)
+                return (Int64(1) << 32) | Int64(hash)
             case let .image(representations, _):
                 if let largest = largestImageRepresentation(representations) {
                     return (Int64(2) << 32) | Int64(largest.resource.id.hashValue)
@@ -660,6 +663,40 @@ final class ThemeGridControllerNode: ASDisplayNode {
         }
     }
     
+    func fixNavigationSearchableGridNodeScrolling(searchNode: NavigationBarSearchContentNode) -> Bool {
+        if searchNode.expansionProgress > 0.0 && searchNode.expansionProgress < 1.0 {
+            let scrollToItem: GridNodeScrollToItem
+            let targetProgress: CGFloat
+            
+            let duration: Double = 0.3
+            let transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: .easeInOut)
+            
+            if searchNode.expansionProgress < 0.6 {
+                scrollToItem = GridNodeScrollToItem(index: 0, position: .top(navigationBarSearchContentHeight), transition: transition, directionHint: .up, adjustForSection: true, adjustForTopInset: true)
+                targetProgress = 0.0
+            } else {
+                scrollToItem = GridNodeScrollToItem(index: 0, position: .top(0.0), transition: transition, directionHint: .up, adjustForSection: true, adjustForTopInset: true)
+                targetProgress = 1.0
+            }
+            
+            let previousOffset = (self.gridNode.scrollView.contentOffset.y + self.gridNode.scrollView.contentInset.top)
+            searchNode.updateExpansionProgress(targetProgress, animated: true)
+            
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, updateOpaqueState: nil, synchronousLoads: false), completion: { _ in })
+            
+            let offset = (self.gridNode.scrollView.contentOffset.y + self.gridNode.scrollView.contentInset.top) - previousOffset
+            
+            self.backgroundNode.layer.animatePosition(from: self.backgroundNode.layer.position.offsetBy(dx: 0.0, dy: offset), to: self.backgroundNode.layer.position, duration: duration)
+            self.separatorNode.layer.animatePosition(from: self.separatorNode.layer.position.offsetBy(dx: 0.0, dy: offset), to: self.separatorNode.layer.position, duration: duration)
+            self.colorItemNode.layer.animatePosition(from: self.colorItemNode.layer.position.offsetBy(dx: 0.0, dy: offset), to: self.colorItemNode.layer.position, duration: duration)
+            self.galleryItemNode.layer.animatePosition(from: self.galleryItemNode.layer.position.offsetBy(dx: 0.0, dy: offset), to: self.galleryItemNode.layer.position, duration: duration)
+            self.descriptionItemNode.layer.animatePosition(from: self.descriptionItemNode.layer.position.offsetBy(dx: 0.0, dy: offset), to: self.descriptionItemNode.layer.position, duration: duration)
+            
+            return true
+        }
+        return false
+    }
+    
     func scrollToTop(animated: Bool = true) {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.contentNode.scrollToTop()
@@ -668,7 +705,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             let duration: Double = 0.25
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: duration, curve: .easeInOut) : .immediate
             
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: GridNodeScrollToItem(index: 0, position: .top, transition: transition, directionHint: .up, adjustForSection: true, adjustForTopInset: true), updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: GridNodeScrollToItem(index: 0, position: .top(0.0), transition: transition, directionHint: .up, adjustForSection: true, adjustForTopInset: true), updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
     
             if animated {
                 self.backgroundNode.layer.animatePosition(from: self.backgroundNode.layer.position.offsetBy(dx: 0.0, dy: -offset), to: self.backgroundNode.layer.position, duration: duration)

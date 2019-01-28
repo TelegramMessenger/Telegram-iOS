@@ -264,7 +264,7 @@ final class ThemeGridController: ViewController {
 
         self.controllerNode.gridNode.scrollingCompleted = { [weak self] in
             if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
-                let _ = fixNavigationSearchableGridNodeScrolling(strongSelf.controllerNode.gridNode, searchNode: searchContentNode)
+                let _ = strongSelf.controllerNode.fixNavigationSearchableGridNodeScrolling(searchNode: searchContentNode)
             }
         }
         

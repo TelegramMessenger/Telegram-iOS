@@ -114,13 +114,13 @@ private func mappedChatHistoryViewListTransition(account: Account, peerId: PeerI
         let mappedPosition: GridNodeScrollToItemPosition
         switch scrollToItem.position {
             case .top:
-                mappedPosition = .top
+                mappedPosition = .top(0.0)
             case .center:
-                mappedPosition = .center
+                mappedPosition = .center(0.0)
             case .bottom:
-                mappedPosition = .bottom
+                mappedPosition = .bottom(0.0)
             case .visible:
-                mappedPosition = .bottom
+                mappedPosition = .bottom(0.0)
         }
         let scrollTransition: ContainedViewLayoutTransition
         if scrollToItem.animated {

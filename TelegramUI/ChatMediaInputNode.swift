@@ -54,7 +54,7 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, view: I
                     case .search, .peerSpecificSetup:
                         break
                     case .sticker:
-                        scrollToItem = GridNodeScrollToItem(index: i, position: .top, transition: .immediate, directionHint: .down, adjustForSection: true, adjustForTopInset: true)
+                        scrollToItem = GridNodeScrollToItem(index: i, position: .top(0.0), transition: .immediate, directionHint: .down, adjustForSection: true, adjustForTopInset: true)
                 }
             }
         case .generic:
@@ -81,7 +81,7 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, view: I
                         if !fromEntries.isEmpty && fromEntries[0].index < toEntries[i].index {
                             directionHint = .down
                         }
-                        scrollToItem = GridNodeScrollToItem(index: i, position: .top, transition: .animated(duration: 0.45, curve: .spring), directionHint: directionHint, adjustForSection: true, adjustForTopInset: true)
+                        scrollToItem = GridNodeScrollToItem(index: i, position: .top(0.0), transition: .animated(duration: 0.45, curve: .spring), directionHint: directionHint, adjustForSection: true, adjustForTopInset: true)
                         break
                     }
                 }
@@ -106,13 +106,13 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, view: I
                             if !fromEntries.isEmpty && fromEntries[0].index < toEntries[i].index {
                                 directionHint = .down
                             }
-                            scrollToItem = GridNodeScrollToItem(index: i, position: .top, transition: .animated(duration: 0.45, curve: .spring), directionHint: directionHint, adjustForSection: true, adjustForTopInset: true)
+                            scrollToItem = GridNodeScrollToItem(index: i, position: .top(0.0), transition: .animated(duration: 0.45, curve: .spring), directionHint: directionHint, adjustForSection: true, adjustForTopInset: true)
                             break
                         }
                     }
                 }
                 if scrollToItem == nil {
-                    scrollToItem = GridNodeScrollToItem(index: 0, position: .top, transition: .animated(duration: 0.45, curve: .spring), directionHint: .up, adjustForSection: true, adjustForTopInset: true)
+                    scrollToItem = GridNodeScrollToItem(index: 0, position: .top(0.0), transition: .animated(duration: 0.45, curve: .spring), directionHint: .up, adjustForSection: true, adjustForTopInset: true)
                 }
             }
     }

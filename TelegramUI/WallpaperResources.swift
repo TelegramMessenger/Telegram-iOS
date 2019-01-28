@@ -360,9 +360,8 @@ func patternColor(for color: UIColor, intensity: CGFloat, prominent: Bool = fals
     var hue:  CGFloat = 0.0
     var saturation: CGFloat = 0.0
     var brightness: CGFloat = 0.0
-    var alpha: CGFloat = 0.0
-    if color.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) {
-        if saturation > 0.0 || brightness < 1.0 {
+    if color.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil) {
+        if saturation > 0.0 || (brightness < 1.0 && brightness > 0.0) {
             saturation = min(1.0, saturation + 0.05 + 0.1 * (1.0 - saturation))
         }
         if brightness > 0.5 {
@@ -370,7 +369,7 @@ func patternColor(for color: UIColor, intensity: CGFloat, prominent: Bool = fals
         } else {
             brightness = max(0.0, min(1.0, 1.0 - brightness * 0.65))
         }
-        alpha = (prominent ? 0.5 : 0.4) * intensity
+        let alpha = (prominent ? 0.5 : 0.4) * intensity
         return UIColor(hue: hue, saturation: saturation, brightness: brightness, alpha: alpha)
     }
     return .black

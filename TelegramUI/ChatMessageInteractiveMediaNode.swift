@@ -300,6 +300,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     var updateVideoFile: TelegramMediaFile?
                     
                     var emptyColor: UIColor = message.effectivelyIncoming(account.peerId) ? theme.chat.bubble.incomingMediaPlaceholderColor : theme.chat.bubble.outgoingMediaPlaceholderColor
+                    if let wallpaper = media as? WallpaperPreviewMedia, case let .file(_, patternColor) = wallpaper.content {
+                        emptyColor = patternColor ?? UIColor(rgb: 0xd6e2ee, alpha: 0.5)
+                    }
                     
                     if mediaUpdated {
                         if let image = media as? TelegramMediaImage {
@@ -414,7 +417,6 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             }
                             
                             if case let .file(file, patternColor) = wallpaper.content {
-                                emptyColor = patternColor ?? UIColor(rgb: 0xd6e2ee, alpha: 0.5)
                                 updatedFetchControls = FetchControls(fetch: { manual in
                                     if let strongSelf = self {
                                         strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(account: account, message: message, file: file, userInitiated: manual).start())
