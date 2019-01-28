@@ -80,7 +80,7 @@ final class ThemeGridSearchItemNode: GridItemNode {
                     if let largestRepresentation = largestImageRepresentation(image.representations) {
                         imageDimensions = largestRepresentation.dimensions
                     }
-                    imageResource = imageRepresentationLargerThan(image.representations, size: CGSize(width: 200.0, height: 100.0))?.resource
+                    imageResource = imageRepresentationLargerThan(image.representations, size: CGSize(width: 600.0, height: 600.0))?.resource
                     if let file = file {
                         if let thumbnailRepresentation = smallestImageRepresentation(file.previewRepresentations) {
                             thumbnailDimensions = thumbnailRepresentation.dimensions

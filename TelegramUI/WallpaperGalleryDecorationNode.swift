@@ -15,6 +15,8 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     private let colorNode: ASImageNode
     private let textNode: ASTextNode
     
+    private var textSize: CGSize?
+    
     private var _value: WallpaperOptionButtonValue
     override var isSelected: Bool {
         get {
@@ -140,21 +142,32 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         self.isUserInteractionEnabled = enabled
     }
     
-    //    override func measure(_ constrainedSize: CGSize) -> CGSize {
-    //        let size = self.textNode.measure(constrainedSize)
-    //        return CGSize(width: size.width + 56.0, height: 30.0)
-    //    }
+    override func measure(_ constrainedSize: CGSize) -> CGSize {
+        let size = self.textNode.measure(constrainedSize)
+        self.textSize = size
+        return CGSize(width: ceil(size.width) + 52.0, height: 30.0)
+    }
     
     override func layout() {
         super.layout()
         
         self.backgroundNode.frame = self.bounds
         
-        let checkSize = CGSize(width: 18.0, height: 18.0)
-        self.checkNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 6.0), size: checkSize)
-        self.colorNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 6.0), size: checkSize)
+        guard let textSize = self.textSize else {
+            return
+        }
         
-        self.textNode.frame = CGRect(x: 39.0, y: 6.0 + UIScreenPixel, width: 100.0, height: 20.0)
+        let checkSize = CGSize(width: 18.0, height: 18.0)
+        let spacing: CGFloat = 9.0
+        let totalWidth = checkSize.width + spacing + textSize.width
+        let origin = floor((self.bounds.width - totalWidth) / 2.0)
+        
+        self.checkNode.frame = CGRect(origin: CGPoint(x: origin, y: 6.0), size: checkSize)
+        self.colorNode.frame = CGRect(origin: CGPoint(x: origin, y: 6.0), size: checkSize)
+        
+        if let textSize = self.textSize {
+            self.textNode.frame = CGRect(x: origin + checkSize.width + spacing, y: 6.0 + UIScreenPixel, width: textSize.width, height: textSize.height)
+        }
     }
 }
 

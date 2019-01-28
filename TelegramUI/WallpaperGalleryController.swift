@@ -94,6 +94,12 @@ private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, sl
     return .file(id: id ?? 0, accessHash: accessHash ?? 0, isCreator: false, isDefault: false, isPattern: isPattern, slug: slug, file: file, settings: WallpaperSettings(blur: false, motion: false, color: colorValue, intensity: intensityValue))
 }
 
+private struct WallpaperPatternTransition: Equatable {
+    let pattern: TelegramWallpaper
+    let intensity: Int32?
+    let preview: Bool
+}
+
 class WallpaperGalleryController: ViewController {
     private var galleryNode: GalleryControllerNode {
         return self.displayNode as! GalleryControllerNode
@@ -117,6 +123,8 @@ class WallpaperGalleryController: ViewController {
     private var initialOptions: WallpaperPresentationOptions?
     private var entries: [WallpaperGalleryEntry] = []
     private var centralEntryIndex: Int?
+    
+    private let patternTransition = Promise<WallpaperPatternTransition?>()
     
     private let centralItemSubtitle = Promise<String?>()
     private let centralItemStatus = Promise<MediaResourceStatus>()
@@ -221,6 +229,12 @@ class WallpaperGalleryController: ViewController {
         self.centralItemAttributesDisposable.add(self.centralItemAction.get().start(next: { [weak self] barButton in
             if let strongSelf = self {
                 strongSelf.navigationItem.rightBarButtonItem = barButton
+            }
+        }))
+        
+        self.centralItemAttributesDisposable.add(self.patternTransition.get().start(next: { [weak self] transition in
+            if let strongSelf = self, let transition = transition {
+                strongSelf.updateEntries(pattern: transition.pattern, intensity: transition.intensity, preview: transition.preview)
             }
         }))
     }
@@ -437,21 +451,6 @@ class WallpaperGalleryController: ViewController {
                 }
             }
             
-            if let entry = node.entry, case let .wallpaper(wallpaper) = entry {
-                var entryColor: UIColor = .white
-                switch wallpaper {
-                    case let .color(color):
-                        entryColor = UIColor(rgb: UInt32(bitPattern: color))
-                    case let .file(file):
-                        if let color = file.settings.color {
-                            entryColor = UIColor(rgb: UInt32(bitPattern: color))
-                        }
-                    default:
-                        break
-                }
-                self.patternPanelNode?.color = entryColor
-            }
-            
             if let (layout, bottomInset) = self.validLayout {
                 self.updateMessagesLayout(layout: layout, bottomInset: bottomInset, transition: .immediate)
             }
@@ -643,10 +642,13 @@ class WallpaperGalleryController: ViewController {
         if let patternPanelNode = self.patternPanelNode {
             currentPatternPanelNode = patternPanelNode
         } else {
+            let intensityValue = ThrottledValue<WallpaperPatternTransition?>(value: nil, interval: 0.01)
+            self.patternTransition.set(intensityValue.get())
+            
             let patternPanelNode = WallpaperPatternPanelNode(account: self.account, theme: presentationData.theme, strings: presentationData.strings)
             patternPanelNode.patternChanged = { [weak self] pattern, intensity, preview in
                 if let strongSelf = self, strongSelf.validLayout != nil {
-                    strongSelf.updateEntries(pattern: pattern, intensity: intensity, preview: preview)
+                    intensityValue.set(value: WallpaperPatternTransition(pattern: pattern, intensity: intensity, preview: preview))
                 }
             }
             self.patternPanelNode = patternPanelNode

@@ -382,7 +382,6 @@ final class WallpaperColorPickerNode: ASDisplayNode {
     private let brightnessNode: WallpaperColorBrightnessNode
     private let brightnessKnobNode: ASImageNode
     
-    private let backgroundNode: WallpaperIntensityPickerNode
     private let intensityNode: WallpaperIntensityPickerNode
 
     private let colorNode: WallpaperColorHueSaturationNode
@@ -409,7 +408,6 @@ final class WallpaperColorPickerNode: ASDisplayNode {
             
             if newHSV != self.colorHSV {
                 self.colorHSV = newHSV
-                self.backgroundNode.value = 1.0 - self.colorHSV.2
                 self.update()
             }
         }
@@ -433,7 +431,6 @@ final class WallpaperColorPickerNode: ASDisplayNode {
             let value = self.adjustingPattern
             self.brightnessNode.isHidden = value
             self.brightnessKnobNode.isHidden = value
-            self.backgroundNode.isHidden = !value
             self.intensityNode.isHidden = !value
             self.setNeedsLayout()
         }
@@ -448,8 +445,6 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         self.colorNode.hitTestSlop = UIEdgeInsetsMake(-16.0, -16.0, -16.0, -16.0)
         self.colorKnobNode = WallpaperColorKnobNode()
         
-        self.backgroundNode = WallpaperIntensityPickerNode(theme: nil, title: strings.WallpaperPreview_PatternColor, bordered: true)
-        self.backgroundNode.isHidden = true
         
         self.intensityNode = WallpaperIntensityPickerNode(theme: nil, title: strings.WallpaperPreview_PatternIntensity, bordered: true)
         self.intensityNode.isHidden = true
@@ -462,7 +457,6 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         self.addSubnode(self.brightnessKnobNode)
         self.addSubnode(self.colorNode)
         self.addSubnode(self.colorKnobNode)
-        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.intensityNode)
         
         let valueChanged: (CGFloat, Bool) -> Void = { [weak self] value, ended in
@@ -479,14 +473,6 @@ final class WallpaperColorPickerNode: ASDisplayNode {
                     }
                 }
             }
-        }
-
-        self.backgroundNode.valueChanged = { value in
-            valueChanged(value, false)
-        }
-        
-        self.backgroundNode.valueChangeEnded = { value in
-            valueChanged(value, true)
         }
         
         self.intensityNode.valueChanged = { [weak self] value in
@@ -530,7 +516,6 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         let min = self.colorHSV
         let max = patternColor(for: self.color, intensity: 1.0).hsv
         self.intensityNode.updateExtrema(min: min, max: max)
-        self.backgroundNode.updateExtrema(min: self.colorHSV, max: (self.colorHSV.0, self.colorHSV.1, 0.0))
     }
     
     func updateKnobLayout(size: CGSize, panningColor: Bool, transition: ContainedViewLayoutTransition) {
@@ -563,10 +548,9 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         transition.updateFrame(node: self.brightnessNode, frame: CGRect(x: inset, y: size.height - 55.0, width: size.width - inset * 2.0, height: 29.0))
         
         let slidersInset: CGFloat = 24.0
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: slidersInset, y: size.height - 103.0, width: size.width - slidersInset * 2.0, height: 50.0))
         transition.updateFrame(node: self.intensityNode, frame: CGRect(x: slidersInset, y: size.height - 54.0, width: size.width - slidersInset * 2.0, height: 50.0))
         
-        self.updateKnobLayout(size: size, panningColor: false, transition: transition)
+        self.updateKnobLayout(size: size, panningColor: false, transition: .immediate)
     }
     
     @objc private func colorTap(_ recognizer: UITapGestureRecognizer) {

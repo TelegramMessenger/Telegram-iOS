@@ -369,7 +369,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             }
             
             for wallpaper in sortedWallpapers {
-                if case let .file(file) = wallpaper, deletedWallpaperSlugs.contains(file.slug) {
+                if case let .file(file) = wallpaper, deletedWallpaperSlugs.contains(file.slug) || file.isPattern {
                     continue
                 }
                 let selected = areWallpapersEqual(presentationData.chatWallpaper, wallpaper)

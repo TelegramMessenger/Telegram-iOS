@@ -639,7 +639,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
     
     func updateButtonsLayout(layout: ContainerViewLayout, offset: CGPoint, transition: ContainedViewLayoutTransition) {
-        let buttonSize = CGSize(width: 100.0, height: 30.0)
+        let patternButtonSize = self.patternButtonNode.measure(layout.size)
+        let colorButtonSize = self.colorButtonNode.measure(layout.size)
+        let blurButtonSize = self.blurButtonNode.measure(layout.size)
+        let motionButtonSize = self.motionButtonNode.measure(layout.size)
+        
+        let maxButtonWidth = max(patternButtonSize.width, max(colorButtonSize.width, max(blurButtonSize.width, motionButtonSize.width)))
+        let buttonSize = CGSize(width: maxButtonWidth, height: 30.0)
         let alpha = 1.0 - min(1.0, max(0.0, abs(offset.y) / 50.0))
         
         var additionalYOffset: CGFloat = 0.0
@@ -695,19 +701,18 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             motionFrame = rightButtonFrame
                         case let .file(file):
                             if file.isPattern {
+                                motionAlpha = 1.0
                                 if self.arguments.isColorsList {
                                     patternAlpha = 1.0
                                     if self.patternButtonNode.isSelected {
                                         patternFrame = leftButtonFrame
                                     }
-                                } else {
-                                    colorAlpha = 1.0
-                                    colorFrame = leftButtonFrame
-                                }
-                                if !self.arguments.isColorsList || self.patternButtonNode.isSelected {
-                                    motionAlpha = 1.0
                                     motionFrame = rightButtonFrame
                                 }
+//                                if !self.arguments.isColorsList || self.patternButtonNode.isSelected {
+//                                    motionAlpha = 1.0
+//                                    motionFrame = rightButtonFrame
+//                                }
                             } else {
                                 blurAlpha = 1.0
                                 blurFrame = leftButtonFrame
