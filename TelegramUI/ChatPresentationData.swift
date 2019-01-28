@@ -26,10 +26,16 @@ extension PresentationFontSize {
 extension TelegramWallpaper {
     var isEmpty: Bool {
         switch self {
-            case .builtin, .image, .file:
+            case .builtin, .image:
                 return false
-            case .color:
-                return true
+            case let .file(file):
+                if file.isPattern, file.settings.color == 0xffffff {
+                    return true
+                } else {
+                    return false
+                }
+            case let .color(color):
+                return color == 0xffffff
         }
     }
     var isBuiltin: Bool {

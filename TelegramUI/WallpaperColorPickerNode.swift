@@ -295,9 +295,9 @@ final class WallpaperIntensityPickerNode: ASDisplayNode {
         self.labelNode = ASTextNode()
         var color: UIColor = .black
         if let theme = theme {
-            color = theme.rootController.navigationBar.secondaryTextColor
+            color = theme.rootController.navigationBar.primaryTextColor
         }
-        self.labelNode.attributedText = NSAttributedString(string: title.uppercased(), font: Font.regular(14.0), textColor: color)
+        self.labelNode.attributedText = NSAttributedString(string: title, font: Font.regular(14.0), textColor: color)
         self.sliderNode = WallpaperIntensitySliderNode(bordered: bordered)
         self.sliderNode.hitTestSlop = UIEdgeInsetsMake(-16.0, -16.0, -16.0, -16.0)
         self.knobNode = WallpaperColorKnobNode()
@@ -518,7 +518,11 @@ final class WallpaperColorPickerNode: ASDisplayNode {
     }
     
     private func update() {
-        self.backgroundColor = UIColor(white: self.colorHSV.2, alpha: 1.0)
+        if self.adjustingPattern {
+            self.backgroundColor = .white
+        } else {
+            self.backgroundColor = UIColor(white: self.colorHSV.2, alpha: 1.0)
+        }
         self.colorNode.value = self.colorHSV.2
         self.brightnessNode.hsv = self.colorHSV
         self.colorKnobNode.hsv = self.colorHSV
@@ -532,7 +536,7 @@ final class WallpaperColorPickerNode: ASDisplayNode {
     func updateKnobLayout(size: CGSize, panningColor: Bool, transition: ContainedViewLayoutTransition) {
         let knobSize = CGSize(width: 45.0, height: 45.0)
         
-        let colorHeight = self.adjustingPattern ? size.height - 120.0 : size.height - 66.0
+        let colorHeight = self.adjustingPattern ? size.height - 116.0 : size.height - 66.0
         var colorKnobFrame = CGRect(x: -knobSize.width / 2.0 + size.width * self.colorHSV.0, y: -knobSize.height / 2.0 + (colorHeight * (1.0 - self.colorHSV.1)), width: knobSize.width, height: knobSize.height)
         var origin = colorKnobFrame.origin
         if !panningColor {
@@ -552,14 +556,15 @@ final class WallpaperColorPickerNode: ASDisplayNode {
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         
-        let colorHeight = self.adjustingPattern ? size.height - 120.0 : size.height - 66.0
+        let colorHeight = self.adjustingPattern ? size.height - 116.0 : size.height - 66.0
         transition.updateFrame(node: self.colorNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: colorHeight))
         
         let inset: CGFloat = 42.0
         transition.updateFrame(node: self.brightnessNode, frame: CGRect(x: inset, y: size.height - 55.0, width: size.width - inset * 2.0, height: 29.0))
         
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: 16.0, y: size.height - 108.0, width: size.width - 16.0 * 2.0, height: 50.0))
-        transition.updateFrame(node: self.intensityNode, frame: CGRect(x: 16.0, y: size.height - 56.0, width: size.width - 16.0 * 2.0, height: 50.0))
+        let slidersInset: CGFloat = 24.0
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: slidersInset, y: size.height - 103.0, width: size.width - slidersInset * 2.0, height: 50.0))
+        transition.updateFrame(node: self.intensityNode, frame: CGRect(x: slidersInset, y: size.height - 54.0, width: size.width - slidersInset * 2.0, height: 50.0))
         
         self.updateKnobLayout(size: size, panningColor: false, transition: transition)
     }
@@ -569,7 +574,7 @@ final class WallpaperColorPickerNode: ASDisplayNode {
             return
         }
         
-        let colorHeight = self.adjustingPattern ? size.height - 120.0 : size.height - 66.0
+        let colorHeight = self.adjustingPattern ? size.height - 116.0 : size.height - 66.0
         
         let location = recognizer.location(in: recognizer.view)
         let newHue = max(0.0, min(1.0, location.x / size.width))
@@ -590,7 +595,7 @@ final class WallpaperColorPickerNode: ASDisplayNode {
         
         let previousColor = self.color
         
-        let colorHeight = self.adjustingPattern ? size.height - 120.0 : size.height - 66.0
+        let colorHeight = self.adjustingPattern ? size.height - 116.0 : size.height - 66.0
         
         let location = recognizer.location(in: recognizer.view)
         let transition = recognizer.translation(in: recognizer.view)

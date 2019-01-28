@@ -23,6 +23,7 @@ private func wallpaperDatas(account: Account, fileReference: FileMediaReference?
                     let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
                     if alwaysShowThumbnailFirst, let decodedThumbnailData = decodedThumbnailData {
                         return .single((decodedThumbnailData, nil, false))
+                        |> then(.complete() |> delay(0.05, queue: Queue.concurrentDefaultQueue()))
                         |> then(.single((nil, loadedData, true)))
                     } else {
                         return .single((nil, loadedData, true))
@@ -287,7 +288,7 @@ func patternWallpaperImage(account: Account, representations: [ImageRepresentati
     
     var scale: CGFloat = 0.0
     if case .fastScreen = mode {
-        scale = max(1.0, UIScreenScale - 1.0)
+        scale = 1.0 //max(1.0, UIScreenScale - 1.0)
     }
     
     return signal
@@ -361,12 +362,14 @@ func patternColor(for color: UIColor, intensity: CGFloat, prominent: Bool = fals
     var brightness: CGFloat = 0.0
     var alpha: CGFloat = 0.0
     if color.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) {
+        if saturation > 0.0 || brightness < 1.0 {
+            saturation = min(1.0, saturation + 0.05 + 0.1 * (1.0 - saturation))
+        }
         if brightness > 0.5 {
             brightness = max(0.0, brightness * 0.65)
         } else {
             brightness = max(0.0, min(1.0, 1.0 - brightness * 0.65))
         }
-        saturation = min(1.0, saturation + 0.05 + 0.1 * (1.0 - saturation))
         alpha = (prominent ? 0.5 : 0.4) * intensity
         return UIColor(hue: hue, saturation: saturation, brightness: brightness, alpha: alpha)
     }

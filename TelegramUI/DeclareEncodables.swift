@@ -34,7 +34,6 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(RecentWebSearchQueryItem.self, f: { RecentWebSearchQueryItem(decoder: $0) })
     declareEncodable(RecentWallpaperSearchQueryItem.self, f: { RecentWallpaperSearchQueryItem(decoder: $0) })
     declareEncodable(VoipDerivedState.self, f: { VoipDerivedState(decoder: $0) })
-    declareEncodable(PresentationThemeSpecificSettings.self, f: { PresentationThemeSpecificSettings(decoder: $0) })
     return
 }()
 

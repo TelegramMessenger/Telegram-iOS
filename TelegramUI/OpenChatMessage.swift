@@ -420,7 +420,7 @@ func openChatWallpaper(account: Account, message: Message, present: @escaping (V
                         case let .slug(slug, options, color, intensity):
                             source = .slug(slug, content.file, options, color, intensity)
                         case let .color(color):
-                            source = .wallpaper(.color(Int32(color.rgb)), nil)
+                            source = .wallpaper(.color(Int32(color.rgb)), nil, nil, nil)
                     }
                     
                     let controller = WallpaperGalleryController(account: account, source: source)

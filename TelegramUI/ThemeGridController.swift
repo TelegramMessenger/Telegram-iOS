@@ -195,7 +195,23 @@ final class ThemeGridController: ViewController {
                     for wallpaper in wallpapers {
                         if wallpaper == strongSelf.presentationData.chatWallpaper {
                             let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in
-                                return PresentationThemeSettings(chatWallpaper: .builtin, chatWallpaperOptions: [], theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                                var fallbackWallpaper: TelegramWallpaper = .builtin
+                                if case let .builtin(theme) = current.theme {
+                                    switch theme {
+                                        case .day:
+                                            fallbackWallpaper = .color(0xffffff)
+                                        case .nightGrayscale:
+                                            fallbackWallpaper = .color(0x000000)
+                                        case .nightAccent:
+                                            fallbackWallpaper = .color(0x18222d)
+                                        default:
+                                            fallbackWallpaper = .builtin
+                                    }
+                                }
+                                
+                                var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                themeSpecificChatWallpapers[current.theme.index] = fallbackWallpaper
+                                return PresentationThemeSettings(chatWallpaper: fallbackWallpaper, chatWallpaperOptions: [], theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                             })).start()
                             break
                         }
@@ -331,7 +347,9 @@ final class ThemeGridController: ViewController {
                 let account = self.account
                 let updateWallpaper: (TelegramWallpaper) -> Void = { [weak self] wallpaper in
                     let _ = (updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
-                        return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                        var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                        themeSpecificChatWallpapers[current.theme.index] = wallpaper
+                        return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                     })).start()
                     
                     if let strongSelf = self, case .file = wallpaper {

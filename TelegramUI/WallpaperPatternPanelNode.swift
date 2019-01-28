@@ -97,7 +97,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
                     
                     selected = false
                 }
-                strongSelf.scrollNode.view.contentSize = CGSize(width: (itemSize.width + inset) * CGFloat(wallpapers.count) + inset, height: 190.0)
+                strongSelf.scrollNode.view.contentSize = CGSize(width: (itemSize.width + inset) * CGFloat(wallpapers.count) + inset, height: 112.0)
                 strongSelf.layoutItemNodes(transition: .immediate)
                 
                 strongSelf.wallpapers = wallpapers
@@ -133,6 +133,16 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         if let wallpaper = self.wallpapers.first {
             self.currentWallpaper = wallpaper
             self.intensityNode.value = 0.4
+            
+            self.scrollNode.view.contentOffset = CGPoint()
+            
+            var selected = true
+            if let subnodes = self.scrollNode.subnodes {
+                for case let subnode as SettingsThemeWallpaperNode in subnodes {
+                    subnode.setSelected(selected, animated: false)
+                    selected = false
+                }
+            }
             
             self.patternChanged?(wallpaper, self.intensityNode.intensity, false)
         }

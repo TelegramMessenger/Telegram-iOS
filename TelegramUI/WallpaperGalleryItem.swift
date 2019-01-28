@@ -186,7 +186,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
     
     func setEntry(_ entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments) {
-        let animated = self.entry != nil
         let previousArguments = self.arguments
         self.arguments = arguments
         
@@ -270,7 +269,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 self.backgroundColor = patternColor.withAlphaComponent(1.0)
                                 
                                 if let previousEntry = previousEntry, case let .wallpaper(wallpaper) = previousEntry, case let .file(previousFile) = wallpaper, file.id == previousFile.id && (file.settings.color != previousFile.settings.color || file.settings.intensity != previousFile.settings.intensity) && self.colorPreview == self.arguments.colorPreview {
-                                    
                                     self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: patternColor))()
                                     return
                                 } else if let offset = self.validOffset, self.arguments.colorPreview && fabs(offset) > 0.0 {
@@ -444,6 +442,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             
             self.colorDisposable.set((colorSignal
             |> deliverOnMainQueue).start(next: { [weak self] color in
+                self?.statusNode.backgroundNodeColor = color
                 self?.patternButtonNode.buttonColor = color
                 self?.colorButtonNode.buttonColor = color
                 self?.blurButtonNode.buttonColor = color
@@ -579,6 +578,16 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         if let color = self.colorButtonNode.color {
             self.requestColorPanel?(color)
+            
+            self.preparePatternEditing()
+        }
+    }
+    
+    private func preparePatternEditing() {
+        if let entry = self.entry, case let .wallpaper(wallpaper) = entry, case let .file(file) = wallpaper {
+            if let size = file.file.dimensions?.fitted(CGSize(width: 1280.0, height: 1280.0)) {
+                let _ = self.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size), complete: false, fetch: true).start()
+            }
         }
     }
     
@@ -748,8 +757,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             self.blurredNode.frame = self.imageNode.bounds
         }
         
-        self.statusNode.frame = CGRect(x: layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - progressDiameter) / 2.0), y: floorToScreenPixels((layout.size.height - progressDiameter) / 2.0), width: progressDiameter, height: progressDiameter)
-        self.progressNode.frame = CGRect(x: layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - progressDiameter) / 2.0), y: floorToScreenPixels((layout.size.height - 15.0) / 2.0), width: progressDiameter, height: progressDiameter)
+        var additionalYOffset: CGFloat = 0.0
+        if self.patternButtonNode.isSelected {
+            additionalYOffset = -190.0
+        }
+        
+        self.statusNode.frame = CGRect(x: layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - progressDiameter) / 2.0), y: floorToScreenPixels((layout.size.height + additionalYOffset - progressDiameter) / 2.0), width: progressDiameter, height: progressDiameter)
+        self.progressNode.frame = CGRect(x: layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - progressDiameter) / 2.0), y: floorToScreenPixels((layout.size.height + additionalYOffset - 15.0) / 2.0), width: progressDiameter, height: progressDiameter)
         
 
         self.updateButtonsLayout(layout: layout, offset: CGPoint(x: offset, y: 0.0), transition: transition)
