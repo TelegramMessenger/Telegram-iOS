@@ -322,25 +322,25 @@ private func areSettingsValid(_ settings: AutomaticThemeSwitchSetting) -> Bool {
 }
 
 public func themeAutoNightSettingsController(context: AccountContext) -> ViewController {
-    var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     
     let actionsDisposable = DisposableSet()
     let updateAutomaticBrightnessDisposable = MetaDisposable()
     
     let stagingSettingsPromise = ValuePromise<AutomaticThemeSwitchSetting?>(nil)
-    let themeSettingsKey = ApplicationSpecificPreferencesKeys.presentationThemeSettings
+    let themeSettingsKey = ApplicationSpecificSharedDataKeys.presentationThemeSettings
     let localizationSettingsKey = PreferencesKeys.localizationSettings
-    let preferences = context.account.postbox.preferencesView(keys: [themeSettingsKey, localizationSettingsKey])
+    let sharedData = context.sharedContext.accountManager.sharedData(keys: [themeSettingsKey])
+    let preferences = context.account.postbox.preferencesView(keys: [localizationSettingsKey])
     
     let updateLocationDisposable = MetaDisposable()
     actionsDisposable.add(updateLocationDisposable)
     
     let updateSettings: (@escaping (AutomaticThemeSwitchSetting) -> AutomaticThemeSwitchSetting) -> Void = { f in
-        let _ = (combineLatest(stagingSettingsPromise.get(), preferences)
+        let _ = (combineLatest(stagingSettingsPromise.get(), sharedData, preferences)
         |> take(1)
-        |> deliverOnMainQueue).start(next: { stagingSettings, preferences in
-            let settings = (preferences.values[themeSettingsKey] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+        |> deliverOnMainQueue).start(next: { stagingSettings, sharedData, preferences in
+            let settings = (sharedData.entries[themeSettingsKey] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
             let updated = f(stagingSettings ?? settings.automaticThemeSwitchSetting)
             stagingSettingsPromise.set(updated)
             if areSettingsValid(updated) {
@@ -459,7 +459,6 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
                     break
             }
             
-            let presentationData = context.currentPresentationData.with { $0 }
             presentControllerImpl?(ThemeAutoNightTimeSelectionActionSheet(context: context, currentValue: currentValue, applyValue: { value in
                 guard let value = value else {
                     return
@@ -467,21 +466,21 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
                 updateSettings { settings in
                     var settings = settings
                     switch settings.trigger {
-                    case let .timeBased(setting):
-                        switch setting {
-                        case var .manual(fromSeconds, toSeconds):
-                            switch field {
-                            case .from:
-                                fromSeconds = value
-                            case .to:
-                                toSeconds = value
+                        case let .timeBased(setting):
+                            switch setting {
+                            case var .manual(fromSeconds, toSeconds):
+                                switch field {
+                                case .from:
+                                    fromSeconds = value
+                                case .to:
+                                    toSeconds = value
+                                }
+                                settings.trigger = .timeBased(setting: .manual(fromSeconds: fromSeconds, toSeconds: toSeconds))
+                            default:
+                                break
                             }
-                            settings.trigger = .timeBased(setting: .manual(fromSeconds: fromSeconds, toSeconds: toSeconds))
                         default:
                             break
-                        }
-                    default:
-                        break
                     }
                     return settings
                 }
@@ -513,10 +512,10 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
         }
     })
     
-    let signal = combineLatest(context.presentationData, preferences, stagingSettingsPromise.get())
+    let signal = combineLatest(context.presentationData, sharedData, preferences, stagingSettingsPromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, preferences, stagingSettings -> (ItemListControllerState, (ItemListNodeState<ThemeAutoNightSettingsControllerEntry>, ThemeAutoNightSettingsControllerEntry.ItemGenerationArguments)) in
-        let settings = (preferences.values[themeSettingsKey] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+    |> map { presentationData, sharedData, preferences, stagingSettings -> (ItemListControllerState, (ItemListNodeState<ThemeAutoNightSettingsControllerEntry>, ThemeAutoNightSettingsControllerEntry.ItemGenerationArguments)) in
+        let settings = (sharedData.entries[themeSettingsKey] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.AutoNightTheme_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(entries: themeAutoNightSettingsControllerEntries(theme: presentationData.theme, strings: presentationData.strings, switchSetting: stagingSettings ?? settings.automaticThemeSwitchSetting, dateTimeFormat: presentationData.dateTimeFormat), style: .blocks, animateChanges: false)
