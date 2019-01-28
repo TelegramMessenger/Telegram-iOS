@@ -728,9 +728,9 @@ public struct AccountRunningImportantTasks: OptionSet {
     public static let pendingMessages = AccountRunningImportantTasks(rawValue: 1 << 1)
 }
 
-struct MasterNotificationKey {
-    public let id: Data
-    public let data: Data
+struct MasterNotificationKey: Codable {
+    let id: Data
+    let data: Data
 }
 
 func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
@@ -997,8 +997,8 @@ public class Account {
         self.networkTypeValue.set(currentNetworkType())
         
         let serviceTasksMasterBecomeMaster = shouldBeServiceTaskMaster.get()
-            |> distinctUntilChanged
-            |> deliverOn(self.serviceQueue)
+        |> distinctUntilChanged
+        |> deliverOn(self.serviceQueue)
         
         self.becomeMasterDisposable.set(serviceTasksMasterBecomeMaster.start(next: { [weak self] value in
             if let strongSelf = self, (value == .now || value == .always) {
@@ -1096,6 +1096,13 @@ public class Account {
             }
             let settings: CacheStorageSettings = ((view.views[storagePreferencesKey] as? PreferencesView)?.values[PreferencesKeys.cacheStorageSettings] as? CacheStorageSettings) ?? CacheStorageSettings.defaultSettings
             mediaBox.setMaxStoreTime(settings.defaultCacheStorageTimeout)
+        })
+        
+        let _ = masterNotificationsKey(masterNotificationKeyValue: self.masterNotificationKey, postbox: self.postbox, ignoreDisabled: false).start(next: { key in
+            let encoder = JSONEncoder()
+            if let data = try? encoder.encode(key) {
+                let _ = try? data.write(to: URL(fileURLWithPath: "\(basePath)/notificationsKey"))
+            }
         })
     }
     

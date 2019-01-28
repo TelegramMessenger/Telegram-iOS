@@ -162,6 +162,12 @@ public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
     return key
 }
 
+public func applicationSpecificSharedDataKey(_ value: Int32) -> ValueBoxKey {
+    let key = ValueBoxKey(length: 4)
+    key.setInt32(0, value: value + 1000)
+    return key
+}
+
 public struct PreferencesKeys {
     public static let globalNotifications: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
