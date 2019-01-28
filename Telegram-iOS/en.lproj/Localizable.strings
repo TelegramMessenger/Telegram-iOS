@@ -3959,7 +3959,7 @@ Unused sets are archived when you add more.";
 "WebSearch.SearchNoResults" = "No Results";
 "WebSearch.SearchNoResultsDescription" = "There were no results for \"%@\".\nTry a new search.";
 
-"WallpaperPreview.PatternColor" = "Background";
-"WallpaperPreview.PatternIntensity" = "Intensity";
+"WallpaperPreview.PatternColor" = "Brightness";
+"WallpaperPreview.PatternIntensity" = "Pattern";
 
 "Message.Wallpaper" = "Chat Background";
