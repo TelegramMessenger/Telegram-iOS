@@ -237,7 +237,6 @@ final class AuthorizedApplicationContext {
         |> distinctUntilChanged
         
         self.wakeupManager = WakeupManager(inForeground: context.sharedContext.applicationBindings.applicationInForeground, runningServiceTasks: context.account.importantTasksRunning, runningBackgroundLocationTasks: runningBackgroundLocationTasks, runningWatchTasks: runningWatchTasksPromise.get(), runningDownloadTasks: runningDownloadTasks)
-        self.wakeupManager.account = context.account
         
         self.showCallsTab = showCallsTab
         

@@ -1610,7 +1610,7 @@ private enum QueuedWakeup: Int32 {
                     context.notificationManager.enqueueRemoteNotification(title: title, text: body, apnsSound: apnsSound, requestId: requestId, strings: strings, accessChallengeData: accessChallengeData)
                     }
                     
-                    context.wakeupManager.wakeupForIncomingMessages(completion: { messageIds -> Signal<Void, NoError> in
+                    context.wakeupManager.wakeupForIncomingMessages(account: context.context.account, completion: { messageIds -> Signal<Void, NoError> in
                         if let contextValue = self.contextValue, case let .authorized(context) = contextValue {
                             if handleVoipNotifications {
                                 return context.notificationManager.commitRemoteNotification(context: context.context, originalRequestId: requestId, messageIds: messageIds)
@@ -1624,7 +1624,7 @@ private enum QueuedWakeup: Int32 {
                     })
                 }
                 if queuedMutePolling {
-                    context.wakeupManager.wakeupForIncomingMessages(completion: { messageIds -> Signal<Void, NoError> in
+                    context.wakeupManager.wakeupForIncomingMessages(account: context.context.account, completion: { messageIds -> Signal<Void, NoError> in
                         if let contextValue = self.contextValue, case .authorized = contextValue {
                             return .single(Void())
                         } else {
@@ -1681,7 +1681,7 @@ private enum QueuedWakeup: Int32 {
             switch wakeup {
                 case .call:
                     if let contextValue = self.contextValue, case let .authorized(context) = contextValue {
-                        context.wakeupManager.wakeupForIncomingMessages()
+                        context.wakeupManager.wakeupForIncomingMessages(account: context.context.account)
                     }
                 case .backgroundLocation:
                     if UIApplication.shared.applicationState == .background {

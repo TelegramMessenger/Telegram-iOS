@@ -42,20 +42,10 @@ private struct CombinedRunningImportantTasks: Equatable {
         }
         return self.serviceTasks.isEmpty && !self.backgroundLocation && !hasWatchTask && !self.downloadTasks
     }
-    
-    static func ==(lhs: CombinedRunningImportantTasks, rhs: CombinedRunningImportantTasks) -> Bool {
-        return lhs.serviceTasks == rhs.serviceTasks && lhs.backgroundLocation == rhs.backgroundLocation && lhs.watchTasks == rhs.watchTasks && lhs.downloadTasks == rhs.downloadTasks
-    }
 }
 
 final class WakeupManager {
     private var state = WakeupManagerState()
-    
-    var account: Account? {
-        didSet {
-            assert(Queue.mainQueue().isCurrent())
-        }
-    }
     
     private let isProcessingNotificationsValue = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let isProcessingServiceTasksValue = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -134,7 +124,7 @@ final class WakeupManager {
         self.wakeupDisposable.dispose()
     }
     
-    private func reportCompletionToSubscribersAndGetUnreadCount(maxId: Int32, messageIds: [MessageId]) -> Signal<Int32?, NoError> {
+    private func reportCompletionToSubscribersAndGetUnreadCount(account: Account, maxId: Int32, messageIds: [MessageId]) -> Signal<Int32?, NoError> {
         var collectedSignals: [Signal<Void, NoError>] = []
         while !self.wakeupResultSubscribers.isEmpty {
             let first = self.wakeupResultSubscribers[0]
@@ -144,18 +134,18 @@ final class WakeupManager {
             }
         }
         return combineLatest(collectedSignals)
-            |> map { _ -> Void in
-                return Void()
-            } |> mapToSignal { [weak self] _ -> Signal<Int32?, NoError> in
-                if let strongSelf = self, let account = strongSelf.account, !messageIds.isEmpty {
-                    return account.postbox.transaction { transaction -> Int32? in
-                        let (unreadCount, _) = renderedTotalUnreadCount(transaction: transaction)
-                        return unreadCount
-                    }
-                } else {
-                    return .single(nil)
+        |> map { _ -> Void in
+            return Void()
+        } |> mapToSignal { _ -> Signal<Int32?, NoError> in
+            if !messageIds.isEmpty {
+                return account.postbox.transaction { transaction -> Int32? in
+                    let (unreadCount, _) = renderedTotalUnreadCount(transaction: transaction)
+                    return unreadCount
                 }
+            } else {
+                return .single(nil)
             }
+        }
     }
     
     private func wakeupForServiceTasks(timeout: Double = 25.0) {
@@ -223,12 +213,8 @@ final class WakeupManager {
         }
     }
     
-    func wakeupForIncomingMessages(timeout: Double = 25.0, completion: (([MessageId]) -> Signal<Void, NoError>)? = nil) {
+    func wakeupForIncomingMessages(account: Account, timeout: Double = 25.0, completion: (([MessageId]) -> Signal<Void, NoError>)? = nil) {
         assert(Queue.mainQueue().isCurrent())
-        guard let account = self.account else {
-            return
-        }
-        
         var endTask: WakeupManagerTask?
         let updatedId: Int32 = self.state.nextTaskId
         self.state.nextTaskId += 1
@@ -245,7 +231,7 @@ final class WakeupManager {
                         strongSelf.state.currentTask = nil
                         currentTask.timer.invalidate()
                         strongSelf.isProcessingNotificationsValue.set(false)
-                        let _ = strongSelf.reportCompletionToSubscribersAndGetUnreadCount(maxId: updatedId, messageIds: []).start()
+                        let _ = strongSelf.reportCompletionToSubscribersAndGetUnreadCount(account: account, maxId: updatedId, messageIds: []).start()
                         UIApplication.shared.endBackgroundTask(currentTask.nativeId)
                     } else {
                         Logger.shared.log("WakeupManager", "handleExpiration(by timer: \(byTimer)) invoked, current task doesn't match")
@@ -282,7 +268,7 @@ final class WakeupManager {
         self.wakeupDisposable.set((account.stateManager.pollStateUpdateCompletion() |> deliverOnMainQueue |> mapToSignal { [weak self] messageIds -> Signal<Int32?, NoError> in
             if let strongSelf = self {
                 Logger.shared.log("WakeupManager", "pollStateUpdateCompletion messageIds: \(messageIds)")
-                return strongSelf.reportCompletionToSubscribersAndGetUnreadCount(maxId: updatedId, messageIds: messageIds)
+                return strongSelf.reportCompletionToSubscribersAndGetUnreadCount(account: account, maxId: updatedId, messageIds: messageIds)
             } else {
                 return .complete()
             }
