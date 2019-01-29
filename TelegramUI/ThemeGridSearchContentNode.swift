@@ -295,6 +295,7 @@ private func themeGridSearchContainerPreparedTransition(from fromEntries: [Theme
 
 private struct ThemeGridSearchResult {
     let query: String
+    let collection: ChatContextResultCollection
     let items: [ChatContextResult]
     let nextOffset: String?
 }
@@ -387,24 +388,24 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         }
         
         self.gridNode.isHidden = true
-//        self.gridNode.visibleItemsUpdated = { [weak self] visibleItems in
-//            if let strongSelf = self, let bottom = visibleItems.bottom {
-//                if let context = searchContextValue.with({ $0 }), bottom.0 >= context.result.items.count - 8 {
-//                    updateSearchContext { previous in
-//                        guard let previous = previous else {
-//                            return (nil, false)
-//                        }
-//                        if previous.loadMoreIndex != nil {
-//                            return (previous, false)
-//                        }
-//                        guard let last = previous.result.items.last else {
-//                            return (previous, false)
-//                        }
-//                        return (ThemeGridSearchContext(result: previous.result, loadMoreIndex: MessageIndex(last)), true)
-//                    }
-//                }
-//            }
-//        }
+        self.gridNode.visibleItemsUpdated = { visibleItems in
+            if let bottom = visibleItems.bottom {
+                if let context = searchContextValue.with({ $0 }), bottom.0 >= context.result.items.count - 8 {
+                    updateSearchContext { previous in
+                        guard let previous = previous else {
+                            return (nil, false)
+                        }
+                        if previous.loadMoreIndex != nil {
+                            return (previous, false)
+                        }
+                        guard let _ = previous.result.items.last else {
+                            return (previous, false)
+                        }
+                        return (ThemeGridSearchContext(result: previous.result, loadMoreIndex: previous.result.nextOffset), true)
+                    }
+                }
+            }
+        }
         self.recentListNode.isHidden = false
         
         let previousSearchItems = Atomic<[ThemeGridSearchEntry]?>(value: nil)
@@ -468,6 +469,55 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                 }
                 |> mapToSignal { peer -> Signal<([ThemeGridSearchEntry], Bool)?, NoError> in
                     if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
+                        let loadMore = searchContext.get()
+                        |> mapToSignal { searchContext -> Signal<([ThemeGridSearchEntry], Bool)?, NoError> in
+                            if let searchContext = searchContext {
+                                if let _ = searchContext.loadMoreIndex, let nextOffset = searchContext.result.nextOffset {
+                                    let collection = searchContext.result.collection
+                                    return requestChatContextResults(account: self.account, botId: collection.botId, peerId: collection.peerId, query: searchContext.result.query, location: .single(collection.geoPoint), offset: nextOffset)
+                                    |> map { nextResults -> (ChatContextResultCollection, String?) in
+                                        var results: [ChatContextResult] = []
+                                        var existingIds = Set<String>()
+                                        for result in searchContext.result.items {
+                                            results.append(result)
+                                            existingIds.insert(result.id)
+                                        }
+                                        var nextOffset: String?
+                                        if let nextResults = nextResults {
+                                            for result in nextResults.results {
+                                                if !existingIds.contains(result.id) {
+                                                    results.append(result)
+                                                    existingIds.insert(result.id)
+                                                }
+                                            }
+                                            if let newNextOffset = nextResults.nextOffset, !newNextOffset.isEmpty {
+                                                nextOffset = newNextOffset
+                                            }
+                                        }
+                                        let merged = ChatContextResultCollection(botId: collection.botId, peerId: collection.peerId, query: collection.query, geoPoint: collection.geoPoint, queryId: nextResults?.queryId ?? collection.queryId, nextOffset: nextOffset ?? "", presentation: collection.presentation, switchPeer: collection.switchPeer, results: results, cacheTimeout: collection.cacheTimeout)
+                                        return (merged, nextOffset)
+                                    }
+                                    |> mapToSignal { newCollection, nextOffset -> Signal<([ThemeGridSearchEntry], Bool)?, NoError> in
+                                        updateSearchContext { previous in
+                                            return (ThemeGridSearchContext(result: ThemeGridSearchResult(query: searchContext.result.query, collection: newCollection, items: newCollection.results, nextOffset: nextOffset), loadMoreIndex: nil), true)
+                                        }
+                                        return .complete()
+                                    }
+                                } else {
+                                    var entries: [ThemeGridSearchEntry] = []
+                                    var i = 0
+                                    for result in searchContext.result.items {
+                                        entries.append(ThemeGridSearchEntry(index: i, result: result))
+                                        i += 1
+                                    }
+                                    return .single((entries, false))
+                                }
+                            } else {
+                                return .complete()
+                            }
+                        }
+                        
+                        
                         return (.complete() |> delay(0.1, queue: Queue.concurrentDefaultQueue()))
                         |> then(
                             requestContextResults(account: account, botId: user.id, query: wallpaperQuery, peerId: account.peerId, limit: 16)
@@ -482,10 +532,12 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                                     i += 1
                                 }
                                 updateSearchContext { _ in
-                                    return (ThemeGridSearchContext(result: ThemeGridSearchResult(query: query, items: collection.results, nextOffset: collection.nextOffset), loadMoreIndex: nil), true)
+                                    return (ThemeGridSearchContext(result: ThemeGridSearchResult(query: query, collection: collection, items: collection.results, nextOffset: collection.nextOffset), loadMoreIndex: nil), true)
                                 }
                                 return (entries, false)
                             }
+                            |> delay(0.2, queue: Queue.concurrentDefaultQueue())
+                            |> then(loadMore)
                         )
                     } else {
                         return .single(nil)

@@ -251,7 +251,14 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                         return TGBuiltinWallpaperInfo()
                     }
                 case let .file(file):
-                    if let path = account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
+                    if file.isPattern {
+                        if let color = file.settings.color {
+                            return TGColorWallpaperInfo(color: UInt32(bitPattern: color))
+                        } else {
+                            return TGBuiltinWallpaperInfo()
+                        }
+                    }
+                    else if let path = account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
                         return TGCustomImageWallpaperInfo(image: image)
                     } else {
                         return TGBuiltinWallpaperInfo()

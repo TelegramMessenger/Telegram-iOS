@@ -238,7 +238,6 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
         if (proxy != nil) {
             _controller->SetProxy(tgvoip::PROXY_SOCKS5, proxy.host.UTF8String, (uint16_t)proxy.port, proxy.username.UTF8String ?: "", proxy.password.UTF8String ?: "");
         }
-        _controller->SetNetworkType(callControllerNetworkTypeForType(networkType));
         
         auto callbacks = tgvoip::VoIPController::Callbacks();
         callbacks.connectionStateChanged = &controllerStateCallback;
@@ -297,6 +296,7 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
     if (_controller != nil) {
         _controller->SetConfig(config);
         
+        _controller->SetNetworkType(callControllerNetworkTypeForType(_networkType));
         _controller->SetEncryptionKey((char *)key.bytes, isOutgoing);
         _controller->SetRemoteEndpoints(endpoints, allowP2P, maxLayer);
         _controller->Start();
@@ -309,6 +309,8 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
     if (_controller != nil) {
         _controller->Stop();
         
+        bool needRate = _controller->NeedRate();
+        
         auto debugString = _controller->GetDebugLog();
         NSString *debugLog = [NSString stringWithUTF8String:debugString.c_str()];
         
@@ -320,7 +322,7 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
         _controller = NULL;
         
         if (_callEnded) {
-            _callEnded(debugLog, stats.bytesSentWifi, stats.bytesRecvdWifi, stats.bytesSentMobile, stats.bytesRecvdMobile);
+            _callEnded(needRate, debugLog, stats.bytesSentWifi, stats.bytesRecvdWifi, stats.bytesSentMobile, stats.bytesRecvdMobile);
         }
     }
 }

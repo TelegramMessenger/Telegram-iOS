@@ -192,7 +192,7 @@ final class OngoingCallContext {
             context.signalBarsChanged = { [weak self] signalBars in
                 self?.receptionPromise.set(.single(signalBars))
             }
-            context.callEnded = { debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
+            context.callEnded = { needRate, debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
                 let delta = NetworkUsageStatsConnectionsEntry(
                     cellular: NetworkUsageStatsDirectionsEntry(
                         incoming: bytesReceivedMobile,

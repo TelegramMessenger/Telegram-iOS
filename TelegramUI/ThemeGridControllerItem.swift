@@ -24,7 +24,7 @@ final class ThemeGridControllerItem: GridItem {
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = ThemeGridControllerItemNode()
-        node.setup(account: self.account, wallpaper: self.wallpaper, selected: self.selected, interaction: self.interaction)
+        node.setup(account: self.account, wallpaper: self.wallpaper, selected: self.selected, interaction: self.interaction, synchronousLoad: synchronousLoad)
         return node
     }
     
@@ -33,7 +33,7 @@ final class ThemeGridControllerItem: GridItem {
             assertionFailure()
             return
         }
-        node.setup(account: self.account, wallpaper: self.wallpaper, selected: self.selected, interaction: self.interaction)
+        node.setup(account: self.account, wallpaper: self.wallpaper, selected: self.selected, interaction: self.interaction, synchronousLoad: false)
     }
 }
 
@@ -41,7 +41,7 @@ final class ThemeGridControllerItemNode: GridItemNode {
     private let wallpaperNode: SettingsThemeWallpaperNode
     private var selectionNode: GridMessageSelectionNode?
     
-    private var currentState: (Account, TelegramWallpaper, Bool)?
+    private var currentState: (Account, TelegramWallpaper, Bool, Bool)?
     private var interaction: ThemeGridControllerInteraction?
     
     override init() {
@@ -58,11 +58,11 @@ final class ThemeGridControllerItemNode: GridItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    func setup(account: Account, wallpaper: TelegramWallpaper, selected: Bool, interaction: ThemeGridControllerInteraction) {
+    func setup(account: Account, wallpaper: TelegramWallpaper, selected: Bool, interaction: ThemeGridControllerInteraction, synchronousLoad: Bool) {
         self.interaction = interaction
         
-        if self.currentState == nil || self.currentState!.0 !== account || wallpaper != self.currentState!.1 || selected != self.currentState!.2 {
-            self.currentState = (account, wallpaper, selected)
+        if self.currentState == nil || self.currentState!.0 !== account || wallpaper != self.currentState!.1 || selected != self.currentState!.2 || synchronousLoad != self.currentState!.3 {
+            self.currentState = (account, wallpaper, selected, synchronousLoad)
             self.updateSelectionState(animated: false)
             self.setNeedsLayout()
         }
@@ -70,14 +70,14 @@ final class ThemeGridControllerItemNode: GridItemNode {
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            if let (_, wallpaper, _) = self.currentState {
+            if let (_, wallpaper, _, _) = self.currentState {
                 self.interaction?.openWallpaper(wallpaper)
             }
         }
     }
     
     func updateSelectionState(animated: Bool) {
-        if let (account, wallpaper, _) = self.currentState {
+        if let (account, wallpaper, _, _) = self.currentState {
             var editing = false
             var id: Int64?
             if case let .file(file) = wallpaper {
@@ -131,8 +131,8 @@ final class ThemeGridControllerItemNode: GridItemNode {
         super.layout()
         
         let bounds = self.bounds
-        if let (account, wallpaper, selected) = self.currentState {
-            self.wallpaperNode.setWallpaper(account: account, wallpaper: wallpaper, selected: selected, size: bounds.size)
+        if let (account, wallpaper, selected, synchronousLoad) = self.currentState {
+            self.wallpaperNode.setWallpaper(account: account, wallpaper: wallpaper, selected: selected, size: bounds.size, synchronousLoad: synchronousLoad)
             self.selectionNode?.frame = CGRect(origin: CGPoint(), size: bounds.size)
         }
     }

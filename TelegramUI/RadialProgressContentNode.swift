@@ -306,6 +306,9 @@ final class RadialProgressContentNode: RadialStatusContentNode {
         } else {
             self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay)
         }
+        if case .none = from {
+            self.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2, delay: delay)
+        }
         self.cancelNode.layer.animateScale(from: 0.2, to: 1.0, duration: 0.2, delay: delay)
     }
 }

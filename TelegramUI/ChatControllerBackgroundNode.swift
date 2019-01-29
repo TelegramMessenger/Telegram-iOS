@@ -68,12 +68,12 @@ final class ChatBackgroundNode: ASDisplayNode {
     }
 }
 
-private var backgroundImageForWallpaper: (TelegramWallpaper, WallpaperPresentationOptions, UIImage)?
+private var backgroundImageForWallpaper: (TelegramWallpaper, Bool, UIImage)?
 private var serviceBackgroundColorForWallpaper: (TelegramWallpaper, UIColor)?
 
-func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mode: WallpaperPresentationOptions = [], postbox: Postbox) -> UIImage? {
+func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, postbox: Postbox) -> UIImage? {
     var backgroundImage: UIImage?
-    if wallpaper == backgroundImageForWallpaper?.0, mode == backgroundImageForWallpaper?.1 {
+    if wallpaper == backgroundImageForWallpaper?.0, (wallpaper.settings?.blur ?? false) == backgroundImageForWallpaper?.1 {
         backgroundImage = backgroundImageForWallpaper?.2
     } else {
         switch wallpaper {
@@ -86,9 +86,9 @@ func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mode: Wallpaper
                     context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
                     context.fill(CGRect(origin: CGPoint(), size: size))
                 })
-            case let .image(representations, _):
+            case let .image(representations, settings):
                 if let largest = largestImageRepresentation(representations) {
-                    if mode.contains(.blur) {
+                    if settings.blur {
                         var image: UIImage?
                         let _ = postbox.mediaBox.cachedResourceRepresentation(largest.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                             if data.complete {
@@ -111,7 +111,7 @@ func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mode: Wallpaper
                     })
                     backgroundImage = image
                 } else {
-                    if mode.contains(.blur) {
+                    if file.settings.blur {
                         var image: UIImage?
                         let _ = postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                             if data.complete {
@@ -126,7 +126,7 @@ func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mode: Wallpaper
                 }
         }
         if let backgroundImage = backgroundImage {
-            backgroundImageForWallpaper = (wallpaper, mode, backgroundImage)
+            backgroundImageForWallpaper = (wallpaper, (wallpaper.settings?.blur ?? false), backgroundImage)
         }
     }
     return backgroundImage
