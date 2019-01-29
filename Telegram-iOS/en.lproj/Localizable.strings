@@ -3885,6 +3885,7 @@ Unused sets are archived when you add more.";
 "WallpaperPreview.Color" = "Color";
 
 "Wallpaper.Search" = "Search Backgrounds";
+"Wallpaper.SearchShort" = "Search";
 "Wallpaper.SetColor" = "Set a Color";
 "Wallpaper.SetCustomBackground" = "Choose from Gallery";
 "Wallpaper.SetCustomBackgroundInfo" = "You can set a custom background image and share it with your friends.";
@@ -3962,3 +3963,7 @@ Unused sets are archived when you add more.";
 "WallpaperPreview.PatternIntensity" = "Pattern Intensity";
 
 "Message.Wallpaper" = "Chat Background";
+
+"Wallpaper.ResetWallpapers" = "Reset Chat Backgrounds";
+"Wallpaper.ResetWallpapersInfo" = "Remove all uploaded chat backgrounds and restore pre-installed ones.";
+"Wallpaper.ResetWallpapersConfirmation" = "Reset Chat Backgrounds";
