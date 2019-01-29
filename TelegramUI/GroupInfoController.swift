@@ -1470,7 +1470,7 @@ public func groupInfoController(account: Account, peerId originalPeerId: PeerId,
                             break
                     }
                 } else if let channel = groupPeer as? TelegramChannel {
-                    if channel.hasPermission(.manageInviteLink) {
+                    if channel.hasPermission(.inviteMembers) {
                         canCreateInviteLink = true
                     }
                 }
