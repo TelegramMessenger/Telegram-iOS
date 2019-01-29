@@ -38,7 +38,7 @@ private func nodeColor(for color: WallpaperSearchColor) -> UIColor {
 private class ThemeGridColorNode: HighlightableButtonNode {
     let action: () -> Void
     
-    init(color: WallpaperSearchColor, strokeColor: UIColor, action: @escaping (WallpaperSearchColor) -> Void) {
+    init(color: WallpaperSearchColor, strokeColor: UIColor, dark: Bool, action: @escaping (WallpaperSearchColor) -> Void) {
         self.action = {
             action(color)
         }
@@ -46,8 +46,10 @@ private class ThemeGridColorNode: HighlightableButtonNode {
         super.init()
         
         let image: UIImage?
-        if color == .white {
-            image = generateCircleImage(diameter: 42.0, lineWidth: 1.0, color: strokeColor)
+        if color == .white && !dark {
+            image = generateFilledCircleImage(diameter: 42.0, color: .white, strokeColor: strokeColor, strokeWidth: 1.0)
+        } else if color == .black && dark {
+            image = generateFilledCircleImage(diameter: 42.0, color: .black, strokeColor: strokeColor, strokeWidth: 1.0)
         } else {
             image = generateFilledCircleImage(diameter: 42.0, color: nodeColor(for: color))
         }
@@ -98,7 +100,7 @@ final class ThemeGridSearchColorsNode: ASDisplayNode {
         self.scrollNode.view.contentSize = CGSize(width: (inset + diameter) * CGFloat(WallpaperSearchColor.allCases.count) + inset, height: 71.0)
         
         for color in WallpaperSearchColor.allCases {
-            let colorNode = ThemeGridColorNode(color: color, strokeColor: theme.list.controlSecondaryColor, action: colorSelected)
+            let colorNode = ThemeGridColorNode(color: color, strokeColor: theme.list.controlSecondaryColor, dark: theme.overallDarkAppearance, action: colorSelected)
             self.scrollNode.addSubnode(colorNode)
         }
     }
