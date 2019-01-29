@@ -342,18 +342,18 @@ class WallpaperGalleryController: ViewController {
                         switch entry {
                             case let .wallpaper(wallpaper):
                                 var resource: MediaResource?
-                                    switch wallpaper {
-                                        case let .file(file):
-                                            resource = file.file.resource
-                                        case let .image(representations, _):
-                                            if let largestSize = largestImageRepresentation(representations) {
-                                                resource = largestSize.resource
-                                            }
-                                        default:
-                                            break
-                                    }
+                                switch wallpaper {
+                                    case let .file(file):
+                                        resource = file.file.resource
+                                    case let .image(representations, _):
+                                        if let largestSize = largestImageRepresentation(representations) {
+                                            resource = largestSize.resource
+                                        }
+                                    default:
+                                        break
+                                }
                                 
-                                let completion: () -> Void = {
+                                let completion: (TelegramWallpaper) -> Void = { wallpaper in
                                     let baseSettings = wallpaper.settings
                                     let updatedSettings = WallpaperSettings(blur: options.contains(.blur), motion: options.contains(.motion), color: baseSettings?.color, intensity: baseSettings?.intensity)
                                     let wallpaper = wallpaper.withUpdatedSettings(updatedSettings)
@@ -372,20 +372,48 @@ class WallpaperGalleryController: ViewController {
                                     let _ = installWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
                                 }
                                 
-                                if options.contains(.blur) {
-                                    if let resource = resource {
-                                        let _ = strongSelf.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
-                                            completion()
-                                        })
-                                    }
-                                } else {
-                                    if case let .file(file) = wallpaper, file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
-                                        let _ = strongSelf.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true).start(completed: {
-                                            completion()
-                                        })
+                                let applyWallpaper: (TelegramWallpaper) -> Void = { wallpaper in
+                                    if options.contains(.blur) {
+                                        if let resource = resource {
+                                            let _ = strongSelf.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+                                                completion(wallpaper)
+                                            })
+                                        }
                                     } else {
-                                        completion()
+                                        if case let .file(file) = wallpaper, file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
+                                            let _ = strongSelf.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true).start(completed: {
+                                                completion(wallpaper)
+                                            })
+                                        } else {
+                                            completion(wallpaper)
+                                        }
                                     }
+                                }
+                            
+                                if case let .image(currentRepresentations, currentSettings) = wallpaper {
+                                    let _ = (strongSelf.account.telegramApplicationContext.wallpaperUploadManager!.stateSignal()
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { status in
+                                        switch status {
+                                            case let .uploaded(uploadedWallpaper, resultWallpaper):
+                                                if case let .image(uploadedRepresentations, _) = uploadedWallpaper, uploadedRepresentations == currentRepresentations {
+                                                    let updatedWallpaper = resultWallpaper.withUpdatedSettings(currentSettings)
+                                                    applyWallpaper(updatedWallpaper)
+                                                    return
+                                                }
+                                            case let .uploading(uploadedWallpaper, _):
+                                                if case let .image(uploadedRepresentations, uploadedSettings) = uploadedWallpaper, uploadedRepresentations == currentRepresentations, uploadedSettings != currentSettings {
+                                                    let updatedWallpaper = uploadedWallpaper.withUpdatedSettings(currentSettings)
+                                                    applyWallpaper(updatedWallpaper)
+                                                    return
+                                                }
+                                            default:
+                                                break
+                                        }
+                                        applyWallpaper(wallpaper)
+                                    })
+                                } else {
+                                    applyWallpaper(wallpaper)
                                 }
                             default:
                                 break

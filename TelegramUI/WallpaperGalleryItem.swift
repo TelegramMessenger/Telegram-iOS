@@ -298,7 +298,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                     switch state {
                                         case .uploading:
                                             return progressAction
-                                        case let .uploaded(_, resultWallpaper):
+                                        case .uploaded:
                                             return defaultAction
                                         default:
                                             return nil

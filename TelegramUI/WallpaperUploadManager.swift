@@ -101,9 +101,16 @@ final class WallpaperUploadManager {
                                 
                                 if self?.currentPresentationData?.theme.name == presentationData.theme.name {
                                     let _ = (updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
+                                        let updatedWallpaper: TelegramWallpaper
+                                        if let currentSettings = current.chatWallpaper.settings {
+                                            updatedWallpaper = wallpaper.withUpdatedSettings(currentSettings)
+                                        } else {
+                                            updatedWallpaper = wallpaper
+                                        }
+                                        
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                                        themeSpecificChatWallpapers[current.theme.index] = wallpaper
-                                        return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                                        themeSpecificChatWallpapers[current.theme.index] = updatedWallpaper
+                                        return PresentationThemeSettings(chatWallpaper: updatedWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                                     })).start()
                                 }
                             }
