@@ -764,7 +764,11 @@ open class NavigationController: UINavigationController, ContainableController, 
                     let appliedLayout = controllerLayout.withUpdatedInputHeight(controller.hasActiveInput ? controllerLayout.inputHeight : nil)
                     controller.containerLayoutUpdated(appliedLayout, transition: .immediate)
                     strongSelf.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { _ in
-                        if let strongSelf = self, let validLayout = strongSelf.validLayout {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        if let validLayout = strongSelf.validLayout {
                             let (_, controllerLayout) = strongSelf.layoutDataForConfiguration(strongSelf.layoutConfiguration(for: validLayout), layout: validLayout, index: strongSelf.viewControllers.count)
                             
                             let containerLayout = controllerLayout.withUpdatedInputHeight(controller.hasActiveInput ? controllerLayout.inputHeight : nil)
@@ -813,13 +817,19 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     public func replaceAllButRootController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
         self.view.endEditing(true)
-        if let validLayout = self.validLayout {
-            var (_, controllerLayout) = self.layoutDataForConfiguration(self.layoutConfiguration(for: validLayout), layout: validLayout, index: self.viewControllers.count)
-            controllerLayout.inputHeight = nil
-            controller.containerLayoutUpdated(controllerLayout, transition: .immediate)
-        }
-        self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in
-            if let strongSelf = self {
+        self.scheduleAfterLayout { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if let validLayout = strongSelf.validLayout {
+                var (_, controllerLayout) = strongSelf.layoutDataForConfiguration(strongSelf.layoutConfiguration(for: validLayout), layout: validLayout, index: strongSelf.viewControllers.count)
+                controllerLayout.inputHeight = nil
+                controller.containerLayoutUpdated(controllerLayout, transition: .immediate)
+            }
+            strongSelf.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { _ in
+                guard let strongSelf = self else {
+                    return
+                }
                 ready?.set(true)
                 var controllers = strongSelf.viewControllers
                 while controllers.count > 1 {
@@ -828,8 +838,8 @@ open class NavigationController: UINavigationController, ContainableController, 
                 controllers.append(controller)
                 strongSelf.setViewControllers(controllers, animated: animated)
                 completion()
-            }
-        }))
+            }))
+        }
     }
 
     public func popToRoot(animated: Bool) {
@@ -993,7 +1003,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     private func scheduleAfterLayout(_ f: @escaping () -> Void) {
-        (self.view as? UITracingLayerView)?.schedule(layout: { [weak self] in
+        (self.view as? UITracingLayerView)?.schedule(layout: {
             f()
         })
         self.view.setNeedsLayout()
