@@ -167,7 +167,7 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
                     |> take(1)
                     |> map { message in
                         var imageReference: ImageMediaReference?
-                        if let message = message, false {
+                        if let message = message {
                             for media in message.media {
                                 if let image = media as? TelegramMediaImage {
                                     imageReference = .message(message: MessageReference(message), media: image)
