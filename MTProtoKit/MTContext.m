@@ -1329,13 +1329,15 @@
 - (void)updateApiEnvironment:(MTApiEnvironment *(^)(MTApiEnvironment *))f {
     [[MTContext contextQueue] dispatchOnQueue:^{
         MTApiEnvironment *apiEnvironment = f(_apiEnvironment);
-        _apiEnvironment = apiEnvironment;
-        
-        NSArray *currentListeners = [[NSArray alloc] initWithArray:_changeListeners];
-        for (id<MTContextChangeListener> listener in currentListeners)
-        {
-            if ([listener respondsToSelector:@selector(contextApiEnvironmentUpdated:apiEnvironment:)]) {
-                [listener contextApiEnvironmentUpdated:self apiEnvironment:apiEnvironment];
+        if (apiEnvironment != nil) {
+            _apiEnvironment = apiEnvironment;
+            
+            NSArray *currentListeners = [[NSArray alloc] initWithArray:_changeListeners];
+            for (id<MTContextChangeListener> listener in currentListeners)
+            {
+                if ([listener respondsToSelector:@selector(contextApiEnvironmentUpdated:apiEnvironment:)]) {
+                    [listener contextApiEnvironmentUpdated:self apiEnvironment:apiEnvironment];
+                }
             }
         }
     }];
