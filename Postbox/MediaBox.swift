@@ -833,7 +833,7 @@ public final class MediaBox {
                             }
                             
                             if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
-                                paths.append(url.lastPathComponent)
+                                paths.append("cache/" + url.lastPathComponent)
                                 cacheResult += Int64(value)
                             }
                         }
