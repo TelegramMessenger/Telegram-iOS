@@ -22,7 +22,6 @@ public struct TelegramChatAdminRightsFlags: OptionSet {
     public static let canDeleteMessages = TelegramChatAdminRightsFlags(rawValue: 1 << 3)
     public static let canBanUsers = TelegramChatAdminRightsFlags(rawValue: 1 << 4)
     public static let canInviteUsers = TelegramChatAdminRightsFlags(rawValue: 1 << 5)
-    public static let canChangeInviteLink = TelegramChatAdminRightsFlags(rawValue: 1 << 6)
     public static let canPinMessages = TelegramChatAdminRightsFlags(rawValue: 1 << 7)
     public static let canAddAdmins = TelegramChatAdminRightsFlags(rawValue: 1 << 9)
     
@@ -31,14 +30,12 @@ public struct TelegramChatAdminRightsFlags: OptionSet {
         .canDeleteMessages,
         .canBanUsers,
         .canInviteUsers,
-        .canChangeInviteLink,
         .canPinMessages,
         .canAddAdmins
     ]
     
     public static var broadcastSpecific: TelegramChatAdminRightsFlags = [
         .canChangeInfo,
-        .canInviteUsers,
         .canPostMessages,
         .canEditMessages,
         .canDeleteMessages,
