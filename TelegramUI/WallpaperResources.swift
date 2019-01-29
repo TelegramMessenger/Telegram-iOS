@@ -26,13 +26,17 @@ private func wallpaperDatas(account: Account, fileReference: FileMediaReference?
                 }
             }
         } else {
-            maybeFullSize = account.postbox.mediaBox.cachedResourceRepresentation(largestRepresentation.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: false, fetch: false)
-            |> mapToSignal { maybeData -> Signal<MediaResourceData, NoError> in
-                if maybeData.complete {
-                    return .single(maybeData)
-                } else {
-                    return account.postbox.mediaBox.resourceData(largestRepresentation.resource)
+            if thumbnail {
+                maybeFullSize = account.postbox.mediaBox.cachedResourceRepresentation(largestRepresentation.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: false, fetch: false)
+                |> mapToSignal { maybeData -> Signal<MediaResourceData, NoError> in
+                    if maybeData.complete {
+                        return .single(maybeData)
+                    } else {
+                        return account.postbox.mediaBox.resourceData(largestRepresentation.resource)
+                    }
                 }
+            } else {
+                maybeFullSize = account.postbox.mediaBox.resourceData(largestRepresentation.resource)
             }
         }
         let decodedThumbnailData = fileReference?.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
