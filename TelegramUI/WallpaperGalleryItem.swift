@@ -6,34 +6,6 @@ import Postbox
 import TelegramCore
 import LegacyComponents
 
-private class WallpaperMotionEffect: UIInterpolatingMotionEffect {
-    var previousValue: CGFloat?
-    
-    override func keyPathsAndRelativeValues(forViewerOffset viewerOffset: UIOffset) -> [String : Any]? {
-        var motionAmplitude: CGFloat = 0.0
-        switch self.type {
-            case .tiltAlongHorizontalAxis:
-                motionAmplitude = viewerOffset.horizontal
-            case .tiltAlongVerticalAxis:
-                motionAmplitude = viewerOffset.vertical
-        }
-        
-        if (motionAmplitude > 0) {
-            guard let max = (self.maximumRelativeValue as? CGFloat) else {
-                return nil
-            }
-            let value = max * motionAmplitude
-            return [self.keyPath: value]
-        } else {
-            guard let min = (self.minimumRelativeValue as? CGFloat) else {
-                return nil
-            }
-            let value = -(min) * motionAmplitude
-            return [self.keyPath: value]
-        }
-    }
-}
-
 struct WallpaperGalleryItemArguments {
     let colorPreview: Bool
     let isColorsList: Bool
@@ -87,14 +59,12 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     let wrapperNode: ASDisplayNode
     let imageNode: TransformImageNode
     private let statusNode: RadialStatusNode
-    private let progressNode: ASTextNode
     private let blurredNode: BlurredImageNode
     let cropNode: WallpaperCropNode
     
     private var blurButtonNode: WallpaperOptionButtonNode
     private var motionButtonNode: WallpaperOptionButtonNode
     private var patternButtonNode: WallpaperOptionButtonNode
-    private var colorButtonNode: WallpaperOptionButtonNode
     
     fileprivate let _ready = Promise<Void>()
     private let fetchDisposable = MetaDisposable()
@@ -106,7 +76,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     let actionButton = Promise<UIBarButtonItem?>(nil)
     var action: (() -> Void)?
     var requestPatternPanel: ((Bool) -> Void)?
-    var requestColorPanel: ((UIColor) -> Void)?
     
     private var validLayout: ContainerViewLayout?
     private var validOffset: CGFloat?
@@ -121,16 +90,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
         self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
         self.statusNode.isUserInteractionEnabled = false
-        self.progressNode = ASTextNode()
         
         self.blurredNode = BlurredImageNode()
         
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.blurButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Blurred, value: .check(false))
         self.motionButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Motion, value: .check(false))
-        
         self.patternButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Pattern, value: .check(false))
-        self.colorButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Color, value: .color(false, .white))
         
         super.init()
         
@@ -146,17 +112,14 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         self.addSubnode(self.wrapperNode)
         self.addSubnode(self.statusNode)
-        self.addSubnode(self.progressNode)
         
         self.addSubnode(self.blurButtonNode)
         self.addSubnode(self.motionButtonNode)
         self.addSubnode(self.patternButtonNode)
-        self.addSubnode(self.colorButtonNode)
         
         self.blurButtonNode.addTarget(self, action: #selector(self.toggleBlur), forControlEvents: .touchUpInside)
         self.motionButtonNode.addTarget(self, action: #selector(self.toggleMotion), forControlEvents: .touchUpInside)
         self.patternButtonNode.addTarget(self, action: #selector(self.togglePattern), forControlEvents: .touchUpInside)
-        self.colorButtonNode.addTarget(self, action: #selector(self.toggleColor), forControlEvents: .touchUpInside)
     }
     
     deinit {
@@ -265,7 +228,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                     patternColor = UIColor(rgb: UInt32(bitPattern: color), alpha: patternIntensity)
                                 }
                                 
-                                self.colorButtonNode.color = patternColor.withAlphaComponent(1.0)
                                 self.backgroundColor = patternColor.withAlphaComponent(1.0)
                                 
                                 if let previousEntry = previousEntry, case let .wallpaper(wallpaper) = previousEntry, case let .file(previousFile) = wallpaper, file.id == previousFile.id && (file.settings.color != previousFile.settings.color || file.settings.intensity != previousFile.settings.intensity) && self.colorPreview == self.arguments.colorPreview {
@@ -418,21 +380,17 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         case let .Fetching(_, progress):
                             let adjustedProgress = max(progress, 0.027)
                             state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: false)
-                            strongSelf.progressNode.attributedText = NSAttributedString(string: "\(Int(progress * 100))%", font: Font.medium(13), textColor: .white, paragraphAlignment: .center)
                         case .Local:
                             state = .none
-                            strongSelf.progressNode.attributedText = nil
                             local = true
                         case .Remote:
                             state = .progress(color: statusForegroundColor, lineWidth: nil, value: 0.027, cancelEnabled: false)
-                            strongSelf.progressNode.attributedText = nil
                     }
                     strongSelf.statusNode.transitionToState(state, completion: {})
                     
                     strongSelf.blurButtonNode.setEnabled(local)
                     strongSelf.motionButtonNode.setEnabled(local)
                     strongSelf.patternButtonNode.setEnabled(local)
-                    strongSelf.colorButtonNode.setEnabled(local)
                 }
             }))
             
@@ -444,7 +402,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             |> deliverOnMainQueue).start(next: { [weak self] color in
                 self?.statusNode.backgroundNodeColor = color
                 self?.patternButtonNode.buttonColor = color
-                self?.colorButtonNode.buttonColor = color
                 self?.blurButtonNode.buttonColor = color
                 self?.motionButtonNode.buttonColor = color
             }))
@@ -568,21 +525,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.requestPatternPanel?(value)
     }
     
-    var isColorEnabled: Bool {
-        return self.colorButtonNode.isSelected
-    }
-    
-    @objc func toggleColor() {
-        let value = !self.colorButtonNode.isSelected
-        self.colorButtonNode.setSelected(value, animated: true)
-        
-        if let color = self.colorButtonNode.color {
-            self.requestColorPanel?(color)
-            
-            self.preparePatternEditing()
-        }
-    }
-    
     private func preparePatternEditing() {
         if let entry = self.entry, case let .wallpaper(wallpaper) = entry, case let .file(file) = wallpaper {
             if let size = file.file.dimensions?.fitted(CGSize(width: 1280.0, height: 1280.0)) {
@@ -593,11 +535,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     
     func setMotionEnabled(_ enabled: Bool, animated: Bool) {
         if enabled {
-            let horizontal = WallpaperMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
+            let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
             horizontal.minimumRelativeValue = motionAmount
             horizontal.maximumRelativeValue = -motionAmount
             
-            let vertical = WallpaperMotionEffect(keyPath: "center.y", type: .tiltAlongVerticalAxis)
+            let vertical = UIInterpolatingMotionEffect(keyPath: "center.y", type: .tiltAlongVerticalAxis)
             vertical.minimumRelativeValue = motionAmount
             vertical.maximumRelativeValue = -motionAmount
             
@@ -640,11 +582,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     
     func updateButtonsLayout(layout: ContainerViewLayout, offset: CGPoint, transition: ContainedViewLayoutTransition) {
         let patternButtonSize = self.patternButtonNode.measure(layout.size)
-        let colorButtonSize = self.colorButtonNode.measure(layout.size)
         let blurButtonSize = self.blurButtonNode.measure(layout.size)
         let motionButtonSize = self.motionButtonNode.measure(layout.size)
         
-        let maxButtonWidth = max(patternButtonSize.width, max(colorButtonSize.width, max(blurButtonSize.width, motionButtonSize.width)))
+        let maxButtonWidth = max(patternButtonSize.width, max(blurButtonSize.width, motionButtonSize.width))
         let buttonSize = CGSize(width: maxButtonWidth, height: 30.0)
         let alpha = 1.0 - min(1.0, max(0.0, abs(offset.y) / 50.0))
         
@@ -654,16 +595,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
         
         let leftButtonFrame = CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0 - buttonSize.width - 10.0) + offset.x, y: layout.size.height - 49.0 - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
-        
         let centerButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width) / 2.0) + offset.x, y: layout.size.height - 49.0 - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
-        
         let rightButtonFrame = CGRect(origin: CGPoint(x: ceil(layout.size.width / 2.0 + 10.0) + offset.x, y: layout.size.height - 49.0 - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
         
         var patternAlpha: CGFloat = 0.0
         var patternFrame = centerButtonFrame
-        
-        var colorAlpha: CGFloat = 0.0
-        var colorFrame = centerButtonFrame
         
         var blurAlpha: CGFloat = 0.0
         var blurFrame = centerButtonFrame
@@ -673,7 +609,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         if let entry = self.entry {
             switch entry {
-                case let .asset(_):
+                case .asset:
                     blurAlpha = 1.0
                     blurFrame = leftButtonFrame
                     motionAlpha = 1.0
@@ -709,10 +645,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                     }
                                     motionFrame = rightButtonFrame
                                 }
-//                                if !self.arguments.isColorsList || self.patternButtonNode.isSelected {
-//                                    motionAlpha = 1.0
-//                                    motionFrame = rightButtonFrame
-//                                }
                             } else {
                                 blurAlpha = 1.0
                                 blurFrame = leftButtonFrame
@@ -725,9 +657,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         transition.updateFrame(node: self.patternButtonNode, frame: patternFrame)
         transition.updateAlpha(node: self.patternButtonNode, alpha: patternAlpha * alpha)
-        
-        transition.updateFrame(node: self.colorButtonNode, frame: colorFrame)
-        transition.updateAlpha(node: self.colorButtonNode, alpha: colorAlpha * alpha)
         
         transition.updateFrame(node: self.blurButtonNode, frame: blurFrame)
         transition.updateAlpha(node: self.blurButtonNode, alpha: blurAlpha * alpha)
@@ -768,9 +697,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
         
         self.statusNode.frame = CGRect(x: layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - progressDiameter) / 2.0), y: floorToScreenPixels((layout.size.height + additionalYOffset - progressDiameter) / 2.0), width: progressDiameter, height: progressDiameter)
-        self.progressNode.frame = CGRect(x: layout.safeInsets.left + floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - progressDiameter) / 2.0), y: floorToScreenPixels((layout.size.height + additionalYOffset - 15.0) / 2.0), width: progressDiameter, height: progressDiameter)
         
-
         self.updateButtonsLayout(layout: layout, offset: CGPoint(x: offset, y: 0.0), transition: transition)
         
         self.validLayout = layout

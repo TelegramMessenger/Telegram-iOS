@@ -45,6 +45,15 @@ final class SearchDisplayController {
             self?.searchBar.prefixString = prefix
             self?.searchBar.text = query
         }
+        self.contentNode.setPlaceholder = { [weak self] string in
+            guard string != self?.searchBar.placeholderString?.string else {
+                return
+            }
+            if let mutableAttributedString = self?.searchBar.placeholderString?.mutableCopy() as? NSMutableAttributedString {
+                mutableAttributedString.mutableString.setString(string)
+                self?.searchBar.placeholderString = mutableAttributedString
+            }
+        }
         
         self.isSearchingDisposable = (contentNode.isSearching
         |> deliverOnMainQueue).start(next: { [weak self] value in

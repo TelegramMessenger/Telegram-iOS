@@ -51,21 +51,8 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
             self.setColor(newValue)
         }
     }
-    var intensity: Int32 {
-        get {
-            return self.colorPickerNode.intensity
-        }
-        set {
-            self.colorPickerNode.intensity = newValue
-        }
-    }
-    var colorChanged: ((UIColor, Int32?, Bool) -> Void)?
-    
-    var adjustingPattern: Bool = false {
-        didSet {
-             self.colorPickerNode.adjustingPattern = self.adjustingPattern
-        }
-    }
+
+    var colorChanged: ((UIColor, Bool) -> Void)?
 
     init(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
@@ -110,16 +97,6 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         self.colorPickerNode.colorChangeEnded = { [weak self] color in
             self?.setColor(color, updatePicker: false, ended: true)
         }
-        self.colorPickerNode.intensityChanged = { [weak self] value in
-            if let strongSelf = self {
-                strongSelf.colorChanged?(strongSelf.color, value, false)
-            }
-        }
-        self.colorPickerNode.intensityChangeEnded = { [weak self] value in
-            if let strongSelf = self {
-                strongSelf.colorChanged?(strongSelf.color, value, true)
-            }
-        }
     }
     
     override func didLoad() {
@@ -142,7 +119,7 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         if updatePicker {
             self.colorPickerNode.color = color
         }
-        self.colorChanged?(color, self.intensity, ended)
+        self.colorChanged?(color, ended)
     }
     
     func updateLayout(size: CGSize, keyboardHeight: CGFloat, transition: ContainedViewLayoutTransition) {

@@ -345,7 +345,6 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         self.gridNode = GridNode()
         
-        
         self.emptyResultsTitleNode = ImmediateTextNode()
         self.emptyResultsTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.SharedMedia_SearchNoResults, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.freeTextColor)
         self.emptyResultsTitleNode.textAlignment = .center
@@ -589,18 +588,22 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
             if updateInterface {
                 let prefix: NSAttributedString?
                 let text: String
+                let placeholder: String
                 switch query {
                     case let .generic(query):
                         prefix = nil
                         text = query
+                        placeholder = self.presentationData.strings.Wallpaper_Search
                     case let .color(color, query):
                         let prefixString = NSMutableAttributedString()
                         prefixString.append(NSAttributedString(string: self.presentationData.strings.WallpaperSearch_ColorPrefix, font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.activeNavigationSearchBar.inputTextColor))
                         prefixString.append(NSAttributedString(string: "\(color.localizedString(strings: self.presentationData.strings)) ", font: Font.regular(17.0), textColor: self.presentationData.theme.rootController.activeNavigationSearchBar.accentColor))
                         prefix = prefixString
                         text = query
+                        placeholder = self.presentationData.strings.Wallpaper_SearchShort
                 }
                 self.setQuery?(prefix, text)
+                self.setPlaceholder?(placeholder)
             }
         }
     }

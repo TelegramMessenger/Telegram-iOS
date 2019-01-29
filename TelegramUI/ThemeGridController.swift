@@ -246,6 +246,40 @@ final class ThemeGridController: ViewController {
             if let strongSelf = self {
                 strongSelf.shareWallpapers(wallpapers)
             }
+        }, resetWallpapers: { [weak self] in
+            if let strongSelf = self {
+                let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                let items: [ActionSheetItem] = [
+                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Wallpaper_ResetWallpapersConfirmation, color: .destructive, action: { [weak self, weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        
+                        if let strongSelf = self {
+                            strongSelf.scrollToTop?()
+                            
+                            let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .loading(cancelled: nil))
+                            strongSelf.present(controller, in: .window(.root))
+                            
+                            let _ = resetWallpapers(account: strongSelf.account).start(completed: { [weak self, weak controller] in
+                                let _ = (telegramWallpapers(postbox: strongSelf.account.postbox, network: strongSelf.account.network)
+                                |> deliverOnMainQueue).start(completed: { [weak self, weak controller] in
+                                    controller?.dismiss()
+                                    if let strongSelf = self {
+                                        strongSelf.controllerNode.updateWallpapers()
+                                    }
+                                })
+                            })
+                        }
+                    })
+                ]
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                strongSelf.present(actionSheet, in: .window(.root))
+            }
         }, popViewController: { [weak self] in
             if let strongSelf = self {
                 let _ = (strongSelf.navigationController as? NavigationController)?.popViewController(animated: true)
@@ -346,6 +380,17 @@ final class ThemeGridController: ViewController {
                 
                 let account = self.account
                 let updateWallpaper: (TelegramWallpaper) -> Void = { [weak self] wallpaper in
+                    var resource: MediaResource?
+                    if case let .image(representations, _) = wallpaper, let representation = largestImageRepresentation(representations) {
+                        resource = representation.resource
+                    } else if case let .file(file) = wallpaper {
+                        resource = file.file.resource
+                    }
+                    
+                    if let resource = resource {
+                        let _ = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start(completed: {})
+                    }
+                    
                     let _ = (updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                         themeSpecificChatWallpapers[current.theme.index] = wallpaper
@@ -366,7 +411,7 @@ final class ThemeGridController: ViewController {
                     
                     let _ = uploadWallpaper(account: account, resource: resource).start(next: { status in
                         if case let .complete(wallpaper) = status {
-                            if mode.contains(.blur), case let .file(_, _, _, _, _, _, file, _) = wallpaper {
+                            if mode.contains(.blur), case let .file(_, _, _, _, _, _, _, file, _) = wallpaper {
                                 let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
                                     updateWallpaper(wallpaper)
                                 })
@@ -376,6 +421,7 @@ final class ThemeGridController: ViewController {
                         }
                     })
                 }
+                
                 
                 if mode.contains(.blur) {
                     let _ = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
@@ -395,7 +441,7 @@ final class ThemeGridController: ViewController {
         for wallpaper in wallpapers {
             var item: String?
             switch wallpaper {
-                case let .file(_, _, _, _, isPattern, slug, _, settings):
+                case let .file(_, _, _, _, isPattern, _, slug, _, settings):
                     var options: [String] = []
                     if isPattern {
                         if let color = settings.color {

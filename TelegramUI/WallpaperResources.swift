@@ -11,8 +11,29 @@ private func wallpaperDatas(account: Account, fileReference: FileMediaReference?
         let maybeFullSize: Signal<MediaResourceData, NoError>
         if thumbnail, let file = fileReference?.media {
             maybeFullSize = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: false, fetch: false)
+            |> mapToSignal { maybeData -> Signal<MediaResourceData, NoError> in
+                if maybeData.complete {
+                    return .single(maybeData)
+                } else {
+                    return account.postbox.mediaBox.resourceData(file.resource)
+                    |> mapToSignal { maybeData -> Signal<MediaResourceData, NoError> in
+                        if maybeData.complete {
+                            return account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: false, fetch: true)
+                        } else {
+                            return .single(maybeData)
+                        }
+                    }
+                }
+            }
         } else {
-            maybeFullSize = account.postbox.mediaBox.resourceData(largestRepresentation.resource)
+            maybeFullSize = account.postbox.mediaBox.cachedResourceRepresentation(largestRepresentation.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: false, fetch: false)
+            |> mapToSignal { maybeData -> Signal<MediaResourceData, NoError> in
+                if maybeData.complete {
+                    return .single(maybeData)
+                } else {
+                    return account.postbox.mediaBox.resourceData(largestRepresentation.resource)
+                }
+            }
         }
         let decodedThumbnailData = fileReference?.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
         
@@ -300,8 +321,14 @@ private func patternWallpaperDatas(account: Account, representations: [ImageRepr
 }
 
 func patternWallpaperImage(account: Account, representations: [ImageRepresentationWithReference], mode: PatternWallpaperDrawMode, autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = patternWallpaperDatas(account: account, representations: representations, mode: mode, autoFetchFullSize: autoFetchFullSize)
     
+    return patternWallpaperDatas(account: account, representations: representations, mode: mode, autoFetchFullSize: autoFetchFullSize)
+    |> mapToSignal { (thumbnailData, fullSizeData, fullSizeComplete) in
+        return patternWallpaperImageInternal(thumbnailData: thumbnailData, fullSizeData: fullSizeData, fullSizeComplete: fullSizeComplete, mode: mode)
+    }
+}
+
+func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Data?, fullSizeComplete: Bool, mode: PatternWallpaperDrawMode) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     var prominent = false
     if case .thumbnail = mode {
         prominent = true
@@ -309,10 +336,10 @@ func patternWallpaperImage(account: Account, representations: [ImageRepresentati
     
     var scale: CGFloat = 0.0
     if case .fastScreen = mode {
-        scale = 1.0 //max(1.0, UIScreenScale - 1.0)
+        scale = 1.0
     }
     
-    return signal
+    return .single((thumbnailData, fullSizeData, fullSizeComplete))
     |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return { arguments in
             let drawingRect = arguments.drawingRect
@@ -382,7 +409,7 @@ func patternColor(for color: UIColor, intensity: CGFloat, prominent: Bool = fals
     var saturation: CGFloat = 0.0
     var brightness: CGFloat = 0.0
     if color.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil) {
-        if saturation > 0.0 || (brightness < 1.0 && brightness > 0.0) {
+        if saturation > 0.0 {
             saturation = min(1.0, saturation + 0.05 + 0.1 * (1.0 - saturation))
         }
         if brightness > 0.5 {
@@ -447,6 +474,76 @@ func settingsBuiltinWallpaperImage(account: Account) -> Signal<(TransformImageAr
             }
             
             addCorners(context, arguments: arguments)
+            
+            return context
+        }
+    }
+}
+
+func photoWallpaper(postbox: Postbox, photoLibraryResource: PhotoLibraryMediaResource) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let thumbnail = fetchPhotoLibraryImage(localIdentifier: photoLibraryResource.localIdentifier, thumbnail: true)
+    let fullSize = fetchPhotoLibraryImage(localIdentifier: photoLibraryResource.localIdentifier, thumbnail: false)
+    
+    return (thumbnail |> then(fullSize))
+    |> map { result in
+        var sourceImage = result?.0
+        let isThumbnail = result?.1 ?? false
+        
+        return { arguments in
+            let context = DrawingContext(size: arguments.drawingSize, scale: 1.0, clear: true)
+            
+            let dimensions = sourceImage?.size
+            
+            if let thumbnailImage = sourceImage?.cgImage, isThumbnail {
+                var fittedSize = arguments.imageSize
+                if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
+                    fittedSize.width = arguments.boundingSize.width
+                }
+                if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
+                    fittedSize.height = arguments.boundingSize.height
+                }
+                
+                let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
+                
+                let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 100.0, height: 100.0))
+                
+                let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
+                let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                thumbnailContext.withFlippedContext { c in
+                    c.interpolationQuality = .none
+                    c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                }
+                telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                
+                var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
+                if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
+                    thumbnailContextFittingSize = thumbnailContextFittingSize.aspectFilled(CGSize(width: 150.0, height: 150.0))
+                }
+                
+                if thumbnailContextFittingSize.width > thumbnailContextSize.width {
+                    let additionalContextSize = thumbnailContextFittingSize
+                    let additionalBlurContext = DrawingContext(size: additionalContextSize, scale: 1.0)
+                    additionalBlurContext.withFlippedContext { c in
+                        c.interpolationQuality = .default
+                        if let image = thumbnailContext.generateImage()?.cgImage {
+                            c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
+                        }
+                    }
+                    telegramFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                    sourceImage = additionalBlurContext.generateImage()
+                } else {
+                    sourceImage = thumbnailContext.generateImage()
+                }
+            }
+            
+            context.withFlippedContext { c in
+                c.setBlendMode(.copy)
+                if let sourceImage = sourceImage, let cgImage = sourceImage.cgImage, let dimensions = dimensions {
+                    let imageSize = dimensions.aspectFilled(arguments.drawingRect.size)
+                    let fittedRect = CGRect(origin: CGPoint(x: floor((arguments.drawingRect.size.width - imageSize.width) / 2.0), y: floor((arguments.drawingRect.size.height - imageSize.height) / 2.0)), size: imageSize)
+                    c.draw(cgImage, in: fittedRect)
+                }
+            }
             
             return context
         }

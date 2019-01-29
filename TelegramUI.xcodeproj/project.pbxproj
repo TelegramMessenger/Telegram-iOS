@@ -3157,11 +3157,11 @@
 				09F664CF21EBCFB900AB7E26 /* WallpaperCropNode.swift */,
 				09DD5D5121ED175300D7007A /* WallpaperColorPickerNode.swift */,
 				0900678C21ED5EA800530762 /* WallpaperColorPanelNode.swift */,
+				0910B0F021FB3DE100F8F87D /* WallpaperPatternPanelNode.swift */,
 				091417F121EF4E5D00C8325A /* WallpaperGalleryController.swift */,
 				09749BCC21F23139008FDDE9 /* WallpaperGalleryDecorationNode.swift */,
 				091417F321EF4F5F00C8325A /* WallpaperGalleryItem.swift */,
 				D05174AA1EAA5B4700A1BF36 /* WallpaperGalleryToolbarNode.swift */,
-				0910B0F021FB3DE100F8F87D /* WallpaperPatternPanelNode.swift */,
 			);
 			name = Themes;
 			sourceTree = "<group>";

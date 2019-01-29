@@ -164,7 +164,7 @@ func serviceColor(with color: UIColor) -> UIColor {
     var brightness: CGFloat = 0.0
     var alpha: CGFloat = 0.0
     if color.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) {
-        if saturation > 0.0 || brightness < 1.0 {
+        if saturation > 0.0 {
             saturation = min(1.0, saturation + 0.05 + 0.1 * (1.0 - saturation))
         }
         brightness = max(0.0, brightness * 0.65)

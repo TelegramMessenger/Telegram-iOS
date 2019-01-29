@@ -75,7 +75,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
                     var updatedWallpaper = wallpaper
                     if case let .file(file) = updatedWallpaper {
                         let settings = WallpaperSettings(blur: false, motion: false, color: 0xd6e2ee, intensity: 100)
-                        updatedWallpaper = .file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, slug: file.slug, file: file.file, settings: settings)
+                        updatedWallpaper = .file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: settings)
                     }
                     
                     node.setWallpaper(account: account, wallpaper: updatedWallpaper, selected: selected, size: itemSize)
@@ -116,7 +116,6 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.scrollNode.view.alwaysBounceHorizontal = true
         
         let sliderView = TGPhotoEditorSliderView()
-        //sliderView.enablePanHandling = true
         sliderView.trackCornerRadius = 1.0
         sliderView.lineSize = 2.0
         sliderView.minimumValue = 0.0

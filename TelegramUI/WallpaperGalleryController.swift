@@ -91,7 +91,7 @@ private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, sl
         intensityValue = 50
     }
     
-    return .file(id: id ?? 0, accessHash: accessHash ?? 0, isCreator: false, isDefault: false, isPattern: isPattern, slug: slug, file: file, settings: WallpaperSettings(blur: false, motion: false, color: colorValue, intensity: intensityValue))
+    return .file(id: id ?? 0, accessHash: accessHash ?? 0, isCreator: false, isDefault: false, isPattern: isPattern, isDark: false, slug: slug, file: file, settings: WallpaperSettings(blur: false, motion: false, color: colorValue, intensity: intensityValue))
 }
 
 private struct WallpaperPatternTransition: Equatable {
@@ -318,9 +318,9 @@ class WallpaperGalleryController: ViewController {
         self.galleryNode.addSubnode(overlayNode)
         
         let colorPanelNode = WallpaperColorPanelNode(theme: presentationData.theme, strings: presentationData.strings)
-        colorPanelNode.colorChanged = { [weak self] color, intensity, ended in
+        colorPanelNode.colorChanged = { [weak self] color, ended in
             if let strongSelf = self {
-                strongSelf.updateEntries(color: color, intensity: intensity, preview: !ended)
+                strongSelf.updateEntries(color: color, preview: !ended)
             }
         }
         if case let .customColor(colorValue) = self.source, let color = colorValue {
@@ -344,23 +344,7 @@ class WallpaperGalleryController: ViewController {
                         let entry = strongSelf.entries[centralItemNode.index]
                         switch entry {
                             case let .wallpaper(wallpaper):
-                                let completion: () -> Void = {
-                                    let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in
-                                        var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                                        themeSpecificChatWallpapers[current.theme.index] = wallpaper
-                                        return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: options, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
-                                    }) |> deliverOnMainQueue).start(completed: {
-                                        self?.dismiss(forceAway: true)
-                                    })
-                                    
-                                    if case .wallpaper = strongSelf.source {
-                                        let _ = saveWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
-                                    }
-                                    let _ = installWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
-                                }
-                                
-                                if options.contains(.blur) {
-                                    var resource: MediaResource?
+                                var resource: MediaResource?
                                     switch wallpaper {
                                         case let .file(file):
                                             resource = file.file.resource
@@ -371,7 +355,23 @@ class WallpaperGalleryController: ViewController {
                                         default:
                                             break
                                     }
-                                    
+                                
+                                let completion: () -> Void = {
+                                    let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in
+                                        var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                        themeSpecificChatWallpapers[current.theme.index] = wallpaper
+                                        return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: options, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                                    }) |> deliverOnMainQueue).start(completed: {
+                                        self?.dismiss(forceAway: true)
+                                    })
+                                
+                                    if case .wallpaper = strongSelf.source {
+                                        let _ = saveWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
+                                    }
+                                    let _ = installWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
+                                }
+                                
+                                if options.contains(.blur) {
                                     if let resource = resource {
                                         let _ = strongSelf.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
                                             completion()
@@ -439,17 +439,6 @@ class WallpaperGalleryController: ViewController {
                     strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
                 }
             }
-            node.requestColorPanel = { [weak self] color in
-                if let strongSelf = self, let (layout, _) = strongSelf.validLayout {
-                    strongSelf.colorPanelEnabled = true
-                    strongSelf.colorPanelNode?.adjustingPattern = true
-                    strongSelf.colorPanelNode?.intensity = 40
-                    strongSelf.colorPanelNode?.color = color
-                    strongSelf.galleryNode.scrollView.isScrollEnabled = false
-                    strongSelf.galleryNode.pager.isScrollEnabled = false
-                    strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
-                }
-            }
             
             if let (layout, bottomInset) = self.validLayout {
                 self.updateMessagesLayout(layout: layout, bottomInset: bottomInset, transition: .immediate)
@@ -457,7 +446,7 @@ class WallpaperGalleryController: ViewController {
         }
     }
     
-    private func updateEntries(color: UIColor, intensity: Int32? = nil, preview: Bool = false) {
+    private func updateEntries(color: UIColor, preview: Bool = false) {
         guard self.validLayout != nil, let centralEntryIndex = self.galleryNode.pager.centralItemNode()?.index else {
             return
         }
@@ -469,12 +458,6 @@ class WallpaperGalleryController: ViewController {
                 switch wallpaper {
                     case .color:
                         currentEntry = .wallpaper(.color(Int32(color.rgb)))
-                    case let .file(file):
-                        if file.isPattern {
-                            let newSettings = WallpaperSettings(blur: file.settings.blur, motion: file.settings.motion, color: Int32(bitPattern: color.rgb), intensity: intensity)
-                            let newWallpaper = TelegramWallpaper.file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, slug: file.slug, file: file.file, settings: newSettings)
-                            currentEntry = .wallpaper(newWallpaper)
-                        }
                     default:
                         break
                 }
@@ -502,7 +485,7 @@ class WallpaperGalleryController: ViewController {
             if let entryColor = entryColor {
                 if case let .file(file) = pattern {
                     let newSettings = WallpaperSettings(blur: file.settings.blur, motion: file.settings.motion, color: entryColor, intensity: intensity)
-                    let newWallpaper = TelegramWallpaper.file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, slug: file.slug, file: file.file, settings: newSettings)
+                    let newWallpaper = TelegramWallpaper.file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: newSettings)
                     updatedEntries.append(.wallpaper(newWallpaper))
                 } else {
                     let newWallpaper = TelegramWallpaper.color(entryColor)
@@ -690,7 +673,7 @@ class WallpaperGalleryController: ViewController {
         
         var controller: ShareController?
         switch wallpaper {
-            case let .file(_, _, _, _, isPattern, slug, _, settings):
+            case let .file(_, _, _, _, isPattern, _, slug, _, settings):
                 var options: [String] = []
                 if (itemNode.options.contains(.blur) && !isPattern) {
                     if (itemNode.options.contains(.motion)) {

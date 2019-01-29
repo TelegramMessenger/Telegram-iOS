@@ -7,6 +7,7 @@ class SearchDisplayControllerContentNode: ASDisplayNode {
     final var dismissInput: (() -> Void)?
     final var cancel: (() -> Void)?
     final var setQuery: ((NSAttributedString?, String) -> Void)?
+    final var setPlaceholder: ((String) -> Void)?
     
     var isSearching: Signal<Bool, NoError> {
         return .single(false)

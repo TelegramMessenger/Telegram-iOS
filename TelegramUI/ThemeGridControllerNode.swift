@@ -25,8 +25,8 @@ private func areWallpapersEqual(_ lhs: TelegramWallpaper, _ rhs: TelegramWallpap
             } else {
                 return false
             }
-        case let .file(_, _, _, _, _, lhsSlug, _, lhsSettings):
-            if case let .file(_, _, _, _, _, rhsSlug, _, rhsSettings) = rhs, lhsSlug == rhsSlug, lhsSettings.color == rhsSettings.color && lhsSettings.intensity == rhsSettings.intensity {
+        case let .file(_, _, _, _, _, _, lhsSlug, _, lhsSettings):
+            if case let .file(_, _, _, _, _, _, rhsSlug, _, rhsSettings) = rhs, lhsSlug == rhsSlug, lhsSettings.color == rhsSettings.color && lhsSettings.intensity == rhsSettings.intensity {
                 return true
             } else {
                 return false
@@ -90,15 +90,15 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
             case .builtin:
                 return 0
             case let .color(color):
-                return (Int64(0) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: color)))
-            case let .file(id, _, _, _, _, _, _, settings):
+                return (Int64(1) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: color)))
+            case let .file(id, _, _, _, _, _, _, _, settings):
                 var hash: Int = id.hashValue
                 hash = hash &* 31 &+ (settings.color?.hashValue ?? 0)
                 hash = hash &* 31 &+ (settings.intensity?.hashValue ?? 0)
-                return (Int64(1) << 32) | Int64(hash)
+                return (Int64(2) << 32) | Int64(hash)
             case let .image(representations, _):
                 if let largest = largestImageRepresentation(representations) {
-                    return (Int64(2) << 32) | Int64(largest.resource.id.hashValue)
+                    return (Int64(3) << 32) | Int64(largest.resource.id.hashValue)
                 } else {
                     return 0
                 }
@@ -157,43 +157,6 @@ private func selectedWallpapers(entries: [ThemeGridControllerEntry]?, state: The
     return wallpapers
 }
 
-private func isDarkWallpaper(_ wallpaper: TelegramWallpaper) -> Bool {
-    if case let .file(file) = wallpaper {
-        if let data = file.file.immediateThumbnailData {
-            let options = NSMutableDictionary()
-            options.setValue(1 as NSNumber, forKey: kCGImageSourceThumbnailMaxPixelSize as String)
-            options.setValue(true as NSNumber, forKey: kCGImageSourceCreateThumbnailFromImageAlways as String)
-            
-            let thumbnailData = decodeTinyThumbnail(data: data)
-            if let thumbnailData = thumbnailData, let imageSource = CGImageSourceCreateWithData(thumbnailData as CFData, nil), let image = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary) {
-                let pixelData = image.dataProvider!.data
-                let data: UnsafePointer<UInt8> = CFDataGetBytePtr(pixelData)
-                
-                let point = CGPoint()
-                let pixelInfo: Int = ((Int(image.width) * Int(point.y)) + Int(point.x)) * 4
-                let r = CGFloat(data[pixelInfo+1]) / CGFloat(255.0)
-                let g = CGFloat(data[pixelInfo+2]) / CGFloat(255.0)
-                let b = CGFloat(data[pixelInfo+3]) / CGFloat(255.0)
-                
-                let color = UIColor(red: r, green: g, blue: b, alpha: 1.0)
-                
-                var hue:  CGFloat = 0.0
-                var saturation: CGFloat = 0.0
-                var brightness: CGFloat = 0.0
-                var alpha: CGFloat = 0.0
-                if color.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) {
-                    if brightness > 0.5 {
-                        return false
-                    } else {
-                        return true
-                    }
-                }
-            }
-        }
-    }
-    return false
-}
-
 final class ThemeGridControllerNode: ASDisplayNode {
     private let account: Account
     private var presentationData: PresentationData
@@ -203,6 +166,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
     private let presentGallery: () -> Void
     private let presentColors: () -> Void
     private let emptyStateUpdated: (Bool) -> Void
+    private let resetWallpapers: () -> Void
+    
     var requestDeactivateSearch: (() -> Void)?
     
     let ready = ValuePromise<Bool>()
@@ -210,15 +175,19 @@ final class ThemeGridControllerNode: ASDisplayNode {
     
     private var backgroundNode: ASDisplayNode
     private var separatorNode: ASDisplayNode
+    private var bottomBackgroundNode: ASDisplayNode
+    private var bottomSeparatorNode: ASDisplayNode
     
     private let colorItemNode: ItemListActionItemNode
     private var colorItem: ItemListActionItem
-    
     private let galleryItemNode: ItemListActionItemNode
     private var galleryItem: ItemListActionItem
-    
     private let descriptionItemNode: ItemListTextItemNode
     private var descriptionItem: ItemListTextItem
+    private let resetItemNode: ItemListActionItemNode
+    private var resetItem: ItemListActionItem
+    private let resetDescriptionItemNode: ItemListTextItemNode
+    private var resetDescriptionItem: ItemListTextItem
     
     private var selectionPanel: ThemeGridSelectionPanelNode?
     private var selectionPanelSeparatorNode: ASDisplayNode?
@@ -240,13 +209,14 @@ final class ThemeGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(account: Account, presentationData: PresentationData, presentPreviewController: @escaping (WallpaperListSource) -> Void, presentGallery: @escaping () -> Void, presentColors: @escaping () -> Void, emptyStateUpdated: @escaping (Bool) -> Void, deleteWallpapers: @escaping ([TelegramWallpaper], @escaping () -> Void) -> Void, shareWallpapers: @escaping ([TelegramWallpaper]) -> Void, popViewController: @escaping () -> Void) {
+    init(account: Account, presentationData: PresentationData, presentPreviewController: @escaping (WallpaperListSource) -> Void, presentGallery: @escaping () -> Void, presentColors: @escaping () -> Void, emptyStateUpdated: @escaping (Bool) -> Void, deleteWallpapers: @escaping ([TelegramWallpaper], @escaping () -> Void) -> Void, shareWallpapers: @escaping ([TelegramWallpaper]) -> Void, resetWallpapers: @escaping () -> Void, popViewController: @escaping () -> Void) {
         self.account = account
         self.presentationData = presentationData
         self.presentPreviewController = presentPreviewController
         self.presentGallery = presentGallery
         self.presentColors = presentColors
         self.emptyStateUpdated = emptyStateUpdated
+        self.resetWallpapers = resetWallpapers
         
         self.gridNode = GridNode()
         self.gridNode.showVerticalScrollIndicator = true
@@ -256,6 +226,12 @@ final class ThemeGridControllerNode: ASDisplayNode {
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
+        
+        self.bottomBackgroundNode = ASDisplayNode()
+        self.bottomBackgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        
+        self.bottomSeparatorNode = ASDisplayNode()
+        self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
         self.colorItemNode = ItemListActionItemNode()
         self.colorItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_SetColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: {
@@ -267,6 +243,12 @@ final class ThemeGridControllerNode: ASDisplayNode {
         })
         self.descriptionItemNode = ItemListTextItemNode()
         self.descriptionItem = ItemListTextItem(theme: presentationData.theme, text: .plain(presentationData.strings.Wallpaper_SetCustomBackgroundInfo), sectionId: 0)
+        self.resetItemNode = ItemListActionItemNode()
+        self.resetItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_ResetWallpapers, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: {
+            resetWallpapers()
+        })
+        self.resetDescriptionItemNode = ItemListTextItemNode()
+        self.resetDescriptionItem = ItemListTextItem(theme: presentationData.theme, text: .plain(presentationData.strings.Wallpaper_ResetWallpapersInfo), sectionId: 0)
         
         self.currentState = ThemeGridControllerNodeState(editing: false, selectedIndices: Set())
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
@@ -288,9 +270,13 @@ final class ThemeGridControllerNode: ASDisplayNode {
         
         self.gridNode.addSubnode(self.backgroundNode)
         self.gridNode.addSubnode(self.separatorNode)
+        self.gridNode.addSubnode(self.bottomBackgroundNode)
+        self.gridNode.addSubnode(self.bottomSeparatorNode)
         self.gridNode.addSubnode(self.colorItemNode)
         self.gridNode.addSubnode(self.galleryItemNode)
         self.gridNode.addSubnode(self.descriptionItemNode)
+        self.gridNode.addSubnode(self.resetItemNode)
+        self.gridNode.addSubnode(self.resetDescriptionItemNode)
         self.addSubnode(self.gridNode)
         
         let previousEntries = Atomic<[ThemeGridControllerEntry]?>(value: nil)
@@ -357,7 +343,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             if presentationData.theme.overallDarkAppearance {
                 var darkWallpapers: [TelegramWallpaper] = []
                 for wallpaper in wallpapers {
-                    if isDarkWallpaper(wallpaper) {
+                    if case let .file(file) = wallpaper, file.isDark {
                         darkWallpapers.append(wallpaper)
                     } else {
                         sortedWallpapers.append(wallpaper)
@@ -409,6 +395,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
                         highlightedNode = strongSelf.colorItemNode
                     } else if strongSelf.galleryItemNode.frame.contains(point) {
                         highlightedNode = strongSelf.galleryItemNode
+                    } else if strongSelf.resetItemNode.frame.contains(point) {
+                        highlightedNode = strongSelf.resetItemNode
                     }
                 }
                 
@@ -417,10 +405,31 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 } else {
                     strongSelf.colorItemNode.setHighlighted(false, at: CGPoint(), animated: true)
                     strongSelf.galleryItemNode.setHighlighted(false, at: CGPoint(), animated: true)
+                    strongSelf.resetItemNode.setHighlighted(false, at: CGPoint(), animated: true)
                 }
             }
         }
         self.gridNode.view.addGestureRecognizer(tapRecognizer)
+        
+        self.gridNode.presentationLayoutUpdated = { [weak self] gridLayout, transition in
+            if let strongSelf = self, let (layout, _) = strongSelf.validLayout {
+                transition.updateFrame(node: strongSelf.bottomBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: gridLayout.contentSize.height), size: CGSize(width: layout.size.width, height: 500.0)))
+                transition.updateFrame(node: strongSelf.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: gridLayout.contentSize.height), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+                
+                let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
+                
+                let makeResetLayout = strongSelf.resetItemNode.asyncLayout()
+                let makeResetDescriptionLayout = strongSelf.resetDescriptionItemNode.asyncLayout()
+                let (resetLayout, resetApply) = makeResetLayout(strongSelf.resetItem, params, ItemListNeighbors(top: .none, bottom: .sameSection(alwaysPlain: true)))
+                let (resetDescriptionLayout, resetDescriptionApply) = makeResetDescriptionLayout(strongSelf.resetDescriptionItem, params, ItemListNeighbors(top: .none, bottom: .none))
+                
+                resetApply()
+                resetDescriptionApply()
+                
+                transition.updateFrame(node: strongSelf.resetItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: gridLayout.contentSize.height + 35.0), size: resetLayout.contentSize))
+                transition.updateFrame(node: strongSelf.resetDescriptionItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: gridLayout.contentSize.height + 35.0 + resetLayout.contentSize.height), size: resetDescriptionLayout.contentSize))
+            }
+        }
     }
     
     @objc private func tapAction(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
@@ -432,7 +441,9 @@ final class ThemeGridControllerNode: ASDisplayNode {
                             if self.colorItemNode.frame.contains(location) {
                                 self.colorItem.action()
                             } else if self.galleryItemNode.frame.contains(location) {
-                                self.galleryItem.action()
+                                self.galleryItem.action() 
+                            } else if self.resetItemNode.frame.contains(location) {
+                                self.resetItem.action()
                             }
                         default:
                             break
@@ -460,6 +471,10 @@ final class ThemeGridControllerNode: ASDisplayNode {
             self?.presentGallery()
         })
         self.descriptionItem = ItemListTextItem(theme: presentationData.theme, text: .plain(presentationData.strings.Wallpaper_SetCustomBackgroundInfo), sectionId: 0)
+        self.resetItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_ResetWallpapers, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
+            self?.resetWallpapers()
+        })
+        self.resetDescriptionItem = ItemListTextItem(theme: presentationData.theme, text: .plain(presentationData.strings.Wallpaper_ResetWallpapersInfo), sectionId: 0)
         
         if let (layout, navigationBarHeight) = self.validLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
@@ -519,7 +534,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         insets.top += navigationBarHeight
         insets.left = layout.safeInsets.left
         insets.right = layout.safeInsets.right
-        let scrollIndicatorInsets = insets
+        var scrollIndicatorInsets = insets
         
         let minSpacing: CGFloat = 8.0
         let referenceImageSize: CGSize
@@ -563,9 +578,10 @@ final class ThemeGridControllerNode: ASDisplayNode {
         insets.top += spacing + buttonInset
         
         if self.currentState.editing {
+            let panelHeight: CGFloat
             if let selectionPanel = self.selectionPanel {
                 selectionPanel.selectedIndices = self.currentState.selectedIndices
-                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, transition: transition, metrics: layout.metrics)
+                panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, transition: transition, metrics: layout.metrics)
                 transition.updateFrame(node: selectionPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
                 if let selectionPanelSeparatorNode = self.selectionPanelSeparatorNode {
                     transition.updateFrame(node: selectionPanelSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
@@ -584,7 +600,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 selectionPanel.backgroundColor = self.presentationData.theme.chat.inputPanel.panelBackgroundColor
                 selectionPanel.controllerInteraction = self.controllerInteraction
                 selectionPanel.selectedIndices = self.currentState.selectedIndices
-                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, transition: .immediate, metrics: layout.metrics)
+                panelHeight = selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, transition: .immediate, metrics: layout.metrics)
                 self.selectionPanel = selectionPanel
                 self.addSubnode(selectionPanel)
                 
@@ -601,6 +617,9 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 transition.updateFrame(node: selectionPanelBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: insets.bottom + panelHeight)))
                 transition.updateFrame(node: selectionPanelSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
             }
+            
+            insets.bottom += panelHeight
+            scrollIndicatorInsets.bottom += panelHeight
         } else if let selectionPanel = self.selectionPanel {
             self.selectionPanel = nil
             transition.updateFrame(node: selectionPanel, frame: selectionPanel.frame.offsetBy(dx: 0.0, dy: selectionPanel.bounds.size.height + insets.bottom), completion: { [weak selectionPanel] _ in
@@ -618,9 +637,12 @@ final class ThemeGridControllerNode: ASDisplayNode {
             }
         }
         
+        let makeResetDescriptionLayout = self.resetDescriptionItemNode.asyncLayout()
+        let (resetDescriptionLayout, _) = makeResetDescriptionLayout(self.resetDescriptionItem, params, ItemListNeighbors(top: .none, bottom: .none))
+        insets.bottom += buttonHeight + 35.0 + resetDescriptionLayout.contentSize.height + 32.0
+        
         self.gridNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: insets, scrollIndicatorInsets: scrollIndicatorInsets, preloadSize: 300.0, type: .fixed(itemSize: imageSize, fillWidth: nil, lineSpacing: spacing, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
-        
 
         if !hadValidLayout {
             self.dequeueTransitions()

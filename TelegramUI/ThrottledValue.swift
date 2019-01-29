@@ -24,12 +24,12 @@ final class ThrottledValue<T: Equatable> {
         guard self.value != value else {
             return
         }
+        self.timer?.invalidate()
         let timestamp = CACurrentMediaTime()
         if timestamp > self.previousSetTimestamp + self.interval {
             self.previousSetTimestamp = timestamp
             self.valuePromise.set(value)
         } else {
-            self.timer?.invalidate()
             let timer = SwiftSignalKit.Timer(timeout: self.interval, repeat: false, completion: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.valuePromise.set(strongSelf.value)
