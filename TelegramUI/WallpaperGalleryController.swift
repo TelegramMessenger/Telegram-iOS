@@ -361,7 +361,7 @@ class WallpaperGalleryController: ViewController {
                                     let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                         themeSpecificChatWallpapers[current.theme.index] = wallpaper
-                                        return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: options, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                                        return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                                     }) |> deliverOnMainQueue).start(completed: {
                                         self?.dismiss(forceAway: true)
                                     })
@@ -670,19 +670,36 @@ class WallpaperGalleryController: ViewController {
         }
         
         var controller: ShareController?
+        var options: [String] = []
+        if (itemNode.options.contains(.blur)) {
+            if (itemNode.options.contains(.motion)) {
+                options.append("mode=blur+motion")
+            } else {
+                options.append("mode=blur")
+            }
+        } else if (itemNode.options.contains(.motion)) {
+            options.append("mode=motion")
+        }
+        
+        let account = self.account
         switch wallpaper {
-            case let .file(_, _, _, _, isPattern, _, slug, _, settings):
-                var options: [String] = []
-                if (itemNode.options.contains(.blur) && !isPattern) {
-                    if (itemNode.options.contains(.motion)) {
-                        options.append("mode=blur+motion")
-                    } else {
-                        options.append("mode=blur")
+            case .image:
+                let _ = (self.account.telegramApplicationContext.wallpaperUploadManager!.stateSignal()
+                |> take(1)
+                |> filter { status -> Bool in
+                    return status.wallpaper == wallpaper
+                }).start(next: { [weak self] status in
+                    if case let .uploaded(uploadedWallpaper, resultWallpaper) = status, uploadedWallpaper == wallpaper, case let .file(file) = resultWallpaper {
+                        var optionsString = ""
+                        if !options.isEmpty {
+                            optionsString = "?\(options.joined(separator: "&"))"
+                        }
+                        
+                        let controller = ShareController(account: account, subject: .url("https://t.me/bg/\(file.slug)\(optionsString)"))
+                        self?.present(controller, in: .window(.root), blockInteraction: true)
                     }
-                } else if (itemNode.options.contains(.motion)) {
-                    options.append("mode=motion")
-                }
-                
+                })
+            case let .file(_, _, _, _, isPattern, _, slug, _, settings):
                 if isPattern {
                     if let color = settings.color {
                         options.append("bg_color=\(UIColor(rgb: UInt32(bitPattern: color)).hexString)")

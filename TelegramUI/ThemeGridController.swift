@@ -211,7 +211,7 @@ final class ThemeGridController: ViewController {
                                 
                                 var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                 themeSpecificChatWallpapers[current.theme.index] = fallbackWallpaper
-                                return PresentationThemeSettings(chatWallpaper: fallbackWallpaper, chatWallpaperOptions: [], theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                                return PresentationThemeSettings(chatWallpaper: fallbackWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                             })).start()
                             break
                         }
@@ -283,7 +283,7 @@ final class ThemeGridController: ViewController {
                                         } else {
                                             wallpaper = .builtin
                                         }
-                                        return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: WallpaperPresentationOptions(), theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: [:], fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                                        return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: [:], fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                                     })
                                 }).start()
                                 
@@ -421,7 +421,7 @@ final class ThemeGridController: ViewController {
                     let _ = (updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                         themeSpecificChatWallpapers[current.theme.index] = wallpaper
-                        return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                        return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                     })).start()
                     
                     if let strongSelf = self, case .file = wallpaper {
@@ -436,20 +436,7 @@ final class ThemeGridController: ViewController {
                     DispatchQueue.main.async {
                         completion()
                     }
-                    
-                    let _ = uploadWallpaper(account: account, resource: resource, settings: settings).start(next: { status in
-                        if case let .complete(wallpaper) = status {
-                            if mode.contains(.blur), case let .file(_, _, _, _, _, _, _, file, _) = wallpaper {
-                                let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
-                                    updateWallpaper(wallpaper)
-                                })
-                            } else {
-                                updateWallpaper(wallpaper)
-                            }
-                        }
-                    })
                 }
-                
                 
                 if mode.contains(.blur) {
                     let _ = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {

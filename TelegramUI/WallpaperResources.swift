@@ -105,6 +105,8 @@ private func wallpaperDatas(account: Account, fileReference: FileMediaReference?
                     let betterThumbnailData = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: false, fetch: true)
                     |> map { next -> (Data?, Bool) in
                         return (next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete)
+                    } |> filter { (data, _) -> Bool in
+                        return data != nil
                     }
                     
                     return thumbnailData |> mapToSignal { thumbnailData in
@@ -416,7 +418,7 @@ func patternColor(for color: UIColor, intensity: CGFloat, prominent: Bool = fals
         if saturation > 0.0 {
             saturation = min(1.0, saturation + 0.05 + 0.1 * (1.0 - saturation))
         }
-        if brightness > 0.5 {
+        if brightness > 0.45 {
             brightness = max(0.0, brightness * 0.65)
         } else {
             brightness = max(0.0, min(1.0, 1.0 - brightness * 0.65))

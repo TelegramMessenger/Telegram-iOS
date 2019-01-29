@@ -168,7 +168,6 @@ public struct AutomaticThemeSwitchSetting: PostboxCoding, Equatable {
 
 public struct PresentationThemeSettings: PreferencesEntry {
     public var chatWallpaper: TelegramWallpaper
-    public var chatWallpaperOptions: WallpaperPresentationOptions
     public var theme: PresentationThemeReference
     public var themeAccentColor: Int32?
     public var themeSpecificChatWallpapers: Dictionary<Int64, TelegramWallpaper>
@@ -200,12 +199,11 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static var defaultSettings: PresentationThemeSettings {
-        return PresentationThemeSettings(chatWallpaper: .builtin, chatWallpaperOptions: [], theme: .builtin(.dayClassic), themeAccentColor: nil, themeSpecificChatWallpapers: [:], fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), disableAnimations: true)
+        return PresentationThemeSettings(chatWallpaper: .builtin, theme: .builtin(.dayClassic), themeAccentColor: nil, themeSpecificChatWallpapers: [:], fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), disableAnimations: true)
     }
     
-    public init(chatWallpaper: TelegramWallpaper, chatWallpaperOptions: WallpaperPresentationOptions, theme: PresentationThemeReference, themeAccentColor: Int32?, themeSpecificChatWallpapers: Dictionary<Int64, TelegramWallpaper>, fontSize: PresentationFontSize, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, disableAnimations: Bool) {
+    public init(chatWallpaper: TelegramWallpaper, theme: PresentationThemeReference, themeAccentColor: Int32?, themeSpecificChatWallpapers: Dictionary<Int64, TelegramWallpaper>, fontSize: PresentationFontSize, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, disableAnimations: Bool) {
         self.chatWallpaper = chatWallpaper
-        self.chatWallpaperOptions = chatWallpaperOptions
         self.theme = theme
         self.themeAccentColor = themeAccentColor
         self.themeSpecificChatWallpapers = themeSpecificChatWallpapers
@@ -216,7 +214,6 @@ public struct PresentationThemeSettings: PreferencesEntry {
     
     public init(decoder: PostboxDecoder) {
         self.chatWallpaper = (decoder.decodeObjectForKey("w", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper) ?? .builtin
-        self.chatWallpaperOptions = WallpaperPresentationOptions(rawValue: decoder.decodeInt32ForKey("o", orElse: 0))
         self.theme = decoder.decodeObjectForKey("t", decoder: { PresentationThemeReference(decoder: $0) }) as! PresentationThemeReference
         self.themeAccentColor = decoder.decodeOptionalInt32ForKey("themeAccentColor")
         self.themeSpecificChatWallpapers = decoder.decodeObjectDictionaryForKey("themeSpecificChatWallpapers", keyDecoder: { decoder in
@@ -231,7 +228,6 @@ public struct PresentationThemeSettings: PreferencesEntry {
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.chatWallpaper, forKey: "w")
-        encoder.encodeInt32(self.chatWallpaperOptions.rawValue, forKey: "o")
         encoder.encodeObject(self.theme, forKey: "t")
         if let themeAccentColor = self.themeAccentColor {
             encoder.encodeInt32(themeAccentColor, forKey: "themeAccentColor")
@@ -255,7 +251,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static func ==(lhs: PresentationThemeSettings, rhs: PresentationThemeSettings) -> Bool {
-        return lhs.chatWallpaper == rhs.chatWallpaper && lhs.chatWallpaperOptions == rhs.chatWallpaperOptions && lhs.theme == rhs.theme && lhs.themeAccentColor == rhs.themeAccentColor && lhs.themeSpecificChatWallpapers == rhs.themeSpecificChatWallpapers && lhs.fontSize == rhs.fontSize && lhs.automaticThemeSwitchSetting == rhs.automaticThemeSwitchSetting && lhs.disableAnimations == rhs.disableAnimations
+        return lhs.chatWallpaper == rhs.chatWallpaper && lhs.theme == rhs.theme && lhs.themeAccentColor == rhs.themeAccentColor && lhs.themeSpecificChatWallpapers == rhs.themeSpecificChatWallpapers && lhs.fontSize == rhs.fontSize && lhs.automaticThemeSwitchSetting == rhs.automaticThemeSwitchSetting && lhs.disableAnimations == rhs.disableAnimations
     }
 }
 

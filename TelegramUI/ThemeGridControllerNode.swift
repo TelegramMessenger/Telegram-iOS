@@ -132,10 +132,13 @@ private func preparedThemeGridEntryTransition(account: Account, from fromEntries
     let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction)) }
     
     var hasEditableItems = false
-    for entry in toEntries {
-        if case .file = entry.wallpaper {
-            hasEditableItems = true
-            break
+    loop: for entry in toEntries {
+        switch entry.wallpaper {
+            case .file, .image:
+                hasEditableItems = true
+                break loop
+            default:
+                break
         }
     }
     
@@ -158,6 +161,10 @@ private func selectedWallpapers(entries: [ThemeGridControllerEntry]?, state: The
     for entry in entries {
         if case let .file(file) = entry.wallpaper {
             if state.selectedIndices.contains(file.id) {
+                wallpapers.append(entry.wallpaper)
+            }
+        } else if case .image = entry.wallpaper {
+            if state.selectedIndices.contains(0) {
                 wallpapers.append(entry.wallpaper)
             }
         }

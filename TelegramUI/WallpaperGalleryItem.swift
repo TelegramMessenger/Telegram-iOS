@@ -163,6 +163,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         if self.entry != entry || self.arguments.colorPreview != previousArguments.colorPreview {
             let previousEntry = self.entry
             self.entry = entry
+            if previousEntry != entry {
+                self.preparePatternEditing()
+            }
             
             self.patternButtonNode.isSelected = self.arguments.patternEnabled
             
@@ -181,6 +184,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             
             let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
             let defaultAction = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: presentationData.theme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.actionPressed))
+            let progressAction = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: presentationData.theme.rootController.navigationBar.accentTextColor))
             
             var isBlurrable = true
             
@@ -280,14 +284,34 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                     fetchSignal = .complete()
                                 }
                                 statusSignal = account.postbox.mediaBox.resourceStatus(largestSize.resource)
+                                if let fileSize = largestSize.resource.size {
+                                    subtitleSignal = .single(dataSizeString(fileSize))
+                                } else {
+                                    subtitleSignal = .single(nil)
+                                }
+                                
+                                actionSignal = self.account.telegramApplicationContext.wallpaperUploadManager!.stateSignal()
+                                |> filter { state in
+                                    return state.wallpaper == wallpaper
+                                }
+                                |> map { state in
+                                    switch state {
+                                        case .uploading:
+                                            return progressAction
+                                        case let .uploaded(_, resultWallpaper):
+                                            return defaultAction
+                                        default:
+                                            return nil
+                                    }
+                                }
                             } else {
                                 displaySize = CGSize(width: 1.0, height: 1.0)
                                 contentSize = displaySize
                                 signal = .never()
                                 fetchSignal = .complete()
                                 statusSignal = .single(.Local)
+                                subtitleSignal = .single(nil)
                             }
-                            subtitleSignal = .single(nil)
                     }
                     self.cropNode.removeFromSupernode()
                 case let .asset(asset):
@@ -322,7 +346,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 imageDimensions = imageRepresentation.dimensions
                                 imageResource = imageRepresentation.resource
                             }
-                            if let thumbnailRepresentation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 200.0, height: 100.0)) {
+                            if let thumbnailRepresentation = smallestImageRepresentation(image.representations) {
                                 thumbnailDimensions = thumbnailRepresentation.dimensions
                                 thumbnailResource = thumbnailRepresentation.resource
                             }

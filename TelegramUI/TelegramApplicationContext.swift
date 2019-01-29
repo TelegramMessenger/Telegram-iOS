@@ -117,6 +117,8 @@ public final class TelegramApplicationContext {
     
     public var watchManager: WatchManager?
     
+    let wallpaperUploadManager: WallpaperUploadManager?
+    
     private var immediateExperimentalUISettingsValue = Atomic<ExperimentalUISettings>(value: ExperimentalUISettings.defaultSettings)
     public var immediateExperimentalUISettings: ExperimentalUISettings {
         return self.immediateExperimentalUISettingsValue.with { $0 }
@@ -163,13 +165,16 @@ public final class TelegramApplicationContext {
             self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData)
             |> then(updatedPresentationData(postbox: account.postbox, applicationBindings: applicationBindings)))
             self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings) |> then(updatedAutomaticMediaDownloadSettings(postbox: account.postbox)))
+            
+            self.wallpaperUploadManager = WallpaperUploadManager(account: account, presentationData: self._presentationData.get())
         } else {
             self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData))
             self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings))
+            
+            self.wallpaperUploadManager = nil
         }
         
         self.currentInAppNotificationSettings = Atomic(value: initialPresentationDataAndSettings.inAppNotificationSettings)
-        
         
         let inAppPreferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.inAppNotificationSettings]))
         inAppNotificationSettingsDisposable = (postbox.combinedView(keys: [inAppPreferencesKey]) |> deliverOnMainQueue).start(next: { [weak self] views in

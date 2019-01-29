@@ -280,7 +280,6 @@ public func themeSettingsController(account: Account) -> ViewController {
                 
                 if let themeSpecificWallpaper = current.themeSpecificChatWallpapers[theme.index] {
                     wallpaper = themeSpecificWallpaper
-                    wallpaperOptions = []
                 } else {
                     switch index {
                         case 1:
@@ -292,29 +291,28 @@ public func themeSettingsController(account: Account) -> ViewController {
                         default:
                             wallpaper = .builtin
                     }
-                    wallpaperOptions = []
                 }
                 
-                return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: wallpaperOptions, theme: theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                return PresentationThemeSettings(chatWallpaper: wallpaper, theme: theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
             })
         }).start()
     }, selectFontSize: { size in
         let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
-            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, chatWallpaperOptions: current.chatWallpaperOptions, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: size, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: size, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
         }).start()
     }, openWallpaperSettings: {
         pushControllerImpl?(ThemeGridController(account: account))
     }, openAccentColor: { color in
         presentControllerImpl?(ThemeAccentColorActionSheet(account: account, currentValue: color, applyValue: { color in
             let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
-                return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, chatWallpaperOptions: current.chatWallpaperOptions, theme: current.theme, themeAccentColor: color, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: color, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
             }).start()
         }))
     }, openAutoNightTheme: {
         pushControllerImpl?(themeAutoNightSettingsController(account: account))
     }, disableAnimations: { disabled in
         let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
-            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, chatWallpaperOptions: current.chatWallpaperOptions, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: disabled)
+            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: disabled)
         }).start()
     })
     

@@ -127,7 +127,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                         
                         imageSignal = wallpaperImage(account: account, fileReference: .standalone(media: file.file), representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad)
                     }
-                    self.imageNode.setSignal(imageSignal)
+                    self.imageNode.setSignal(imageSignal, attemptSynchronously: synchronousLoad)
                     
                     let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets(), emptyColor: self.color))

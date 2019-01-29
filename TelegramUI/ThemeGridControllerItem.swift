@@ -82,6 +82,8 @@ final class ThemeGridControllerItemNode: GridItemNode {
             var id: Int64?
             if case let .file(file) = wallpaper {
                 id = file.id
+            } else if case .image = wallpaper {
+                id = 0
             }
             var selectedIndices = Set<Int64>()
             if let interaction = self.interaction {

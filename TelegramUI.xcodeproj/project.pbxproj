@@ -11,6 +11,7 @@
 		0900678F21ED8E0E00530762 /* HexColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0900678E21ED8E0E00530762 /* HexColor.swift */; };
 		0902838821931D960067EFBD /* LanguageSuggestionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0902838721931D960067EFBD /* LanguageSuggestionController.swift */; };
 		0902838D2194AEB90067EFBD /* ImageTransparency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0902838C2194AEB90067EFBD /* ImageTransparency.swift */; };
+		090B48C82200BCA8005083FA /* WallpaperUploadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090B48C72200BCA8005083FA /* WallpaperUploadManager.swift */; };
 		090E63E62195880F00E3C035 /* ContactAddItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E63E52195880F00E3C035 /* ContactAddItem.swift */; };
 		090E63EE2196FE3A00E3C035 /* OpenAddContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E63ED2196FE3A00E3C035 /* OpenAddContact.swift */; };
 		0910B0ED21FA178C00F8F87D /* WallpaperPreviewMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0910B0EC21FA178C00F8F87D /* WallpaperPreviewMedia.swift */; };
@@ -1141,6 +1142,7 @@
 		0900678E21ED8E0E00530762 /* HexColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HexColor.swift; sourceTree = "<group>"; };
 		0902838721931D960067EFBD /* LanguageSuggestionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageSuggestionController.swift; sourceTree = "<group>"; };
 		0902838C2194AEB90067EFBD /* ImageTransparency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTransparency.swift; sourceTree = "<group>"; };
+		090B48C72200BCA8005083FA /* WallpaperUploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperUploadManager.swift; sourceTree = "<group>"; };
 		090E63E52195880F00E3C035 /* ContactAddItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactAddItem.swift; sourceTree = "<group>"; };
 		090E63ED2196FE3A00E3C035 /* OpenAddContact.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAddContact.swift; sourceTree = "<group>"; };
 		0910B0EC21FA178C00F8F87D /* WallpaperPreviewMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperPreviewMedia.swift; sourceTree = "<group>"; };
@@ -4760,6 +4762,7 @@
 				09DD5D4F21ECC3C400D7007A /* SuppressContactsWarning.swift */,
 				D000CAB921EE130D0011B15D /* MapResourceToAvatarSizes.swift */,
 				D000CABB21F158AD0011B15D /* PrepareSecretThumbnailData.swift */,
+				090B48C72200BCA8005083FA /* WallpaperUploadManager.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -5826,6 +5829,7 @@
 				D0EC6DFD1EB9F58900EBF1C3 /* GalleryControllerNode.swift in Sources */,
 				D0E9BA571F055A0B00F079A4 /* STPFormTextField.m in Sources */,
 				D0EC6DFE1EB9F58900EBF1C3 /* GalleryControllerPresentationState.swift in Sources */,
+				090B48C82200BCA8005083FA /* WallpaperUploadManager.swift in Sources */,
 				D0E8B8BB2044780600605593 /* ItemListSecretChatKeyItem.swift in Sources */,
 				D0EC6DFF1EB9F58900EBF1C3 /* GalleryItem.swift in Sources */,
 				09619B9521A4ABF600493558 /* InstantPageReferenceController.swift in Sources */,
