@@ -2559,7 +2559,6 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CanDeleteMessages" = "Delete Messages";
 "Channel.AdminLog.CanBanUsers" = "Ban Users";
 "Channel.AdminLog.CanInviteUsers" = "Add Users";
-"Channel.AdminLog.CanChangeInviteLink" = "Invite Users Via Link";
 "Channel.AdminLog.CanPinMessages" = "Pin Messages";
 "Channel.AdminLog.CanAddAdmins" = "Add New Admins";
 "Channel.AdminLog.CanEditMessages" = "Edit Messages";
