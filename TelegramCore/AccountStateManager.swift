@@ -400,7 +400,14 @@ public final class AccountStateManager {
                                                         }
                                                     }
                                                     return postbox.transaction { transaction -> (Api.updates.Difference?, AccountReplayedFinalState?) in
-                                                        if let replayedState = replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState) {
+                                                        let startTime = CFAbsoluteTimeGetCurrent()
+                                                        let replayedState = replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
+                                                        let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
+                                                        if deltaTime > 1.0 {
+                                                            Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
+                                                        }
+                                                        
+                                                        if let replayedState = replayedState {
                                                             return (difference, replayedState)
                                                         } else {
                                                             return (nil, nil)
@@ -503,7 +510,13 @@ public final class AccountStateManager {
                         }
                         
                         return postbox.transaction { transaction -> AccountReplayedFinalState? in
-                            return replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
+                            let startTime = CFAbsoluteTimeGetCurrent()
+                            let result = replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
+                            let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
+                            if deltaTime > 1.0 {
+                                Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
+                            }
+                            return result
                         }
                         |> map({ ($0, finalState) })
                         |> deliverOn(queue)
@@ -678,8 +691,14 @@ public final class AccountStateManager {
                 let mediaBox = self.postbox.mediaBox
                 let auxiliaryMethods = self.auxiliaryMethods
                 let signal = self.postbox.transaction { transaction -> AccountReplayedFinalState? in
-                    return replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
+                    let startTime = CFAbsoluteTimeGetCurrent()
+                    let result = replayFinalState(accountPeerId: accountPeerId, mediaBox: mediaBox, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState)
+                    let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
+                    if deltaTime > 1.0 {
+                        Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
                     }
+                    return result
+                }
                 |> map({ ($0, finalState) })
                 |> deliverOn(self.queue)
                 
