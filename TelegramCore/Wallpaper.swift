@@ -130,6 +130,15 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
         }
     }
     
+    public var settings: WallpaperSettings? {
+        switch self {
+            case let .image(_, settings), let .file(_, _, _, _, _, _, _, _, settings):
+                return settings
+            default:
+                return nil
+        }
+    }
+    
     public func withUpdatedSettings(_ settings: WallpaperSettings) -> TelegramWallpaper {
         switch self {
             case .builtin:
