@@ -532,7 +532,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                                     i += 1
                                 }
                                 updateSearchContext { _ in
-                                    return (ThemeGridSearchContext(result: ThemeGridSearchResult(query: query, collection: collection, items: collection.results, nextOffset: collection.nextOffset), loadMoreIndex: nil), true)
+                                    return (ThemeGridSearchContext(result: ThemeGridSearchResult(query: wallpaperQuery, collection: collection, items: collection.results, nextOffset: collection.nextOffset), loadMoreIndex: nil), true)
                                 }
                                 return (entries, false)
                             }
