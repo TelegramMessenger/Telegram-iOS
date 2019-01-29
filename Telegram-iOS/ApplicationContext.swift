@@ -7,34 +7,6 @@ import TelegramCore
 import Display
 import LegacyComponents
 
-/*func applicationContext(networkArguments: NetworkInitializationArguments, applicationBindings: TelegramApplicationBindings, replyFromNotificationsActive: Signal<Bool, NoError>, backgroundAudioActive: Signal<Bool, NoError>, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, sharedContext: SharedAccountContext, accountManager: AccountManager, rootPath: String, legacyBasePath: String, mainWindow: Window1, reinitializedNotificationSettings: @escaping () -> Void) -> Signal<ApplicationContext?, NoError> {
-    return currentAccount(allocateIfNotExists: true, networkArguments: networkArguments, supplementary: false, manager: accountManager, rootPath: rootPath, auxiliaryMethods: telegramAccountAuxiliaryMethods)
-    |> filter { $0 != nil }
-    |> deliverOnMainQueue
-    |> mapToSignal { account -> Signal<ApplicationContext?, NoError> in
-        if let account = account {
-            switch account {
-                case .upgrading:
-                    preconditionFailure()
-                case let .unauthorized(account):
-                    return currentPresentationDataAndSettings(postbox: account.postbox)
-                    |> deliverOnMainQueue
-                    |> map { dataAndSettings -> ApplicationContext? in
-                        return .unauthorized(UnauthorizedApplicationContext(account: account, applicationBindings: applicationBindings))
-                    }
-                case let .authorized(account):
-                    return currentPresentationDataAndSettings(postbox: account.postbox)
-                    |> deliverOnMainQueue
-                    |> map { dataAndSettings -> ApplicationContext? in
-                        return .authorized(AuthorizedApplicationContext(mainWindow: mainWindow, replyFromNotificationsActive: replyFromNotificationsActive, backgroundAudioActive: backgroundAudioActive, watchManagerArguments: watchManagerArguments, context: AccountContext(sharedContext: sharedContext, account: account, initialPresentationDataAndSettings: dataAndSettings), accountManager: accountManager, legacyBasePath: legacyBasePath, showCallsTab: dataAndSettings.callListSettings.showTab, reinitializedNotificationSettings: reinitializedNotificationSettings))
-                    }
-            }
-        } else {
-            return .single(nil)
-        }
-    }
-}*/
-
 func isAccessLocked(data: PostboxAccessChallengeData, at timestamp: Int32) -> Bool {
     if data.isLockable, let autolockDeadline = data.autolockDeadline, autolockDeadline <= timestamp {
         return true
@@ -183,7 +155,7 @@ final class AuthorizedApplicationContext {
     }
     
     var applicationBadge: Signal<Int32, NoError> {
-        return renderedTotalUnreadCount(postbox: self.context.account.postbox)
+        return renderedTotalUnreadCount(accountManager: self.context.sharedContext.accountManager, postbox: self.context.account.postbox)
         |> map {
             $0.0
         }
@@ -225,10 +197,9 @@ final class AuthorizedApplicationContext {
         
         let runningWatchTasksPromise = Promise<WatchRunningTasks?>(nil)
         
-        let downloadPreferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings]))
-        let runningDownloadTasks = combineLatest(context.account.postbox.combinedView(keys: [downloadPreferencesKey]), context.account.shouldKeepBackgroundDownloadConnections.get())
-        |> map { views, shouldKeepBackgroundDownloadConnections -> Bool in
-            let settings: AutomaticMediaDownloadSettings = (views.views[downloadPreferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings ?? AutomaticMediaDownloadSettings.defaultSettings
+        let runningDownloadTasks = combineLatest(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]), context.account.shouldKeepBackgroundDownloadConnections.get())
+        |> map { sharedData, shouldKeepBackgroundDownloadConnections -> Bool in
+            let settings: AutomaticMediaDownloadSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings ?? AutomaticMediaDownloadSettings.defaultSettings
             if !settings.downloadInBackground {
                 return false
             }
@@ -236,7 +207,7 @@ final class AuthorizedApplicationContext {
         }
         |> distinctUntilChanged
         
-        self.wakeupManager = WakeupManager(inForeground: context.sharedContext.applicationBindings.applicationInForeground, runningServiceTasks: context.account.importantTasksRunning, runningBackgroundLocationTasks: runningBackgroundLocationTasks, runningWatchTasks: runningWatchTasksPromise.get(), runningDownloadTasks: runningDownloadTasks)
+        self.wakeupManager = WakeupManager(accountManager: context.sharedContext.accountManager, inForeground: context.sharedContext.applicationBindings.applicationInForeground, runningServiceTasks: context.account.importantTasksRunning, runningBackgroundLocationTasks: runningBackgroundLocationTasks, runningWatchTasks: runningWatchTasksPromise.get(), runningDownloadTasks: runningDownloadTasks)
         
         self.showCallsTab = showCallsTab
         
@@ -248,7 +219,7 @@ final class AuthorizedApplicationContext {
         context.attachOverlayMediaController(self.overlayMediaController)
         var presentImpl: ((ViewController, Any?) -> Void)?
         var openSettingsImpl: (() -> Void)?
-        let callManager = PresentationCallManager(account: context.account, getDeviceAccessData: {
+        let callManager = PresentationCallManager(accountManager: context.sharedContext.accountManager, account: context.account, getDeviceAccessData: {
             return (context.currentPresentationData.with { $0 }, { c, a in
                 presentImpl?(c, a)
             }, {
@@ -377,12 +348,10 @@ final class AuthorizedApplicationContext {
         
         let previousPasscodeState = Atomic<PasscodeState?>(value: nil)
         
-        let preferencesKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([ApplicationSpecificPreferencesKeys.presentationPasscodeSettings]))
-        
-        self.passcodeStatusDisposable.set((combineLatest(queue: Queue.mainQueue(), context.account.postbox.combinedView(keys: [.accessChallengeData, preferencesKey]), context.sharedContext.applicationBindings.applicationIsActive)
-        |> map { view, isActive -> (PostboxAccessChallengeData, PresentationPasscodeSettings?, Bool) in
-            let accessChallengeData = (view.views[.accessChallengeData] as? AccessChallengeDataView)?.data ?? PostboxAccessChallengeData.none
-            let passcodeSettings = (view.views[preferencesKey] as! PreferencesView).values[ApplicationSpecificPreferencesKeys.presentationPasscodeSettings] as? PresentationPasscodeSettings
+        self.passcodeStatusDisposable.set((combineLatest(queue: Queue.mainQueue(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), context.sharedContext.accountManager.accessChallengeData(), context.sharedContext.applicationBindings.applicationIsActive)
+        |> map { sharedData, accessChallengeDataView, isActive -> (PostboxAccessChallengeData, PresentationPasscodeSettings?, Bool) in
+            let accessChallengeData = accessChallengeDataView.data
+            let passcodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings] as? PresentationPasscodeSettings
             return (accessChallengeData, passcodeSettings, isActive)
         }
         |> map { accessChallengeData, passcodeSettings, isActive -> PasscodeState in
@@ -424,7 +393,7 @@ final class AuthorizedApplicationContext {
             
             if previousState?.isActive != updatedState.isActive || isLocked != strongSelf.isLocked {
                 if updatedAutolockDeadline != previousState?.challengeData.autolockDeadline {
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> Void in
+                    let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
                         let data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(updatedAutolockDeadline)
                         transaction.setAccessChallengeData(data)
                     }).start()
@@ -457,7 +426,7 @@ final class AuthorizedApplicationContext {
                                     return
                                 }
                                 if value != nil {
-                                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> Void in
+                                    let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
                                         let data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(nil)
                                         transaction.setAccessChallengeData(data)
                                     }).start()
@@ -481,19 +450,19 @@ final class AuthorizedApplicationContext {
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                let _ = strongSelf.context.account.postbox.transaction({ transaction -> Void in
+                                let _ = strongSelf.context.sharedContext.accountManager.transaction({ transaction -> Void in
                                     var attempts: AccessChallengeAttempts?
                                     if let attemptData = attemptData {
                                         attempts = AccessChallengeAttempts(count: Int32(attemptData.numberOfInvalidAttempts), timestamp: Int32(attemptData.dateOfLastInvalidAttempt))
                                     }
                                     var data = transaction.getAccessChallengeData()
                                     switch data {
-                                    case .none:
-                                        break
-                                    case let .numericalPassword(value, timeout, _):
-                                        data = .numericalPassword(value: value, timeout: timeout, attempts: attempts)
-                                    case let .plaintextPassword(value, timeout, _):
-                                        data = .plaintextPassword(value: value, timeout: timeout, attempts: attempts)
+                                        case .none:
+                                            break
+                                        case let .numericalPassword(value, timeout, _):
+                                            data = .numericalPassword(value: value, timeout: timeout, attempts: attempts)
+                                        case let .plaintextPassword(value, timeout, _):
+                                            data = .plaintextPassword(value: value, timeout: timeout, attempts: attempts)
                                     }
                                     transaction.setAccessChallengeData(data)
                                 }).start()
@@ -502,7 +471,7 @@ final class AuthorizedApplicationContext {
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                let _ = (strongSelf.context.account.postbox.transaction { transaction -> Void in
+                                let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
                                     let data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(nil)
                                     transaction.setAccessChallengeData(data)
                                 }).start()
@@ -619,16 +588,13 @@ final class AuthorizedApplicationContext {
             }
         }))
         
-        let inAppPreferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.inAppNotificationSettings]))
-        self.inAppNotificationSettingsDisposable.set(((context.account.postbox.combinedView(keys: [inAppPreferencesKey])) |> deliverOnMainQueue).start(next: { [weak self] views in
+        self.inAppNotificationSettingsDisposable.set(((context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])) |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             if let strongSelf = self {
-                if let view = views.views[inAppPreferencesKey] as? PreferencesView {
-                    if let settings = view.values[ApplicationSpecificPreferencesKeys.inAppNotificationSettings] as? InAppNotificationSettings {
-                        let previousSettings = strongSelf.inAppNotificationSettings
-                        strongSelf.inAppNotificationSettings = settings
-                        if let previousSettings = previousSettings, previousSettings.displayNameOnLockscreen != settings.displayNameOnLockscreen {
-                            reinitializedNotificationSettings()
-                        }
+                if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings {
+                    let previousSettings = strongSelf.inAppNotificationSettings
+                    strongSelf.inAppNotificationSettings = settings
+                    if let previousSettings = previousSettings, previousSettings.displayNameOnLockscreen != settings.displayNameOnLockscreen {
+                        reinitializedNotificationSettings()
                     }
                 }
             }
@@ -1038,10 +1004,10 @@ final class AuthorizedApplicationContext {
             }
         })
         
-        let showCallsTabSignal = context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.callListSettings])
-        |> map { view -> Bool in
+        let showCallsTabSignal = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.callListSettings])
+        |> map { sharedData -> Bool in
             var value = true
-            if let settings = view.values[ApplicationSpecificPreferencesKeys.callListSettings] as? CallListSettings {
+            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.callListSettings] as? CallListSettings {
                 value = settings.showTab
             }
             return value

@@ -213,7 +213,6 @@
 		09D304382174344900C00567 /* TGBridgeWebPageMediaAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572F52172953500BDF00F /* TGBridgeWebPageMediaAttachment.m */; };
 		09D304392174344900C00567 /* TGBridgeMessageEntities.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C572F42172953500BDF00F /* TGBridgeMessageEntities.m */; };
 		09FDAEE62140477F00BF856F /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09FDAEE52140477F00BF856F /* MtProtoKitDynamic.framework */; };
-		D000CACB21FB6E380011B15D /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D000CACA21FB6E380011B15D /* NotificationService.swift */; };
 		D000CACF21FB6E380011B15D /* NotificationService.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D000CAC821FB6E370011B15D /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D001D5AA1F878DA300DF975A /* PhoneCountries.txt in Resources */ = {isa = PBXBuildFile; fileRef = D001D5A91F878DA300DF975A /* PhoneCountries.txt */; };
 		D006CF9F21A8D11B00FDCD32 /* ModernProto.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D006CF9E21A8D11B00FDCD32 /* ModernProto.framework */; };
@@ -300,6 +299,8 @@
 		D06706611D51185400DED3E3 /* TelegramCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D06706601D51185400DED3E3 /* TelegramCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D06706621D5118F500DED3E3 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06706601D51185400DED3E3 /* TelegramCore.framework */; };
 		D06E4C2F21347D9200088087 /* UIImage+ImageEffects.m in Sources */ = {isa = PBXBuildFile; fileRef = D06E4C2E21347D9200088087 /* UIImage+ImageEffects.m */; };
+		D073E52021FF7CE900742DDD /* Crypto.m in Sources */ = {isa = PBXBuildFile; fileRef = D073E51F21FF7CE900742DDD /* Crypto.m */; };
+		D073E52222003E1E00742DDD /* Data.swift in Sources */ = {isa = PBXBuildFile; fileRef = D073E52122003E1E00742DDD /* Data.swift */; };
 		D084023220E1883500065674 /* ApplicationShortcutItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D084023120E1883500065674 /* ApplicationShortcutItem.swift */; };
 		D08410451FABDC5D008FFE92 /* TGItemProviderSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D08410441FABDC5C008FFE92 /* TGItemProviderSignals.m */; };
 		D08410481FABDCF2008FFE92 /* LegacyComponents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08410491FABDCF2008FFE92 /* LegacyComponents.framework */; };
@@ -419,6 +420,12 @@
 		D0ECCB7F1FE9C38500609802 /* Telegram_iOS_UITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECCB7E1FE9C38500609802 /* Telegram_iOS_UITests.swift */; };
 		D0ECCB8A1FE9C4AC00609802 /* SnapshotHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECCB891FE9C4AC00609802 /* SnapshotHelper.swift */; };
 		D0ECCB8D1FE9CE3F00609802 /* SnapshotChatList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECCB8C1FE9CE3F00609802 /* SnapshotChatList.swift */; };
+		D0ED633821FF3E1E001D4648 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAF2F21D75FFAB0011F558 /* MtProtoKitDynamic.framework */; };
+		D0ED633A21FF3EDF001D4648 /* AccountData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ED633921FF3EDF001D4648 /* AccountData.swift */; };
+		D0ED633B21FF3EFD001D4648 /* BuildConfig.m in Sources */ = {isa = PBXBuildFile; fileRef = D09250011FE52D2A003F693F /* BuildConfig.m */; };
+		D0ED633D21FF4580001D4648 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0400EE41D5B912E007931CE /* NotificationService.swift */; };
+		D0ED633F21FF46E4001D4648 /* ImageData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ED633E21FF46E4001D4648 /* ImageData.swift */; };
+		D0ED634121FF4786001D4648 /* Serialization.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ED634021FF4786001D4648 /* Serialization.swift */; };
 		D0F575132083B96B00F1C1E1 /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0F575122083B96B00F1C1E1 /* CloudKit.framework */; };
 		D0FC1948201D2DA800FEDBB2 /* SFCompactRounded-Semibold.otf in Resources */ = {isa = PBXBuildFile; fileRef = D0FC1947201D2DA700FEDBB2 /* SFCompactRounded-Semibold.otf */; };
 /* End PBXBuildFile section */
@@ -899,8 +906,6 @@
 		D000CAC221FB6E170011B15D /* NotificationService-AppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "NotificationService-AppStore.entitlements"; sourceTree = "<group>"; };
 		D000CAC321FB6E170011B15D /* NotificationService-AppStoreLLC.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "NotificationService-AppStoreLLC.entitlements"; sourceTree = "<group>"; };
 		D000CAC821FB6E370011B15D /* NotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		D000CACA21FB6E380011B15D /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
-		D000CACC21FB6E380011B15D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D001D5A91F878DA300DF975A /* PhoneCountries.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PhoneCountries.txt; path = "Telegram-iOS/Resources/PhoneCountries.txt"; sourceTree = "<group>"; };
 		D006CF9E21A8D11B00FDCD32 /* ModernProto.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ModernProto.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D006CFA121A8D12600FDCD32 /* ModernProto.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ModernProto.framework; path = "../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-ffbqcdyqpehxdvcwhyaorlehrrdc/Build/Products/Debug Hockeyapp-iphoneos/ModernProto.framework"; sourceTree = "<group>"; };
@@ -1031,6 +1036,9 @@
 		D06706601D51185400DED3E3 /* TelegramCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D06E4C2D21347D9200088087 /* UIImage+ImageEffects.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIImage+ImageEffects.h"; sourceTree = "<group>"; };
 		D06E4C2E21347D9200088087 /* UIImage+ImageEffects.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIImage+ImageEffects.m"; sourceTree = "<group>"; };
+		D073E51E21FF7CE900742DDD /* Crypto.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Crypto.h; sourceTree = "<group>"; };
+		D073E51F21FF7CE900742DDD /* Crypto.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Crypto.m; sourceTree = "<group>"; };
+		D073E52122003E1E00742DDD /* Data.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Data.swift; sourceTree = "<group>"; };
 		D079FD001F06BBD10038FADE /* Telegram-iOS-AppStore.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Telegram-iOS-AppStore.entitlements"; sourceTree = "<group>"; };
 		D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = "Config-Hockeyapp.xcconfig"; sourceTree = "<group>"; };
 		D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = "Config-AppStore.xcconfig"; sourceTree = "<group>"; };
@@ -1166,6 +1174,10 @@
 		D0ECCB801FE9C38500609802 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0ECCB891FE9C4AC00609802 /* SnapshotHelper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SnapshotHelper.swift; sourceTree = "<group>"; };
 		D0ECCB8C1FE9CE3F00609802 /* SnapshotChatList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotChatList.swift; sourceTree = "<group>"; };
+		D0ED633921FF3EDF001D4648 /* AccountData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountData.swift; sourceTree = "<group>"; };
+		D0ED633C21FF3F28001D4648 /* NotificationService-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NotificationService-Bridging-Header.h"; sourceTree = "<group>"; };
+		D0ED633E21FF46E4001D4648 /* ImageData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageData.swift; sourceTree = "<group>"; };
+		D0ED634021FF4786001D4648 /* Serialization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Serialization.swift; sourceTree = "<group>"; };
 		D0F575122083B96B00F1C1E1 /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
 		D0FC1947201D2DA700FEDBB2 /* SFCompactRounded-Semibold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "SFCompactRounded-Semibold.otf"; path = "Telegram-iOS/Resources/SFCompactRounded-Semibold.otf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -1185,6 +1197,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0ED633821FF3E1E001D4648 /* MtProtoKitDynamic.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1899,15 +1912,6 @@
 			name = Media;
 			sourceTree = "<group>";
 		};
-		D000CAC921FB6E380011B15D /* NotificationService */ = {
-			isa = PBXGroup;
-			children = (
-				D000CACA21FB6E380011B15D /* NotificationService.swift */,
-				D000CACC21FB6E380011B15D /* Info.plist */,
-			);
-			path = NotificationService;
-			sourceTree = "<group>";
-		};
 		D00859931B28189D00EAF753 = {
 			isa = PBXGroup;
 			children = (
@@ -1919,7 +1923,6 @@
 				D0D268821D79A70A00C422DA /* SiriIntentsUI */,
 				D02CF5FF215D9ABF00E0F56A /* NotificationContent */,
 				09C56F8C2172797200BDF00F /* Watch */,
-				D000CAC921FB6E380011B15D /* NotificationService */,
 				D00859C21B281E0000EAF753 /* Frameworks */,
 				D008599E1B28189D00EAF753 /* Telegram-iOS */,
 				D0400EE31D5B912E007931CE /* NotificationService */,
@@ -2151,7 +2154,14 @@
 				D000CAC121FB6E160011B15D /* NotificationService-Fork.entitlements */,
 				D000CAC021FB6E160011B15D /* NotificationService-HockeyApp.entitlements */,
 				D0400EE41D5B912E007931CE /* NotificationService.swift */,
+				D0ED633921FF3EDF001D4648 /* AccountData.swift */,
+				D0ED633E21FF46E4001D4648 /* ImageData.swift */,
 				D0400EE61D5B912E007931CE /* Info.plist */,
+				D0ED633C21FF3F28001D4648 /* NotificationService-Bridging-Header.h */,
+				D0ED634021FF4786001D4648 /* Serialization.swift */,
+				D073E51E21FF7CE900742DDD /* Crypto.h */,
+				D073E51F21FF7CE900742DDD /* Crypto.m */,
+				D073E52122003E1E00742DDD /* Data.swift */,
 			);
 			path = NotificationService;
 			sourceTree = "<group>";
@@ -3172,7 +3182,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D000CACB21FB6E380011B15D /* NotificationService.swift in Sources */,
+				D073E52222003E1E00742DDD /* Data.swift in Sources */,
+				D0ED633B21FF3EFD001D4648 /* BuildConfig.m in Sources */,
+				D0ED633D21FF4580001D4648 /* NotificationService.swift in Sources */,
+				D0ED633A21FF3EDF001D4648 /* AccountData.swift in Sources */,
+				D0ED634121FF4786001D4648 /* Serialization.swift in Sources */,
+				D073E52021FF7CE900742DDD /* Crypto.m in Sources */,
+				D0ED633F21FF46E4001D4648 /* ImageData.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4702,6 +4718,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUILD_NUMBER = 99999;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -4765,6 +4782,7 @@
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OBJC_BRIDGING_HEADER = "NotificationService/NotificationService-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -4775,6 +4793,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUILD_NUMBER = 99999;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -4838,6 +4857,7 @@
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OBJC_BRIDGING_HEADER = "NotificationService/NotificationService-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -4848,6 +4868,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUILD_NUMBER = 99999;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -4911,6 +4932,7 @@
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OBJC_BRIDGING_HEADER = "NotificationService/NotificationService-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -4921,6 +4943,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUILD_NUMBER = 99999;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -4984,6 +5007,7 @@
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OBJC_BRIDGING_HEADER = "NotificationService/NotificationService-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -4994,6 +5018,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUILD_NUMBER = 99999;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -5049,6 +5074,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "match AppStore org.telegram.TelegramHD.NotificationService";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "NotificationService/NotificationService-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -5060,6 +5086,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUILD_NUMBER = 99999;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -5115,6 +5142,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "match AppStore ph.telegra.Telegraph.NotificationService";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "NotificationService/NotificationService-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -5126,6 +5154,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUILD_NUMBER = 99999;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -5181,6 +5210,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "match InHouse org.telegram.Telegram-iOS.NotificationService";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "NotificationService/NotificationService-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -5192,6 +5222,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUILD_NUMBER = 99999;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -5247,6 +5278,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "match InHouse org.telegram.Telegram-iOS.NotificationService";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "NotificationService/NotificationService-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";

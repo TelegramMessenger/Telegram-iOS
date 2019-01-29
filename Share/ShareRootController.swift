@@ -143,14 +143,11 @@ class ShareRootController: UIViewController {
                 let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
                 
                 initializeAccountManagement()
-                account = accountManager(basePath: rootPath + "/accounts-metadata")
-                |> take(1)
-                |> mapToSignal { accountManager -> Signal<(SharedAccountContext, LoggingSettings), NoError> in
-                    let sharedContext = SharedAccountContext(accountManager: accountManager, applicationBindings: applicationBindings, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), rootPath: rootPath, apsNotificationToken: .never(), voipNotificationToken: .never())
+                let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
+                let sharedContext = SharedAccountContext(accountManager: accountManager, applicationBindings: applicationBindings, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), rootPath: rootPath, apsNotificationToken: .never(), voipNotificationToken: .never())
                     
-                    return accountManager.transaction { transaction -> (SharedAccountContext, LoggingSettings) in
-                        return (sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
-                    }
+                account = accountManager.transaction { transaction -> (SharedAccountContext, LoggingSettings) in
+                    return (sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
                 }
                 |> introduceError(ShareAuthorizationError.self)
                 |> mapToSignal { sharedContext, loggingSettings -> Signal<(SharedAccountContext, Account), ShareAuthorizationError> in
@@ -181,19 +178,18 @@ class ShareRootController: UIViewController {
                 |> take(1)
             }
             
-            let preferencesKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([ApplicationSpecificPreferencesKeys.presentationPasscodeSettings]))
-            
             let shouldBeMaster = self.shouldBeMaster
             let applicationInterface = account
             |> mapToSignal { sharedContext, account -> Signal<(AccountContext, PostboxAccessChallengeData), ShareAuthorizationError> in
-                return combineLatest(currentPresentationDataAndSettings(postbox: account.postbox), account.postbox.combinedView(keys: [.accessChallengeData, preferencesKey]) |> take(1))
+                return combineLatest(sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), currentPresentationDataAndSettings(accountManager: sharedContext.accountManager, postbox: account.postbox), sharedContext.accountManager.accessChallengeData())
+                |> take(1)
                 |> deliverOnMainQueue
                 |> introduceError(ShareAuthorizationError.self)
-                |> map { dataAndSettings, data -> (AccountContext, PostboxAccessChallengeData) in
+                |> map { sharedData, dataAndSettings, data -> (AccountContext, PostboxAccessChallengeData) in
                     accountCache = (sharedContext, account)
                     updateLegacyLocalization(strings: dataAndSettings.presentationData.strings)
                     let context = AccountContext(sharedContext: sharedContext, account: account, initialPresentationDataAndSettings: dataAndSettings)
-                    return (context, (data.views[.accessChallengeData] as! AccessChallengeDataView).data)
+                    return (context, data.data)
                 }
             }
             |> deliverOnMainQueue

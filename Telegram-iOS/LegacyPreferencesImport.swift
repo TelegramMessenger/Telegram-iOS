@@ -56,7 +56,7 @@ private func convertLegacyProxyPort(_ value: Int) -> Int32 {
     }
 }
 
-func importLegacyPreferences(account: TemporaryAccount, documentsPath: String, database: SqliteInterface) -> Signal<Never, NoError> {
+func importLegacyPreferences(accountManager: AccountManager, account: TemporaryAccount, documentsPath: String, database: SqliteInterface) -> Signal<Never, NoError> {
     return deferred { () -> Signal<Never, NoError> in
         var presentationState: TGPresentationState?
         if let value = NSKeyedUnarchiver.unarchiveObject(withFile: documentsPath + "/presentation.dat") as? TGPresentationState {
@@ -172,8 +172,8 @@ func importLegacyPreferences(account: TemporaryAccount, documentsPath: String, d
             localization = NSKeyedUnarchiver.unarchiveObject(withFile: nativeDocumentsPath + "/localization") as? TGLocalization
         }
         
-        return account.postbox.transaction { transaction -> Void in
-            transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings, { current in
+        return accountManager.transaction { transaction -> Signal<Void, NoError> in
+            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { current in
                 var settings = (current as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
                 if let presentationState = presentationState {
                     switch presentationState.pallete {
@@ -249,7 +249,7 @@ func importLegacyPreferences(account: TemporaryAccount, documentsPath: String, d
                 return settings
             })
             
-            transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings, { current in
+            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings, { current in
                 var settings: AutomaticMediaDownloadSettings = current as? AutomaticMediaDownloadSettings ?? .defaultSettings
 
                 if let preferences = autoDownloadPreferences, !preferences.isDefaultPreferences() {
@@ -285,7 +285,7 @@ func importLegacyPreferences(account: TemporaryAccount, documentsPath: String, d
                 return settings
             })
             
-            transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.inAppNotificationSettings, { current in
+            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings, { current in
                 var settings: InAppNotificationSettings = current as? InAppNotificationSettings ?? .defaultSettings
                 if let soundEnabled = soundEnabled {
                     settings.playSounds = soundEnabled
@@ -299,7 +299,7 @@ func importLegacyPreferences(account: TemporaryAccount, documentsPath: String, d
                 return settings
             })
             
-            transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.voiceCallSettings, { current in
+            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.voiceCallSettings, { current in
                 var settings: VoiceCallSettings = current as? VoiceCallSettings ?? .defaultSettings
                 if let callsDataUsageMode = callsDataUsageMode {
                     switch callsDataUsageMode {
@@ -320,7 +320,119 @@ func importLegacyPreferences(account: TemporaryAccount, documentsPath: String, d
                 return settings
             })
             
-            transaction.updatePreferencesEntry(key: PreferencesKeys.proxySettings, { current in
+            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.callListSettings, { current in
+                var settings: CallListSettings = current as? CallListSettings ?? .defaultSettings
+                if let showCallsTab = showCallsTab {
+                    settings.showTab = showCallsTab
+                }
+                return settings
+            })
+            
+            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationPasscodeSettings, { current in
+                var settings: PresentationPasscodeSettings = current as? PresentationPasscodeSettings ?? .defaultSettings
+                if let passcodeChallenge = passcodeChallenge {
+                    transaction.setAccessChallengeData(passcodeChallenge)
+                    switch passcodeChallenge {
+                        case .none:
+                            break
+                        case let .numericalPassword(_, timeout, _):
+                            settings.autolockTimeout = timeout
+                        case let .plaintextPassword(_, timeout, _):
+                            settings.autolockTimeout = timeout
+                    }
+                    settings.enableBiometrics = passcodeEnableBiometrics
+                }
+                return settings
+            })
+            
+            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.stickerSettings, { current in
+                var settings: StickerSettings = current as? StickerSettings ?? .defaultSettings
+                if let stickersSuggestMode = stickersSuggestMode {
+                    switch stickersSuggestMode {
+                        case 1:
+                            settings.emojiStickerSuggestionMode = .installed
+                        case 2:
+                            settings.emojiStickerSuggestionMode = .none
+                        default:
+                            settings.emojiStickerSuggestionMode = .all
+                    }
+                }
+                return settings
+            })
+            
+            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings, { current in
+                var settings: MusicPlaybackSettings = current as? MusicPlaybackSettings ?? .defaultSettings
+                if let musicPlayerOrderType = musicPlayerOrderType {
+                    switch musicPlayerOrderType {
+                    case 1:
+                        settings.order = .reversed
+                    case 2:
+                        settings.order = .random
+                    default:
+                        settings.order = .regular
+                    }
+                }
+                if let musicPlayerRepeatType = musicPlayerRepeatType {
+                    switch musicPlayerRepeatType {
+                    case 1:
+                        settings.looping = .all
+                    case 2:
+                        settings.looping = .item
+                    default:
+                        settings.looping = .none
+                    }
+                }
+                return settings
+            })
+            
+            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.instantPagePresentationSettings, { current in
+                var settings: InstantPagePresentationSettings = current as? InstantPagePresentationSettings ?? .defaultSettings
+                if let instantPageFontSize = instantPageFontSize {
+                    switch instantPageFontSize {
+                        case 0.85:
+                            settings.fontSize = .small
+                        case 1.15:
+                            settings.fontSize = .large
+                        case 1.30:
+                            settings.fontSize = .xlarge
+                        case 1.50:
+                            settings.fontSize = .xxlarge
+                        default:
+                            settings.fontSize = .standard
+                    }
+                }
+                if let instantPageFontSerif = instantPageFontSerif {
+                    settings.forceSerif = instantPageFontSerif == 1
+                }
+                if let instantPageTheme = instantPageTheme {
+                    switch instantPageTheme {
+                    case 1:
+                        settings.themeType = .sepia
+                    case 2:
+                        settings.themeType = .gray
+                    case 3:
+                        settings.themeType = .dark
+                    default:
+                        settings.themeType = .light
+                    }
+                }
+                if let instantPageAutoNightMode = instantPageAutoNightMode {
+                    settings.autoNightMode = instantPageAutoNightMode == 1
+                }
+                return settings
+            })
+            
+            if let localization = localization {
+                transaction.updateSharedData(SharedDataKeys.localizationSettings, { _ in
+                    var entries: [LocalizationEntry] = []
+                    for (key, value) in localization.dict() {
+                        entries.append(LocalizationEntry.string(key: key, value: value))
+                    }
+                    return LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: localization.code, localizedName: "", localization: Localization(version: 0, entries: entries), customPluralizationCode: nil), secondaryComponent: nil)
+                })
+            }
+            
+            transaction.updateSharedData(SharedDataKeys.proxySettings, { current in
                 var settings: ProxySettings = current as? ProxySettings ?? .defaultSettings
                 if let callsUseProxy = callsUseProxy {
                     settings.useForCalls = callsUseProxy
@@ -364,134 +476,25 @@ func importLegacyPreferences(account: TemporaryAccount, documentsPath: String, d
                 return settings
             })
             
-            transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.stickerSettings, { current in
-                var settings: StickerSettings = current as? StickerSettings ?? .defaultSettings
-                if let stickersSuggestMode = stickersSuggestMode {
-                    switch stickersSuggestMode {
-                        case 1:
-                            settings.emojiStickerSuggestionMode = .installed
-                        case 2:
-                            settings.emojiStickerSuggestionMode = .none
-                        default:
-                        settings.emojiStickerSuggestionMode = .all
+            return account.postbox.transaction { transaction -> Void in
+                transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.contactSynchronizationSettings, { current in
+                    var settings: ContactSynchronizationSettings = current as? ContactSynchronizationSettings ?? .defaultSettings
+                    if let contactsInhibitSync = contactsInhibitSync, contactsInhibitSync {
+                        settings.synchronizeDeviceContacts = false
                     }
-                }
-                return settings
-            })
-            
-            transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.contactSynchronizationSettings, { current in
-                var settings: ContactSynchronizationSettings = current as? ContactSynchronizationSettings ?? .defaultSettings
-                if let contactsInhibitSync = contactsInhibitSync, contactsInhibitSync {
-                    settings.synchronizeDeviceContacts = false
-                }
-                return settings
-            })
-            
-            transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.callListSettings, { current in
-                var settings: CallListSettings = current as? CallListSettings ?? .defaultSettings
-                if let showCallsTab = showCallsTab {
-                    settings.showTab = showCallsTab
-                }
-                return settings
-            })
-            
-            transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationPasscodeSettings, { current in
-                var settings: PresentationPasscodeSettings = current as? PresentationPasscodeSettings ?? .defaultSettings
-                if let passcodeChallenge = passcodeChallenge {
-                    transaction.setAccessChallengeData(passcodeChallenge)
-                    switch passcodeChallenge {
-                        case .none:
-                            break
-                        case let .numericalPassword(_, timeout, _):
-                            settings.autolockTimeout = timeout
-                        case let .plaintextPassword(_, timeout, _):
-                            settings.autolockTimeout = timeout
-                    }
-                    settings.enableBiometrics = passcodeEnableBiometrics
-                }
-                return settings
-            })
-            
-            if let localization = localization {
-                transaction.updatePreferencesEntry(key: PreferencesKeys.localizationSettings, { _ in
-                    var entries: [LocalizationEntry] = []
-                    for (key, value) in localization.dict() {
-                        entries.append(LocalizationEntry.string(key: key, value: value))
-                    }
-                    return LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: localization.code, localizedName: "", localization: Localization(version: 0, entries: entries), customPluralizationCode: nil), secondaryComponent: nil)
+                    return settings
                 })
+                
+                if let secretInlineBotsInitialized = secretInlineBotsInitialized, secretInlineBotsInitialized {
+                    ApplicationSpecificNotice.setSecretChatInlineBotUsage(transaction: transaction)
+                }
+                
+                if let allowSecretWebpagesInitialized = allowSecretWebpagesInitialized, allowSecretWebpagesInitialized, let allowSecretWebpages = allowSecretWebpages {
+                    ApplicationSpecificNotice.setSecretChatLinkPreviews(transaction: transaction, value: allowSecretWebpages)
+                }
             }
-            
-            if let secretInlineBotsInitialized = secretInlineBotsInitialized, secretInlineBotsInitialized {
-                ApplicationSpecificNotice.setSecretChatInlineBotUsage(transaction: transaction)
-            }
-            
-            if let allowSecretWebpagesInitialized = allowSecretWebpagesInitialized, allowSecretWebpagesInitialized, let allowSecretWebpages = allowSecretWebpages {
-                ApplicationSpecificNotice.setSecretChatLinkPreviews(transaction: transaction, value: allowSecretWebpages)
-            }
-            
-            transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.musicPlaybackSettings, { current in
-                var settings: MusicPlaybackSettings = current as? MusicPlaybackSettings ?? .defaultSettings
-                if let musicPlayerOrderType = musicPlayerOrderType {
-                    switch musicPlayerOrderType {
-                        case 1:
-                            settings.order = .reversed
-                        case 2:
-                            settings.order = .random
-                        default:
-                            settings.order = .regular
-                    }
-                }
-                if let musicPlayerRepeatType = musicPlayerRepeatType {
-                    switch musicPlayerRepeatType {
-                        case 1:
-                            settings.looping = .all
-                        case 2:
-                            settings.looping = .item
-                        default:
-                            settings.looping = .none
-                    }
-                }
-                return settings
-            })
-            
-            transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.instantPagePresentationSettings, { current in
-                var settings: InstantPagePresentationSettings = current as? InstantPagePresentationSettings ?? .defaultSettings
-                if let instantPageFontSize = instantPageFontSize {
-                    switch instantPageFontSize {
-                        case 0.85:
-                            settings.fontSize = .small
-                        case 1.15:
-                            settings.fontSize = .large
-                        case 1.30:
-                            settings.fontSize = .xlarge
-                        case 1.50:
-                            settings.fontSize = .xxlarge
-                        default:
-                            settings.fontSize = .standard
-                    }
-                }
-                if let instantPageFontSerif = instantPageFontSerif {
-                    settings.forceSerif = instantPageFontSerif == 1
-                }
-                if let instantPageTheme = instantPageTheme {
-                    switch instantPageTheme {
-                        case 1:
-                            settings.themeType = .sepia
-                        case 2:
-                            settings.themeType = .gray
-                        case 3:
-                            settings.themeType = .dark
-                        default:
-                            settings.themeType = .light
-                    }
-                }
-                if let instantPageAutoNightMode = instantPageAutoNightMode {
-                    settings.autoNightMode = instantPageAutoNightMode == 1
-                }
-                return settings
-            })
         }
+        |> switchToLatest
         |> ignoreValues
     }
 }

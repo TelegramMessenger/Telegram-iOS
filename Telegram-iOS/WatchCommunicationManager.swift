@@ -65,10 +65,9 @@ final class WatchCommunicationManager {
                 strongSelf.server.setMicAccessAllowed(true)
                 strongSelf.server.pushContext()
                 
-                let watchPresetSettingsKey = ApplicationSpecificPreferencesKeys.watchPresetSettings
-                strongSelf.presets.set(context.context.account.postbox.preferencesView(keys: [watchPresetSettingsKey])
-                |> map({ preferences -> WatchPresetSettings in
-                    return (preferences.values[watchPresetSettingsKey] as? WatchPresetSettings) ?? WatchPresetSettings.defaultSettings
+                strongSelf.presets.set(context.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.watchPresetSettings])
+                |> map({ sharedData -> WatchPresetSettings in
+                    return (sharedData.entries[ApplicationSpecificSharedDataKeys.watchPresetSettings] as? WatchPresetSettings) ?? WatchPresetSettings.defaultSettings
                 }))
             } else {
                 strongSelf.accountContext.set(.single(nil))

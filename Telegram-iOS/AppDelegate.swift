@@ -583,13 +583,12 @@ private enum QueuedWakeup: Int32 {
             self.window?.rootViewController?.dismiss(animated: true, completion: nil)
         })
         
-        self.sharedContextPromise.set(accountManager(basePath: rootPath + "/accounts-metadata")
-        |> deliverOnMainQueue
-        |> mapToSignal { accountManager -> Signal<(SharedAccountContext, LoggingSettings), NoError> in
-            let sharedContext = SharedAccountContext(accountManager: accountManager, applicationBindings: applicationBindings, networkArguments: networkArguments, rootPath: rootPath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init))
-            return accountManager.transaction { transaction -> (SharedAccountContext, LoggingSettings) in
-                return (sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
-            }
+        let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
+        let sharedContext = SharedAccountContext(accountManager: accountManager, applicationBindings: applicationBindings, networkArguments: networkArguments, rootPath: rootPath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init))
+        
+        self.sharedContextPromise.set(
+        accountManager.transaction { transaction -> (SharedAccountContext, LoggingSettings) in
+            return (sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
         }
         |> mapToSignal { sharedContext, loggingSettings -> Signal<SharedAccountContext, NoError> in
             Logger.shared.logToFile = loggingSettings.logToFile
@@ -686,12 +685,12 @@ private enum QueuedWakeup: Int32 {
             })
             |> mapToSignal { account, hasOther -> Signal<(AnyObject, InitialPresentationDataAndSettings, Bool)?, NoError> in
                 if let account = account as? Account {
-                    return currentPresentationDataAndSettings(postbox: account.postbox)
+                    return currentPresentationDataAndSettings(accountManager: sharedContext.accountManager, postbox: account.postbox)
                     |> map { initialSettings in
                         return (account, initialSettings, hasOther)
                     }
                 } else if let account = account as? UnauthorizedAccount {
-                    return currentPresentationDataAndSettings(postbox: account.postbox)
+                    return currentPresentationDataAndSettings(accountManager: sharedContext.accountManager, postbox: account.postbox)
                     |> map { initialSettings in
                         return (account, initialSettings, hasOther)
                     }
@@ -1314,14 +1313,6 @@ private enum QueuedWakeup: Int32 {
     private func openUrl(url: URL) {
         let _ = (self.context.get()
         |> flatMap { $0 }
-        |> filter { context in
-            switch context {
-                case .authorized, .unauthorized:
-                    return true
-                default:
-                    return false
-            }
-        }
         |> take(1)
         |> deliverOnMainQueue).start(next: { contextValue in
             switch contextValue {
@@ -1331,7 +1322,7 @@ private enum QueuedWakeup: Int32 {
                     if let proxyData = parseProxyUrl(url) {
                         context.rootController.view.endEditing(true)
                         let strings = context.strings
-                        let controller = ProxyServerActionSheetController(theme: defaultPresentationTheme, strings: strings, postbox: context.account.postbox, network: context.account.network, server: proxyData, presentationData: nil)
+                        let controller = ProxyServerActionSheetController(theme: defaultPresentationTheme, strings: strings, accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, server: proxyData, presentationData: nil)
                         context.rootController.currentWindow?.present(controller, on: PresentationSurfaceLevel.root, blockInteraction: false, completion: {})
                     } else if let secureIdData = parseSecureIdUrl(url) {
                         let strings = context.strings
@@ -1401,16 +1392,30 @@ private enum QueuedWakeup: Int32 {
                         case .camera:
                             context.openRootCamera()
                         case .savedMessages:
-                            self.openChatWhenReady(peerId: context.context.account.peerId)
+                            self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId)
                     }
                 }
             }
         })
     }
     
-    private func openChatWhenReady(peerId: PeerId, messageId: MessageId? = nil) {
-        self.openChatWhenReadyDisposable.set((self.authorizedContext()
+    private func openChatWhenReady(accountId: AccountRecordId?, peerId: PeerId, messageId: MessageId? = nil) {
+        let signal = self.sharedContextPromise.get()
         |> take(1)
+        |> mapToSignal { sharedContext -> Signal<AuthorizedApplicationContext, NoError> in
+            if let accountId = accountId {
+                sharedContext.switchToAccount(id: accountId)
+                return self.authorizedContext()
+                |> filter { context in
+                    context.context.account.id == accountId
+                }
+                |> take(1)
+            } else {
+                return self.authorizedContext()
+                |> take(1)
+            }
+        }
+        self.openChatWhenReadyDisposable.set((signal
         |> deliverOnMainQueue).start(next: { context in
             context.openChatWithPeerId(peerId: peerId, messageId: messageId)
         }))
@@ -1434,7 +1439,7 @@ private enum QueuedWakeup: Int32 {
                 if response.notification.request.content.categoryIdentifier == "watch" {
                     messageId = messageIdFromNotification(peerId: peerId, notification: response.notification)
                 }
-                self.openChatWhenReady(peerId: peerId, messageId: messageId)
+                self.openChatWhenReady(accountId: accountIdFromNotification(response.notification), peerId: peerId, messageId: messageId)
             }
             completionHandler()
         } else if response.actionIdentifier == "reply", let peerId = peerIdFromNotification(response.notification) {
@@ -1507,8 +1512,8 @@ private enum QueuedWakeup: Int32 {
     
     private func registerForNotifications(context: AccountContext, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
         let presentationData = context.currentPresentationData.with { $0 }
-        let _ = (context.account.postbox.transaction { transaction -> Bool in
-            let settings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.inAppNotificationSettings) as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
+        let _ = (context.sharedContext.accountManager.transaction { transaction -> Bool in
+            let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings) as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
             return settings.displayNameOnLockscreen
         }
         |> deliverOnMainQueue).start(next: { displayNames in
@@ -1594,7 +1599,7 @@ private enum QueuedWakeup: Int32 {
             let queuedMutePolling = self.queuedMutePolling
             self.queuedMutePolling = false
             
-            let _ = (context.context.account.postbox.transaction(ignoreDisabled: true, { transaction -> PostboxAccessChallengeData in
+            let _ = (context.context.sharedContext.accountManager.transaction(ignoreDisabled: true, { transaction -> PostboxAccessChallengeData in
                 return transaction.getAccessChallengeData()
             })
             |> deliverOnMainQueue).start(next: { accessChallengeData in
@@ -1723,6 +1728,15 @@ private enum QueuedWakeup: Int32 {
             
             self.window?.rootViewController?.present(activityController, animated: true, completion: nil)
         })
+    }
+}
+
+@available(iOS 10.0, *)
+private func accountIdFromNotification(_ notification: UNNotification) -> AccountRecordId? {
+    if let id = notification.request.content.userInfo["accountId"] as? Int64 {
+        return AccountRecordId(rawValue: id)
+    } else {
+        return nil
     }
 }
 

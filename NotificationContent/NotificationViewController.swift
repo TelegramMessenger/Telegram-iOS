@@ -11,7 +11,7 @@ private enum NotificationContentAuthorizationError {
     case unauthorized
 }
 
-private var accountCache: (Account, AccountManager)?
+private var sharedAccountContext: SharedAccountContext?
 
 private var installedSharedLogger = false
 
@@ -22,9 +22,27 @@ private func setupSharedLogger(_ path: String) {
     }
 }
 
+private func parseFileLocationResource(_ dict: [AnyHashable: Any]) -> TelegramMediaResource? {
+    guard let datacenterId = dict["datacenterId"] as? Int32 else {
+        return nil
+    }
+    guard let volumeId = dict["volumeId"] as? Int64 else {
+        return nil
+    }
+    guard let localId = dict["localId"] as? Int32 else {
+        return nil
+    }
+    guard let secret = dict["secret"] as? Int64 else {
+        return nil
+    }
+    var fileReference: Data?
+    if let fileReferenceString = dict["fileReference"] as? String {
+        fileReference = dataWithHexString(fileReferenceString)
+    }
+    return CloudFileMediaResource(datacenterId: Int(datacenterId), volumeId: volumeId, localId: localId, secret: secret, size: nil, fileReference: fileReference)
+}
+
 class NotificationViewController: UIViewController, UNNotificationContentExtension {
-    private let accountPromise = Promise<Account>()
-    
     private let imageNode = TransformImageNode()
     private var imageDimensions: CGSize?
     
@@ -66,47 +84,37 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
         
         setupSharedLogger(logsPath)
         
-        let account: Signal<(Account, AccountManager), NotificationContentAuthorizationError>
-        if let accountCache = accountCache {
-            account = .single(accountCache)
-        } else {
+        if sharedAccountContext == nil {
+            initializeAccountManagement()
+            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
+            
+            let applicationBindings = TelegramApplicationBindings(isMainApp: false, containerPath: appGroupUrl.path, appSpecificScheme: BuildConfig.shared().appSpecificUrlScheme, openUrl: { _ in
+            }, openUniversalUrl: { _, completion in
+                completion.completion(false)
+                return
+            }, canOpenUrl: { _ in
+                return false
+            }, getTopWindow: {
+                return nil
+            }, displayNotification: { _ in
+                
+            }, applicationInForeground: .single(false), applicationIsActive: .single(false), clearMessageNotifications: { _ in
+            }, pushIdleTimerExtension: {
+                return EmptyDisposable
+            }, openSettings: {}, openAppStorePage: {}, registerForNotifications: { _ in }, requestSiriAuthorization: { _ in }, siriAuthorization: { return .notDetermined }, getWindowHost: {
+                return nil
+            }, presentNativeController: { _ in
+            }, dismissNativeController: {
+            })
+            
             let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
             
-            initializeAccountManagement()
-            account = accountManager(basePath: rootPath + "/accounts-metadata")
-            |> take(1)
-            |> introduceError(NotificationContentAuthorizationError.self)
-            |> mapToSignal { accountManager -> Signal<(Account, AccountManager), NotificationContentAuthorizationError> in
-                return currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: telegramAccountAuxiliaryMethods)
-                |> introduceError(NotificationContentAuthorizationError.self)
-                |> mapToSignal { account -> Signal<(Account, AccountManager), NotificationContentAuthorizationError> in
-                    if let account = account {
-                        switch account {
-                            case .upgrading:
-                                return .complete()
-                            case let .authorized(account):
-                                setupAccount(account)
-                                accountCache = (account, accountManager)
-                                return .single((account, accountManager))
-                            case .unauthorized:
-                                return .fail(.unauthorized)
-                        }
-                    } else {
-                        return .complete()
-                    }
-                }
-            }
-            |> take(1)
+            sharedAccountContext = SharedAccountContext(accountManager: accountManager, applicationBindings: applicationBindings, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), rootPath: rootPath, apsNotificationToken: .never(), voipNotificationToken: .never())
         }
-        self.accountPromise.set(account
-        |> map { $0.0 }
-        |> `catch` { _ -> Signal<Account, NoError> in
-            return .complete()
-        })
     }
     
     func didReceive(_ notification: UNNotification) {
-        if let peerIdValue = notification.request.content.userInfo["peerId"] as? Int64, let messageIdNamespace = notification.request.content.userInfo["messageId.namespace"] as? Int32, let messageIdId = notification.request.content.userInfo["messageId.id"] as? Int32, let dict = notification.request.content.userInfo["mediaInfo"] as? [String: Any] {
+        if let accountIdValue = notification.request.content.userInfo["accountId"] as? Int64, let peerIdValue = notification.request.content.userInfo["peerId"] as? Int64, let messageIdNamespace = notification.request.content.userInfo["messageId.namespace"] as? Int32, let messageIdId = notification.request.content.userInfo["messageId.id"] as? Int32, let dict = notification.request.content.userInfo["mediaInfo"] as? [String: Any] {
             let messageId = MessageId(peerId: PeerId(peerIdValue), namespace: messageIdNamespace, id: messageIdId)
             
             if let imageInfo = dict["image"] as? [String: Any] {
@@ -139,18 +147,35 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
                     |> map { $0.1 })
                 }
                 
-                self.applyDisposable.set((self.accountPromise.get()
+                guard let sharedAccountContext = sharedAccountContext else {
+                    return
+                }
+                
+                self.applyDisposable.set((sharedAccountContext.activeAccounts
+                |> map { _, accounts, _ -> Account? in
+                    return accounts[AccountRecordId(rawValue: accountIdValue)]
+                }
+                |> filter { account in
+                    return account != nil
+                }
                 |> take(1)
                 |> mapToSignal { account -> Signal<(Account, ImageMediaReference?), NoError> in
+                    guard let account = account else {
+                        return .complete()
+                    }
                     return account.postbox.messageAtId(messageId)
                     |> take(1)
                     |> map { message in
                         var imageReference: ImageMediaReference?
-                        if let message = message {
+                        if let message = message, false {
                             for media in message.media {
                                 if let image = media as? TelegramMediaImage {
                                     imageReference = .message(message: MessageReference(message), media: image)
                                 }
+                            }
+                        } else {
+                            if let thumbnailFileLocation = thumbnailInfo["fileLocation"] as? [AnyHashable: Any], let thumbnailResource = parseFileLocationResource(thumbnailFileLocation), let fileLocation = fullSizeInfo["fileLocation"] as? [AnyHashable: Any], let resource = parseFileLocationResource(fileLocation) {
+                                imageReference = .standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: 1), representations: [TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(width), height: CGFloat(height)).fitted(CGSize(width: 320.0, height: 320.0)), resource: thumbnailResource), TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(width), height: CGFloat(height)), resource: resource)], immediateThumbnailData: nil, reference: nil, partialReference: nil))
                             }
                         }
                         return (account, imageReference)

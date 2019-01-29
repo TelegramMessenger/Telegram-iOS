@@ -45,6 +45,7 @@ private struct CombinedRunningImportantTasks: Equatable {
 }
 
 final class WakeupManager {
+    private let accountManager: AccountManager
     private var state = WakeupManagerState()
     
     private let isProcessingNotificationsValue = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -68,7 +69,9 @@ final class WakeupManager {
     
     private var wakeupResultSubscribers: [(Int32, ([MessageId]) -> Signal<Void, NoError>)] = []
     
-    init(inForeground: Signal<Bool, NoError>, runningServiceTasks: Signal<AccountRunningImportantTasks, NoError>, runningBackgroundLocationTasks: Signal<Bool, NoError>, runningWatchTasks: Signal<WatchRunningTasks?, NoError>, runningDownloadTasks: Signal<Bool, NoError>) {
+    init(accountManager: AccountManager, inForeground: Signal<Bool, NoError>, runningServiceTasks: Signal<AccountRunningImportantTasks, NoError>, runningBackgroundLocationTasks: Signal<Bool, NoError>, runningWatchTasks: Signal<WatchRunningTasks?, NoError>, runningDownloadTasks: Signal<Bool, NoError>) {
+        self.accountManager = accountManager
+        
         self.inForegroundDisposable = (inForeground |> distinctUntilChanged |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
                 if value {
@@ -133,14 +136,20 @@ final class WakeupManager {
                 collectedSignals.append(first.1(messageIds))
             }
         }
+        let accountManager = self.accountManager
         return combineLatest(collectedSignals)
         |> map { _ -> Void in
             return Void()
         } |> mapToSignal { _ -> Signal<Int32?, NoError> in
             if !messageIds.isEmpty {
-                return account.postbox.transaction { transaction -> Int32? in
-                    let (unreadCount, _) = renderedTotalUnreadCount(transaction: transaction)
-                    return unreadCount
+                return accountManager.transaction { transaction -> InAppNotificationSettings in
+                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings) as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
+                }
+                |> mapToSignal { inAppSettings -> Signal<Int32?, NoError> in
+                    return account.postbox.transaction { transaction -> Int32? in
+                        let (unreadCount, _) = renderedTotalUnreadCount(inAppNotificationSettings: inAppSettings, transaction: transaction)
+                        return unreadCount
+                    }
                 }
             } else {
                 return .single(nil)

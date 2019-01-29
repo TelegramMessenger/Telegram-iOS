@@ -242,9 +242,9 @@ final class NotificationManager {
     func commitRemoteNotification(context: AccountContext, originalRequestId: NotificationManagedNotificationRequestId?, messageIds: [MessageId]) -> Signal<Void, NoError> {
         return context.account.postbox.transaction { transaction -> ([(MessageId, [Message], Bool, PeerMessageSound, Bool)], Bool) in
             var isLocked = false
-            if isAccessLocked(data: transaction.getAccessChallengeData(), at: Int32(CFAbsoluteTimeGetCurrent())) {
+            /*if isAccessLocked(data: transaction.getAccessChallengeData(), at: Int32(CFAbsoluteTimeGetCurrent())) {
                 isLocked = true
-            }
+            }*/
             
             var results: [(MessageId, [Message], Bool, PeerMessageSound, Bool)] = []
             var updatedMessageIds = messageIds

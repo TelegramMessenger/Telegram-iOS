@@ -14,7 +14,7 @@ enum AccountImportProgressType {
     case media
 }
 
-private func importedAccountData(basePath: String, documentsPath: String, account: TemporaryAccount, database: SqliteInterface) -> Signal<(AccountImportProgressType, Float), AccountImportError> {
+private func importedAccountData(basePath: String, documentsPath: String, accountManager: AccountManager, account: TemporaryAccount, database: SqliteInterface) -> Signal<(AccountImportProgressType, Float), AccountImportError> {
     return deferred { () -> Signal<(AccountImportProgressType, Float), AccountImportError> in
         let keychain = MTFileBasedKeychain(name: "Telegram", documentsPath: documentsPath)
         guard let masterDatacenterId = keychain.object(forKey: "defaultDatacenterId", group: "persistent") as? Int else {
@@ -33,7 +33,7 @@ private func importedAccountData(basePath: String, documentsPath: String, accoun
         
         let importData = importPreferencesData(documentsPath: documentsPath, masterDatacenterId: Int32(masterDatacenterId), account: account, database: database)
         |> mapToSignal { accountUserId -> Signal<(AccountImportProgressType, Float), AccountImportError> in
-            return importDatabaseData(account: account, basePath: basePath, database: database, accountUserId: accountUserId)
+            return importDatabaseData(accountManager: accountManager, account: account, basePath: basePath, database: database, accountUserId: accountUserId)
         }
         
         return importKeychain
@@ -67,7 +67,7 @@ private func importPreferencesData(documentsPath: String, masterDatacenterId: In
     }
 }
 
-private func importDatabaseData(account: TemporaryAccount, basePath: String, database: SqliteInterface, accountUserId: Int32) -> Signal<(AccountImportProgressType, Float), AccountImportError> {
+private func importDatabaseData(accountManager: AccountManager, account: TemporaryAccount, basePath: String, database: SqliteInterface, accountUserId: Int32) -> Signal<(AccountImportProgressType, Float), AccountImportError> {
     return deferred { () -> Signal<(AccountImportProgressType, Float), AccountImportError> in
         var importedAccountUser: Signal<Never, AccountImportError> = .complete()
         if let (user, presence) = loadLegacyUser(database: database, id: accountUserId) {
@@ -85,7 +85,7 @@ private func importDatabaseData(account: TemporaryAccount, basePath: String, dat
         /*let importedFiles = loadLegacyFiles(account: account, basePath: basePath, accountPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: accountUserId), database: database)
         |> introduceError(AccountImportError.self)*/
         
-        let importedLegacyPreferences = importLegacyPreferences(account: account, documentsPath: basePath + "/Documents", database: database)
+        let importedLegacyPreferences = importLegacyPreferences(accountManager: accountManager, account: account, documentsPath: basePath + "/Documents", database: database)
         |> introduceError(AccountImportError.self)
         
         return importedAccountUser
@@ -221,7 +221,7 @@ func importedLegacyAccount(basePath: String, accountManager: AccountManager, pre
             return temporaryAccount(manager: accountManager, rootPath: rootPathForBasePath(basePath))
             |> introduceError(AccountImportError.self)
             |> mapToSignal { account -> Signal<ImportedLegacyAccountEvent, AccountImportError> in
-                let actions = importedAccountData(basePath: basePath, documentsPath: documentsPath, account: account, database: database)
+                let actions = importedAccountData(basePath: basePath, documentsPath: documentsPath, accountManager: accountManager, account: account, database: database)
                 var result = actions
                 |> map { typeAndProgress -> ImportedLegacyAccountEvent in
                     return .progress(typeAndProgress.0, typeAndProgress.1)
