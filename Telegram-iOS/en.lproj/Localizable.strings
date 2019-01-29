@@ -3964,5 +3964,5 @@ Unused sets are archived when you add more.";
 "Message.Wallpaper" = "Chat Background";
 
 "Wallpaper.ResetWallpapers" = "Reset Chat Backgrounds";
-"Wallpaper.ResetWallpapersInfo" = "Remove all uploaded chat backgrounds and restore pre-installed ones.";
+"Wallpaper.ResetWallpapersInfo" = "Remove all uploaded chat backgrounds and restore pre-installed backgrounds for all themes.";
 "Wallpaper.ResetWallpapersConfirmation" = "Reset Chat Backgrounds";
