@@ -1747,7 +1747,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             if let readStateData = combinedInitialData.readStateData {
                 if case let .peer(peerId) = strongSelf.chatLocation, let peerReadStateData = readStateData[peerId], let notificationSettings = peerReadStateData.notificationSettings {
                     
-                    let inAppSettings = InAppNotificationSettings.defaultSettings
+                    let inAppSettings = strongSelf.context.currentInAppNotificationSettings.with { $0 }
                     let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: peerReadStateData.totalState ?? ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:]))
                     
                     var globalRemainingUnreadChatCount = count
@@ -2999,14 +2999,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         var unreadCount: Int32 = 0
                         var totalChatCount: Int32 = 0
                         
-                        var inAppSettingsValue: InAppNotificationSettings?
+                        let inAppSettings = strongSelf.context.currentInAppNotificationSettings.with { $0 }
                         if let view = views.views[unreadCountsKey] as? UnreadMessageCountsView {
                             if let count = view.count(for: .peer(peerId)) {
                                 unreadCount = count
                             }
                             if let (_, state) = view.total() {
-                                let inAppSettings = InAppNotificationSettings.defaultSettings
-                                inAppSettingsValue = inAppSettings
                                 let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
                                 totalChatCount = count
                             }
@@ -3017,7 +3015,6 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         if let view = views.views[notificationSettingsKey] as? PeerNotificationSettingsView, let notificationSettings = view.notificationSettings[peerId] {
                             var globalRemainingUnreadChatCount = totalChatCount
                             if !notificationSettings.isRemovedFromTotalUnreadCount && unreadCount > 0 {
-                                let inAppSettings = inAppSettingsValue ?? InAppNotificationSettings.defaultSettings
                                 if case .messages = inAppSettings.totalUnreadCountDisplayCategory {
                                     globalRemainingUnreadChatCount -= unreadCount
                                 } else {
@@ -3116,8 +3113,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             if let count = view.count(for: .group(groupId)) {
                                 unreadCount = count
                             }
-                            if let (preferencesEntry, state) = view.total() {
-                                let inAppSettings = InAppNotificationSettings.defaultSettings
+                            if let (_, state) = view.total() {
+                                let inAppSettings = strongSelf.context.currentInAppNotificationSettings.with { $0 }
                                 let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
                                 totalCount = count
                             }
