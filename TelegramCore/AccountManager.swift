@@ -209,7 +209,7 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
                         return false
                     }
                 })
-                return accountWithId(networkArguments: networkArguments, id: record.0, supplementary: supplementary, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, auxiliaryMethods: auxiliaryMethods)
+                return accountWithId(accountManager: manager, networkArguments: networkArguments, id: record.0, supplementary: supplementary, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, auxiliaryMethods: auxiliaryMethods)
                 |> mapToSignal { accountResult -> Signal<AccountResult?, NoError> in
                     let postbox: Postbox
                     let initialKind: AccountKind
@@ -377,7 +377,7 @@ private func cleanupAccount(networkArguments: NetworkInitializationArguments, ac
             return false
         }
     })
-    return accountWithId(networkArguments: networkArguments, id: id, supplementary: true, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, auxiliaryMethods: auxiliaryMethods)
+    return accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, supplementary: true, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, auxiliaryMethods: auxiliaryMethods)
     |> mapToSignal { account -> Signal<Void, NoError> in
         switch account {
             case .upgrading:

@@ -26,7 +26,7 @@ private func switchToAuthorizedAccount(transaction: AccountManagerModifier, acco
     transaction.removeAuth()
 }
 
-public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> {
+public func sendAuthorizationCode(accountManager: AccountManager, account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> {
     let sendCode = Api.functions.auth.sendCode(flags: 0, phoneNumber: phoneNumber, currentNumber: nil, apiId: apiId, apiHash: apiHash)
     
     let codeAndAccount = account.network.request(sendCode, automaticFloodWait: false)
@@ -38,7 +38,7 @@ public func sendAuthorizationCode(account: UnauthorizedAccount, phoneNumber: Str
             case Regex("(PHONE_|USER_|NETWORK_)MIGRATE_(\\d+)"):
                 let range = error.errorDescription.range(of: "MIGRATE_")!
                 let updatedMasterDatacenterId = Int32(error.errorDescription[range.upperBound ..< error.errorDescription.endIndex])!
-                let updatedAccount = account.changedMasterDatacenterId(updatedMasterDatacenterId)
+                let updatedAccount = account.changedMasterDatacenterId(accountManager: accountManager, masterDatacenterId: updatedMasterDatacenterId)
                 return updatedAccount
                 |> mapToSignalPromotingError { updatedAccount -> Signal<(Api.auth.SentCode, UnauthorizedAccount), MTRpcError> in
                     return updatedAccount.network.request(sendCode, automaticFloodWait: false)

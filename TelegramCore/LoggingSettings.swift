@@ -9,7 +9,7 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public final class LoggingSettings: AccountSharedData, Equatable {
+public final class LoggingSettings: PreferencesEntry, Equatable {
     public let logToFile: Bool
     public let logToConsole: Bool
     public let redactSensitiveData: Bool
@@ -63,7 +63,7 @@ public final class LoggingSettings: AccountSharedData, Equatable {
         return true
     }
     
-    public func isEqual(to: AccountSharedData) -> Bool {
+    public func isEqual(to: PreferencesEntry) -> Bool {
         guard let to = to as? LoggingSettings else {
             return false
         }

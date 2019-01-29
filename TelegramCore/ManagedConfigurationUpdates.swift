@@ -9,10 +9,10 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+func managedConfigurationUpdates(accountManager: AccountManager, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = Signal<Void, NoError> { subscriber in
         return (network.request(Api.functions.help.getConfig()) |> retryRequest |> mapToSignal { result -> Signal<Void, NoError> in
-            return postbox.transaction { transaction -> Void in
+            return postbox.transaction { transaction -> Signal<Void, NoError> in
                 switch result {
                     case let .config(config):
                         var addressList: [Int: [MTDatacenterAddress]] = [:]
@@ -64,21 +64,29 @@ func managedConfigurationUpdates(postbox: Postbox, network: Network) -> Signal<V
                         
                         updateSearchBotsConfiguration(transaction: transaction, configuration: SearchBotsConfiguration(imageBotUsername: config.imgSearchUsername, gifBotUsername: config.gifSearchUsername, venueBotUsername: config.venueSearchUsername))
                     
-                        let (primary, secondary) = getLocalization(transaction)
-                        var invalidateLocalization = false
-                        if primary.version != config.langPackVersion {
-                            invalidateLocalization = true
-                        }
-                        if let secondary = secondary, let baseLangPackVersion = config.baseLangPackVersion {
-                            if secondary.version != baseLangPackVersion {
+                        return accountManager.transaction { transaction -> Signal<Void, NoError> in
+                            let (primary, secondary) = getLocalization(transaction)
+                            var invalidateLocalization = false
+                            if primary.version != config.langPackVersion {
                                 invalidateLocalization = true
                             }
+                            if let secondary = secondary, let baseLangPackVersion = config.baseLangPackVersion {
+                                if secondary.version != baseLangPackVersion {
+                                    invalidateLocalization = true
+                                }
+                            }
+                            if invalidateLocalization {
+                                return postbox.transaction { transaction -> Void in
+                                    addSynchronizeLocalizationUpdatesOperation(transaction: transaction)
+                                }
+                            } else {
+                                return .complete()
+                            }
                         }
-                        if invalidateLocalization {
-                            addSynchronizeLocalizationUpdatesOperation(transaction: transaction)
-                        }
+                        |> switchToLatest
                 }
             }
+            |> switchToLatest
         }).start()
     }
     

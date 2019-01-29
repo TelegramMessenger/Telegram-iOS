@@ -1933,7 +1933,7 @@ private func recordPeerActivityTimestamp(peerId: PeerId, timestamp: Int32, into 
     }
 }
 
-func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Transaction, auxiliaryMethods: AccountAuxiliaryMethods, finalState: AccountFinalState) -> AccountReplayedFinalState? {
+func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountPeerId: PeerId, mediaBox: MediaBox, transaction: Transaction, auxiliaryMethods: AccountAuxiliaryMethods, finalState: AccountFinalState) -> AccountReplayedFinalState? {
     let verified = verifyTransaction(transaction, finalState: finalState.state)
     if !verified {
         Logger.shared.log("State", "failed to verify final state")
@@ -2583,30 +2583,34 @@ func replayFinalState(accountPeerId: PeerId, mediaBox: MediaBox, transaction: Tr
     if !pollLangPacks.isEmpty {
         addSynchronizeLocalizationUpdatesOperation(transaction: transaction)
     } else {
-        outer: for (langCode, langPackDifference) in langPackDifferences {
-            if !langPackDifference.isEmpty {
-                let sortedLangPackDifference = langPackDifference.sorted(by: { lhs, rhs in
-                    let lhsVersion: Int32
-                    switch lhs {
-                        case let .langPackDifference(_, fromVersion, _, _):
-                            lhsVersion = fromVersion
-                    }
-                    let rhsVersion: Int32
-                    switch rhs {
-                        case let .langPackDifference(_, fromVersion, _, _):
-                            rhsVersion = fromVersion
-                    }
-                    return lhsVersion < rhsVersion
-                })
+        let _ = (accountManager.transaction { transaction -> Void in
+            outer: for (langCode, langPackDifference) in langPackDifferences {
+                if !langPackDifference.isEmpty {
+                    let sortedLangPackDifference = langPackDifference.sorted(by: { lhs, rhs in
+                        let lhsVersion: Int32
+                        switch lhs {
+                            case let .langPackDifference(_, fromVersion, _, _):
+                                lhsVersion = fromVersion
+                        }
+                        let rhsVersion: Int32
+                        switch rhs {
+                            case let .langPackDifference(_, fromVersion, _, _):
+                                rhsVersion = fromVersion
+                        }
+                        return lhsVersion < rhsVersion
+                    })
                 
-                for difference in sortedLangPackDifference {
-                    if !tryApplyingLanguageDifference(transaction: transaction, langCode: langCode, difference: difference) {
-                        addSynchronizeLocalizationUpdatesOperation(transaction: transaction)
-                        break outer
+                    for difference in sortedLangPackDifference {
+                        if !tryApplyingLanguageDifference(transaction: transaction, langCode: langCode, difference: difference) {
+                            let _ = (postbox.transaction { transaction -> Void in
+                                addSynchronizeLocalizationUpdatesOperation(transaction: transaction)
+                            }).start()
+                            break outer
+                        }
                     }
                 }
             }
-        }
+        }).start()
     }
     
     addedIncomingMessageIds.append(contentsOf: addedSecretMessageIds)

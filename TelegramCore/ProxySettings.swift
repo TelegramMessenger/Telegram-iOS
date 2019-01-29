@@ -159,9 +159,9 @@ public struct ProxySettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updateProxySettingsInteractively(postbox: Postbox, network: Network, _ f: @escaping (ProxySettings) -> ProxySettings) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        updateProxySettingsInteractively(transaction: transaction, network: network, f)
+public func updateProxySettingsInteractively(accountManager: AccountManager, _ f: @escaping (ProxySettings) -> ProxySettings) -> Signal<Void, NoError> {
+    return accountManager.transaction { transaction -> Void in
+        updateProxySettingsInteractively(transaction: transaction, f)
     }
 }
 
@@ -176,25 +176,10 @@ extension ProxyServerSettings {
     }
 }
 
-public func updateProxySettingsInteractively(transaction: Transaction, network: Network, _ f: @escaping (ProxySettings) -> ProxySettings) {
-    var updateNetwork = false
-    var updatedSettings: ProxySettings?
-    transaction.updatePreferencesEntry(key: PreferencesKeys.proxySettings, { current in
+public func updateProxySettingsInteractively(transaction: AccountManagerModifier, _ f: @escaping (ProxySettings) -> ProxySettings) {
+    transaction.updateSharedData(SharedDataKeys.proxySettings, { current in
         let previous = (current as? ProxySettings) ?? ProxySettings.defaultSettings
         let updated = f(previous)
-        updatedSettings = updated
-        if updated.effectiveActiveServer != previous.effectiveActiveServer {
-            updateNetwork = true
-        }
         return updated
     })
-    
-    if updateNetwork, let updatedSettings = updatedSettings {
-        network.context.updateApiEnvironment { current in
-            return current?.withUpdatedSocksProxySettings(updatedSettings.effectiveActiveServer.flatMap { activeServer -> MTSocksProxySettings? in
-                return activeServer.mtProxySettings
-            })
-        }
-        network.dropConnectionStatus()
-    }
 }

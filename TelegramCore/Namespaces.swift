@@ -140,11 +140,8 @@ public extension PeerSummaryCounterTags {
 
 private enum PreferencesKeyValues: Int32 {
     case globalNotifications = 0
-    case cacheStorageSettings = 1
-    case localizationSettings = 2
     case suggestedLocalization = 3
     case limitsConfiguration = 4
-    case proxySettings = 5
     case coreSettings = 7
     case contentPrivacySettings = 8
     case networkSettings = 9
@@ -175,18 +172,6 @@ public struct PreferencesKeys {
         return key
     }()
     
-    public static let cacheStorageSettings: ValueBoxKey = {
-        let key = ValueBoxKey(length: 4)
-        key.setInt32(0, value: PreferencesKeyValues.cacheStorageSettings.rawValue)
-        return key
-    }()
-    
-    public static let localizationSettings: ValueBoxKey = {
-        let key = ValueBoxKey(length: 4)
-        key.setInt32(0, value: PreferencesKeyValues.localizationSettings.rawValue)
-        return key
-    }()
-    
     public static let suggestedLocalization: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.suggestedLocalization.rawValue)
@@ -196,12 +181,6 @@ public struct PreferencesKeys {
     public static let limitsConfiguration: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.limitsConfiguration.rawValue)
-        return key
-    }()
-    
-    public static let proxySettings: ValueBoxKey = {
-        let key = ValueBoxKey(length: 4)
-        key.setInt32(0, value: PreferencesKeyValues.proxySettings.rawValue)
         return key
     }()
     
@@ -263,6 +242,9 @@ public struct PreferencesKeys {
 private enum SharedDataKeyValues: Int32 {
     case loggingSettings = 0
     case accountInitializationSettings = 1
+    case cacheStorageSettings = 2
+    case localizationSettings = 3
+    case proxySettings = 4
 }
 
 public struct SharedDataKeys {
@@ -275,6 +257,24 @@ public struct SharedDataKeys {
     public static let accountInitializationSettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: SharedDataKeyValues.accountInitializationSettings.rawValue)
+        return key
+    }()
+    
+    public static let cacheStorageSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: SharedDataKeyValues.cacheStorageSettings.rawValue)
+        return key
+    }()
+    
+    public static let localizationSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: SharedDataKeyValues.localizationSettings.rawValue)
+        return key
+    }()
+    
+    public static let proxySettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: SharedDataKeyValues.proxySettings.rawValue)
         return key
     }()
 }

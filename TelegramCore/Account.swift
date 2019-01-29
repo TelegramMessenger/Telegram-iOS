@@ -196,15 +196,21 @@ public class UnauthorizedAccount {
         })
     }
     
-    public func changedMasterDatacenterId(_ masterDatacenterId: Int32) -> Signal<UnauthorizedAccount, NoError> {
+    public func changedMasterDatacenterId(accountManager: AccountManager, masterDatacenterId: Int32) -> Signal<UnauthorizedAccount, NoError> {
         if masterDatacenterId == Int32(self.network.mtProto.datacenterId) {
             return .single(self)
         } else {
             let keychain = makeExclusiveKeychain(id: self.id, postbox: self.postbox)
             
-            return self.postbox.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkSettings?) in
-                return (transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings, transaction.getPreferencesEntry(key: PreferencesKeys.proxySettings) as? ProxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
-            } |> mapToSignal { (localizationSettings, proxySettings, networkSettings) -> Signal<UnauthorizedAccount, NoError> in
+            return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
+                return (transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings) as? ProxySettings)
+            }
+            |> mapToSignal { localizationSettings, proxySettings -> Signal<(LocalizationSettings?, ProxySettings?, NetworkSettings?), NoError> in
+                return self.postbox.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkSettings?) in
+                    return (localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
+                }
+            }
+            |> mapToSignal { (localizationSettings, proxySettings, networkSettings) -> Signal<UnauthorizedAccount, NoError> in
                 return initializedNetwork(arguments: self.networkArguments, supplementary: false, datacenterId: Int(masterDatacenterId), keychain: keychain, basePath: self.basePath, testingEnvironment: self.testingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil)
                 |> map { network in
                     let updated = UnauthorizedAccount(networkArguments: self.networkArguments, id: self.id, rootPath: self.rootPath, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
@@ -254,7 +260,7 @@ let telegramPostboxSeedConfiguration: SeedConfiguration = {
     }, additionalChatListIndexNamespace: Namespaces.Message.Cloud)
 }()
 
-public func accountWithId(networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
+public func accountWithId(accountManager: AccountManager, networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     
     let postbox = openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: telegramPostboxSeedConfiguration)
@@ -265,15 +271,14 @@ public func accountWithId(networkArguments: NetworkInitializationArguments, id: 
             case .upgrading:
                 return .single(.upgrading)
             case let .postbox(postbox):
-                return postbox.stateView()
-                |> take(1)
-                |> mapToSignal { view -> Signal<AccountResult, NoError> in
-                    return postbox.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkSettings?) in
-                        return (transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings, transaction.getPreferencesEntry(key: PreferencesKeys.proxySettings) as? ProxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
+                return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
+                    return (transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings) as? ProxySettings)
+                }
+                |> mapToSignal { localizationSettings, proxySettings -> Signal<AccountResult, NoError> in
+                    return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?) in
+                        return (transaction.getState(), localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
                     }
-                    |> mapToSignal { (localizationSettings, proxySettings, networkSettings) -> Signal<AccountResult, NoError> in
-                        let accountState = view.state
-                        
+                    |> mapToSignal { (accountState, localizationSettings, proxySettings, networkSettings) -> Signal<AccountResult, NoError> in
                         let keychain = makeExclusiveKeychain(id: id, postbox: postbox)
                         
                         if let accountState = accountState {
@@ -290,7 +295,7 @@ public func accountWithId(networkArguments: NetworkInitializationArguments, id: 
                                     |> mapToSignal { phoneNumber in
                                         return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: phoneNumber)
                                         |> map { network -> AccountResult in
-                                            return .authorized(Account(id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
+                                            return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods))
                                         }
                                     }
                                 case _:
@@ -733,6 +738,21 @@ struct MasterNotificationKey: Codable {
     let data: Data
 }
 
+private struct AccountDatacenterKey: Codable {
+    let id: Int64
+    let data: Data
+}
+
+private struct AccountDatacenterInfo: Codable {
+    let masterKey: AccountDatacenterKey
+}
+
+private struct StoredAccountInfo: Codable {
+    let primaryId: Int32
+    let isTestingEnvironment: Bool
+    let datacenters: [Int32: AccountDatacenterInfo]
+}
+
 func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
     return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: ignoreDisabled)
 }
@@ -871,7 +891,7 @@ public class Account {
     
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
     
-    public init(id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods) {
+    public init(accountManager: AccountManager, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods) {
         self.id = id
         self.basePath = basePath
         self.testingEnvironment = testingEnvironment
@@ -886,7 +906,7 @@ public class Account {
         self.callSessionManager = CallSessionManager(postbox: postbox, network: network, maxLayer: networkArguments.voipMaxLayer, addUpdates: { [weak self] updates in
             self?.stateManager?.addUpdates(updates)
         })
-        self.stateManager = AccountStateManager(accountPeerId: self.peerId, postbox: self.postbox, network: self.network, callSessionManager: self.callSessionManager, addIsContactUpdates: { [weak self] updates in
+        self.stateManager = AccountStateManager(accountPeerId: self.peerId, accountManager: accountManager, postbox: self.postbox, network: self.network, callSessionManager: self.callSessionManager, addIsContactUpdates: { [weak self] updates in
             self?.contactSyncManager?.addIsContactUpdates(updates)
         }, shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), peerInputActivityManager: self.peerInputActivityManager, auxiliaryMethods: auxiliaryMethods)
         self.contactSyncManager = ContactSyncManager(postbox: postbox, network: network, accountPeerId: peerId, stateManager: self.stateManager)
@@ -897,11 +917,8 @@ public class Account {
         }).start()
         self.notificationAutolockReportManager = NotificationAutolockReportManager(deadline: self.autolockReportDeadline.get(), network: network)
         self.autolockReportDeadline.set(
-            postbox.combinedView(keys: [.accessChallengeData])
-            |> map { view -> Int32? in
-                guard let dataView = view.views[.accessChallengeData] as? AccessChallengeDataView else {
-                    return nil
-                }
+            accountManager.accessChallengeData()
+            |> map { dataView -> Int32? in
                 guard let autolockDeadline = dataView.data.autolockDeadline else {
                     return nil
                 }
@@ -1078,23 +1095,50 @@ public class Account {
                 strongSelf._importantTasksRunning.set(value)
             }
         }))
-        self.managedOperationsDisposable.add(managedConfigurationUpdates(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add((accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
+        |> map { sharedData -> ProxyServerSettings? in
+            if let settings = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings {
+                return settings.effectiveActiveServer
+            } else {
+                return nil
+            }
+        }
+        |> distinctUntilChanged).start(next: { activeServer in
+            let updated = activeServer.flatMap { activeServer -> MTSocksProxySettings? in
+                return activeServer.mtProxySettings
+            }
+            network.context.updateApiEnvironment { environment in
+                let current = environment?.socksProxySettings
+                let updateNetwork: Bool
+                if let current = current, let updated = updated {
+                    updateNetwork = !current.isEqual(updated)
+                } else {
+                    updateNetwork = (current != nil) != (updated != nil)
+                }
+                if updateNetwork {
+                    network.dropConnectionStatus()
+                    return environment?.withUpdatedSocksProxySettings(updated)
+                } else {
+                    return nil
+                }
+            }
+        }))
+        self.managedOperationsDisposable.add(managedConfigurationUpdates(accountManager: accountManager, postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedVoipConfigurationUpdates(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedAppConfigurationUpdates(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedTermsOfServiceUpdates(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedAppChangelog(postbox: self.postbox, network: self.network, stateManager: self.stateManager, appVersion: self.networkArguments.appVersion).start())
         self.managedOperationsDisposable.add(managedProxyInfoUpdates(postbox: self.postbox, network: self.network, viewTracker: self.viewTracker).start())
-        self.managedOperationsDisposable.add(managedLocalizationUpdatesOperations(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedLocalizationUpdatesOperations(accountManager: accountManager, postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedPendingPeerNotificationSettings(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizeAppLogEventsOperations(postbox: self.postbox, network: self.network).start())
         
-        let storagePreferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.cacheStorageSettings]))
         let mediaBox = postbox.mediaBox
-        self.storageSettingsDisposable = self.postbox.combinedView(keys: [storagePreferencesKey]).start(next: { [weak mediaBox] view in
+        self.storageSettingsDisposable = accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings]).start(next: { [weak mediaBox] sharedData in
             guard let mediaBox = mediaBox else {
                 return
             }
-            let settings: CacheStorageSettings = ((view.views[storagePreferencesKey] as? PreferencesView)?.values[PreferencesKeys.cacheStorageSettings] as? CacheStorageSettings) ?? CacheStorageSettings.defaultSettings
+            let settings: CacheStorageSettings = sharedData.entries[SharedDataKeys.cacheStorageSettings] as? CacheStorageSettings ?? CacheStorageSettings.defaultSettings
             mediaBox.setMaxStoreTime(settings.defaultCacheStorageTimeout)
         })
         
@@ -1104,6 +1148,24 @@ public class Account {
                 let _ = try? data.write(to: URL(fileURLWithPath: "\(basePath)/notificationsKey"))
             }
         })
+        
+        let primaryDatacenterId = Int32(network.datacenterId)
+        let context = network.context
+        context.performBatchUpdates {
+            var datacenters: [Int32: AccountDatacenterInfo] = [:]
+            for nId in context.knownDatacenterIds() {
+                if let id = nId as? Int {
+                    if let authInfo = context.authInfoForDatacenter(withId: id), let authKey = authInfo.authKey {
+                        datacenters[Int32(id)] = AccountDatacenterInfo(masterKey: AccountDatacenterKey(id: authInfo.authKeyId, data: authKey))
+                    }
+                }
+            }
+            let storedInfo = StoredAccountInfo(primaryId: primaryDatacenterId, isTestingEnvironment: testingEnvironment, datacenters: datacenters)
+            let encoder = JSONEncoder()
+            if let data = try? encoder.encode(storedInfo) {
+                let _ = try? data.write(to: URL(fileURLWithPath: "\(basePath)/storedInfo"))
+            }
+        }
     }
     
     deinit {
