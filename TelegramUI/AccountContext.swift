@@ -135,7 +135,7 @@ public final class AccountContext {
         self.sharedContext = sharedContext
         self.account = account
         
-        self.downloadedMediaStoreManager = DownloadedMediaStoreManager(postbox: account.postbox)
+        self.downloadedMediaStoreManager = DownloadedMediaStoreManager(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
         if let locationManager = self.sharedContext.locationManager {
             self.liveLocationManager = LiveLocationManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, viewTracker: account.viewTracker, stateManager: account.stateManager, locationManager: locationManager, inForeground: self.sharedContext.applicationBindings.applicationInForeground)
@@ -149,29 +149,30 @@ public final class AccountContext {
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)
        
         self._presentationData.set(.single(initialPresentationDataAndSettings.presentationData)
-        |> then(updatedPresentationData(postbox: account.postbox, applicationBindings: self.sharedContext.applicationBindings)))
-        self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings) |> then(updatedAutomaticMediaDownloadSettings(postbox: account.postbox)))
+        |> then(
+            updatedPresentationData(accountManager: sharedContext.accountManager, postbox: account.postbox, applicationBindings: self.sharedContext.applicationBindings)
+        ))
+        self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings)
+        |> then(
+            updatedAutomaticMediaDownloadSettings(accountManager: sharedContext.accountManager)
+        ))
         
         self.currentInAppNotificationSettings = Atomic(value: initialPresentationDataAndSettings.inAppNotificationSettings)
         
-        let inAppPreferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.inAppNotificationSettings]))
-        inAppNotificationSettingsDisposable = (account.postbox.combinedView(keys: [inAppPreferencesKey]) |> deliverOnMainQueue).start(next: { [weak self] views in
+        self.inAppNotificationSettingsDisposable = (sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             if let strongSelf = self {
-                if let view = views.views[inAppPreferencesKey] as? PreferencesView {
-                    if let settings = view.values[ApplicationSpecificPreferencesKeys.inAppNotificationSettings] as? InAppNotificationSettings {
-                        let _ = strongSelf.currentInAppNotificationSettings.swap(settings)
-                    }
+                if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings {
+                    let _ = strongSelf.currentInAppNotificationSettings.swap(settings)
                 }
             }
         })
         
-        let mediaInputSettingsPreferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.mediaInputSettings]))
-        self.mediaInputSettingsDisposable = (account.postbox.combinedView(keys: [mediaInputSettingsPreferencesKey]) |> deliverOnMainQueue).start(next: { [weak self] views in
+        self.mediaInputSettingsDisposable = (sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.mediaInputSettings])
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             if let strongSelf = self {
-                if let view = views.views[mediaInputSettingsPreferencesKey] as? PreferencesView {
-                    if let settings = view.values[ApplicationSpecificPreferencesKeys.mediaInputSettings] as? MediaInputSettings {
-                        let _ = strongSelf.currentMediaInputSettings.swap(settings)
-                    }
+                if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.mediaInputSettings] as? MediaInputSettings {
+                    let _ = strongSelf.currentMediaInputSettings.swap(settings)
                 }
             }
         })
@@ -219,9 +220,9 @@ public final class AccountContext {
         
         let immediateExperimentalUISettingsValue = self.immediateExperimentalUISettingsValue
         let _ = immediateExperimentalUISettingsValue.swap(initialPresentationDataAndSettings.experimentalUISettings)
-        self.experimentalUISettingsDisposable = (account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.experimentalUISettings])
-        |> deliverOnMainQueue).start(next: { view in
-            if let settings = view.values[ApplicationSpecificPreferencesKeys.experimentalUISettings] as? ExperimentalUISettings {
+        self.experimentalUISettingsDisposable = (sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings])
+        |> deliverOnMainQueue).start(next: { sharedData in
+            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings {
                 let _ = immediateExperimentalUISettingsValue.swap(settings)
             }
         })

@@ -51,6 +51,7 @@ private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, them
 }
 
 final class OverlayPlayerControlsNode: ASDisplayNode {
+    private let accountManager: AccountManager
     private let postbox: Postbox
     private let theme: PresentationTheme
     
@@ -100,7 +101,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat)?
     
-    init(account: Account, theme: PresentationTheme, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError>) {
+    init(account: Account, accountManager: AccountManager, theme: PresentationTheme, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError>) {
+        self.accountManager = accountManager
         self.postbox = account.postbox
         self.theme = theme
         
@@ -523,7 +525,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 case .random:
                     nextOrder = .regular
             }
-            let _ = updateMusicPlaybackSettingsInteractively(postbox: self.postbox, {
+            let _ = updateMusicPlaybackSettingsInteractively(accountManager: self.accountManager, {
                 return $0.withUpdatedOrder(nextOrder)
             }).start()
             self.control?(.setOrder(nextOrder))
@@ -541,7 +543,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 case .all:
                     nextLooping = .none
             }
-            let _ = updateMusicPlaybackSettingsInteractively(postbox: self.postbox, {
+            let _ = updateMusicPlaybackSettingsInteractively(accountManager: self.accountManager, {
                 return $0.withUpdatedLooping(nextLooping)
             }).start()
             self.control?(.setLooping(nextLooping))

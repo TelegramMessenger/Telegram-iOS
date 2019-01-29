@@ -542,7 +542,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     |> mapToSignal { primary, activeAccounts, _ -> Signal<[(Account, Peer, Int32)], NoError> in
         var accounts: [Signal<(Account, Peer, Int32)?, NoError>] = []
         func accountWithPeer(_ account: Account) -> Signal<(Account, Peer, Int32)?, NoError> {
-            return combineLatest(account.postbox.peerView(id: account.peerId), renderedTotalUnreadCount(postbox: account.postbox))
+            return combineLatest(account.postbox.peerView(id: account.peerId), renderedTotalUnreadCount(accountManager: context.sharedContext.accountManager, postbox: account.postbox))
             |> map { view, totalUnreadCount -> (Peer?, Int32) in
                 return (view.peers[view.peerId], totalUnreadCount.0)
             }
@@ -1050,10 +1050,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         return context.presentationData
     }
     
-    let proxyPreferences = contextValue.get()
-    |> mapToSignal { context in
-        return context.account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings])
-    }
+    let proxyPreferences = context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
     
     let featuredStickerPacks = contextValue.get()
     |> mapToSignal { context in
@@ -1062,7 +1059,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), proxyPreferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()), accountsAndPeers)
     |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasPassportAndWatch, accountsAndPeers -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
-        let proxySettings: ProxySettings = preferencesAndExceptions.0.values[PreferencesKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
+        let proxySettings: ProxySettings = preferencesAndExceptions.0.entries[SharedDataKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
     
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
             arguments.openEditing()

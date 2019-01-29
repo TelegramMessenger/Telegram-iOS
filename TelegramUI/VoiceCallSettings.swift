@@ -66,9 +66,9 @@ public struct VoiceCallSettings: PreferencesEntry, Equatable {
     }
 }
 
-func updateVoiceCallSettingsSettingsInteractively(postbox: Postbox, _ f: @escaping (VoiceCallSettings) -> VoiceCallSettings) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.voiceCallSettings, { entry in
+func updateVoiceCallSettingsSettingsInteractively(accountManager: AccountManager, _ f: @escaping (VoiceCallSettings) -> VoiceCallSettings) -> Signal<Void, NoError> {
+    return accountManager.transaction { transaction -> Void in
+        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.voiceCallSettings, { entry in
             let currentSettings: VoiceCallSettings
             if let entry = entry as? VoiceCallSettings {
                 currentSettings = entry

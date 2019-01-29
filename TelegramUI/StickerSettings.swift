@@ -44,9 +44,9 @@ public struct StickerSettings: PreferencesEntry, Equatable {
     }
 }
 
-func updateStickerSettingsInteractively(postbox: Postbox, _ f: @escaping (StickerSettings) -> StickerSettings) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.stickerSettings, { entry in
+func updateStickerSettingsInteractively(accountManager: AccountManager, _ f: @escaping (StickerSettings) -> StickerSettings) -> Signal<Void, NoError> {
+    return accountManager.transaction { transaction -> Void in
+        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.stickerSettings, { entry in
             let currentSettings: StickerSettings
             if let entry = entry as? StickerSettings {
                 currentSettings = entry

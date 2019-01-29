@@ -53,9 +53,9 @@ public struct WatchPresetSettings: PreferencesEntry, Equatable {
     }
 }
 
-func updateWatchPresetSettingsInteractively(postbox: Postbox, _ f: @escaping (WatchPresetSettings) -> WatchPresetSettings) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.watchPresetSettings, { entry in
+func updateWatchPresetSettingsInteractively(accountManager: AccountManager, _ f: @escaping (WatchPresetSettings) -> WatchPresetSettings) -> Signal<Void, NoError> {
+    return accountManager.transaction { transaction -> Void in
+        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.watchPresetSettings, { entry in
             let currentSettings: WatchPresetSettings
             if let entry = entry as? WatchPresetSettings {
                 currentSettings = entry

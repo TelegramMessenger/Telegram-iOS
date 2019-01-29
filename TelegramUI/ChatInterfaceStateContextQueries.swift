@@ -68,8 +68,8 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             } else {
                 signal = .single({ _ in return .stickers([]) })
             }
-            let stickers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = context.account.postbox.transaction { transaction -> StickerSettings in
-                let stickerSettings: StickerSettings = (transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.stickerSettings) as? StickerSettings) ?? .defaultSettings
+            let stickers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = context.sharedContext.accountManager.transaction { transaction -> StickerSettings in
+                let stickerSettings: StickerSettings = (transaction.getSharedData(ApplicationSpecificSharedDataKeys.stickerSettings) as? StickerSettings) ?? .defaultSettings
                 return stickerSettings
             }
             |> mapToSignal { stickerSettings -> Signal<[FoundStickerItem], NoError> in

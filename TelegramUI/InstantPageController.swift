@@ -45,10 +45,11 @@ final class InstantPageController: ViewController {
             }
         })
         
-        self.settingsDisposable = (self.context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.instantPagePresentationSettings]) |> deliverOnMainQueue).start(next: { [weak self] view in
+        self.settingsDisposable = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.instantPagePresentationSettings])
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             if let strongSelf = self {
                 let settings: InstantPagePresentationSettings
-                if let current = view.values[ApplicationSpecificPreferencesKeys.instantPagePresentationSettings] as? InstantPagePresentationSettings {
+                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.instantPagePresentationSettings] as? InstantPagePresentationSettings {
                     settings = current
                 } else {
                     settings = InstantPagePresentationSettings.defaultSettings

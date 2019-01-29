@@ -91,7 +91,7 @@ private func saveIncomingMediaControllerEntries(presentationData: PresentationDa
 
 func saveIncomingMediaController(context: AccountContext) -> ViewController {
     let arguments = SaveIncomingMediaControllerArguments(toggle: { type in
-        let _ = updateMediaDownloadSettingsInteractively(postbox: context.account.postbox, { settings in
+        let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             switch type {
                 case .contact:
@@ -107,10 +107,11 @@ func saveIncomingMediaController(context: AccountContext) -> ViewController {
         }).start()
     })
     
-    let signal = combineLatest(context.presentationData, context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings])) |> deliverOnMainQueue
-    |> map { presentationData, prefs -> (ItemListControllerState, (ItemListNodeState<SaveIncomingMediaEntry>, SaveIncomingMediaEntry.ItemGenerationArguments)) in
+    let signal = combineLatest(queue: .mainQueue(), context.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]))
+    |> deliverOnMainQueue
+    |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<SaveIncomingMediaEntry>, SaveIncomingMediaEntry.ItemGenerationArguments)) in
         let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
-        if let value = prefs.values[ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
             automaticMediaDownloadSettings = value
         } else {
             automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings

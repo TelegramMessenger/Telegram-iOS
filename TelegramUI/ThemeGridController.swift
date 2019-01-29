@@ -189,7 +189,7 @@ final class ThemeGridController: ViewController {
                     }
                     for wallpaper in wallpapers {
                         if wallpaper == strongSelf.presentationData.chatWallpaper {
-                            let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.context.account.postbox, { current in
+                            let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
                                 return PresentationThemeSettings(chatWallpaper: .builtin, chatWallpaperOptions: [], theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                             })).start()
                             break
@@ -317,8 +317,9 @@ final class ThemeGridController: ViewController {
                 self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                 
                 let account = self.context.account
+                let accountManager = self.context.sharedContext.accountManager
                 let updateWallpaper: (TelegramWallpaper) -> Void = { [weak self] wallpaper in
-                    let _ = (updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
+                    let _ = (updatePresentationThemeSettingsInteractively(accountManager: accountManager, { current in
                         return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                     })).start()
                     

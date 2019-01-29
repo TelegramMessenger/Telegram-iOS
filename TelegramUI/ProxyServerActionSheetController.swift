@@ -18,10 +18,10 @@ public final class ProxyServerActionSheetController: ActionSheetController {
     
     convenience init(context: AccountContext, server: ProxyServerSettings) {
         let presentationData = context.currentPresentationData.with { $0 }
-        self.init(theme: presentationData.theme, strings: presentationData.strings, postbox: context.account.postbox, network: context.account.network, server: server, presentationData: context.presentationData)
+        self.init(theme: presentationData.theme, strings: presentationData.strings, accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, server: server, presentationData: context.presentationData)
     }
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, network: Network, server: ProxyServerSettings, presentationData: Signal<PresentationData, NoError>?) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, accountManager: AccountManager, postbox: Postbox, network: Network, server: ProxyServerSettings, presentationData: Signal<PresentationData, NoError>?) {
         let sheetTheme = ActionSheetControllerTheme(presentationTheme: theme)
         super.init(theme: sheetTheme)
         
@@ -32,7 +32,7 @@ public final class ProxyServerActionSheetController: ActionSheetController {
             items.append(ActionSheetTextItem(title: strings.SocksProxySetup_AdNoticeHelp))
         }
         items.append(ProxyServerInfoItem(strings: strings, server: server))
-        items.append(ProxyServerActionItem(postbox: postbox, network: network, presentationTheme: theme, strings: strings, server: server, dismiss: { [weak self] success in
+        items.append(ProxyServerActionItem(accountManager: accountManager, postbox: postbox, network: network, presentationTheme: theme, strings: strings, server: server, dismiss: { [weak self] success in
             guard let strongSelf = self, !strongSelf.isDismissed else {
                 return
             }
@@ -193,6 +193,7 @@ private final class ProxyServerInfoItemNode: ActionSheetItemNode {
 }
 
 private final class ProxyServerActionItem: ActionSheetItem {
+    private let accountManager: AccountManager
     private let postbox: Postbox
     private let network: Network
     private let presentationTheme: PresentationTheme
@@ -201,7 +202,8 @@ private final class ProxyServerActionItem: ActionSheetItem {
     private let dismiss: (Bool) -> Void
     private let present: (ViewController, Any?) -> Void
     
-    init(postbox: Postbox, network: Network, presentationTheme: PresentationTheme, strings: PresentationStrings, server: ProxyServerSettings, dismiss: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(accountManager: AccountManager, postbox: Postbox, network: Network, presentationTheme: PresentationTheme, strings: PresentationStrings, server: ProxyServerSettings, dismiss: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+        self.accountManager = accountManager
         self.postbox = postbox
         self.network = network
         self.presentationTheme = presentationTheme
@@ -212,7 +214,7 @@ private final class ProxyServerActionItem: ActionSheetItem {
     }
     
     func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
-        return ProxyServerActionItemNode(postbox: self.postbox, network: self.network, presentationTheme: self.presentationTheme, theme: theme, strings: self.strings, server: self.server, dismiss: self.dismiss, present: self.present)
+        return ProxyServerActionItemNode(accountManager: self.accountManager, postbox: self.postbox, network: self.network, presentationTheme: self.presentationTheme, theme: theme, strings: self.strings, server: self.server, dismiss: self.dismiss, present: self.present)
     }
     
     func updateNode(_ node: ActionSheetItemNode) {
@@ -220,6 +222,7 @@ private final class ProxyServerActionItem: ActionSheetItem {
 }
 
 private final class ProxyServerActionItemNode: ActionSheetItemNode {
+    private let accountManager: AccountManager
     private let postbox: Postbox
     private let network: Network
     private let presentationTheme: PresentationTheme
@@ -236,7 +239,8 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
     private let disposable = MetaDisposable()
     private var revertSettings: ProxySettings?
     
-    init(postbox: Postbox, network: Network, presentationTheme: PresentationTheme, theme: ActionSheetControllerTheme, strings: PresentationStrings, server: ProxyServerSettings, dismiss: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(accountManager: AccountManager, postbox: Postbox, network: Network, presentationTheme: PresentationTheme, theme: ActionSheetControllerTheme, strings: PresentationStrings, server: ProxyServerSettings, dismiss: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+        self.accountManager = accountManager
         self.postbox = postbox
         self.network = network
         self.theme = theme
@@ -280,7 +284,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
     deinit {
         self.disposable.dispose()
         if let revertSettings = self.revertSettings {
-            let _ = updateProxySettingsInteractively(postbox: self.postbox, network: self.network, { _ in
+            let _ = updateProxySettingsInteractively(accountManager: self.accountManager, { _ in
                 return revertSettings
             })
         }
@@ -306,10 +310,9 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
     
     @objc private func buttonPressed() {
         let proxyServerSettings = self.server
-        let network = self.network
-        let _ = (self.postbox.transaction { transaction -> ProxySettings in
+        let _ = (self.accountManager.transaction { transaction -> ProxySettings in
             var currentSettings: ProxySettings?
-            updateProxySettingsInteractively(transaction: transaction, network: network, { settings in
+            updateProxySettingsInteractively(transaction: transaction, { settings in
                 currentSettings = settings
                 var settings = settings
                 if let index = settings.servers.index(of: proxyServerSettings) {
@@ -356,7 +359,7 @@ private final class ProxyServerActionItemNode: ActionSheetItemNode {
                         if value {
                             strongSelf.dismiss(true)
                         } else {
-                            let _ = updateProxySettingsInteractively(postbox: strongSelf.postbox, network: strongSelf.network, { _ in
+                            let _ = updateProxySettingsInteractively(accountManager: strongSelf.accountManager, { _ in
                                 return previousSettings
                             })
                             strongSelf.titleNode.attributedText = NSAttributedString(string: strongSelf.strings.SocksProxySetup_ConnectAndSave, font: Font.regular(20.0), textColor: strongSelf.theme.controlAccentColor)

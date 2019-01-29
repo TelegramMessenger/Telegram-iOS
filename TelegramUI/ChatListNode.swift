@@ -879,7 +879,7 @@ final class ChatListNode: ListView {
         }
         
         self.scrollToTopOptionPromise.set(combineLatest(
-            renderedTotalUnreadCount(postbox: self.context.account.postbox) |> deliverOnMainQueue,
+            renderedTotalUnreadCount(accountManager: self.context.sharedContext.accountManager, postbox: self.context.account.postbox) |> deliverOnMainQueue,
             self.visibleUnreadCounts.get(),
             self.scrolledAtTop.get()
         ) |> map { badge, visibleUnreadCounts, scrolledAtTop -> ChatListGlobalScrollOption in
@@ -1089,9 +1089,10 @@ final class ChatListNode: ListView {
     }
     
     private func relativeUnreadChatListIndex(position: ChatListRelativePosition) -> Signal<ChatListIndex?, NoError> {
-        return self.context.account.postbox.transaction { transaction -> ChatListIndex? in
+        let postbox = self.context.account.postbox
+        return self.context.sharedContext.accountManager.transaction { transaction -> Signal<ChatListIndex?, NoError> in
             var filter = true
-            if let inAppNotificationSettings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.inAppNotificationSettings) as? InAppNotificationSettings {
+            if let inAppNotificationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings) as? InAppNotificationSettings {
                 switch inAppNotificationSettings.totalUnreadCountDisplayStyle {
                     case .raw:
                         filter = false
@@ -1099,8 +1100,11 @@ final class ChatListNode: ListView {
                         filter = true
                 }
             }
-            return transaction.getRelativeUnreadChatListIndex(filtered: filter, position: position)
+            return postbox.transaction { transaction -> ChatListIndex? in
+                return transaction.getRelativeUnreadChatListIndex(filtered: filter, position: position)
+            }
         }
+        |> switchToLatest
     }
     
     func scrollToEarliestUnread(earlierThan: ChatListIndex?) {

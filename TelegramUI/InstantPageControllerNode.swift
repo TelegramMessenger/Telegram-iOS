@@ -1307,7 +1307,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let settingsNode = InstantPageSettingsNode(strings: self.strings, settings: settings, currentThemeType: instantPageThemeTypeForSettingsAndTime(presentationTheme: self.presentationTheme, settings: settings, time: self.themeReferenceDate), applySettings: { [weak self] settings in
                 if let strongSelf = self {
                     strongSelf.update(settings: settings, strings: strongSelf.strings)
-                    let _ = updateInstantPagePresentationSettingsInteractively(postbox: strongSelf.context.account.postbox, { _ in
+                    let _ = updateInstantPagePresentationSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { _ in
                         return settings
                     }).start()
                 }

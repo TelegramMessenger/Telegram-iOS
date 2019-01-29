@@ -1747,7 +1747,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             if let readStateData = combinedInitialData.readStateData {
                 if case let .peer(peerId) = strongSelf.chatLocation, let peerReadStateData = readStateData[peerId], let notificationSettings = peerReadStateData.notificationSettings {
                     
-                    let inAppSettings = peerReadStateData.inAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
+                    let inAppSettings = InAppNotificationSettings.defaultSettings
                     let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: peerReadStateData.totalState ?? ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:]))
                     
                     var globalRemainingUnreadChatCount = count
@@ -2991,7 +2991,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         
         switch self.chatLocation {
             case let .peer(peerId):
-                let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(ApplicationSpecificPreferencesKeys.inAppNotificationSettings)])
+                let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(nil)])
                 let notificationSettingsKey: PostboxViewKey = .peerNotificationSettings(peerIds: Set([peerId]))
                 self.chatUnreadCountDisposable = (self.context.account.postbox.combinedView(keys: [unreadCountsKey, notificationSettingsKey])
                 |> deliverOnMainQueue).start(next: { [weak self] views in
@@ -3004,8 +3004,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             if let count = view.count(for: .peer(peerId)) {
                                 unreadCount = count
                             }
-                            if let (preferencesEntry, state) = view.total() {
-                                let inAppSettings = (preferencesEntry as? InAppNotificationSettings) ?? InAppNotificationSettings.defaultSettings
+                            if let (_, state) = view.total() {
+                                let inAppSettings = InAppNotificationSettings.defaultSettings
                                 inAppSettingsValue = inAppSettings
                                 let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
                                 totalChatCount = count
@@ -3106,7 +3106,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     }
                 }))
             case let .group(groupId):
-                let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.group(groupId), .total(ApplicationSpecificPreferencesKeys.inAppNotificationSettings)])
+                let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.group(groupId), .total(nil)])
                 self.chatUnreadCountDisposable = (self.context.account.postbox.combinedView(keys: [unreadCountsKey]) |> deliverOnMainQueue).start(next: { [weak self] views in
                     if let strongSelf = self {
                         var unreadCount: Int32 = 0
@@ -3117,7 +3117,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                 unreadCount = count
                             }
                             if let (preferencesEntry, state) = view.total() {
-                                let inAppSettings = (preferencesEntry as? InAppNotificationSettings) ?? InAppNotificationSettings.defaultSettings
+                                let inAppSettings = InAppNotificationSettings.defaultSettings
                                 let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
                                 totalCount = count
                             }
@@ -3797,8 +3797,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     private func presentAttachmentMenu(editMediaOptions: MessageMediaEditingOptions?) {
-        let _ = (self.context.account.postbox.transaction { transaction -> GeneratedMediaStoreSettings in
-            let entry = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
+        let _ = (self.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in
+            let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
             return entry ?? GeneratedMediaStoreSettings.defaultSettings
         }
         |> deliverOnMainQueue).start(next: { [weak self] settings in
@@ -4008,11 +4008,15 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     private func presentMediaPicker(fileMode: Bool, editingMedia: Bool, completion: @escaping ([Any]) -> Void) {
-        let _ = (self.context.account.postbox.transaction { transaction -> (GeneratedMediaStoreSettings, SearchBotsConfiguration) in
-            let entry = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
-            let configuration = currentSearchBotsConfiguration(transaction: transaction)
-            return (entry ?? GeneratedMediaStoreSettings.defaultSettings, configuration)
+        let postbox = self.context.account.postbox
+        let _ = (self.context.sharedContext.accountManager.transaction { transaction -> Signal<(GeneratedMediaStoreSettings, SearchBotsConfiguration), NoError> in
+            let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
+            return postbox.transaction { transaction -> (GeneratedMediaStoreSettings, SearchBotsConfiguration) in
+                let configuration = currentSearchBotsConfiguration(transaction: transaction)
+                return (entry ?? GeneratedMediaStoreSettings.defaultSettings, configuration)
+            }
         }
+        |> switchToLatest
         |> deliverOnMainQueue).start(next: { [weak self] settings, searchBotsConfiguration in
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
@@ -4315,8 +4319,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     private func displayPasteMenu(_ images: [UIImage]) {
-        let _ = (self.context.account.postbox.transaction { transaction -> GeneratedMediaStoreSettings in
-            let entry = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
+        let _ = (self.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in
+            let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
             return entry ?? GeneratedMediaStoreSettings.defaultSettings
         }
         |> deliverOnMainQueue).start(next: { [weak self] settings in

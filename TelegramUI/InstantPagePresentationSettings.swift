@@ -87,9 +87,9 @@ public final class InstantPagePresentationSettings: PreferencesEntry, Equatable 
     }
 }
 
-func updateInstantPagePresentationSettingsInteractively(postbox: Postbox, _ f: @escaping (InstantPagePresentationSettings) -> InstantPagePresentationSettings) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.instantPagePresentationSettings, { entry in
+func updateInstantPagePresentationSettingsInteractively(accountManager: AccountManager, _ f: @escaping (InstantPagePresentationSettings) -> InstantPagePresentationSettings) -> Signal<Void, NoError> {
+    return accountManager.transaction { transaction -> Void in
+        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.instantPagePresentationSettings, { entry in
             let currentSettings: InstantPagePresentationSettings
             if let entry = entry as? InstantPagePresentationSettings {
                 currentSettings = entry

@@ -656,7 +656,7 @@ class WebSearchControllerNode: ASDisplayNode {
     
     @objc private func indexChanged() {
         if let scope = WebSearchScope(rawValue: Int32(self.segmentedControl.selectedSegmentIndex)) {
-            let _ = updateWebSearchSettingsInteractively(postbox: self.context.account.postbox) { _ -> WebSearchSettings in
+            let _ = updateWebSearchSettingsInteractively(accountManager: self.context.sharedContext.accountManager) { _ -> WebSearchSettings in
                 return WebSearchSettings(scope: scope)
             }.start()
             self.requestUpdateInterfaceState(true) { current in

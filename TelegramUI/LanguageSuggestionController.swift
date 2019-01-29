@@ -344,7 +344,7 @@ func languageSuggestionController(context: AccountContext, suggestedLocalization
             dismissImpl?(true)
         } else {
             startActivity()
-            disposable.set((downloadAndApplyLocalization(postbox: context.account.postbox, network: context.account.network, languageCode: languageCode)
+            disposable.set((downloadAndApplyLocalization(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, languageCode: languageCode)
             |> deliverOnMainQueue).start(completed: {
                 dismissImpl?(true)
             }))

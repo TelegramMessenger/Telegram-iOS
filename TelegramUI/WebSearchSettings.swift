@@ -30,9 +30,9 @@ struct WebSearchSettings: Equatable, PreferencesEntry {
     }
 }
 
-func updateWebSearchSettingsInteractively(postbox: Postbox, _ f: @escaping (WebSearchSettings) -> WebSearchSettings) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.webSearchSettings, { entry in
+func updateWebSearchSettingsInteractively(accountManager: AccountManager, _ f: @escaping (WebSearchSettings) -> WebSearchSettings) -> Signal<Void, NoError> {
+    return accountManager.transaction { transaction -> Void in
+        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.webSearchSettings, { entry in
             let currentSettings: WebSearchSettings
             if let entry = entry as? WebSearchSettings {
                 currentSettings = entry

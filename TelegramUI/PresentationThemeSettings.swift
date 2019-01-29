@@ -262,9 +262,9 @@ final class PresentationThemeSpecificSettings: PostboxCoding {
 
 private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 100, highWaterItemCount: 200)
 
-public func updatePresentationThemeSettingsInteractively(postbox: Postbox, _ f: @escaping (PresentationThemeSettings) -> PresentationThemeSettings) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings, { entry in
+public func updatePresentationThemeSettingsInteractively(accountManager: AccountManager, _ f: @escaping (PresentationThemeSettings) -> PresentationThemeSettings) -> Signal<Void, NoError> {
+    return accountManager.transaction { transaction -> Void in
+        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
             let currentSettings: PresentationThemeSettings
             if let entry = entry as? PresentationThemeSettings {
                 currentSettings = entry
@@ -274,13 +274,13 @@ public func updatePresentationThemeSettingsInteractively(postbox: Postbox, _ f: 
             return f(currentSettings)
         })
         
-        if let preferences = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings) as? PresentationThemeSettings {
+        /*if let preferences = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings) as? PresentationThemeSettings {
             let themeSpecificSettings = PresentationThemeSpecificSettings(chatWallpaper: preferences.chatWallpaper, chatWallpaperOptions: preferences.chatWallpaperOptions)
             
             let key = ValueBoxKey(length: 8)
             key.setInt64(0, value: preferences.theme.index)
             let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.themeSpecificSettings, key: key)
             transaction.putItemCacheEntry(id: id, entry: themeSpecificSettings, collectionSpec: collectionSpec)
-        }
+        }*/
     }
 }

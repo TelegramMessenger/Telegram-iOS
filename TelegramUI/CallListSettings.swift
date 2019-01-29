@@ -38,9 +38,9 @@ public struct CallListSettings: PreferencesEntry, Equatable {
     }
 }
 
-func updateCallListSettingsInteractively(postbox: Postbox, _ f: @escaping (CallListSettings) -> CallListSettings) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.callListSettings, { entry in
+func updateCallListSettingsInteractively(accountManager: AccountManager, _ f: @escaping (CallListSettings) -> CallListSettings) -> Signal<Void, NoError> {
+    return accountManager.transaction { transaction -> Void in
+        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.callListSettings, { entry in
             let currentSettings: CallListSettings
             if let entry = entry as? CallListSettings {
                 currentSettings = entry

@@ -84,7 +84,7 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceSplashController(postbox: self.account.postbox, network: self.account.network, theme: self.theme)
+            controller = AuthorizationSequenceSplashController(accountManager: self.sharedContext.accountManager, postbox: self.account.postbox, network: self.account.network, theme: self.theme)
             controller.nextPressed = { [weak self] strings in
                 if let strongSelf = self {
                     if let strings = strings {
@@ -135,7 +135,7 @@ public final class AuthorizationSequenceController: NavigationController {
             controller.loginWithNumber = { [weak self, weak controller] number in
                 if let strongSelf = self {
                     controller?.inProgress = true
-                    strongSelf.actionDisposable.set((sendAuthorizationCode(account: strongSelf.account, phoneNumber: number, apiId: strongSelf.apiId, apiHash: strongSelf.apiHash) |> deliverOnMainQueue).start(next: { [weak self] account in
+                    strongSelf.actionDisposable.set((sendAuthorizationCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, phoneNumber: number, apiId: strongSelf.apiId, apiHash: strongSelf.apiHash) |> deliverOnMainQueue).start(next: { [weak self] account in
                         if let strongSelf = self {
                             controller?.inProgress = false
                             strongSelf.account = account
@@ -210,7 +210,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                         guard let strongSelf = self, let controller = controller else {
                                             return
                                         }
-                                        controller.present(proxySettingsController(postbox: strongSelf.account.postbox, network: strongSelf.account.network, mode: .modal, theme: defaultPresentationTheme, strings: strongSelf.strings, updatedPresentationData: .single((defaultPresentationTheme, strongSelf.strings))), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                        controller.present(proxySettingsController(accountManager: strongSelf.sharedContext.accountManager, postbox: strongSelf.account.postbox, network: strongSelf.account.network, mode: .modal, theme: defaultPresentationTheme, strings: strongSelf.strings, updatedPresentationData: .single((defaultPresentationTheme, strongSelf.strings))), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                     }))
                             }
                             controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: actions), in: .window(.root))

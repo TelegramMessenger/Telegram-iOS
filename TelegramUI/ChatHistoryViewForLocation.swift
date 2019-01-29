@@ -174,16 +174,11 @@ private func extractAdditionalData(view: MessageHistoryView, chatLocation: ChatL
     var cachedDataMessages: [MessageId: Message]?
     var readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData] = [:]
     var notificationSettings: PeerNotificationSettings?
-    var inAppNotificationSettings: InAppNotificationSettings?
         
     loop: for data in view.additionalData {
         switch data {
             case let .peerNotificationSettings(value):
                 notificationSettings = value
-            case let .preferencesEntry(key, value):
-                if key == ApplicationSpecificPreferencesKeys.inAppNotificationSettings {
-                    inAppNotificationSettings = value as? InAppNotificationSettings
-                }
             default:
                 break
         }
@@ -206,7 +201,7 @@ private func extractAdditionalData(view: MessageHistoryView, chatLocation: ChatL
                     case let .peer(peerId):
                         if let combinedReadStates = view.fixedReadStates {
                             if case let .peer(readStates) = combinedReadStates, let readState = readStates[peerId] {
-                                readStateData[peerId] = ChatHistoryCombinedInitialReadStateData(unreadCount: readState.count, totalState: totalUnreadState, inAppNotificationSettings: inAppNotificationSettings,  notificationSettings: notificationSettings)
+                                readStateData[peerId] = ChatHistoryCombinedInitialReadStateData(unreadCount: readState.count, totalState: totalUnreadState, notificationSettings: notificationSettings)
                             }
                         }
                     case .group:

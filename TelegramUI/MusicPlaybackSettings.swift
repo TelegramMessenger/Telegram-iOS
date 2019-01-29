@@ -75,9 +75,9 @@ public struct MusicPlaybackSettings: PreferencesEntry, Equatable {
     }
 }
 
-func updateMusicPlaybackSettingsInteractively(postbox: Postbox, _ f: @escaping (MusicPlaybackSettings) -> MusicPlaybackSettings) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.musicPlaybackSettings, { entry in
+func updateMusicPlaybackSettingsInteractively(accountManager: AccountManager, _ f: @escaping (MusicPlaybackSettings) -> MusicPlaybackSettings) -> Signal<Void, NoError> {
+    return accountManager.transaction { transaction -> Void in
+        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings, { entry in
             let currentSettings: MusicPlaybackSettings
             if let entry = entry as? MusicPlaybackSettings {
                 currentSettings = entry

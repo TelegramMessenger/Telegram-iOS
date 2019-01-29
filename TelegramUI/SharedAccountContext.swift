@@ -39,7 +39,7 @@ public final class SharedAccountContext {
         self.apsNotificationToken = apsNotificationToken
         self.voipNotificationToken = voipNotificationToken
         
-        self.mediaManager = MediaManager(inForeground: applicationBindings.applicationInForeground)
+        self.mediaManager = MediaManager(accountManager: accountManager, inForeground: applicationBindings.applicationInForeground)
         
         if applicationBindings.isMainApp {
             self.locationManager = DeviceLocationManager(queue: Queue.mainQueue())
@@ -101,7 +101,7 @@ public final class SharedAccountContext {
             var addedAuthSignal: Signal<UnauthorizedAccount?, NoError> = .single(nil)
             for (id, isTestingEnvironment) in records {
                 if self.activeAccountsValue?.accounts[id] == nil {
-                    addedSignals.append(accountWithId(networkArguments: networkArguments, id: id, supplementary: false, rootPath: rootPath, beginWithTestingEnvironment: isTestingEnvironment, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+                    addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, supplementary: false, rootPath: rootPath, beginWithTestingEnvironment: isTestingEnvironment, auxiliaryMethods: telegramAccountAuxiliaryMethods)
                     |> map { result -> Account? in
                         switch result {
                             case let .authorized(account):
@@ -113,7 +113,7 @@ public final class SharedAccountContext {
                 }
             }
             if let authRecord = authRecord, authRecord.0 != self.activeAccountsValue?.currentAuth?.id {
-                addedAuthSignal = accountWithId(networkArguments: networkArguments, id: authRecord.0, supplementary: false, rootPath: rootPath, beginWithTestingEnvironment: authRecord.1, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+                addedAuthSignal = accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: authRecord.0, supplementary: false, rootPath: rootPath, beginWithTestingEnvironment: authRecord.1, auxiliaryMethods: telegramAccountAuxiliaryMethods)
                 |> map { result -> UnauthorizedAccount? in
                     switch result {
                         case let .unauthorized(account):
@@ -197,7 +197,8 @@ public final class SharedAccountContext {
         self.registeredNotificationTokensDisposable.set((self.activeAccounts
         |> mapToSignal { _, activeAccounts, _ -> Signal<Never, NoError> in
             var applied: [Signal<Never, NoError>] = []
-            let activeUserIds = activeAccounts.values.map({ $0.peerId.id })
+            let activeProductionUserIds = activeAccounts.values.filter({ !$0.testingEnvironment }).map({ $0.peerId.id })
+            let activeTestingUserIds = activeAccounts.values.filter({ $0.testingEnvironment }).map({ $0.peerId.id })
             for (_, account) in activeAccounts {
                 let appliedAps = self.apsNotificationToken
                 |> distinctUntilChanged(isEqual: { $0 == $1 })
@@ -211,7 +212,7 @@ public final class SharedAccountContext {
                     } else {
                         encrypt = false
                     }
-                    return registerNotificationToken(account: account, token: token, type: .aps(encrypt: encrypt), sandbox: sandbox, otherAccountUserIds: activeUserIds.filter({ $0 != account.peerId.id }))
+                    return registerNotificationToken(account: account, token: token, type: .aps(encrypt: encrypt), sandbox: sandbox, otherAccountUserIds: (account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.peerId.id }))
                 }
                 let appliedVoip = self.voipNotificationToken
                 |> distinctUntilChanged(isEqual: { $0 == $1 })
@@ -219,7 +220,7 @@ public final class SharedAccountContext {
                     guard let token = token else {
                         return .complete()
                     }
-                    return registerNotificationToken(account: account, token: token, type: .voip, sandbox: sandbox, otherAccountUserIds: activeUserIds.filter({ $0 != account.peerId.id }))
+                    return registerNotificationToken(account: account, token: token, type: .voip, sandbox: sandbox, otherAccountUserIds: (account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.peerId.id }))
                 }
                 
                 applied.append(appliedAps)
@@ -236,11 +237,20 @@ public final class SharedAccountContext {
         }).start()
     }
     
-    func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: (SettingsController & ViewController)? = nil) {
+    public func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: (SettingsController & ViewController)? = nil) {
         assert(Queue.mainQueue().isCurrent())
         self.switchingSettingsController = settingsController
-        let _ = self.accountManager.transaction({ transaction in
-            transaction.setCurrentId(id)
-        }).start()
+        let _ = self.accountManager.transaction({ transaction -> Bool in
+            if transaction.getCurrent()?.0 != id {
+                transaction.setCurrentId(id)
+                return true
+            } else {
+                return false
+            }
+        }).start(next: { value in
+            if !value {
+                self.switchingSettingsController = nil
+            }
+        })
     }
 }

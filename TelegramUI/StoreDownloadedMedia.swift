@@ -165,14 +165,14 @@ private final class DownloadedMediaStoreManagerImpl {
     private let appSpecificAssetCollectionValue: Promise<PHAssetCollection>
     private let storeSettings = Promise<AutomaticMediaDownloadSettings>()
     
-    init(queue: Queue, postbox: Postbox) {
+    init(queue: Queue, postbox: Postbox, accountManager: AccountManager) {
         self.queue = queue
         self.postbox = postbox
         
         self.appSpecificAssetCollectionValue = Promise(initializeOnFirstAccess: appSpecificAssetCollection())
-        self.storeSettings.set(postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings])
-        |> map { view -> AutomaticMediaDownloadSettings in
-            if let settings = view.values[ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
+        self.storeSettings.set(accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
+        |> map { sharedData -> AutomaticMediaDownloadSettings in
+            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
                 return settings
             } else {
                 return .defaultSettings
@@ -215,10 +215,10 @@ final class DownloadedMediaStoreManager {
     private let queue = Queue()
     private let impl: QueueLocalObject<DownloadedMediaStoreManagerImpl>
     
-    init(postbox: Postbox) {
+    init(postbox: Postbox, accountManager: AccountManager) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return DownloadedMediaStoreManagerImpl(queue: queue, postbox: postbox)
+            return DownloadedMediaStoreManagerImpl(queue: queue, postbox: postbox, accountManager: accountManager)
         })
     }
     

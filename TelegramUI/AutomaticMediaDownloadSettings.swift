@@ -91,7 +91,7 @@ public struct AutomaticMediaDownloadPeers: Equatable, PostboxCoding {
     }
 }
 
-public struct AutomaticMediaDownloadSettings: AccountSharedData, PreferencesEntry, Equatable {
+public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
     public var masterEnabled: Bool
     public var peers: AutomaticMediaDownloadPeers
     public var autoplayGifs: Bool

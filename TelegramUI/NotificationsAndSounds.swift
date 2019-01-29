@@ -771,37 +771,37 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
             return settings
         }).start()
     }, updateInAppSounds: { value in
-        let _ = updateInAppNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
+        let _ = updateInAppNotificationSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             settings.playSounds = value
             return settings
         }).start()
     }, updateInAppVibration: { value in
-        let _ = updateInAppNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
+        let _ = updateInAppNotificationSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             settings.vibrate = value
             return settings
         }).start()
     }, updateInAppPreviews: { value in
-        let _ = updateInAppNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
+        let _ = updateInAppNotificationSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             settings.displayPreviews = value
             return settings
         }).start()
     }, updateDisplayNameOnLockscreen: { value in
-        let _ = updateInAppNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
+        let _ = updateInAppNotificationSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             settings.displayNameOnLockscreen = value
             return settings
         }).start()
     }, updateTotalUnreadCountStyle: { value in
-        let _ = updateInAppNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
+        let _ = updateInAppNotificationSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             settings.totalUnreadCountDisplayStyle = value ? .raw : .filtered
             return settings
         }).start()
     }, updateIncludeTag: { tag, value in
-        let _ = updateInAppNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
+        let _ = updateInAppNotificationSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             if !value {
                 settings.totalUnreadCountIncludeTags.remove(tag)
@@ -811,7 +811,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
             return settings
         }).start()
     }, updateTotalUnreadCountCategory: { value in
-        let _ = updateInAppNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
+        let _ = updateInAppNotificationSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             settings.totalUnreadCountDisplayCategory = value ? .messages : .chats
             return settings
@@ -860,7 +860,8 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
         }).start()
     })
     
-    let preferences = context.account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications, ApplicationSpecificPreferencesKeys.inAppNotificationSettings])
+    let sharedData = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
+    let preferences = context.account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications])
     
     let exceptionsSignal = Signal<NotificationExceptionsList?, NoError>.single(exceptionsList) |> then(notificationExceptionsList(network: context.account.network) |> map(Optional.init))
     
@@ -922,8 +923,8 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
             }))
     }
     
-    let signal = combineLatest(context.presentationData, preferences, notificationExceptions.get(), DeviceAccess.authorizationStatus(context: context, subject: .notifications), notificationsWarningSuppressed.get())
-        |> map { presentationData, view, exceptions, authorizationStatus, warningSuppressed -> (ItemListControllerState, (ItemListNodeState<NotificationsAndSoundsEntry>, NotificationsAndSoundsEntry.ItemGenerationArguments)) in
+    let signal = combineLatest(context.presentationData, sharedData, preferences, notificationExceptions.get(), DeviceAccess.authorizationStatus(context: context, subject: .notifications), notificationsWarningSuppressed.get())
+        |> map { presentationData, sharedData, view, exceptions, authorizationStatus, warningSuppressed -> (ItemListControllerState, (ItemListNodeState<NotificationsAndSoundsEntry>, NotificationsAndSoundsEntry.ItemGenerationArguments)) in
             
             let viewSettings: GlobalNotificationSettingsSet
             if let settings = view.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
@@ -933,7 +934,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
             }
             
             let inAppSettings: InAppNotificationSettings
-            if let settings = view.values[ApplicationSpecificPreferencesKeys.inAppNotificationSettings] as? InAppNotificationSettings {
+            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings {
                 inAppSettings = settings
             } else {
                 inAppSettings = InAppNotificationSettings.defaultSettings

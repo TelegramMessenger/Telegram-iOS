@@ -147,9 +147,9 @@ final class WebSearchController: ViewController {
             }
         }
         
-        let settings = self.context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.webSearchSettings])
-        |> map { view -> WebSearchSettings in
-            if let current = view.values[ApplicationSpecificPreferencesKeys.webSearchSettings] as? WebSearchSettings {
+        let settings = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webSearchSettings])
+        |> map { sharedData -> WebSearchSettings in
+            if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webSearchSettings] as? WebSearchSettings {
                 return current
             } else {
                 return WebSearchSettings.defaultSettings

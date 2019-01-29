@@ -181,13 +181,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 })
             case let .enableRaiseToSpeak(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Enable Raise to Speak", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    let _ = updateMediaInputSettingsInteractively(postbox: arguments.context.account.postbox, {
+                    let _ = updateMediaInputSettingsInteractively(accountManager: arguments.context.sharedContext.accountManager, {
                         $0.withUpdatedEnableRaiseToSpeak(value)
                     }).start()
                 })
             case let .keepChatNavigationStack(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Keep Chat Stack", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    let _ = updateExperimentalUISettingsInteractively(postbox: arguments.context.account.postbox, { settings in
+                    let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.context.sharedContext.accountManager, { settings in
                         var settings = settings
                         settings.keepChatNavigationStack = value
                         return settings
@@ -283,28 +283,28 @@ public func debugController(context: AccountContext, accountManager: AccountMana
         hasLegacyAppData = FileManager.default.fileExists(atPath: statusPath)
     }
     
-    let signal = combineLatest(context.presentationData, accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings])), context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.mediaInputSettings, ApplicationSpecificPreferencesKeys.experimentalUISettings]))
-        |> map { presentationData, sharedData, preferencesView -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
-            let loggingSettings: LoggingSettings
-            if let value = sharedData.entries [SharedDataKeys.loggingSettings] as? LoggingSettings {
-                loggingSettings = value
-            } else {
-                loggingSettings = LoggingSettings.defaultSettings
-            }
-            
-            let mediaInputSettings: MediaInputSettings
-            if let value = preferencesView.values[ApplicationSpecificPreferencesKeys.mediaInputSettings] as? MediaInputSettings {
-                mediaInputSettings = value
-            } else {
-                mediaInputSettings = MediaInputSettings.defaultSettings
-            }
-            
-            let experimentalSettings: ExperimentalUISettings = (preferencesView.values[ApplicationSpecificPreferencesKeys.experimentalUISettings] as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Debug"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: debugControllerEntries(presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, hasLegacyAppData: hasLegacyAppData), style: .blocks)
-            
-            return (controllerState, (listState, arguments))
+    let signal = combineLatest(context.presentationData, accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.mediaInputSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings])))
+    |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
+        let loggingSettings: LoggingSettings
+        if let value = sharedData.entries[SharedDataKeys.loggingSettings] as? LoggingSettings {
+            loggingSettings = value
+        } else {
+            loggingSettings = LoggingSettings.defaultSettings
+        }
+        
+        let mediaInputSettings: MediaInputSettings
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.mediaInputSettings] as? MediaInputSettings {
+            mediaInputSettings = value
+        } else {
+            mediaInputSettings = MediaInputSettings.defaultSettings
+        }
+        
+        let experimentalSettings: ExperimentalUISettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Debug"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(entries: debugControllerEntries(presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, hasLegacyAppData: hasLegacyAppData), style: .blocks)
+        
+        return (controllerState, (listState, arguments))
     }
     
     let controller = ItemListController(context: context, state: signal)

@@ -412,10 +412,10 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         let privacySignal = privacySettingsPromise.get()
             |> take(1)
         
-        let callsSignal = context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.voiceCallSettings, PreferencesKeys.voipConfiguration])
+        let callsSignal = combineLatest(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings]), context.account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration]))
         |> take(1)
-        |> map { view -> (VoiceCallSettings, VoipConfiguration) in
-            let voiceCallSettings: VoiceCallSettings = view.values[ApplicationSpecificPreferencesKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
+        |> map { sharedData, view -> (VoiceCallSettings, VoipConfiguration) in
+            let voiceCallSettings: VoiceCallSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
             let voipConfiguration = view.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
             
             return (voiceCallSettings, voipConfiguration)
@@ -426,7 +426,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             if let info = info {
                 pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .voiceCalls, current: info.voiceCalls, callSettings: (info.voiceCallsP2P, callSettings.0), voipConfiguration: callSettings.1, callIntegrationAvailable: CallKitIntegration.isAvailable, updated: { updated, updatedCallSettings in
                     if let currentInfoDisposable = currentInfoDisposable, let (updatedCallsPrivacy, updatedCallSettings) = updatedCallSettings  {
-                        let _ = updateVoiceCallSettingsSettingsInteractively(postbox: context.account.postbox, { _ in
+                        let _ = updateVoiceCallSettingsSettingsInteractively(accountManager: context.sharedContext.accountManager, { _ in
                             return updatedCallSettings
                         }).start()
                         

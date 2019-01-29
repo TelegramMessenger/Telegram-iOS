@@ -184,7 +184,14 @@ public final class InitialPresentationDataAndSettings {
 }
 
 public func currentPresentationDataAndSettings(accountManager: AccountManager, postbox: Postbox) -> Signal<InitialPresentationDataAndSettings, NoError> {
-    return accountManager.transaction { transaction -> Signal<(PresentationThemeSettings, LocalizationSettings?, AutomaticMediaDownloadSettings, LimitsConfiguration, CallListSettings, InAppNotificationSettings, MediaInputSettings, ExperimentalUISettings, ContactSynchronizationSettings), NoError> in
+    return accountManager.transaction { transaction -> Signal<InitialPresentationDataAndSettings, NoError> in
+        let localizationSettings: LocalizationSettings?
+        if let current = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings {
+            localizationSettings = current
+        } else {
+            localizationSettings = nil
+        }
+        
         let themeSettings: PresentationThemeSettings
         if let current = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings) as? PresentationThemeSettings {
             themeSettings = current
@@ -193,43 +200,36 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager, p
         }
         
         let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
-        if let value = transaction.getSharedData(key: ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings) as? AutomaticMediaDownloadSettings {
+        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings) as? AutomaticMediaDownloadSettings {
             automaticMediaDownloadSettings = value
         } else {
             automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
         }
         
         let callListSettings: CallListSettings
-        if let value = transaction.getSharedData(key: ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings {
+        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings {
             callListSettings = value
         } else {
             callListSettings = CallListSettings.defaultSettings
         }
         
         let inAppNotificationSettings: InAppNotificationSettings
-        if let value = transaction.getSharedData(key: ApplicationSpecificSharedDataKeys.inAppNotificationSettings) as? InAppNotificationSettings {
+        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings) as? InAppNotificationSettings {
             inAppNotificationSettings = value
         } else {
             inAppNotificationSettings = InAppNotificationSettings.defaultSettings
         }
         
         let mediaInputSettings: MediaInputSettings
-        if let value = transaction.getSharedData(key: ApplicationSpecificSharedDataKeys.mediaInputSettings) as? MediaInputSettings {
+        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.mediaInputSettings) as? MediaInputSettings {
             mediaInputSettings = value
         } else {
             mediaInputSettings = MediaInputSettings.defaultSettings
         }
         
-        let experimentalUISettings: ExperimentalUISettings = (transaction.getSharedData(key: ApplicationSpecificSharedDataKeys.experimentalUISettings) as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
+        let experimentalUISettings: ExperimentalUISettings = (transaction.getSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings) as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
         
         return postbox.transaction { transaction -> (PresentationThemeSettings, LocalizationSettings?, AutomaticMediaDownloadSettings, LimitsConfiguration, CallListSettings, InAppNotificationSettings, MediaInputSettings, ExperimentalUISettings, ContactSynchronizationSettings) in
-            let localizationSettings: LocalizationSettings?
-            if let current = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
-                localizationSettings = current
-            } else {
-                localizationSettings = nil
-            }
-            
             let limitsConfiguration: LimitsConfiguration
             if let value = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration {
                 limitsConfiguration = value
@@ -362,12 +362,12 @@ private func automaticThemeShouldSwitch(_ settings: AutomaticThemeSwitchSetting,
     }
 }
 
-public func updatedPresentationData(postbox: Postbox, applicationBindings: TelegramApplicationBindings) -> Signal<PresentationData, NoError> {
-    let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.presentationThemeSettings, PreferencesKeys.localizationSettings, ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
-    return postbox.combinedView(keys: [preferencesKey])
-    |> mapToSignal { view -> Signal<PresentationData, NoError> in
+public func updatedPresentationData(accountManager: AccountManager, postbox: Postbox, applicationBindings: TelegramApplicationBindings) -> Signal<PresentationData, NoError> {
+    let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
+    return combineLatest(accountManager.sharedData(keys: [SharedDataKeys.localizationSettings, ApplicationSpecificSharedDataKeys.presentationThemeSettings]), postbox.combinedView(keys: [preferencesKey]))
+    |> mapToSignal { sharedData, view -> Signal<PresentationData, NoError> in
         let themeSettings: PresentationThemeSettings
-        if let current = (view.views[preferencesKey] as! PreferencesView).values[ApplicationSpecificPreferencesKeys.presentationThemeSettings] as? PresentationThemeSettings {
+        if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings {
             themeSettings = current
         } else {
             themeSettings = PresentationThemeSettings.defaultSettings
@@ -443,7 +443,7 @@ public func updatedPresentationData(postbox: Postbox, applicationBindings: Teleg
                             }
                             
                             let localizationSettings: LocalizationSettings?
-                            if let current = (view.views[preferencesKey] as! PreferencesView).values[PreferencesKeys.localizationSettings] as? LocalizationSettings {
+                            if let current = sharedData.entries[SharedDataKeys.localizationSettings] as? LocalizationSettings {
                                 localizationSettings = current
                             } else {
                                 localizationSettings = nil

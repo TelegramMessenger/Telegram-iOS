@@ -106,7 +106,7 @@ final class WallpaperListPreviewController: ViewController {
             switch wallpaper {
                 case let .wallpaper(wallpaper):
                     let completion: () -> Void = {
-                        let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.context.account.postbox, { current in
+                        let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
                             return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                         })
                             |> deliverOnMainQueue).start(completed: {

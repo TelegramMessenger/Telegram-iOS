@@ -134,9 +134,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
-        let hasProxy = context.account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings])
-        |> map { preferences -> (Bool, Bool) in
-            if let settings = preferences.values[PreferencesKeys.proxySettings] as? ProxySettings {
+        let hasProxy = context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
+        |> map { sharedData -> (Bool, Bool) in
+            if let settings = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings {
                 return (!settings.servers.isEmpty, settings.enabled)
             } else {
                 return (false, false)
@@ -146,9 +146,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             return lhs == rhs
         })
         
-        let passcode = context.account.postbox.combinedView(keys: [.accessChallengeData])
+        let passcode = context.sharedContext.accountManager.accessChallengeData()
         |> map { view -> (Bool, Bool) in
-            let data = (view.views[.accessChallengeData] as! AccessChallengeDataView).data
+            let data = view.data
             return (data.isLockable, data.autolockDeadline == 0)
         }
         
@@ -201,7 +201,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         })
         
-        self.badgeDisposable = (renderedTotalUnreadCount(postbox: context.account.postbox) |> deliverOnMainQueue).start(next: { [weak self] count in
+        self.badgeDisposable = (renderedTotalUnreadCount(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox) |> deliverOnMainQueue).start(next: { [weak self] count in
             if let strongSelf = self {
                 if count.0 == 0 {
                     strongSelf.tabBarItem.badgeValue = ""
@@ -217,7 +217,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         
         self.titleView.toggleIsLocked = { [weak self] in
             if let strongSelf = self {
-                let _ = (strongSelf.context.account.postbox.transaction({ transaction -> Void in
+                let _ = (strongSelf.context.sharedContext.accountManager.transaction({ transaction -> Void in
                     var data = transaction.getAccessChallengeData()
                     if data.isLockable {
                         if data.autolockDeadline != 0 {
@@ -654,12 +654,15 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         super.viewDidAppear(animated)
         
         #if DEBUG
-        DispatchQueue.main.async {
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
             let count = ChatControllerCount.with({ $0 })
             if count != 0 {
-                self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: "", text: "ChatControllerCount \(count)", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: "", text: "ChatControllerCount \(count)", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
             }
-        }
+        })
         #endif
         
         if !self.didSetup3dTouch {
@@ -670,10 +673,10 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         }
         
         if let lockViewFrame = self.titleView.lockViewFrame, !self.didShowPasscodeLockTooltipController {
-            self.passcodeLockTooltipDisposable.set(combineLatest(queue: .mainQueue(), ApplicationSpecificNotice.getPasscodeLockTips(postbox: self.context.account.postbox), self.context.account.postbox.combinedView(keys: [.accessChallengeData]) |> take(1)).start(next: { [weak self] tooltipValue, passcodeView in
+            self.passcodeLockTooltipDisposable.set(combineLatest(queue: .mainQueue(), ApplicationSpecificNotice.getPasscodeLockTips(postbox: self.context.account.postbox), self.context.sharedContext.accountManager.accessChallengeData() |> take(1)).start(next: { [weak self] tooltipValue, passcodeView in
                     if let strongSelf = self {
                         if !tooltipValue {
-                            let hasPasscode = (passcodeView.views[.accessChallengeData] as! AccessChallengeDataView).data.isLockable
+                            let hasPasscode = passcodeView.data.isLockable
                             if hasPasscode {
                                 let _ = ApplicationSpecificNotice.setPasscodeLockTips(postbox: strongSelf.context.account.postbox).start()
                                 
@@ -697,9 +700,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             self.didSuggestLocalization = true
             
             let network = self.context.account.network
-            let signal = self.context.account.postbox.transaction { transaction -> (String, SuggestedLocalizationEntry?) in
+            let signal = combineLatest(self.context.sharedContext.accountManager.transaction { transaction -> String in
                 let languageCode: String
-                if let current = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
+                if let current = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings {
                     let code = current.primaryComponent.languageCode
                     let rawSuffix = "-raw"
                     if code.hasSuffix(rawSuffix) {
@@ -710,12 +713,15 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 } else {
                     languageCode = "en"
                 }
+                return languageCode
+            }, self.context.account.postbox.transaction { transaction -> SuggestedLocalizationEntry? in
                 var suggestedLocalization: SuggestedLocalizationEntry?
                 if let localization = transaction.getPreferencesEntry(key: PreferencesKeys.suggestedLocalization) as? SuggestedLocalizationEntry {
                     suggestedLocalization = localization
                 }
-                return (languageCode, suggestedLocalization)
-            } |> mapToSignal({ value -> Signal<(String, SuggestedLocalizationInfo)?, NoError> in
+                return suggestedLocalization
+            })
+            |> mapToSignal({ value -> Signal<(String, SuggestedLocalizationInfo)?, NoError> in
                 guard let suggestedLocalization = value.1, !suggestedLocalization.isSeen && suggestedLocalization.languageCode != "en" && suggestedLocalization.languageCode != value.0 else {
                     return .single(nil)
                 }

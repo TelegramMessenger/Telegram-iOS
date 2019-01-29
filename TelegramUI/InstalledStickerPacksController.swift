@@ -480,7 +480,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         for (option, title) in options {
             items.append(ActionSheetButtonItem(title: title, color: .accent, action: {
                 dismissAction()
-                let _ = updateStickerSettingsInteractively(postbox: context.account.postbox, { current in
+                let _ = updateStickerSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                     return current.withUpdatedEmojiStickerSuggestionMode(option)
                 }).start()
             }))
@@ -520,74 +520,68 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
 
     var previousPackCount: Int?
     
-    let stickerSettingsKey = ApplicationSpecificPreferencesKeys.stickerSettings
-    let preferencesKey: PostboxViewKey = .preferences(keys: Set([stickerSettingsKey]))
-    let preferencesView = context.account.postbox.combinedView(keys: [preferencesKey])
-    
-    let signal = combineLatest(context.presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, combineLatest(featured.get() |> deliverOnMainQueue, archivedPromise.get() |> deliverOnMainQueue), preferencesView |> deliverOnMainQueue)
-        |> deliverOnMainQueue
-        |> map { presentationData, state, view, featuredAndArchived, preferencesView -> (ItemListControllerState, (ItemListNodeState<InstalledStickerPacksEntry>, InstalledStickerPacksEntry.ItemGenerationArguments)) in
-            
-            var stickerSettings = StickerSettings.defaultSettings
-            if let view = preferencesView.views[preferencesKey] as? PreferencesView {
-                if let value = view.values[stickerSettingsKey] as? StickerSettings {
-                   stickerSettings = value
-                }
-            }
-            
-            var packCount: Int? = nil
-            if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespaceForMode(mode)])] as? ItemCollectionInfosView, let entries = stickerPacksView.entriesByNamespace[namespaceForMode(mode)] {
-                packCount = entries.count
-            }
-            
-            let leftNavigationButton: ItemListNavigationButton? = nil
-            /*if case .modal = mode {
-                leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-                    dismissImpl?()
-                })
-            }*/
-            
-            var rightNavigationButton: ItemListNavigationButton?
-            if let packCount = packCount, packCount != 0 {
-                if case .modal = mode {
-                    rightNavigationButton = nil
+    let signal = combineLatest(queue: .mainQueue(), context.presentationData, statePromise.get(), stickerPacks.get(), combineLatest(queue: .mainQueue(), featured.get(), archivedPromise.get()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]))
+    |> deliverOnMainQueue
+    |> map { presentationData, state, view, featuredAndArchived, sharedData -> (ItemListControllerState, (ItemListNodeState<InstalledStickerPacksEntry>, InstalledStickerPacksEntry.ItemGenerationArguments)) in
+        var stickerSettings = StickerSettings.defaultSettings
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
+           stickerSettings = value
+        }
+        
+        var packCount: Int? = nil
+        if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespaceForMode(mode)])] as? ItemCollectionInfosView, let entries = stickerPacksView.entriesByNamespace[namespaceForMode(mode)] {
+            packCount = entries.count
+        }
+        
+        let leftNavigationButton: ItemListNavigationButton? = nil
+        /*if case .modal = mode {
+            leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+                dismissImpl?()
+            })
+        }*/
+        
+        var rightNavigationButton: ItemListNavigationButton?
+        if let packCount = packCount, packCount != 0 {
+            if case .modal = mode {
+                rightNavigationButton = nil
+            } else {
+                if state.editing {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+                        updateState {
+                            $0.withUpdatedEditing(false)
+                        }
+                        if case .modal = mode {
+                            dismissImpl?()
+                        }
+                    })
                 } else {
-                    if state.editing {
-                        rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                            updateState {
-                                $0.withUpdatedEditing(false)
-                            }
-                            if case .modal = mode {
-                                dismissImpl?()
-                            }
-                        })
-                    } else {
-                        rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
-                            updateState {
-                                $0.withUpdatedEditing(true)
-                            }
-                        })
-                    }
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
+                        updateState {
+                            $0.withUpdatedEditing(true)
+                        }
+                    })
                 }
             }
-            
-            let previous = previousPackCount
-            previousPackCount = packCount
-            
-            let title: String
-            switch mode {
-                case .general, .modal:
-                    title = presentationData.strings.StickerPacksSettings_Title
-                case .masks:
-                    title = presentationData.strings.MaskStickerSettings_Title
-            }
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-            
-            let listState = ItemListNodeState(entries: installedStickerPacksControllerEntries(presentationData: presentationData, state: state, mode: mode, view: view, featured: featuredAndArchived.0, archived: featuredAndArchived.1, stickerSettings: stickerSettings), style: .blocks, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+        }
+        
+        let previous = previousPackCount
+        previousPackCount = packCount
+        
+        let title: String
+        switch mode {
+            case .general, .modal:
+                title = presentationData.strings.StickerPacksSettings_Title
+            case .masks:
+                title = presentationData.strings.MaskStickerSettings_Title
+        }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        
+        let listState = ItemListNodeState(entries: installedStickerPacksControllerEntries(presentationData: presentationData, state: state, mode: mode, view: view, featured: featuredAndArchived.0, archived: featuredAndArchived.1, stickerSettings: stickerSettings), style: .blocks, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
+        return (controllerState, (listState, arguments))
+    }
+    |> afterDisposed {
+        actionsDisposable.dispose()
     }
     
     let controller = ItemListController(context: context, state: signal)

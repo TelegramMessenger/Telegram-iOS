@@ -332,19 +332,23 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         }
         
         let removeItem: (String) -> Void = { id in
-            let _ = (context.account.postbox.transaction { transaction -> LocalizationInfo? in
+            let _ = (context.account.postbox.transaction { transaction -> Signal<LocalizationInfo?, NoError> in
                 removeSavedLocalization(transaction: transaction, languageCode: id)
-                if let settings = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings, let state = transaction.getPreferencesEntry(key: PreferencesKeys.localizationListState) as? LocalizationListState {
-                    if settings.primaryComponent.languageCode == id {
-                        for item in state.availableOfficialLocalizations {
-                            if item.languageCode == "en" {
-                                return item
+                let state = transaction.getPreferencesEntry(key: PreferencesKeys.localizationListState) as? LocalizationListState
+                return context.sharedContext.accountManager.transaction { transaction -> LocalizationInfo? in
+                    if let settings = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings, let state = state {
+                        if settings.primaryComponent.languageCode == id {
+                            for item in state.availableOfficialLocalizations {
+                                if item.languageCode == "en" {
+                                    return item
+                                }
                             }
                         }
                     }
+                    return nil
                 }
-                return nil
             }
+            |> switchToLatest
             |> deliverOnMainQueue).start(next: { [weak self] info in
                 if revealedCodeValue == id {
                     revealedCodeValue = nil
@@ -356,16 +360,16 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             })
         }
         
-        let preferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.localizationListState, PreferencesKeys.localizationSettings]))
+        let preferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.localizationListState]))
         let previousEntriesHolder = Atomic<([LanguageListEntry], PresentationTheme, PresentationStrings)?>(value: nil)
-        self.listDisposable = combineLatest(queue: .mainQueue(), context.account.postbox.combinedView(keys: [preferencesKey]), self.presentationDataValue.get(), self.applyingCode.get(), revealedCode.get(), self.isEditing.get()).start(next: { [weak self] view, presentationData, applyingCode, revealedCode, isEditing in
+        self.listDisposable = combineLatest(queue: .mainQueue(), context.account.postbox.combinedView(keys: [preferencesKey]), context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.localizationSettings]), self.presentationDataValue.get(), self.applyingCode.get(), revealedCode.get(), self.isEditing.get()).start(next: { [weak self] view, sharedData, presentationData, applyingCode, revealedCode, isEditing in
             guard let strongSelf = self else {
                 return
             }
             
             var entries: [LanguageListEntry] = []
             var activeLanguageCode: String?
-            if let localizationSettings = (view.views[preferencesKey] as? PreferencesView)?.values[PreferencesKeys.localizationSettings] as? LocalizationSettings {
+            if let localizationSettings = sharedData.entries[SharedDataKeys.localizationSettings] as? LocalizationSettings {
                 activeLanguageCode = localizationSettings.primaryComponent.languageCode
             }
             var existingIds = Set<String>()
@@ -500,7 +504,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                 return
             }
             strongSelf.applyingCode.set(.single(info.languageCode))
-            strongSelf.applyDisposable.set((downloadAndApplyLocalization(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, languageCode: info.languageCode)
+            strongSelf.applyDisposable.set((downloadAndApplyLocalization(accountManager: strongSelf.context.sharedContext.accountManager, postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, languageCode: info.languageCode)
                 |> deliverOnMainQueue).start(completed: {
                     self?.applyingCode.set(.single(nil))
                 }))

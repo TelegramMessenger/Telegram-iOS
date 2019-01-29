@@ -607,7 +607,7 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
          updateState { state in
             return state.withUpdatedCallsIntegrationEnabled(enabled)
         }
-        let _ = updateVoiceCallSettingsSettingsInteractively(postbox: context.account.postbox, { settings in
+        let _ = updateVoiceCallSettingsSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             settings.enableSystemIntegration = enabled
             return settings

@@ -62,6 +62,7 @@ public final class MediaManager: NSObject {
     
     private let queue = Queue.mainQueue()
     
+    private let accountManager: AccountManager
     private let inForeground: Signal<Bool, NoError>
     
     public let audioSession: ManagedAudioSession
@@ -146,7 +147,8 @@ public final class MediaManager: NSObject {
     
     let galleryHiddenMediaManager = GalleryHiddenMediaManager()
     
-    init(inForeground: Signal<Bool, NoError>) {
+    init(accountManager: AccountManager, inForeground: Signal<Bool, NoError>) {
+        self.accountManager = accountManager
         self.inForeground = inForeground
         
         self.audioSession = sharedAudioSession
@@ -402,10 +404,10 @@ public final class MediaManager: NSObject {
         assert(Queue.mainQueue().isCurrent())
         let inputData: Signal<(Account, SharedMediaPlaylist, MusicPlaybackSettings)?, NoError>
         if let (account, playlist) = playlist {
-            inputData = account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.musicPlaybackSettings])
+            inputData = self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.musicPlaybackSettings])
             |> take(1)
-            |> map { view in
-                let settings = (view.values[ApplicationSpecificPreferencesKeys.musicPlaybackSettings] as? MusicPlaybackSettings) ?? MusicPlaybackSettings.defaultSettings
+            |> map { sharedData in
+                let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.musicPlaybackSettings] as? MusicPlaybackSettings) ?? MusicPlaybackSettings.defaultSettings
                 return (account, playlist, settings)
             }
         } else {

@@ -116,20 +116,20 @@ private func voiceCallDataSavingControllerEntries(presentationData: Presentation
 
 func voiceCallDataSavingController(context: AccountContext) -> ViewController {
     let voiceCallSettingsPromise = Promise<VoiceCallSettings>()
-    voiceCallSettingsPromise.set(context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.voiceCallSettings])
-        |> map { view -> VoiceCallSettings in
-            let voiceCallSettings: VoiceCallSettings
-            if let value = view.values[ApplicationSpecificPreferencesKeys.voiceCallSettings] as? VoiceCallSettings {
-                voiceCallSettings = value
-            } else {
-                voiceCallSettings = VoiceCallSettings.defaultSettings
-            }
-            
-            return voiceCallSettings
-        })
+    voiceCallSettingsPromise.set(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings])
+    |> map { sharedData -> VoiceCallSettings in
+        let voiceCallSettings: VoiceCallSettings
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings {
+            voiceCallSettings = value
+        } else {
+            voiceCallSettings = VoiceCallSettings.defaultSettings
+        }
+        
+        return voiceCallSettings
+    })
     
     let arguments = VoiceCallDataSavingControllerArguments(updateSelection: { option in
-        let _ = updateVoiceCallSettingsSettingsInteractively(postbox: context.account.postbox, { current in
+        let _ = updateVoiceCallSettingsSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             var current = current
             current.dataSaving = option
             return current

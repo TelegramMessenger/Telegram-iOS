@@ -65,7 +65,7 @@ public final class PresentationCallManager {
         return OngoingCallContext.maxLayer
     }
     
-    public init(account: Account, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), networkType: Signal<NetworkType, NoError>, audioSession: ManagedAudioSession, activeAccounts: Signal<[Account], NoError>) {
+    public init(accountManager: AccountManager, account: Account, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), networkType: Signal<NetworkType, NoError>, audioSession: ManagedAudioSession, activeAccounts: Signal<[Account], NoError>) {
         self.tempAccount = account
         self.getDeviceAccessData = getDeviceAccessData
         self.networkType = networkType
@@ -98,9 +98,9 @@ public final class PresentationCallManager {
         })
         
         let postbox = self.tempAccount.postbox
-        let enableCallKit = postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.voiceCallSettings])
-        |> map { preferences -> Bool in
-            let settings = preferences.values[ApplicationSpecificPreferencesKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
+        let enableCallKit = accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings])
+        |> map { sharedData -> Bool in
+            let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
             return settings.enableSystemIntegration
         }
         |> distinctUntilChanged
@@ -192,9 +192,9 @@ public final class PresentationCallManager {
             }
         }
         
-        self.proxyServerDisposable = (postbox.preferencesView(keys: [PreferencesKeys.proxySettings])
-        |> deliverOnMainQueue).start(next: { [weak self] preferences in
-            if let strongSelf = self, let settings = preferences.values[PreferencesKeys.proxySettings] as? ProxySettings {
+        self.proxyServerDisposable = (accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+            if let strongSelf = self, let settings = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings {
                 if settings.enabled && settings.useForCalls {
                     strongSelf.proxyServer = settings.activeServer
                 } else {
@@ -203,16 +203,16 @@ public final class PresentationCallManager {
             }
         })
         
-        self.callSettingsDisposable = (postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.voiceCallSettings, PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState])
-        |> deliverOnMainQueue).start(next: { [weak self] preferences in
-            let callSettings = preferences.values[ApplicationSpecificPreferencesKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
+        self.callSettingsDisposable = (combineLatest(queue: .mainQueue(), accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings]), postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState]))
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData, preferences in
+            let callSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
             let configuration = preferences.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
             let derivedState = preferences.values[ApplicationSpecificPreferencesKeys.voipDerivedState] as? VoipDerivedState ?? .default
             if let strongSelf = self {
                 strongSelf.callSettings = (callSettings, configuration, derivedState)
                 
                 if let legacyP2PMode = callSettings.legacyP2PMode {
-                    _ = updateVoiceCallSettingsSettingsInteractively(postbox: postbox, { settings -> VoiceCallSettings in
+                    _ = updateVoiceCallSettingsSettingsInteractively(accountManager: accountManager, { settings -> VoiceCallSettings in
                         var settings = settings
                         settings.legacyP2PMode = nil
                         return settings

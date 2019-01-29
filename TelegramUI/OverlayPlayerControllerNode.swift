@@ -81,7 +81,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         
         self.contentNode = ASDisplayNode()
         
-        self.controlsNode = OverlayPlayerControlsNode(account: context.account, theme: self.presentationData.theme, status: context.sharedContext.mediaManager.musicMediaPlayerState)
+        self.controlsNode = OverlayPlayerControlsNode(account: context.account, accountManager: context.sharedContext.accountManager, theme: self.presentationData.theme, status: context.sharedContext.mediaManager.musicMediaPlayerState)
         
         self.historyBackgroundNode = ASDisplayNode()
         self.historyBackgroundNode.isLayerBacked = true

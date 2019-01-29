@@ -427,37 +427,36 @@ func dataAndStorageController(context: AccountContext) -> ViewController {
     let actionsDisposable = DisposableSet()
     
     let dataAndStorageDataPromise = Promise<DataAndStorageData>()
-    dataAndStorageDataPromise.set(context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings, ApplicationSpecificPreferencesKeys.generatedMediaStoreSettings, ApplicationSpecificPreferencesKeys.voiceCallSettings,
-        PreferencesKeys.proxySettings])
-        |> map { view -> DataAndStorageData in
-            let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
-            if let value = view.values[ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
-                automaticMediaDownloadSettings = value
-            } else {
-                automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
-            }
-            
-            let generatedMediaStoreSettings: GeneratedMediaStoreSettings
-            if let value = view.values[ApplicationSpecificPreferencesKeys.generatedMediaStoreSettings] as? GeneratedMediaStoreSettings {
-                generatedMediaStoreSettings = value
-            } else {
-                generatedMediaStoreSettings = GeneratedMediaStoreSettings.defaultSettings
-            }
-            
-            let voiceCallSettings: VoiceCallSettings
-            if let value = view.values[ApplicationSpecificPreferencesKeys.voiceCallSettings] as? VoiceCallSettings {
-                voiceCallSettings = value
-            } else {
-                voiceCallSettings = VoiceCallSettings.defaultSettings
-            }
-            
-            var proxySettings: ProxySettings?
-            if let value = view.values[PreferencesKeys.proxySettings] as? ProxySettings {
-                proxySettings = value
-            }
-            
-            return DataAndStorageData(automaticMediaDownloadSettings: automaticMediaDownloadSettings, generatedMediaStoreSettings: generatedMediaStoreSettings, voiceCallSettings: voiceCallSettings, proxySettings: proxySettings)
-        })
+    dataAndStorageDataPromise.set(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings, ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.proxySettings])
+    |> map { sharedData -> DataAndStorageData in
+        let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
+            automaticMediaDownloadSettings = value
+        } else {
+            automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
+        }
+        
+        let generatedMediaStoreSettings: GeneratedMediaStoreSettings
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings] as? GeneratedMediaStoreSettings {
+            generatedMediaStoreSettings = value
+        } else {
+            generatedMediaStoreSettings = GeneratedMediaStoreSettings.defaultSettings
+        }
+        
+        let voiceCallSettings: VoiceCallSettings
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings {
+            voiceCallSettings = value
+        } else {
+            voiceCallSettings = VoiceCallSettings.defaultSettings
+        }
+        
+        var proxySettings: ProxySettings?
+        if let value = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings {
+            proxySettings = value
+        }
+        
+        return DataAndStorageData(automaticMediaDownloadSettings: automaticMediaDownloadSettings, generatedMediaStoreSettings: generatedMediaStoreSettings, voiceCallSettings: voiceCallSettings, proxySettings: proxySettings)
+    })
     
     let arguments = DataAndStorageControllerArguments(openStorageUsage: {
         pushControllerImpl?(storageUsageController(context: context))
@@ -466,7 +465,7 @@ func dataAndStorageController(context: AccountContext) -> ViewController {
     }, openProxy: {
         pushControllerImpl?(proxySettingsController(context: context))
     }, toggleAutomaticDownloadMaster: { value in
-        let _ = updateMediaDownloadSettingsInteractively(postbox: context.account.postbox, { settings in
+        let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             settings.masterEnabled = value
             return settings
@@ -481,7 +480,7 @@ func dataAndStorageController(context: AccountContext) -> ViewController {
             ActionSheetButtonItem(title: presentationData.strings.AutoDownloadSettings_Reset, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 
-                let _ = updateMediaDownloadSettingsInteractively(postbox: context.account.postbox, { settings in
+                let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
                     var settings = settings
                     let defaultSettings = AutomaticMediaDownloadSettings.defaultSettings
                     settings.masterEnabled = defaultSettings.masterEnabled
@@ -500,17 +499,17 @@ func dataAndStorageController(context: AccountContext) -> ViewController {
     }, openSaveIncomingPhotos: {
         pushControllerImpl?(saveIncomingMediaController(context: context))
     }, toggleSaveEditedPhotos: { value in
-        let _ = updateGeneratedMediaStoreSettingsInteractively(postbox: context.account.postbox, { current in
+        let _ = updateGeneratedMediaStoreSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             return current.withUpdatedStoreEditedPhotos(value)
         }).start()
     }, toggleAutoplayGifs: { value in
-        let _ = updateMediaDownloadSettingsInteractively(postbox: context.account.postbox, { settings in
+        let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             settings.autoplayGifs = value
             return settings
         }).start()
     }, toggleDownloadInBackground: { value in
-        let _ = updateMediaDownloadSettingsInteractively(postbox: context.account.postbox, { settings in
+        let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             settings.downloadInBackground = value
             return settings

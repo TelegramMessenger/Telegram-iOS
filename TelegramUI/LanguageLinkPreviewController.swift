@@ -109,7 +109,7 @@ public final class LanguageLinkPreviewController: ViewController {
             return
         }
         self.controllerNode.setInProgress(true)
-        self.disposable.set((downloadAndApplyLocalization(postbox: self.context.account.postbox, network: self.context.account.network, languageCode: localizationInfo.languageCode)
+        self.disposable.set((downloadAndApplyLocalization(accountManager: self.context.sharedContext.accountManager, postbox: self.context.account.postbox, network: self.context.account.network, languageCode: localizationInfo.languageCode)
         |> deliverOnMainQueue).start(error: { [weak self] _ in
             guard let strongSelf = self else {
                 return

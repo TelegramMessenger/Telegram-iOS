@@ -42,9 +42,9 @@ public struct GeneratedMediaStoreSettings: PreferencesEntry, Equatable {
     }
 }
 
-func updateGeneratedMediaStoreSettingsInteractively(postbox: Postbox, _ f: @escaping (GeneratedMediaStoreSettings) -> GeneratedMediaStoreSettings) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.generatedMediaStoreSettings, { entry in
+func updateGeneratedMediaStoreSettingsInteractively(accountManager: AccountManager, _ f: @escaping (GeneratedMediaStoreSettings) -> GeneratedMediaStoreSettings) -> Signal<Void, NoError> {
+    return accountManager.transaction { transaction -> Void in
+        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings, { entry in
             let currentSettings: GeneratedMediaStoreSettings
             if let entry = entry as? GeneratedMediaStoreSettings {
                 currentSettings = entry

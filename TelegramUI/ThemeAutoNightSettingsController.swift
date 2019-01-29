@@ -328,23 +328,20 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
     let updateAutomaticBrightnessDisposable = MetaDisposable()
     
     let stagingSettingsPromise = ValuePromise<AutomaticThemeSwitchSetting?>(nil)
-    let themeSettingsKey = ApplicationSpecificSharedDataKeys.presentationThemeSettings
-    let localizationSettingsKey = PreferencesKeys.localizationSettings
-    let sharedData = context.sharedContext.accountManager.sharedData(keys: [themeSettingsKey])
-    let preferences = context.account.postbox.preferencesView(keys: [localizationSettingsKey])
+    let sharedData = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
     
     let updateLocationDisposable = MetaDisposable()
     actionsDisposable.add(updateLocationDisposable)
     
     let updateSettings: (@escaping (AutomaticThemeSwitchSetting) -> AutomaticThemeSwitchSetting) -> Void = { f in
-        let _ = (combineLatest(stagingSettingsPromise.get(), sharedData, preferences)
+        let _ = (combineLatest(stagingSettingsPromise.get(), sharedData)
         |> take(1)
-        |> deliverOnMainQueue).start(next: { stagingSettings, sharedData, preferences in
-            let settings = (sharedData.entries[themeSettingsKey] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+        |> deliverOnMainQueue).start(next: { stagingSettings, sharedData in
+            let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
             let updated = f(stagingSettings ?? settings.automaticThemeSwitchSetting)
             stagingSettingsPromise.set(updated)
             if areSettingsValid(updated) {
-                let _ = updatePresentationThemeSettingsInteractively(postbox: context.account.postbox, { current in
+                let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                     var current = current
                     current.automaticThemeSwitchSetting = updated
                     return current
@@ -512,10 +509,10 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
         }
     })
     
-    let signal = combineLatest(context.presentationData, sharedData, preferences, stagingSettingsPromise.get())
+    let signal = combineLatest(context.presentationData, sharedData, stagingSettingsPromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, sharedData, preferences, stagingSettings -> (ItemListControllerState, (ItemListNodeState<ThemeAutoNightSettingsControllerEntry>, ThemeAutoNightSettingsControllerEntry.ItemGenerationArguments)) in
-        let settings = (sharedData.entries[themeSettingsKey] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+    |> map { presentationData, sharedData, stagingSettings -> (ItemListControllerState, (ItemListNodeState<ThemeAutoNightSettingsControllerEntry>, ThemeAutoNightSettingsControllerEntry.ItemGenerationArguments)) in
+        let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.AutoNightTheme_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(entries: themeAutoNightSettingsControllerEntries(theme: presentationData.theme, strings: presentationData.strings, switchSetting: stagingSettings ?? settings.automaticThemeSwitchSetting, dateTimeFormat: presentationData.dateTimeFormat), style: .blocks, animateChanges: false)
@@ -527,9 +524,6 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
     }
     
     let controller = ItemListController(context: context, state: signal)
-    pushControllerImpl = { [weak controller] c in
-        (controller?.navigationController as? NavigationController)?.pushViewController(c)
-    }
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root))
     }

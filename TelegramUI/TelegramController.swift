@@ -470,8 +470,8 @@ public class TelegramController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> AudioPlaybackRate in
-                        let settings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.musicPlaybackSettings) as? MusicPlaybackSettings ?? MusicPlaybackSettings.defaultSettings
+                    let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> AudioPlaybackRate in
+                        let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings) as? MusicPlaybackSettings ?? MusicPlaybackSettings.defaultSettings
                         
                         let nextRate: AudioPlaybackRate
                         switch settings.voicePlaybackRate {
@@ -480,14 +480,15 @@ public class TelegramController: ViewController {
                             case .x2:
                                 nextRate = .x1
                         }
-                        transaction.setPreferencesEntry(key: ApplicationSpecificPreferencesKeys.musicPlaybackSettings, value: settings.withUpdatedVoicePlaybackRate(nextRate))
+                        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings, { _ in
+                            return settings.withUpdatedVoicePlaybackRate(nextRate)
+                        })
                         return nextRate
                     }
                     |> deliverOnMainQueue).start(next: { baseRate in
                         guard let strongSelf = self, let (_, _, type) = strongSelf.playlistStateAndType else {
                             return
                         }
-                        
                         strongSelf.context.sharedContext.mediaManager.playlistControl(.setBaseRate(baseRate), type: type)
                     })
                 }

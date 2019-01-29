@@ -263,17 +263,17 @@ private func stringForCategory(strings: PresentationStrings, category: PeerCache
 
 func storageUsageController(context: AccountContext, isModal: Bool = false) -> ViewController {
     let cacheSettingsPromise = Promise<CacheStorageSettings>()
-    cacheSettingsPromise.set(context.account.postbox.preferencesView(keys: [PreferencesKeys.cacheStorageSettings])
-        |> map { view -> CacheStorageSettings in
-            let cacheSettings: CacheStorageSettings
-            if let value = view.values[PreferencesKeys.cacheStorageSettings] as? CacheStorageSettings {
-                cacheSettings = value
-            } else {
-                cacheSettings = CacheStorageSettings.defaultSettings
-            }
-            
-            return cacheSettings
-        })
+    cacheSettingsPromise.set(context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings])
+    |> map { sharedData -> CacheStorageSettings in
+        let cacheSettings: CacheStorageSettings
+        if let value = sharedData.entries[SharedDataKeys.cacheStorageSettings] as? CacheStorageSettings {
+            cacheSettings = value
+        } else {
+            cacheSettings = CacheStorageSettings.defaultSettings
+        }
+        
+        return cacheSettings
+    })
     
     var presentControllerImpl: ((ViewController) -> Void)?
     
@@ -306,7 +306,7 @@ func storageUsageController(context: AccountContext, isModal: Bool = false) -> V
             controller?.dismissAnimated()
         }
         let timeoutAction: (Int32) -> Void = { timeout in
-            let _ = updateCacheStorageSettingsInteractively(postbox: context.account.postbox, { current in
+            let _ = updateCacheStorageSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                 return current.withUpdatedDefaultCacheStorageTimeout(timeout)
             }).start()
         }

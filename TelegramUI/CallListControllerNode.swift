@@ -248,7 +248,7 @@ final class CallListControllerNode: ASDisplayNode {
             }
         }, updateShowCallsTab: { [weak self] value in
             if let strongSelf = self {
-                let _ = updateCallListSettingsInteractively(postbox: strongSelf.context.account.postbox, {
+                let _ = updateCallListSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, {
                     $0.withUpdatedShowTab(value)
                 }).start()
             }
@@ -272,14 +272,14 @@ final class CallListControllerNode: ASDisplayNode {
                 showSettings = true
         }
         
-        let showCallsTab = context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.callListSettings])
-            |> map { view -> Bool in
-                var value = true
-                if let settings = view.values[ApplicationSpecificPreferencesKeys.callListSettings] as? CallListSettings {
-                    value = settings.showTab
-                }
-                return value
+        let showCallsTab = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.callListSettings])
+        |> map { sharedData -> Bool in
+            var value = true
+            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.callListSettings] as? CallListSettings {
+                value = settings.showTab
             }
+            return value
+        }
         
         let callListNodeViewTransition = combineLatest(callListViewUpdate, self.statePromise.get(), showCallsTab) |> mapToQueue { (update, state, showCallsTab) -> Signal<CallListNodeListViewTransition, NoError> in
             let processedView = CallListNodeView(originalView: update.view, filteredEntries: callListNodeEntriesForView(update.view, state: state, showSettings: showSettings, showCallsTab: showCallsTab))

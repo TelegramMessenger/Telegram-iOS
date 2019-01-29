@@ -50,14 +50,14 @@ public struct PresentationPasscodeSettings: PreferencesEntry, Equatable {
     }
 }
 
-func updatePresentationPasscodeSettingsInteractively(postbox: Postbox, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
+func updatePresentationPasscodeSettingsInteractively(accountManager: AccountManager, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) -> Signal<Void, NoError> {
+    return accountManager.transaction { transaction -> Void in
         updatePresentationPasscodeSettingsInternal(transaction: transaction, f)
     }
 }
 
-func updatePresentationPasscodeSettingsInternal(transaction: Transaction, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) {
-    transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationPasscodeSettings, { entry in
+func updatePresentationPasscodeSettingsInternal(transaction: AccountManagerModifier, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) {
+    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationPasscodeSettings, { entry in
         let currentSettings: PresentationPasscodeSettings
         if let entry = entry as? PresentationPasscodeSettings {
             currentSettings = entry
