@@ -1,5 +1,119 @@
 import Foundation
 
+public struct AccessChallengeAttempts: PostboxCoding, Equatable {
+    public let count: Int32
+    public let timestamp: Int32
+    
+    public init(count: Int32, timestamp: Int32) {
+        self.count = count
+        self.timestamp = timestamp
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.count = decoder.decodeInt32ForKey("c", orElse: 0)
+        self.timestamp = decoder.decodeInt32ForKey("t", orElse: 0)
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.count, forKey: "c")
+        encoder.encodeInt32(self.timestamp, forKey: "t")
+    }
+}
+
+public enum PostboxAccessChallengeData: PostboxCoding, Equatable {
+    case none
+    case numericalPassword(value: String, timeout: Int32?, attempts: AccessChallengeAttempts?)
+    case plaintextPassword(value: String, timeout: Int32?, attempts: AccessChallengeAttempts?)
+    
+    public init(decoder: PostboxDecoder) {
+        switch decoder.decodeInt32ForKey("r", orElse: 0) {
+            case 0:
+                self = .none
+            case 1:
+                self = .numericalPassword(value: decoder.decodeStringForKey("t", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("a"), attempts: decoder.decodeObjectForKey("att", decoder: { AccessChallengeAttempts(decoder: $0) }) as? AccessChallengeAttempts)
+            case 2:
+                self = .plaintextPassword(value: decoder.decodeStringForKey("t", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("a"), attempts: decoder.decodeObjectForKey("att", decoder: { AccessChallengeAttempts(decoder: $0) }) as? AccessChallengeAttempts)
+            default:
+                assertionFailure()
+                self = .none
+        }
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        switch self {
+            case .none:
+                encoder.encodeInt32(0, forKey: "r")
+            case let .numericalPassword(text, timeout, attempts):
+                encoder.encodeInt32(1, forKey: "r")
+                encoder.encodeString(text, forKey: "t")
+                if let timeout = timeout {
+                    encoder.encodeInt32(timeout, forKey: "a")
+                } else {
+                    encoder.encodeNil(forKey: "a")
+                }
+                if let attempts = attempts {
+                    encoder.encodeObject(attempts, forKey: "att")
+                } else {
+                    encoder.encodeNil(forKey: "att")
+                }
+            case let .plaintextPassword(text, timeout, attempts):
+                encoder.encodeInt32(2, forKey: "r")
+                encoder.encodeString(text, forKey: "t")
+                if let timeout = timeout {
+                    encoder.encodeInt32(timeout, forKey: "a")
+                } else {
+                    encoder.encodeNil(forKey: "a")
+                }
+                if let attempts = attempts {
+                    encoder.encodeObject(attempts, forKey: "att")
+                } else {
+                    encoder.encodeNil(forKey: "att")
+                }
+        }
+    }
+    
+    public var isLockable: Bool {
+        if case .none = self {
+            return false
+        } else {
+            return true
+        }
+    }
+    
+    public var autolockDeadline: Int32? {
+        switch self {
+            case .none:
+                return nil
+            case let .numericalPassword(_, timeout, _):
+                return timeout
+            case let .plaintextPassword(_, timeout, _):
+                return timeout
+        }
+    }
+    
+    public var attempts: AccessChallengeAttempts? {
+        switch self {
+            case .none:
+                return nil
+            case let .numericalPassword(_, _, attempts):
+                return attempts
+            case let .plaintextPassword(_, _, attempts):
+                return attempts
+        }
+    }
+    
+    public func withUpdatedAutolockDeadline(_ autolockDeadline: Int32?) -> PostboxAccessChallengeData {
+        switch self {
+            case .none:
+                return self
+            case let .numericalPassword(value, _, attempts):
+                return .numericalPassword(value: value, timeout: autolockDeadline, attempts: attempts)
+            case let .plaintextPassword(value, _, attempts):
+                return .plaintextPassword(value: value, timeout: autolockDeadline, attempts: attempts)
+        }
+    }
+}
+
 public struct AuthAccountRecord: PostboxCoding {
     public let id: AccountRecordId
     public let attributes: [AccountRecordAttribute]
@@ -28,6 +142,7 @@ enum AccountManagerMetadataOperation {
 private enum MetadataKey: Int64 {
     case currentAccountId = 0
     case currentAuthAccount = 1
+    case accessChallenge = 2
 }
 
 final class AccountManagerMetadataTable: Table {
@@ -76,5 +191,21 @@ final class AccountManagerMetadataTable: Table {
             self.valueBox.remove(self.table, key: self.key(.currentAuthAccount))
         }
         operations.append(.updateCurrentAuthAccountRecord(record))
+    }
+    
+    func getAccessChallengeData() -> PostboxAccessChallengeData {
+        if let value = self.valueBox.get(self.table, key: self.key(.accessChallenge)) {
+            return PostboxAccessChallengeData(decoder: PostboxDecoder(buffer: value))
+        } else {
+            return .none
+        }
+    }
+    
+    func setAccessChallengeData(_ data: PostboxAccessChallengeData) {
+        let encoder = PostboxEncoder()
+        data.encode(encoder)
+        withExtendedLifetime(encoder, {
+            self.valueBox.set(self.table, key: self.key(.accessChallenge), value: encoder.readBufferNoCopy())
+        })
     }
 }

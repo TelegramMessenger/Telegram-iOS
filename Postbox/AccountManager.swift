@@ -14,8 +14,10 @@ public struct AccountManagerModifier {
     public let createAuth: ([AccountRecordAttribute]) -> AuthAccountRecord?
     public let removeAuth: () -> Void
     public let createRecord: ([AccountRecordAttribute]) -> AccountRecordId
-    public let getSharedData: (ValueBoxKey) -> AccountSharedData?
-    public let updateSharedData: (ValueBoxKey, (AccountSharedData?) -> AccountSharedData?) -> Void
+    public let getSharedData: (ValueBoxKey) -> PreferencesEntry?
+    public let updateSharedData: (ValueBoxKey, (PreferencesEntry?) -> PreferencesEntry?) -> Void
+    public let getAccessChallengeData: () -> PostboxAccessChallengeData
+    public let setAccessChallengeData: (PostboxAccessChallengeData) -> Void
 }
 
 final class AccountManagerImpl {
@@ -34,9 +36,11 @@ final class AccountManagerImpl {
     private var currentMetadataOperations: [AccountManagerMetadataOperation] = []
     
     private var currentUpdatedSharedDataKeys = Set<ValueBoxKey>()
+    private var currentUpdatedAccessChallengeData: PostboxAccessChallengeData?
     
     private var recordsViews = Bag<(MutableAccountRecordsView, ValuePipe<AccountRecordsView>)>()
     private var sharedDataViews = Bag<(MutableAccountSharedDataView, ValuePipe<AccountSharedDataView>)>()
+    private var accessChallengeDataViews = Bag<(MutableAccessChallengeDataView, ValuePipe<AccessChallengeDataView>)>()
     
     fileprivate init(queue: Queue, basePath: String, temporarySessionId: Int64) {
         self.queue = queue
@@ -60,7 +64,7 @@ final class AccountManagerImpl {
         assert(self.queue.isCurrent())
     }
     
-    fileprivate func transaction<T>(_ f: @escaping (AccountManagerModifier) -> T) -> Signal<T, NoError> {
+    fileprivate func transaction<T>(ignoreDisabled: Bool, _ f: @escaping (AccountManagerModifier) -> T) -> Signal<T, NoError> {
         return Signal { subscriber in
             self.queue.justDispatch {
                 self.valueBox.begin()
@@ -104,6 +108,11 @@ final class AccountManagerImpl {
                 }, updateSharedData: { key, f in
                     let updated = f(self.sharedDataTable.get(key: key))
                     self.sharedDataTable.set(key: key, value: updated, updatedKeys: &self.currentUpdatedSharedDataKeys)
+                }, getAccessChallengeData: {
+                    return self.metadataTable.getAccessChallengeData()
+                }, setAccessChallengeData: { data in
+                    self.currentUpdatedAccessChallengeData = data
+                    self.metadataTable.setAccessChallengeData(data)
                 })
                 
                 let result = f(transaction)
@@ -136,9 +145,18 @@ final class AccountManagerImpl {
             }
         }
         
+        if let data = self.currentUpdatedAccessChallengeData {
+            for (view, pipe) in self.accessChallengeDataViews.copyItems() {
+                if view.replay(updatedData: data) {
+                    pipe.putNext(AccessChallengeDataView(view))
+                }
+            }
+        }
+        
         self.currentRecordOperations.removeAll()
         self.currentMetadataOperations.removeAll()
         self.currentUpdatedSharedDataKeys.removeAll()
+        self.currentUpdatedAccessChallengeData = nil
         
         for table in self.tables {
             table.beforeCommit()
@@ -146,16 +164,23 @@ final class AccountManagerImpl {
     }
     
     fileprivate func accountRecords() -> Signal<AccountRecordsView, NoError> {
-        return self.transaction { transaction -> Signal<AccountRecordsView, NoError> in
+        return self.transaction(ignoreDisabled: false, { transaction -> Signal<AccountRecordsView, NoError> in
             return self.accountRecordsInternal(transaction: transaction)
-        }
+        })
         |> switchToLatest
     }
     
     fileprivate func sharedData(keys: Set<ValueBoxKey>) -> Signal<AccountSharedDataView, NoError> {
-        return self.transaction { transaction -> Signal<AccountSharedDataView, NoError> in
+        return self.transaction(ignoreDisabled: false, { transaction -> Signal<AccountSharedDataView, NoError> in
             return self.sharedDataInternal(transaction: transaction, keys: keys)
-        }
+        })
+        |> switchToLatest
+    }
+    
+    fileprivate func accessChallengeData() -> Signal<AccessChallengeDataView, NoError> {
+        return self.transaction(ignoreDisabled: false, { transaction -> Signal<AccessChallengeDataView, NoError> in
+            return self.accessChallengeDataInternal(transaction: transaction)
+        })
         |> switchToLatest
     }
     
@@ -201,8 +226,28 @@ final class AccountManagerImpl {
         }
     }
     
+    private func accessChallengeDataInternal(transaction: AccountManagerModifier) -> Signal<AccessChallengeDataView, NoError> {
+        let mutableView = MutableAccessChallengeDataView(data: transaction.getAccessChallengeData())
+        let pipe = ValuePipe<AccessChallengeDataView>()
+        let index = self.accessChallengeDataViews.add((mutableView, pipe))
+        
+        let queue = self.queue
+        return (.single(AccessChallengeDataView(mutableView))
+        |> then(pipe.signal()))
+        |> `catch` { _ -> Signal<AccessChallengeDataView, NoError> in
+            return .complete()
+        }
+        |> afterDisposed { [weak self] in
+            queue.async {
+                if let strongSelf = self {
+                    strongSelf.accessChallengeDataViews.remove(index)
+                }
+            }
+        }
+    }
+    
     fileprivate func currentAccountRecord(allocateIfNotExists: Bool) -> Signal<(AccountRecordId, [AccountRecordAttribute])?, NoError> {
-        return self.transaction { transaction -> Signal<(AccountRecordId, [AccountRecordAttribute])?, NoError> in
+        return self.transaction(ignoreDisabled: false, { transaction -> Signal<(AccountRecordId, [AccountRecordAttribute])?, NoError> in
             let current = transaction.getCurrent()
             let record: (AccountRecordId, [AccountRecordAttribute])?
             if let current = current {
@@ -228,7 +273,7 @@ final class AccountManagerImpl {
             }
             
             return signal
-        }
+        })
         |> switchToLatest
         |> distinctUntilChanged(isEqual: { lhs, rhs in
             if let lhs = lhs, let rhs = rhs {
@@ -254,7 +299,7 @@ final class AccountManagerImpl {
     
     func allocatedTemporaryAccountId() -> Signal<AccountRecordId, NoError> {
         let temporarySessionId = self.temporarySessionId
-        return self.transaction { transaction -> Signal<AccountRecordId, NoError> in
+        return self.transaction(ignoreDisabled: false, { transaction -> Signal<AccountRecordId, NoError> in
             
             let id = generateAccountRecordId()
             transaction.updateRecord(id, { _ in
@@ -262,7 +307,7 @@ final class AccountManagerImpl {
             })
             
             return .single(id)
-        }
+        })
         |> switchToLatest
         |> distinctUntilChanged(isEqual: { lhs, rhs in
             return lhs == rhs
@@ -275,7 +320,7 @@ public final class AccountManager {
     private let impl: QueueLocalObject<AccountManagerImpl>
     public let temporarySessionId: Int64
     
-    fileprivate init(basePath: String) {
+    public init(basePath: String) {
         var temporarySessionId: Int64 = 0
         arc4random_buf(&temporarySessionId, 8)
         self.temporarySessionId = temporarySessionId
@@ -285,11 +330,11 @@ public final class AccountManager {
         })
     }
     
-    public func transaction<T>(_ f: @escaping (AccountManagerModifier) -> T) -> Signal<T, NoError> {
+    public func transaction<T>(ignoreDisabled: Bool = false, _ f: @escaping (AccountManagerModifier) -> T) -> Signal<T, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
-                disposable.set(impl.transaction(f).start(next: { next in
+                disposable.set(impl.transaction(ignoreDisabled: ignoreDisabled, f).start(next: { next in
                     subscriber.putNext(next)
                 }, completed: {
                     subscriber.putCompletion()
@@ -327,6 +372,20 @@ public final class AccountManager {
         }
     }
     
+    public func accessChallengeData() -> Signal<AccessChallengeDataView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.accessChallengeData().start(next: { next in
+                    subscriber.putNext(next)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+    }
+    
     public func currentAccountRecord(allocateIfNotExists: Bool) -> Signal<(AccountRecordId, [AccountRecordAttribute])?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -353,13 +412,5 @@ public final class AccountManager {
             }
             return disposable
         }
-    }
-}
-
-public func accountManager(basePath: String) -> Signal<AccountManager, NoError> {
-    return Signal { subscriber in
-        subscriber.putNext(AccountManager(basePath: basePath))
-        subscriber.putCompletion()
-        return EmptyDisposable
     }
 }

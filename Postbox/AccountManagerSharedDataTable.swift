@@ -5,15 +5,15 @@ final class AccountManagerSharedDataTable: Table {
         return ValueBoxTable(id: id, keyType: .binary)
     }
     
-    func get(key: ValueBoxKey) -> AccountSharedData? {
-        if let value = self.valueBox.get(self.table, key: key), let object = PostboxDecoder(buffer: value).decodeRootObject() as? AccountSharedData {
+    func get(key: ValueBoxKey) -> PreferencesEntry? {
+        if let value = self.valueBox.get(self.table, key: key), let object = PostboxDecoder(buffer: value).decodeRootObject() as? PreferencesEntry {
             return object
         } else {
             return nil
         }
     }
     
-    func set(key: ValueBoxKey, value: AccountSharedData?, updatedKeys: inout Set<ValueBoxKey>) {
+    func set(key: ValueBoxKey, value: PreferencesEntry?, updatedKeys: inout Set<ValueBoxKey>) {
         if let value = value {
             if let current = self.get(key: key), current.isEqual(to: value) {
                 return

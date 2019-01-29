@@ -703,6 +703,7 @@
 				D05D8B33218F1EBB0064586F /* AccountManagerSharedDataTable.swift */,
 				D0BEAF6F1E54BC1E00BD963D /* AccountRecordsView.swift */,
 				D05D8B30218F1D3D0064586F /* AccountSharedData.swift */,
+				D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */,
 			);
 			name = "Account Manager";
 			sourceTree = "<group>";
@@ -873,7 +874,6 @@
 				D0FA0AC91E780A26005BB9B7 /* PostboxView.swift */,
 				D0FA0ACC1E781067005BB9B7 /* Views.swift */,
 				D0F53BF21E794C6700117362 /* PeerChatStateView.swift */,
-				D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */,
 				D0E1D30E1ECA53F900FCEEF1 /* GlobalMessageTagsView.swift */,
 				D07047A41F3CF63800F6A8D4 /* MessageHistoryTagSummaryView.swift */,
 				D07047AA1F3DD8D100F6A8D4 /* PendingMessageActionsView.swift */,

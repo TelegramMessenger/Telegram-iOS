@@ -7,7 +7,6 @@ public enum PostboxViewKey: Hashable {
     case peerChatState(peerId: PeerId)
     case peerGroupState(groupId: PeerGroupId)
     case orderedItemList(id: Int32)
-    case accessChallengeData
     case preferences(keys: Set<ValueBoxKey>)
     case globalMessageTags(globalTag: GlobalMessageTags, position: MessageIndex, count: Int, groupingPredicate: ((Message, Message) -> Bool)?)
     case peer(peerId: PeerId, components: PeerViewComponents)
@@ -44,8 +43,6 @@ public enum PostboxViewKey: Hashable {
                 return id.hashValue
             case let .orderedItemList(id):
                 return id.hashValue
-            case .accessChallengeData:
-                return 2
             case .preferences:
                 return 3
             case .globalMessageTags:
@@ -125,12 +122,6 @@ public enum PostboxViewKey: Hashable {
                 }
             case let .orderedItemList(id):
                 if case .orderedItemList(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .accessChallengeData:
-                if case .accessChallengeData = rhs {
                     return true
                 } else {
                     return false
@@ -279,8 +270,6 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
             return MutablePeerGroupStateView(postbox: postbox, groupId: groupId)
         case let .orderedItemList(id):
             return MutableOrderedItemListView(postbox: postbox, collectionId: id)
-        case .accessChallengeData:
-            return MutableAccessChallengeDataView(postbox: postbox)
         case let .preferences(keys):
             return MutablePreferencesView(postbox: postbox, keys: keys)
         case let .globalMessageTags(globalTag, position, count, groupingPredicate):
