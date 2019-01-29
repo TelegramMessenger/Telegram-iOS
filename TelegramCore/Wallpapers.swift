@@ -148,7 +148,7 @@ public func uploadWallpaper(account: Account, resource: MediaResource, mimeType:
     |> map { result, resource -> UploadWallpaperStatus in
         switch result {
             case let .complete(wallpaper):
-                if case let .file(_, _, _, _, _, _, file, _) = wallpaper, let resource = resource {
+                if case let .file(_, _, _, _, _, _, _, file, _) = wallpaper, let resource = resource {
                     account.postbox.mediaBox.moveResourceData(from: resource.id, to: file.resource.id)
                 }
             default:
@@ -179,7 +179,7 @@ public func deleteWallpaper(account: Account, wallpaper: TelegramWallpaper) -> S
 }
 
 private func saveUnsaveWallpaper(account: Account, wallpaper: TelegramWallpaper, unsave: Bool) -> Signal<Void, NoError> {
-    guard case let .file(_, _, _, _, _, slug, _, settings) = wallpaper else {
+    guard case let .file(_, _, _, _, _, _, slug, _, settings) = wallpaper else {
         return .complete()
     }
     return account.network.request(Api.functions.account.saveWallPaper(wallpaper: Api.InputWallPaper.inputWallPaperSlug(slug: slug), unsave: unsave ? Api.Bool.boolTrue : Api.Bool.boolFalse, settings: apiWallpaperSettings(settings)))
@@ -192,7 +192,7 @@ private func saveUnsaveWallpaper(account: Account, wallpaper: TelegramWallpaper,
 }
 
 public func installWallpaper(account: Account, wallpaper: TelegramWallpaper) -> Signal<Void, NoError> {
-    guard case let .file(_, _, _, _, _, slug, _, settings) = wallpaper else {
+    guard case let .file(_, _, _, _, _, _, slug, _, settings) = wallpaper else {
         return .complete()
     }
     return account.network.request(Api.functions.account.installWallPaper(wallpaper: Api.InputWallPaper.inputWallPaperSlug(slug: slug), settings: apiWallpaperSettings(settings)))

@@ -997,7 +997,7 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                                     return .single(fileReference)
                                 }
                             }
-                        case let .file(_, _, _, _, _, _, file, _):
+                        case let .file(_, _, _, _, _, _, _, file, _):
                             if let fileReference = findMediaResourceReference(media: file, resource: resource) {
                                 return .single(fileReference)
                             }
