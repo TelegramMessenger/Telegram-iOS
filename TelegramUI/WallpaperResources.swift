@@ -5,17 +5,17 @@ import Postbox
 import TelegramCore
 import TelegramUIPrivateModule
 
-private func wallpaperDatas(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, autoFetchFullSize: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
+private func wallpaperDatas(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, autoFetchFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
     if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = largestImageRepresentation(representations.map({ $0.representation })), let smallestIndex = representations.index(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.index(where: { $0.representation == largestRepresentation }) {
         
         let maybeFullSize: Signal<MediaResourceData, NoError>
         if thumbnail, let file = fileReference?.media {
-            maybeFullSize = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: false, fetch: false)
+            maybeFullSize = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: false, fetch: false, attemptSynchronously: synchronousLoad)
             |> mapToSignal { maybeData -> Signal<MediaResourceData, NoError> in
                 if maybeData.complete {
                     return .single(maybeData)
                 } else {
-                    return account.postbox.mediaBox.resourceData(file.resource)
+                    return account.postbox.mediaBox.resourceData(file.resource, attemptSynchronously: synchronousLoad)
                     |> mapToSignal { maybeData -> Signal<MediaResourceData, NoError> in
                         if maybeData.complete {
                             return account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: false, fetch: true)
@@ -136,8 +136,8 @@ private func wallpaperDatas(account: Account, fileReference: FileMediaReference?
     }
 }
 
-func wallpaperImage(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = wallpaperDatas(account: account, fileReference: fileReference, representations: representations, alwaysShowThumbnailFirst: alwaysShowThumbnailFirst, thumbnail: thumbnail, autoFetchFullSize: autoFetchFullSize)
+func wallpaperImage(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, autoFetchFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = wallpaperDatas(account: account, fileReference: fileReference, representations: representations, alwaysShowThumbnailFirst: alwaysShowThumbnailFirst, thumbnail: thumbnail, autoFetchFullSize: autoFetchFullSize, synchronousLoad: synchronousLoad)
     
     return signal
     |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
@@ -340,7 +340,7 @@ func patternWallpaperImageInternal(thumbnailData: Data?, fullSizeData: Data?, fu
     
     var scale: CGFloat = 0.0
     if case .fastScreen = mode {
-        scale = 1.0
+        scale = max(1.0, UIScreenScale - 1.0)
     }
     
     return .single((thumbnailData, fullSizeData, fullSizeComplete))

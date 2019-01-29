@@ -238,8 +238,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, mode: chatPresentationInterfaceState.chatWallpaperMode, postbox: account.postbox)
-        self.backgroundNode.motionEnabled = chatPresentationInterfaceState.chatWallpaperMode.contains(.motion)
+        self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, postbox: account.postbox)
+        self.backgroundNode.motionEnabled = chatPresentationInterfaceState.chatWallpaper.settings?.motion ?? false
 
         self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
     
@@ -1313,9 +1313,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if self.chatPresentationInterfaceState != chatPresentationInterfaceState {
             let themeUpdated = self.chatPresentationInterfaceState.theme !== chatPresentationInterfaceState.theme
             
-            if self.chatPresentationInterfaceState.chatWallpaper != chatPresentationInterfaceState.chatWallpaper ||  self.chatPresentationInterfaceState.chatWallpaperMode != chatPresentationInterfaceState.chatWallpaperMode {
-                self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, mode: chatPresentationInterfaceState.chatWallpaperMode, postbox: account.postbox)
-                self.backgroundNode.motionEnabled = chatPresentationInterfaceState.chatWallpaperMode.contains(.motion)
+            if self.chatPresentationInterfaceState.chatWallpaper != chatPresentationInterfaceState.chatWallpaper {
+                self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, postbox: account.postbox)
+                self.backgroundNode.motionEnabled = chatPresentationInterfaceState.chatWallpaper.settings?.motion ?? false
             }
             
             self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)

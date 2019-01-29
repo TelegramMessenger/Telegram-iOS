@@ -260,6 +260,33 @@ final class ThemeGridController: ViewController {
                             strongSelf.present(controller, in: .window(.root))
                             
                             let _ = resetWallpapers(account: strongSelf.account).start(completed: { [weak self, weak controller] in
+                                let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
+                                    transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings, { entry in
+                                        let current: PresentationThemeSettings
+                                        if let entry = entry as? PresentationThemeSettings {
+                                            current = entry
+                                        } else {
+                                            current = PresentationThemeSettings.defaultSettings
+                                        }
+                                        let wallpaper: TelegramWallpaper
+                                        if case let .builtin(theme) = current.theme {
+                                            switch theme {
+                                                case .day:
+                                                    wallpaper = .color(0xffffff)
+                                                case .nightGrayscale:
+                                                    wallpaper = .color(0x000000)
+                                                case .nightAccent:
+                                                    wallpaper = .color(0x18222d)
+                                                default:
+                                                    wallpaper = .builtin
+                                            }
+                                        } else {
+                                            wallpaper = .builtin
+                                        }
+                                        return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: WallpaperPresentationOptions(), theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: [:], fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                                    })
+                                }).start()
+                                
                                 let _ = (telegramWallpapers(postbox: strongSelf.account.postbox, network: strongSelf.account.network)
                                 |> deliverOnMainQueue).start(completed: { [weak self, weak controller] in
                                     controller?.dismiss()
@@ -403,13 +430,14 @@ final class ThemeGridController: ViewController {
                 }
                 
                 let apply: () -> Void = {
-                    let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: thumbnailDimensions, resource: thumbnailResource), TelegramMediaImageRepresentation(dimensions: croppedImage.size, resource: resource)], WallpaperSettings())
+                    let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), color: nil, intensity: nil)
+                    let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: thumbnailDimensions, resource: thumbnailResource), TelegramMediaImageRepresentation(dimensions: croppedImage.size, resource: resource)], settings)
                     updateWallpaper(wallpaper)
                     DispatchQueue.main.async {
                         completion()
                     }
                     
-                    let _ = uploadWallpaper(account: account, resource: resource).start(next: { status in
+                    let _ = uploadWallpaper(account: account, resource: resource, settings: settings).start(next: { status in
                         if case let .complete(wallpaper) = status {
                             if mode.contains(.blur), case let .file(_, _, _, _, _, _, _, file, _) = wallpaper {
                                 let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {

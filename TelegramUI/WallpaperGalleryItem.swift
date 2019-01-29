@@ -231,7 +231,16 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 self.backgroundColor = patternColor.withAlphaComponent(1.0)
                                 
                                 if let previousEntry = previousEntry, case let .wallpaper(wallpaper) = previousEntry, case let .file(previousFile) = wallpaper, file.id == previousFile.id && (file.settings.color != previousFile.settings.color || file.settings.intensity != previousFile.settings.intensity) && self.colorPreview == self.arguments.colorPreview {
-                                    self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: patternColor))()
+                                    
+                                    let makeImageLayout = self.imageNode.asyncLayout()
+                                    Queue.concurrentDefaultQueue().async {
+                                        let apply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: patternColor))
+                                        Queue.mainQueue().async {
+                                            if self.colorPreview {
+                                                apply()
+                                            }
+                                        }
+                                    }
                                     return
                                 } else if let offset = self.validOffset, self.arguments.colorPreview && fabs(offset) > 0.0 {
                                     return

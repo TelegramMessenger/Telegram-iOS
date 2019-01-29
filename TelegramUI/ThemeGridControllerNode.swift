@@ -118,6 +118,7 @@ private struct ThemeGridEntryTransition {
     let updateFirstIndexInSectionOffset: Int?
     let stationaryItems: GridNodeStationaryItems
     let scrollToItem: GridNodeScrollToItem?
+    let synchronousLoad: Bool
 }
 
 private func preparedThemeGridEntryTransition(account: Account, from fromEntries: [ThemeGridControllerEntry], to toEntries: [ThemeGridControllerEntry], interaction: ThemeGridControllerInteraction) -> ThemeGridEntryTransition {
@@ -138,7 +139,14 @@ private func preparedThemeGridEntryTransition(account: Account, from fromEntries
         }
     }
     
-    return ThemeGridEntryTransition(deletions: deletions, insertions: insertions, updates: updates, isEmpty: !hasEditableItems, updateFirstIndexInSectionOffset: nil, stationaryItems: stationaryItems, scrollToItem: scrollToItem)
+    var synchronousLoad = false
+    if let previousWallpaper = fromEntries.first?.wallpaper, let newWallpaper = toEntries.first?.wallpaper {
+        if case .image = previousWallpaper, case let .file(file) = newWallpaper, file.isCreator {
+            synchronousLoad = true
+        }
+    }
+    
+    return ThemeGridEntryTransition(deletions: deletions, insertions: insertions, updates: updates, isEmpty: !hasEditableItems, updateFirstIndexInSectionOffset: nil, stationaryItems: stationaryItems, scrollToItem: scrollToItem, synchronousLoad: synchronousLoad)
 }
 
 private func selectedWallpapers(entries: [ThemeGridControllerEntry]?, state: ThemeGridControllerNodeState) -> [TelegramWallpaper] {
@@ -286,11 +294,15 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 if let entries = entries, !entries.isEmpty {
                     let wallpapers = entries.map { $0.wallpaper }
                     
-                    var options: WallpaperPresentationOptions?
-                    if wallpaper == strongSelf.presentationData.chatWallpaper {
-                        options = strongSelf.presentationData.chatWallpaperOptions
+                    var options = WallpaperPresentationOptions()
+                    if wallpaper == strongSelf.presentationData.chatWallpaper, let settings = wallpaper.settings {
+                        if settings.blur {
+                            options.insert(.blur)
+                        }
+                        if settings.motion {
+                            options.insert(.motion)
+                        }
                     }
-                    
                     presentPreviewController(.list(wallpapers: wallpapers, central: wallpaper, type: .wallpapers(options)))
                 }
             }
@@ -355,7 +367,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             }
             
             for wallpaper in sortedWallpapers {
-                if case let .file(file) = wallpaper, deletedWallpaperSlugs.contains(file.slug) || file.isPattern {
+                if case let .file(file) = wallpaper, deletedWallpaperSlugs.contains(file.slug) || (file.isPattern && file.settings.color == nil) {
                     continue
                 }
                 let selected = areWallpapersEqual(presentationData.chatWallpaper, wallpaper)
@@ -464,6 +476,11 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
         self.searchDisplayController?.updatePresentationData(self.presentationData)
         
+        self.backgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
+        self.bottomBackgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
+        
         self.colorItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.Wallpaper_SetColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
             self?.presentColors()
         })
@@ -516,7 +533,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
     private func dequeueTransitions() {
         while !self.queuedTransitions.isEmpty {
             let transition = self.queuedTransitions.removeFirst()
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { [weak self] _ in
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset, synchronousLoads: transition.synchronousLoad), completion: { [weak self] _ in
                 if let strongSelf = self {
                     strongSelf.ready.set(true)
                 }
