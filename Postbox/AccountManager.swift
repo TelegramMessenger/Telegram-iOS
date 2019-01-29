@@ -25,6 +25,7 @@ final class AccountManagerImpl {
     private let basePath: String
     private let temporarySessionId: Int64
     private let valueBox: ValueBox
+    private let sharedMediaManager: SharedAccountMediaManager
     
     private var tables: [Table] = []
     
@@ -45,6 +46,7 @@ final class AccountManagerImpl {
     fileprivate init(queue: Queue, basePath: String, temporarySessionId: Int64) {
         self.queue = queue
         self.basePath = basePath
+        self.sharedMediaManager = SharedAccountMediaManager(basePath: basePath + "/media")
         self.temporarySessionId = temporarySessionId
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
         self.valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue)
