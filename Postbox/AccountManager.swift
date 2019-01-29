@@ -254,11 +254,14 @@ final class AccountManagerImpl {
 }
 
 public final class AccountManager {
+    public let basePath: String
     private let queue = Queue()
     private let impl: QueueLocalObject<AccountManagerImpl>
     public let temporarySessionId: Int64
     
     fileprivate init(basePath: String) {
+        self.basePath = basePath
+        
         var temporarySessionId: Int64 = 0
         arc4random_buf(&temporarySessionId, 8)
         self.temporarySessionId = temporarySessionId
