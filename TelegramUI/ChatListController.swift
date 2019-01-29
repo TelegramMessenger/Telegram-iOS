@@ -168,7 +168,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 if checkProxy {
                     if strongSelf.proxyUnavailableTooltipController == nil && !strongSelf.didShowProxyUnavailableTooltipController && strongSelf.isNodeLoaded && strongSelf.displayNode.view.window != nil {
                         strongSelf.didShowProxyUnavailableTooltipController = true
-                        let tooltipController = TooltipController(text: "The proxy may be unavailable. Try selecting another one.", timeout: 60.0, dismissByTapOutside: true)
+                        let tooltipController = TooltipController(text: strongSelf.presentationData.strings.Proxy_TooltipUnavailable, timeout: 60.0, dismissByTapOutside: true)
                         strongSelf.proxyUnavailableTooltipController = tooltipController
                         tooltipController.dismissed = { [weak tooltipController] in
                             if let strongSelf = self, let tooltipController = tooltipController, strongSelf.proxyUnavailableTooltipController === tooltipController {
@@ -253,6 +253,12 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         })
         self.searchContentNode?.updateExpansionProgress(0.0)
         self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        
+        if !GlobalExperimentalSettings.isAppStoreBuild {
+            self.tabBarItemDebugTapAction = {
+                preconditionFailure("debug tap")
+            }
+        }
     }
 
     required public init(coder aDecoder: NSCoder) {
