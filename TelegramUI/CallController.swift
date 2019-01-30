@@ -167,10 +167,13 @@ public final class CallController: ViewController {
         self.controllerNode.presentCallRating = { [weak self] callId in
             if let strongSelf = self, !strongSelf.presentedCallRating {
                 strongSelf.presentedCallRating = true
+                
                 Queue.mainQueue().after(0.5, {
+                    let window = strongSelf.window
                     let controller = callRatingController(account: strongSelf.account, callId: callId, present: { [weak self] c, a in
-                        if let strongSelf = self {
-                            strongSelf.present(c, in: .window(.root), with: a)
+                        if let window = window {
+                            c.presentationArguments = a
+                            window.present(c, on: .root, blockInteraction: false, completion: {})
                         }
                     })
                     strongSelf.present(controller, in: .window(.root))
