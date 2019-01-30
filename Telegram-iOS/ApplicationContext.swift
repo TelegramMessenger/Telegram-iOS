@@ -799,8 +799,6 @@ final class AuthorizedApplicationContext {
         }))
         
         if #available(iOS 10.0, *) {
-            let debugModal = false
-            
             let permissionsPosition = ValuePromise(0, ignoreRepeated: true)
             self.permissionsDisposable.set((combineLatest(requiredPermissions(account: account), permissionUISplitTest(postbox: account.postbox), permissionsPosition.get(), account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey()), .noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())]))
             |> deliverOnMainQueue).start(next: { [weak self] required, splitTest, position, combined in
@@ -836,14 +834,14 @@ final class AuthorizedApplicationContext {
                                 modal = true
                             }
                             if case .requestable = required.0.status, contactsTimestamp != 0 {
-                                requestedPermissions.append((required.0, modal || debugModal))
+                                requestedPermissions.append((required.0, modal))
                             }
                         case .notifications:
                             if case .modal = config.notifications {
                                 modal = true
                             }
                             if case .requestable = required.1.status, notificationsTimestamp != 0 {
-                                requestedPermissions.append((required.1, modal || debugModal))
+                                requestedPermissions.append((required.1, modal))
                             }
                         case .siri:
                             if case .requestable = required.2.status {
@@ -881,7 +879,7 @@ final class AuthorizedApplicationContext {
                         }
                         
                         if !didAppear {
-                            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.15, execute: {
+                            Queue.mainQueue().after(0.15, {
                                 (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments.init(presentationAnimation: .modalSheet))
                             })
                         }
