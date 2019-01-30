@@ -291,10 +291,25 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                         return nil
                     }
                 case let .file(file):
-                    if let path = account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
-                        return image
+                    if file.isPattern {
+                        if let color = file.settings.color {
+                            return generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
+                                if color == 0 {
+                                    context.setFillColor(UIColor(rgb: 0x222222).cgColor)
+                                } else {
+                                    context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
+                                }
+                                context.fill(CGRect(origin: CGPoint(), size: size))
+                            })
+                        } else {
+                            return nil
+                        }
                     } else {
-                        return nil
+                        if let path = account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
+                            return image
+                        } else {
+                            return nil
+                        }
                     }
             }
         } else {

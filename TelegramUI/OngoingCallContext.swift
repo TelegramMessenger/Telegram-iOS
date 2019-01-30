@@ -192,7 +192,7 @@ final class OngoingCallContext {
             context.signalBarsChanged = { [weak self] signalBars in
                 self?.receptionPromise.set(.single(signalBars))
             }
-            context.callEnded = { needRate, debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
+            context.callEnded = { debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
                 let delta = NetworkUsageStatsConnectionsEntry(
                     cellular: NetworkUsageStatsDirectionsEntry(
                         incoming: bytesReceivedMobile,
@@ -276,6 +276,15 @@ final class OngoingCallContext {
             return EmptyDisposable
         }
         return (poll |> then(.complete() |> delay(0.5, queue: Queue.concurrentDefaultQueue()))) |> restart
+    }
+    
+    func needsRating(_ completion: @escaping (Bool) -> Void) {
+        self.withContext { context in
+            let needsRating = context.needRate()
+            Queue.mainQueue().async {
+                completion(needsRating)
+            }
+        }
     }
 }
 

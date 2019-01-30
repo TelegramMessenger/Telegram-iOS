@@ -15,6 +15,7 @@ final class CallControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     private var peer: Peer?
     private let debugInfo: Signal<(String, String), NoError>
+    private var forceReportRating = false
     
     private let containerNode: ASDisplayNode
     
@@ -51,6 +52,7 @@ final class CallControllerNode: ASDisplayNode {
     var endCall: (() -> Void)?
     var back: (() -> Void)?
     var dismissedInteractively: (() -> Void)?
+    var presentCallRating: ((CallId) -> Void)?
     
     init(account: Account, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false) {
         self.account = account
@@ -190,7 +192,7 @@ final class CallControllerNode: ASDisplayNode {
                 }
             case .terminating:
                 statusValue = .text(self.presentationData.strings.Call_StatusEnded)
-            case let .terminated(reason):
+            case let .terminated(_, reason, _):
                 if let reason = reason {
                     switch reason {
                         case let .ended(type):
@@ -263,6 +265,10 @@ final class CallControllerNode: ASDisplayNode {
         self.statusNode.reception = statusReception
         
         self.updateButtonsMode()
+        
+        if case let .terminated(id, _, reportRating) = callState, let callId = id, reportRating || self.forceReportRating {
+            self.presentCallRating?(callId)
+        }
     }
     
     private func updateButtonsMode() {
@@ -455,6 +461,8 @@ final class CallControllerNode: ASDisplayNode {
         guard self.debugNode == nil else {
             return
         }
+        
+        self.forceReportRating = true
         
         let debugNode = CallDebugNode(signal: self.debugInfo)
         debugNode.dismiss = { [weak self] in

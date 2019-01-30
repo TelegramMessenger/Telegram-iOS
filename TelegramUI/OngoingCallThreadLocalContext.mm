@@ -309,8 +309,6 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
     if (_controller != nil) {
         _controller->Stop();
         
-        bool needRate = _controller->NeedRate();
-        
         auto debugString = _controller->GetDebugLog();
         NSString *debugLog = [NSString stringWithUTF8String:debugString.c_str()];
         
@@ -322,8 +320,16 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
         _controller = NULL;
         
         if (_callEnded) {
-            _callEnded(needRate, debugLog, stats.bytesSentWifi, stats.bytesRecvdWifi, stats.bytesSentMobile, stats.bytesRecvdMobile);
+            _callEnded(debugLog, stats.bytesSentWifi, stats.bytesRecvdWifi, stats.bytesSentMobile, stats.bytesRecvdMobile);
         }
+    }
+}
+    
+- (bool)needRate {
+    if (_controller != nil) {
+        return _controller->NeedRate();
+    } else {
+        return false;
     }
 }
 

@@ -49,6 +49,13 @@ class WallpaperGalleryItem: GalleryItem {
 private let progressDiameter: CGFloat = 50.0
 private let motionAmount: CGFloat = 32.0
 
+private func reference(for resource: MediaResource, media: Media, message: Message?) -> MediaResourceReference {
+    if let message = message {
+        return .media(media: .message(message: MessageReference(message), media: media), resource: resource)
+    }
+    return .wallpaper(resource: resource)
+}
+
 final class WallpaperGalleryItemNode: GalleryItemNode {
     private let account: Account
     var entry: WallpaperGalleryEntry?
@@ -95,8 +102,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         self.blurButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Blurred, value: .check(false))
+        self.blurButtonNode.setEnabled(false)
         self.motionButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Motion, value: .check(false))
+        self.motionButtonNode.setEnabled(false)
         self.patternButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Pattern, value: .check(false))
+        self.patternButtonNode.setEnabled(false)
         
         super.init()
         
@@ -189,7 +199,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             var isBlurrable = true
             
             switch entry {
-                case let .wallpaper(wallpaper):
+                case let .wallpaper(wallpaper, message):
                     switch wallpaper {
                         case .builtin:
                             displaySize = CGSize(width: 1308.0, height: 2688.0).fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
@@ -218,9 +228,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             
                             var convertedRepresentations: [ImageRepresentationWithReference] = []
                             for representation in file.file.previewRepresentations {
-                                convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .wallpaper(resource: representation.resource)))
+                                convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: representation.resource, media: file.file, message: message)))
                             }
-                            convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .wallpaper(resource: file.file.resource)))
+                            convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: reference(for: file.file.resource, media: file.file, message: message)))
                             
                             if file.isPattern {
                                 var patternColor = UIColor(rgb: 0xd6e2ee, alpha: 0.5)
@@ -234,7 +244,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 
                                 self.backgroundColor = patternColor.withAlphaComponent(1.0)
                                 
-                                if let previousEntry = previousEntry, case let .wallpaper(wallpaper) = previousEntry, case let .file(previousFile) = wallpaper, file.id == previousFile.id && (file.settings.color != previousFile.settings.color || file.settings.intensity != previousFile.settings.intensity) && self.colorPreview == self.arguments.colorPreview {
+                                if let previousEntry = previousEntry, case let .wallpaper(wallpaper, _) = previousEntry, case let .file(previousFile) = wallpaper, file.id == previousFile.id && (file.settings.color != previousFile.settings.color || file.settings.intensity != previousFile.settings.intensity) && self.colorPreview == self.arguments.colorPreview {
                                     
                                     let makeImageLayout = self.imageNode.asyncLayout()
                                     Queue.concurrentDefaultQueue().async {
@@ -260,7 +270,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 
                                 isBlurrable = false
                             } else {
-                                signal = wallpaperImage(account: account, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
+                                let fileReference: FileMediaReference
+                                if let message = message {
+                                    fileReference = .message(message: MessageReference(message), media: file.file)
+                                } else {
+                                    fileReference = .standalone(media: file.file)
+                                }
+                                signal = wallpaperImage(account: account, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
                             }
                             fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
                             statusSignal = account.postbox.mediaBox.resourceStatus(file.file.resource)
@@ -559,7 +575,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
     
     private func preparePatternEditing() {
-        if let entry = self.entry, case let .wallpaper(wallpaper) = entry, case let .file(file) = wallpaper {
+        if let entry = self.entry, case let .wallpaper(wallpaper, _) = entry, case let .file(file) = wallpaper {
             if let size = file.file.dimensions?.fitted(CGSize(width: 1280.0, height: 1280.0)) {
                 let _ = self.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size), complete: false, fetch: true).start()
             }
@@ -652,7 +668,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     blurFrame = leftButtonFrame
                     motionAlpha = 1.0
                     motionFrame = rightButtonFrame
-                case let .wallpaper(wallpaper):
+                case let .wallpaper(wallpaper, _):
                     switch wallpaper {
                         case .builtin:
                             motionAlpha = 1.0

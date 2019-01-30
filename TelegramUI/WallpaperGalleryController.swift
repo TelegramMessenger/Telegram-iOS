@@ -14,22 +14,38 @@ enum WallpaperListType {
 
 enum WallpaperListSource {
     case list(wallpapers: [TelegramWallpaper], central: TelegramWallpaper, type: WallpaperListType)
-    case wallpaper(TelegramWallpaper, WallpaperPresentationOptions?, UIColor?, Int32?)
-    case slug(String, TelegramMediaFile?, WallpaperPresentationOptions?, UIColor?, Int32?)
+    case wallpaper(TelegramWallpaper, WallpaperPresentationOptions?, UIColor?, Int32?, Message?)
+    case slug(String, TelegramMediaFile?, WallpaperPresentationOptions?, UIColor?, Int32?, Message?)
     case asset(PHAsset)
     case contextResult(ChatContextResult)
     case customColor(Int32?)
 }
 
+private func areMessagesEqual(_ lhsMessage: Message?, _ rhsMessage: Message?) -> Bool {
+    if lhsMessage == nil && rhsMessage == nil {
+        return true
+    }
+    guard let lhsMessage = lhsMessage, let rhsMessage = rhsMessage else {
+        return false
+    }
+    if lhsMessage.stableVersion != rhsMessage.stableVersion {
+        return false
+    }
+    if lhsMessage.id != rhsMessage.id || lhsMessage.flags != rhsMessage.flags {
+        return false
+    }
+    return true
+}
+
 enum WallpaperGalleryEntry: Equatable {
-    case wallpaper(TelegramWallpaper)
+    case wallpaper(TelegramWallpaper, Message?)
     case asset(PHAsset)
     case contextResult(ChatContextResult)
     
     public static func ==(lhs: WallpaperGalleryEntry, rhs: WallpaperGalleryEntry) -> Bool {
         switch lhs {
-            case let .wallpaper(wallpaper):
-                if case .wallpaper(wallpaper) = rhs {
+            case let .wallpaper(lhsWallpaper, lhsMessage):
+                if case let .wallpaper(rhsWallpaper, rhsMessage) = rhs, lhsWallpaper == rhsWallpaper, areMessagesEqual(lhsMessage, rhsMessage) {
                     return true
                 } else {
                     return false
@@ -153,22 +169,22 @@ class WallpaperGalleryController: ViewController {
         
         switch source {
             case let .list(wallpapers, central, type):
-                entries = wallpapers.map { .wallpaper($0) }
+                entries = wallpapers.map { .wallpaper($0, nil) }
                 centralEntryIndex = wallpapers.index(of: central)!
                 
                 if case let .wallpapers(wallpaperOptions) = type, let options = wallpaperOptions {
                     self.initialOptions = options
                 }
-            case let .slug(slug, file, options, color, intensity):
+            case let .slug(slug, file, options, color, intensity, message):
                 if let file = file {
                     let wallpaper = updatedFileWallpaper(slug: slug, file: file, color: color, intensity: intensity)
-                    entries = [.wallpaper(wallpaper)]
+                    entries = [.wallpaper(wallpaper, message)]
                     centralEntryIndex = 0
                     self.initialOptions = options
                 }
-            case let .wallpaper(wallpaper, options, color, intensity):
+            case let .wallpaper(wallpaper, options, color, intensity, message):
                 let wallpaper = updatedFileWallpaper(wallpaper: wallpaper, color: color, intensity: intensity)
-                entries = [.wallpaper(wallpaper)]
+                entries = [.wallpaper(wallpaper, message)]
                 centralEntryIndex = 0
                 self.initialOptions = options
             case let .asset(asset):
@@ -180,7 +196,7 @@ class WallpaperGalleryController: ViewController {
             case let .customColor(color):
                 self.colorPanelEnabled = true
                 let initialColor = color ?? 0x000000
-                entries = [.wallpaper(.color(initialColor))]
+                entries = [.wallpaper(.color(initialColor), nil)]
                 centralEntryIndex = 0
         }
         
@@ -340,7 +356,7 @@ class WallpaperGalleryController: ViewController {
                     if !strongSelf.entries.isEmpty {
                         let entry = strongSelf.entries[centralItemNode.index]
                         switch entry {
-                            case let .wallpaper(wallpaper):
+                            case let .wallpaper(wallpaper, _):
                                 var resource: MediaResource?
                                 switch wallpaper {
                                     case let .file(file):
@@ -483,10 +499,10 @@ class WallpaperGalleryController: ViewController {
         var entries = self.entries
         var currentEntry = entries[centralEntryIndex]
         switch currentEntry {
-            case let .wallpaper(wallpaper):
+            case let .wallpaper(wallpaper, _):
                 switch wallpaper {
                     case .color:
-                        currentEntry = .wallpaper(.color(Int32(color.rgb)))
+                        currentEntry = .wallpaper(.color(Int32(color.rgb)), nil)
                     default:
                         break
                 }
@@ -503,7 +519,7 @@ class WallpaperGalleryController: ViewController {
         var updatedEntries: [WallpaperGalleryEntry] = []
         for entry in self.entries {
             var entryColor: Int32?
-            if case let .wallpaper(wallpaper) = entry {
+            if case let .wallpaper(wallpaper, _) = entry {
                 if case let .color(color) = wallpaper {
                     entryColor = color
                 } else if case let .file(file) = wallpaper {
@@ -515,10 +531,10 @@ class WallpaperGalleryController: ViewController {
                 if let pattern = pattern, case let .file(file) = pattern {
                     let newSettings = WallpaperSettings(blur: file.settings.blur, motion: file.settings.motion, color: entryColor, intensity: intensity)
                     let newWallpaper = TelegramWallpaper.file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: newSettings)
-                    updatedEntries.append(.wallpaper(newWallpaper))
+                    updatedEntries.append(.wallpaper(newWallpaper, nil))
                 } else {
                     let newWallpaper = TelegramWallpaper.color(entryColor)
-                    updatedEntries.append(.wallpaper(newWallpaper))
+                    updatedEntries.append(.wallpaper(newWallpaper, nil))
                 }
             }
         }
@@ -537,7 +553,7 @@ class WallpaperGalleryController: ViewController {
         peers[otherPeerId] = TelegramUser(id: otherPeerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
         
         var currentWallpaper: TelegramWallpaper = self.presentationData.chatWallpaper
-        if let entry = self.currentEntry(), case let .wallpaper(wallpaper) = entry {
+        if let entry = self.currentEntry(), case let .wallpaper(wallpaper, _) = entry {
             currentWallpaper = wallpaper
         }
         
@@ -693,7 +709,7 @@ class WallpaperGalleryController: ViewController {
     }
     
     private func actionPressed() {
-        guard let entry = self.currentEntry(), case let .wallpaper(wallpaper) = entry, let itemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode else {
+        guard let entry = self.currentEntry(), case let .wallpaper(wallpaper, _) = entry, let itemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode else {
             return
         }
         

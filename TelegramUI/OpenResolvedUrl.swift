@@ -216,7 +216,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, account: Account, context: Open
             let _ = (signal
             |> deliverOnMainQueue).start(next: { [weak controller] wallpaper in
                 controller?.dismiss()
-                let galleryController = WallpaperGalleryController(account: account, source: .wallpaper(wallpaper, options, color, intensity))
+                let galleryController = WallpaperGalleryController(account: account, source: .wallpaper(wallpaper, options, color, intensity, nil))
                 present(galleryController, nil)
             }, error: { [weak controller] error in
                 controller?.dismiss()
