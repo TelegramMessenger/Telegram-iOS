@@ -16,10 +16,10 @@ final class SharedAccountMediaManager {
     }
     
     func resourceData(resourceId: MediaResourceId) -> Data? {
-        return try? Data(contentsOf: URL(fileURLWithPath: self.pathForId(id)))
+        return try? Data(contentsOf: URL(fileURLWithPath: self.pathForId(resourceId)))
     }
     
     func storeResourceData(resourceId: MediaResourceId, data: Data) {
-        let _ = try? data.write(to: URL(fileURLWithPath: self.pathForId(id)))
+        let _ = try? data.write(to: URL(fileURLWithPath: self.pathForId(resourceId)))
     }
 }
