@@ -83,7 +83,7 @@ public final class SharedAccountContext {
     public var presentGlobalController: (ViewController, Any?) -> Void = { _, _ in }
     public var presentCrossfadeController: () -> Void = {}
     
-    public init(mainWindow: Window1?, accountManager: AccountManager, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>) {
+    public init(mainWindow: Window1?, accountManager: AccountManager, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void) {
         assert(Queue.mainQueue().isCurrent())
         self.mainWindow = mainWindow
         self.applicationBindings = applicationBindings
@@ -323,7 +323,7 @@ public final class SharedAccountContext {
                 })
             }, audioSession: self.mediaManager.audioSession, activeAccounts: self.activeAccounts |> map { _, accounts, _ in
                 return Array(accounts.values)
-                })
+            })
             self.callManager = callManager
             
             self.callDisposable = (callManager.currentCallSignal
@@ -336,18 +336,17 @@ public final class SharedAccountContext {
                         
                         if let call = call {
                             mainWindow.hostView.containerView.endEditing(true)
-                            /*let callController = CallController(context: strongSelf.context, call: call)
+                            let callController = CallController(sharedContext: strongSelf, account: call.account, call: call)
                             strongSelf.callController = callController
-                            strongSelf.mainWindow.present(callController, on: .calls)
+                            strongSelf.mainWindow?.present(callController, on: .calls)
                             strongSelf.callState.set(call.state
-                                |> map(Optional.init))
-                            strongSelf.hasOngoingCall.set(true)*/
-                            
-                            //strongSelf.notificationManager.setNotificationCall(call, strings: strongSelf.context.sharedContext.currentPresentationData.with({ $0 }).strings)
+                            |> map(Optional.init))
+                            strongSelf.hasOngoingCall.set(true)
+                            setNotificationCall(call)
                         } else {
                             strongSelf.callState.set(.single(nil))
                             strongSelf.hasOngoingCall.set(false)
-                            //strongSelf.notificationManager.setNotificationCall(nil, strings: strongSelf.context.sharedContext.currentPresentationData.with({ $0 }).strings)
+                            setNotificationCall(nil)
                         }
                     }
                 }

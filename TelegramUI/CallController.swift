@@ -15,7 +15,8 @@ public final class CallController: ViewController {
         return self._ready
     }
     
-    private let context: AccountContext
+    private let sharedContext: SharedAccountContext
+    private let account: Account
     public let call: PresentationCall
     
     private var presentationData: PresentationData
@@ -32,11 +33,12 @@ public final class CallController: ViewController {
     private var audioOutputStateDisposable: Disposable?
     private var audioOutputState: ([AudioSessionOutput], AudioSessionOutput?)?
     
-    public init(context: AccountContext, call: PresentationCall) {
-        self.context = context
+    public init(sharedContext: SharedAccountContext, account: Account, call: PresentationCall) {
+        self.sharedContext = sharedContext
+        self.account = account
         self.call = call
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
         
@@ -89,7 +91,7 @@ public final class CallController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = CallControllerNode(context: self.context, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit)
+        self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit)
         self.displayNodeDidLoad()
         
         self.controllerNode.toggleMute = { [weak self] in
@@ -167,7 +169,7 @@ public final class CallController: ViewController {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
-        self.peerDisposable = (context.account.postbox.peerView(id: self.call.peerId)
+        self.peerDisposable = (self.account.postbox.peerView(id: self.call.peerId)
         |> deliverOnMainQueue).start(next: { [weak self] view in
             if let strongSelf = self {
                 if let peer = view.peers[view.peerId] {

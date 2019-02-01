@@ -154,7 +154,7 @@ private final class PresentationCallToneRenderer {
 }
 
 public final class PresentationCall {
-    private let account: Account
+    public let account: Account
     private let audioSession: ManagedAudioSession
     private let callSessionManager: CallSessionManager
     private let callKitIntegration: CallKitIntegration?

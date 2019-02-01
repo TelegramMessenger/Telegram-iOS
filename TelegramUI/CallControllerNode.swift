@@ -8,7 +8,8 @@ import SwiftSignalKit
 import TelegramUIPrivateModule
 
 final class CallControllerNode: ASDisplayNode {
-    private let context: AccountContext
+    private let sharedContext: SharedAccountContext
+    private let account: Account
     
     private let statusBar: StatusBar
     
@@ -52,8 +53,9 @@ final class CallControllerNode: ASDisplayNode {
     var back: (() -> Void)?
     var dismissedInteractively: (() -> Void)?
     
-    init(context: AccountContext, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false) {
-        self.context = context
+    init(sharedContext: SharedAccountContext, account: Account, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false) {
+        self.sharedContext = sharedContext
+        self.account = account
         self.presentationData = presentationData
         self.statusBar = statusBar
         self.debugInfo = debugInfo
@@ -152,7 +154,7 @@ final class CallControllerNode: ASDisplayNode {
             self.peer = peer
             if let peerReference = PeerReference(peer), !peer.profileImageRepresentations.isEmpty {
                 let representations: [ImageRepresentationWithReference] = peer.profileImageRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: .avatar(peer: peerReference, resource: $0.resource)) })
-                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, autoFetchFullSize: true))
+                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.account, representations: representations, autoFetchFullSize: true))
                 self.dimNode.isHidden = false
             } else {
                 self.imageNode.setSignal(callDefaultBackground())

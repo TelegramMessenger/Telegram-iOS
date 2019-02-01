@@ -129,6 +129,13 @@ public final class MediaManager: NSObject {
     var globalMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> {
         return self.globalMediaPlayerStateValue.get()
     }
+    public var activeGlobalMediaPlayerAccountId: Signal<AccountRecordId?, NoError> {
+        return self.globalMediaPlayerStateValue.get()
+        |> map { state in
+            return state?.0.id
+        }
+        |> distinctUntilChanged
+    }
     
     private let setPlaylistByTypeDisposables = DisposableDict<MediaManagerPlayerType>()
     

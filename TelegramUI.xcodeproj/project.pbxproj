@@ -161,6 +161,7 @@
 		D0147BA7206E8B4F00E40378 /* SecureIdAuthAcceptNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0147BA6206E8B4F00E40378 /* SecureIdAuthAcceptNode.swift */; };
 		D0147BA9206EA35000E40378 /* SecureIdDocumentGalleryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0147BA8206EA35000E40378 /* SecureIdDocumentGalleryController.swift */; };
 		D0147BAB206EA6C100E40378 /* SecureIdDocumentImageGalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0147BAA206EA6C100E40378 /* SecureIdDocumentImageGalleryItem.swift */; };
+		D017734C22049BF800DA06A7 /* UpgradedAccounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D017734B22049BF800DA06A7 /* UpgradedAccounts.swift */; };
 		D01776B31F1D69A80044446D /* RadialStatusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01776B21F1D69A80044446D /* RadialStatusNode.swift */; };
 		D01776B51F1D6CCC0044446D /* RadialStatusContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01776B41F1D6CCC0044446D /* RadialStatusContentNode.swift */; };
 		D01776B81F1D6FB30044446D /* RadialProgressContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01776B71F1D6FB30044446D /* RadialProgressContentNode.swift */; };
@@ -1324,6 +1325,7 @@
 		D01749541E1082770057C89A /* StoredMessageFromSearchPeer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StoredMessageFromSearchPeer.swift; sourceTree = "<group>"; };
 		D01749561E1087CC0057C89A /* ChatBotStartInputPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatBotStartInputPanelNode.swift; sourceTree = "<group>"; };
 		D01749611E11DB240057C89A /* NetworkStatusTitleView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkStatusTitleView.swift; sourceTree = "<group>"; };
+		D017734B22049BF800DA06A7 /* UpgradedAccounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpgradedAccounts.swift; sourceTree = "<group>"; };
 		D01776B21F1D69A80044446D /* RadialStatusNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RadialStatusNode.swift; sourceTree = "<group>"; };
 		D01776B41F1D6CCC0044446D /* RadialStatusContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RadialStatusContentNode.swift; sourceTree = "<group>"; };
 		D01776B71F1D6FB30044446D /* RadialProgressContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RadialProgressContentNode.swift; sourceTree = "<group>"; };
@@ -2738,6 +2740,7 @@
 				D02B198921F1DA9E0094A764 /* SharedAccountContext.swift */,
 				D05811931DD5F9380057C769 /* AccountContext.swift */,
 				D02B198D21FA453F0094A764 /* AccountUserInterface.swift */,
+				D017734B22049BF800DA06A7 /* UpgradedAccounts.swift */,
 			);
 			name = "Account Management";
 			sourceTree = "<group>";
@@ -5592,6 +5595,7 @@
 				D0EC6D9A1EB9F58900EBF1C3 /* ChatMessageReplyInfoNode.swift in Sources */,
 				D0FE4DE41F0AEBB900E8A0B3 /* SharedVideoContextManager.swift in Sources */,
 				D0EC6D9B1EB9F58900EBF1C3 /* ChatMessageStickerItemNode.swift in Sources */,
+				D017734C22049BF800DA06A7 /* UpgradedAccounts.swift in Sources */,
 				D0EC6D9C1EB9F58900EBF1C3 /* ChatMessageInstantVideoItemNode.swift in Sources */,
 				D0EC6D9D1EB9F58900EBF1C3 /* ChatMessageTextBubbleContentNode.swift in Sources */,
 				D0E9BA2B1F0557A600F079A4 /* STPFormEncoder.m in Sources */,
