@@ -330,6 +330,7 @@ public final class AccountManager {
     public let temporarySessionId: Int64
     
     public init(basePath: String) {
+        self.basePath = basePath
         var temporarySessionId: Int64 = 0
         arc4random_buf(&temporarySessionId, 8)
         self.temporarySessionId = temporarySessionId
