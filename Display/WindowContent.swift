@@ -208,8 +208,8 @@ public final class WindowHostView {
     let updateDeferScreenEdgeGestures: (UIRectEdge) -> Void
     let updatePreferNavigationUIHidden: (Bool) -> Void
     
-    var present: ((ViewController, PresentationSurfaceLevel, Bool, @escaping () -> Void) -> Void)?
-    var presentInGlobalOverlay: ((_ controller: ViewController) -> Void)?
+    var present: ((ContainableController, PresentationSurfaceLevel, Bool, @escaping () -> Void) -> Void)?
+    var presentInGlobalOverlay: ((_ controller: ContainableController) -> Void)?
     var presentNative: ((UIViewController) -> Void)?
     var updateSize: ((CGSize, Double) -> Void)?
     var layoutSubviews: (() -> Void)?
@@ -219,7 +219,7 @@ public final class WindowHostView {
     var invalidateDeferScreenEdgeGesture: (() -> Void)?
     var invalidatePreferNavigationUIHidden: (() -> Void)?
     var cancelInteractiveKeyboardGestures: (() -> Void)?
-    var forEachController: (((ViewController) -> Void) -> Void)?
+    var forEachController: (((ContainableController) -> Void) -> Void)?
     var getAccessibilityElements: (() -> [Any]?)?
     
     init(containerView: UIView, eventView: UIView, isRotating: @escaping () -> Bool, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void, updateDeferScreenEdgeGestures: @escaping (UIRectEdge) -> Void, updatePreferNavigationUIHidden: @escaping (Bool) -> Void) {
@@ -246,9 +246,9 @@ public struct WindowTracingTags {
 }
 
 public protocol WindowHost {
-    func forEachController(_ f: (ViewController) -> Void)
-    func present(_ controller: ViewController, on level: PresentationSurfaceLevel, blockInteraction: Bool, completion: @escaping () -> Void)
-    func presentInGlobalOverlay(_ controller: ViewController)
+    func forEachController(_ f: (ContainableController) -> Void)
+    func present(_ controller: ContainableController, on level: PresentationSurfaceLevel, blockInteraction: Bool, completion: @escaping () -> Void)
+    func presentInGlobalOverlay(_ controller: ContainableController)
     func invalidateDeferScreenEdgeGestures()
     func invalidatePreferNavigationUIHidden()
     func cancelInteractiveKeyboardGestures()
@@ -742,18 +742,17 @@ public class Window1 {
             keyboardManager.surfaces = keyboardSurfaces
             
             var supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
+            let orientationToLock: UIInterfaceOrientationMask
+            if self.windowLayout.size.width < self.windowLayout.size.height {
+                orientationToLock = .portrait
+            } else {
+                orientationToLock = .landscape
+            }
             if let _rootController = self._rootController {
-                let orientationToLock: UIInterfaceOrientationMask
-                if self.windowLayout.size.width < self.windowLayout.size.height {
-                    orientationToLock = .portrait
-                } else {
-                    orientationToLock = .landscape
-                }
-                
                 supportedOrientations = supportedOrientations.intersection(_rootController.combinedSupportedOrientations(currentOrientationToLock: orientationToLock))
             }
-            supportedOrientations = supportedOrientations.intersection(self.presentationContext.combinedSupportedOrientations())
-            supportedOrientations = supportedOrientations.intersection(self.overlayPresentationContext.combinedSupportedOrientations())
+            supportedOrientations = supportedOrientations.intersection(self.presentationContext.combinedSupportedOrientations(currentOrientationToLock: orientationToLock))
+            supportedOrientations = supportedOrientations.intersection(self.overlayPresentationContext.combinedSupportedOrientations(currentOrientationToLock: orientationToLock))
             
             var resolvedOrientations: UIInterfaceOrientationMask
             switch self.windowLayout.metrics.widthClass {
@@ -904,11 +903,11 @@ public class Window1 {
         }
     }
     
-    public func present(_ controller: ViewController, on level: PresentationSurfaceLevel, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
+    public func present(_ controller: ContainableController, on level: PresentationSurfaceLevel, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
         self.presentationContext.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
     }
     
-    public func presentInGlobalOverlay(_ controller: ViewController) {
+    public func presentInGlobalOverlay(_ controller: ContainableController) {
         self.overlayPresentationContext.present(controller)
     }
     
@@ -1009,7 +1008,7 @@ public class Window1 {
         return false
     }
     
-    public func forEachViewController(_ f: (ViewController) -> Bool) {
+    public func forEachViewController(_ f: (ContainableController) -> Bool) {
         for (controller, _) in self.presentationContext.controllers {
             if !f(controller) {
                 break

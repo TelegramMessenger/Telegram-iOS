@@ -39,7 +39,7 @@ final class PresentationContext {
         return self.view != nil && self.layout != nil
     }
     
-    private(set) var controllers: [(ViewController, PresentationSurfaceLevel)] = []
+    private(set) var controllers: [(ContainableController, PresentationSurfaceLevel)] = []
     
     private var presentationDisposables = DisposableSet()
     
@@ -47,8 +47,8 @@ final class PresentationContext {
     
     var isCurrentlyOpaque: Bool {
         for (controller, _) in self.controllers {
-            if controller.isOpaqueWhenInOverlay && controller.isNodeLoaded {
-                if traceIsOpaque(layer: controller.displayNode.layer, rect: controller.displayNode.bounds) {
+            if controller.isOpaqueWhenInOverlay && controller.isViewLoaded {
+                if traceIsOpaque(layer: controller.view.layer, rect: controller.view.bounds) {
                     return true
                 }
             }
@@ -57,7 +57,7 @@ final class PresentationContext {
     }
     
     private func topLevelSubview(for level: PresentationSurfaceLevel) -> UIView? {
-        var topController: ViewController?
+        var topController: ContainableController?
         for (controller, controllerLevel) in self.controllers.reversed() {
             if !controller.isViewLoaded || controller.view.superview == nil {
                 continue
@@ -97,7 +97,7 @@ final class PresentationContext {
         }
     }
     
-    public func present(_ controller: ViewController, on level: PresentationSurfaceLevel, blockInteraction: Bool = false, completion: @escaping () -> Void) {
+    public func present(_ controller: ContainableController, on level: PresentationSurfaceLevel, blockInteraction: Bool = false, completion: @escaping () -> Void) {
         let controllerReady = controller.ready.get()
         |> filter({ $0 })
         |> take(1)
@@ -105,15 +105,17 @@ final class PresentationContext {
         |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(true))
         
         if let _ = self.view, let initialLayout = self.layout {
-            if controller.lockOrientation {
-                let orientations: UIInterfaceOrientationMask
-                if initialLayout.size.width < initialLayout.size.height {
-                    orientations = .portrait
-                } else {
-                    orientations = .landscape
+            if let controller = controller as? ViewController {
+                if controller.lockOrientation {
+                    let orientations: UIInterfaceOrientationMask
+                    if initialLayout.size.width < initialLayout.size.height {
+                        orientations = .portrait
+                    } else {
+                        orientations = .landscape
+                    }
+                    
+                    controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: orientations, compactSize: orientations)
                 }
-                
-                controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: orientations, compactSize: orientations)
             }
             controller.view.frame = CGRect(origin: CGPoint(), size: initialLayout.size)
             controller.containerLayoutUpdated(initialLayout, transition: .immediate)
@@ -145,12 +147,12 @@ final class PresentationContext {
                     }
                     strongSelf.controllers.insert((controller, level), at: insertIndex ?? strongSelf.controllers.count)
                     if let view = strongSelf.view, let layout = strongSelf.layout {
-                        controller.navigation_setDismiss({ [weak controller] in
+                        (controller as? UIViewController)?.navigation_setDismiss({ [weak controller] in
                             if let strongSelf = self, let controller = controller {
                                 strongSelf.dismiss(controller)
                             }
                         }, rootController: nil)
-                        controller.setIgnoreAppearanceMethodInvocations(true)
+                        (controller as? UIViewController)?.setIgnoreAppearanceMethodInvocations(true)
                         if layout != initialLayout {
                             controller.view.frame = CGRect(origin: CGPoint(), size: layout.size)
                             if let topLevelSubview = strongSelf.topLevelSubview(for: level) {
@@ -166,7 +168,7 @@ final class PresentationContext {
                                 view.addSubview(controller.view)
                             }
                         }
-                        controller.setIgnoreAppearanceMethodInvocations(false)
+                        (controller as? UIViewController)?.setIgnoreAppearanceMethodInvocations(false)
                         view.layer.invalidateUpTheTree()
                         controller.viewWillAppear(false)
                         controller.viewDidAppear(false)
@@ -182,7 +184,7 @@ final class PresentationContext {
         self.presentationDisposables.dispose()
     }
     
-    private func dismiss(_ controller: ViewController) {
+    private func dismiss(_ controller: ContainableController) {
         if let index = self.controllers.index(where: { $0.0 === controller }) {
             self.controllers.remove(at: index)
             controller.viewWillDisappear(false)
@@ -247,11 +249,11 @@ final class PresentationContext {
         return nil
     }
     
-    func combinedSupportedOrientations() -> ViewControllerSupportedOrientations {
+    func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
         var mask = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
         
         for (controller, _) in self.controllers {
-            mask = mask.intersection(controller.supportedOrientations)
+            mask = mask.intersection(controller.combinedSupportedOrientations(currentOrientationToLock: currentOrientationToLock))
         }
         
         return mask

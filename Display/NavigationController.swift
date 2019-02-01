@@ -95,6 +95,14 @@ public enum NavigationControllerMode {
 }
 
 open class NavigationController: UINavigationController, ContainableController, UIGestureRecognizerDelegate {
+    public var isOpaqueWhenInOverlay: Bool = true
+    
+    public var ready: Promise<Bool> = Promise(true)
+    
+    public var lockOrientation: Bool = false
+    
+    public var deferScreenEdgeGestures: UIRectEdge = UIRectEdge()
+    
     private let mode: NavigationControllerMode
     private var theme: NavigationControllerTheme
     

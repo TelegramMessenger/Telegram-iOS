@@ -25,7 +25,7 @@ private func isViewVisibleInHierarchy(_ view: UIView, _ initial: Bool = true) ->
 final class GlobalOverlayPresentationContext {
     private let statusBarHost: StatusBarHost?
     
-    private var controllers: [ViewController] = []
+    private var controllers: [ContainableController] = []
     
     private var presentationDisposables = DisposableSet()
     private var layout: ContainerViewLayout?
@@ -49,7 +49,7 @@ final class GlobalOverlayPresentationContext {
         return nil
     }
     
-    func present(_ controller: ViewController) {
+    func present(_ controller: ContainableController) {
         let controllerReady = controller.ready.get()
         |> filter({ $0 })
         |> take(1)
@@ -68,12 +68,12 @@ final class GlobalOverlayPresentationContext {
                     
                     strongSelf.controllers.append(controller)
                     if let view = strongSelf.currentPresentationView(), let layout = strongSelf.layout {
-                        controller.navigation_setDismiss({ [weak controller] in
+                        (controller as? UIViewController)?.navigation_setDismiss({ [weak controller] in
                             if let strongSelf = self, let controller = controller {
                                 strongSelf.dismiss(controller)
                             }
                         }, rootController: nil)
-                        controller.setIgnoreAppearanceMethodInvocations(true)
+                        (controller as? UIViewController)?.setIgnoreAppearanceMethodInvocations(true)
                         if layout != initialLayout {
                             controller.view.frame = CGRect(origin: CGPoint(), size: layout.size)
                             view.addSubview(controller.view)
@@ -81,7 +81,7 @@ final class GlobalOverlayPresentationContext {
                         } else {
                             view.addSubview(controller.view)
                         }
-                        controller.setIgnoreAppearanceMethodInvocations(false)
+                        (controller as? UIViewController)?.setIgnoreAppearanceMethodInvocations(false)
                         view.layer.invalidateUpTheTree()
                         controller.viewWillAppear(false)
                         controller.viewDidAppear(false)
@@ -97,7 +97,7 @@ final class GlobalOverlayPresentationContext {
         self.presentationDisposables.dispose()
     }
     
-    private func dismiss(_ controller: ViewController) {
+    private func dismiss(_ controller: ContainableController) {
         if let index = self.controllers.index(where: { $0 === controller }) {
             self.controllers.remove(at: index)
             controller.viewWillDisappear(false)
@@ -158,11 +158,11 @@ final class GlobalOverlayPresentationContext {
         return nil
     }
     
-    func combinedSupportedOrientations() -> ViewControllerSupportedOrientations {
+    func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
         var mask = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
         
         for controller in self.controllers {
-            mask = mask.intersection(controller.supportedOrientations)
+            mask = mask.intersection(controller.combinedSupportedOrientations(currentOrientationToLock: currentOrientationToLock))
         }
         
         return mask

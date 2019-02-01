@@ -170,14 +170,14 @@ private final class NativeWindow: UIWindow, WindowHost {
     var layoutSubviewsEvent: (() -> Void)?
     var updateIsUpdatingOrientationLayout: ((Bool) -> Void)?
     var updateToInterfaceOrientation: (() -> Void)?
-    var presentController: ((ViewController, PresentationSurfaceLevel, Bool, @escaping () -> Void) -> Void)?
-    var presentControllerInGlobalOverlay: ((_ controller: ViewController) -> Void)?
+    var presentController: ((ContainableController, PresentationSurfaceLevel, Bool, @escaping () -> Void) -> Void)?
+    var presentControllerInGlobalOverlay: ((_ controller: ContainableController) -> Void)?
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
     var presentNativeImpl: ((UIViewController) -> Void)?
     var invalidateDeferScreenEdgeGestureImpl: (() -> Void)?
     var invalidatePreferNavigationUIHiddenImpl: (() -> Void)?
     var cancelInteractiveKeyboardGesturesImpl: (() -> Void)?
-    var forEachControllerImpl: (((ViewController) -> Void) -> Void)?
+    var forEachControllerImpl: (((ContainableController) -> Void) -> Void)?
     var getAccessibilityElementsImpl: (() -> [Any]?)?
     
     override var accessibilityElements: [Any]? {
@@ -256,11 +256,11 @@ private final class NativeWindow: UIWindow, WindowHost {
         self.updateToInterfaceOrientation?()
     }*/
     
-    func present(_ controller: ViewController, on level: PresentationSurfaceLevel, blockInteraction: Bool, completion: @escaping () -> Void) {
+    func present(_ controller: ContainableController, on level: PresentationSurfaceLevel, blockInteraction: Bool, completion: @escaping () -> Void) {
         self.presentController?(controller, level, blockInteraction, completion)
     }
     
-    func presentInGlobalOverlay(_ controller: ViewController) {
+    func presentInGlobalOverlay(_ controller: ContainableController) {
         self.presentControllerInGlobalOverlay?(controller)
     }
     
@@ -284,7 +284,7 @@ private final class NativeWindow: UIWindow, WindowHost {
         self.cancelInteractiveKeyboardGesturesImpl?()
     }
     
-    func forEachController(_ f: (ViewController) -> Void) {
+    func forEachController(_ f: (ContainableController) -> Void) {
         self.forEachControllerImpl?(f)
     }
 }
