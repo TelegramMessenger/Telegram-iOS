@@ -88,7 +88,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                 }
             }
             
-            let (titleSize, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: incoming ? theme.theme.chat.bubble.actionButtonsIncomingTextColor : theme.theme.chat.bubble.actionButtonsOutgoingTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(44.0, constrainedWidth - minimumSideInset - minimumSideInset), height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
+            let (titleSize, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: incoming ? bubbleVariableColor(variableColor: theme.theme.chat.bubble.actionButtonsIncomingTextColor, wallpaper: theme.wallpaper) : bubbleVariableColor(variableColor: theme.theme.chat.bubble.actionButtonsOutgoingTextColor, wallpaper: theme.wallpaper)), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(44.0, constrainedWidth - minimumSideInset - minimumSideInset), height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
             
             let graphics = PresentationResourcesChat.additionalGraphics(theme.theme, wallpaper: theme.wallpaper)
             let backgroundImage: UIImage?

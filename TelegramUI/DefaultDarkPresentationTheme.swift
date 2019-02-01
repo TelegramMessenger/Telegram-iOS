@@ -173,16 +173,16 @@ private let bubble = PresentationThemeChatBubble(
     incomingFileDurationColor: UIColor(rgb: 0xffffff, alpha: 0.5),
     outgoingFileDurationColor: UIColor(rgb: 0xffffff, alpha: 0.5),
     shareButtonFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0x000000, alpha: 0.5), withoutWallpaper: UIColor(rgb: 0x000000, alpha: 0.5)),
-    shareButtonStrokeColor: UIColor(rgb: 0xb2b2b2, alpha: 0.18),
-    shareButtonForegroundColor: UIColor(rgb: 0xb2b2b2), //!!!
+    shareButtonStrokeColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0xb2b2b2, alpha: 0.18), withoutWallpaper: UIColor(rgb: 0xb2b2b2, alpha: 0.18)),
+    shareButtonForegroundColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0xb2b2b2), withoutWallpaper: UIColor(rgb: 0xb2b2b2)), //!!!
     mediaOverlayControlBackgroundColor: UIColor(white: 0.0, alpha: 0.6), //!!!
     mediaOverlayControlForegroundColor: UIColor(white: 1.0, alpha: 1.0), //!!!
     actionButtonsIncomingFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0x000000, alpha: 0.5), withoutWallpaper: UIColor(rgb: 0x000000, alpha: 0.5)),
-    actionButtonsIncomingStrokeColor: UIColor(rgb: 0xb2b2b2, alpha: 0.18),
-    actionButtonsIncomingTextColor: UIColor(rgb: 0xffffff),
+    actionButtonsIncomingStrokeColor: PresentationThemeVariableColor(color: UIColor(rgb: 0xb2b2b2, alpha: 0.18)),
+    actionButtonsIncomingTextColor: PresentationThemeVariableColor(color: UIColor(rgb: 0xffffff)),
     actionButtonsOutgoingFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0x000000, alpha: 0.5), withoutWallpaper: UIColor(rgb: 0x000000, alpha: 0.5)),
-    actionButtonsOutgoingStrokeColor: UIColor(rgb: 0xb2b2b2, alpha: 0.18),
-    actionButtonsOutgoingTextColor: UIColor(rgb: 0xffffff),
+    actionButtonsOutgoingStrokeColor: PresentationThemeVariableColor(color: UIColor(rgb: 0xb2b2b2, alpha: 0.18)),
+    actionButtonsOutgoingTextColor: PresentationThemeVariableColor(color: UIColor(rgb: 0xffffff)),
     selectionControlBorderColor: .white,
     selectionControlFillColor: accentColor,
     selectionControlForegroundColor: .black,
@@ -200,7 +200,7 @@ private let serviceMessage = PresentationThemeServiceMessage(
     unreadBarFillColor: UIColor(rgb: 0x1b1b1b), //!!!
     unreadBarStrokeColor: UIColor(rgb: 0x000000),
     unreadBarTextColor: UIColor(rgb: 0xb2b2b2), //!!!
-    dateTextColor: UIColor(rgb: 0xb2b2b2)
+    dateTextColor: PresentationThemeVariableColor(color: UIColor(rgb: 0xb2b2b2))
 )
 
 private let inputPanelMediaRecordingControl = PresentationThemeChatInputPanelMediaRecordingControl(

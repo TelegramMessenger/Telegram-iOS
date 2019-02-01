@@ -956,7 +956,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
-        return [
+        let inputShortcuts: [KeyShortcut] = [
             KeyShortcut(title: strings.KeyCommand_JumpToPreviousChat, input: UIKeyInputUpArrow, modifiers: [.alternate], action: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.chatListDisplayNode.chatListNode.selectChat(.previous(unread: false))
@@ -985,6 +985,24 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             KeyShortcut(title: strings.KeyCommand_Find, input: "\t", modifiers: [], action: toggleSearch),
             KeyShortcut(input: UIKeyInputEscape, modifiers: [], action: toggleSearch)
         ]
+        
+        let openChat: (Int) -> Void = { [weak self] index in
+            if let strongSelf = self {
+                if index == 0 {
+                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.peerId(strongSelf.account.peerId))
+                } else {
+                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.index(index - 1))
+                }
+            }
+        }
+        
+        let chatShortcuts: [KeyShortcut] = (0 ... 9).map { index in
+            return KeyShortcut(input: "\(index)", modifiers: [.command], action: {
+                openChat(index)
+            })
+        }
+        
+        return inputShortcuts + chatShortcuts
     }
     
     override public func toolbarActionSelected(left: Bool) {

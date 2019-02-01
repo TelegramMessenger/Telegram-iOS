@@ -262,6 +262,8 @@ private final class ChatListOpaqueTransactionState {
 enum ChatListSelectionOption {
     case previous(unread: Bool)
     case next(unread: Bool)
+    case peerId(PeerId)
+    case index(Int)
 }
 
 enum ChatListGlobalScrollOption {
@@ -632,8 +634,7 @@ final class ChatListNode: ListView {
                     }
                     
                     if let location = location, location != strongSelf.currentLocation {
-                        strongSelf.currentLocation = location
-                        strongSelf.chatListLocation.set(location)
+                        strongSelf.setChatListLocation(location)
                     }
                     
                     strongSelf.enqueueHistoryPreloadUpdate()
@@ -674,16 +675,13 @@ final class ChatListNode: ListView {
         self.chatListDisposable.set(appliedTransition.start())
         
         let initialLocation: ChatListNodeLocation
-
         switch mode {
-        case .chatList:
-            initialLocation = .initial(count: 50)
-        case .peers:
-            initialLocation = .initial(count: 200)
+            case .chatList:
+                initialLocation = .initial(count: 50)
+            case .peers:
+                initialLocation = .initial(count: 200)
         }
-        
-        self.currentLocation = initialLocation
-        self.chatListLocation.set(initialLocation)
+        self.setChatListLocation(initialLocation)
         
         let postbox = account.postbox
         let previousPeerCache = Atomic<[PeerId: Peer]>(value: [:])
@@ -1062,17 +1060,20 @@ final class ChatListNode: ListView {
             if view.laterIndex == nil {
                 self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             } else {
-                let location: ChatListNodeLocation = .scroll(index: ChatListIndex.absoluteUpperBound, sourceIndex: ChatListIndex.absoluteLowerBound
+                let location: ChatListNodeLocation = .scroll(index: .absoluteUpperBound, sourceIndex: .absoluteLowerBound
                     , scrollPosition: .top(0.0), animated: true)
-                self.currentLocation = location
-                self.chatListLocation.set(location)
+                self.setChatListLocation(location)
             }
         } else {
-            let location: ChatListNodeLocation = .scroll(index: ChatListIndex.absoluteUpperBound, sourceIndex: ChatListIndex.absoluteLowerBound
+            let location: ChatListNodeLocation = .scroll(index: .absoluteUpperBound, sourceIndex: .absoluteLowerBound
                 , scrollPosition: .top(0.0), animated: true)
-            self.currentLocation = location
-            self.chatListLocation.set(location)
+            self.setChatListLocation(location)
         }
+    }
+    
+    private func setChatListLocation(_ location: ChatListNodeLocation) {
+        self.currentLocation = location
+        self.chatListLocation.set(location)
     }
     
     private func relativeUnreadChatListIndex(position: ChatListRelativePosition) -> Signal<ChatListIndex?, NoError> {
@@ -1080,10 +1081,10 @@ final class ChatListNode: ListView {
             var filter = true
             if let inAppNotificationSettings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.inAppNotificationSettings) as? InAppNotificationSettings {
                 switch inAppNotificationSettings.totalUnreadCountDisplayStyle {
-                case .raw:
-                    filter = false
-                case .filtered:
-                    filter = true
+                    case .raw:
+                        filter = false
+                    case .filtered:
+                        filter = true
                 }
             }
             return transaction.getRelativeUnreadChatListIndex(filtered: filter, position: position)
@@ -1097,15 +1098,13 @@ final class ChatListNode: ListView {
             }
             
             if let index = index {
-                let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: self?.currentlyVisibleLatestChatListIndex() ?? ChatListIndex.absoluteUpperBound
+                let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: self?.currentlyVisibleLatestChatListIndex() ?? .absoluteUpperBound
                     , scrollPosition: .center(.top), animated: true)
-                strongSelf.currentLocation = location
-                strongSelf.chatListLocation.set(location)
+                strongSelf.setChatListLocation(location)
             } else {
-                let location: ChatListNodeLocation = .scroll(index: ChatListIndex.absoluteUpperBound, sourceIndex: ChatListIndex.absoluteLowerBound
+                let location: ChatListNodeLocation = .scroll(index: .absoluteUpperBound, sourceIndex: .absoluteLowerBound
                     , scrollPosition: .top(0.0), animated: true)
-                strongSelf.currentLocation = location
-                strongSelf.chatListLocation.set(location)
+                strongSelf.setChatListLocation(location)
             }
         })
     }
@@ -1123,14 +1122,14 @@ final class ChatListNode: ListView {
             return
         }
         
-        if interaction.highlightedChatLocation == nil {
-            let location: ChatListNodeLocation = .scroll(index: ChatListIndex.absoluteUpperBound, sourceIndex: ChatListIndex.absoluteLowerBound
-                , scrollPosition: .top(0.0), animated: true)
-            self.currentLocation = location
-            self.chatListLocation.set(location)
-            //interaction.highlightedChatLocation = ChatListHighlightedLocation(location: .peer(0), progress: 1.0)
-            return
-        }
+//        if interaction.highlightedChatLocation == nil {
+//            let location: ChatListNodeLocation = .scroll(index: ChatListIndex.absoluteUpperBound, sourceIndex: ChatListIndex.absoluteLowerBound
+//                , scrollPosition: .top(0.0), animated: true)
+//            self.currentLocation = location
+//            self.chatListLocation.set(location)
+//            //interaction.highlightedChatLocation = ChatListHighlightedLocation(location: .peer(0), progress: 1.0)
+//            return
+//        }
         
         let entryCount = chatListView.filteredEntries.count
         var current: (ChatListIndex, PeerId, Int)? = nil
@@ -1153,53 +1152,67 @@ final class ChatListNode: ListView {
             }
         }
         
-        if let current = current {
-            switch option {
-                case .previous(unread: true), .next(unread: true):
-                    let position: ChatListRelativePosition
+        switch option {
+            case .previous(unread: true), .next(unread: true):
+                let position: ChatListRelativePosition
+                if let current = current {
                     if case .previous = option {
                         position = .earlier(than: current.0)
                     } else {
                         position = .later(than: current.0)
                     }
-                    let _ = (relativeUnreadChatListIndex(position: position) |> deliverOnMainQueue).start(next: { [weak self] index in
-                        guard let strongSelf = self, let index = index else {
-                            return
-                        }
-
-                        let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: self?.currentlyVisibleLatestChatListIndex() ?? ChatListIndex.absoluteUpperBound, scrollPosition: .center(.top), animated: true)
-                        strongSelf.currentLocation = location
-                        strongSelf.chatListLocation.set(location)
-                        strongSelf.peerSelected?(index.messageIndex.id.peerId, false, false)
-                    })
-                    break
-                case .previous(unread: false), .next(unread: false):
-                    if entryCount > 1 {
-                        if current.2 > 0, case let .PeerEntry(index, _, _, _, _, _, peer, _, _, _, _, _, _) = chatListView.filteredEntries[current.2 - 1] {
-                            next = (index, peer.peerId)
-                        }
-                        if current.2 <= entryCount - 2, case let .PeerEntry(index, _, _, _, _, _, peer, _, _, _, _, _, _) = chatListView.filteredEntries[current.2 + 1] {
-                            previous = (index, peer.peerId)
-                        }
+                } else {
+                    position = .later(than: nil)
+                }
+                let _ = (relativeUnreadChatListIndex(position: position) |> deliverOnMainQueue).start(next: { [weak self] index in
+                    guard let strongSelf = self, let index = index else {
+                        return
                     }
-                    
-                    var target: (ChatListIndex, PeerId)? = nil
-                    switch option {
-                        case .previous:
-                            target = previous
-                        case .next:
-                            target = next
+                    let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: strongSelf.currentlyVisibleLatestChatListIndex() ?? .absoluteUpperBound, scrollPosition: .center(.top), animated: true)
+                    strongSelf.setChatListLocation(location)
+                    strongSelf.peerSelected?(index.messageIndex.id.peerId, false, false)
+                })
+            case .previous(unread: false), .next(unread: false):
+                var target: (ChatListIndex, PeerId)? = nil
+                if let current = current, entryCount > 1 {
+                    if current.2 > 0, case let .PeerEntry(index, _, _, _, _, _, peer, _, _, _, _, _, _) = chatListView.filteredEntries[current.2 - 1] {
+                        next = (index, peer.peerId)
                     }
-                    
-                    if let target = target {
-                        let location: ChatListNodeLocation = .scroll(index: target.0, sourceIndex: ChatListIndex.absoluteLowerBound
-                            , scrollPosition: .center(.top), animated: true)
-                        self.currentLocation = location
-                        self.chatListLocation.set(location)
-                        self.peerSelected?(target.1, false, false)
+                    if current.2 <= entryCount - 2, case let .PeerEntry(index, _, _, _, _, _, peer, _, _, _, _, _, _) = chatListView.filteredEntries[current.2 + 1] {
+                        previous = (index, peer.peerId)
                     }
-                    break
-            }
+                    if case .previous = option {
+                        target = previous
+                    } else {
+                        target = next
+                    }
+                } else if entryCount > 0 {
+                    if case let .PeerEntry(index, _, _, _, _, _, peer, _, _, _, _, _, _) = chatListView.filteredEntries[entryCount - 1] {
+                        target = (index, peer.peerId)
+                    }
+                }
+                if let target = target {
+                    let location: ChatListNodeLocation = .scroll(index: target.0, sourceIndex: .absoluteLowerBound, scrollPosition: .center(.top), animated: true)
+                    self.setChatListLocation(location)
+                    self.peerSelected?(target.1, false, false)
+                }
+            case let .peerId(peerId):
+                self.peerSelected?(peerId, false, false)
+            case let .index(index):
+                guard index < 10 else {
+                    return
+                }
+                let _ = (chatListViewForLocation(groupId: nil, location: .initial(count: 10), account: self.account)
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { update in
+                    let entries = update.view.entries
+                    if entries.count > index, case let .MessageEntry(index, _, _, _, _, renderedPeer, _) = entries[10 - index - 1] {
+                        let location: ChatListNodeLocation = .scroll(index: index, sourceIndex: .absoluteLowerBound, scrollPosition: .center(.top), animated: true)
+                        self.setChatListLocation(location)
+                        self.peerSelected?(renderedPeer.peerId, false, false)
+                    }
+                })
+                break
         }
     }
     

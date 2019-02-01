@@ -273,7 +273,7 @@ public func currentPresentationDataAndSettings(postbox: Postbox) -> Signal<Initi
                     case .nightAccent:
                         themeValue = defaultDarkAccentPresentationTheme
                     case .day:
-                        themeValue = makeDefaultDayPresentationTheme(accentColor: themeSettings.themeAccentColor ?? defaultDayAccentColor)
+                        themeValue = makeDefaultDayPresentationTheme(accentColor: themeSettings.themeAccentColor ?? defaultDayAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
                 }
         }
         let stringsValue: PresentationStrings
@@ -421,7 +421,7 @@ public func updatedPresentationData(postbox: Postbox, applicationBindings: Teleg
                                     case .nightAccent:
                                         themeValue = defaultDarkAccentPresentationTheme
                                     case .day:
-                                        themeValue = makeDefaultDayPresentationTheme(accentColor: themeSettings.themeAccentColor ?? defaultDayAccentColor)
+                                        themeValue = makeDefaultDayPresentationTheme(accentColor: themeSettings.themeAccentColor ?? defaultDayAccentColor, serviceBackgroundColor: serviceBackgroundColor)
                                 }
                         }
                         

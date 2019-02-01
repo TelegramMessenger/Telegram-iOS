@@ -187,12 +187,12 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         incomingAccentTextColor: UIColor(rgb: 0x007ee5),
         outgoingAccentTextColor: UIColor(rgb: 0x00a700),
         incomingAccentControlColor: UIColor(rgb: 0x007ee5),
-        outgoingAccentControlColor: UIColor(rgb: 0x3FC33B),
+        outgoingAccentControlColor: UIColor(rgb: 0x3fc33b),
         incomingMediaActiveControlColor: UIColor(rgb: 0x007ee5),
-        outgoingMediaActiveControlColor: UIColor(rgb: 0x3FC33B),
+        outgoingMediaActiveControlColor: UIColor(rgb: 0x3fc33b),
         incomingMediaInactiveControlColor: UIColor(rgb: 0xcacaca),
-        outgoingMediaInactiveControlColor: UIColor(rgb: 0x93D987),
-        outgoingCheckColor: UIColor(rgb: 0x19C700),
+        outgoingMediaInactiveControlColor: UIColor(rgb: 0x93d987),
+        outgoingCheckColor: UIColor(rgb: 0x19c700),
         incomingPendingActivityColor: UIColor(rgb: 0x525252, alpha: 0.6),
         outgoingPendingActivityColor: UIColor(rgb: 0x42b649),
         mediaDateAndStatusFillColor: UIColor(white: 0.0, alpha: 0.5),
@@ -204,17 +204,17 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         incomingFileDurationColor: UIColor(rgb: 0x525252, alpha: 0.6),
         outgoingFileDurationColor: UIColor(rgb: 0x008c09, alpha: 0.8),
         shareButtonFillColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0x748391, alpha: 0.45)),
-        shareButtonStrokeColor: .clear,
-        shareButtonForegroundColor: .white,
+        shareButtonStrokeColor: PresentationThemeVariableColor(withWallpaper: .clear, withoutWallpaper: .clear),
+        shareButtonForegroundColor: PresentationThemeVariableColor(withWallpaper: .white, withoutWallpaper: .white),
         mediaOverlayControlBackgroundColor: UIColor(white: 0.0, alpha: 0.6),
         mediaOverlayControlForegroundColor: UIColor(white: 1.0, alpha: 1.0),
-        actionButtonsIncomingFillColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0x596E89, alpha: 0.35)),
-        actionButtonsIncomingStrokeColor: .clear,
-        actionButtonsIncomingTextColor: .white,
-        actionButtonsOutgoingFillColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0x596E89, alpha: 0.35)),
-        actionButtonsOutgoingStrokeColor: .clear,
-        actionButtonsOutgoingTextColor: .white,
-        selectionControlBorderColor: UIColor(rgb: 0xC7C7CC),
+        actionButtonsIncomingFillColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0x596e89, alpha: 0.35)),
+        actionButtonsIncomingStrokeColor: PresentationThemeVariableColor(color: .clear),
+        actionButtonsIncomingTextColor: PresentationThemeVariableColor(color: .white),
+        actionButtonsOutgoingFillColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0x596e89, alpha: 0.35)),
+        actionButtonsOutgoingStrokeColor: PresentationThemeVariableColor(color: .clear),
+        actionButtonsOutgoingTextColor: PresentationThemeVariableColor(color: .white),
+        selectionControlBorderColor: UIColor(rgb: 0xc7c7cc),
         selectionControlFillColor: accentColor,
         selectionControlForegroundColor: .white,
         mediaHighlightOverlayColor: UIColor(white: 1.0, alpha: 0.6),
@@ -223,7 +223,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         incomingMediaPlaceholderColor: UIColor(rgb: 0xe8ecf0),
         outgoingMediaPlaceholderColor: UIColor(rgb: 0xd2f2b6),
         incomingPolls: PresentationThemeChatBubblePolls(radioButton: UIColor(rgb: 0xc8c7cc), radioProgress: UIColor(rgb: 0x007ee5), highlight: UIColor(rgb: 0x007ee5).withAlphaComponent(0.08), separator: UIColor(rgb: 0xc8c7cc), bar: UIColor(rgb: 0x007ee5)),
-        outgoingPolls: PresentationThemeChatBubblePolls(radioButton: UIColor(rgb: 0x93d987), radioProgress: UIColor(rgb: 0x3FC33B), highlight: UIColor(rgb: 0x3FC33B).withAlphaComponent(0.08), separator: UIColor(rgb: 0x93d987), bar: UIColor(rgb: 0x3fc33b))
+        outgoingPolls: PresentationThemeChatBubblePolls(radioButton: UIColor(rgb: 0x93d987), radioProgress: UIColor(rgb: 0x3fc33b), highlight: UIColor(rgb: 0x3fc33b).withAlphaComponent(0.08), separator: UIColor(rgb: 0x93d987), bar: UIColor(rgb: 0x3fc33b))
     )
     
     let bubbleDay = PresentationThemeChatBubble(
@@ -259,18 +259,18 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         outgoingFileDescriptionColor: UIColor(rgb: 0xffffff, alpha: 0.7),
         incomingFileDurationColor: UIColor(rgb: 0x525252, alpha: 0.6),
         outgoingFileDurationColor: UIColor(rgb: 0xffffff, alpha: 0.7),
-        shareButtonFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8), withoutWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8)),
-        shareButtonStrokeColor: UIColor(rgb: 0xE5E5EA),
-        shareButtonForegroundColor: accentColor,
+        shareButtonFillColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8)),
+        shareButtonStrokeColor: PresentationThemeVariableColor(withWallpaper: .clear, withoutWallpaper: UIColor(rgb: 0xe5e5ea)),
+        shareButtonForegroundColor: PresentationThemeVariableColor(withWallpaper: .white, withoutWallpaper: accentColor),
         mediaOverlayControlBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.6),
         mediaOverlayControlForegroundColor: UIColor(rgb: 0xffffff, alpha: 1.0),
-        actionButtonsIncomingFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8), withoutWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8)),
-        actionButtonsIncomingStrokeColor: accentColor.withMultipliedBrightnessBy(1.2),
-        actionButtonsIncomingTextColor: accentColor.withMultipliedBrightnessBy(1.2),
-        actionButtonsOutgoingFillColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8), withoutWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8)),
-        actionButtonsOutgoingStrokeColor: accentColor.withMultipliedBrightnessBy(1.2),
-        actionButtonsOutgoingTextColor: accentColor.withMultipliedBrightnessBy(1.2),
-        selectionControlBorderColor: UIColor(rgb: 0xC7C7CC),
+        actionButtonsIncomingFillColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8)),
+        actionButtonsIncomingStrokeColor: PresentationThemeVariableColor(withWallpaper: .clear, withoutWallpaper: accentColor.withMultipliedBrightnessBy(1.2)),
+        actionButtonsIncomingTextColor: PresentationThemeVariableColor(withWallpaper: .white, withoutWallpaper: accentColor.withMultipliedBrightnessBy(1.2)),
+        actionButtonsOutgoingFillColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0xffffff, alpha: 0.8)),
+        actionButtonsOutgoingStrokeColor: PresentationThemeVariableColor(withWallpaper: .clear, withoutWallpaper: accentColor.withMultipliedBrightnessBy(1.2)),
+        actionButtonsOutgoingTextColor: PresentationThemeVariableColor(withWallpaper: .white, withoutWallpaper: accentColor.withMultipliedBrightnessBy(1.2)),
+        selectionControlBorderColor: UIColor(rgb: 0xc7c7cc),
         selectionControlFillColor: accentColor,
         selectionControlForegroundColor: .white,
         mediaHighlightOverlayColor: UIColor(rgb: 0xffffff, alpha: 0.6),
@@ -287,15 +287,15 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         unreadBarFillColor: UIColor(white: 1.0, alpha: 0.9),
         unreadBarStrokeColor: UIColor(white: 0.0, alpha: 0.2),
         unreadBarTextColor: UIColor(rgb: 0x86868d),
-        dateTextColor: .white
+        dateTextColor: PresentationThemeVariableColor(color: .white)
     )
     
     let serviceMessageDay = PresentationThemeServiceMessage(
-        components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0xffffff, alpha: 0.8), primaryText: UIColor(rgb: 0x8D8E93), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), dateFillStatic: UIColor(rgb: 0xffffff, alpha: 0.8), dateFillFloating: UIColor(rgb: 0xffffff, alpha: 0.8)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0xffffff, alpha: 0.8), primaryText: UIColor(rgb: 0x8D8E93), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), dateFillStatic: UIColor(rgb: 0xffffff, alpha: 0.8), dateFillFloating: UIColor(rgb: 0xffffff, alpha: 0.8))),
+        components: PresentationThemeServiceMessageColor(withDefaultWallpaper: PresentationThemeServiceMessageColorComponents(fill: UIColor(rgb: 0xffffff, alpha: 0.8), primaryText: UIColor(rgb: 0x8d8e93), linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), dateFillStatic: UIColor(rgb: 0xffffff, alpha: 0.8), dateFillFloating: UIColor(rgb: 0xffffff, alpha: 0.8)), withCustomWallpaper: PresentationThemeServiceMessageColorComponents(fill: serviceBackgroundColor, primaryText: .white, linkHighlight: UIColor(rgb: 0x748391, alpha: 0.25), dateFillStatic: serviceBackgroundColor, dateFillFloating: serviceBackgroundColor.withAlphaComponent(serviceBackgroundColor.alpha * 0.6667))),
         unreadBarFillColor: UIColor(rgb: 0xffffff),
         unreadBarStrokeColor: UIColor(rgb: 0xffffff),
         unreadBarTextColor: UIColor(rgb: 0x8D8E93),
-        dateTextColor: UIColor(rgb: 0x8D8E93)
+        dateTextColor: PresentationThemeVariableColor(withWallpaper: .white, withoutWallpaper: UIColor(rgb: 0x8d8e93))
     )
     
     let inputPanelMediaRecordingControl = PresentationThemeChatInputPanelMediaRecordingControl(
@@ -427,20 +427,21 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
     )
 }
 
-public let defaultPresentationTheme = makeDefaultPresentationTheme(accentColor: UIColor(rgb: 0x007ee5), serviceBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.3), day: false)
+public let defaultPresentationTheme = makeDefaultPresentationTheme(accentColor: UIColor(rgb: 0x007ee5), serviceBackgroundColor: defaultServiceBackgroundColor, day: false)
 
 let defaultDayAccentColor: Int32 = 0x007ee5
+let defaultServiceBackgroundColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.3)
 
 func makeDefaultPresentationTheme(serviceBackgroundColor: UIColor?) -> PresentationTheme {
     return makeDefaultPresentationTheme(accentColor: UIColor(rgb: 0x007ee5), serviceBackgroundColor: serviceBackgroundColor ?? .black, day: false)
 }
 
-func makeDefaultDayPresentationTheme(accentColor: Int32?) -> PresentationTheme {
+func makeDefaultDayPresentationTheme(accentColor: Int32?, serviceBackgroundColor: UIColor) -> PresentationTheme {
     let color: UIColor
     if let accentColor = accentColor {
         color = UIColor(rgb: UInt32(bitPattern: accentColor))
     } else {
         color = UIColor(rgb: UInt32(bitPattern: defaultDayAccentColor))
     }
-    return makeDefaultPresentationTheme(accentColor: color, serviceBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.3), day: true)
+    return makeDefaultPresentationTheme(accentColor: color, serviceBackgroundColor: serviceBackgroundColor, day: true)
 }
