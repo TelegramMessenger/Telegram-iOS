@@ -88,6 +88,14 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
             initializeAccountManagement()
             let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
             
+            var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
+            let semaphore = DispatchSemaphore(value: 0)
+            let _ = currentPresentationDataAndSettings(accountManager: accountManager).start(next: { value in
+                initialPresentationDataAndSettings = value
+                semaphore.signal()
+            })
+            semaphore.wait()
+            
             let applicationBindings = TelegramApplicationBindings(isMainApp: false, containerPath: appGroupUrl.path, appSpecificScheme: BuildConfig.shared().appSpecificUrlScheme, openUrl: { _ in
             }, openUniversalUrl: { _, completion in
                 completion.completion(false)
@@ -109,7 +117,7 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
             
             let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
             
-            sharedAccountContext = SharedAccountContext(accountManager: accountManager, applicationBindings: applicationBindings, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), rootPath: rootPath, apsNotificationToken: .never(), voipNotificationToken: .never())
+            sharedAccountContext = SharedAccountContext(mainWindow: nil, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), rootPath: rootPath, apsNotificationToken: .never(), voipNotificationToken: .never())
         }
     }
     

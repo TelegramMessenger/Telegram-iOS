@@ -361,6 +361,8 @@
 		D0AF32291FACA1920097362B /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D17E891CAAD66600C4750B /* Accelerate.framework */; };
 		D0AF322C1FACA1B00097362B /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B8445F1DACF561005F29E1 /* libc++.tbd */; };
 		D0AF322F1FACBA280097362B /* TGShareLocationSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D0AF322D1FACBA270097362B /* TGShareLocationSignals.m */; };
+		D0B21B0D2203A9A1003F741D /* SharedWakeupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B21B0C2203A9A1003F741D /* SharedWakeupManager.swift */; };
+		D0B21B0F220438E9003F741D /* SharedNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B21B0E220438E9003F741D /* SharedNotificationManager.swift */; };
 		D0B2F738204F4C9900D3BFB9 /* NotificationCenter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E41A381D65A69C00FBFC00 /* NotificationCenter.framework */; };
 		D0B2F742204F4C9900D3BFB9 /* Widget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D0B2F737204F4C9900D3BFB9 /* Widget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D0B2F74A204F4D6100D3BFB9 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B2F74F204F4D6100D3BFB9 /* Postbox.framework */; };
@@ -1092,6 +1094,8 @@
 		D0AF322A1FACA1A80097362B /* libstdc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libstdc++.tbd"; path = "usr/lib/libstdc++.tbd"; sourceTree = SDKROOT; };
 		D0AF322D1FACBA270097362B /* TGShareLocationSignals.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGShareLocationSignals.m; sourceTree = "<group>"; };
 		D0AF322E1FACBA270097362B /* TGShareLocationSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGShareLocationSignals.h; sourceTree = "<group>"; };
+		D0B21B0C2203A9A1003F741D /* SharedWakeupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedWakeupManager.swift; sourceTree = "<group>"; };
+		D0B21B0E220438E9003F741D /* SharedNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedNotificationManager.swift; sourceTree = "<group>"; };
 		D0B2F737204F4C9900D3BFB9 /* Widget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Widget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0B2F74E204F4D6100D3BFB9 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0B2F74F204F4D6100D3BFB9 /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1975,6 +1979,8 @@
 				D0ADF956212B56C200310BBC /* Legacy Data Import */,
 				D0ECCB8B1FE9CE2B00609802 /* Snapshots */,
 				D008599F1B28189D00EAF753 /* Supporting Files */,
+				D0B21B0C2203A9A1003F741D /* SharedWakeupManager.swift */,
+				D0B21B0E220438E9003F741D /* SharedNotificationManager.swift */,
 			);
 			path = "Telegram-iOS";
 			sourceTree = "<group>";
@@ -3212,6 +3218,7 @@
 				D039FB172170F06A00BD1BAD /* PreFetchedLegacyResource.swift in Sources */,
 				09D304292174343300C00567 /* TGBridgeBotInfo.m in Sources */,
 				09D304272174341E00C00567 /* TGBridgeChatMessages.m in Sources */,
+				D0B21B0F220438E9003F741D /* SharedNotificationManager.swift in Sources */,
 				D02E31231BD803E800CD3F01 /* main.m in Sources */,
 				D05B37FD1FEA8D870041D2A5 /* SnapshotResources.swift in Sources */,
 				D0EB243B201B77C400F6CC13 /* ClearNotificationsManager.swift in Sources */,
@@ -3221,6 +3228,7 @@
 				D06E4C2F21347D9200088087 /* UIImage+ImageEffects.m in Sources */,
 				D0B3B53B21666C0000FC60A0 /* LegacyFileImport.swift in Sources */,
 				D0ADF95E212C818F00310BBC /* LegacyPreferencesImport.swift in Sources */,
+				D0B21B0D2203A9A1003F741D /* SharedWakeupManager.swift in Sources */,
 				09D304282174342E00C00567 /* TGBridgeChat.m in Sources */,
 				09C50E8A2173AEDB009E676F /* WatchRequestHandlers.swift in Sources */,
 				09D304302174344900C00567 /* TGBridgeForwardedMessageMediaAttachment.m in Sources */,

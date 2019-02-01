@@ -15,7 +15,7 @@ final class WatchCommunicationManager {
     private let presets = Promise<WatchPresetSettings?>(nil)
     private let navigateToMessagePipe = ValuePipe<MessageId>()
     
-    init(queue: Queue, context: Promise<ApplicationContext?>) {
+    init(queue: Queue, context: Promise<AuthorizedApplicationContext?>) {
         self.queue = queue
         
         let handlers = allWatchRequestHandlers.reduce([String : AnyClass]()) { (map, handler) -> [String : AnyClass] in
@@ -57,7 +57,7 @@ final class WatchCommunicationManager {
             guard let strongSelf = self, appInstalled else {
                 return
             }
-            if let appContext = appContext, case let .authorized(context) = appContext {
+            if let context = appContext {
                 strongSelf.accountContext.set(.single(context.context))
                 strongSelf.server.setAuthorized(true, userId: context.context.account.peerId.id)
                 strongSelf.server.setMicAccessAllowed(false)
@@ -79,10 +79,10 @@ final class WatchCommunicationManager {
         }))
         
         self.presetsDisposable.set((combineLatest(self.watchAppInstalled, self.presets.get() |> distinctUntilChanged |> deliverOn(self.queue), context.get() |> deliverOn(self.queue))).start(next: { [weak self] appInstalled, presets, appContext in
-            guard let strongSelf = self, let presets = presets, let appContext = appContext, case let .authorized(context) = appContext, appInstalled, let tempPath = strongSelf.watchTemporaryStorePath else {
+            guard let strongSelf = self, let presets = presets, let context = appContext, appInstalled, let tempPath = strongSelf.watchTemporaryStorePath else {
                 return
             }
-            let presentationData = context.context.currentPresentationData.with { $0 }
+            let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
             let defaultSuggestions: [String : String] = [
                 "OK": presentationData.strings.Watch_Suggestion_OK,
                 "Thanks": presentationData.strings.Watch_Suggestion_Thanks,
@@ -173,7 +173,7 @@ final class WatchCommunicationManager {
     }
 }
 
-func watchCommunicationManager(context: Promise<ApplicationContext?>) -> Signal<WatchCommunicationManager?, NoError> {
+func watchCommunicationManager(context: Promise<AuthorizedApplicationContext?>) -> Signal<WatchCommunicationManager?, NoError> {
     return Signal { subscriber in
         let queue = Queue()
         queue.async {

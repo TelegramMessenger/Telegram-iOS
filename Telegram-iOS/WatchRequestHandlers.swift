@@ -39,7 +39,7 @@ final class WatchChatListHandler: WatchRequestHandler {
                     if let context = context {
                         return context.account.viewTracker.tailChatListView(groupId: nil, count: limit)
                         |> map { chatListView, _ -> (ChatListView, PresentationData) in
-                            return (chatListView, context.currentPresentationData.with { $0 })
+                            return (chatListView, context.sharedContext.currentPresentationData.with { $0 })
                         }
                     } else {
                         return .complete()
@@ -87,7 +87,7 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
                     if let context = context {
                         return context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId), index: .upperBound, anchorIndex: .upperBound, count: limit, fixedCombinedReadStates: nil)
                         |> map { messageHistoryView, _, _ -> (MessageHistoryView, Bool, PresentationData) in
-                            return (messageHistoryView, peerId == context.account.peerId, context.currentPresentationData.with { $0 })
+                            return (messageHistoryView, peerId == context.account.peerId, context.sharedContext.currentPresentationData.with { $0 })
                         }
                     } else {
                         return .complete()
@@ -140,7 +140,7 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
                         let messageSignal = downloadMessage(postbox: context.account.postbox, network: context.account.network, messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: args.messageId))
                         |> map { message -> (Message, PresentationData)? in
                             if let message = message {
-                                return (message, context.currentPresentationData.with { $0 })
+                                return (message, context.sharedContext.currentPresentationData.with { $0 })
                             } else {
                                 return nil
                             }

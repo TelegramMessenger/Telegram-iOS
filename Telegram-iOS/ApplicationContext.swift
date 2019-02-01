@@ -87,29 +87,6 @@ private struct PasscodeState: Equatable {
     let enableBiometrics: Bool
 }
 
-private enum CallStatusText: Equatable {
-    case none
-    case inProgress(Double?)
-    
-    static func ==(lhs: CallStatusText, rhs: CallStatusText) -> Bool {
-        switch lhs {
-            case .none:
-                if case .none = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .inProgress(lhsReferenceTime):
-                if case let .inProgress(rhsReferenceTime) = rhs, lhsReferenceTime == rhsReferenceTime {
-                    return true
-                } else {
-                    return false
-                }
-            
-        }
-    }
-}
-
 final class AuthorizedApplicationContext {
     let mainWindow: Window1
     let lockedCoveringView: LockedWindowCoveringView
@@ -125,8 +102,7 @@ final class AuthorizedApplicationContext {
     private var scheduledOperChatWithPeerId: PeerId?
     private var scheduledOpenExternalUrl: URL?
     
-    let wakeupManager: WakeupManager
-    let notificationManager: NotificationManager
+    //let notificationManager: NotificationManager
         
     private let passcodeStatusDisposable = MetaDisposable()
     private let passcodeLockDisposable = MetaDisposable()
@@ -142,9 +118,6 @@ final class AuthorizedApplicationContext {
     
     private var isLocked: Bool = true
     private var passcodeController: ViewController?
-    private var callController: CallController?
-    private let hasOngoingCall = ValuePromise<Bool>(false)
-    private let callState = Promise<PresentationCallState?>(nil)
     
     private var currentTermsOfServiceUpdate: TermsOfServiceUpdate?
     private var currentPermissionsController: PermissionController?
@@ -166,10 +139,6 @@ final class AuthorizedApplicationContext {
     private var presentationDataDisposable: Disposable?
     private var displayAlertsDisposable: Disposable?
     private var removeNotificationsDisposable: Disposable?
-    private var callDisposable: Disposable?
-    private var callStateDisposable: Disposable?
-    private var currentCallStatusText: CallStatusText = .none
-    private var currentCallStatusTextTimer: SwiftSignalKit.Timer?
     
     private var applicationInForegroundDisposable: Disposable?
     
@@ -179,7 +148,7 @@ final class AuthorizedApplicationContext {
     
     init(mainWindow: Window1, replyFromNotificationsActive: Signal<Bool, NoError>, backgroundAudioActive: Signal<Bool, NoError>, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, context: AccountContext, accountManager: AccountManager, legacyBasePath: String, showCallsTab: Bool, reinitializedNotificationSettings: @escaping () -> Void) {
         setupLegacyComponents(context: context)
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.mainWindow = mainWindow
         self.lockedCoveringView = LockedWindowCoveringView(theme: presentationData.theme)
@@ -207,29 +176,18 @@ final class AuthorizedApplicationContext {
         }
         |> distinctUntilChanged
         
-        self.wakeupManager = WakeupManager(accountManager: context.sharedContext.accountManager, inForeground: context.sharedContext.applicationBindings.applicationInForeground, runningServiceTasks: context.account.importantTasksRunning, runningBackgroundLocationTasks: runningBackgroundLocationTasks, runningWatchTasks: runningWatchTasksPromise.get(), runningDownloadTasks: runningDownloadTasks)
+        //self.wakeupManager = WakeupManager(accountManager: context.sharedContext.accountManager, inForeground: context.sharedContext.applicationBindings.applicationInForeground, runningServiceTasks: context.account.importantTasksRunning, runningBackgroundLocationTasks: runningBackgroundLocationTasks, runningWatchTasks: runningWatchTasksPromise.get(), runningDownloadTasks: runningDownloadTasks)
         
         self.showCallsTab = showCallsTab
         
-        self.notificationManager = NotificationManager()
-        self.notificationManager.isApplicationInForeground = false
+        //self.notificationManager = NotificationManager()
+        //self.notificationManager.isApplicationInForeground = false
         
         self.overlayMediaController = OverlayMediaController()
         
         context.attachOverlayMediaController(self.overlayMediaController)
-        var presentImpl: ((ViewController, Any?) -> Void)?
-        var openSettingsImpl: (() -> Void)?
-        let callManager = PresentationCallManager(accountManager: context.sharedContext.accountManager, account: context.account, getDeviceAccessData: {
-            return (context.currentPresentationData.with { $0 }, { c, a in
-                presentImpl?(c, a)
-            }, {
-                openSettingsImpl?()
-            })
-        }, networkType: context.account.networkType, audioSession: context.sharedContext.mediaManager.audioSession, activeAccounts: .single([context.account]))
-        context.callManager = callManager
-        context.hasOngoingCall = self.hasOngoingCall.get()
         
-        let shouldBeServiceTaskMaster = combineLatest(context.sharedContext.applicationBindings.applicationInForeground, self.wakeupManager.isWokenUp, replyFromNotificationsActive, backgroundAudioActive, callManager.hasActiveCalls)
+        /*let shouldBeServiceTaskMaster = combineLatest(context.sharedContext.applicationBindings.applicationInForeground, self.wakeupManager.isWokenUp, replyFromNotificationsActive, backgroundAudioActive, callManager.hasActiveCalls)
         |> map { foreground, wokenUp, replyFromNotificationsActive, backgroundAudioActive, hasActiveCalls -> AccountServiceTaskMasterMode in
             if foreground || wokenUp || replyFromNotificationsActive || hasActiveCalls {
                 return .always
@@ -256,10 +214,8 @@ final class AuthorizedApplicationContext {
                 Logger.shared.log("ApplicationContext", "setting canBeginTransactions to \(next)")
                 context.account.postbox.setCanBeginTransactions(next)
             }
-        })
+        })*/
         context.account.shouldExplicitelyKeepWorkerConnections.set(backgroundAudioActive)
-        context.account.shouldKeepBackgroundDownloadConnections.set(context.fetchManager.hasUserInitiatedEntries)
-        context.account.shouldKeepOnlinePresence.set(context.sharedContext.applicationBindings.applicationInForeground)
         
         let cache = TGCache(cachesPath: legacyBasePath + "/Caches")!
         
@@ -295,56 +251,11 @@ final class AuthorizedApplicationContext {
             context.keyShortcutsController = keyShortcutsController
         }
         
-        self.applicationInForegroundDisposable = context.sharedContext.applicationBindings.applicationInForeground.start(next: { [weak self] value in
+        /*self.applicationInForegroundDisposable = context.sharedContext.applicationBindings.applicationInForeground.start(next: { [weak self] value in
             Queue.mainQueue().async {
                 self?.notificationManager.isApplicationInForeground = value
             }
-        })
-        
-        self.mainWindow.inCallNavigate = { [weak self] in
-            if let strongSelf = self, let callController = strongSelf.callController {
-                if callController.isNodeLoaded && callController.view.superview == nil {
-                    strongSelf.rootController.view.endEditing(true)
-                    strongSelf.mainWindow.present(callController, on: .calls)
-                }
-            }
-        }
-        
-        context.presentGlobalController = { [weak self] c, a in
-            self?.mainWindow.present(c, on: .root)
-        }
-        context.presentCrossfadeController = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            var exists = false
-            strongSelf.mainWindow.forEachViewController { controller in
-                if controller is ThemeSettingsCrossfadeController {
-                    exists = true
-                }
-                return true
-            }
-            
-            if !exists {
-                mainWindow.present(ThemeSettingsCrossfadeController(), on: .root)
-            }
-        }
-        
-        context.navigateToCurrentCall = { [weak self] in
-            if let strongSelf = self, let callController = strongSelf.callController {
-                if callController.isNodeLoaded && callController.view.superview == nil {
-                    strongSelf.rootController.view.endEditing(true)
-                    strongSelf.mainWindow.present(callController, on: .calls)
-                }
-            }
-        }
-        
-        presentImpl = { [weak self] c, _ in
-            self?.mainWindow.present(c, on: .root)
-        }
-        openSettingsImpl = { [weak context] in
-            context?.sharedContext.applicationBindings.openSettings()
-        }
+        })*/
         
         let previousPasscodeState = Atomic<PasscodeState?>(value: nil)
         
@@ -400,7 +311,7 @@ final class AuthorizedApplicationContext {
                 }
                 
                 strongSelf.isLocked = isLocked
-                strongSelf.notificationManager.isApplicationLocked = isLocked
+                //strongSelf.notificationManager.isApplicationLocked = isLocked
                 
                 if isLocked {
                     if updatedState.isActive {
@@ -418,7 +329,7 @@ final class AuthorizedApplicationContext {
                                 case .plaintextPassword:
                                     mode = TGPasscodeEntryControllerModeVerifyComplex
                             }
-                            let presentationData = strongSelf.context.currentPresentationData.with { $0 }
+                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                             let presentAnimated = previousState != nil && previousState!.isActive
                             let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: presentAnimated), theme: presentationData.theme)
                             let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: mode, cancelEnabled: false, allowTouchId: updatedState.enableBiometrics, attemptData: attemptData, completion: { value in
@@ -543,7 +454,7 @@ final class AuthorizedApplicationContext {
                             
                             if #available(iOS 10.0, *) {
                             } else {
-                                DeviceAccess.authorizeAccess(to: .contacts, presentationData: strongSelf.context.currentPresentationData.with { $0 }, present: { c, a in
+                                DeviceAccess.authorizeAccess(to: .contacts, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, present: { c, a in
                                 }, openSettings: {}, { _ in })
                             }
                             
@@ -657,7 +568,7 @@ final class AuthorizedApplicationContext {
                     }
                     
                     if inAppNotificationSettings.displayPreviews {
-                       let presentationData = strongSelf.context.currentPresentationData.with { $0 }
+                       let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         strongSelf.notificationController.enqueue(ChatMessageNotificationItem(context: strongSelf.context, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, messages: messages, tapAction: {
                             if let strongSelf = self {
                                 var foundOverlay = false
@@ -713,7 +624,7 @@ final class AuthorizedApplicationContext {
             
             strongSelf.currentTermsOfServiceUpdate = termsOfServiceUpdate
             if let termsOfServiceUpdate = termsOfServiceUpdate {
-                let presentationData = strongSelf.context.currentPresentationData.with { $0 }
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                 var acceptImpl: ((String?) -> Void)?
                 var declineImpl: (() -> Void)?
                 let controller = TermsOfServiceController(theme: TermsOfServiceControllerTheme(presentationTheme: presentationData.theme), strings: presentationData.strings, text: termsOfServiceUpdate.text, entities: termsOfServiceUpdate.entities, ageConfirmation: termsOfServiceUpdate.ageConfirmation, signingUp: false, accept: { proccedBot in
@@ -892,7 +803,7 @@ final class AuthorizedApplicationContext {
         |> deliverOnMainQueue).start(next: { [weak self] alerts in
             if let strongSelf = self{
                 for text in alerts {
-                    let presentationData = strongSelf.context.currentPresentationData.with { $0 }
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     let controller = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
                     (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                 }
@@ -906,84 +817,12 @@ final class AuthorizedApplicationContext {
             }
         })
         
-        self.callDisposable = (callManager.currentCallSignal
-        |> deliverOnMainQueue).start(next: { [weak self] call in
-            if let strongSelf = self {
-                if call !== strongSelf.callController?.call {
-                    strongSelf.callController?.dismiss()
-                    strongSelf.callController = nil
-                    strongSelf.hasOngoingCall.set(false)
-                    
-                    if let call = call {
-                        let callController = CallController(context: strongSelf.context, call: call)
-                        strongSelf.callController = callController
-                        strongSelf.rootController.view?.endEditing(true)
-                        strongSelf.mainWindow.present(callController, on: .calls)
-                        strongSelf.callState.set(call.state
-                        |> map(Optional.init))
-                        strongSelf.hasOngoingCall.set(true)
-                        strongSelf.notificationManager.setNotificationCall(call, strings: strongSelf.context.currentPresentationData.with({ $0 }).strings)
-                    } else {
-                        strongSelf.callState.set(.single(nil))
-                        strongSelf.hasOngoingCall.set(false)
-                        strongSelf.notificationManager.setNotificationCall(nil, strings: strongSelf.context.currentPresentationData.with({ $0 }).strings)
-                    }
-                }
-            }
-        })
-        
-        self.callStateDisposable = (self.callState.get()
-        |> deliverOnMainQueue).start(next: { [weak self] state in
-            if let strongSelf = self {
-                let resolvedText: CallStatusText
-                if let state = state {
-                    switch state {
-                        case .connecting, .requesting, .terminating, .ringing, .waiting:
-                            resolvedText = .inProgress(nil)
-                        case .terminated:
-                            resolvedText = .none
-                        case let .active(timestamp, _, _):
-                            resolvedText = .inProgress(timestamp)
-                    }
-                } else {
-                    resolvedText = .none
-                }
-                
-                if strongSelf.currentCallStatusText != resolvedText {
-                    strongSelf.currentCallStatusText = resolvedText
-                    
-                    var referenceTimestamp: Double?
-                    if case let .inProgress(timestamp) = resolvedText, let concreteTimestamp = timestamp {
-                        referenceTimestamp = concreteTimestamp
-                    }
-                    
-                    if let _ = referenceTimestamp {
-                        if strongSelf.currentCallStatusTextTimer == nil {
-                            let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: {
-                                if let strongSelf = self {
-                                    strongSelf.updateStatusBarText()
-                                }
-                            }, queue: Queue.mainQueue())
-                            strongSelf.currentCallStatusTextTimer = timer
-                            timer.start()
-                        }
-                    } else {
-                        strongSelf.currentCallStatusTextTimer?.invalidate()
-                        strongSelf.currentCallStatusTextTimer = nil
-                    }
-                    
-                    strongSelf.updateStatusBarText()
-                }
-            }
-        })
-        
         self.context.account.resetStateManagement()
-        let contactSynchronizationPreferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
        
         let importableContacts = self.context.sharedContext.contactDataManager?.importable() ?? .single([:])
-        self.context.account.importableContacts.set(self.context.account.postbox.combinedView(keys: [contactSynchronizationPreferencesKey])
-        |> mapToSignal { preferences -> Signal<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData], NoError> in
-            let settings: ContactSynchronizationSettings = ((preferences.views[contactSynchronizationPreferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings) ?? .defaultSettings
+        self.context.account.importableContacts.set(self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings])
+        |> mapToSignal { sharedData -> Signal<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData], NoError> in
+            let settings: ContactSynchronizationSettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings) ?? .defaultSettings
             if settings.synchronizeDeviceContacts {
                 return importableContacts
             } else {
@@ -992,7 +831,7 @@ final class AuthorizedApplicationContext {
         })
         
         let previousTheme = Atomic<PresentationTheme?>(value: nil)
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 if previousTheme.swap(presentationData.theme) !== presentationData.theme {
@@ -1051,40 +890,16 @@ final class AuthorizedApplicationContext {
                         if chatIsVisible {
                             navigateToMessage()
                         } else {
-                            let presentationData = strongSelf.context.currentPresentationData.with { $0 }
+                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                             let controller = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.WatchRemote_AlertTitle, text: presentationData.strings.WatchRemote_AlertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.WatchRemote_AlertOpen, action:navigateToMessage)])
                             (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                         }
                     } else {
-                        strongSelf.notificationManager.presentWatchContinuityNotification(context: strongSelf.context, messageId: messageId)
+                        //strongSelf.notificationManager.presentWatchContinuityNotification(context: strongSelf.context, messageId: messageId)
                     }
                 }
             }))
         })
-    }
-    
-    private func updateStatusBarText() {
-        if case let .inProgress(timestamp) = self.currentCallStatusText {
-            let text: String
-            let presentationData = self.context.currentPresentationData.with { $0 }
-            if let timestamp = timestamp {
-                let duration = Int32(CFAbsoluteTimeGetCurrent() - timestamp)
-                let durationString: String
-                if duration > 60 * 60 {
-                    durationString = String(format: "%02d:%02d:%02d", arguments: [duration / 3600, (duration / 60) % 60, duration % 60])
-                } else {
-                    durationString = String(format: "%02d:%02d", arguments: [(duration / 60) % 60, duration % 60])
-                }
-                
-                text = presentationData.strings.Call_StatusBar(durationString).0
-            } else {
-                text = presentationData.strings.Call_StatusBar("").0
-            }
-            
-            self.mainWindow.setForceInCallStatusBar(text)
-        } else {
-            self.mainWindow.setForceInCallStatusBar(nil)
-        }
     }
     
     deinit {
@@ -1099,9 +914,6 @@ final class AuthorizedApplicationContext {
         self.passcodeStatusDisposable.dispose()
         self.displayAlertsDisposable?.dispose()
         self.removeNotificationsDisposable?.dispose()
-        self.callDisposable?.dispose()
-        self.callStateDisposable?.dispose()
-        self.currentCallStatusTextTimer?.invalidate()
         self.presentationDataDisposable?.dispose()
         self.enablePostboxTransactionsDiposable?.dispose()
         self.termsOfServiceProceedToBotDisposable.dispose()
@@ -1126,7 +938,7 @@ final class AuthorizedApplicationContext {
     
     func openUrl(_ url: URL) {
         if self.rootController.rootTabController != nil {
-            let presentationData = self.context.currentPresentationData.with { $0 }
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             openExternalUrl(context: self.context, url: url.absoluteString, presentationData: presentationData, navigationController: self.rootController, dismissInput: { [weak self] in
                 self?.rootController.view.endEditing(true)
             })

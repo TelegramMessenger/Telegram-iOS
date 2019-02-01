@@ -144,7 +144,15 @@ class ShareRootController: UIViewController {
                 
                 initializeAccountManagement()
                 let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
-                let sharedContext = SharedAccountContext(accountManager: accountManager, applicationBindings: applicationBindings, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), rootPath: rootPath, apsNotificationToken: .never(), voipNotificationToken: .never())
+                var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
+                let semaphore = DispatchSemaphore(value: 0)
+                let _ = currentPresentationDataAndSettings(accountManager: accountManager).start(next: { value in
+                    initialPresentationDataAndSettings = value
+                    semaphore.signal()
+                })
+                semaphore.wait()
+                
+                let sharedContext = SharedAccountContext(mainWindow: nil, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), rootPath: rootPath, apsNotificationToken: .never(), voipNotificationToken: .never())
                     
                 account = accountManager.transaction { transaction -> (SharedAccountContext, LoggingSettings) in
                     return (sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
@@ -181,14 +189,17 @@ class ShareRootController: UIViewController {
             let shouldBeMaster = self.shouldBeMaster
             let applicationInterface = account
             |> mapToSignal { sharedContext, account -> Signal<(AccountContext, PostboxAccessChallengeData), ShareAuthorizationError> in
-                return combineLatest(sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), currentPresentationDataAndSettings(accountManager: sharedContext.accountManager, postbox: account.postbox), sharedContext.accountManager.accessChallengeData())
+                let limitsConfiguration = account.postbox.transaction { transaction -> LimitsConfiguration in
+                    return transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+                }
+                return combineLatest(sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), limitsConfiguration, sharedContext.accountManager.accessChallengeData())
                 |> take(1)
                 |> deliverOnMainQueue
                 |> introduceError(ShareAuthorizationError.self)
-                |> map { sharedData, dataAndSettings, data -> (AccountContext, PostboxAccessChallengeData) in
+                |> map { sharedData, limitsConfiguration, data -> (AccountContext, PostboxAccessChallengeData) in
                     accountCache = (sharedContext, account)
-                    updateLegacyLocalization(strings: dataAndSettings.presentationData.strings)
-                    let context = AccountContext(sharedContext: sharedContext, account: account, initialPresentationDataAndSettings: dataAndSettings)
+                    updateLegacyLocalization(strings: sharedContext.currentPresentationData.with({ $0 }).strings)
+                    let context = AccountContext(sharedContext: sharedContext, account: account, limitsConfiguration: limitsConfiguration)
                     return (context, data.data)
                 }
             }

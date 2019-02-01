@@ -476,15 +476,15 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                 return settings
             })
             
+            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings, { current in
+                var settings: ContactSynchronizationSettings = current as? ContactSynchronizationSettings ?? .defaultSettings
+                if let contactsInhibitSync = contactsInhibitSync, contactsInhibitSync {
+                    settings.synchronizeDeviceContacts = false
+                }
+                return settings
+            })
+            
             return account.postbox.transaction { transaction -> Void in
-                transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.contactSynchronizationSettings, { current in
-                    var settings: ContactSynchronizationSettings = current as? ContactSynchronizationSettings ?? .defaultSettings
-                    if let contactsInhibitSync = contactsInhibitSync, contactsInhibitSync {
-                        settings.synchronizeDeviceContacts = false
-                    }
-                    return settings
-                })
-                
                 if let secretInlineBotsInitialized = secretInlineBotsInitialized, secretInlineBotsInitialized {
                     ApplicationSpecificNotice.setSecretChatInlineBotUsage(transaction: transaction)
                 }

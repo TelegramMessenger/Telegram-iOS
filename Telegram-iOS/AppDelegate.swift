@@ -120,6 +120,18 @@ private enum QueuedWakeup: Int32 {
     case backgroundLocation
 }
 
+private final class SharedApplicationContext {
+    let sharedContext: SharedAccountContext
+    let notificationManager: SharedNotificationManager
+    let wakeupManager: SharedWakeupManager
+    
+    init(sharedContext: SharedAccountContext, notificationManager: SharedNotificationManager, wakeupManager: SharedWakeupManager) {
+        self.sharedContext = sharedContext
+        self.notificationManager = notificationManager
+        self.wakeupManager = wakeupManager
+    }
+}
+
 @objc(AppDelegate) class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, BITHockeyManagerDelegate, UNUserNotificationCenterDelegate, UIAlertViewDelegate {
     @objc var window: UIWindow?
     var nativeWindow: (UIWindow & WindowHost)?
@@ -134,12 +146,16 @@ private enum QueuedWakeup: Int32 {
     private var isActiveValue = false
     let hasActiveAudioSession = Promise<Bool>(false)
     
-    private let sharedContextPromise = Promise<SharedAccountContext>()
+    private let sharedContextPromise = Promise<SharedApplicationContext>()
     private let watchCommunicationManagerPromise = Promise<WatchCommunicationManager?>()
     
-    private var contextValue: ApplicationContext?
-    private let context = Promise<ApplicationContext?>()
+    private var contextValue: AuthorizedApplicationContext?
+    private let context = Promise<AuthorizedApplicationContext?>()
     private let contextDisposable = MetaDisposable()
+    
+    private var authContextValue: UnauthorizedApplicationContext?
+    private let authContext = Promise<UnauthorizedApplicationContext?>()
+    private let authContextDisposable = MetaDisposable()
     
     private let openChatWhenReadyDisposable = MetaDisposable()
     private let openUrlWhenReadyDisposable = MetaDisposable()
@@ -193,8 +209,8 @@ private enum QueuedWakeup: Int32 {
         }
     }
     
-    private var queuedNotifications: [PKPushPayload] = []
-    private var queuedNotificationRequests: [(String, String, String?, NotificationManagedNotificationRequestId)] = []
+    //private var queuedNotifications: [[AnyHashable: Any]] = []
+    //private var queuedNotificationRequests: [(String, String, String?, NotificationManagedNotificationRequestId)] = []
     private var queuedMutePolling = false
     private var queuedAnnouncements: [String] = []
     private var queuedWakeups = Set<QueuedWakeup>()
@@ -220,7 +236,7 @@ private enum QueuedWakeup: Int32 {
         self.window = window
         self.nativeWindow = window
         
-        self.clearNotificationsManager = ClearNotificationsManager(getNotificationIds: { completion in
+        let clearNotificationsManager = ClearNotificationsManager(getNotificationIds: { completion in
             if #available(iOS 10.0, *) {
                 UNUserNotificationCenter.current().getDeliveredNotifications(completionHandler: { notifications in
                     var result: [(String, NotificationManagedNotificationRequestId)] = []
@@ -323,6 +339,7 @@ private enum QueuedWakeup: Int32 {
                 }
             }
         })
+        self.clearNotificationsManager = clearNotificationsManager
         
         #if DEBUG
         for argument in ProcessInfo.processInfo.arguments {
@@ -543,7 +560,7 @@ private enum QueuedWakeup: Int32 {
                 UIApplication.shared.openURL(url)
             }
         }, registerForNotifications: { completion in
-            let _ = (self.currentAuthorizedContext()
+            let _ = (self.context.get()
             |> take(1)
             |> deliverOnMainQueue).start(next: { context in
                 if let context = context {
@@ -584,18 +601,51 @@ private enum QueuedWakeup: Int32 {
         })
         
         let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
-        let sharedContext = SharedAccountContext(accountManager: accountManager, applicationBindings: applicationBindings, networkArguments: networkArguments, rootPath: rootPath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init))
+        var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
+        let semaphore = DispatchSemaphore(value: 0)
+        let _ = currentPresentationDataAndSettings(accountManager: accountManager).start(next: { value in
+            initialPresentationDataAndSettings = value
+            semaphore.signal()
+        })
+        semaphore.wait()
         
-        self.sharedContextPromise.set(
-        accountManager.transaction { transaction -> (SharedAccountContext, LoggingSettings) in
-            return (sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
+        let sharedContext = SharedAccountContext(mainWindow: self.mainWindow, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: networkArguments, rootPath: rootPath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init))
+        sharedContext.presentGlobalController = { [weak self] c, a in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.mainWindow.present(c, on: .root)
         }
-        |> mapToSignal { sharedContext, loggingSettings -> Signal<SharedAccountContext, NoError> in
+        sharedContext.presentCrossfadeController = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            var exists = false
+            strongSelf.mainWindow.forEachViewController { controller in
+                if controller is ThemeSettingsCrossfadeController {
+                    exists = true
+                }
+                return true
+            }
+            
+            if !exists {
+                strongSelf.mainWindow.present(ThemeSettingsCrossfadeController(), on: .root)
+            }
+        }
+        
+        let notificationManager = SharedNotificationManager(episodeId: self.episodeId, clearNotificationsManager: clearNotificationsManager, inForeground: applicationBindings.applicationInForeground, accounts: sharedContext.activeAccounts |> map { primary, accounts, _ in Array(accounts.values.map({ ($0, $0.id == primary?.id) })) })
+        let wakeupManager = SharedWakeupManager(activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1) }, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: hasActiveAudioSession.get(), notificationManager: notificationManager)
+        let sharedApplicationContext = SharedApplicationContext(sharedContext: sharedContext, notificationManager: notificationManager, wakeupManager: wakeupManager)
+        self.sharedContextPromise.set(
+        accountManager.transaction { transaction -> (SharedApplicationContext, LoggingSettings) in
+            return (sharedApplicationContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
+        }
+        |> mapToSignal { sharedApplicationContext, loggingSettings -> Signal<SharedApplicationContext, NoError> in
             Logger.shared.logToFile = loggingSettings.logToFile
             Logger.shared.logToConsole = loggingSettings.logToConsole
             Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
             
-            return importedLegacyAccount(basePath: appGroupUrl.path, accountManager: sharedContext.accountManager, present: { controller in
+            return importedLegacyAccount(basePath: appGroupUrl.path, accountManager: sharedApplicationContext.sharedContext.accountManager, present: { controller in
                 self.window?.rootViewController?.present(controller, animated: true, completion: nil)
             })
             |> `catch` { _ -> Signal<ImportedLegacyAccountEvent, NoError> in
@@ -615,7 +665,7 @@ private enum QueuedWakeup: Int32 {
                     return EmptyDisposable
                 } |> runOn(Queue.mainQueue())
             }
-            |> mapToSignal { event -> Signal<SharedAccountContext, NoError> in
+            |> mapToSignal { event -> Signal<SharedApplicationContext, NoError> in
                 switch event {
                     case let .progress(type, value):
                         Queue.mainQueue().async {
@@ -642,7 +692,7 @@ private enum QueuedWakeup: Int32 {
                                 let _ = try? FileManager.default.createDirectory(atPath: appGroupUrl.path + "/Documents", withIntermediateDirectories: true, attributes: nil)
                                 let _ = try? Data().write(to: URL(fileURLWithPath: statusPath))
                             })
-                            return sharedContext.accountManager.transaction { transaction -> SharedAccountContext in
+                            return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> SharedApplicationContext in
                                 transaction.setCurrentId(temporaryId)
                                 transaction.updateRecord(temporaryId, { record in
                                     if let record = record {
@@ -650,10 +700,10 @@ private enum QueuedWakeup: Int32 {
                                     }
                                     return record
                                 })
-                                return sharedContext
+                                return sharedApplicationContext
                             }
                         } else {
-                            return .single(sharedContext)
+                            return .single(sharedApplicationContext)
                         }
                 }
             }
@@ -672,10 +722,55 @@ private enum QueuedWakeup: Int32 {
             
         self.context.set(self.sharedContextPromise.get()
         |> deliverOnMainQueue
-        |> mapToSignal { sharedContext -> Signal<ApplicationContext?, NoError> in
-            return sharedContext.activeAccounts
-            |> map { primary, _, auth -> (AnyObject?, Bool) in
-                return (auth ?? primary, primary != nil)
+        |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext?, NoError> in
+            return sharedApplicationContext.sharedContext.activeAccounts
+            |> map { primary, _, _ -> Account? in
+                return primary
+            }
+            |> distinctUntilChanged(isEqual: { lhs, rhs in
+                if lhs !== rhs {
+                    return false
+                }
+                return true
+            })
+            |> mapToSignal { account -> Signal<(Account, LimitsConfiguration, CallListSettings)?, NoError> in
+                return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings in
+                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings ?? CallListSettings.defaultSettings
+                }
+                |> mapToSignal { callListSettings -> Signal<(Account, LimitsConfiguration, CallListSettings)?, NoError> in
+                    if let account = account {
+                        return account.postbox.transaction { transaction -> (Account, LimitsConfiguration, CallListSettings)? in
+                            let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+                            return (account, limitsConfiguration, callListSettings)
+                        }
+                    } else {
+                        return .single(nil)
+                    }
+                }
+            }
+            |> deliverOnMainQueue
+            |> map { accountAndSettings -> AuthorizedApplicationContext? in
+                return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings in
+                    let context = AccountContext(sharedContext: sharedApplicationContext.sharedContext, account: account, limitsConfiguration: limitsConfiguration)
+                    return AuthorizedApplicationContext(mainWindow: self.mainWindow, replyFromNotificationsActive: replyFromNotificationsActive, backgroundAudioActive: backgroundAudioActive, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedApplicationContext.sharedContext.accountManager, legacyBasePath: appGroupUrl.path, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
+                        let _ = (self.context.get()
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { context in
+                            if let context = context {
+                                self.registerForNotifications(context: context.context, authorize: false)
+                            }
+                        })
+                    })
+                }
+            }
+        })
+        
+        self.authContext.set(self.sharedContextPromise.get()
+        |> deliverOnMainQueue
+        |> mapToSignal { sharedApplicationContext -> Signal<UnauthorizedApplicationContext?, NoError> in
+            return sharedApplicationContext.sharedContext.activeAccounts
+            |> map { _, accounts, auth -> (UnauthorizedAccount?, Bool) in
+                return (auth, !accounts.isEmpty)
             }
             |> distinctUntilChanged(isEqual: { lhs, rhs in
                 if lhs.0 !== rhs.0 {
@@ -683,107 +778,101 @@ private enum QueuedWakeup: Int32 {
                 }
                 return true
             })
-            |> mapToSignal { account, hasOther -> Signal<(AnyObject, InitialPresentationDataAndSettings, Bool)?, NoError> in
-                if let account = account as? Account {
-                    return currentPresentationDataAndSettings(accountManager: sharedContext.accountManager, postbox: account.postbox)
-                    |> map { initialSettings in
-                        return (account, initialSettings, hasOther)
+            |> mapToSignal { account, hasOther -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, Bool)?, NoError> in
+                return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings in
+                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings ?? CallListSettings.defaultSettings
                     }
-                } else if let account = account as? UnauthorizedAccount {
-                    return currentPresentationDataAndSettings(accountManager: sharedContext.accountManager, postbox: account.postbox)
-                    |> map { initialSettings in
-                        return (account, initialSettings, hasOther)
+                |> mapToSignal { callListSettings -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, Bool)?, NoError> in
+                    if let account = account {
+                        return account.postbox.transaction { transaction -> (UnauthorizedAccount, LimitsConfiguration, CallListSettings, Bool)? in
+                            let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+                            return (account, limitsConfiguration, callListSettings, hasOther)
+                        }
+                    } else {
+                        return .single(nil)
                     }
-                } else {
-                    return .single(nil)
                 }
             }
             |> deliverOnMainQueue
-            |> map { accountAndSettings -> ApplicationContext? in
-                return accountAndSettings.flatMap { account, initialSettings, hasOther in
-                    if let account = account as? Account {
-                        let context = AccountContext(sharedContext: sharedContext, account: account, initialPresentationDataAndSettings: initialSettings)
-                        return ApplicationContext.authorized(AuthorizedApplicationContext(mainWindow: self.mainWindow, replyFromNotificationsActive: replyFromNotificationsActive, backgroundAudioActive: backgroundAudioActive, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedContext.accountManager, legacyBasePath: appGroupUrl.path, showCallsTab: initialSettings.callListSettings.showTab, reinitializedNotificationSettings: {
-                            let _ = (self.context.get()
-                            |> take(1)
-                            |> deliverOnMainQueue).start(next: { value in
-                                if let value = value, case let .authorized(context) = value {
-                                    self.registerForNotifications(context: context.context, authorize: false)
-                                }
-                            })
-                        }))
-                    } else if let account = account as? UnauthorizedAccount {
-                        return ApplicationContext.unauthorized(UnauthorizedApplicationContext(sharedContext: sharedContext, account: account, hasOtherAccounts: hasOther))
-                    } else {
-                        return nil
-                    }
+            |> map { accountAndSettings -> UnauthorizedApplicationContext? in
+                return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings, hasOther in
+                    return UnauthorizedApplicationContext(sharedContext: sharedApplicationContext.sharedContext, account: account, hasOtherAccounts: hasOther)
                 }
             }
         })
         
         let contextReadyDisposable = MetaDisposable()
         
-        self.contextDisposable.set(self.context.get().start(next: { context in
-            assert(Queue.mainQueue().isCurrent())
+        self.contextDisposable.set((self.context.get()
+        |> deliverOnMainQueue).start(next: { context in
             var network: Network?
             if let context = context {
-                switch context {
-                    case let .unauthorized(unauthorized):
-                        network = unauthorized.account.network
-                    case let .authorized(authorized):
-                        network = authorized.context.account.network
-                }
+                network = context.context.account.network
             }
             
-            Logger.shared.log("App \(self.episodeId)", "received context \(String(describing: context)) account \(String(describing: context?.accountId)) network \(String(describing: network))")
+            Logger.shared.log("App \(self.episodeId)", "received context \(String(describing: context)) account \(String(describing: context?.context.account.id)) network \(String(describing: network))")
             
             if let contextValue = self.contextValue {
-                switch contextValue {
-                    case let .unauthorized(unauthorized):
-                        unauthorized.account.shouldBeServiceTaskMaster.set(.single(.never))
-                    case let .authorized(authorized):
-                        authorized.context.isCurrent = false
-                        authorized.context.account.shouldBeServiceTaskMaster.set(.single(.never))
-                        authorized.context.account.shouldKeepOnlinePresence.set(.single(false))
-                        authorized.context.account.shouldExplicitelyKeepWorkerConnections.set(.single(false))
-                        authorized.context.account.shouldKeepBackgroundDownloadConnections.set(.single(false))
-                }
+                contextValue.context.isCurrent = false
+                contextValue.context.account.shouldExplicitelyKeepWorkerConnections.set(.single(false))
+                contextValue.context.account.shouldKeepBackgroundDownloadConnections.set(.single(false))
             }
             self.contextValue = context
             if let context = context {
-                let isReady: Signal<Bool, NoError>
-                switch context {
-                    case let .authorized(authorized):
-                        setupLegacyComponents(context: authorized.context)
-                        authorized.context.isCurrent = true
-                        isReady = authorized.isReady.get()
-                    default:
-                        isReady = .single(true)
-                }
+                setupLegacyComponents(context: context.context)
+                context.context.isCurrent = true
+                let isReady = context.isReady.get()
                 contextReadyDisposable.set((isReady
                 |> filter { $0 }
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
                     self.mainWindow.viewController = context.rootController
-                    self.mainWindow.topLevelOverlayControllers = context.overlayControllers
-                    self.maybeDequeueNotificationPayloads()
+                    self.mainWindow.topLevelOverlayControllers = [context.overlayMediaController, context.notificationController]
+                    /*self.maybeDequeueNotificationPayloads()
                     self.maybeDequeueNotificationRequests()
-                    self.maybeDequeueWakeups()
-                    switch context {
-                        case let .authorized(context):
-                            var authorizeNotifications = true
-                            if #available(iOS 10.0, *) {
-                                authorizeNotifications = false
-                            }
-                            self.registerForNotifications(context: context.context, authorize: authorizeNotifications)
-                        case .unauthorized:
-                            break
+                    self.maybeDequeueWakeups()*/
+                    var authorizeNotifications = true
+                    if #available(iOS 10.0, *) {
+                        authorizeNotifications = false
                     }
+                    self.registerForNotifications(context: context.context, authorize: authorizeNotifications)
                 }))
             } else {
                 self.mainWindow.viewController = nil
                 self.mainWindow.topLevelOverlayControllers = []
                 contextReadyDisposable.set(nil)
+            }
+        }))
+        
+        let authContextReadyDisposable = MetaDisposable()
+        
+        self.authContextDisposable.set((self.authContext.get()
+        |> deliverOnMainQueue).start(next: { context in
+            var network: Network?
+            if let context = context {
+                network = context.account.network
+            }
+            
+            Logger.shared.log("App \(self.episodeId)", "received auth context \(String(describing: context)) account \(String(describing: context?.account.id)) network \(String(describing: network))")
+            
+            if let authContextValue = self.authContextValue {
+                authContextValue.account.shouldBeServiceTaskMaster.set(.single(.never))
+                authContextValue.rootController.view.endEditing(true)
+                authContextValue.rootController.dismiss()
+            }
+            self.authContextValue = context
+            if let context = context {
+                let isReady: Signal<Bool, NoError> = .single(true)
+                authContextReadyDisposable.set((isReady
+                |> filter { $0 }
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { _ in
+                    self.mainWindow.present(context.rootController, on: .root)
+                    //self.mainWindow.viewController = context.rootController
+                    //self.mainWindow.topLevelOverlayControllers = context.overlayControllers
+                }))
+            } else {
+                authContextReadyDisposable.set(nil)
             }
         }))
         
@@ -804,14 +893,9 @@ private enum QueuedWakeup: Int32 {
         self.badgeDisposable.set((self.context.get()
         |> mapToSignal { context -> Signal<Int32, NoError> in
             if let context = context {
-                switch context {
-                    case let .authorized(context):
-                        return context.applicationBadge
-                    case .unauthorized:
-                        return .single(0)
-                }
+                return context.applicationBadge
             } else {
-                return .never()
+                return .single(0)
             }
         }
         |> deliverOnMainQueue).start(next: { count in
@@ -822,15 +906,10 @@ private enum QueuedWakeup: Int32 {
             self.quickActionsDisposable.set((self.context.get()
             |> mapToSignal { context -> Signal<[ApplicationShortcutItem], NoError> in
                 if let context = context {
-                    switch context {
-                        case let .authorized(context):
-                            let presentationData = context.context.currentPresentationData.with { $0 }
-                            return .single(applicationShortcutItems(strings: presentationData.strings))
-                        case .unauthorized:
-                            return .single([])
-                    }
+                    let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
+                    return .single(applicationShortcutItems(strings: presentationData.strings))
                 } else {
-                    return .never()
+                    return .single([])
                 }
             }
             |> distinctUntilChanged
@@ -876,14 +955,8 @@ private enum QueuedWakeup: Int32 {
                         }
                     }))
                 }
-                if let contextValue = strongSelf.contextValue {
-                    if case let .authorized(context) = contextValue {
-                        let presentationData = context.context.currentPresentationData.with { $0 }
-                        strongSelf.mainWindow.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: alert.title, text: alert.message ?? "", actions: actions), on: .root)
-                    } else if case let .unauthorized(context) = contextValue {
-                        strongSelf.mainWindow.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: context.rootController.theme), title: alert.title, text: alert.message ?? "", actions: actions), on: .root)
-                    }
-                }
+                let presentationData = sharedContext.currentPresentationData.with { $0 }
+                strongSelf.mainWindow.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: alert.title, text: alert.message ?? "", actions: actions), on: .root)
             }
         })
         
@@ -916,6 +989,12 @@ private enum QueuedWakeup: Int32 {
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
+        let _ = (self.sharedContextPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+            sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0)
+        })
+        
         self.isInForegroundValue = false
         self.isInForegroundPromise.set(false)
         self.isActiveValue = false
@@ -964,6 +1043,12 @@ private enum QueuedWakeup: Int32 {
     }
     
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        let _ = (self.sharedContextPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+            sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0)
+        })
+        
         var redactedPayload = userInfo
         if var aps = redactedPayload["aps"] as? [AnyHashable: Any] {
             if Logger.shared.redactSensitiveData {
@@ -976,7 +1061,6 @@ private enum QueuedWakeup: Int32 {
             }
             redactedPayload["aps"] = aps
         }
-        
         
         Logger.shared.log("App \(self.episodeId)", "remoteNotification: \(redactedPayload)")
         completionHandler(UIBackgroundFetchResult.noData)
@@ -996,28 +1080,24 @@ private enum QueuedWakeup: Int32 {
         }
     }
     
-    private var pushCnt = 0
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
-        if case PKPushType.voIP = type {
-            Logger.shared.log("App \(self.episodeId)", "pushRegistry payload: \(payload.dictionaryPayload)")
-            /*#if DEBUG
-            self.pushCnt += 1
-            if self.pushCnt % 2 != 0 {
-                Logger.shared.log("App \(self.episodeId)", "pushRegistry payload drop")
-                return
-            }
-            #endif*/
+        let _ = (self.sharedContextPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+            sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0)
             
-            self.queuedNotifications.append(payload)
-            self.maybeDequeueNotificationPayloads()
-        }
+            if case PKPushType.voIP = type {
+                Logger.shared.log("App \(self.episodeId)", "pushRegistry payload: \(payload.dictionaryPayload)")
+                sharedApplicationContext.notificationManager.addEncryptedNotification(payload.dictionaryPayload)
+            }
+        })
     }
     
-    private func processPushPayload(_ payload: PKPushPayload, account: Account) {
+    /*private func processPushPayload(_ payload: [AnyHashable: Any], account: Account) {
         let decryptedPayload: Signal<[AnyHashable: Any]?, NoError>
-        if let _ = payload.dictionaryPayload["aps"] as? [AnyHashable: Any] {
-            decryptedPayload = .single(payload.dictionaryPayload as [AnyHashable: Any])
-        } else if var encryptedPayload = payload.dictionaryPayload["p"] as? String {
+        if let _ = payload["aps"] as? [AnyHashable: Any] {
+            decryptedPayload = .single(payload)
+        } else if var encryptedPayload = payload["p"] as? String {
             encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
             encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
             while encryptedPayload.count % 4 != 0 {
@@ -1234,7 +1314,7 @@ private enum QueuedWakeup: Int32 {
                     self.clearNotificationsManager?.append(readMessageId)
                     self.clearNotificationsManager?.commitNow()
                     
-                    let signal = self.currentAuthorizedContext()
+                    let signal = self.context.get()
                     |> take(1)
                     |> mapToSignal { context -> Signal<Void, NoError> in
                         if let context = context {
@@ -1249,7 +1329,7 @@ private enum QueuedWakeup: Int32 {
                 }
                 
                 if let (datacenterId, host, port, secret) = configurationUpdate {
-                    let signal = self.currentAuthorizedContext()
+                    let signal = self.context.get()
                     |> take(1)
                     |> mapToSignal { context -> Signal<Void, NoError> in
                         if let context = context {
@@ -1261,28 +1341,16 @@ private enum QueuedWakeup: Int32 {
                 }
             }
         })
-    }
+    }*/
     
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
         Logger.shared.log("App \(self.episodeId)", "invalidated token for \(type)")
     }
-
-    private func currentAuthorizedContext() -> Signal<AuthorizedApplicationContext?, NoError> {
-        return self.context.get()
-            |> take(1)
-            |> mapToSignal { contextValue -> Signal<AuthorizedApplicationContext?, NoError> in
-                if let contextValue = contextValue, case let .authorized(context) = contextValue {
-                    return .single(context)
-                } else {
-                    return .single(nil)
-                }
-        }
-    }
     
     private func authorizedContext() -> Signal<AuthorizedApplicationContext, NoError> {
         return self.context.get()
-        |> mapToSignal { contextValue -> Signal<AuthorizedApplicationContext, NoError> in
-            if let contextValue = contextValue, case let .authorized(context) = contextValue {
+        |> mapToSignal { context -> Signal<AuthorizedApplicationContext, NoError> in
+            if let context = context {
                 return .single(context)
             } else {
                 return .complete()
@@ -1311,30 +1379,35 @@ private enum QueuedWakeup: Int32 {
     }
     
     private func openUrl(url: URL) {
-        let _ = (self.context.get()
-        |> flatMap { $0 }
+        let _ = (self.sharedContextPromise.get()
         |> take(1)
-        |> deliverOnMainQueue).start(next: { contextValue in
-            switch contextValue {
-                case let .authorized(context):
-                    context.openUrl(url)
-                case let .unauthorized(context):
-                    if let proxyData = parseProxyUrl(url) {
-                        context.rootController.view.endEditing(true)
-                        let strings = context.strings
-                        let controller = ProxyServerActionSheetController(theme: defaultPresentationTheme, strings: strings, accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, server: proxyData, presentationData: nil)
-                        context.rootController.currentWindow?.present(controller, on: PresentationSurfaceLevel.root, blockInteraction: false, completion: {})
-                    } else if let secureIdData = parseSecureIdUrl(url) {
-                        let strings = context.strings
-                        let theme = context.rootController.theme
-                        context.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: theme), title: nil, text: strings.Passport_NotLoggedInMessage, actions: [TextAlertAction(type: .genericAction, title: strings.Calls_NotNow, action: {
-                            if let callbackUrl = URL(string: secureIdCallbackUrl(with: secureIdData.callbackUrl, peerId: secureIdData.peerId, result: .cancel, parameters: [:])) {
-                                UIApplication.shared.openURL(callbackUrl)
-                            }
-                        }), TextAlertAction(type: .defaultAction, title: strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
-                    } else if let confirmationCode = parseConfirmationCodeUrl(url) {
-                        context.rootController.applyConfirmationCode(confirmationCode)
-                    }
+        |> mapToSignal { sharedApplicationContext -> Signal<(SharedAccountContext, AuthorizedApplicationContext?, UnauthorizedApplicationContext?), NoError> in
+            combineLatest(self.context.get(), self.authContext.get())
+            |> filter { $0 != nil || $1 != nil }
+            |> take(1)
+            |> map { context, authContext -> (SharedAccountContext, AuthorizedApplicationContext?, UnauthorizedApplicationContext?) in
+                return (sharedApplicationContext.sharedContext, context, authContext)
+            }
+        }
+        |> deliverOnMainQueue).start(next: { _, context, authContext in
+            if let context = context {
+                context.openUrl(url)
+            } else if let authContext = authContext {
+                if let proxyData = parseProxyUrl(url) {
+                    authContext.rootController.view.endEditing(true)
+                    let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
+                    let controller = ProxyServerActionSheetController(theme: presentationData.theme, strings: presentationData.strings, accountManager: authContext.sharedContext.accountManager, postbox: authContext.account.postbox, network: authContext.account.network, server: proxyData, presentationData: nil)
+                    authContext.rootController.currentWindow?.present(controller, on: PresentationSurfaceLevel.root, blockInteraction: false, completion: {})
+                } else if let secureIdData = parseSecureIdUrl(url) {
+                    let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
+                    authContext.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Passport_NotLoggedInMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Calls_NotNow, action: {
+                        if let callbackUrl = URL(string: secureIdCallbackUrl(with: secureIdData.callbackUrl, peerId: secureIdData.peerId, result: .cancel, parameters: [:])) {
+                            UIApplication.shared.openURL(callbackUrl)
+                        }
+                    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
+                } else if let confirmationCode = parseConfirmationCodeUrl(url) {
+                    authContext.rootController.applyConfirmationCode(confirmationCode)
+                }
             }
         })
     }
@@ -1345,8 +1418,8 @@ private enum QueuedWakeup: Int32 {
                 if let contact = startCallIntent.contacts?.first {
                     if let handle = contact.personHandle?.value {
                         if let userId = Int32(handle) {
-                            if let contextValue = self.contextValue, case let .authorized(context) = contextValue {
-                                let _ = context.context.callManager?.requestCall(account: context.context.account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
+                            if let context = self.contextValue {
+                                let _ = context.context.sharedContext.callManager?.requestCall(account: context.context.account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), endCurrentIfAny: false)
                             }
                         }
                     }
@@ -1364,25 +1437,21 @@ private enum QueuedWakeup: Int32 {
     @available(iOS 9.0, *)
     func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
         let _ = (self.context.get()
-        |> mapToSignal { value -> Signal<ApplicationContext?, NoError> in
-            if let value = value {
-                if case let .authorized(context) = value {
-                    return context.unlockedState
-                    |> filter { $0 }
-                    |> take(1)
-                    |> map { _ -> ApplicationContext? in
-                        return value
-                    }
-                } else {
-                    return .single(nil)
+        |> mapToSignal { context -> Signal<AuthorizedApplicationContext?, NoError> in
+            if let context = context {
+                return context.unlockedState
+                |> filter { $0 }
+                |> take(1)
+                |> map { _ -> AuthorizedApplicationContext? in
+                    return context
                 }
             } else {
                 return .complete()
             }
         }
         |> take(1)
-        |> deliverOnMainQueue).start(next: { contextValue in
-            if let contextValue = contextValue, case let .authorized(context) = contextValue {
+        |> deliverOnMainQueue).start(next: { context in
+            if let context = context {
                 if let type = ApplicationShortcutItemType(rawValue: shortcutItem.type) {
                     switch type {
                         case .search:
@@ -1402,9 +1471,9 @@ private enum QueuedWakeup: Int32 {
     private func openChatWhenReady(accountId: AccountRecordId?, peerId: PeerId, messageId: MessageId? = nil) {
         let signal = self.sharedContextPromise.get()
         |> take(1)
-        |> mapToSignal { sharedContext -> Signal<AuthorizedApplicationContext, NoError> in
+        |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext, NoError> in
             if let accountId = accountId {
-                sharedContext.switchToAccount(id: accountId)
+                sharedApplicationContext.sharedContext.switchToAccount(id: accountId)
                 return self.authorizedContext()
                 |> filter { context in
                     context.context.account.id == accountId
@@ -1425,7 +1494,7 @@ private enum QueuedWakeup: Int32 {
         self.openUrlWhenReadyDisposable.set((self.authorizedContext()
         |> take(1)
         |> deliverOnMainQueue).start(next: { context in
-            let presentationData = context.context.currentPresentationData.with { $0 }
+            let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
             openExternalUrl(context: context.context, url: url, presentationData: presentationData, navigationController: context.rootController, dismissInput: {
             })
         }))
@@ -1511,7 +1580,7 @@ private enum QueuedWakeup: Int32 {
     }
     
     private func registerForNotifications(context: AccountContext, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let _ = (context.sharedContext.accountManager.transaction { transaction -> Bool in
             let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings) as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
             return settings.displayNameOnLockscreen
@@ -1582,8 +1651,8 @@ private enum QueuedWakeup: Int32 {
         }
     }
     
-    private func maybeDequeueNotificationPayloads() {
-        if let contextValue = self.contextValue, case let .authorized(context) = contextValue, !self.queuedNotifications.isEmpty {
+    /*private func maybeDequeueNotificationPayloads() {
+        if let context = self.contextValue, !self.queuedNotifications.isEmpty {
             let queuedNotifications = self.queuedNotifications
             self.queuedNotifications = []
             for payload in queuedNotifications {
@@ -1593,7 +1662,7 @@ private enum QueuedWakeup: Int32 {
     }
     
     private func maybeDequeueNotificationRequests() {
-        if let contextValue = self.contextValue, case let .authorized(context) = contextValue {
+        if let context = self.contextValue {
             let requests = self.queuedNotificationRequests
             self.queuedNotificationRequests = []
             let queuedMutePolling = self.queuedMutePolling
@@ -1603,20 +1672,20 @@ private enum QueuedWakeup: Int32 {
                 return transaction.getAccessChallengeData()
             })
             |> deliverOnMainQueue).start(next: { accessChallengeData in
-                guard let contextValue = self.contextValue, case let .authorized(context) = contextValue else {
+                guard let context = self.contextValue else {
                     Logger.shared.log("App \(self.episodeId)", "Couldn't process remote notification request")
                     return
                 }
                 
-                let strings = context.context.currentPresentationData.with({ $0 }).strings
+                let strings = context.context.sharedContext.currentPresentationData.with({ $0 }).strings
                 
                 for (title, body, apnsSound, requestId) in requests {
                     if handleVoipNotifications {
-                    context.notificationManager.enqueueRemoteNotification(title: title, text: body, apnsSound: apnsSound, requestId: requestId, strings: strings, accessChallengeData: accessChallengeData)
+                        //context.notificationManager.enqueueRemoteNotification(title: title, text: body, apnsSound: apnsSound, requestId: requestId, strings: strings, accessChallengeData: accessChallengeData)
                     }
                     
-                    context.wakeupManager.wakeupForIncomingMessages(account: context.context.account, completion: { messageIds -> Signal<Void, NoError> in
-                        if let contextValue = self.contextValue, case let .authorized(context) = contextValue {
+                    /*context.wakeupManager.wakeupForIncomingMessages(account: context.context.account, completion: { messageIds -> Signal<Void, NoError> in
+                        if let context = self.contextValue {
                             if handleVoipNotifications {
                                 return context.notificationManager.commitRemoteNotification(context: context.context, originalRequestId: requestId, messageIds: messageIds)
                             } else {
@@ -1626,17 +1695,17 @@ private enum QueuedWakeup: Int32 {
                             Logger.shared.log("App \(self.episodeId)", "Couldn't process remote notifications wakeup result")
                             return .complete()
                         }
-                    })
+                    })*/
                 }
                 if queuedMutePolling {
-                    context.wakeupManager.wakeupForIncomingMessages(account: context.context.account, completion: { messageIds -> Signal<Void, NoError> in
-                        if let contextValue = self.contextValue, case .authorized = contextValue {
+                    /*context.wakeupManager.wakeupForIncomingMessages(account: context.context.account, completion: { messageIds -> Signal<Void, NoError> in
+                        if let context = self.contextValue {
                             return .single(Void())
                         } else {
                             Logger.shared.log("App \(self.episodeId)", "Couldn't process remote notifications wakeup result")
                             return .single(Void())
                         }
-                    })
+                    })*/
                 }
             })
         } else {
@@ -1645,7 +1714,7 @@ private enum QueuedWakeup: Int32 {
     }
     
     private func maybeDequeueAnnouncements() {
-        if let contextValue = self.contextValue, case let .authorized(context) = contextValue, !self.queuedAnnouncements.isEmpty {
+        if let context = self.contextValue, !self.queuedAnnouncements.isEmpty {
             let queuedAnnouncements = self.queuedAnnouncements
             self.queuedAnnouncements = []
             let _ = (context.context.account.postbox.transaction(ignoreDisabled: true, { transaction -> [MessageId: String] in
@@ -1672,9 +1741,9 @@ private enum QueuedWakeup: Int32 {
                 }
                 return result
             }) |> deliverOnMainQueue).start(next: { result in
-                if let contextValue = self.contextValue, case let .authorized(context) = contextValue {
+                if let context = self.contextValue {
                     for (id, text) in result {
-                        context.notificationManager.enqueueRemoteNotification(title: "", text: text, apnsSound: nil, requestId: .messageId(id), strings: context.context.currentPresentationData.with({ $0 }).strings, accessChallengeData: .none)
+                        //context.notificationManager.enqueueRemoteNotification(title: "", text: text, apnsSound: nil, requestId: .messageId(id), strings: context.context.sharedContext.currentPresentationData.with({ $0 }).strings, accessChallengeData: .none)
                     }
                 }
             })
@@ -1685,12 +1754,12 @@ private enum QueuedWakeup: Int32 {
         for wakeup in self.queuedWakeups {
             switch wakeup {
                 case .call:
-                    if let contextValue = self.contextValue, case let .authorized(context) = contextValue {
-                        context.wakeupManager.wakeupForIncomingMessages(account: context.context.account)
+                    if let context = self.contextValue {
+                        //context.wakeupManager.wakeupForIncomingMessages(account: context.context.account)
                     }
                 case .backgroundLocation:
                     if UIApplication.shared.applicationState == .background {
-                        if let contextValue = self.contextValue, case let .authorized(context) = contextValue {
+                        if let context = self.contextValue {
                             context.context.liveLocationManager?.pollOnce()
                         }
                     }
@@ -1698,19 +1767,19 @@ private enum QueuedWakeup: Int32 {
         }
         
         self.queuedWakeups.removeAll()
-    }
+    }*/
     
     @available(iOS 10.0, *)
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        #if DEBUG
-            completionHandler([.alert])
-        #else
-            completionHandler([])
-        #endif
+        if let context = self.contextValue {
+            if let accountId = accountIdFromNotification(notification), context.context.account.id != accountId {
+                completionHandler([.alert])
+            }
+        }
     }
     
     override var next: UIResponder? {
-        if let contextValue = self.contextValue, case let .authorized(context) = contextValue, let controller = context.context.keyShortcutsController {
+        if let context = self.contextValue, let controller = context.context.keyShortcutsController {
             return controller
         }
         return super.next

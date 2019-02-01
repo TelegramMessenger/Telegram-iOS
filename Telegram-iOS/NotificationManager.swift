@@ -323,7 +323,7 @@ final class NotificationManager {
     }
     
     private func processNotificationMessages(context: AccountContext, messageList: [([Message], PeerMessageSound, Bool, Bool)], isLocked: Bool) {
-        let presentationData = (context.currentPresentationData.with { $0 })
+        let presentationData = (context.sharedContext.currentPresentationData.with { $0 })
         let strings = presentationData.strings
         let nameDisplayOrder = presentationData.nameDisplayOrder
         
@@ -801,7 +801,7 @@ final class NotificationManager {
                 }
             }
         }
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
        
         var userInfo: [AnyHashable : Any] = [:]
         userInfo["peerId"] = messageId.peerId.toInt64()
