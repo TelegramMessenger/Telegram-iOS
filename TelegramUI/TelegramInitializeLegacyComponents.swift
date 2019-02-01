@@ -239,14 +239,21 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                     return TGBuiltinWallpaperInfo()
                 case let .color(color):
                     return TGColorWallpaperInfo(color: UInt32(bitPattern: color))
-                case let .image(representations):
+                case let .image(representations, _):
                     if let resource = largestImageRepresentation(representations)?.resource, let path = legacyContext.account.postbox.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
                         return TGCustomImageWallpaperInfo(image: image)
                     } else {
                         return TGBuiltinWallpaperInfo()
                     }
                 case let .file(file):
-                    if let path = legacyContext.account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
+                    if file.isPattern {
+                        if let color = file.settings.color {
+                            return TGColorWallpaperInfo(color: UInt32(bitPattern: color))
+                        } else {
+                            return TGBuiltinWallpaperInfo()
+                        }
+                    }
+                    else if let path = legacyContext.account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
                         return TGCustomImageWallpaperInfo(image: image)
                     } else {
                         return TGBuiltinWallpaperInfo()
@@ -272,17 +279,32 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                         }
                         context.fill(CGRect(origin: CGPoint(), size: size))
                     })
-                case let .image(representations):
+                case let .image(representations, _):
                     if let resource = largestImageRepresentation(representations)?.resource, let path = legacyContext.account.postbox.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
                         return image
                     } else {
                         return nil
                     }
                 case let .file(file):
-                    if let path = legacyContext.account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
-                        return image
+                    if file.isPattern {
+                        if let color = file.settings.color {
+                            return generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
+                                if color == 0 {
+                                    context.setFillColor(UIColor(rgb: 0x222222).cgColor)
+                                } else {
+                                    context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
+                                }
+                                context.fill(CGRect(origin: CGPoint(), size: size))
+                            })
+                        } else {
+                            return nil
+                        }
                     } else {
-                        return nil
+                        if let path = legacyContext.account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
+                            return image
+                        } else {
+                            return nil
+                        }
                     }
             }
         } else {

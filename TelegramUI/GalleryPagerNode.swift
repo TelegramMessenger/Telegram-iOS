@@ -83,6 +83,15 @@ final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate {
         self.view.addSubview(self.scrollView)
     }
     
+    var isScrollEnabled: Bool {
+        get {
+            return self.scrollView.isScrollEnabled
+        }
+        set {
+            self.scrollView.isScrollEnabled = newValue
+        }
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (layout, navigationBarHeight)
         

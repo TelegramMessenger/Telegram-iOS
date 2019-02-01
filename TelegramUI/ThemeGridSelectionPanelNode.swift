@@ -13,7 +13,7 @@ final class ThemeGridSelectionPanelNode: ASDisplayNode {
     
     private var theme: PresentationTheme
     
-    var selectedIndices = Set<Int>() {
+    var selectedIndices = Set<Int64>() {
         didSet {
             if oldValue != self.selectedIndices {
                 self.deleteButton.isEnabled = !self.selectedIndices.isEmpty

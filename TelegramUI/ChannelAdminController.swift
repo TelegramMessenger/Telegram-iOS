@@ -293,8 +293,6 @@ private func stringForRight(strings: PresentationStrings, right: TelegramChatAdm
         } else {
             return strings.Channel_EditAdmin_PermissionInviteSubscribers
         }
-    } else if right.contains(.canChangeInviteLink) {
-        return ""
     } else if right.contains(.canPinMessages) {
         return strings.Channel_EditAdmin_PermissionPinMessages
     } else if right.contains(.canAddAdmins) {
@@ -317,8 +315,6 @@ private func rightDependencies(_ right: TelegramChatAdminRightsFlags) -> [Telegr
         return []
     } else if right.contains(.canInviteUsers) {
         return []
-    } else if right.contains(.canChangeInviteLink) {
-        return [.canInviteUsers]
     } else if right.contains(.canPinMessages) {
         return []
     } else if right.contains(.canAddAdmins) {

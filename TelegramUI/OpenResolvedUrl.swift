@@ -199,10 +199,14 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
             
             let signal: Signal<TelegramWallpaper, GetWallpaperError>
             var options: WallpaperPresentationOptions?
+            var color: UIColor?
+            var intensity: Int32?
             switch parameter {
-                case let .slug(slug, wallpaperOptions):
+                case let .slug(slug, wallpaperOptions, patternColor, patternIntensity):
                     signal = getWallpaper(account: context.account, slug: slug)
                     options = wallpaperOptions
+                    color = patternColor
+                    intensity = patternIntensity
                     controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
                     present(controller!, nil)
                 case let .color(color):
@@ -212,20 +216,10 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
             let _ = (signal
             |> deliverOnMainQueue).start(next: { [weak controller] wallpaper in
                 controller?.dismiss()
-                let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options))
+                let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options, color, intensity, nil))
                 present(galleryController, nil)
             }, error: { [weak controller] error in
                 controller?.dismiss()
-                
-//                let text: String
-//                switch error {
-//                case .limitExceeded:
-//                    text = presentationData.strings.Login_CodeFloodError
-//                case .generic:
-//                    text = presentationData.strings.Login_UnknownError
-//                }
-//                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-//                present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             })
             dismissInput()
     }

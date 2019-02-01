@@ -35,6 +35,7 @@ func blurredImage(_ image: UIImage, radius: CGFloat, iterations: Int = 3) -> UII
         free(tempData)
     }
     
+    
     let source = CFDataGetBytePtr(providerData)
     memcpy(inBuffer.data, source, bytes)
     

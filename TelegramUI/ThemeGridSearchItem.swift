@@ -77,10 +77,10 @@ final class ThemeGridSearchItemNode: GridItemNode {
             case let .internalReference(_, _, _, _, _, image, file, _):
                 if let image = image {
                     immediateThumbnailData = image.immediateThumbnailData
-                    if let largestRepresentation = largestImageRepresentation(image.representations) {
-                        imageDimensions = largestRepresentation.dimensions
+                    if let representation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 321.0, height: 321.0)) {
+                        imageResource = representation.resource
+                        imageDimensions = representation.dimensions
                     }
-                    imageResource = imageRepresentationLargerThan(image.representations, size: CGSize(width: 200.0, height: 100.0))?.resource
                     if let file = file {
                         if let thumbnailRepresentation = smallestImageRepresentation(file.previewRepresentations) {
                             thumbnailDimensions = thumbnailRepresentation.dimensions
@@ -112,7 +112,7 @@ final class ThemeGridSearchItemNode: GridItemNode {
             }
             if !representations.isEmpty {
                 let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil)
-                updateImageSignal =  mediaGridMessagePhoto(account: item.account, photoReference: .standalone(media: tmpImage))
+                updateImageSignal =  mediaGridMessagePhoto(account: item.account, photoReference: .standalone(media: tmpImage), fullRepresentationSize: CGSize(width: 512, height: 512))
             } else {
                 updateImageSignal = .complete()
             }

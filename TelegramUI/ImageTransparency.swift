@@ -51,11 +51,13 @@ func imageHasTransparency(_ cgImage: CGImage) -> Bool {
         return false
     }
     if let (histogramBins, alphaBinIndex) = generateHistogram(cgImage: cgImage) {
+        let opaqueCount: vImagePixelCount = histogramBins[alphaBinIndex][255]
+        var transparentCount: vImagePixelCount = 0
         for i in 0 ..< 255 {
-            if histogramBins[alphaBinIndex][i] > 0 {
-                return true
-            }
+            transparentCount += histogramBins[alphaBinIndex][i]
         }
+        let totalCount = opaqueCount + transparentCount
+        return Double(transparentCount) / Double(totalCount) > 0.02
     }
     return false
 }

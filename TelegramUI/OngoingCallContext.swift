@@ -277,5 +277,14 @@ final class OngoingCallContext {
         }
         return (poll |> then(.complete() |> delay(0.5, queue: Queue.concurrentDefaultQueue()))) |> restart
     }
+    
+    func needsRating(_ completion: @escaping (Bool) -> Void) {
+        self.withContext { context in
+            let needsRating = context.needRate()
+            Queue.mainQueue().async {
+                completion(needsRating)
+            }
+        }
+    }
 }
 

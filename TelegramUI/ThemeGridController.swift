@@ -112,7 +112,12 @@ final class ThemeGridController: ViewController {
                                 strongSelf.controllerNode.scrollToTop(animated: false)
                             }
                             if let controller = controller {
-                                controller.dismiss(forceAway: true)
+                                switch wallpaper {
+                                    case .asset, .contextResult:
+                                        controller.dismiss(forceAway: true)
+                                    default:
+                                        break
+                                }
                             }
                         })
                     }
@@ -190,17 +195,40 @@ final class ThemeGridController: ViewController {
                     for wallpaper in wallpapers {
                         if wallpaper == strongSelf.presentationData.chatWallpaper {
                             let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
-                                return PresentationThemeSettings(chatWallpaper: .builtin, chatWallpaperOptions: [], theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                                var fallbackWallpaper: TelegramWallpaper = .builtin
+                                if case let .builtin(theme) = current.theme {
+                                    switch theme {
+                                        case .day:
+                                            fallbackWallpaper = .color(0xffffff)
+                                        case .nightGrayscale:
+                                            fallbackWallpaper = .color(0x000000)
+                                        case .nightAccent:
+                                            fallbackWallpaper = .color(0x18222d)
+                                        default:
+                                            fallbackWallpaper = .builtin
+                                    }
+                                }
+                                
+                                var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                themeSpecificChatWallpapers[current.theme.index] = fallbackWallpaper
+                                return PresentationThemeSettings(chatWallpaper: fallbackWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                             })).start()
                             break
                         }
                     }
                     
+                    var deleteWallpapers: [Signal<Void, NoError>] = []
                     for wallpaper in wallpapers {
-                        let _ = deleteWallpaper(account: strongSelf.context.account, wallpaper: wallpaper).start()
+                        deleteWallpapers.append(deleteWallpaper(account: strongSelf.context.account, wallpaper: wallpaper))
                     }
                     
-                    let _ = telegramWallpapers(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network).start()
+                    let _ = (combineLatest(deleteWallpapers)
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.controllerNode.updateWallpapers()
+                        }
+                    })
+                    
                     strongSelf.donePressed()
                 }))
                 
@@ -217,6 +245,67 @@ final class ThemeGridController: ViewController {
         }, shareWallpapers: { [weak self] wallpapers in
             if let strongSelf = self {
                 strongSelf.shareWallpapers(wallpapers)
+            }
+        }, resetWallpapers: { [weak self] in
+            if let strongSelf = self {
+                let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                let items: [ActionSheetItem] = [
+                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Wallpaper_ResetWallpapersConfirmation, color: .destructive, action: { [weak self, weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        
+                        if let strongSelf = self {
+                            strongSelf.scrollToTop?()
+                            
+                            let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .loading(cancelled: nil))
+                            strongSelf.present(controller, in: .window(.root))
+                            
+                            let _ = resetWallpapers(account: strongSelf.context.account).start(completed: { [weak self, weak controller] in
+                                let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
+                                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
+                                        let current: PresentationThemeSettings
+                                        if let entry = entry as? PresentationThemeSettings {
+                                            current = entry
+                                        } else {
+                                            current = PresentationThemeSettings.defaultSettings
+                                        }
+                                        let wallpaper: TelegramWallpaper
+                                        if case let .builtin(theme) = current.theme {
+                                            switch theme {
+                                                case .day:
+                                                    wallpaper = .color(0xffffff)
+                                                case .nightGrayscale:
+                                                    wallpaper = .color(0x000000)
+                                                case .nightAccent:
+                                                    wallpaper = .color(0x18222d)
+                                                default:
+                                                    wallpaper = .builtin
+                                            }
+                                        } else {
+                                            wallpaper = .builtin
+                                        }
+                                        return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: [:], fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                                    })
+                                }).start()
+                                
+                                let _ = (telegramWallpapers(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network)
+                                |> deliverOnMainQueue).start(completed: { [weak self, weak controller] in
+                                    controller?.dismiss()
+                                    if let strongSelf = self {
+                                        strongSelf.controllerNode.updateWallpapers()
+                                    }
+                                })
+                            })
+                        }
+                    })
+                ]
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                strongSelf.present(actionSheet, in: .window(.root))
             }
         }, popViewController: { [weak self] in
             if let strongSelf = self {
@@ -236,7 +325,7 @@ final class ThemeGridController: ViewController {
 
         self.controllerNode.gridNode.scrollingCompleted = { [weak self] in
             if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
-                let _ = fixNavigationSearchableGridNodeScrolling(strongSelf.controllerNode.gridNode, searchNode: searchContentNode)
+                let _ = strongSelf.controllerNode.fixNavigationSearchableGridNodeScrolling(searchNode: searchContentNode)
             }
         }
         
@@ -319,8 +408,21 @@ final class ThemeGridController: ViewController {
                 let account = self.context.account
                 let accountManager = self.context.sharedContext.accountManager
                 let updateWallpaper: (TelegramWallpaper) -> Void = { [weak self] wallpaper in
+                    var resource: MediaResource?
+                    if case let .image(representations, _) = wallpaper, let representation = largestImageRepresentation(representations) {
+                        resource = representation.resource
+                    } else if case let .file(file) = wallpaper {
+                        resource = file.file.resource
+                    }
+                    
+                    if let resource = resource {
+                        let _ = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start(completed: {})
+                    }
+                    
                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: accountManager, { current in
-                        return PresentationThemeSettings(chatWallpaper: wallpaper, chatWallpaperOptions: mode, theme: current.theme, themeAccentColor: current.themeAccentColor, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                        var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                        themeSpecificChatWallpapers[current.theme.index] = wallpaper
+                        return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
                     })).start()
                     
                     if let strongSelf = self, case .file = wallpaper {
@@ -329,23 +431,12 @@ final class ThemeGridController: ViewController {
                 }
                 
                 let apply: () -> Void = {
-                    let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: thumbnailDimensions, resource: thumbnailResource), TelegramMediaImageRepresentation(dimensions: croppedImage.size, resource: resource)])
+                    let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), color: nil, intensity: nil)
+                    let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: thumbnailDimensions, resource: thumbnailResource), TelegramMediaImageRepresentation(dimensions: croppedImage.size, resource: resource)], settings)
                     updateWallpaper(wallpaper)
                     DispatchQueue.main.async {
                         completion()
                     }
-                    
-                    let _ = uploadWallpaper(account: account, resource: resource).start(next: { status in
-                        if case let .complete(wallpaper) = status {
-                            if mode.contains(.blur), case let .file(_, _, _, _, _, file) = wallpaper {
-                                let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
-                                    updateWallpaper(wallpaper)
-                                })
-                            } else {
-                                updateWallpaper(wallpaper)
-                            }
-                        }
-                    })
                 }
                 
                 if mode.contains(.blur) {
@@ -366,10 +457,24 @@ final class ThemeGridController: ViewController {
         for wallpaper in wallpapers {
             var item: String?
             switch wallpaper {
-                case let .file(_, _, _, _, slug, _):
-                    item = slug
+                case let .file(_, _, _, _, isPattern, _, slug, _, settings):
+                    var options: [String] = []
+                    if isPattern {
+                        if let color = settings.color {
+                            options.append("bg_color=\(UIColor(rgb: UInt32(bitPattern: color)).hexString)")
+                        }
+                        if let intensity = settings.intensity {
+                            options.append("intensity=\(intensity)")
+                        }
+                    }
+                    
+                    var optionsString = ""
+                    if !options.isEmpty {
+                        optionsString = "?\(options.joined(separator: "&"))"
+                    }
+                    item = slug + optionsString
                 case let .color(color):
-                    item = "\(String(UInt32(bitPattern: color), radix: 16, uppercase: false))"
+                    item = "\(UIColor(rgb: UInt32(bitPattern: color)).hexString)"
                 default:
                     break
             }

@@ -67,6 +67,8 @@ typedef NS_ENUM(int32_t, OngoingCallDataSaving) {
 - (void)startWithKey:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescription * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescription *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath;
 - (void)stop;
 
+- (bool)needRate;
+    
 - (NSString * _Nullable)debugInfo;
 - (NSString * _Nullable)version;
 - (NSData * _Nonnull)getDerivedState;

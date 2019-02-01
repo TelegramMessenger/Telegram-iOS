@@ -50,12 +50,10 @@ public struct ApplicationSpecificSharedDataKeys {
 
 private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
     case instantPageStoredState = 0
-    case themeSpecificSettings = 1
 }
 
 public struct ApplicationSpecificItemCacheCollectionId {
     public static let instantPageStoredState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.instantPageStoredState.rawValue)
-    public static let themeSpecificSettings = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.themeSpecificSettings.rawValue)
 }
 
 private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {

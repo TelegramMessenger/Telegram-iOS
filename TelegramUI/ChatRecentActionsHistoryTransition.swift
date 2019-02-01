@@ -662,7 +662,6 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 (.canDeleteMessages, self.presentationData.strings.Channel_AdminLog_CanDeleteMessages),
                                 (.canBanUsers, self.presentationData.strings.Channel_AdminLog_CanBanUsers),
                                 (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsers),
-                                (.canChangeInviteLink, self.presentationData.strings.Channel_AdminLog_CanChangeInviteLink),
                                 (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),
                                 (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins)
                             ]

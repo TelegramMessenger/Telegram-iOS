@@ -134,7 +134,7 @@ class AutodownloadSizeLimitItemNode: ListViewItemNode {
             value = CGFloat(index)
             sliderView.value = value
             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-            sliderView.backColor = item.theme.list.itemSecondaryTextColor
+            sliderView.backColor = item.theme.list.disclosureArrowColor
             sliderView.trackColor = item.theme.list.itemAccentColor
             sliderView.knobImage = generateKnobImage()
             
@@ -211,7 +211,7 @@ class AutodownloadSizeLimitItemNode: ListViewItemNode {
                     if let sliderView = strongSelf.sliderView {
                         if themeUpdated {
                             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                            sliderView.backColor = item.theme.list.itemSecondaryTextColor
+                            sliderView.backColor = item.theme.list.disclosureArrowColor
                             sliderView.trackColor = item.theme.list.itemAccentColor
                             sliderView.knobImage = generateKnobImage()
                         }

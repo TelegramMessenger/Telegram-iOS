@@ -3,6 +3,8 @@ import AsyncDisplayKit
 import Display
 
 final class WallpaperGalleryToolbarNode: ASDisplayNode {
+    private var theme: PresentationTheme
+    
     private let cancelButton = HighlightableButtonNode()
     private let doneButton = HighlightableButtonNode()
     private let separatorNode = ASDisplayNode()
@@ -12,6 +14,8 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
     var done: (() -> Void)?
     
     init(theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        
         super.init()
         
         self.addSubnode(self.cancelButton)
@@ -24,7 +28,7 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.cancelButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    strongSelf.cancelButton.backgroundColor = UIColor(rgb: 0xd4d4d4)
+                    strongSelf.cancelButton.backgroundColor = strongSelf.theme.list.itemHighlightedBackgroundColor
                 } else {
                     UIView.animate(withDuration: 0.3, animations: {
                         strongSelf.cancelButton.backgroundColor = .clear
@@ -36,7 +40,7 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.doneButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    strongSelf.doneButton.backgroundColor = UIColor(rgb: 0xd4d4d4)
+                    strongSelf.doneButton.backgroundColor = strongSelf.theme.list.itemHighlightedBackgroundColor
                 } else {
                     UIView.animate(withDuration: 0.3, animations: {
                         strongSelf.doneButton.backgroundColor = .clear
@@ -55,6 +59,7 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
         self.backgroundColor = theme.rootController.tabBar.backgroundColor
         self.separatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
         self.topSeparatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
@@ -75,6 +80,7 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
     }
     
     @objc func donePressed() {
+        self.doneButton.isUserInteractionEnabled = false
         self.done?()
     }
 }

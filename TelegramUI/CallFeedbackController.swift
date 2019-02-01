@@ -204,7 +204,7 @@ private func callFeedbackControllerEntries(theme: PresentationTheme, strings: Pr
     return entries
 }
 
-public func callFeedbackController(context: AccountContext, callId: CallId, rating: Int) -> ViewController {
+public func callFeedbackController(sharedContext: SharedAccountContext, account: Account, callId: CallId, rating: Int) -> ViewController {
     let initialState = CallFeedbackState()
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -232,7 +232,7 @@ public func callFeedbackController(context: AccountContext, callId: CallId, rati
         updateState { $0.withUpdatedIncludeLogs(value) }
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
+    let signal = combineLatest(sharedContext.presentationData, statePromise.get())
         |> deliverOnMainQueue
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<CallFeedbackControllerEntry>, CallFeedbackControllerEntry.ItemGenerationArguments)) in
             
@@ -255,7 +255,7 @@ public func callFeedbackController(context: AccountContext, callId: CallId, rati
                 }
                 comment.append(hashtags)
                 
-                let _ = rateCallAndSendLogs(account: context.account, callId: callId, starsCount: rating, comment: comment, includeLogs: state.includeLogs).start()
+                let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: comment, includeLogs: state.includeLogs).start()
                 dismissImpl?()
                 
                 presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .starSuccess(presentationData.strings.CallFeedback_Success)))
@@ -267,7 +267,8 @@ public func callFeedbackController(context: AccountContext, callId: CallId, rati
             return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(context: context, state: signal)
+    
+    let controller = ItemListController(sharedContext: sharedContext, state: signal)
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }

@@ -84,7 +84,7 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
                     }
                 }
                 if let scrollIndex = scrollIndex {
-                    scrollToItem = GridNodeScrollToItem(index: scrollIndex, position: .top, transition: transition, directionHint: .down, adjustForSection: true, adjustForTopInset: true)
+                    scrollToItem = GridNodeScrollToItem(index: scrollIndex, position: .top(0.0), transition: transition, directionHint: .down, adjustForSection: true, adjustForTopInset: true)
                 }
             } else {
                 var scrollIndex: Int?
@@ -95,7 +95,7 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
                     }
                 }
                 if let scrollIndex = scrollIndex {
-                    scrollToItem = GridNodeScrollToItem(index: scrollIndex, position: .top, transition: transition, directionHint: .down, adjustForSection: true, adjustForTopInset: true)
+                    scrollToItem = GridNodeScrollToItem(index: scrollIndex, position: .top(0.0), transition: transition, directionHint: .down, adjustForSection: true, adjustForTopInset: true)
                 }
             }
         }

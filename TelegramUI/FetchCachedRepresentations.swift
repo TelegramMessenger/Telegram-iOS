@@ -62,6 +62,22 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
             }
             return fetchCachedBlurredWallpaperRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
         }
+    } else if let representation = representation as? CachedPatternWallpaperMaskRepresentation {
+        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+            if !data.complete {
+                return .complete()
+            }
+            return fetchCachedPatternWallpaperMaskRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
+        }
+    } else if let representation = representation as? CachedPatternWallpaperRepresentation {
+        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+            if !data.complete {
+                return .complete()
+            }
+            return fetchCachedPatternWallpaperRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
+        }
     }
     return .never()
 }
@@ -303,6 +319,93 @@ private func fetchCachedBlurredWallpaperRepresentation(account: Account, resourc
                     CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
                     
                     let colorQuality: Float = 0.5
+                    
+                    let options = NSMutableDictionary()
+                    options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
+                    
+                    CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
+                    if CGImageDestinationFinalize(colorDestination) {
+                        subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                        subscriber.putCompletion()
+                    }
+                }
+            }
+        }
+        return EmptyDisposable
+    }) |> runOn(Queue.concurrentDefaultQueue())
+}
+
+private func fetchCachedPatternWallpaperMaskRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedPatternWallpaperMaskRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+    return Signal({ subscriber in
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
+            if let image = UIImage(data: data) {
+                var randomId: Int64 = 0
+                arc4random_buf(&randomId, 8)
+                let path = NSTemporaryDirectory() + "\(randomId)"
+                let url = URL(fileURLWithPath: path)
+                
+                let size = representation.size != nil ? image.size.aspectFitted(representation.size!) : CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
+                
+                let alphaImage = generateImage(size, contextGenerator: { size, context in
+                    context.setFillColor(UIColor.black.cgColor)
+                    context.fill(CGRect(origin: CGPoint(), size: size))
+                    context.clip(to: CGRect(origin: CGPoint(), size: size), mask: image.cgImage!)
+                    context.setFillColor(UIColor.white.cgColor)
+                    context.fill(CGRect(origin: CGPoint(), size: size))
+                }, scale: 1.0)
+                   
+                if let alphaImage = alphaImage, let alphaDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
+                    CGImageDestinationSetProperties(alphaDestination, [:] as CFDictionary)
+                    
+                    let colorQuality: Float = 0.87
+                    
+                    let options = NSMutableDictionary()
+                    options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
+                    
+                    CGImageDestinationAddImage(alphaDestination, alphaImage.cgImage!, options as CFDictionary)
+                    if CGImageDestinationFinalize(alphaDestination) {
+                        subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                        subscriber.putCompletion()
+                    }
+                }
+            }
+        }
+        return EmptyDisposable
+    }) |> runOn(Queue.concurrentDefaultQueue())
+}
+
+private func fetchCachedPatternWallpaperRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedPatternWallpaperRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+    return Signal({ subscriber in
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
+            if let image = UIImage(data: data) {
+                var randomId: Int64 = 0
+                arc4random_buf(&randomId, 8)
+                let path = NSTemporaryDirectory() + "\(randomId)"
+                let url = URL(fileURLWithPath: path)
+                
+                let size = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
+                
+                let backgroundColor = UIColor(rgb: UInt32(bitPattern: representation.color))
+                let foregroundColor = patternColor(for: backgroundColor, intensity: CGFloat(representation.intensity) / 100.0)
+                
+                let colorImage = generateImage(size, contextGenerator: { size, c in
+                    let rect = CGRect(origin: CGPoint(), size: size)
+                    c.setBlendMode(.copy)
+                    c.setFillColor(backgroundColor.cgColor)
+                    c.fill(rect)
+                    
+                    c.setBlendMode(.normal)
+                    if let cgImage = image.cgImage {
+                        c.clip(to: rect, mask: cgImage)
+                    }
+                    c.setFillColor(foregroundColor.cgColor)
+                    c.fill(rect)
+                }, scale: 1.0)
+                
+                if let colorImage = colorImage, let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
+                    CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
+                    
+                    let colorQuality: Float = 0.9
                     
                     let options = NSMutableDictionary()
                     options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)

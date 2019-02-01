@@ -70,6 +70,7 @@ public final class AccountContext {
     let downloadedMediaStoreManager: DownloadedMediaStoreManager
     
     public let liveLocationManager: LiveLocationManager?
+    let wallpaperUploadManager: WallpaperUploadManager?
     
     let peerChannelMemberCategoriesContextsManager = PeerChannelMemberCategoriesContextsManager()
     
@@ -103,6 +104,11 @@ public final class AccountContext {
             self.liveLocationManager = nil
         }
         self.fetchManager = FetchManager(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager)
+        if sharedContext.applicationBindings.isMainApp {
+            self.wallpaperUploadManager = WallpaperUploadManager(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
+        } else {
+            self.wallpaperUploadManager = nil
+        }
         
         self.currentLimitsConfiguration = Atomic(value: limitsConfiguration)
     }

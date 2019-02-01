@@ -40,8 +40,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case keepChatNavigationStack(PresentationTheme, Bool)
     case clearTips(PresentationTheme)
     case reimport(PresentationTheme)
-    case sendTthumb(PresentationTheme)
-    case previewTthumb(PresentationTheme)
+    case resetData(PresentationTheme)
     case animatedStickers(PresentationTheme)
     case versionInfo(PresentationTheme)
     
@@ -57,7 +56,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack:
                 return DebugControllerSection.experiments.rawValue
-            case .clearTips, .reimport, .sendTthumb, .previewTthumb, .animatedStickers:
+            case .clearTips, .reimport, .resetData, .animatedStickers:
                 return DebugControllerSection.experiments.rawValue
             case .versionInfo:
                 return DebugControllerSection.info.rawValue
@@ -90,10 +89,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 10
             case .reimport:
                 return 11
-            case .sendTthumb:
+            case .resetData:
                 return 12
-            case .previewTthumb:
-                return 13
             case .animatedStickers:
                 return 14
             case .versionInfo:
@@ -214,13 +211,11 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         exit(0)
                     }
                 })
-            case let .sendTthumb(theme):
-                return ItemListSwitchItem(theme: theme, title: "Send TThumb", value: GlobalExperimentalSettings.enableTinyThumbnails, sectionId: self.section, style: .blocks, updated: { value in
-                    GlobalExperimentalSettings.enableTinyThumbnails = value
-                })
-            case let .previewTthumb(theme):
-                return ItemListSwitchItem(theme: theme, title: "Preview TThumb", value: GlobalExperimentalSettings.forceTinyThumbnailsPreview, sectionId: self.section, style: .blocks, updated: { value in
-                    GlobalExperimentalSettings.forceTinyThumbnailsPreview = value
+            case let .resetData(theme):
+                return ItemListActionItem(theme: theme, title: "Reset Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    let databasePath = arguments.accountManager.basePath + "/db"
+                    let _ = try? FileManager.default.removeItem(atPath: databasePath)
+                    preconditionFailure()
                 })
             case let .animatedStickers(theme):
                 return ItemListSwitchItem(theme: theme, title: "AJSON", value: GlobalExperimentalSettings.animatedStickers, sectionId: self.section, style: .blocks, updated: { value in
@@ -256,8 +251,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     if hasLegacyAppData {
         entries.append(.reimport(presentationData.theme))
     }
-    entries.append(.sendTthumb(presentationData.theme))
-    entries.append(.previewTthumb(presentationData.theme))
+    entries.append(.resetData(presentationData.theme))
     entries.append(.animatedStickers(presentationData.theme))
     entries.append(.versionInfo(presentationData.theme))
     

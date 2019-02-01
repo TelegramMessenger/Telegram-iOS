@@ -13,11 +13,10 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     let fontSize: PresentationFontSize
     let wallpaper: TelegramWallpaper
-    let wallpaperMode: WallpaperPresentationOptions
     let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
     
-    init(context: AccountContext, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, wallpaperMode: WallpaperPresentationOptions, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder) {
+    init(context: AccountContext, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder) {
         self.context = context
         self.theme = theme
         self.componentTheme = componentTheme
@@ -25,7 +24,6 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.fontSize = fontSize
         self.wallpaper = wallpaper
-        self.wallpaperMode = wallpaperMode
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
     }
@@ -110,7 +108,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
         
         return { item, params, neighbors in
             var updatedBackgroundImage: UIImage?
-            if currentItem?.wallpaper != item.wallpaper || currentItem?.wallpaperMode != item.wallpaperMode {
+            if currentItem?.wallpaper != item.wallpaper {
                 switch item.wallpaper {
                     case .builtin:
                         if let filePath = frameworkBundle.path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg") {
@@ -121,9 +119,9 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                             context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
                             context.fill(CGRect(origin: CGPoint(), size: size))
                         })
-                    case let .image(representations):
+                    case let .image(representations, settings):
                         if let largest = largestImageRepresentation(representations) {
-                            if item.wallpaperMode.contains(.blur) {
+                            if settings.blur {
                                 var image: UIImage?
                                 let _ = item.context.account.postbox.mediaBox.cachedResourceRepresentation(largest.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                                     if data.complete {
@@ -137,7 +135,15 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                             }
                         }
                     case let .file(file):
-                        if item.wallpaperMode.contains(.blur) {
+                        if file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
+                            var image: UIImage?
+                            let _ = item.context.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                                if data.complete {
+                                    image = UIImage(contentsOfFile: data.path)?.precomposed()
+                                }
+                            })
+                            updatedBackgroundImage = image
+                        } else if file.settings.blur {
                             var image: UIImage?
                             let _ = item.context.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                                 if data.complete {

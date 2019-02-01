@@ -66,7 +66,7 @@ struct PresentationResourcesChat {
     }
     
     static func principalGraphics(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> PrincipalThemeEssentialGraphics {
-        let hasWallpaper = !wallpaper.isEmpty && !wallpaper.isBuiltin
+        let hasWallpaper = !wallpaper.isEmpty
         let key: PresentationResourceKey = !hasWallpaper ? PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithoutWallpaper : PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithWallpaper
         return theme.object(key.rawValue, { theme in
             return PrincipalThemeEssentialGraphics(theme.chat, wallpaper: wallpaper)

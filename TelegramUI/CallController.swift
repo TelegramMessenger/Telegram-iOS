@@ -30,6 +30,8 @@ public final class CallController: ViewController {
     private var callMutedDisposable: Disposable?
     private var isMuted = false
     
+    private var presentedCallRating = false
+    
     private var audioOutputStateDisposable: Disposable?
     private var audioOutputState: ([AudioSessionOutput], AudioSessionOutput?)?
     
@@ -162,6 +164,23 @@ public final class CallController: ViewController {
         
         self.controllerNode.back = { [weak self] in
             let _ = self?.dismiss()
+        }
+        
+        self.controllerNode.presentCallRating = { [weak self] callId in
+            if let strongSelf = self, !strongSelf.presentedCallRating {
+                strongSelf.presentedCallRating = true
+                
+                Queue.mainQueue().after(0.5, {
+                    let window = strongSelf.window
+                    let controller = callRatingController(sharedContext: strongSelf.sharedContext, account: strongSelf.account, callId: callId, present: { [weak self] c, a in
+                        if let window = window {
+                            c.presentationArguments = a
+                            window.present(c, on: .root, blockInteraction: false, completion: {})
+                        }
+                    })
+                    strongSelf.present(controller, in: .window(.root))
+                })
+            }
         }
         
         self.controllerNode.dismissedInteractively = { [weak self] in

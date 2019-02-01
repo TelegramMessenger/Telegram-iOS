@@ -242,7 +242,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }
         
-        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, chatWallpaperMode: self.presentationData.chatWallpaperOptions, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.fontSize, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation)
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.fontSize, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation)
         
         var mediaAccessoryPanelVisibility = MediaAccessoryPanelVisibility.none
         if case .standard = mode {
@@ -702,6 +702,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }, openWallpaper: { [weak self] message in
             if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
+                strongSelf.chatDisplayNode.dismissInput()
                 openChatWallpaper(context: strongSelf.context, message: message, present: { [weak self] c, a in
                     self?.present(c, in: .window(.root), with: a, blockInteraction: true)
                 })
@@ -1098,7 +1099,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }, rateCall: { [weak self] message, callId in
             if let strongSelf = self {
-                let controller = callRatingController(context: strongSelf.context, callId: callId, present: { [weak self] c, a in
+                let controller = callRatingController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, callId: callId, present: { [weak self] c, a in
                     if let strongSelf = self {
                         strongSelf.present(c, in: .window(.root), with: a)
                     }
@@ -1650,7 +1651,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             state = state.updatedTheme(self.presentationData.theme)
             state = state.updatedStrings(self.presentationData.strings)
             state = state.updatedDateTimeFormat(self.presentationData.dateTimeFormat)
-            state = state.updatedChatWallpaper(self.presentationData.chatWallpaper, mode: self.presentationData.chatWallpaperOptions)
+            state = state.updatedChatWallpaper(self.presentationData.chatWallpaper)
             return state
         })
     }
@@ -5977,10 +5978,6 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     private func processQRCode(_ code: String) {
         if let (host, port, username, password, secret) = parseProxyUrl(code) {
             self.openResolved(ResolvedUrl.proxy(host: host, port: port, username: username, password: password, secret: secret))
-        } else {
-            let _ = resolveUrl(account: self.context.account, url: code).start(next: { [weak self] resolved in
-                self?.openResolved(resolved)
-            })
         }
     }
     

@@ -51,9 +51,10 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
             self.setColor(newValue)
         }
     }
-    var colorChanged: ((UIColor) -> Void)?
 
-    init(theme: PresentationTheme) {
+    var colorChanged: ((UIColor, Bool) -> Void)?
+
+    init(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
         
         self.backgroundNode = ASDisplayNode()
@@ -77,7 +78,7 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         self.doneButton = HighlightableButtonNode()
         self.doneButton.setImage(PresentationResourcesChat.chatInputPanelApplyButtonImage(theme), for: .normal)
         
-        self.colorPickerNode = WallpaperColorPickerNode()
+        self.colorPickerNode = WallpaperColorPickerNode(strings: strings)
     
         super.init()
         
@@ -91,7 +92,10 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         self.addSubnode(self.colorPickerNode)
         
         self.colorPickerNode.colorChanged = { [weak self] color in
-            self?.setColor(color, updatePicker: false)
+            self?.setColor(color, updatePicker: false, ended: false)
+        }
+        self.colorPickerNode.colorChangeEnded = { [weak self] color in
+            self?.setColor(color, updatePicker: false, ended: true)
         }
     }
     
@@ -110,12 +114,12 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         self.textFieldNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
     }
     
-    private func setColor(_ color: UIColor, updatePicker: Bool = true) {
+    private func setColor(_ color: UIColor, updatePicker: Bool = true, ended: Bool = true) {
         self.textFieldNode.textField.text = color.hexString.uppercased()
         if updatePicker {
             self.colorPickerNode.color = color
         }
-        self.colorChanged?(color)
+        self.colorChanged?(color, ended)
     }
     
     func updateLayout(size: CGSize, keyboardHeight: CGFloat, transition: ContainedViewLayoutTransition) {

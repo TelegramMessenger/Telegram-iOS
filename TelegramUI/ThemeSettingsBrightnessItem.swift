@@ -112,7 +112,7 @@ class ThemeSettingsBrightnessItemNode: ListViewItemNode {
         if let item = self.item, let params = self.layoutParams {
             sliderView.value = CGFloat(item.value)
             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-            sliderView.backColor = item.theme.list.itemSecondaryTextColor
+            sliderView.backColor = item.theme.list.disclosureArrowColor
             sliderView.trackColor = item.theme.list.itemAccentColor
             sliderView.knobImage = generateKnobImage()
             

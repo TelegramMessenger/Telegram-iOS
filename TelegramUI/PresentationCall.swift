@@ -12,7 +12,7 @@ public enum PresentationCallState: Equatable {
     case connecting(Data?)
     case active(Double, Int32?, Data)
     case terminating
-    case terminated(CallSessionTerminationReason?)
+    case terminated(CallId?, CallSessionTerminationReason?, Bool)
 }
 
 private final class PresentationCallToneRenderer {
@@ -176,6 +176,8 @@ public final class PresentationCall {
     private var reception: Int32?
     private var receptionDisposable: Disposable?
     private var reportedIncomingCall = false
+    
+    private var shouldPresentCallRating = false
     
     private var sessionStateDisposable: Disposable?
     
@@ -424,8 +426,8 @@ public final class PresentationCall {
                 presentationState = .connecting(nil)
             case .dropping:
                 presentationState = .terminating
-            case let .terminated(reason, _):
-                presentationState = .terminated(reason)
+            case let .terminated(id, reason, options):
+                presentationState = .terminated(id, reason, options.contains(.reportRating) || self.shouldPresentCallRating)
             case let .requesting(ringing):
                 presentationState = .requesting(ringing)
             case let .active(_, _, keyVisualHash, _, _, _):
@@ -504,6 +506,12 @@ public final class PresentationCall {
             self.statePromise.set(presentationState)
             self.updateTone(presentationState, previous: previous)
         }
+        
+        if !self.shouldPresentCallRating {
+            self.ongoingContext.needsRating { needsRating in
+                self.shouldPresentCallRating = needsRating
+            }
+        }
     }
     
     private func updateTone(_ state: PresentationCallState, previous: CallSession?) {
@@ -516,18 +524,18 @@ public final class PresentationCall {
                             tone = .connecting
                         case .requesting(true):
                             tone = .ringing
-                        case let .terminated(reason):
+                        case let .terminated(_, reason, _):
                             if let reason = reason {
                                 switch reason {
-                                case let .ended(type):
-                                    switch type {
-                                    case .busy:
-                                        tone = .busy
-                                    case .hungUp, .missed:
-                                        tone = .ended
-                                    }
-                                case .error:
-                                    tone = .failed
+                                    case let .ended(type):
+                                        switch type {
+                                        case .busy:
+                                            tone = .busy
+                                        case .hungUp, .missed:
+                                            tone = .ended
+                                        }
+                                    case .error:
+                                        tone = .failed
                                 }
                             }
                         default:

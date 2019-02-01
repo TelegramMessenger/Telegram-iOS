@@ -11,7 +11,7 @@ enum ParsedInternalPeerUrlParameter {
 }
 
 enum WallpaperUrlParameter {
-    case slug(String, WallpaperPresentationOptions)
+    case slug(String, WallpaperPresentationOptions, UIColor?, Int32?)
     case color(UIColor)
 }
 
@@ -181,23 +181,31 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         parameter = .color(color)
                     } else {
                         var options: WallpaperPresentationOptions = []
+                        var intensity: Int32?
+                        var color: UIColor?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
-                                if let value = queryItem.value, queryItem.name == "mode" {
-                                    for option in value.components(separatedBy: "+") {
-                                        switch option.lowercased() {
-                                            case "motion":
-                                                options.insert(.motion)
-                                            case "blur":
-                                                options.insert(.blur)
-                                            default:
-                                                break
+                                if let value = queryItem.value{
+                                    if queryItem.name == "mode" {
+                                        for option in value.components(separatedBy: "+") {
+                                            switch option.lowercased() {
+                                                case "motion":
+                                                    options.insert(.motion)
+                                                case "blur":
+                                                    options.insert(.blur)
+                                                default:
+                                                    break
+                                            }
                                         }
+                                    } else if queryItem.name == "bg_color" {
+                                        color = UIColor(hexString: value)
+                                    } else if queryItem.name == "intensity" {
+                                        intensity = Int32(value)
                                     }
                                 }
                             }
                         }
-                        parameter = .slug(component, options)
+                        parameter = .slug(component, options, color, intensity)
                     }
                     return .wallpaper(parameter)
                 } else if let value = Int(pathComponents[1]) {
@@ -301,6 +309,28 @@ func parseProxyUrl(_ url: String) -> (host: String, port: Int32, username: Strin
     if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
         if let internalUrl = parseInternalUrl(query: host + "?" + query), case let .proxy(proxy) = internalUrl {
             return (proxy.host, proxy.port, proxy.username, proxy.password, proxy.secret)
+        }
+    }
+    
+    return nil
+}
+
+func parseWallpaperUrl(_ url: String) -> WallpaperUrlParameter? {
+    let schemes = ["http://", "https://", ""]
+    let baseTelegramMePaths = ["telegram.me", "t.me"]
+    for basePath in baseTelegramMePaths {
+        for scheme in schemes {
+            let basePrefix = scheme + basePath + "/"
+            if url.lowercased().hasPrefix(basePrefix) {
+                if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])), case let .wallpaper(wallpaper) = internalUrl {
+                    return wallpaper
+                }
+            }
+        }
+    }
+    if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
+        if let internalUrl = parseInternalUrl(query: host + "?" + query), case let .wallpaper(wallpaper) = internalUrl {
+            return wallpaper
         }
     }
     
