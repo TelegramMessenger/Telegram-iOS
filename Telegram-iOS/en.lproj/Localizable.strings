@@ -3967,3 +3967,5 @@ Unused sets are archived when you add more.";
 "Wallpaper.ResetWallpapers" = "Reset Chat Backgrounds";
 "Wallpaper.ResetWallpapersInfo" = "Remove all uploaded chat backgrounds and restore pre-installed backgrounds for all themes.";
 "Wallpaper.ResetWallpapersConfirmation" = "Reset Chat Backgrounds";
+
+"Proxy.TooltipUnavailable" = "The proxy may be unavailable. Try selecting another one.";
