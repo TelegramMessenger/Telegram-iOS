@@ -94,6 +94,17 @@ public extension UIColor {
         return (UInt32(alpha * 255.0) << 24) | (UInt32(red * 255.0) << 16) | (UInt32(green * 255.0) << 8) | (UInt32(blue * 255.0))
     }
     
+    var hsv: (CGFloat, CGFloat, CGFloat) {
+        var hue: CGFloat = 0.0
+        var saturation: CGFloat = 0.0
+        var value: CGFloat = 0.0
+        if self.getHue(&hue, saturation: &saturation, brightness: &value, alpha: nil) {
+            return (hue, saturation, value)
+        } else {
+            return (0.0, 0.0, 0.0)
+        }
+    }
+    
     func withMultipliedBrightnessBy(_ factor: CGFloat) -> UIColor {
         var hue: CGFloat = 0.0
         var saturation: CGFloat = 0.0

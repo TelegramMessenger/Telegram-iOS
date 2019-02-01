@@ -32,9 +32,9 @@ public struct GridNodeUpdateItem {
 }
 
 public enum GridNodeScrollToItemPosition {
-    case top
-    case bottom
-    case center
+    case top(CGFloat)
+    case bottom(CGFloat)
+    case center(CGFloat)
     case visible
 }
 
@@ -356,7 +356,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                 updateLayoutTransition = scrollToItem.transition
             }
         } else if previousLayoutWasEmpty {
-            generatedScrollToItem = GridNodeScrollToItem(index: 0, position: .top, transition: .immediate, directionHint: .up, adjustForSection: true, adjustForTopInset: true)
+            generatedScrollToItem = GridNodeScrollToItem(index: 0, position: .top(0.0), transition: .immediate, directionHint: .up, adjustForSection: true, adjustForTopInset: true)
         } else {
             generatedScrollToItem = nil
         }
@@ -640,12 +640,12 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                             var verticalOffset: CGFloat = self.scrollView.contentOffset.y
                             
                             switch scrollToItem.position {
-                                case .top:
-                                    verticalOffset = itemFrame.frame.minY + additionalOffset
-                                case .center:
-                                    verticalOffset = floor(itemFrame.frame.minY + itemFrame.frame.size.height / 2.0 - displayHeight / 2.0 - self.gridLayout.insets.top) + additionalOffset
-                                case .bottom:
-                                    verticalOffset = itemFrame.frame.maxY - displayHeight + additionalOffset
+                                case let .top(offset):
+                                    verticalOffset = itemFrame.frame.minY + additionalOffset + offset
+                                case let .center(offset):
+                                    verticalOffset = floor(itemFrame.frame.minY + itemFrame.frame.size.height / 2.0 - displayHeight / 2.0 - self.gridLayout.insets.top) + additionalOffset + offset
+                                case let .bottom(offset):
+                                    verticalOffset = itemFrame.frame.maxY - displayHeight + additionalOffset + offset
                                 case .visible:
                                     if verticalOffset + self.gridLayout.insets.top > itemFrame.frame.minY {
                                         //verticalOffset = -self.gridLayout.insets.top + itemFrame.frame.minY
