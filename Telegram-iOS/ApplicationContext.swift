@@ -215,7 +215,7 @@ final class AuthorizedApplicationContext {
                 context.account.postbox.setCanBeginTransactions(next)
             }
         })*/
-        context.account.shouldExplicitelyKeepWorkerConnections.set(backgroundAudioActive)
+        //context.account.shouldExplicitelyKeepWorkerConnections.set(backgroundAudioActive)
         
         let cache = TGCache(cachesPath: legacyBasePath + "/Caches")!
         

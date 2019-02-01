@@ -1,7 +1,10 @@
 import Foundation
+import UIKit
+import UserNotifications
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramUI
 
 private final class PollStateContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -110,6 +113,10 @@ final class SharedNotificationManager {
         }
         let previousDisposable = context.disposable
         context.disposable = (account.stateManager.pollStateUpdateCompletion()
+        |> mapToSignal { messageIds -> Signal<[MessageId], NoError> in
+            return .single(messageIds)
+            |> delay(1.0, queue: Queue.mainQueue())
+        }
         |> deliverOnMainQueue).start(next: { [weak self, weak context] _ in
             guard let strongSelf = self else {
                 return
@@ -355,6 +362,107 @@ final class SharedNotificationManager {
             
             if let (datacenterId, host, port, secret) = configurationUpdate {
                 account.network.mergeBackupDatacenterAddress(datacenterId: datacenterId, host: host, port: port, secret: secret)
+            }
+        }
+    }
+    
+    private var currentNotificationCall: (peer: Peer?, internalId: CallSessionInternalId)?
+    private func updateNotificationCall(call: (peer: Peer?, internalId: CallSessionInternalId)?, strings: PresentationStrings) {
+        if let previousCall = currentNotificationCall {
+            if #available(iOS 10.0, *) {
+                let center = UNUserNotificationCenter.current()
+                center.removeDeliveredNotifications(withIdentifiers: ["call_\(previousCall.internalId)"])
+            } else {
+                if let notifications = UIApplication.shared.scheduledLocalNotifications {
+                    for notification in notifications {
+                        if let userInfo = notification.userInfo, let callId = userInfo["callId"] as? String, callId == String(describing: previousCall.internalId) {
+                            UIApplication.shared.cancelLocalNotification(notification)
+                        }
+                    }
+                }
+            }
+        }
+        self.currentNotificationCall = call
+        
+        if let notificationCall = call {
+            let rawText = strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle ?? "").0
+            let title: String?
+            let body: String
+            if let index = rawText.firstIndex(of: "|") {
+                title = String(rawText[rawText.startIndex ..< index])
+                body = String(rawText[rawText.index(after: index)...])
+            } else {
+                title = nil
+                body = rawText
+            }
+            
+            if #available(iOS 10.0, *) {
+                let content = UNMutableNotificationContent()
+                if let title = title {
+                    content.title = title
+                }
+                content.body = body
+                content.sound = UNNotificationSound(named: "0.m4a")
+                content.categoryIdentifier = "incomingCall"
+                content.userInfo = [:]
+                
+                let request = UNNotificationRequest(identifier: "call_\(notificationCall.internalId)", content: content, trigger: nil)
+                
+                let center = UNUserNotificationCenter.current()
+                Logger.shared.log("NotificationManager", "adding call \(notificationCall.internalId)")
+                center.add(request, withCompletionHandler: { error in
+                    if let error = error {
+                        Logger.shared.log("NotificationManager", "error adding call \(notificationCall.internalId), error: \(String(describing: error))")
+                    }
+                })
+                
+            } else {
+                let notification = UILocalNotification()
+                if #available(iOS 8.2, *) {
+                    notification.alertTitle = title
+                    notification.alertBody = body
+                } else {
+                    if let title = title {
+                        notification.alertBody = "\(title): \(body)"
+                    } else {
+                        notification.alertBody = body
+                    }
+                }
+                notification.category = "incomingCall"
+                notification.userInfo = ["callId": String(describing: notificationCall.internalId)]
+                notification.soundName = "0.m4a"
+                UIApplication.shared.presentLocalNotificationNow(notification)
+            }
+        }
+    }
+    
+    private let notificationCallStateDisposable = MetaDisposable()
+    private(set) var notificationCall: PresentationCall?
+    
+    func setNotificationCall(_ call: PresentationCall?, strings: PresentationStrings) {
+        if self.notificationCall?.internalId != call?.internalId {
+            self.notificationCall = call
+            if let notificationCall = self.notificationCall {
+                let peer = notificationCall.peer
+                let internalId = notificationCall.internalId
+                let isIntegratedWithCallKit = notificationCall.isIntegratedWithCallKit
+                self.notificationCallStateDisposable.set((notificationCall.state
+                    |> map { state -> (Peer?, CallSessionInternalId)? in
+                        if isIntegratedWithCallKit {
+                            return nil
+                        }
+                        if case .ringing = state {
+                            return (peer, internalId)
+                        } else {
+                            return nil
+                        }
+                    }
+                    |> distinctUntilChanged(isEqual: { $0?.1 == $1?.1 })).start(next: { [weak self] peerAndInternalId in
+                        self?.updateNotificationCall(call: peerAndInternalId, strings: strings)
+                    }))
+            } else {
+                self.notificationCallStateDisposable.set(nil)
+                self.updateNotificationCall(call: nil, strings: strings)
             }
         }
     }

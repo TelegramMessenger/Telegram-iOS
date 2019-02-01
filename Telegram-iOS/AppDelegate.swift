@@ -600,7 +600,14 @@ private final class SharedApplicationContext {
             self.window?.rootViewController?.dismiss(animated: true, completion: nil)
         })
         
+        // Move back to signal
         let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
+        let upgradeSemaphore = DispatchSemaphore(value: 0)
+        let _ = upgradedAccounts(accountManager: accountManager, rootPath: rootPath).start(completed: {
+            upgradeSemaphore.signal()
+        })
+        upgradeSemaphore.wait()
+        
         var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
         let semaphore = DispatchSemaphore(value: 0)
         let _ = currentPresentationDataAndSettings(accountManager: accountManager).start(next: { value in
@@ -609,7 +616,10 @@ private final class SharedApplicationContext {
         })
         semaphore.wait()
         
-        let sharedContext = SharedAccountContext(mainWindow: self.mainWindow, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: networkArguments, rootPath: rootPath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init))
+        var setPresentationCall: ((PresentationCall?) -> Void)?
+        let sharedContext = SharedAccountContext(mainWindow: self.mainWindow, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: networkArguments, rootPath: rootPath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
+            setPresentationCall?(call)
+        })
         sharedContext.presentGlobalController = { [weak self] c, a in
             guard let strongSelf = self else {
                 return
@@ -634,7 +644,10 @@ private final class SharedApplicationContext {
         }
         
         let notificationManager = SharedNotificationManager(episodeId: self.episodeId, clearNotificationsManager: clearNotificationsManager, inForeground: applicationBindings.applicationInForeground, accounts: sharedContext.activeAccounts |> map { primary, accounts, _ in Array(accounts.values.map({ ($0, $0.id == primary?.id) })) })
-        let wakeupManager = SharedWakeupManager(activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1) }, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: hasActiveAudioSession.get(), notificationManager: notificationManager)
+        setPresentationCall = { call in
+            notificationManager.setNotificationCall(call, strings: sharedContext.currentPresentationData.with({ $0 }).strings)
+        }
+        let wakeupManager = SharedWakeupManager(activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1) }, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager)
         let sharedApplicationContext = SharedApplicationContext(sharedContext: sharedContext, notificationManager: notificationManager, wakeupManager: wakeupManager)
         self.sharedContextPromise.set(
         accountManager.transaction { transaction -> (SharedApplicationContext, LoggingSettings) in

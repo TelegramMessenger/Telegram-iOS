@@ -3,12 +3,15 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramUI
 
 private struct AccountTasks {
     let stateSynchronization: Bool
     let importantTasks: AccountRunningImportantTasks
     let backgroundLocation: Bool
     let backgroundDownloads: Bool
+    let backgroundAudio: Bool
+    let activeCalls: Bool
     
     var isEmpty: Bool {
         if self.stateSynchronization {
@@ -21,6 +24,12 @@ private struct AccountTasks {
             return false
         }
         if self.backgroundDownloads {
+            return false
+        }
+        if self.backgroundAudio {
+            return false
+        }
+        if self.activeCalls {
             return false
         }
         return true
@@ -40,7 +49,7 @@ final class SharedWakeupManager {
     
     private var accountsAndTasks: [(Account, Bool, AccountTasks)] = []
     
-    init(activeAccounts: Signal<(primary: Account?, accounts: [AccountRecordId: Account]), NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager) {
+    init(activeAccounts: Signal<(primary: Account?, accounts: [AccountRecordId: Account]), NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager, mediaManager: MediaManager, callManager: PresentationCallManager?) {
         assert(Queue.mainQueue().isCurrent())
         
         self.inForegroundDisposable = (inForeground
@@ -65,9 +74,37 @@ final class SharedWakeupManager {
         |> deliverOnMainQueue
         |> mapToSignal { primary, accounts -> Signal<[(Account, Bool, AccountTasks)], NoError> in
             let signals: [Signal<(Account, Bool, AccountTasks), NoError>] = accounts.values.map { account in
-                return combineLatest(queue: .mainQueue(), account.importantTasksRunning, notificationManager.isPollingState(accountId: account.id))
-                |> map { importantTasksRunning, isPollingState -> (Account, Bool, AccountTasks) in
-                    return (account, primary?.id == account.id, AccountTasks(stateSynchronization: isPollingState, importantTasks: importantTasksRunning, backgroundLocation: false, backgroundDownloads: false))
+                let hasActiveMedia = mediaManager.activeGlobalMediaPlayerAccountId
+                |> map { id -> Bool in
+                    return id == account.id
+                }
+                |> distinctUntilChanged
+                let isPlayingBackgroundAudio = combineLatest(queue: .mainQueue(), hasActiveMedia, hasActiveAudioSession)
+                |> map { hasActiveMedia, hasActiveAudioSession -> Bool in
+                    return hasActiveMedia && hasActiveAudioSession
+                }
+                |> distinctUntilChanged
+                
+                let hasActiveCalls = (callManager?.currentCallSignal ?? .single(nil))
+                |> map { call in
+                    return call?.account.id == account.id
+                }
+                |> distinctUntilChanged
+                let isPlayingBackgroundActiveCall = combineLatest(queue: .mainQueue(), hasActiveCalls, hasActiveAudioSession)
+                |> map { hasActiveCalls, hasActiveAudioSession -> Bool in
+                    return hasActiveCalls && hasActiveAudioSession
+                }
+                |> distinctUntilChanged
+                
+                let hasActiveAudio = combineLatest(queue: .mainQueue(), isPlayingBackgroundAudio, isPlayingBackgroundActiveCall)
+                |> map { isPlayingBackgroundAudio, isPlayingBackgroundActiveCall in
+                    return isPlayingBackgroundAudio || isPlayingBackgroundActiveCall
+                }
+                |> distinctUntilChanged
+                
+                return combineLatest(queue: .mainQueue(), account.importantTasksRunning, notificationManager.isPollingState(accountId: account.id), hasActiveAudio, hasActiveCalls)
+                |> map { importantTasksRunning, isPollingState, hasActiveAudio, hasActiveCalls -> (Account, Bool, AccountTasks) in
+                    return (account, primary?.id == account.id, AccountTasks(stateSynchronization: isPollingState, importantTasks: importantTasksRunning, backgroundLocation: false, backgroundDownloads: false, backgroundAudio: hasActiveAudio, activeCalls: hasActiveCalls))
                 }
             }
             return combineLatest(signals)
@@ -165,11 +202,12 @@ final class SharedWakeupManager {
     private func updateAccounts() {
         if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension {
             for (account, primary, tasks) in self.accountsAndTasks {
-                if primary || !tasks.isEmpty {
+                if (self.inForeground && primary) || !tasks.isEmpty {
                     account.shouldBeServiceTaskMaster.set(.single(.always))
                 } else {
                     account.shouldBeServiceTaskMaster.set(.single(.never))
                 }
+                account.shouldExplicitelyKeepWorkerConnections.set(.single(tasks.backgroundAudio))
                 account.shouldKeepOnlinePresence.set(.single(primary && self.inForeground))
                 account.shouldKeepBackgroundDownloadConnections.set(.single(tasks.backgroundDownloads))
             }
