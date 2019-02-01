@@ -18,6 +18,8 @@ public struct AccountManagerModifier {
     public let updateSharedData: (ValueBoxKey, (PreferencesEntry?) -> PreferencesEntry?) -> Void
     public let getAccessChallengeData: () -> PostboxAccessChallengeData
     public let setAccessChallengeData: (PostboxAccessChallengeData) -> Void
+    public let getVersion: () -> Int32
+    public let setVersion: (Int32) -> Void
 }
 
 final class AccountManagerImpl {
@@ -115,6 +117,10 @@ final class AccountManagerImpl {
                 }, setAccessChallengeData: { data in
                     self.currentUpdatedAccessChallengeData = data
                     self.metadataTable.setAccessChallengeData(data)
+                }, getVersion: {
+                    return self.metadataTable.getVersion()
+                }, setVersion: { version in
+                    self.metadataTable.setVersion(version)
                 })
                 
                 let result = f(transaction)

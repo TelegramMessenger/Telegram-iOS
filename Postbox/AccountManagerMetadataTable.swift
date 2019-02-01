@@ -143,6 +143,7 @@ private enum MetadataKey: Int64 {
     case currentAccountId = 0
     case currentAuthAccount = 1
     case accessChallenge = 2
+    case version = 3
 }
 
 final class AccountManagerMetadataTable: Table {
@@ -154,6 +155,21 @@ final class AccountManagerMetadataTable: Table {
         let result = ValueBoxKey(length: 8)
         result.setInt64(0, value: key.rawValue)
         return result
+    }
+    
+    func getVersion() -> Int32 {
+        if let value = self.valueBox.get(self.table, key: self.key(.version)) {
+            var id: Int32 = 0
+            value.read(&id, offset: 0, length: 4)
+            return id
+        } else {
+            return 0
+        }
+    }
+    
+    func setVersion(_ version: Int32) {
+        var value: Int32 = version
+        self.valueBox.set(self.table, key: self.key(.version), value: MemoryBuffer(memory: &value, capacity: 4, length: 4, freeWhenDone: false))
     }
     
     func getCurrentAccountId() -> AccountRecordId? {
