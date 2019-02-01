@@ -733,7 +733,7 @@ public struct AccountRunningImportantTasks: OptionSet {
     public static let pendingMessages = AccountRunningImportantTasks(rawValue: 1 << 1)
 }
 
-struct MasterNotificationKey: Codable {
+public struct MasterNotificationKey: Codable {
     let id: Data
     let data: Data
 }
@@ -753,7 +753,7 @@ private struct StoredAccountInfo: Codable {
     let datacenters: [Int32: AccountDatacenterInfo]
 }
 
-func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
+public func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
     return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: ignoreDisabled)
 }
 
@@ -789,42 +789,50 @@ private func masterNotificationsKey(masterNotificationKeyValue: Atomic<MasterNot
     })
 }
 
+public func decryptedNotificationPayload(key: MasterNotificationKey, data: Data) -> Data? {
+    if data.count < 8 {
+        return nil
+    }
+    
+    if data.subdata(in: 0 ..< 8) != key.id {
+        return nil
+    }
+    
+    let x = 8
+    let msgKey = data.subdata(in: 8 ..< (8 + 16))
+    let rawData = data.subdata(in: (8 + 16) ..< data.count)
+    let sha256_a = sha256Digest(msgKey + key.data.subdata(in: x ..< (x + 36)))
+    let sha256_b = sha256Digest(key.data.subdata(in: (40 + x) ..< (40 + x + 36)) + msgKey)
+    let aesKey = sha256_a.subdata(in: 0 ..< 8) + sha256_b.subdata(in: 8 ..< (8 + 16)) + sha256_a.subdata(in: 24 ..< (24 + 8))
+    let aesIv = sha256_b.subdata(in: 0 ..< 8) + sha256_a.subdata(in: 8 ..< (8 + 16)) + sha256_b.subdata(in: 24 ..< (24 + 8))
+    
+    guard let data = MTAesDecrypt(rawData, aesKey, aesIv), data.count > 4 else {
+        return nil
+    }
+    
+    var dataLength: Int32 = 0
+    data.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+        memcpy(&dataLength, bytes, 4)
+    }
+    
+    if dataLength < 0 || dataLength > data.count - 4 {
+        return nil
+    }
+    
+    let checkMsgKeyLarge = sha256Digest(key.data.subdata(in: (88 + x) ..< (88 + x + 32)) + data)
+    let checkMsgKey = checkMsgKeyLarge.subdata(in: 8 ..< (8 + 16))
+    
+    if checkMsgKey != msgKey {
+        return nil
+    }
+    
+    return data.subdata(in: 4 ..< (4 + Int(dataLength)))
+}
+
 public func decryptedNotificationPayload(account: Account, data: Data) -> Signal<Data?, NoError> {
     return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: true)
     |> map { secret -> Data? in
-        if data.subdata(in: 0 ..< 8) != secret.id {
-            return nil
-        }
-        
-        let x = 8
-        let msgKey = data.subdata(in: 8 ..< (8 + 16))
-        let rawData = data.subdata(in: (8 + 16) ..< data.count)
-        let sha256_a = sha256Digest(msgKey + secret.data.subdata(in: x ..< (x + 36)))
-        let sha256_b = sha256Digest(secret.data.subdata(in: (40 + x) ..< (40 + x + 36)) + msgKey)
-        let aesKey = sha256_a.subdata(in: 0 ..< 8) + sha256_b.subdata(in: 8 ..< (8 + 16)) + sha256_a.subdata(in: 24 ..< (24 + 8))
-        let aesIv = sha256_b.subdata(in: 0 ..< 8) + sha256_a.subdata(in: 8 ..< (8 + 16)) + sha256_b.subdata(in: 24 ..< (24 + 8))
-        
-        guard let data = MTAesDecrypt(rawData, aesKey, aesIv), data.count > 4 else {
-            return nil
-        }
-        
-        var dataLength: Int32 = 0
-        data.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
-            memcpy(&dataLength, bytes, 4)
-        }
-        
-        if dataLength < 0 || dataLength > data.count - 4 {
-            return nil
-        }
-        
-        let checkMsgKeyLarge = sha256Digest(secret.data.subdata(in: (88 + x) ..< (88 + x + 32)) + data)
-        let checkMsgKey = checkMsgKeyLarge.subdata(in: 8 ..< (8 + 16))
-        
-        if checkMsgKey != msgKey {
-            return nil
-        }
-        
-        return data.subdata(in: 4 ..< (4 + Int(dataLength)))
+        return decryptedNotificationPayload(key: secret, data: data)
     }
 }
 
@@ -1080,8 +1088,7 @@ public class Account {
             self.accountPresenceManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] },
             self.notificationAutolockReportManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] }
         ]
-        let importantBackgroundOperationsRunning = combineLatest(importantBackgroundOperations)
-        |> deliverOn(Queue())
+        let importantBackgroundOperationsRunning = combineLatest(queue: Queue(), importantBackgroundOperations)
         |> map { values -> AccountRunningImportantTasks in
             var result: AccountRunningImportantTasks = []
             for value in values {
