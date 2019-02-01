@@ -161,7 +161,7 @@ func twoStepVerificationResetController(context: AccountContext, emailPattern: S
                 updateState {
                     return $0.withUpdatedChecking(false)
                 }
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let alertText: String
                 switch error {
                     case .generic:
@@ -190,11 +190,11 @@ func twoStepVerificationResetController(context: AccountContext, emailPattern: S
     }, next: {
         checkCode()
     }, openEmailInaccessible: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Your remaining options are either to remember your password or to reset your account.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
-    let signal = combineLatest(context.presentationData, statePromise.get()) |> deliverOnMainQueue
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get()) |> deliverOnMainQueue
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationResetEntry>, TwoStepVerificationResetEntry.ItemGenerationArguments)) in
             
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {

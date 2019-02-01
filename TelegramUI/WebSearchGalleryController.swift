@@ -98,7 +98,7 @@ class WebSearchGalleryController: ViewController {
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: WebSearchGalleryController.navigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         

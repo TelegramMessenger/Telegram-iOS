@@ -47,7 +47,7 @@ final class BotCheckoutInfoController: ViewController {
         self.focus = focus
         self.formInfoUpdated = formInfoUpdated
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style

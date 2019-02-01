@@ -17,8 +17,8 @@ public final class ProxyServerActionSheetController: ActionSheetController {
     private var isDismissed: Bool = false
     
     convenience init(context: AccountContext, server: ProxyServerSettings) {
-        let presentationData = context.currentPresentationData.with { $0 }
-        self.init(theme: presentationData.theme, strings: presentationData.strings, accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, server: server, presentationData: context.presentationData)
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.init(theme: presentationData.theme, strings: presentationData.strings, accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, server: server, presentationData: context.sharedContext.presentationData)
     }
     
     public init(theme: PresentationTheme, strings: PresentationStrings, accountManager: AccountManager, postbox: Postbox, network: Network, server: ProxyServerSettings, presentationData: Signal<PresentationData, NoError>?) {

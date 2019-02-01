@@ -286,7 +286,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
     init(context: AccountContext) {
         self.context = context
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder))
         
@@ -308,7 +308,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
         self.addSubnode(self.listNode)
         self.addSubnode(self.countPanelNode)
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

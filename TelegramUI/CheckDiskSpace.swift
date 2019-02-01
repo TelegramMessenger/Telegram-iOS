@@ -25,7 +25,7 @@ func checkAvailableDiskSpace(context: AccountContext, threshold: Int64 = 100 * 1
         return true
     }
     
-    let presentationData = context.currentPresentationData.with { $0 }
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let controller = textAlertController(context: context, title: nil, text: presentationData.strings.Cache_LowDiskSpaceText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
         let controller = storageUsageController(context: context, isModal: true)
         present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

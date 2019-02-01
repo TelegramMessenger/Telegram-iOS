@@ -210,7 +210,7 @@ public final class ShareController: ViewController {
         self.immediateExternalShare = immediateExternalShare
         self.subject = subject
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
         
@@ -316,7 +316,7 @@ public final class ShareController: ViewController {
             return (peers, accountPeer)
         })
         
-        self.presentationDataDisposable = (self.context.presentationData
+        self.presentationDataDisposable = (self.context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 strongSelf.controllerNode.updatePresentationData(presentationData)

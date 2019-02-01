@@ -105,7 +105,7 @@ public func debugAccountsController(context: AccountContext, accountManager: Acc
             transaction.setCurrentId(id)
         }).start()
     }, loginNewAccount: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
@@ -126,7 +126,7 @@ public func debugAccountsController(context: AccountContext, accountManager: Acc
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
-    let signal = combineLatest(context.presentationData, accountManager.accountRecords())
+    let signal = combineLatest(context.sharedContext.presentationData, accountManager.accountRecords())
         |> map { presentationData, view -> (ItemListControllerState, (ItemListNodeState<DebugAccountsControllerEntry>, DebugAccountsControllerEntry.ItemGenerationArguments)) in
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Accounts"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
             let listState = ItemListNodeState(entries: debugAccountsControllerEntries(view: view, presentationData: presentationData), style: .blocks)

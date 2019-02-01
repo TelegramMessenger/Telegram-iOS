@@ -302,7 +302,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
             return .complete()
         }
         |> deliverOnMainQueue).start(completed: {
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
             
             let applyPacks: Signal<Void, NoError> = stickerPacks.get()
@@ -367,7 +367,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
     
     var previousPackCount: Int?
     
-    let signal = combineLatest(context.presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, installedStickerPacks.get() |> deliverOnMainQueue)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, installedStickerPacks.get() |> deliverOnMainQueue)
         |> deliverOnMainQueue
         |> map { presentationData, state, packs, installedView -> (ItemListControllerState, (ItemListNodeState<ArchivedStickerPacksEntry>, ArchivedStickerPacksEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?

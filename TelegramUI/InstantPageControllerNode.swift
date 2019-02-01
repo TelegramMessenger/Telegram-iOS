@@ -1131,7 +1131,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             }))
                         } else {
                             strongSelf.loadProgress.set(1.0)
-                            openExternalUrl(context: strongSelf.context, url: externalUrl, presentationData: strongSelf.context.currentPresentationData.with { $0 }, navigationController: strongSelf.getNavigationController(), dismissInput: {
+                            openExternalUrl(context: strongSelf.context, url: externalUrl, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, navigationController: strongSelf.getNavigationController(), dismissInput: {
                                 self?.view.endEditing(true)
                             })
                         }
@@ -1170,7 +1170,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     private func openUrlIn(_ url: InstantPageUrlItem) {
-        let presentationData = self.context.currentPresentationData.with { $0 }
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = OpenInActionSheetController(context: self.context, item: .url(url: url.url), openUrl: { [weak self] url in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
                 openExternalUrl(context: strongSelf.context, url: url, forceExternal: true, presentationData: presentationData, navigationController: navigationController, dismissInput: {})

@@ -135,7 +135,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
     init(context: AccountContext, peerId: PeerId, tagMask: MessageTags, interfaceInteraction: ChatControllerInteraction) {
         self.context = context
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.dateTimeFormat))
         
@@ -216,7 +216,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
             self?.dismissInput?()
         }
         
-        self.presentationDataDisposable = context.presentationData.start(next: { [weak self] presentationData in
+        self.presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings, presentationData.dateTimeFormat)))
                 

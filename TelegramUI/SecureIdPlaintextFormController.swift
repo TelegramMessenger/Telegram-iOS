@@ -24,7 +24,7 @@ final class SecureIdPlaintextFormController: FormController<SecureIdPlaintextFor
     
     init(context: AccountContext, secureIdContext: SecureIdAccessContext, type: SecureIdPlaintextFormType, immediatelyAvailableValue: SecureIdValue?, updatedValue: @escaping (SecureIdValueWithContext?) -> Void) {
         self.context = context
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.secureIdContext = secureIdContext
         self.type = type
         self.immediatelyAvailableValue = immediatelyAvailableValue

@@ -128,13 +128,13 @@ func resetPasswordController(context: AccountContext, emailPattern: String, comp
             return state
         }
     }, openHelp: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
     })
     
     var initialFocusImpl: (() -> Void)?
     
-    let signal = combineLatest(context.presentationData, statePromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
     |> deliverOnMainQueue
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<ResetPasswordEntry>, ResetPasswordEntry.ItemGenerationArguments)) in
         
@@ -175,7 +175,7 @@ func resetPasswordController(context: AccountContext, emailPattern: String, comp
                             case .generic:
                                 text = presentationData.strings.Login_UnknownError
                         }
-                        let presentationData = context.currentPresentationData.with { $0 }
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                     }, completed: {
                         completion()

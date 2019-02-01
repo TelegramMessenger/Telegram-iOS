@@ -198,8 +198,8 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     var willDisappear: ((Bool) -> Void)?
     
     convenience init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
-        let presentationData = context.currentPresentationData.with { $0 }
-        self.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.presentationData |> map { ($0.theme, $0.strings) }, state: state, tabBarItem: tabBarItem)
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.sharedContext.presentationData |> map { ($0.theme, $0.strings) }, state: state, tabBarItem: tabBarItem)
     }
     
     init(theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?) {

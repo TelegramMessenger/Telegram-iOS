@@ -27,7 +27,7 @@ final class InstantPageController: ViewController {
     
     init(context: AccountContext, webPage: TelegramMediaWebpage, anchor: String? = nil) {
         self.context = context
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.webPage = webPage
         self.anchor = anchor

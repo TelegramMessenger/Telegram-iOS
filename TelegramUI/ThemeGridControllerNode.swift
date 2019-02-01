@@ -306,7 +306,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         })
         self.controllerInteraction = interaction
         
-        let transition = combineLatest(wallpapersPromise.get(), context.presentationData)
+        let transition = combineLatest(wallpapersPromise.get(), context.sharedContext.presentationData)
         |> map { wallpapers, presentationData -> (ThemeGridEntryTransition, Bool) in
             var entries: [ThemeGridControllerEntry] = []
             var index = 1

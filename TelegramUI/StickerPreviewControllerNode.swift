@@ -22,7 +22,7 @@ final class StickerPreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     init(context: AccountContext) {
         self.context = context
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.6)

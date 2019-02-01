@@ -371,7 +371,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
         let isTestingEnvironment = context.account.testingEnvironment
         context.sharedContext.beginNewAuth(testingEnvironment: isTestingEnvironment)
     }, logout: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Settings_LogoutConfirmationTitle, text: presentationData.strings.Settings_LogoutConfirmationText, actions: [
             TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
             }),
@@ -384,7 +384,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
     
     let peerView = context.account.viewTracker.peerView(context.account.peerId)
     
-    let signal = combineLatest(context.presentationData, statePromise.get(), peerView)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peerView)
         |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
             let rightNavigationButton: ItemListNavigationButton
             if state.updatingName != nil || state.updatingBioText {
@@ -443,7 +443,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
         } |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
             controller?.view.endEditing(true)
             
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
             legacyController.statusBar.statusBarStyle = .Ignore

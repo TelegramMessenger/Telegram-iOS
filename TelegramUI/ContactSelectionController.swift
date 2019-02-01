@@ -69,7 +69,7 @@ class ContactSelectionController: ViewController {
         self.displayDeviceContacts = displayDeviceContacts
         self.confirmation = confirmation
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -88,7 +88,7 @@ class ContactSelectionController: ViewController {
             }
         }
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

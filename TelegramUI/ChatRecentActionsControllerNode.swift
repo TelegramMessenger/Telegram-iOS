@@ -77,7 +77,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.presentController = presentController
         self.getNavigationController = getNavigationController
         
-        self.automaticMediaDownloadSettings = context.currentAutomaticMediaDownloadSettings.with { $0 }
+        self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
@@ -436,7 +436,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
         }))
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

@@ -870,12 +870,12 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
         } |> deliverOnMainQueue).start(next: { link in
             if let link = link {
                 UIPasteboard.general.string = link
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Username_LinkCopied)), nil)
             }
         })
     }, revokePrivateLink: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
@@ -931,7 +931,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     
     let previousHadNamesToRevoke = Atomic<Bool?>(value: nil)
     
-    let signal = combineLatest(context.presentationData, statePromise.get() |> deliverOnMainQueue, peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue)
     |> deliverOnMainQueue
     |> map { presentationData, state, view, publicChannelsToRevoke -> (ItemListControllerState, (ItemListNodeState<ChannelVisibilityEntry>, ChannelVisibilityEntry.ItemGenerationArguments)) in
         let peer = peerViewMainPeer(view)
@@ -1220,7 +1220,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                 return false
             })
             if let resultItemNode = resultItemNode {
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(presentationData.strings.Conversation_ContextMenuCopyLink), action: {
                     UIPasteboard.general.string = text
                 })])

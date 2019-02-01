@@ -512,7 +512,7 @@ public func channelPermissionsController(context: AccountContext, peerId: PeerId
         var dismissController: (() -> Void)?
         let controller = ChannelMembersSearchController(context: context, peerId: peerId, mode: .ban, openPeer: { peer, participant in
             if let participant = participant {
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 switch participant.participant {
                     case .creator:
                         return
@@ -569,13 +569,13 @@ public func channelPermissionsController(context: AccountContext, peerId: PeerId
     }, openKicked: {
         pushControllerImpl?(channelBlacklistController(context: context, peerId: peerId))
     }, presentRestrictedPublicGroupPermissionsAlert: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.GroupPermission_NotAvailableInPublicGroups, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
     })
     
     let previousParticipants = Atomic<[RenderedChannelParticipant]?>(value: nil)
     
-    let signal = combineLatest(queue: .mainQueue(), context.presentationData, statePromise.get(), peerView.get(), peersPromise.get())
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), peerView.get(), peersPromise.get())
     |> deliverOnMainQueue
     |> map { presentationData, state, view, participants -> (ItemListControllerState, (ItemListNodeState<ChannelPermissionsEntry>, ChannelPermissionsEntry.ItemGenerationArguments)) in
         var rightNavigationButton: ItemListNavigationButton?

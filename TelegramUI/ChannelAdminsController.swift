@@ -482,7 +482,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
     
     let adminsPromise = Promise<[RenderedChannelParticipant]?>(nil)
     
-    let presentationDataSignal = context.presentationData
+    let presentationDataSignal = context.sharedContext.presentationData
     
     var upgradedToSupergroupImpl: ((PeerId, @escaping () -> Void) -> Void)?
     
@@ -536,7 +536,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
                 var dismissController: (() -> Void)?
                 let controller = ChannelMembersSearchController(context: context, peerId: peerId, mode: .promote, filters: [], openPeer: { peer, participant in
                     dismissController?()
-                    let presentationData = context.currentPresentationData.with { $0 }
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     if peer.id == context.account.peerId {
                         return
                     }

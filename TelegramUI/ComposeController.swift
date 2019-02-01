@@ -29,7 +29,7 @@ public class ComposeController: ViewController {
     public init(context: AccountContext) {
         self.context = context
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -48,7 +48,7 @@ public class ComposeController: ViewController {
             }
         }
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
             |> deliverOnMainQueue).start(next: { [weak self] presentationData in
                 if let strongSelf = self {
                     let previousTheme = strongSelf.presentationData.theme
@@ -145,7 +145,7 @@ public class ComposeController: ViewController {
                             }
                         }, error: { _ in
                             if let strongSelf = self, let controller = controller {
-                                let presentationData = strongSelf.context.currentPresentationData.with { $0 }
+                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                 
                                 controller.displayNavigationActivity = false
                                 controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))

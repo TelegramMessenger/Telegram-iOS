@@ -34,7 +34,7 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
         let node = ChatMessageAvatarAccessoryItemNode()
         node.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
         if let peer = self.peer {
-            node.setPeer(account: self.context.account, theme: self.context.currentPresentationData.with({ $0 }).theme, peer: peer, authorOfMessage: self.messageReference, emptyColor: self.emptyColor)
+            node.setPeer(account: self.context.account, theme: self.context.sharedContext.currentPresentationData.with({ $0 }).theme, peer: peer, authorOfMessage: self.messageReference, emptyColor: self.emptyColor)
         }
         return node
     }

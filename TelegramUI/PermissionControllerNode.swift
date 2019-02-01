@@ -57,7 +57,7 @@ final class PermissionControllerNode: ASDisplayNode {
     
     init(context: AccountContext, splitTest: PermissionUISplitTest) {
         self.context = context
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.splitTest = splitTest
         self.innerState = PermissionControllerInnerState(layout: nil, data: PermissionControllerDataState(state: nil))
         

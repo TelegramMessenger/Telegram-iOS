@@ -28,7 +28,7 @@ final class ComposeControllerNode: ASDisplayNode {
     init(context: AccountContext) {
         self.context = context
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var openCreateNewGroupImpl: (() -> Void)?
         var openCreateNewSecretChatImpl: (() -> Void)?
@@ -66,7 +66,7 @@ final class ComposeControllerNode: ASDisplayNode {
             self?.openCreateNewChannel?()
         }
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
             |> deliverOnMainQueue).start(next: { [weak self] presentationData in
                 if let strongSelf = self {
                     let previousTheme = strongSelf.presentationData.theme

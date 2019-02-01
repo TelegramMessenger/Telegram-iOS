@@ -269,7 +269,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
         let _ = (context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
             return (transaction.getPeer(context.account.peerId), currentSearchBotsConfiguration(transaction: transaction))
         } |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
             legacyController.statusBar.statusBarStyle = .Ignore
@@ -335,7 +335,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
         })
     })
     
-    let signal = combineLatest(context.presentationData, statePromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<CreateChannelEntry>, CreateChannelEntry.ItemGenerationArguments)) in
             
             let rightNavigationButton: ItemListNavigationButton

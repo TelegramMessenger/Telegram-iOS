@@ -79,7 +79,7 @@ final class SecureIdDocumentTypeSelectionController: ActionSheetController {
     }
     
     init(context: AccountContext, field: SecureIdParsedRequestedFormField, currentValues: [SecureIdValueWithContext], completion: @escaping (SecureIdDocumentFormRequestedData) -> Void) {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let theme = presentationData.theme
         let strings = presentationData.strings
         
@@ -87,7 +87,7 @@ final class SecureIdDocumentTypeSelectionController: ActionSheetController {
         
         super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
         
-        self.presentationDisposable = context.presentationData.start(next: { [weak self] presentationData in
+        self.presentationDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
             }

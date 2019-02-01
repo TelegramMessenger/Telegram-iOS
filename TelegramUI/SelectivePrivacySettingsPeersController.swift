@@ -286,7 +286,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
     
     var previousPeers: [Peer]?
     
-    let signal = combineLatest(context.presentationData, statePromise.get(), peersPromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peersPromise.get())
         |> deliverOnMainQueue
         |> map { presentationData, state, peers -> (ItemListControllerState, (ItemListNodeState<SelectivePrivacyPeersEntry>, SelectivePrivacyPeersEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?

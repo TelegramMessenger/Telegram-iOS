@@ -132,7 +132,7 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
         }
     })
     
-    let signal = combineLatest(context.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId))
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId))
     |> deliverOnMainQueue
     |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<GroupPreHistorySetupEntry>, GroupPreHistorySetupEntry.ItemGenerationArguments)) in
         let defaultValue: Bool = (view.cachedData as? CachedChannelData)?.flags.contains(.preHistoryEnabled) ?? false

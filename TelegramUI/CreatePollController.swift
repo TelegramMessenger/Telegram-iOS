@@ -299,7 +299,7 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
     let previousOptionIds = Atomic<[Int]?>(value: nil)
     
     let limitsKey = PostboxViewKey.preferences(keys: Set([PreferencesKeys.limitsConfiguration]))
-    let signal = combineLatest(context.presentationData, statePromise.get() |> deliverOnMainQueue, context.account.postbox.combinedView(keys: [limitsKey]))
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, context.account.postbox.combinedView(keys: [limitsKey]))
     |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState<CreatePollEntry>, CreatePollEntry.ItemGenerationArguments)) in
         let limitsConfiguration: LimitsConfiguration = (combinedView.views[limitsKey] as? PreferencesView)?.values[PreferencesKeys.limitsConfiguration] as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
         
@@ -346,7 +346,7 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
                 }
             }
             if hasNonEmptyOptions || !state.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.CreatePoll_CancelConfirmation, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
                     dismissImpl?()
                 })]), nil)

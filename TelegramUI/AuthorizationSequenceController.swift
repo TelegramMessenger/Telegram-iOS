@@ -30,6 +30,8 @@ public final class AuthorizationSequenceController: NavigationController {
     private var stateDisposable: Disposable?
     private let actionDisposable = MetaDisposable()
     
+    private var didPlayPresentationAnimation = false
+    
     public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, hasOtherAccounts: Bool, strings: PresentationStrings, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String) {
         self.sharedContext = sharedContext
         self.account = account
@@ -785,6 +787,31 @@ public final class AuthorizationSequenceController: NavigationController {
         } else {
             controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: self.theme), title: nil, text: self.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {})]), in: .window(.root))
         }
+    }
+    
+    private func animateIn() {
+        self.view.layer.animatePosition(from: CGPoint(x: self.view.layer.position.x, y: self.view.layer.position.y + self.view.layer.bounds.size.height), to: self.view.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+    }
+    
+    private func animateOut(completion: (() -> Void)? = nil) {
+        self.view.layer.animatePosition(from: self.view.layer.position, to: CGPoint(x: self.view.layer.position.x, y: self.view.layer.position.y + self.view.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { [weak self] _ in
+            completion?()
+        })
+    }
+    
+    override public func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        if !self.didPlayPresentationAnimation {
+            self.didPlayPresentationAnimation = true
+            self.animateIn()
+        }
+    }
+    
+    public func dismiss() {
+        self.animateOut(completion: { [weak self] in
+            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+        })
     }
 }
 

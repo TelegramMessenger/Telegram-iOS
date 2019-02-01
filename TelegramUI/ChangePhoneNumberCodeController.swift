@@ -171,8 +171,8 @@ private final class ChangePhoneNumberCodeControllerImpl: ItemListController<Chan
     init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeEntry.ItemGenerationArguments)), NoError>, applyCodeImpl: @escaping (Int) -> Void) {
         self.applyCodeImpl = applyCodeImpl
         
-        let presentationData = context.currentPresentationData.with { $0 }
-        super.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.presentationData |> map { ($0.theme, $0.strings) }, state: state, tabBarItem: nil)
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        super.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.sharedContext.presentationData |> map { ($0.theme, $0.strings) }, state: state, tabBarItem: nil)
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -246,7 +246,7 @@ func changePhoneNumberCodeController(context: AccountContext, phoneNumber: Strin
                 updateState {
                     return $0.withUpdatedChecking(false)
                 }
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let alertText: String
                 switch error {
                     case .generic:
@@ -263,7 +263,7 @@ func changePhoneNumberCodeController(context: AccountContext, phoneNumber: Strin
                 updateState {
                     return $0.withUpdatedChecking(false)
                 }
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
                 dismissImpl?()
             }))
@@ -285,7 +285,7 @@ func changePhoneNumberCodeController(context: AccountContext, phoneNumber: Strin
         checkCode()
     })
     
-    let signal = combineLatest(context.presentationData, statePromise.get() |> deliverOnMainQueue, currentDataPromise.get() |> deliverOnMainQueue, timeout.get() |> deliverOnMainQueue)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, currentDataPromise.get() |> deliverOnMainQueue, timeout.get() |> deliverOnMainQueue)
         |> deliverOnMainQueue
         |> map { presentationData, state, data, timeout -> (ItemListControllerState, (ItemListNodeState<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?

@@ -67,7 +67,7 @@ class ContactMultiselectionController: ViewController {
         self.mode = mode
         self.options = options
         self.filters = filters
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.titleView = CounterContollerTitleView(theme: self.presentationData.theme)
         
@@ -84,7 +84,7 @@ class ContactMultiselectionController: ViewController {
             }
         }
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

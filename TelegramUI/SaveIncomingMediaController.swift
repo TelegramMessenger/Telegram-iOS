@@ -107,7 +107,7 @@ func saveIncomingMediaController(context: AccountContext) -> ViewController {
         }).start()
     })
     
-    let signal = combineLatest(queue: .mainQueue(), context.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]))
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]))
     |> deliverOnMainQueue
     |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<SaveIncomingMediaEntry>, SaveIncomingMediaEntry.ItemGenerationArguments)) in
         let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings

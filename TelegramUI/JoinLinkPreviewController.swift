@@ -24,7 +24,7 @@ public final class JoinLinkPreviewController: ViewController {
         self.link = link
         self.navigateToPeer = navigateToPeer
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
     }

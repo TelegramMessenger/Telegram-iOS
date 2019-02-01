@@ -84,8 +84,8 @@ func saveToCameraRoll(context: AccountContext, postbox: Postbox, mediaReference:
             case let .data(data):
                 if data.complete {
                     return Signal<Float, NoError> { subscriber in
-                        DeviceAccess.authorizeAccess(to: .mediaLibrary(.save), presentationData: context.currentPresentationData.with { $0 }, present: { c, a in
-                            context.presentGlobalController(c, a)
+                        DeviceAccess.authorizeAccess(to: .mediaLibrary(.save), presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: { c, a in
+                            context.sharedContext.presentGlobalController(c, a)
                         }, openSettings: context.sharedContext.applicationBindings.openSettings, { authorized in
                             if !authorized {
                                 subscriber.putCompletion()

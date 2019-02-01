@@ -381,7 +381,7 @@ func networkUsageStatsController(context: AccountContext) -> ViewController {
     var presentControllerImpl: ((ViewController) -> Void)?
     
     let arguments = NetworkUsageStatsControllerArguments(resetStatistics: { [weak stats] section in
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
@@ -406,7 +406,7 @@ func networkUsageStatsController(context: AccountContext) -> ViewController {
         presentControllerImpl?(controller)
     })
     
-    let signal = combineLatest(context.presentationData, section.get(), stats.get()) |> deliverOnMainQueue
+    let signal = combineLatest(context.sharedContext.presentationData, section.get(), stats.get()) |> deliverOnMainQueue
         |> map { presentationData, section, stats -> (ItemListControllerState, (ItemListNodeState<NetworkUsageStatsEntry>, NetworkUsageStatsEntry.ItemGenerationArguments)) in
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .sectionControl([presentationData.strings.NetworkUsageSettings_Cellular, presentationData.strings.NetworkUsageSettings_Wifi], 0), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)

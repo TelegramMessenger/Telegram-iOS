@@ -106,7 +106,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         self.blurredNode = BlurredImageNode()
         
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.blurButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Blurred)
         self.motionButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Motion)
         
@@ -171,7 +171,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             let displaySize: CGSize
             let contentSize: CGSize
             
-            let presentationData = self.context.currentPresentationData.with { $0 }
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             let defaultAction = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: presentationData.theme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.actionPressed))
             
             switch entry {

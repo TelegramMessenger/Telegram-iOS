@@ -473,7 +473,7 @@ func dataAndStorageController(context: AccountContext) -> ViewController {
     }, openAutomaticDownloadCategory: { category in
         pushControllerImpl?(autodownloadMediaCategoryController(context: context, category: category))
     }, resetAutomaticDownload: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
             ActionSheetTextItem(title: presentationData.strings.AutoDownloadSettings_ResetHelp),
@@ -516,7 +516,7 @@ func dataAndStorageController(context: AccountContext) -> ViewController {
         }).start()
     })
     
-    let signal = combineLatest(context.presentationData, statePromise.get(), dataAndStorageDataPromise.get()) |> deliverOnMainQueue
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), dataAndStorageDataPromise.get()) |> deliverOnMainQueue
         |> map { presentationData, state, dataAndStorageData -> (ItemListControllerState, (ItemListNodeState<DataAndStorageEntry>, DataAndStorageEntry.ItemGenerationArguments)) in
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ChatSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)

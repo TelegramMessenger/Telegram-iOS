@@ -75,7 +75,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     if color == 0x00ffffff {
                         self.imageNode.isHidden = false
                         self.backgroundNode.isHidden = true
-                        self.imageNode.setSignal(whiteColorImage(theme: context.currentPresentationData.with { $0 }.theme))
+                        self.imageNode.setSignal(whiteColorImage(theme: context.sharedContext.currentPresentationData.with { $0 }.theme))
                         let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                         apply()
                     } else {

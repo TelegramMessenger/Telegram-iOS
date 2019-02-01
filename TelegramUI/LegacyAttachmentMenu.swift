@@ -39,7 +39,7 @@ func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions:
         carouselItem.recipientName = peer.displayTitle
         carouselItem.cameraPressed = { [weak controller] cameraView in
             if let controller = controller {
-                DeviceAccess.authorizeAccess(to: .camera, presentationData: context.currentPresentationData.with { $0 }, present: context.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
+                DeviceAccess.authorizeAccess(to: .camera, presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
                     if value {
                         openCamera(cameraView, controller)
                     }
@@ -181,7 +181,7 @@ func presentLegacyPasteMenu(context: AccountContext, peer: Peer, saveEditedPhoto
         legacyController?.dismiss()
     }
     
-    let presentationDisposable = context.presentationData.start(next: { [weak legacyController] presentationData in
+    let presentationDisposable = context.sharedContext.presentationData.start(next: { [weak legacyController] presentationData in
         if let legacyController = legacyController, let controller = legacyController.legacyController as? TGMenuSheetController  {
             controller.pallete = legacyMenuPaletteFromTheme(presentationData.theme)
         }

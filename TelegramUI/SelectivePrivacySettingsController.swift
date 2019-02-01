@@ -500,7 +500,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
 }
 
 func selectivePrivacySettingsController(context: AccountContext, kind: SelectivePrivacySettingsKind, current: SelectivePrivacySettings, callSettings: (SelectivePrivacySettings, VoiceCallSettings)? = nil, voipConfiguration: VoipConfiguration? = nil, callIntegrationAvailable: Bool? = nil, updated: @escaping (SelectivePrivacySettings, (SelectivePrivacySettings, VoiceCallSettings)?) -> Void) -> ViewController {
-    let strings = context.currentPresentationData.with { $0 }.strings
+    let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
     var initialEnableFor = Set<PeerId>()
     var initialDisableFor = Set<PeerId>()
@@ -614,7 +614,7 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
         }).start()
     })
     
-    let signal = combineLatest(context.presentationData, statePromise.get()) |> deliverOnMainQueue
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get()) |> deliverOnMainQueue
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<SelectivePrivacySettingsEntry>, SelectivePrivacySettingsEntry.ItemGenerationArguments)) in
             
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {

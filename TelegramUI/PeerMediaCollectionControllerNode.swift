@@ -139,7 +139,7 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         
         self.requestDeactivateSearch = requestDeactivateSearch
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.mediaCollectionInterfaceState = PeerMediaCollectionInterfaceState(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
         self.sectionsNode = PeerMediaCollectionSectionsNode(theme: self.presentationData.theme, strings: self.presentationData.strings)

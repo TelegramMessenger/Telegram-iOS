@@ -84,7 +84,7 @@ final class ChangePhoneNumberIntroController: ViewController {
     init(context: AccountContext, phoneNumber: String) {
         self.context = context
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         

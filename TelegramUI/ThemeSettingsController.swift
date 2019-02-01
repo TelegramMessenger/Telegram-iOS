@@ -325,7 +325,7 @@ public func themeSettingsController(context: AccountContext) -> ViewController {
     
     let previousTheme = Atomic<PresentationTheme?>(value: nil)
     
-    let signal = combineLatest(context.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings, SharedDataKeys.localizationSettings]))
+    let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings, SharedDataKeys.localizationSettings]))
     |> deliverOnMainQueue
     |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<ThemeSettingsControllerEntry>, ThemeSettingsControllerEntry.ItemGenerationArguments)) in
         let theme: PresentationTheme

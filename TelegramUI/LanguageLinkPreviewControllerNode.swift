@@ -45,7 +45,7 @@ final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScro
     
     init(context: AccountContext, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, openUrl: @escaping (String) -> Void) {
         self.context = context
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.requestLayout = requestLayout
         self.openUrl = openUrl

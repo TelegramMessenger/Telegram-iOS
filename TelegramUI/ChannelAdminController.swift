@@ -526,7 +526,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
             return current.withUpdatedUpdatedFlags(updated)
         }
     }, dismissAdmin: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         var items: [ActionSheetItem] = []
         items.append(ActionSheetButtonItem(title: presentationData.strings.Channel_Moderator_AccessLevelRevoke, color: .destructive, font: .default, enabled: true, action: { [weak actionSheet] in
@@ -561,7 +561,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
     
     let combinedView = context.account.postbox.combinedView(keys: [.peer(peerId: peerId, components: .all), .peer(peerId: adminId, components: .all)])
     
-    let signal = combineLatest(context.presentationData, statePromise.get(), combinedView)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), combinedView)
     |> deliverOnMainQueue
     |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState<ChannelAdminEntry>, ChannelAdminEntry.ItemGenerationArguments)) in
         let channelView = combinedView.views[.peer(peerId: peerId, components: .all)] as! PeerView

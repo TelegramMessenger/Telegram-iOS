@@ -94,7 +94,7 @@ final class ThemeGridControllerItemNode: GridItemNode {
                     selectionNode.updateSelected(selected, animated: animated)
                     selectionNode.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
                 } else {
-                    let theme = context.currentPresentationData.with { $0 }.theme
+                    let theme = context.sharedContext.currentPresentationData.with { $0 }.theme
                     let selectionNode = GridMessageSelectionNode(theme: theme, toggle: { [weak self] value in
                         if let strongSelf = self {
                             strongSelf.interaction?.toggleWallpaperSelection(index, value)

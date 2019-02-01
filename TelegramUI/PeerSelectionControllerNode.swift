@@ -55,7 +55,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.dismiss = dismiss
         self.filter = filter
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         if hasContactSelector {
             self.toolbarBackgroundNode = ASDisplayNode()
@@ -101,7 +101,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         self.addSubnode(self.chatListNode)
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

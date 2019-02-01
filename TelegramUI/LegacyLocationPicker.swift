@@ -84,7 +84,7 @@ func legacyLocationPickerController(context: AccountContext, selfPeer: Peer, pee
             })
         })
     }
-    let presentationDisposable = context.presentationData.start(next: { [weak controller] presentationData in
+    let presentationDisposable = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
         if let controller = controller  {
             controller.pallete = legacyLocationPalette(from: presentationData.theme)
         }

@@ -294,7 +294,7 @@ func notificationPeerExceptionController(context: AccountContext, peerId: PeerId
     })
     
     
-    let signal = combineLatest(context.presentationData, statePromise.get() |> distinctUntilChanged)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> distinctUntilChanged)
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<NotificationPeerExceptionEntry>, NotificationPeerExceptionEntry.ItemGenerationArguments)) in
             
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {

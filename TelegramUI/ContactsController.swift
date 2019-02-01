@@ -73,7 +73,7 @@ public class ContactsController: ViewController {
     public init(context: AccountContext) {
         self.context = context
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -104,7 +104,7 @@ public class ContactsController: ViewController {
             }
         }
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -118,24 +118,23 @@ public class ContactsController: ViewController {
             }
         })
         
-        let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
         if #available(iOSApplicationExtension 10.0, *) {
             let warningKey = PostboxViewKey.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())
-            self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(context: context, subject: .contacts), context.account.postbox.combinedView(keys: [warningKey, preferencesKey])
-                |> map { combined -> (Bool, ContactsSortOrder) in
-                    let settings = ((combined.views[preferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)
-                    let synchronizeDeviceContacts: Bool = settings?.synchronizeDeviceContacts ?? true
-                    let sortOrder: ContactsSortOrder = settings?.sortOrder ?? .presence
-                    if !synchronizeDeviceContacts {
-                        return (true, sortOrder)
-                    }
-                    let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
-                    if let timestamp = timestamp, timestamp > 0 {
-                        return (true, sortOrder)
-                    } else {
-                        return (false, sortOrder)
-                    }
-                })
+            self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(context: context, subject: .contacts), combineLatest(context.account.postbox.combinedView(keys: [warningKey]), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]))
+            |> map { combined, sharedData -> (Bool, ContactsSortOrder) in
+                let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings
+                let synchronizeDeviceContacts: Bool = settings?.synchronizeDeviceContacts ?? true
+                let sortOrder: ContactsSortOrder = settings?.sortOrder ?? .presence
+                if !synchronizeDeviceContacts {
+                    return (true, sortOrder)
+                }
+                let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                if let timestamp = timestamp, timestamp > 0 {
+                    return (true, sortOrder)
+                } else {
+                    return (false, sortOrder)
+                }
+            })
             |> deliverOnMainQueue).start(next: { [weak self] status, suppressedAndSortOrder in
                 if let strongSelf = self {
                     let (suppressed, sortOrder) = suppressedAndSortOrder
@@ -144,9 +143,9 @@ public class ContactsController: ViewController {
                 }
             })
         } else {
-            self.sortOrderPromise.set(context.account.postbox.combinedView(keys: [preferencesKey])
-            |> map { combined -> ContactsSortOrder in
-                let settings = ((combined.views[preferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)
+            self.sortOrderPromise.set(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings])
+            |> map { sharedData -> ContactsSortOrder in
+                let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings
                 return settings?.sortOrder ?? .presence
             })
         }
@@ -307,11 +306,11 @@ public class ContactsController: ViewController {
         let updateSortOrder: (ContactsSortOrder) -> Void = { [weak self] sortOrder in
             if let strongSelf = self {
                 strongSelf.sortOrderPromise.set(.single(sortOrder))
-                let _ = updateContactSettingsInteractively(postbox: strongSelf.context.account.postbox) { current -> ContactSynchronizationSettings in
+                let _ = updateContactSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current -> ContactSynchronizationSettings in
                     var updated = current
                     updated.sortOrder = sortOrder
                     return updated
-                }.start()
+                }).start()
             }
         }
         

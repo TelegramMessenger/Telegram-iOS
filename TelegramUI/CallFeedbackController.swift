@@ -232,7 +232,7 @@ public func callFeedbackController(context: AccountContext, callId: CallId, rati
         updateState { $0.withUpdatedIncludeLogs(value) }
     })
     
-    let signal = combineLatest(context.presentationData, statePromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
         |> deliverOnMainQueue
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<CallFeedbackControllerEntry>, CallFeedbackControllerEntry.ItemGenerationArguments)) in
             

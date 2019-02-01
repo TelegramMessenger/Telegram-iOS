@@ -551,7 +551,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                     if messages.count == 1 {
                         strongSelf.commitDeleteMessages(messages, ask: true)
                     } else {
-                        let presentationData = strongSelf.context.currentPresentationData.with { $0 }
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         var generalMessageContentKind: MessageContentKind?
                         for message in messages {
                             let currentKind = messageContentKind(message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: strongSelf.context.account.peerId)
@@ -677,7 +677,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                 return transaction.getMessageGroup(currentMessage.id) ?? []
             } |> deliverOnMainQueue).start(next: { [weak self] messages in
                 if let strongSelf = self, !messages.isEmpty {
-                    let presentationData = strongSelf.context.currentPresentationData.with { $0 }
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     var generalMessageContentKind: MessageContentKind?
                     for message in messages {
                         let currentKind = messageContentKind(message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: strongSelf.context.account.peerId)
@@ -797,7 +797,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                 }
             })
         } else if let (webPage, media) = self.currentWebPageAndMedia {
-            let presentationData = self.context.currentPresentationData.with { $0 }
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             
             var preferredAction = ShareControllerPreferredAction.default
             var subject = ShareControllerSubject.media(.webPage(webPage: WebpageReference(webPage), media: media))

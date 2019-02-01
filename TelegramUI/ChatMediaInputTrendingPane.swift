@@ -166,7 +166,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                     return .complete()
                 } |> deliverOnMainQueue).start(completed: {
                     if let strongSelf = self {
-                        let presentationData = strongSelf.context.currentPresentationData.with { $0 }
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         strongSelf.controllerInteraction.presentController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
                     }
                 })
@@ -186,7 +186,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         
         let previousEntries = Atomic<[TrendingPaneEntry]?>(value: nil)
         let context = self.context
-        self.disposable = (combineLatest(context.account.viewTracker.featuredStickerPacks(), context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]), context.presentationData)
+        self.disposable = (combineLatest(context.account.viewTracker.featuredStickerPacks(), context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]), context.sharedContext.presentationData)
         |> map { trendingEntries, view, presentationData -> TrendingPaneTransition in
             var installedPacks = Set<ItemCollectionId>()
             if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionInfosView {

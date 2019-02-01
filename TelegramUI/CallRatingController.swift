@@ -332,7 +332,7 @@ func rateCallAndSendLogs(account: Account, callId: CallId, starsCount: Int, comm
 }
 
 func callRatingController(context: AccountContext, callId: CallId, present: @escaping (ViewController, Any) -> Void) -> AlertController {
-    let presentationData = context.currentPresentationData.with { $0 }
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings
     

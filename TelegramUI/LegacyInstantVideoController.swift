@@ -169,7 +169,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
             }
             legacyController.bindCaptureController(controller)
             
-            let presentationDisposable = context.presentationData.start(next: { [weak controller] presentationData in
+            let presentationDisposable = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
                 if let controller = controller {
                     controller.pallete = legacyInputMicPalette(from: presentationData.theme)
                 }

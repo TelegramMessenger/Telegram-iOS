@@ -57,7 +57,7 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
         if let current = current as? GroupInfoSearchNavigationContentNode {
             return current
         } else {
-            let presentationData = self.context.currentPresentationData.with { $0 }
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             return GroupInfoSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, mode: self.searchMode, cancel: self.cancel, updateActivity: { [weak self] value in
                 self?.updateActivity = value
             })

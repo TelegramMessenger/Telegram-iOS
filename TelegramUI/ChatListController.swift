@@ -54,7 +54,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         
         self.groupId = groupId
         
-        self.presentationData = (context.currentPresentationData.with { $0 })
+        self.presentationData = (context.sharedContext.currentPresentationData.with { $0 })
         self.presentationDataValue.set(.single(self.presentationData))
         
         self.titleView = NetworkStatusTitleView(theme: self.presentationData.theme)
@@ -242,7 +242,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

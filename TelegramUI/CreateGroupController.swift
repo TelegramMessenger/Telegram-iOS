@@ -291,7 +291,7 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId]) ->
             return (transaction.getPeer(context.account.peerId), currentSearchBotsConfiguration(transaction: transaction))
         }
         |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
             legacyController.statusBar.statusBarStyle = .Ignore
@@ -357,7 +357,7 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId]) ->
         })
     })
     
-    let signal = combineLatest(context.presentationData, statePromise.get(), context.account.postbox.multiplePeersView(peerIds))
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.postbox.multiplePeersView(peerIds))
     |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<CreateGroupEntry>, CreateGroupEntry.ItemGenerationArguments)) in
         
         let rightNavigationButton: ItemListNavigationButton

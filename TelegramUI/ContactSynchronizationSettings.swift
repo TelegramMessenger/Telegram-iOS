@@ -43,9 +43,9 @@ public struct ContactSynchronizationSettings: Equatable, PreferencesEntry {
     }
 }
 
-func updateContactSettingsInteractively(postbox: Postbox, _ f: @escaping (ContactSynchronizationSettings) -> ContactSynchronizationSettings) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.contactSynchronizationSettings, { entry in
+func updateContactSettingsInteractively(accountManager: AccountManager, _ f: @escaping (ContactSynchronizationSettings) -> ContactSynchronizationSettings) -> Signal<Void, NoError> {
+    return accountManager.transaction { transaction -> Void in
+        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings, { entry in
             let currentSettings: ContactSynchronizationSettings
             if let entry = entry as? ContactSynchronizationSettings {
                 currentSettings = entry

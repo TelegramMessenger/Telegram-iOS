@@ -358,7 +358,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
                     contactsController?.dismiss()
                 }
             }).start(error: { [weak contactsController] error in
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let text: String
                 switch error {
                     case .limitExceeded:
@@ -411,7 +411,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
     
     var previousPeers: [RenderedChannelParticipant]?
     
-    let signal = combineLatest(context.presentationData, statePromise.get(), peerView, peersPromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peerView, peersPromise.get())
         |> deliverOnMainQueue
         |> map { presentationData, state, view, peers -> (ItemListControllerState, (ItemListNodeState<ChannelMembersEntry>, ChannelMembersEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?

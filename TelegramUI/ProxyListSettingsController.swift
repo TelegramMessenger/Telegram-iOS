@@ -297,8 +297,8 @@ public enum ProxySettingsControllerMode {
 }
 
 public func proxySettingsController(context: AccountContext, mode: ProxySettingsControllerMode = .default) -> ViewController {
-    let presentationData = context.currentPresentationData.with { $0 }
-    return proxySettingsController(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, mode: mode, theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.presentationData |> map { ($0.theme, $0.strings) })
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    return proxySettingsController(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, mode: mode, theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.sharedContext.presentationData |> map { ($0.theme, $0.strings) })
 }
 
 public func proxySettingsController(accountManager: AccountManager, postbox: Postbox, network: Network, mode: ProxySettingsControllerMode, theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>) -> ViewController {

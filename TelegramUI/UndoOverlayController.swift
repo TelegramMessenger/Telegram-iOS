@@ -12,7 +12,7 @@ final class UndoOverlayController: ViewController {
     
     init(context: AccountContext, text: String, action: @escaping (Bool) -> Void) {
         self.context = context
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.text = text
         self.action = action
         

@@ -36,7 +36,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     
     init(context: AccountContext, options: [ContactListAdditionalOption], displayDeviceContacts: Bool) {
         self.context = context
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.displayDeviceContacts = displayDeviceContacts
         
         self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options)))
@@ -53,7 +53,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         
         self.addSubnode(self.contactListNode)
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

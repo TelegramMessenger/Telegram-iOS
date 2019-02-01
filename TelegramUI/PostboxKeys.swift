@@ -3,12 +3,10 @@ import TelegramCore
 import Postbox
 
 private enum ApplicationSpecificPreferencesKeyValues: Int32 {
-    case contactSynchronizationSettings = 12
     case voipDerivedState = 16
 }
 
 public struct ApplicationSpecificPreferencesKeys {
-    public static let contactSynchronizationSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.contactSynchronizationSettings.rawValue)
     public static let voipDerivedState = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.voipDerivedState.rawValue)
 }
 
@@ -28,6 +26,7 @@ private enum ApplicationSpecificSharedDataKeyValues: Int32 {
     case stickerSettings = 12
     case watchPresetSettings = 13
     case webSearchSettings = 14
+    case contactSynchronizationSettings = 15
 }
 
 public struct ApplicationSpecificSharedDataKeys {
@@ -46,6 +45,7 @@ public struct ApplicationSpecificSharedDataKeys {
     public static let stickerSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.stickerSettings.rawValue)
     public static let watchPresetSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.watchPresetSettings.rawValue)
     public static let webSearchSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.webSearchSettings.rawValue)
+    public static let contactSynchronizationSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.contactSynchronizationSettings.rawValue)
 }
 
 private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {

@@ -98,7 +98,7 @@ public class TelegramController: ViewController {
     
     init(context: AccountContext, navigationBarPresentationData: NavigationBarPresentationData?, mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility, locationBroadcastPanelSource: LocationBroadcastPanelSource) {
         self.context = context
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.mediaAccessoryPanelVisibility = mediaAccessoryPanelVisibility
         self.locationBroadcastPanelSource = locationBroadcastPanelSource
         
@@ -220,7 +220,7 @@ public class TelegramController: ViewController {
             }
         }
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -268,7 +268,7 @@ public class TelegramController: ViewController {
                 transition.updateFrame(node: locationBroadcastAccessoryPanel, frame: panelFrame)
                 locationBroadcastAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
             } else {
-                let presentationData = self.context.currentPresentationData.with { $0 }
+                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
                 locationBroadcastAccessoryPanel = LocationBroadcastNavigationAccessoryPanel(accountPeerId: self.context.account.peerId, theme: presentationData.theme, strings: presentationData.strings, tapAction: { [weak self] in
                     if let strongSelf = self {
                         switch strongSelf.locationBroadcastPanelSource {
@@ -281,7 +281,7 @@ public class TelegramController: ViewController {
                                     if messages.count == 1 {
                                         presentLiveLocationController(context: strongSelf.context, peerId: messages[0].id.peerId, controller: strongSelf)
                                     } else {
-                                        let presentationData = strongSelf.context.currentPresentationData.with { $0 }
+                                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                         let controller = ActionSheetController(presentationTheme: presentationData.theme)
                                         let dismissAction: () -> Void = { [weak controller] in
                                             controller?.dismissAnimated()
@@ -347,7 +347,7 @@ public class TelegramController: ViewController {
                             case let .peer(peerId):
                                 closePeerId = peerId
                         }
-                        let presentationData = strongSelf.context.currentPresentationData.with { $0 }
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         let controller = ActionSheetController(presentationTheme: presentationData.theme)
                         let dismissAction: () -> Void = { [weak controller] in
                             controller?.dismissAnimated()
@@ -525,7 +525,7 @@ public class TelegramController: ViewController {
                             })
                             
                             var cancelImpl: (() -> Void)?
-                            let presentationData = strongSelf.context.currentPresentationData.with { $0 }
+                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                             let progressSignal = Signal<Never, NoError> { subscriber in
                                 let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
                                     cancelImpl?()

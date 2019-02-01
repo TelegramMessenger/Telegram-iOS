@@ -265,7 +265,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
     let peerView = context.account.viewTracker.peerView(context.account.peerId)
     |> deliverOnMainQueue
     
-    let signal = combineLatest(context.presentationData, statePromise.get() |> deliverOnMainQueue, peerView)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, peerView)
         |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<UsernameSetupEntry>, UsernameSetupEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
             

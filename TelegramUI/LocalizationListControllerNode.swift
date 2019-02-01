@@ -84,7 +84,7 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
     init(context: AccountContext, listState: LocalizationListState, selectLocalization: @escaping (LocalizationInfo) -> Void, applyingCode: Signal<String?, NoError>) {
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
         
@@ -138,7 +138,7 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
             strongSelf.enqueueTransition(transition)
         }))
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
             |> deliverOnMainQueue).start(next: { [weak self] presentationData in
                 if let strongSelf = self {
                     let previousTheme = strongSelf.presentationData.theme

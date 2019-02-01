@@ -436,7 +436,7 @@ public func recentSessionsController(context: AccountContext) -> ViewController 
             }
         }
     }, removeSession: { sessionId in
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
@@ -485,7 +485,7 @@ public func recentSessionsController(context: AccountContext) -> ViewController 
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, terminateOtherSessions: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
@@ -568,7 +568,7 @@ public func recentSessionsController(context: AccountContext) -> ViewController 
             }
         }))
     }, terminateAllWebSessions: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
@@ -608,7 +608,7 @@ public func recentSessionsController(context: AccountContext) -> ViewController 
     
     let previousMode = Atomic<RecentSessionsMode>(value: .sessions)
     
-    let signal = combineLatest(context.presentationData, mode.get(), statePromise.get(), sessionsPromise.get(), websitesPromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, mode.get(), statePromise.get(), sessionsPromise.get(), websitesPromise.get())
         |> deliverOnMainQueue
         |> map { presentationData, mode, state, sessions, websitesAndPeers -> (ItemListControllerState, (ItemListNodeState<RecentSessionsEntry>, RecentSessionsEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?

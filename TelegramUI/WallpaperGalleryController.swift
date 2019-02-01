@@ -109,7 +109,7 @@ class WallpaperGalleryController: ViewController {
     init(context: AccountContext, source: WallpaperListSource) {
         self.context = context
         self.source = source
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
         
@@ -147,7 +147,7 @@ class WallpaperGalleryController: ViewController {
                 self.centralEntryIndex = 0
         }
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -266,7 +266,7 @@ class WallpaperGalleryController: ViewController {
                 break
         }
         
-        let presentationData = self.context.currentPresentationData.with { $0 }
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let toolbarNode = WallpaperGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings)
         let overlayNode = WallpaperGalleryOverlayNode()
         self.overlayNode = overlayNode

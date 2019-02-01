@@ -331,7 +331,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         self.context = context
         self.queryPromise = Promise<WallpaperSearchQuery>(self.queryValue)
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationDataPromise = Promise(self.presentationData)
         
         self.dimNode = ASDisplayNode()
@@ -508,7 +508,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
             }
         }))
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

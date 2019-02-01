@@ -96,7 +96,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         if compact {
             self.avatarNode.font = compactAvatarFont
         }
-        let presentationData = item.context.currentPresentationData.with { $0 }
+        let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
         
         var title: String?
         if let firstMessage = item.messages.first, let peer = messageMainPeer(firstMessage) {

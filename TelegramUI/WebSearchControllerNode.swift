@@ -176,7 +176,7 @@ class WebSearchControllerNode: ASDisplayNode {
         self.peer = peer
         self.mode = mode
         
-        self.webSearchInterfaceState = WebSearchInterfaceState(presentationData: context.currentPresentationData.with { $0 })
+        self.webSearchInterfaceState = WebSearchInterfaceState(presentationData: context.sharedContext.currentPresentationData.with { $0 })
         self.webSearchInterfaceStatePromise = ValuePromise(self.webSearchInterfaceState, ignoreRepeated: true)
         
         self.segmentedBackgroundNode = ASDisplayNode()

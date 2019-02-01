@@ -576,7 +576,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         
         var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
         
-        let presentationData = context.currentPresentationData.modify {$0}
+        let presentationData = context.sharedContext.currentPresentationData.modify {$0}
         
         let updatePeerSound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
             return updatePeerNotificationSoundInteractive(account: context.account, peerId: peerId, sound: sound) |> deliverOnMainQueue
@@ -682,7 +682,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         
         let previousEntriesHolder = Atomic<([NotificationExceptionEntry], PresentationTheme, PresentationStrings)?>(value: nil)
 
-        self.listDisposable = (combineLatest(context.presentationData, statePromise.get(), preferences) |> deliverOnMainQueue).start(next: { [weak self] (presentationData, state, prefs) in
+        self.listDisposable = (combineLatest(context.sharedContext.presentationData, statePromise.get(), preferences) |> deliverOnMainQueue).start(next: { [weak self] (presentationData, state, prefs) in
             let entries = notificationsExceptionEntries(presentationData: presentationData, state: state)
             let previousEntriesAndPresentationData = previousEntriesHolder.swap((entries, presentationData.theme, presentationData.strings))
 
@@ -868,7 +868,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
     init(context: AccountContext, mode: NotificationExceptionMode, arguments: NotificationExceptionArguments) {
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
         
@@ -934,7 +934,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         
         let previousEntriesHolder = Atomic<([NotificationExceptionEntry], PresentationTheme, PresentationStrings)?>(value: nil)
         
-        self.searchDisposable.set((combineLatest(context.presentationData, stateAndPeers, preferences) |> deliverOnMainQueue).start(next: { [weak self] (presentationData, state, prefs) in
+        self.searchDisposable.set((combineLatest(context.sharedContext.presentationData, stateAndPeers, preferences) |> deliverOnMainQueue).start(next: { [weak self] (presentationData, state, prefs) in
             let entries = notificationsExceptionEntries(presentationData: presentationData, state: state.0, query: state.1)
             let previousEntriesAndPresentationData = previousEntriesHolder.swap((entries, presentationData.theme, presentationData.strings))
             
@@ -944,7 +944,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         }))
         
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

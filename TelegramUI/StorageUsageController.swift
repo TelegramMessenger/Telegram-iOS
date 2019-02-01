@@ -300,7 +300,7 @@ func storageUsageController(context: AccountContext, isModal: Bool = false) -> V
     actionDisposables.add(clearDisposable)
     
     let arguments = StorageUsageControllerArguments(account: context.account, updateKeepMedia: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
@@ -335,7 +335,7 @@ func storageUsageController(context: AccountContext, isModal: Bool = false) -> V
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak statsPromise] result in
             if let result = result, case let .result(stats) = result {
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let controller = ActionSheetController(presentationTheme: presentationData.theme)
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()
@@ -491,7 +491,7 @@ func storageUsageController(context: AccountContext, isModal: Bool = false) -> V
                             let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: updatedOtherSize, otherPaths: updatedOtherPaths, cacheSize: updatedCacheSize, tempPaths: updatedTempPaths, tempSize: updatedTempSize, immutableSize: stats.immutableSize)
                             
                             var cancelImpl: (() -> Void)?
-                            let presentationData = context.currentPresentationData.with { $0 }
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             let progressSignal = Signal<Never, NoError> { subscriber in
                                 let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
                                     cancelImpl?()
@@ -554,7 +554,7 @@ func storageUsageController(context: AccountContext, isModal: Bool = false) -> V
                         }
                     }
                     
-                    let presentationData = context.currentPresentationData.with { $0 }
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let controller = ActionSheetController(presentationTheme: presentationData.theme)
                     let dismissAction: () -> Void = { [weak controller] in
                         controller?.dismissAnimated()
@@ -666,7 +666,7 @@ func storageUsageController(context: AccountContext, isModal: Bool = false) -> V
                                 let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize)
                                 
                                 var cancelImpl: (() -> Void)?
-                                let presentationData = context.currentPresentationData.with { $0 }
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 let progressSignal = Signal<Never, NoError> { subscriber in
                                     let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
                                         cancelImpl?()
@@ -714,7 +714,7 @@ func storageUsageController(context: AccountContext, isModal: Bool = false) -> V
     
     var dismissImpl: (() -> Void)?
     
-    let signal = combineLatest(context.presentationData, cacheSettingsPromise.get(), statsPromise.get()) |> deliverOnMainQueue
+    let signal = combineLatest(context.sharedContext.presentationData, cacheSettingsPromise.get(), statsPromise.get()) |> deliverOnMainQueue
         |> map { presentationData, cacheSettings, cacheStats -> (ItemListControllerState, (ItemListNodeState<StorageUsageEntry>, StorageUsageEntry.ItemGenerationArguments)) in
             let leftNavigationButton = isModal ? ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()

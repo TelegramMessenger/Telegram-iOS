@@ -96,7 +96,7 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
         let textColor: UIColor = self.theme.primaryTextColor
         self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetButtonNode.defaultFont, textColor: textColor)
         
-        self.avatarNode.setPeer(account: item.context.account, theme: (item.context.currentPresentationData.with { $0 }).theme, peer: item.peer)
+        self.avatarNode.setPeer(account: item.context.account, theme: (item.context.sharedContext.currentPresentationData.with { $0 }).theme, peer: item.peer)
         
         self.timerNode.update(backgroundColor: self.theme.controlAccentColor.withAlphaComponent(0.4), foregroundColor: self.theme.controlAccentColor, textColor: self.theme.controlAccentColor, beginTimestamp: item.beginTimestamp, timeout: item.timeout, strings: item.strings)
         

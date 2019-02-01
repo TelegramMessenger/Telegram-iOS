@@ -36,7 +36,7 @@ public final class CallController: ViewController {
         self.context = context
         self.call = call
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
         

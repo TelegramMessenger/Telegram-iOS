@@ -64,7 +64,7 @@ private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponent
             subject = .send
         }
         if let context = self.context {
-            DeviceAccess.authorizeAccess(to: .location(subject), presentationData: context.currentPresentationData.with { $0 }, present: context.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
+            DeviceAccess.authorizeAccess(to: .location(subject), presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
                 if !value {
                     alertDismissCompletion?()
                 }
@@ -233,7 +233,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     
     public func currentWallpaperInfo() -> TGWallpaperInfo! {
         if let legacyContext = legacyContext {
-            let presentationData = legacyContext.currentPresentationData.with { $0 }
+            let presentationData = legacyContext.sharedContext.currentPresentationData.with { $0 }
             switch presentationData.chatWallpaper {
                 case .builtin:
                     return TGBuiltinWallpaperInfo()
@@ -259,7 +259,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     
     public func currentWallpaperImage() -> UIImage! {
         if let legacyContext = legacyContext {
-            let presentationData = legacyContext.currentPresentationData.with { $0 }
+            let presentationData = legacyContext.sharedContext.currentPresentationData.with { $0 }
             switch presentationData.chatWallpaper {
                 case .builtin:
                     return nil
@@ -359,7 +359,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     func navigationBarPallete() -> TGNavigationBarPallete! {
         let theme: PresentationTheme
         if let legacyContext = legacyContext {
-            let presentationData = legacyContext.currentPresentationData.with { $0 }
+            let presentationData = legacyContext.sharedContext.currentPresentationData.with { $0 }
             theme = presentationData.theme
         } else {
             theme = defaultPresentationTheme
@@ -371,7 +371,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     func menuSheetPallete() -> TGMenuSheetPallete! {
         let theme: PresentationTheme
         if let legacyContext = legacyContext {
-            let presentationData = legacyContext.currentPresentationData.with { $0 }
+            let presentationData = legacyContext.sharedContext.currentPresentationData.with { $0 }
             theme = presentationData.theme
         } else {
             theme = defaultPresentationTheme
@@ -384,7 +384,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     func mediaAssetsPallete() -> TGMediaAssetsPallete! {
         let presentationTheme: PresentationTheme
         if let legacyContext = legacyContext {
-            let presentationData = legacyContext.currentPresentationData.with { $0 }
+            let presentationData = legacyContext.sharedContext.currentPresentationData.with { $0 }
             presentationTheme = presentationData.theme
         } else {
             presentationTheme = defaultPresentationTheme
@@ -399,7 +399,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     func checkButtonPallete() -> TGCheckButtonPallete! {
         let presentationTheme: PresentationTheme
         if let legacyContext = legacyContext {
-            let presentationData = legacyContext.currentPresentationData.with { $0 }
+            let presentationData = legacyContext.sharedContext.currentPresentationData.with { $0 }
             presentationTheme = presentationData.theme
         } else {
             presentationTheme = defaultPresentationTheme

@@ -193,7 +193,7 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
     var previousPackCount: Int?
     var initialUnreadPacks: [ItemCollectionId: Bool] = [:]
     
-    let signal = combineLatest(context.presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, featured.get() |> deliverOnMainQueue)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, featured.get() |> deliverOnMainQueue)
         |> deliverOnMainQueue
         |> map { presentationData, state, view, featured -> (ItemListControllerState, (ItemListNodeState<FeaturedStickerPacksEntry>, FeaturedStickerPacksEntry.ItemGenerationArguments)) in
             let packCount: Int? = featured.count

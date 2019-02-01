@@ -129,7 +129,7 @@ final class WebSearchController: ViewController {
         self.peer = peer
         self.configuration = configuration
         
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.interfaceState = WebSearchInterfaceState(presentationData: presentationData)
         
         var searchQuery: String?
@@ -156,7 +156,7 @@ final class WebSearchController: ViewController {
             }
         }
 
-        self.disposable = ((combineLatest(settings, context.presentationData))
+        self.disposable = ((combineLatest(settings, context.sharedContext.presentationData))
         |> deliverOnMainQueue).start(next: { [weak self] settings, presentationData in
             guard let strongSelf = self else {
                 return

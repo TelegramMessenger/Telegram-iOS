@@ -135,7 +135,7 @@ final class SecureIdDocumentGalleryFooterContentNode: GalleryFooterContentNode {
     }
     
     @objc func deleteButtonPressed() {
-        let presentationData = self.context.currentPresentationData.with { $0 }
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         let items: [ActionSheetItem] = [
             ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak self, weak actionSheet] in

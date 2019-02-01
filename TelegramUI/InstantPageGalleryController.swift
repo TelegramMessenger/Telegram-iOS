@@ -142,7 +142,7 @@ class InstantPageGalleryController: ViewController {
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var openLinkImpl: ((InstantPageUrlItem) -> Void)?
         self.innerOpenUrl = { url in

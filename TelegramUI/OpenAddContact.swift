@@ -14,7 +14,7 @@ func openAddContact(context: AccountContext, firstName: String = "", lastName: S
             case .notDetermined:
                 DeviceAccess.authorizeAccess(to: .contacts)
             default:
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
                     context.sharedContext.applicationBindings.openSettings()
                 })]), nil)

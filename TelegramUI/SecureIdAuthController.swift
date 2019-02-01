@@ -81,7 +81,7 @@ final class SecureIdAuthController: ViewController {
     
     init(context: AccountContext, mode: SecureIdAuthControllerMode) {
         self.context = context
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.mode = mode
         

@@ -244,7 +244,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     let arguments = PasscodeOptionsControllerArguments(turnPasscodeOn: {
         var dismissImpl: (() -> Void)?
         
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
         let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeSetupSimple, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
@@ -275,7 +275,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
             legacyController?.dismiss()
         }
     }, turnPasscodeOff: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.PasscodeSettings_TurnPasscodeOff, color: .destructive, action: { [weak actionSheet] in
@@ -308,7 +308,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
         |> deliverOnMainQueue).start(next: { isSimple in
             var dismissImpl: (() -> Void)?
             
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
             let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: isSimple ? TGPasscodeEntryControllerModeSetupSimple : TGPasscodeEntryControllerModeSetupComplex, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
@@ -337,7 +337,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
             }
         })
     }, changePasscodeTimeout: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         var items: [ActionSheetItem] = []
         let setAction: (Int32?) -> Void = { value in
@@ -386,7 +386,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     }, toggleSimplePasscode: { value in
         var dismissImpl: (() -> Void)?
         
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
         let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: value ? TGPasscodeEntryControllerModeSetupSimple : TGPasscodeEntryControllerModeSetupComplex, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
@@ -417,7 +417,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
         }
     })
     
-    let signal = combineLatest(context.presentationData, statePromise.get(), passcodeOptionsDataPromise.get()) |> deliverOnMainQueue
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), passcodeOptionsDataPromise.get()) |> deliverOnMainQueue
         |> map { presentationData, state, passcodeOptionsData -> (ItemListControllerState, (ItemListNodeState<PasscodeOptionsEntry>, PasscodeOptionsEntry.ItemGenerationArguments)) in
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.PasscodeSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
@@ -454,7 +454,7 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
             }
             var dismissImpl: (() -> Void)?
             
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
             let mode: TGPasscodeEntryControllerMode
@@ -535,7 +535,7 @@ public func passcodeEntryController(context: AccountContext, animateIn: Bool = t
             }
             var dismissImpl: (() -> Void)?
             
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
             let mode: TGPasscodeEntryControllerMode

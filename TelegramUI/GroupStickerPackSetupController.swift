@@ -398,7 +398,7 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
     
     let previousHadData = Atomic<Bool>(value: false)
     
-    let signal = combineLatest(context.presentationData, statePromise.get() |> deliverOnMainQueue, initialData.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, searchState.get() |> deliverOnMainQueue)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, initialData.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, searchState.get() |> deliverOnMainQueue)
         |> map { presentationData, state, initialData, view, searchState -> (ItemListControllerState, (ItemListNodeState<GroupStickerPackEntry>, GroupStickerPackEntry.ItemGenerationArguments)) in
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()

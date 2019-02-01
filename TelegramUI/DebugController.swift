@@ -283,7 +283,7 @@ public func debugController(context: AccountContext, accountManager: AccountMana
         hasLegacyAppData = FileManager.default.fileExists(atPath: statusPath)
     }
     
-    let signal = combineLatest(context.presentationData, accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.mediaInputSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings])))
+    let signal = combineLatest(context.sharedContext.presentationData, accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.mediaInputSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings])))
     |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
         let loggingSettings: LoggingSettings
         if let value = sharedData.entries[SharedDataKeys.loggingSettings] as? LoggingSettings {

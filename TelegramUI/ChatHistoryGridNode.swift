@@ -245,11 +245,11 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         self.messageId = messageId
         self.tagMask = tagMask
         self.controllerInteraction = controllerInteraction
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init()
         
-        self.chatPresentationDataPromise.set(context.presentationData |> map { presentationData in
+        self.chatPresentationDataPromise.set(context.sharedContext.presentationData |> map { presentationData in
             return ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
         })
         

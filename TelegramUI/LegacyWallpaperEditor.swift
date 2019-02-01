@@ -52,7 +52,7 @@ func legacyWallpaperPicker(context: AccountContext, presentationData: Presentati
     return Signal { subscriber in
         let intent = TGMediaAssetsControllerSetCustomWallpaperIntent
         
-        DeviceAccess.authorizeAccess(to: .mediaLibrary(.wallpaper), presentationData: presentationData, present: context.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
+        DeviceAccess.authorizeAccess(to: .mediaLibrary(.wallpaper), presentationData: presentationData, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
             if !value {
                 subscriber.putError(Void())
                 return

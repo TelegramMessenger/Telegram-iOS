@@ -128,7 +128,7 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, con
         legacyLocation.venue = TGVenueAttachment(title: venue.title, address: venue.address, provider: venue.provider, venueId: venue.id, type: venue.type)
     }
     
-    let presentationData = context.currentPresentationData.with { $0 }
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     
     let legacyController = LegacyController(presentation: isModal ? .modal(animateIn: true) : .navigation, theme: presentationData.theme, strings: presentationData.strings)
     let controller: TGLocationViewController
@@ -224,7 +224,7 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, con
         legacyController?.dismiss()
     }
     
-    let theme = (context.currentPresentationData.with { $0 }).theme
+    let theme = (context.sharedContext.currentPresentationData.with { $0 }).theme
     controller.pallete = legacyLocationPalette(from: theme)
     
     controller.modalMode = isModal
@@ -232,7 +232,7 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, con
         if let strongLegacyController = legacyController, let location = legacyLocation {
             let map = telegramMap(for: location)
             
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let shareAction = OpenInControllerAction(title: presentationData.strings.Conversation_ContextMenuShare, action: {
                 strongLegacyController.present(ShareController(context: context, subject: .mapMedia(map), externalShare: true), in: .window(.root), with: nil)
             })
@@ -267,7 +267,7 @@ func legacyLocationController(message: Message?, mapMedia: TelegramMediaMap, con
         legacyController.bind(controller: controller)
     }
     
-    let presentationDisposable = context.presentationData.start(next: { [weak controller] presentationData in
+    let presentationDisposable = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
         if let controller = controller  {
             controller.pallete = legacyLocationPalette(from: presentationData.theme)
         }

@@ -128,7 +128,7 @@ public func convertToSupergroupController(context: AccountContext, peerId: PeerI
     actionsDisposable.add(convertDisposable)
     
     let arguments = ConvertToSupergroupArguments(convert: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Group_UpgradeConfirmation, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
             var alreadyConverting = false
@@ -148,7 +148,7 @@ public func convertToSupergroupController(context: AccountContext, peerId: PeerI
         })]), nil)
     })
     
-    let signal = combineLatest(context.presentationData, statePromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
         |> deliverOnMainQueue
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<ConvertToSupergroupEntry>, ConvertToSupergroupEntry.ItemGenerationArguments)) in
             

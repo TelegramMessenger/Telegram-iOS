@@ -204,7 +204,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
         self.openPeer = openPeer
         self.mode = mode
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings, self.presentationData.nameSortOrder, self.presentationData.nameDisplayOrder, self.presentationData.dateTimeFormat))
         
         self.dimNode = ASDisplayNode()
@@ -870,7 +870,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                 }
             }))
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

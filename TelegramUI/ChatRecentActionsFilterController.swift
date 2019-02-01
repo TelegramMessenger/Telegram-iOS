@@ -367,7 +367,7 @@ public func channelRecentActionsFilterController(context: AccountContext, peer: 
     
     let adminsPromise = Promise<[RenderedChannelParticipant]?>(nil)
     
-    let presentationDataSignal = context.presentationData
+    let presentationDataSignal = context.sharedContext.presentationData
     
     let actionsDisposable = DisposableSet()
     

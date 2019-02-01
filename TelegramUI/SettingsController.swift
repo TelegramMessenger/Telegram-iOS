@@ -471,13 +471,13 @@ private final class SettingsControllerImpl: ItemListController<SettingsEntry>, S
     
     init(currentContext: AccountContext, contextValue: Promise<AccountContext>, state: Signal<(ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?) {
         self.contextValue = contextValue
-        let presentationData = currentContext.currentPresentationData.with { $0 }
+        let presentationData = currentContext.sharedContext.currentPresentationData.with { $0 }
         
         self.contextValue.set(.single(currentContext))
         
         let updatedPresentationData = self.contextValue.get()
         |> mapToSignal { context -> Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError> in
-            return context.presentationData
+            return context.sharedContext.presentationData
             |> map { ($0.theme, $0.strings) }
         }
         
@@ -573,7 +573,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
             presentControllerImpl?(controller, nil)
             let _ = (resolvedUrl.get()
@@ -592,7 +592,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     let resolvedUrl = contextValue.get()
     |> deliverOnMainQueue
     |> mapToSignal { context -> Signal<ResolvedUrl, NoError> in
-        var faqUrl = context.currentPresentationData.with { $0 }.strings.Settings_FAQ_URL
+        var faqUrl = context.sharedContext.currentPresentationData.with { $0 }.strings.Settings_FAQ_URL
         if faqUrl == "Settings.FAQ_URL" || faqUrl.isEmpty {
             faqUrl = "https://telegram.org/faq#general"
         }
@@ -716,7 +716,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> take(1)).start(next: { context in
             let supportPeer = Promise<PeerId?>()
             supportPeer.set(supportPeerId(account: context.account))
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             let resolvedUrlPromise = Promise<ResolvedUrl>()
             resolvedUrlPromise.set(resolvedUrl)
@@ -744,7 +744,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
             var cancelImpl: (() -> Void)?
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let progressSignal = Signal<Never, NoError> { subscriber in
                 let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
                     cancelImpl?()
@@ -822,7 +822,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let controller = ActionSheetController(presentationTheme: presentationData.theme)
             let dismissAction: () -> Void = { [weak controller] in
                 controller?.dismissAnimated()
@@ -850,7 +850,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 return (transaction.getPeer(context.account.peerId), currentSearchBotsConfiguration(transaction: transaction))
             }
             |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
                 let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
                 legacyController.statusBar.statusBarStyle = .Ignore
@@ -1047,7 +1047,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     let updatedPresentationData = contextValue.get()
     |> mapToSignal { context -> Signal<PresentationData, NoError> in
-        return context.presentationData
+        return context.sharedContext.presentationData
     }
     
     let proxyPreferences = context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
@@ -1149,7 +1149,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> take(1)
         |> deliverOnMainQueue).start(next: { context in
             if let strongController = controller {
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 var resultItemNode: ListViewItemNode?
                 let _ = strongController.frameForItemNode({ itemNode in
                     if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {

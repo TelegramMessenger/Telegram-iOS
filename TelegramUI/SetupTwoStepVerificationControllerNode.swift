@@ -154,7 +154,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
         self.stateUpdated = stateUpdated
         self.present = present
         self.dismiss = dismiss
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.innerState = SetupTwoStepVerificationControllerInnerState(layout: nil, data: SetupTwoStepVerificationControllerDataState(activity: false, state: SetupTwoStepVerificationState(initialState: initialState)))
         self.activityIndicator = ActivityIndicator(type: .custom(self.presentationData.theme.list.itemAccentColor, 22.0, 2.0, false))
         

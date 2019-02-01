@@ -19,7 +19,7 @@ final class LegacyEmptyController: TGViewController {
     override func present(context generator: ((LegacyComponentsContext?) -> UIViewController?)!) {
         if let context = self.context as? LegacyControllerContext, let controller = context.controller {
             let context = legacyContextGet()
-            let presentationData = context?.currentPresentationData.with { $0 }
+            let presentationData = context?.sharedContext.currentPresentationData.with { $0 }
             
             let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: presentationData?.theme, initialLayout: controller.currentlyAppliedLayout)
             guard let presentedController = generator(legacyController.context) else {

@@ -163,7 +163,7 @@ public func groupsInCommonController(context: AccountContext, peerId: PeerId) ->
     
     var previousPeers: [Peer]?
     
-    let signal = combineLatest(context.presentationData, statePromise.get(), peersPromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peersPromise.get())
         |> deliverOnMainQueue
         |> map { presentationData, state, peers -> (ItemListControllerState, (ItemListNodeState<GroupsInCommonEntry>, GroupsInCommonEntry.ItemGenerationArguments)) in
             var emptyStateItem: ItemListControllerEmptyStateItem?

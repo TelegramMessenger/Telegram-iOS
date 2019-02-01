@@ -216,7 +216,7 @@ public func blockedPeersController(context: AccountContext) -> ViewController {
             }
         }
     }, addPeer: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = PeerSelectionController(context: context, filter: [.onlyPrivateChats, .excludeSavedMessages, .removeSearchHeader, .excludeRecent], title: presentationData.strings.BlockedUsers_SelectUserTitle)
         controller.peerSelected = { [weak controller] peerId in
             if let strongController = controller {
@@ -306,7 +306,7 @@ public func blockedPeersController(context: AccountContext) -> ViewController {
     
     var previousPeers: [Peer]?
     
-    let signal = combineLatest(context.presentationData, statePromise.get(), peersPromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peersPromise.get())
         |> deliverOnMainQueue
         |> map { presentationData, state, peers -> (ItemListControllerState, (ItemListNodeState<BlockedPeersEntry>, BlockedPeersEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?

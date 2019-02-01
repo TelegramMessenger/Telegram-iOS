@@ -36,7 +36,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
     init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType,  initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, requestDismiss: @escaping () -> Void, requestShare: @escaping (MessageId) -> Void) {
         self.context = context
         self.peerId = peerId
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.type = type
         self.requestDismiss = requestDismiss
         self.requestShare = requestShare

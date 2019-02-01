@@ -1265,7 +1265,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
             let _ = (context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
                 return (transaction.getPeer(peerView.peerId), currentSearchBotsConfiguration(transaction: transaction))
                 } |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
-                    let presentationData = context.currentPresentationData.with { $0 }
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     
                     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
                     legacyController.statusBar.statusBarStyle = .Ignore
@@ -1363,7 +1363,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
         let _ = (peerView.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { peerView in
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let _ = (context.account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
                 let peerSettings: TelegramPeerNotificationSettings = (transaction.getPeerNotificationSettings(peerView.peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
                 let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
@@ -1458,7 +1458,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 |> deliverOnMainQueue, members.get() |> take(1) |> deliverOnMainQueue)).start(next: { groupPeer, recentIds in
                 var confirmationImpl: ((PeerId) -> Signal<Bool, NoError>)?
                 var options: [ContactListAdditionalOption] = []
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 var inviteByLinkImpl: (() -> Void)?
                 
                 var canCreateInviteLink = false
@@ -1499,7 +1499,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     |> deliverOnMainQueue
                     |> mapToSignal { peer in
                         let result = ValuePromise<Bool>()
-                        let presentationData = context.currentPresentationData.with { $0 }
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         if let contactsController = contactsController {
                             let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.GroupInfo_AddParticipantConfirmation(peer.displayTitle).0, actions: [
                                 TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {
@@ -1781,7 +1781,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
         let _ = (peerView.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { peerView in
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             if let channel = peerView.peers[peerView.peerId] as? TelegramChannel, channel.flags.contains(.isCreator), stateValue.with({ $0 }).editingState != nil {
                 let controller = ActionSheetController(presentationTheme: presentationData.theme)
@@ -1892,7 +1892,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     let previousChannelMembers = Atomic<[PeerId]?>(value: nil)
     
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
-    let signal = combineLatest(queue: .mainQueue(), context.presentationData, statePromise.get(), peerView.get(), context.account.postbox.combinedView(keys: [globalNotificationsKey]), channelMembersPromise.get())
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), peerView.get(), context.account.postbox.combinedView(keys: [globalNotificationsKey]), channelMembersPromise.get())
     |> map { presentationData, state, view, combinedView, channelMembers -> (ItemListControllerState, (ItemListNodeState<GroupInfoEntry>, GroupInfoEntry.ItemGenerationArguments)) in
         let peer = peerViewMainPeer(view)
         
@@ -2108,7 +2108,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     }
     displayCopyContextMenuImpl = { [weak controller] text, tag in
         if let strongController = controller {
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             var resultItemNode: ListViewItemNode?
             let _ = strongController.frameForItemNode({ itemNode in
                 var itemTag: GroupInfoEntryTag? = nil
@@ -2251,7 +2251,7 @@ func handlePeerInfoAboutTextAction(context: AccountContext, peerId: PeerId, navi
         }))
     }
     
-    let presentationData = context.currentPresentationData.with { $0 }
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     switch action {
     case .tap:
         switch itemLink {

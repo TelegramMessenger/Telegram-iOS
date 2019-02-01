@@ -326,7 +326,7 @@ func languageSuggestionController(context: AccountContext, suggestedLocalization
         return nil
     }
     
-    let theme = context.currentPresentationData.with { $0 }.theme
+    let theme = context.sharedContext.currentPresentationData.with { $0 }.theme
     let strings = LanguageSuggestionControllerStrings(localization: suggestedLocalization)
     guard let mainPath = Bundle.main.path(forResource: "en", ofType: "lproj") else {
         return nil

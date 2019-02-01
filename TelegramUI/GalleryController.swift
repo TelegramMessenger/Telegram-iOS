@@ -321,7 +321,7 @@ class GalleryController: ViewController {
         self.actionInteraction = actionInteraction
         self.streamVideos = streamSingleVideo
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var performActionImpl: ((GalleryControllerInteractionTapAction) -> Void)?
         self.performAction = { action in

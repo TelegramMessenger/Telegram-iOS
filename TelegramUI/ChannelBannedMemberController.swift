@@ -421,7 +421,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
             }
         })
     }, openTimeout: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         let intervals: [Int32] = [
             1 * 60 * 60 * 24,
@@ -459,7 +459,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
         ])])
         presentControllerImpl?(actionSheet, nil)
     }, delete: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         var items: [ActionSheetItem] = []
         items.append(ActionSheetButtonItem(title: presentationData.strings.GroupPermission_Delete, color: .destructive, font: .default, enabled: true, action: { [weak actionSheet] in
@@ -493,7 +493,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
     
     let canEdit = true
     
-    let signal = combineLatest(context.presentationData, statePromise.get(), combinedView)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), combinedView)
     |> deliverOnMainQueue
     |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState<ChannelBannedMemberEntry>, ChannelBannedMemberEntry.ItemGenerationArguments)) in
         let channelView = combinedView.views[.peer(peerId: peerId, components: .all)] as! PeerView
@@ -654,7 +654,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
                                             
                                         }, completed: {
                                             if previousRights == nil {
-                                                let presentationData = context.currentPresentationData.with { $0 }
+                                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                                 presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.GroupPermission_AddSuccess)), nil)
                                             }
                                             updated(cleanResolvedRights.flags.isEmpty ? nil : cleanResolvedRights)
@@ -663,7 +663,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
                                 }
                             }
                             
-                            let presentationData = context.currentPresentationData.with { $0 }
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
                             var items: [ActionSheetItem] = []
                             items.append(ActionSheetTextItem(title: presentationData.strings.GroupPermission_ApplyAlertText(peer.displayTitle).0))

@@ -587,7 +587,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
         let _ = (context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
             return (transaction.getPeer(peerId), currentSearchBotsConfiguration(transaction: transaction))
             } |> deliverOnMainQueue).start(next: { peer, searchBotsConfiguration in
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
                 let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
                 legacyController.statusBar.statusBarStyle = .Ignore
@@ -695,7 +695,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     }, openChannelTypeSetup: {
         presentControllerImpl?(channelVisibilityController(context: context, peerId: peerId, mode: .generic, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
     }, changeNotificationMuteSettings: {
-        let presentationData = context.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let _ = (context.account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
             let peerSettings: TelegramPeerNotificationSettings = (transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
             let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
@@ -740,7 +740,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
             guard let peer = peer else {
                 return
             }
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let controller = ActionSheetController(presentationTheme: presentationData.theme)
             let dismissAction: () -> Void = { [weak controller] in
                 controller?.dismissAnimated()
@@ -764,7 +764,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
             guard let peer = peer else {
                 return
             }
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let controller = ActionSheetController(presentationTheme: presentationData.theme)
             let dismissAction: () -> Void = { [weak controller] in
                 controller?.dismissAnimated()
@@ -793,7 +793,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     })
     
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
-    let signal = combineLatest(context.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId), context.account.postbox.combinedView(keys: [globalNotificationsKey]))
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId), context.account.postbox.combinedView(keys: [globalNotificationsKey]))
         |> map { presentationData, state, view, combinedView -> (ItemListControllerState, (ItemListNodeState<ChannelInfoEntry>, ChannelInfoEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
             
@@ -951,7 +951,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     }
     displayContextMenuImpl = { [weak controller] tag, text in
         if let strongController = controller {
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             var resultItemNode: ListViewItemNode?
             let _ = strongController.frameForItemNode({ itemNode in
                 if let itemNode = itemNode as? ItemListTextWithLabelItemNode {

@@ -48,7 +48,7 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.textNode)
         
-        self.avatarNode.setPeer(account: context.account, theme: (context.currentPresentationData.with { $0 }).theme, peer: peer)
+        self.avatarNode.setPeer(account: context.account, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer)
         
         let text: (String, [(Int, NSRange)])
         if chatPeer is TelegramGroup || chatPeer is TelegramChannel {

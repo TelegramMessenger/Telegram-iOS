@@ -130,7 +130,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         self.controllerInteraction = interaction
         
         let wallpapers = colors.map { TelegramWallpaper.color($0) }
-        let transition = context.presentationData
+        let transition = context.sharedContext.presentationData
         |> map { presentationData -> (ThemeColorsGridEntryTransition, Bool) in
             var entries: [ThemeColorsGridControllerEntry] = []
             var index = 0

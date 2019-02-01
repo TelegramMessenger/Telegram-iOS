@@ -263,11 +263,11 @@ final class BotReceiptControllerNode: ItemListControllerNode<BotReceiptEntry> {
         self.context = context
         self.dismissAnimated = dismissAnimated
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         let arguments = BotReceiptControllerArguments(account: context.account)
         
-        let signal: Signal<(PresentationTheme, (ItemListNodeState<BotReceiptEntry>, BotReceiptEntry.ItemGenerationArguments)), NoError> = combineLatest(context.presentationData, receiptData.get(), context.account.postbox.loadedPeerWithId(messageId.peerId))
+        let signal: Signal<(PresentationTheme, (ItemListNodeState<BotReceiptEntry>, BotReceiptEntry.ItemGenerationArguments)), NoError> = combineLatest(context.sharedContext.presentationData, receiptData.get(), context.account.postbox.loadedPeerWithId(messageId.peerId))
             |> map { presentationData, receiptData, botPeer -> (PresentationTheme, (ItemListNodeState<BotReceiptEntry>, BotReceiptEntry.ItemGenerationArguments)) in
                 let nodeState = ItemListNodeState(entries: botReceiptControllerEntries(presentationData: presentationData, invoice: invoice, formInvoice: receiptData?.0, formInfo: receiptData?.1, shippingOption: receiptData?.2, paymentMethodTitle: receiptData?.3, botPeer: botPeer), style: .plain, focusItemTag: nil, emptyStateItem: nil, animateChanges: false)
                 

@@ -19,7 +19,7 @@ private enum PeerReportOption {
 }
 
 func peerReportOptionsController(context: AccountContext, subject: PeerReportSubject, present: @escaping (ViewController, Any?) -> Void) -> ViewController {
-    let presentationData = context.currentPresentationData.with { $0 }
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let controller = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme))
     
     let options: [PeerReportOption] = [
@@ -209,7 +209,7 @@ private func peerReportController(context: AccountContext, subject: PeerReportSu
     
     let reportDisposable = MetaDisposable()
     
-    let signal = combineLatest(context.presentationData, statePromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<PeerReportControllerEntry>, PeerReportControllerEntry.ItemGenerationArguments)) in
             let rightButton: ItemListNavigationButton
             if state.isReporting {
@@ -228,7 +228,7 @@ private func peerReportController(context: AccountContext, subject: PeerReportSu
                     
                     if !text.isEmpty {
                         let completed: () -> Void = {
-                            let presentationData = context.currentPresentationData.with { $0 }
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             
                             let alert = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {
                                 

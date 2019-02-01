@@ -33,7 +33,7 @@ final class ChangePhoneNumberController: ViewController {
     
     init(context: AccountContext) {
         self.context = context
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -114,7 +114,7 @@ final class ChangePhoneNumberController: ViewController {
                 if let strongSelf = self {
                     strongSelf.inProgress = false
                     
-                    let presentationData = strongSelf.context.currentPresentationData.with { $0 }
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                 
                     let text: String
                     switch error {

@@ -81,7 +81,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     init(context: AccountContext, openShare: (() -> Void)?, openMention: @escaping (String) -> Void) {
         self.context = context
         self.openShare = openShare
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true

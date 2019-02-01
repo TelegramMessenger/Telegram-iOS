@@ -239,8 +239,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 self.chatLocationInfoData = .group(Promise())
         }
         
-        self.presentationData = context.currentPresentationData.with { $0 }
-        self.automaticMediaDownloadSettings = context.currentAutomaticMediaDownloadSettings.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }
         
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, chatWallpaperMode: self.presentationData.chatWallpaperOptions, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.fontSize, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation)
         
@@ -814,25 +814,25 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     }
                     
                     if let cachedUserData = strongSelf.peerView?.cachedData as? CachedUserData, cachedUserData.callsPrivate {
-                        let presentationData = context.currentPresentationData.with { $0 }
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         
                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                         return
                     }
                     
-                    let callResult = context.callManager?.requestCall(account: context.account, peerId: peer.id, endCurrentIfAny: false)
+                    let callResult = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, endCurrentIfAny: false)
                     if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                         if currentPeerId == peer.id {
-                            context.navigateToCurrentCall?()
+                            context.sharedContext.navigateToCurrentCall()
                         } else {
-                            let presentationData = context.currentPresentationData.with { $0 }
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             let _ = (context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
                                 return (transaction.getPeer(peer.id), transaction.getPeer(currentPeerId))
                             }
                             |> deliverOnMainQueue).start(next: { peer, current in
                                 if let peer = peer, let current = current {
                                     strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                        let _ = context.callManager?.requestCall(account: context.account, peerId: peer.id, endCurrentIfAny: true)
+                                        let _ = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, endCurrentIfAny: true)
                                     })]), in: .window(.root))
                                 }
                             })
@@ -1519,7 +1519,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         })
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -1534,7 +1534,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         })
         
-        self.automaticMediaDownloadSettingsDisposable = (context.automaticMediaDownloadSettings
+        self.automaticMediaDownloadSettingsDisposable = (context.sharedContext.automaticMediaDownloadSettings
         |> deliverOnMainQueue).start(next: { [weak self] downloadSettings in
             if let strongSelf = self, strongSelf.automaticMediaDownloadSettings != downloadSettings {
                 strongSelf.automaticMediaDownloadSettings = downloadSettings
@@ -1747,7 +1747,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             if let readStateData = combinedInitialData.readStateData {
                 if case let .peer(peerId) = strongSelf.chatLocation, let peerReadStateData = readStateData[peerId], let notificationSettings = peerReadStateData.notificationSettings {
                     
-                    let inAppSettings = strongSelf.context.currentInAppNotificationSettings.with { $0 }
+                    let inAppSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
                     let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: peerReadStateData.totalState ?? ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:]))
                     
                     var globalRemainingUnreadChatCount = count
@@ -2496,12 +2496,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }) else {
                     return
                 }
-                let hasOngoingCall: Signal<Bool, NoError>
-                if let signal = strongSelf.context.hasOngoingCall {
-                    hasOngoingCall = signal
-                } else {
-                    hasOngoingCall = .single(false)
-                }
+                let hasOngoingCall: Signal<Bool, NoError> = strongSelf.context.sharedContext.hasOngoingCall.get()
                 let _ = (hasOngoingCall
                 |> deliverOnMainQueue).start(next: { hasOngoingCall in
                     guard let strongSelf = self, strongSelf.beginMediaRecordingRequestId == requestId else {
@@ -2999,7 +2994,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         var unreadCount: Int32 = 0
                         var totalChatCount: Int32 = 0
                         
-                        let inAppSettings = strongSelf.context.currentInAppNotificationSettings.with { $0 }
+                        let inAppSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
                         if let view = views.views[unreadCountsKey] as? UnreadMessageCountsView {
                             if let count = view.count(for: .peer(peerId)) {
                                 unreadCount = count
@@ -3078,7 +3073,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 
                 self.sentMessageEventsDisposable.set(self.context.account.pendingMessageManager.deliveredMessageEvents(peerId: peerId).start(next: { [weak self] _ in
                     if let strongSelf = self {
-                        let inAppNotificationSettings: InAppNotificationSettings = strongSelf.context.currentInAppNotificationSettings.with { $0 }
+                        let inAppNotificationSettings: InAppNotificationSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
                         
                         if inAppNotificationSettings.playSounds {
                             serviceSoundManager.playMessageDeliveredSound()
@@ -3114,7 +3109,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                 unreadCount = count
                             }
                             if let (_, state) = view.total() {
-                                let inAppSettings = strongSelf.context.currentInAppNotificationSettings.with { $0 }
+                                let inAppSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
                                 let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
                                 totalCount = count
                             }
@@ -3196,7 +3191,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     }
                     
                     if strongSelf.firstLoadedMessageToListen() != nil || strongSelf.chatDisplayNode.isTextInputPanelActive {
-                        if strongSelf.context.immediateHasOngoingCall {
+                        if strongSelf.context.sharedContext.immediateHasOngoingCall {
                             return false
                         }
                         
@@ -3204,7 +3199,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             return false
                         }
                         
-                        if !strongSelf.context.currentMediaInputSettings.with { $0.enableRaiseToSpeak } {
+                        if !strongSelf.context.sharedContext.currentMediaInputSettings.with { $0.enableRaiseToSpeak } {
                             return false
                         }
                         
@@ -3926,7 +3921,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             strongSelf.present(legacyController, in: .window(.root))
             controller.present(in: emptyController, sourceView: nil, animated: true)
             
-            let presentationDisposable = strongSelf.context.presentationData.start(next: { [weak controller] presentationData in
+            let presentationDisposable = strongSelf.context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
                 if let controller = controller {
                     controller.pallete = legacyMenuPaletteFromTheme(presentationData.theme)
                 }
@@ -5567,7 +5562,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         return data.with { [weak self] data -> [UIPreviewActionItem] in
             var items: [UIPreviewActionItem] = []
             if let data = data, let strongSelf = self {
-                let presentationData = strongSelf.context.currentPresentationData.with { $0 }
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                 
                 switch strongSelf.peekActions {
                     case .standard:

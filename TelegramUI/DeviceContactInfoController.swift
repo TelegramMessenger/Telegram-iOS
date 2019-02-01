@@ -763,7 +763,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
         }
         |> deliverOnMainQueue).start(next: { user in
             if let user = user, let phone = user.phone, formatPhoneNumber(phone) == formatPhoneNumber(number) {
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let controller = ActionSheetController(presentationTheme: presentationData.theme)
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()
@@ -772,18 +772,18 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                     ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.UserInfo_TelegramCall, action: {
                             dismissAction()
-                            let callResult = context.callManager?.requestCall(account: context.account, peerId: user.id, endCurrentIfAny: false)
+                            let callResult = context.sharedContext.callManager?.requestCall(account: context.account, peerId: user.id, endCurrentIfAny: false)
                             if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                                 if currentPeerId == user.id {
-                                    context.navigateToCurrentCall?()
+                                    context.sharedContext.navigateToCurrentCall()
                                 } else {
-                                    let presentationData = context.currentPresentationData.with { $0 }
+                                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                     let _ = (context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
                                         return (transaction.getPeer(user.id), transaction.getPeer(currentPeerId))
                                         } |> deliverOnMainQueue).start(next: { peer, current in
                                             if let peer = peer, let current = current {
                                                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                                    let _ = context.callManager?.requestCall(account: context.account, peerId: peer.id, endCurrentIfAny: true)
+                                                    let _ = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, endCurrentIfAny: true)
                                                 })]), nil)
                                             }
                                         })
@@ -861,7 +861,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                 if subject.contactData.basicData.phoneNumbers.count == 1 {
                     inviteAction(subject.contactData.basicData.phoneNumbers[0].value)
                 } else {
-                    let presentationData = context.currentPresentationData.with { $0 }
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let controller = ActionSheetController(presentationTheme: presentationData.theme)
                     let dismissAction: () -> Void = { [weak controller] in
                         controller?.dismissAnimated()
@@ -927,7 +927,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
     }
     
     let previousEditingPhoneIds = Atomic<Set<Int64>?>(value: nil)
-    let signal = combineLatest(context.presentationData, statePromise.get(), contactData)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), contactData)
     |> map { presentationData, state, peerAndContactData -> (ItemListControllerState, (ItemListNodeState<DeviceContactInfoEntry>, DeviceContactInfoEntry.ItemGenerationArguments)) in
         var leftNavigationButton: ItemListNavigationButton?
         switch subject {
@@ -1061,7 +1061,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
         }
     }
     inviteImpl = { [weak controller] numbers in
-        controller?.inviteContact(presentationData: context.currentPresentationData.with { $0 }, numbers: numbers)
+        controller?.inviteContact(presentationData: context.sharedContext.currentPresentationData.with { $0 }, numbers: numbers)
     }
     openAddressImpl = { [weak controller] address in
         guard let _ = controller else {
@@ -1072,14 +1072,14 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
         guard let controller = controller else {
             return
         }
-        openExternalUrl(context: context, url: url, presentationData: context.currentPresentationData.with { $0 }, navigationController: controller.navigationController as? NavigationController, dismissInput: { [weak controller] in
+        openExternalUrl(context: context, url: url, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: controller.navigationController as? NavigationController, dismissInput: { [weak controller] in
             controller?.view.endEditing(true)
         })
     }
     
     displayCopyContextMenuImpl = { [weak controller] tag, value in
         if let strongController = controller {
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             var resultItemNode: ListViewItemNode?
             let _ = strongController.frameForItemNode({ itemNode in
                 if let itemNode = itemNode as? ItemListTextWithLabelItemNode {
@@ -1181,7 +1181,7 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
 }
 
 func addContactOptionsController(context: AccountContext, peer: Peer?, contactData: DeviceContactExtendedData) -> ActionSheetController {
-    let presentationData = context.currentPresentationData.with { $0 }
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let controller = ActionSheetController(presentationTheme: presentationData.theme)
     let dismissAction: () -> Void = { [weak controller] in
         controller?.dismissAnimated()

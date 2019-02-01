@@ -136,7 +136,7 @@ func voiceCallDataSavingController(context: AccountContext) -> ViewController {
         }).start()
     })
     
-    let signal = combineLatest(context.presentationData, voiceCallSettingsPromise.get()) |> deliverOnMainQueue
+    let signal = combineLatest(context.sharedContext.presentationData, voiceCallSettingsPromise.get()) |> deliverOnMainQueue
         |> map { presentationData, data -> (ItemListControllerState, (ItemListNodeState<VoiceCallDataSavingEntry>, VoiceCallDataSavingEntry.ItemGenerationArguments)) in
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.CallSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)

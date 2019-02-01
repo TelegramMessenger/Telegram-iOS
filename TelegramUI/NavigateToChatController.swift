@@ -43,7 +43,7 @@ public func navigateToChatController(navigationController: NavigationController,
         let resolvedKeepStack: Bool
         switch keepStack {
             case .default:
-                resolvedKeepStack = context.immediateExperimentalUISettings.keepChatNavigationStack
+                resolvedKeepStack = context.sharedContext.immediateExperimentalUISettings.keepChatNavigationStack
             case .always:
                 resolvedKeepStack = true
             case .never:
@@ -89,13 +89,13 @@ public func isInlineControllerForChatNotificationOverlayPresentation(_ controlle
     return false
 }
 
-public func isOverlayControllerForChatNotificationOverlayPresentation(_ controller: ViewController) -> Bool {
+public func isOverlayControllerForChatNotificationOverlayPresentation(_ controller: ContainableController) -> Bool {
     if controller is GalleryController || controller is AvatarGalleryController || controller is WallpaperGalleryController || controller is InstantPageGalleryController || controller is InstantVideoController {
         return true
     }
     
-    if controller.isNodeLoaded {
-        if let backgroundColor = controller.displayNode.backgroundColor, !backgroundColor.isEqual(UIColor.clear) {
+    if controller.isViewLoaded {
+        if let backgroundColor = controller.view.backgroundColor, !backgroundColor.isEqual(UIColor.clear) {
             return true
         }
         

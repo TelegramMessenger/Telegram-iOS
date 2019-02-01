@@ -23,7 +23,7 @@ final class ChatRecentActionsController: TelegramController {
         self.context = context
         self.peer = peer
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.titleView = ChatRecentActionsTitleView(color: self.presentationData.theme.rootController.navigationBar.primaryTextColor)
         
@@ -104,7 +104,7 @@ final class ChatRecentActionsController: TelegramController {
             self?.openFilterSetup()
         }
         
-        self.presentationDataDisposable = (context.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

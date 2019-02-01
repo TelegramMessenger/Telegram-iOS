@@ -48,7 +48,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
     
     init(context: AccountContext, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.context = context
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.requestLayout = requestLayout
         

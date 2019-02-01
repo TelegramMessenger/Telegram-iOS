@@ -142,7 +142,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
         self.context = context
         self.openPeer = openPeer
         
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
         

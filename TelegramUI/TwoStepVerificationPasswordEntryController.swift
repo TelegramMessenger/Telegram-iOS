@@ -337,7 +337,7 @@ func twoStepVerificationPasswordEntryController(context: AccountContext, mode: T
                         updateState {
                             $0.withUpdatedUpdating(false)
                         }
-                        let presentationData = context.currentPresentationData.with { $0 }
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         let alertText: String
                         switch error {
                             case .generic:
@@ -362,7 +362,7 @@ func twoStepVerificationPasswordEntryController(context: AccountContext, mode: T
                         updateState {
                             $0.withUpdatedUpdating(false)
                         }
-                        let presentationData = context.currentPresentationData.with { $0 }
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         let alertText: String
                         switch error {
                             case .generic:
@@ -374,7 +374,7 @@ func twoStepVerificationPasswordEntryController(context: AccountContext, mode: T
                     }))
             }
         } else if invalidReentry {
-            let presentationData = context.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.TwoStepAuth_SetupPasswordConfirmFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }
@@ -387,7 +387,7 @@ func twoStepVerificationPasswordEntryController(context: AccountContext, mode: T
         checkPassword()
     })
     
-    let signal = combineLatest(context.presentationData, statePromise.get()) |> deliverOnMainQueue
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get()) |> deliverOnMainQueue
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationPasswordEntryEntry>, TwoStepVerificationPasswordEntryEntry.ItemGenerationArguments)) in
             
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {

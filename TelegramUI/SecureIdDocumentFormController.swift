@@ -31,7 +31,7 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
     
     init(context: AccountContext, secureIdContext: SecureIdAccessContext, requestedData: SecureIdDocumentFormRequestedData, requestOptionalData: Bool = false, scrollTo: SecureIdDocumentFormScrollToSubject? = nil, primaryLanguageByCountry: [String: String], values: [SecureIdValueWithContext], updatedValues: @escaping ([SecureIdValueWithContext]) -> Void) {
         self.context = context
-        self.presentationData = context.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.secureIdContext = secureIdContext
         self.requestedData = requestedData
         self.requestOptionalData = requestOptionalData

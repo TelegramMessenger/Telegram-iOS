@@ -226,7 +226,7 @@ func openChatMessage(context: AccountContext, message: Message, standalone: Bool
                 present(controller, nil)
                 return true
             case let .document(file):
-                let presentationData = context.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 if let rootController = navigationController?.view.window?.rootViewController {
                     presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: context.account.postbox, file: file)
                 }
