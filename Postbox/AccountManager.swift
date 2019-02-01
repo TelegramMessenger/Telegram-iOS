@@ -324,6 +324,7 @@ final class AccountManagerImpl {
 }
 
 public final class AccountManager {
+    public let basePath: String
     private let queue = Queue()
     private let impl: QueueLocalObject<AccountManagerImpl>
     public let temporarySessionId: Int64

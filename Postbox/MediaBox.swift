@@ -773,13 +773,13 @@ public final class MediaBox {
         }
     }
     
-    public func collectOtherResourceUsage(excludeIds: Set<WrappedMediaResourceId>) -> Signal<(Int64, [String], Int64), NoError> {
+    public func collectOtherResourceUsage(excludeIds: Set<WrappedMediaResourceId>, combinedExcludeIds: Set<WrappedMediaResourceId>) -> Signal<(Int64, [String], Int64), NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
                 var result: Int64 = 0
                 
                 var excludeNames = Set<String>()
-                for id in excludeIds {
+                for id in combinedExcludeIds {
                     let partial = "\(self.fileNameForId(id.id))_partial"
                     let meta = "\(self.fileNameForId(id.id))_meta"
                     let complete = self.fileNameForId(id.id)
@@ -818,10 +818,22 @@ public final class MediaBox {
                 
                 var cacheResult: Int64 = 0
                 
+                var excludePrefixes = Set<String>()
+                for id in excludeIds {
+                    let cachedRepresentationPrefix = self.fileNameForId(id.id)
+                    
+                    excludePrefixes.insert(cachedRepresentationPrefix)
+                }
+                
                 if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: self.basePath + "/cache"), includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
                     loop: for url in enumerator {
                         if let url = url as? URL {
+                            if let prefix = url.lastPathComponent.components(separatedBy: ":").first, excludePrefixes.contains(prefix) {
+                                continue loop
+                            }
+                            
                             if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                paths.append("cache/" + url.lastPathComponent)
                                 cacheResult += Int64(value)
                             }
                         }
@@ -840,13 +852,6 @@ public final class MediaBox {
             self.dataQueue.async {
                 for path in paths {
                     unlink(self.basePath + "/" + path)
-                }
-                if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: self.basePath + "/cache"), includingPropertiesForKeys: [], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
-                    loop: for url in enumerator {
-                        if let url = url as? URL {
-                            unlink(url.path)
-                        }
-                    }
                 }
                 subscriber.putCompletion()
             }
