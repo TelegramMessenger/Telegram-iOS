@@ -171,7 +171,7 @@ public func collectCacheUsageStats(account: Account, additionalCachePaths: [Stri
                         return (state.media, state.mediaResourceIds, state.allResourceIds)
                     }
                     
-                    return account.postbox.mediaBox.collectOtherResourceUsage(excludeIds: allResourceIds.union(excludeResourceIds))
+                    return account.postbox.mediaBox.collectOtherResourceUsage(excludeIds: excludeResourceIds, combinedExcludeIds: allResourceIds.union(excludeResourceIds))
                     |> mapError { _ in return CollectCacheUsageStatsError.generic }
                     |> mapToSignal { otherSize, otherPaths, cacheSize in
                         var tempPaths: [String] = []
