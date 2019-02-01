@@ -260,6 +260,28 @@ let telegramPostboxSeedConfiguration: SeedConfiguration = {
     }, additionalChatListIndexNamespace: Namespaces.Message.Cloud)
 }()
 
+public func accountPreferenceEntries(rootPath: String, id: AccountRecordId, keys: Set<ValueBoxKey>) -> Signal<[ValueBoxKey: PreferencesEntry], NoError> {
+    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
+    let postbox = openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: telegramPostboxSeedConfiguration)
+    return postbox
+    |> mapToSignal { value -> Signal<[ValueBoxKey: PreferencesEntry], NoError> in
+        switch value {
+            case let .postbox(postbox):
+                return postbox.transaction { transaction -> [ValueBoxKey: PreferencesEntry] in
+                    var result: [ValueBoxKey: PreferencesEntry] = [:]
+                    for key in keys {
+                        if let value = transaction.getPreferencesEntry(key: key) {
+                            result[key] = value
+                        }
+                    }
+                    return result
+                }
+            default:
+                return .complete()
+        }
+    }
+}
+
 public func accountWithId(accountManager: AccountManager, networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     

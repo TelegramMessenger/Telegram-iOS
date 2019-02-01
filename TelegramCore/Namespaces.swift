@@ -241,7 +241,6 @@ public struct PreferencesKeys {
 
 private enum SharedDataKeyValues: Int32 {
     case loggingSettings = 0
-    case accountInitializationSettings = 1
     case cacheStorageSettings = 2
     case localizationSettings = 3
     case proxySettings = 4
@@ -251,12 +250,6 @@ public struct SharedDataKeys {
     public static let loggingSettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: SharedDataKeyValues.loggingSettings.rawValue)
-        return key
-    }()
-    
-    public static let accountInitializationSettings: ValueBoxKey = {
-        let key = ValueBoxKey(length: 4)
-        key.setInt32(0, value: SharedDataKeyValues.accountInitializationSettings.rawValue)
         return key
     }()
     
