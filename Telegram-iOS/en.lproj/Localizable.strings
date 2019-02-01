@@ -2559,7 +2559,6 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CanDeleteMessages" = "Delete Messages";
 "Channel.AdminLog.CanBanUsers" = "Ban Users";
 "Channel.AdminLog.CanInviteUsers" = "Add Users";
-"Channel.AdminLog.CanChangeInviteLink" = "Invite Users Via Link";
 "Channel.AdminLog.CanPinMessages" = "Pin Messages";
 "Channel.AdminLog.CanAddAdmins" = "Add New Admins";
 "Channel.AdminLog.CanEditMessages" = "Edit Messages";
@@ -3870,19 +3869,22 @@ Unused sets are archived when you add more.";
 
 "WallpaperPreview.Title" = "Background Preview";
 "WallpaperPreview.PreviewTopText" = "Press Set to apply the background";
-"WallpaperPreview.PreviewBottomText" = "Lorem ipsum dolor sit amet";
+"WallpaperPreview.PreviewBottomText" = "Enjoy the view";
 "WallpaperPreview.SwipeTopText" = "Swipe left or right to preview more backgrounds";
-"WallpaperPreview.SwipeBottomText" = "Lorem ipsum dolor sit amet";
+"WallpaperPreview.SwipeBottomText" = "Backgrounds for the god of backgrounds!";
 "WallpaperPreview.SwipeColorsTopText" = "Swipe left or right to see more colors";
-"WallpaperPreview.SwipeColorsBottomText" = "Lorem ipsum dolor sit amet";
+"WallpaperPreview.SwipeColorsBottomText" = "Salmon is a fish, not a color";
 "WallpaperPreview.CustomColorTopText" = "Use sliders to adjust color";
-"WallpaperPreview.CustomColorBottomText" = "Lorem ipsum dolor sit amet";
+"WallpaperPreview.CustomColorBottomText" = "Something to match your curtains";
 "WallpaperPreview.CropTopText" = "Pinch and pan to adjust background";
-"WallpaperPreview.CropBottomText" = "Lorem ipsum dolor sit amet";
+"WallpaperPreview.CropBottomText" = "Pinch me, I'm dreaming";
 "WallpaperPreview.Motion" = "Motion";
 "WallpaperPreview.Blurred" = "Blurred";
+"WallpaperPreview.Pattern" = "Pattern";
+"WallpaperPreview.Color" = "Color";
 
 "Wallpaper.Search" = "Search Backgrounds";
+"Wallpaper.SearchShort" = "Search";
 "Wallpaper.SetColor" = "Set a Color";
 "Wallpaper.SetCustomBackground" = "Choose from Gallery";
 "Wallpaper.SetCustomBackgroundInfo" = "You can set a custom background image and share it with your friends.";
@@ -3930,7 +3932,7 @@ Unused sets are archived when you add more.";
 "Undo.DeletedChannel" = "Deleted channel";
 "Undo.DeletedGroup" = "Deleted group";
 
-"AccessDenied.Wallpapers" = "Telegram needs access to your photo library to set a custom wallpaper.\n\nPlease go to Settings > Privacy > Photos and set Telegram to ON.";
+"AccessDenied.Wallpapers" = "Telegram needs access to your photo library to set a custom chat background.\n\nPlease go to Settings > Privacy > Photos and set Telegram to ON.";
 
 "Conversation.ChatBackground" = "Chat Background";
 "Conversation.ViewBackground" = "VIEW BACKGROUND";
@@ -3955,3 +3957,13 @@ Unused sets are archived when you add more.";
 "CallFeedback.Success" = "Thanks for\nyour feedback";
 
 "Settings.AddAccount" = "Add Account";
+"WebSearch.SearchNoResults" = "No Results";
+"WebSearch.SearchNoResultsDescription" = "There were no results for \"%@\".\nTry a new search.";
+
+"WallpaperPreview.PatternIntensity" = "Pattern Intensity";
+
+"Message.Wallpaper" = "Chat Background";
+
+"Wallpaper.ResetWallpapers" = "Reset Chat Backgrounds";
+"Wallpaper.ResetWallpapersInfo" = "Remove all uploaded chat backgrounds and restore pre-installed backgrounds for all themes.";
+"Wallpaper.ResetWallpapersConfirmation" = "Reset Chat Backgrounds";
