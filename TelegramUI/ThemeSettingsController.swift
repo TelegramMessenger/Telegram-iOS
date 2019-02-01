@@ -276,7 +276,6 @@ public func themeSettingsController(context: AccountContext) -> ViewController {
                 }
                 
                 let wallpaper: TelegramWallpaper
-                let wallpaperOptions: WallpaperPresentationOptions
                 
                 if let themeSpecificWallpaper = current.themeSpecificChatWallpapers[theme.index] {
                     wallpaper = themeSpecificWallpaper
