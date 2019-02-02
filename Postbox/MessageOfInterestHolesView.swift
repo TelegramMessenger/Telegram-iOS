@@ -526,10 +526,13 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
         var i = referenceIndex
         var j = referenceIndex + 1
         
+        let lowerI = max(0, referenceIndex - 50)
+        let upperJ = min(referenceIndex + 50, self.entries.count)
+        
         switch self.location {
             case let .group(groupId):
-                while i >= 0 || j < self.entries.count {
-                    if j < self.entries.count {
+                while i >= lowerI || j < upperJ {
+                    if j < upperJ {
                         if let hole = self.entries[j].hole {
                             switch anchorLocation {
                                 case let .index(index):
@@ -552,7 +555,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                         }
                     }
                     
-                    if i >= 0 {
+                    if i >= lowerI  {
                         if let hole = self.entries[i].hole {
                             switch anchorLocation {
                                 case let .index(index):
@@ -598,8 +601,8 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                     case let .index(index):
                         anchorId = index.id
                 }
-                while i >= 0 || j < self.entries.count {
-                    if j < self.entries.count {
+                while i >= lowerI || j < upperJ {
+                    if j < upperJ {
                         if let hole = self.entries[j].hole {
                             if anchorId.id >= hole.hole.min && anchorId.id <= hole.hole.maxIndex.id.id {
                                 return MessageOfInterestHole(hole: .peer(hole.hole), direction: .AroundId(anchorId))
@@ -609,7 +612,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                         }
                     }
                     
-                    if i >= 0 {
+                    if i >= lowerI {
                         if let hole = self.entries[i].hole {
                             if anchorId.id >= hole.hole.min && anchorId.id <= hole.hole.maxIndex.id.id {
                                 return MessageOfInterestHole(hole: .peer(hole.hole), direction: .AroundId(anchorId))
