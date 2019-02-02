@@ -266,8 +266,8 @@ func updateTwoStepVerificationSecureSecret(network: Network, password: String, s
     }
 }
 
-public func updateTwoStepVerificationEmail(account: Account, currentPassword: String, updatedEmail: String) -> Signal<UpdateTwoStepVerificationPasswordResult, UpdateTwoStepVerificationPasswordError> {
-    return twoStepAuthData(account.network)
+public func updateTwoStepVerificationEmail(network: Network, currentPassword: String, updatedEmail: String) -> Signal<UpdateTwoStepVerificationPasswordResult, UpdateTwoStepVerificationPasswordError> {
+    return twoStepAuthData(network)
     |> mapError { _ -> UpdateTwoStepVerificationPasswordError in
         return .generic
     }
@@ -283,13 +283,13 @@ public func updateTwoStepVerificationEmail(account: Account, currentPassword: St
         }
 
         let flags: Int32 = 1 << 1
-        return account.network.request(Api.functions.account.updatePasswordSettings(password: checkPassword, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newAlgo: nil, newPasswordHash: nil, hint: nil, email: updatedEmail, newSecureSettings: nil)), automaticFloodWait: false)
+        return network.request(Api.functions.account.updatePasswordSettings(password: checkPassword, newSettings: Api.account.PasswordInputSettings.passwordInputSettings(flags: flags, newAlgo: nil, newPasswordHash: nil, hint: nil, email: updatedEmail, newSecureSettings: nil)), automaticFloodWait: false)
         |> map { _ -> UpdateTwoStepVerificationPasswordResult in
             return .password(password: currentPassword, pendingEmail: nil)
         }
         |> `catch` { error -> Signal<UpdateTwoStepVerificationPasswordResult, MTRpcError> in
             if error.errorDescription.hasPrefix("EMAIL_UNCONFIRMED") {
-                return twoStepAuthData(account.network)
+                return twoStepAuthData(network)
                 |> map { result -> UpdateTwoStepVerificationPasswordResult in
                     var codeLength: Int32?
                     if error.errorDescription.hasPrefix("EMAIL_UNCONFIRMED_") {

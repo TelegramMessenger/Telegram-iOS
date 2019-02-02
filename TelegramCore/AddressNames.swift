@@ -112,7 +112,7 @@ public func updateAddressName(account: Account, domain: AddressNameDomain, name:
     return account.postbox.transaction { transaction -> Signal<Void, UpdateAddressNameError> in
         switch domain {
             case .account:
-                return account.network.request(Api.functions.account.updateUsername(username: name ?? ""))
+                return account.network.request(Api.functions.account.updateUsername(username: name ?? ""), automaticFloodWait: false)
                 |> mapError { _ -> UpdateAddressNameError in
                     return .generic
                 }
@@ -126,7 +126,7 @@ public func updateAddressName(account: Account, domain: AddressNameDomain, name:
                 }
             case let .peer(peerId):
                 if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
-                    return account.network.request(Api.functions.channels.updateUsername(channel: inputChannel, username: name ?? ""))
+                    return account.network.request(Api.functions.channels.updateUsername(channel: inputChannel, username: name ?? ""), automaticFloodWait: false)
                         |> mapError { _ -> UpdateAddressNameError in
                             return .generic
                         }
