@@ -697,10 +697,10 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                             }
                         }
                         optionsMap[id]!.insert(.deleteLocally)
-                        if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message) {
-                            if !message.flags.contains(.Incoming) || limitsConfiguration.canRemoveIncomingMessagesInPrivateChats {
-                                optionsMap[id]!.insert(.deleteGlobally)
-                            }
+                        if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message) && !message.flags.contains(.Incoming) {
+                            optionsMap[id]!.insert(.deleteGlobally)
+                        } else if limitsConfiguration.canRemoveIncomingMessagesInPrivateChats {
+                            optionsMap[id]!.insert(.deleteGlobally)
                         }
                         if user.botInfo != nil {
                             optionsMap[id]!.insert(.report)
