@@ -24,7 +24,7 @@ final class CachedWallpapersConfiguration: PostboxCoding {
 }
 
 public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: Bool = false) -> Signal<[TelegramWallpaper], NoError> {
-    let fetch: ([TelegramWallpaper]?, Int32?) -> Signal<([TelegramWallpaper], Int32), NoError> = { list, hash in
+    let fetch: ([TelegramWallpaper]?, Int32?) -> Signal<[TelegramWallpaper], NoError> = { list, hash in
         network.request(Api.functions.account.getWallPapers(hash: hash ?? 0))
         |> retryRequest
         |> mapToSignal { result -> Signal<([TelegramWallpaper], Int32), NoError> in
@@ -37,14 +37,14 @@ public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: 
                         if case let .file(file) = wallpaper, !file.isDefault {
                         } else if !addedBuiltin {
                             addedBuiltin = true
-                            items.append(.builtin)
+                            items.append(.builtin(WallpaperSettings()))
                         }
                         items.append(wallpaper)
                     }
                     
                     if !addedBuiltin {
                         addedBuiltin = true
-                        items.append(.builtin)
+                        items.append(.builtin(WallpaperSettings()))
                     }
                     
                     if items == list {
@@ -56,40 +56,36 @@ public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: 
                     return .complete()
             }
         }
+        |> mapToSignal { items, hash -> Signal<[TelegramWallpaper], NoError> in
+            return postbox.transaction { transaction -> [TelegramWallpaper] in
+                var entries: [OrderedItemListEntry] = []
+                for item in items {
+                    var intValue = Int32(entries.count)
+                    let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
+                    entries.append(OrderedItemListEntry(id: id, contents: item))
+                }
+                transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers, items: entries)
+                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWallpapersConfiguration, key: ValueBoxKey(length: 0)), entry: CachedWallpapersConfiguration(hash: hash), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+                return items
+            }
+        }
     }
     
     if forceUpdate {
         return fetch(nil, nil)
-        |> map { list, _ in
-            return list
-        }
     } else {
         return postbox.transaction { transaction -> ([TelegramWallpaper], Int32?) in
             let configuration = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWallpapersConfiguration, key: ValueBoxKey(length: 0))) as? CachedWallpapersConfiguration
             let items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers)
             if items.count == 0 {
-                return ([.builtin], 0)
+                return ([.builtin(WallpaperSettings())], 0)
             } else {
                 return (items.map { $0.contents as! TelegramWallpaper }, configuration?.hash)
             }
         }
         |> mapToSignal { list, hash -> Signal<[TelegramWallpaper], NoError> in
-            let remote = fetch(list, hash)
-            |> mapToSignal({ items, hash -> Signal<[TelegramWallpaper], NoError> in
-                return postbox.transaction { transaction -> [TelegramWallpaper] in
-                    var entries: [OrderedItemListEntry] = []
-                    for item in items {
-                        var intValue = Int32(entries.count)
-                        let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-                        entries.append(OrderedItemListEntry(id: id, contents: item))
-                    }
-                    transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers, items: entries)
-                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWallpapersConfiguration, key: ValueBoxKey(length: 0)), entry: CachedWallpapersConfiguration(hash: hash), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
-                    return items
-                }
-            })
             return .single(list)
-            |> then(remote)
+            |> then(fetch(list, hash))
         }
     }
 }

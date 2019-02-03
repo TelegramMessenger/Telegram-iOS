@@ -44,7 +44,7 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
 }
 
 public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
-    case builtin
+    case builtin(WallpaperSettings)
     case color(Int32)
     case image([TelegramMediaImageRepresentation], WallpaperSettings)
     case file(id: Int64, accessHash: Int64, isCreator: Bool, isDefault: Bool, isPattern: Bool, isDark: Bool, slug: String, file: TelegramMediaFile, settings: WallpaperSettings)
@@ -52,7 +52,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case 0:
-                self = .builtin
+                let settings = decoder.decodeObjectForKey("settings", decoder: { WallpaperSettings(decoder: $0) }) as? WallpaperSettings ?? WallpaperSettings()
+                self = .builtin(settings)
             case 1:
                 self = .color(decoder.decodeInt32ForKey("c", orElse: 0))
             case 2:
@@ -78,8 +79,9 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     
     public func encode(_ encoder: PostboxEncoder) {
         switch self {
-            case .builtin:
+            case let .builtin(settings):
                 encoder.encodeInt32(0, forKey: "v")
+                encoder.encodeObject(settings, forKey: "settings")
             case let .color(color):
                 encoder.encodeInt32(1, forKey: "v")
                 encoder.encodeInt32(color, forKey: "c")
@@ -103,8 +105,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     
     public static func ==(lhs: TelegramWallpaper, rhs: TelegramWallpaper) -> Bool {
         switch lhs {
-            case .builtin:
-                if case .builtin = rhs {
+            case let .builtin(settings):
+                if case .builtin(settings) = rhs {
                     return true
                 } else {
                     return false
@@ -132,7 +134,7 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     
     public var settings: WallpaperSettings? {
         switch self {
-            case let .image(_, settings), let .file(_, _, _, _, _, _, _, _, settings):
+            case let .builtin(settings), let .image(_, settings), let .file(_, _, _, _, _, _, _, _, settings):
                 return settings
             default:
                 return nil
@@ -142,7 +144,7 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     public func withUpdatedSettings(_ settings: WallpaperSettings) -> TelegramWallpaper {
         switch self {
             case .builtin:
-                return self
+                return .builtin(settings)
             case .color:
                 return self
             case let .image(representations, _):
