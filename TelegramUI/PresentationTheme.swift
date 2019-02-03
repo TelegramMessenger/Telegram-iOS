@@ -452,10 +452,11 @@ public func bubbleColorComponents(theme: PresentationTheme, incoming: Bool, wall
 }
 
 public func bubbleVariableColor(variableColor: PresentationThemeVariableColor, wallpaper: TelegramWallpaper) -> UIColor {
-    if wallpaper != .builtin && wallpaper != .color(0xffffff) {
-        return variableColor.withWallpaper
-    } else {
-        return variableColor.withoutWallpaper
+    switch wallpaper {
+        case .builtin, .color(0xffffff):
+            return variableColor.withoutWallpaper
+        default:
+            return variableColor.withWallpaper
     }
 }
 
@@ -649,10 +650,11 @@ public func serviceMessageColorComponents(theme: PresentationTheme, wallpaper: T
 }
 
 public func serviceMessageColorComponents(chatTheme: PresentationThemeChat, wallpaper: TelegramWallpaper) -> PresentationThemeServiceMessageColorComponents {
-    if wallpaper != .builtin && wallpaper != .color(0xffffff) {
-        return chatTheme.serviceMessage.components.withCustomWallpaper
-    } else {
-        return chatTheme.serviceMessage.components.withDefaultWallpaper
+    switch wallpaper {
+        case .builtin, .color(0xffffff):
+            return chatTheme.serviceMessage.components.withDefaultWallpaper
+        default:
+            return chatTheme.serviceMessage.components.withCustomWallpaper
     }
 }
 

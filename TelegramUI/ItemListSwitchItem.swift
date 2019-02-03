@@ -15,17 +15,19 @@ class ItemListSwitchItem: ListViewItem, ItemListItem {
     let type: ItemListSwitchItemNodeType
     let enableInteractiveChanges: Bool
     let enabled: Bool
+    let maximumNumberOfLines: Int
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     let updated: (Bool) -> Void
     
-    init(theme: PresentationTheme, title: String, value: Bool, type: ItemListSwitchItemNodeType = .regular, enableInteractiveChanges: Bool = true, enabled: Bool = true, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void) {
+    init(theme: PresentationTheme, title: String, value: Bool, type: ItemListSwitchItemNodeType = .regular, enableInteractiveChanges: Bool = true, enabled: Bool = true, maximumNumberOfLines: Int = 1, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void) {
         self.theme = theme
         self.title = title
         self.value = value
         self.type = type
         self.enableInteractiveChanges = enableInteractiveChanges
         self.enabled = enabled
+        self.maximumNumberOfLines = maximumNumberOfLines
         self.sectionId = sectionId
         self.style = style
         self.updated = updated
@@ -154,7 +156,7 @@ class ItemListSwitchItemNode: ListViewItemNode {
         var currentDisabledOverlayNode = self.disabledOverlayNode
         
         return { item, params, neighbors in
-            let contentSize: CGSize
+            var contentSize: CGSize
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             let itemBackgroundColor: UIColor
@@ -179,7 +181,9 @@ class ItemListSwitchItemNode: ListViewItemNode {
                     insets = itemListNeighborsGroupedInsets(neighbors)
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 80.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: item.maximumNumberOfLines, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 80.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            contentSize.height = max(contentSize.height, titleLayout.size.height + 22.0)
             
             if !item.enabled {
                 if currentDisabledOverlayNode == nil {

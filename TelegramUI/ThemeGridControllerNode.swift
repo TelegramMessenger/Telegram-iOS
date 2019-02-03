@@ -156,7 +156,6 @@ private func selectedWallpapers(entries: [ThemeGridControllerEntry]?, state: The
     guard let entries = entries, state.editing else {
         return []
     }
-
     var wallpapers: [TelegramWallpaper] = []
     for entry in entries {
         if case let .file(file) = entry.wallpaper {

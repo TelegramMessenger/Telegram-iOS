@@ -147,7 +147,7 @@ private enum CallFeedbackControllerEntry: ItemListNodeEntry {
         case let .reasonsHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .reason(theme, reason, title, value):
-            return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(theme: theme, title: title, value: value, maximumNumberOfLines: 2, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleReason(reason, value)
             })
         case let .comment(theme, text, placeholder):
