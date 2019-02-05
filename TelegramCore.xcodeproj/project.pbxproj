@@ -20,6 +20,14 @@
 		9F06831121A40DEC001D8EDB /* NotificationExceptionsList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */; };
 		9F10CE8B20613C78002DD61A /* SecretApiLayer73.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018EDFF2044939F00CBB130 /* SecretApiLayer73.swift */; };
 		9F10CE8C20613CDB002DD61A /* TelegramDeviceContactImportInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F7732052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift */; };
+		9F153D1021E8E0A200B95D82 /* Wallpaper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0900555521E4A96D0030924C /* Wallpaper.swift */; };
+		9F4EEF9B21DCF66F002C3B33 /* JSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66C21B5C56F00245FD9 /* JSON.swift */; };
+		9F4EEF9C21DCF66F002C3B33 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66E21B6147600245FD9 /* AppConfiguration.swift */; };
+		9F4EEF9D21DCF66F002C3B33 /* SearchBotsConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E68021BAA20E00245FD9 /* SearchBotsConfiguration.swift */; };
+		9F4EEF9E21DCF6E7002C3B33 /* ManagedVoipConfigurationUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */; };
+		9F4EEF9F21DCF6E7002C3B33 /* ManagedAppConfigurationUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66621B59BAA00245FD9 /* ManagedAppConfigurationUpdates.swift */; };
+		9F4EEFA021DCF6E7002C3B33 /* SynchronizeAppLogEventsOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66821B5A11100245FD9 /* SynchronizeAppLogEventsOperation.swift */; };
+		9F4EEFA121DCF6E7002C3B33 /* ManagedSynchronizeAppLogEventsOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66A21B5A41C00245FD9 /* ManagedSynchronizeAppLogEventsOperations.swift */; };
 		9FAA268820D457A300D26CF3 /* RemoteStorageConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EA188120D3D2B1001AEE19 /* RemoteStorageConfiguration.swift */; };
 		9FC8ADA9206BBD000094F7B4 /* SaveSecureIdValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D805206539D000BC3599 /* SaveSecureIdValue.swift */; };
 		9FC8ADAB206BBFF10094F7B4 /* RecentWebSessions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FC8ADAA206BBFF10094F7B4 /* RecentWebSessions.swift */; };
@@ -2537,6 +2545,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9F153D1021E8E0A200B95D82 /* Wallpaper.swift in Sources */,
+				9F4EEF9E21DCF6E7002C3B33 /* ManagedVoipConfigurationUpdates.swift in Sources */,
+				9F4EEF9F21DCF6E7002C3B33 /* ManagedAppConfigurationUpdates.swift in Sources */,
+				9F4EEFA021DCF6E7002C3B33 /* SynchronizeAppLogEventsOperation.swift in Sources */,
+				9F4EEFA121DCF6E7002C3B33 /* ManagedSynchronizeAppLogEventsOperations.swift in Sources */,
+				9F4EEF9B21DCF66F002C3B33 /* JSON.swift in Sources */,
+				9F4EEF9C21DCF66F002C3B33 /* AppConfiguration.swift in Sources */,
+				9F4EEF9D21DCF66F002C3B33 /* SearchBotsConfiguration.swift in Sources */,
 				9FAA268820D457A300D26CF3 /* RemoteStorageConfiguration.swift in Sources */,
 				C28D3CF120D3DAA30027F4D6 /* DeepLinkInfo.swift in Sources */,
 				9FC8ADAC206BC00A0094F7B4 /* RecentWebSessions.swift in Sources */,
