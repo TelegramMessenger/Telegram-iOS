@@ -257,7 +257,7 @@ private struct EditSettingsState: Equatable {
     }
 }
 
-private func editSettingsEntries(presentationData: PresentationData, state: EditSettingsState, view: PeerView) -> [SettingsEntry] {
+private func editSettingsEntries(presentationData: PresentationData, state: EditSettingsState, view: PeerView, canAddAccounts: Bool) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -273,14 +273,16 @@ private func editSettingsEntries(presentationData: PresentationData, state: Edit
         }
         entries.append(.username(presentationData.theme, presentationData.strings.Settings_Username, peer.addressName == nil ? "" : ("@" + peer.addressName!)))
         
-        entries.append(.addAccount(presentationData.theme, presentationData.strings.Settings_AddAccount))
+        if canAddAccounts {
+            entries.append(.addAccount(presentationData.theme, presentationData.strings.Settings_AddAccount))
+        }
         entries.append(.logOut(presentationData.theme, presentationData.strings.Settings_Logout))
     }
     
     return entries
 }
 
-func editSettingsController(context: AccountContext, currentName: ItemListAvatarAndNameInfoItemName, currentBioText: String, accountManager: AccountManager) -> ViewController {
+func editSettingsController(context: AccountContext, currentName: ItemListAvatarAndNameInfoItemName, currentBioText: String, accountManager: AccountManager, canAddAccounts: Bool) -> ViewController {
     let initialState = EditSettingsState(editingName: currentName, editingBioText: currentBioText)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -396,7 +398,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
             }
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.EditProfile_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: editSettingsEntries(presentationData: presentationData, state: state, view: view), style: .blocks)
+            let listState = ItemListNodeState(entries: editSettingsEntries(presentationData: presentationData, state: state, view: view, canAddAccounts: canAddAccounts), style: .blocks)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

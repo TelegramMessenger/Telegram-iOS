@@ -46,7 +46,7 @@ final class BotReceiptController: ViewController {
     }
     
     override func loadDisplayNode() {
-        let displayNode = BotReceiptControllerNode(navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
+        let displayNode = BotReceiptControllerNode(controller: nil, navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
             if let strongSelf = self {
                 strongSelf.navigationOffset = offset
             }

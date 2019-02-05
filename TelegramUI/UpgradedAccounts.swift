@@ -104,10 +104,10 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String) -
         return (transaction.getVersion(), transaction.getCurrent()?.0)
     }
     |> mapToSignal { version, currentId -> Signal<Void, NoError> in
-        if version == 0 {
+        if version == 0 || true {
             if let currentId = currentId {
                 return accountPreferenceEntries(rootPath: rootPath, id: currentId, keys: Set(preferencesKeyMapping.keys.map({ $0.key }) + applicationSpecificPreferencesKeyMapping.keys.map({ $0.key })))
-                |> mapToSignal { values -> Signal<Void, NoError> in
+                |> mapToSignal { path, values -> Signal<Void, NoError> in
                     return accountManager.transaction { transaction -> Void in
                         for (key, value) in values {
                             var upgradedKey: ValueBoxKey?
@@ -127,6 +127,31 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String) -
                                 transaction.updateSharedData(upgradedKey, { _ in
                                     return value
                                 })
+                            }
+                        }
+                        
+                        if let value = values[LegacyApplicationSpecificPreferencesKeyValues.presentationThemeSettings.key] as? PresentationThemeSettings {
+                            let mediaBox = MediaBox(basePath: path + "/postbox/media")
+                            let wallpapers = [value.chatWallpaper] + Array(value.themeSpecificChatWallpapers.values)
+                            for wallpaper in wallpapers {
+                                switch wallpaper {
+                                    case let .file(file):
+                                        if let path = mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                            accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)
+                                            let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
+                                            let _ = accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start()
+                                        }
+                                    case let .image(representations, _):
+                                        for representation in representations {
+                                            let resource = representation.resource
+                                            if let path = mediaBox.completedResourcePath(resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                                accountManager.mediaBox.storeResourceData(resource.id, data: data)
+                                                let _ = mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
+                                            }
+                                        }
+                                    default:
+                                        break
+                                }
                             }
                         }
                         

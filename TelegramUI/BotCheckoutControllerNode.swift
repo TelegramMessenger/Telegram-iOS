@@ -383,7 +383,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
     private var applePayAuthrorizationCompletion: ((PKPaymentAuthorizationStatus) -> Void)?
     private var applePayController: PKPaymentAuthorizationViewController?
     
-    init(navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void) {
+    init(controller: ItemListController<BotCheckoutEntry>?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void) {
         self.context = context
         self.messageId = messageId
         self.present = present
@@ -418,7 +418,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
         self.inProgressDimNode.isUserInteractionEnabled = false
         self.inProgressDimNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.5)
         
-        super.init(navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
+        super.init(controller: controller, navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
         
         self.arguments = arguments
         

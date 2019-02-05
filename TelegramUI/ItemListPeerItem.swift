@@ -83,8 +83,9 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let toggleUpdated: ((Bool) -> Void)?
     let hasTopStripe: Bool
     let hasTopGroupInset: Bool
+    let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
@@ -107,6 +108,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.toggleUpdated = toggleUpdated
         self.hasTopStripe = hasTopStripe
         self.hasTopGroupInset = hasTopGroupInset
+        self.tag = tag
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -163,7 +165,7 @@ private let labelDisclosureFont = Font.regular(17.0)
 private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 17.0)!
 private let badgeFont = Font.regular(15.0)
 
-class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
+class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -193,6 +195,10 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode {
         } else {
             return false
         }
+    }
+    
+    var tag: ItemListItemTag? {
+        return self.layoutParams?.0.tag
     }
     
     init() {

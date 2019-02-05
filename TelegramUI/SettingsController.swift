@@ -25,6 +25,18 @@ private final class SettingsItemIcons {
     static let faq = UIImage(bundleImageName: "Settings/MenuIcons/Faq")?.precomposed()
 }
 
+private enum SettingsEntryTag: Equatable, ItemListItemTag {
+    case account(AccountRecordId)
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? SettingsEntryTag {
+            return self == other
+        } else {
+            return false
+        }
+    }
+}
+
 private struct SettingsItemArguments {
     let accountManager: AccountManager
     let avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext
@@ -333,7 +345,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                     arguments.setAccountIdWithRevealedOptions(lhsAccountId, rhsAccountId)
                 }, removePeer: { _ in
                     arguments.removeAccount(account.id)
-                })
+                }, tag: SettingsEntryTag.account(account.id))
             case let .addAccount(theme, text):
                 return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, alwaysPlain: false, sectionId: self.section, editing: false, action: {
                     arguments.addAccount()
@@ -418,7 +430,9 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
                 entries.append(.account(index, peerAccount, presentationData.theme, presentationData.strings, peer, badgeCount, state.accountIdWithRevealedOptions == peerAccount.id))
                 index += 1
             }
-            entries.append(.addAccount(presentationData.theme, presentationData.strings.Settings_AddAccount))
+            if accountsAndPeers.count < 5 {
+                entries.append(.addAccount(presentationData.theme, presentationData.strings.Settings_AddAccount))
+            }
         }
         
         if !proxySettings.servers.isEmpty {
@@ -538,7 +552,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     let auxiliaryMethods = context.account.auxiliaryMethods
     let rootPath = rootPathForBasePath(context.sharedContext.applicationBindings.containerPath)
     
-    let accountsAndPeers: Signal<[(Account, Peer, Int32)], NoError> = context.sharedContext.activeAccounts
+    let accountsAndPeersSignal: Signal<[(Account, Peer, Int32)], NoError> = context.sharedContext.activeAccounts
     |> mapToSignal { primary, activeAccounts, _ -> Signal<[(Account, Peer, Int32)], NoError> in
         var accounts: [Signal<(Account, Peer, Int32)?, NoError>] = []
         func accountWithPeer(_ account: Account) -> Signal<(Account, Peer, Int32)?, NoError> {
@@ -568,6 +582,9 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             return accounts.compactMap({ $0 })
         }
     }
+    
+    let accountsAndPeers = Promise<[(Account, Peer, Int32)]>()
+    accountsAndPeers.set(accountsAndPeersSignal)
 
     let openFaq: (Promise<ResolvedUrl>) -> Void = { resolvedUrl in
         let _ = (contextValue.get()
@@ -762,15 +779,15 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             
             let peerKey: PostboxViewKey = .peer(peerId: context.account.peerId, components: [])
             let cachedDataKey: PostboxViewKey = .cachedPeerData(peerId: context.account.peerId)
-            let signal = (context.account.postbox.combinedView(keys: [peerKey, cachedDataKey])
-            |> mapToSignal { view -> Signal<(TelegramUser, CachedUserData), NoError> in
+            let signal = (combineLatest(accountsAndPeers.get() |> take(1), context.account.postbox.combinedView(keys: [peerKey, cachedDataKey]))
+            |> mapToSignal { accountsAndPeers, view -> Signal<(TelegramUser, CachedUserData, Bool), NoError> in
                 guard let cachedDataView = view.views[cachedDataKey] as? CachedPeerDataView, let cachedData = cachedDataView.cachedPeerData as? CachedUserData else {
                     return .complete()
                 }
                 guard let peerView = view.views[peerKey] as? PeerView, let peer = peerView.peers[context.account.peerId] as? TelegramUser else {
                     return .complete()
                 }
-                return .single((peer, cachedData))
+                return .single((peer, cachedData, accountsAndPeers.count < 5))
             }
             |> take(1))
             |> afterDisposed {
@@ -782,8 +799,8 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 openEditingDisposable.set(nil)
             }
             openEditingDisposable.set((signal
-            |> deliverOnMainQueue).start(next: { peer, cachedData in
-                pushControllerImpl?(editSettingsController(context: context, currentName: .personName(firstName: peer.firstName ?? "", lastName: peer.lastName ?? ""), currentBioText: cachedData.about ?? "", accountManager: accountManager))
+            |> deliverOnMainQueue).start(next: { peer, cachedData, canAddAccounts in
+                pushControllerImpl?(editSettingsController(context: context, currentName: .personName(firstName: peer.firstName ?? "", lastName: peer.lastName ?? ""), currentBioText: cachedData.about ?? "", accountManager: accountManager, canAddAccounts: canAddAccounts))
             }))
         })
     }, displayCopyContextMenu: {
@@ -1057,7 +1074,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         return context.account.viewTracker.featuredStickerPacks()
     }
     
-    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), proxyPreferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()), accountsAndPeers)
+    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), proxyPreferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()), accountsAndPeers.get())
     |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasPassportAndWatch, accountsAndPeers -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
         let proxySettings: ProxySettings = preferencesAndExceptions.0.entries[SharedDataKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
     
@@ -1191,6 +1208,27 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     controller.didAppear = { _ in
         updatePassport()
         updateNotifyExceptions()
+    }
+    controller.previewItemWithTag = { tag in
+        if let tag = tag as? SettingsEntryTag, case let .account(id) = tag {
+            var selectedAccount: Account?
+            let _ = (accountsAndPeers.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { accountsAndPeers in
+                for (account, _, _) in accountsAndPeers {
+                    if account.id == id {
+                        selectedAccount = account
+                        break
+                    }
+                }
+            })
+            if let selectedAccount = selectedAccount {
+                let accountContext = AccountContext(sharedContext: context.sharedContext, account: selectedAccount, limitsConfiguration: LimitsConfiguration.defaultValue)
+                let chatListController = ChatListController(context: accountContext, groupId: nil, controlsHistoryPreload: false, hideNetworkActivityStatus: true)
+                return chatListController
+            }
+        }
+        return nil
     }
     return controller
 }

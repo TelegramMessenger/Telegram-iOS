@@ -98,8 +98,18 @@ final class ItemListNodeVisibleEntries<Entry: ItemListNodeEntry>: Sequence {
     }
 }
 
-final class ItemListControllerNodeView: UITracingLayerView {
+final class ItemListControllerNodeView<Entry: ItemListNodeEntry>: UITracingLayerView, PreviewingHostView {
     var onLayout: (() -> Void)?
+    
+    init(controller: ItemListController<Entry>?) {
+        self.controller = controller
+        
+        super.init(frame: CGRect())
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
     
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -120,6 +130,16 @@ final class ItemListControllerNodeView: UITracingLayerView {
             return result
         }
     }
+    
+    var previewingDelegate: PreviewingHostViewDelegate? {
+        return PreviewingHostViewDelegate(controllerForLocation: { [weak self] sourceView, point in
+            return self?.controller?.previewingController(from: sourceView, for: point)
+        }, commitController: { [weak self] controller in
+            self?.controller?.previewingCommit(controller)
+        })
+    }
+    
+    weak var controller: ItemListController<Entry>?
 }
 
 class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollViewDelegate {
@@ -163,7 +183,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
         }
     }
     
-    init(navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, state: Signal<(PresentationTheme, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>) {
+    init(controller: ItemListController<Entry>?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, state: Signal<(PresentationTheme, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>) {
         self.navigationBar = navigationBar
         self.updateNavigationOffset = updateNavigationOffset
         
@@ -171,8 +191,8 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
         
         super.init()
         
-        self.setViewBlock({
-            return ItemListControllerNodeView()
+        self.setViewBlock({ [weak controller] in
+            return ItemListControllerNodeView<Entry>(controller: controller)
         })
         
         self.backgroundColor = nil
@@ -237,7 +257,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
     override func didLoad() {
         super.didLoad()
         
-        (self.view as? ItemListControllerNodeView)?.onLayout = { [weak self] in
+        (self.view as? ItemListControllerNodeView<Entry>)?.onLayout = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -250,7 +270,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
             }
         }
         
-        (self.view as? ItemListControllerNodeView)?.hitTestImpl = { [weak self] point, event in
+        (self.view as? ItemListControllerNodeView<Entry>)?.hitTestImpl = { [weak self] point, event in
             return self?.hitTest(point, with: event)
         }
     }

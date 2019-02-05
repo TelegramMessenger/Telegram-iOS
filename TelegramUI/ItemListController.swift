@@ -142,6 +142,8 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
+    private var validLayout: ContainerViewLayout?
+    
     private var didPlayPresentationAnimation = false
     private(set) var didAppearOnce = false
     var didAppear: ((Bool) -> Void)?
@@ -194,6 +196,8 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
             }
         }
     }
+    
+    var previewItemWithTag: ((ItemListItemTag) -> UIViewController?)?
     
     var willDisappear: ((Bool) -> Void)?
     
@@ -392,7 +396,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
                 }
             }
         } |> map { ($0.theme, $1) }
-        let displayNode = ItemListControllerNode<Entry>(navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
+        let displayNode = ItemListControllerNode<Entry>(controller: self, navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
             if let strongSelf = self {
                 strongSelf.navigationOffset = offset
             }
@@ -412,6 +416,8 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        self.validLayout = layout
         
         (self.displayNode as! ItemListControllerNode<Entry>).containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
@@ -481,5 +487,55 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     
     func afterLayout(_ f: @escaping () -> Void) {
         (self.displayNode as! ItemListControllerNode<Entry>).afterLayout(f)
+    }
+    
+    func previewingController(from sourceView: UIView, for location: CGPoint) -> (UIViewController, CGRect)? {
+        guard let layout = self.validLayout else {
+            return nil
+        }
+        
+        let boundsSize = self.view.bounds.size
+        let contentSize: CGSize
+        if let metrics = DeviceMetrics.forScreenSize(layout.size) {
+            contentSize = metrics.previewingContentSize(inLandscape: boundsSize.width > boundsSize.height)
+        } else {
+            contentSize = boundsSize
+        }
+        
+        var selectedNode: ItemListItemNode?
+        let listLocation = self.view.convert(location, to:  (self.displayNode as! ItemListControllerNode<Entry>).listNode.view)
+        (self.displayNode as! ItemListControllerNode<Entry>).listNode.forEachItemNode { itemNode in
+            if itemNode.frame.contains(listLocation), let itemNode = itemNode as? ItemListItemNode {
+                selectedNode = itemNode
+            }
+        }
+        if let selectedNode = selectedNode as? (ItemListItemNode & ListViewItemNode), let tag = selectedNode.tag {
+            var sourceRect = selectedNode.view.superview!.convert(selectedNode.frame, to: sourceView)
+            sourceRect.size.height -= UIScreenPixel
+            
+            if let controller = self.previewItemWithTag?(tag) {
+                if let controller = controller as? ContainableController {
+                    controller.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+                }
+                return (controller, sourceRect)
+            } else {
+                return nil
+            }
+        } else {
+            return nil
+        }
+    }
+    
+    func previewingCommit(_ viewControllerToCommit: UIViewController) {
+        /*if let viewControllerToCommit = viewControllerToCommit as? ViewController {
+            if let chatController = viewControllerToCommit as? ChatController {
+                chatController.canReadHistory.set(true)
+                chatController.updatePresentationMode(.standard(previewing: false))
+                if let navigationController = self.navigationController as? NavigationController {
+                    navigateToChatController(navigationController: navigationController, chatController: chatController, context: self.context, chatLocation: chatController.chatLocation, animated: false)
+                    self.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+                }
+            }
+        }*/
     }
 }

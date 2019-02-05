@@ -213,9 +213,22 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 })
             case let .resetData(theme):
                 return ItemListActionItem(theme: theme, title: "Reset Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    let databasePath = arguments.accountManager.basePath + "/db"
-                    let _ = try? FileManager.default.removeItem(atPath: databasePath)
-                    preconditionFailure()
+                    let presentationData = arguments.context.sharedContext.currentPresentationData.with { $0 }
+                    let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: "All data will be lost."),
+                        ActionSheetButtonItem(title: "Reset Data", color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            let databasePath = arguments.accountManager.basePath + "/db"
+                            let _ = try? FileManager.default.removeItem(atPath: databasePath)
+                            preconditionFailure()
+                        }),
+                    ]), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    arguments.presentController(actionSheet, nil)
                 })
             case let .animatedStickers(theme):
                 return ItemListSwitchItem(theme: theme, title: "AJSON", value: GlobalExperimentalSettings.animatedStickers, sectionId: self.section, style: .blocks, updated: { value in

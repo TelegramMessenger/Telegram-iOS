@@ -100,6 +100,7 @@ final class WallpaperUploadManager {
                             let updateWallpaper: (TelegramWallpaper) -> Void = { wallpaper in
                                 if let resource = wallpaper.mainResource {
                                     let _ = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start(completed: {})
+                                    let _ = sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start(completed: {})
                                 }
                                 
                                 if self?.currentPresentationData?.theme.name == presentationData.theme.name {
@@ -120,6 +121,8 @@ final class WallpaperUploadManager {
                             
                             if case let .file(_, _, _, _, _, _, _, file, settings) = wallpaper, settings.blur {
                                 let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+                                })
+                                let _ = sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
                                     updateWallpaper(wallpaper)
                                 })
                             } else {

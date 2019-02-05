@@ -9,6 +9,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         return self.displayNode as! AuthorizationSequencePhoneEntryControllerNode
     }
     
+    private let otherAccountPhoneNumbers: [String]
     private let network: Network
     private let strings: PresentationStrings
     private let theme: AuthorizationTheme
@@ -35,7 +36,8 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(hasOtherAccounts: Bool, network: Network, strings: PresentationStrings, theme: AuthorizationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+    init(otherAccountPhoneNumbers: [String], network: Network, strings: PresentationStrings, theme: AuthorizationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+        self.otherAccountPhoneNumbers = otherAccountPhoneNumbers
         self.network = network
         self.strings = strings
         self.theme = theme
@@ -56,7 +58,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
             back()
         }
         
-        if hasOtherAccounts {
+        if !otherAccountPhoneNumbers.isEmpty {
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         }
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
@@ -129,7 +131,11 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     @objc func nextPressed() {
         let (_, _, number) = self.controllerNode.codeAndNumber
         if !number.isEmpty {
-            self.loginWithNumber?(self.controllerNode.currentNumber)
+            if self.otherAccountPhoneNumbers.lazy.map(formatPhoneNumber).contains(formatPhoneNumber(self.controllerNode.currentNumber)) {
+                self.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: self.theme), title: nil, text: self.strings.Login_PhoneNumberAlreadyAuthorized, actions: [TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {})]), in: .window(.root))
+            } else {
+                self.loginWithNumber?(self.controllerNode.currentNumber)
+            }
         } else {
             hapticFeedback.error()
             self.controllerNode.animateError()

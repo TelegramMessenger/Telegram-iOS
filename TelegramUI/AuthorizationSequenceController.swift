@@ -20,7 +20,7 @@ public final class AuthorizationSequenceController: NavigationController {
     
     private let sharedContext: SharedAccountContext
     private var account: UnauthorizedAccount
-    private let hasOtherAccounts: Bool
+    private let otherAccountPhoneNumbers: [String]
     private let apiId: Int32
     private let apiHash: String
     private var strings: PresentationStrings
@@ -32,10 +32,10 @@ public final class AuthorizationSequenceController: NavigationController {
     
     private var didPlayPresentationAnimation = false
     
-    public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, hasOtherAccounts: Bool, strings: PresentationStrings, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String) {
+    public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: [String], strings: PresentationStrings, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String) {
         self.sharedContext = sharedContext
         self.account = account
-        self.hasOtherAccounts = hasOtherAccounts
+        self.otherAccountPhoneNumbers = otherAccountPhoneNumbers
         self.apiId = apiId
         self.apiHash = apiHash
         self.strings = strings
@@ -118,13 +118,13 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequencePhoneEntryController(hasOtherAccounts: self.hasOtherAccounts, network: self.account.network, strings: self.strings, theme: self.theme, openUrl: { [weak self] url in
+            controller = AuthorizationSequencePhoneEntryController(otherAccountPhoneNumbers: self.otherAccountPhoneNumbers, network: self.account.network, strings: self.strings, theme: self.theme, openUrl: { [weak self] url in
                 self?.openUrl(url)
             }, back: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
-                if strongSelf.hasOtherAccounts {
+                if !strongSelf.otherAccountPhoneNumbers.isEmpty {
                     let _ = (strongSelf.sharedContext.accountManager.transaction { transaction -> Void in
                         transaction.removeAuth()
                     }).start()
@@ -708,7 +708,7 @@ public final class AuthorizationSequenceController: NavigationController {
                         if let _ = self.viewControllers.last as? AuthorizationSequenceSplashController {
                         } else {
                             var controllers: [ViewController] = []
-                            if !self.hasOtherAccounts {
+                            if self.otherAccountPhoneNumbers.isEmpty {
                                 controllers.append(self.splashController())
                             } else {
                                 controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: ""))
@@ -717,14 +717,14 @@ public final class AuthorizationSequenceController: NavigationController {
                         }
                     case let .phoneEntry(countryCode, number):
                         var controllers: [ViewController] = []
-                        if !self.hasOtherAccounts {
+                        if !self.otherAccountPhoneNumbers.isEmpty {
                             controllers.append(self.splashController())
                         }
                         controllers.append(self.phoneEntryController(countryCode: countryCode, number: number))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                     case let .confirmationCodeEntry(number, type, _, timeout, nextType, termsOfService):
                         var controllers: [ViewController] = []
-                        if !self.hasOtherAccounts {
+                        if !self.otherAccountPhoneNumbers.isEmpty {
                             controllers.append(self.splashController())
                         }
                         controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: ""))
@@ -732,28 +732,28 @@ public final class AuthorizationSequenceController: NavigationController {
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                     case let .passwordEntry(hint, _, _, suggestReset):
                         var controllers: [ViewController] = []
-                        if !self.hasOtherAccounts {
+                        if !self.otherAccountPhoneNumbers.isEmpty {
                             controllers.append(self.splashController())
                         }
                         controllers.append(self.passwordEntryController(hint: hint, suggestReset: suggestReset))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                     case let .passwordRecovery(_, _, _, emailPattern):
                         var controllers: [ViewController] = []
-                        if !self.hasOtherAccounts {
+                        if !self.otherAccountPhoneNumbers.isEmpty {
                             controllers.append(self.splashController())
                         }
                         controllers.append(self.passwordRecoveryController(emailPattern: emailPattern))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                     case let .awaitingAccountReset(protectedUntil, number):
                         var controllers: [ViewController] = []
-                        if !self.hasOtherAccounts {
+                        if !self.otherAccountPhoneNumbers.isEmpty {
                             controllers.append(self.splashController())
                         }
                         controllers.append(self.awaitingAccountResetController(protectedUntil: protectedUntil, number: number))
                         self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                     case let .signUp(_, _, _, firstName, lastName, termsOfService):
                         var controllers: [ViewController] = []
-                        if !self.hasOtherAccounts {
+                        if !self.otherAccountPhoneNumbers.isEmpty {
                             controllers.append(self.splashController())
                         }
                         controllers.append(self.signUpController(firstName: firstName, lastName: lastName, termsOfService: termsOfService))

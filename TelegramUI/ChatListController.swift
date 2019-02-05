@@ -13,6 +13,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     
     private let context: AccountContext
     private let controlsHistoryPreload: Bool
+    private let hideNetworkActivityStatus: Bool
     
     public let groupId: PeerGroupId?
     
@@ -48,9 +49,10 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(context: AccountContext, groupId: PeerGroupId?, controlsHistoryPreload: Bool) {
+    public init(context: AccountContext, groupId: PeerGroupId?, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool = false) {
         self.context = context
         self.controlsHistoryPreload = controlsHistoryPreload
+        self.hideNetworkActivityStatus = hideNetworkActivityStatus
         
         self.groupId = groupId
         
@@ -152,54 +154,56 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             return (data.isLockable, data.autolockDeadline == 0)
         }
         
-        self.titleDisposable = combineLatest(queue: .mainQueue(), context.account.networkState, hasProxy, passcode).start(next: { [weak self] state, proxy, passcode in
-            if let strongSelf = self {
-                let (hasProxy, connectsViaProxy) = proxy
-                let (isPasscodeSet, isManuallyLocked) = passcode
-                var checkProxy = false
-                switch state {
-                    case .waitingForNetwork:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
-                    case let .connecting(proxy):
-                        var text = strongSelf.presentationData.strings.State_Connecting
-                        if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {
-                            text = strongSelf.presentationData.strings.State_ConnectingToProxy
-                        }
-                        if let proxy = proxy, proxy.hasConnectionIssues {
-                            checkProxy = true
-                        }
-                        strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
-                    case .updating:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
-                    case .online:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.DialogList_Title, activity: false, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
-                }
-                if checkProxy {
-                    if strongSelf.proxyUnavailableTooltipController == nil && !strongSelf.didShowProxyUnavailableTooltipController && strongSelf.isNodeLoaded && strongSelf.displayNode.view.window != nil {
-                        strongSelf.didShowProxyUnavailableTooltipController = true
-                        let tooltipController = TooltipController(text: strongSelf.presentationData.strings.Proxy_TooltipUnavailable, timeout: 60.0, dismissByTapOutside: true)
-                        strongSelf.proxyUnavailableTooltipController = tooltipController
-                        tooltipController.dismissed = { [weak tooltipController] in
-                            if let strongSelf = self, let tooltipController = tooltipController, strongSelf.proxyUnavailableTooltipController === tooltipController {
-                                strongSelf.proxyUnavailableTooltipController = nil
+        if !self.hideNetworkActivityStatus {
+            self.titleDisposable = combineLatest(queue: .mainQueue(), context.account.networkState, hasProxy, passcode).start(next: { [weak self] state, proxy, passcode in
+                if let strongSelf = self {
+                    let (hasProxy, connectsViaProxy) = proxy
+                    let (isPasscodeSet, isManuallyLocked) = passcode
+                    var checkProxy = false
+                    switch state {
+                        case .waitingForNetwork:
+                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
+                        case let .connecting(proxy):
+                            var text = strongSelf.presentationData.strings.State_Connecting
+                            if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {
+                                text = strongSelf.presentationData.strings.State_ConnectingToProxy
                             }
-                        }
-                        strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: {
-                            if let strongSelf = self, let rect = strongSelf.titleView.proxyButtonFrame {
-                                return (strongSelf.titleView, rect.insetBy(dx: 0.0, dy: -4.0))
+                            if let proxy = proxy, proxy.hasConnectionIssues {
+                                checkProxy = true
                             }
-                            return nil
-                        }))
+                            strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
+                        case .updating:
+                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
+                        case .online:
+                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.DialogList_Title, activity: false, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
                     }
-                } else {
-                    strongSelf.didShowProxyUnavailableTooltipController = false
-                    if let proxyUnavailableTooltipController = strongSelf.proxyUnavailableTooltipController {
-                        strongSelf.proxyUnavailableTooltipController = nil
-                        proxyUnavailableTooltipController.dismiss()
+                    if checkProxy {
+                        if strongSelf.proxyUnavailableTooltipController == nil && !strongSelf.didShowProxyUnavailableTooltipController && strongSelf.isNodeLoaded && strongSelf.displayNode.view.window != nil {
+                            strongSelf.didShowProxyUnavailableTooltipController = true
+                            let tooltipController = TooltipController(text: strongSelf.presentationData.strings.Proxy_TooltipUnavailable, timeout: 60.0, dismissByTapOutside: true)
+                            strongSelf.proxyUnavailableTooltipController = tooltipController
+                            tooltipController.dismissed = { [weak tooltipController] in
+                                if let strongSelf = self, let tooltipController = tooltipController, strongSelf.proxyUnavailableTooltipController === tooltipController {
+                                    strongSelf.proxyUnavailableTooltipController = nil
+                                }
+                            }
+                            strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: {
+                                if let strongSelf = self, let rect = strongSelf.titleView.proxyButtonFrame {
+                                    return (strongSelf.titleView, rect.insetBy(dx: 0.0, dy: -4.0))
+                                }
+                                return nil
+                            }))
+                        }
+                    } else {
+                        strongSelf.didShowProxyUnavailableTooltipController = false
+                        if let proxyUnavailableTooltipController = strongSelf.proxyUnavailableTooltipController {
+                            strongSelf.proxyUnavailableTooltipController = nil
+                            proxyUnavailableTooltipController.dismiss()
+                        }
                     }
                 }
-            }
-        })
+            })
+        }
         
         self.badgeDisposable = (renderedTotalUnreadCount(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox) |> deliverOnMainQueue).start(next: { [weak self] count in
             if let strongSelf = self {

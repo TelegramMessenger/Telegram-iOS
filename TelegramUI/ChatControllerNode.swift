@@ -238,7 +238,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, postbox: context.account.postbox)
+        self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox)
         self.backgroundNode.motionEnabled = chatPresentationInterfaceState.chatWallpaper.settings?.motion ?? false
 
         self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
@@ -1314,7 +1314,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let themeUpdated = self.chatPresentationInterfaceState.theme !== chatPresentationInterfaceState.theme
             
             if self.chatPresentationInterfaceState.chatWallpaper != chatPresentationInterfaceState.chatWallpaper {
-                self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, postbox: context.account.postbox)
+                self.backgroundNode.image = chatControllerBackgroundImage(wallpaper: chatPresentationInterfaceState.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox)
                 self.backgroundNode.motionEnabled = chatPresentationInterfaceState.chatWallpaper.settings?.motion ?? false
             }
             

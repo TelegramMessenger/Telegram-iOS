@@ -337,7 +337,25 @@ final class ThemeGridController: ViewController {
     private func uploadCustomWallpaper(_ wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, completion: @escaping () -> Void) {
         let imageSignal: Signal<UIImage, NoError>
         switch wallpaper {
-            case .wallpaper:
+            case let .wallpaper(wallpaper, _):
+                switch wallpaper {
+                    case let .file(file):
+                        if let path = self.context.account.postbox.mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                            self.context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)
+                            let _ = self.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
+                            let _ = self.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start()
+                        }
+                    case let .image(representations, _):
+                        for representation in representations {
+                            let resource = representation.resource
+                            if let path = self.context.account.postbox.mediaBox.completedResourcePath(resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                self.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
+                                let _ = self.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
+                            }
+                        }
+                    default:
+                        break
+                }
                 imageSignal = .complete()
                 completion()
             case let .asset(asset):
@@ -400,13 +418,15 @@ final class ThemeGridController: ViewController {
             
             if let data = UIImageJPEGRepresentation(croppedImage, 0.8), let thumbnailImage = thumbnailImage, let thumbnailData = UIImageJPEGRepresentation(thumbnailImage, 0.4) {
                 let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
+                self.context.sharedContext.accountManager.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
                 self.context.account.postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
                 
                 let resource = LocalFileMediaResource(fileId: arc4random64())
+                self.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
                 self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                 
-                let account = self.context.account
                 let accountManager = self.context.sharedContext.accountManager
+                let account = self.context.account
                 let updateWallpaper: (TelegramWallpaper) -> Void = { [weak self] wallpaper in
                     var resource: MediaResource?
                     if case let .image(representations, _) = wallpaper, let representation = largestImageRepresentation(representations) {
@@ -416,6 +436,7 @@ final class ThemeGridController: ViewController {
                     }
                     
                     if let resource = resource {
+                        let _ = accountManager.mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start(completed: {})
                         let _ = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start(completed: {})
                     }
                     
@@ -440,6 +461,9 @@ final class ThemeGridController: ViewController {
                 }
                 
                 if mode.contains(.blur) {
+                    let _ = self.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+                        apply()
+                    })
                     let _ = self.context.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
                         apply()
                     })
