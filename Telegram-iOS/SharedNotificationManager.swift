@@ -23,6 +23,7 @@ final class SharedNotificationManager {
     private let episodeId: UInt32
     
     private let clearNotificationsManager: ClearNotificationsManager
+    private let pollLiveLocationOnce: (AccountRecordId) -> Void
     
     private var inForeground: Bool = false
     private var inForegroundDisposable: Disposable?
@@ -34,11 +35,12 @@ final class SharedNotificationManager {
     
     private var pollStateContexts: [AccountRecordId: PollStateContext] = [:]
     
-    init(episodeId: UInt32, clearNotificationsManager: ClearNotificationsManager, inForeground: Signal<Bool, NoError>, accounts: Signal<[(Account, Bool)], NoError>) {
+    init(episodeId: UInt32, clearNotificationsManager: ClearNotificationsManager, inForeground: Signal<Bool, NoError>, accounts: Signal<[(Account, Bool)], NoError>, pollLiveLocationOnce: @escaping (AccountRecordId) -> Void) {
         assert(Queue.mainQueue().isCurrent())
         
         self.episodeId = episodeId
         self.clearNotificationsManager = clearNotificationsManager
+        self.pollLiveLocationOnce = pollLiveLocationOnce
         
         self.inForegroundDisposable = (inForeground
         |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -348,7 +350,9 @@ final class SharedNotificationManager {
                 }
             }
             if isLocationPolling {
-                //addedWakeups.insert(.backgroundLocation)
+                if !self.inForeground || !isCurrent {
+                    self.pollLiveLocationOnce(account.id)
+                }
             }
             
             if let readMessageId = readMessageId {

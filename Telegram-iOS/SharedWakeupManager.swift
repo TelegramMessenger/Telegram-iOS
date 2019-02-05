@@ -49,7 +49,7 @@ final class SharedWakeupManager {
     
     private var accountsAndTasks: [(Account, Bool, AccountTasks)] = []
     
-    init(activeAccounts: Signal<(primary: Account?, accounts: [AccountRecordId: Account]), NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager, mediaManager: MediaManager, callManager: PresentationCallManager?) {
+    init(activeAccounts: Signal<(primary: Account?, accounts: [AccountRecordId: Account]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager, mediaManager: MediaManager, callManager: PresentationCallManager?) {
         assert(Queue.mainQueue().isCurrent())
         
         self.inForegroundDisposable = (inForeground
@@ -102,9 +102,15 @@ final class SharedWakeupManager {
                 }
                 |> distinctUntilChanged
                 
-                return combineLatest(queue: .mainQueue(), account.importantTasksRunning, notificationManager.isPollingState(accountId: account.id), hasActiveAudio, hasActiveCalls)
-                |> map { importantTasksRunning, isPollingState, hasActiveAudio, hasActiveCalls -> (Account, Bool, AccountTasks) in
-                    return (account, primary?.id == account.id, AccountTasks(stateSynchronization: isPollingState, importantTasks: importantTasksRunning, backgroundLocation: false, backgroundDownloads: false, backgroundAudio: hasActiveAudio, activeCalls: hasActiveCalls))
+                let hasActiveLiveLocationPolling = liveLocationPolling
+                |> map { id in
+                    return id == account.id
+                }
+                |> distinctUntilChanged
+                
+                return combineLatest(queue: .mainQueue(), account.importantTasksRunning, notificationManager.isPollingState(accountId: account.id), hasActiveAudio, hasActiveCalls, hasActiveLiveLocationPolling)
+                |> map { importantTasksRunning, isPollingState, hasActiveAudio, hasActiveCalls, hasActiveLiveLocationPolling -> (Account, Bool, AccountTasks) in
+                    return (account, primary?.id == account.id, AccountTasks(stateSynchronization: isPollingState, importantTasks: importantTasksRunning, backgroundLocation: hasActiveLiveLocationPolling, backgroundDownloads: false, backgroundAudio: hasActiveAudio, activeCalls: hasActiveCalls))
                 }
             }
             return combineLatest(signals)

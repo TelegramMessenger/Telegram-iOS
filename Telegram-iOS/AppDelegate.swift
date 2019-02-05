@@ -643,11 +643,39 @@ private final class SharedApplicationContext {
             }
         }
         
-        let notificationManager = SharedNotificationManager(episodeId: self.episodeId, clearNotificationsManager: clearNotificationsManager, inForeground: applicationBindings.applicationInForeground, accounts: sharedContext.activeAccounts |> map { primary, accounts, _ in Array(accounts.values.map({ ($0, $0.id == primary?.id) })) })
+        let notificationManager = SharedNotificationManager(episodeId: self.episodeId, clearNotificationsManager: clearNotificationsManager, inForeground: applicationBindings.applicationInForeground, accounts: sharedContext.activeAccounts |> map { primary, accounts, _ in Array(accounts.values.map({ ($0, $0.id == primary?.id) })) }, pollLiveLocationOnce: { accountId in
+            let _ = (self.context.get()
+            |> filter {
+                return $0 != nil
+            }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { context in
+                if let context = context, context.context.account.id == accountId {
+                    context.context.liveLocationManager?.pollOnce()
+                }
+            })
+        })
         setPresentationCall = { call in
             notificationManager.setNotificationCall(call, strings: sharedContext.currentPresentationData.with({ $0 }).strings)
         }
-        let wakeupManager = SharedWakeupManager(activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1) }, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager)
+        let liveLocationPolling = self.context.get()
+        |> mapToSignal { context -> Signal<AccountRecordId?, NoError> in
+            if let context = context, let liveLocationManager = context.context.liveLocationManager {
+                let accountId = context.context.account.id
+                return liveLocationManager.isPolling
+                |> distinctUntilChanged
+                |> map { value -> AccountRecordId? in
+                    if value {
+                        return accountId
+                    } else {
+                        return nil
+                    }
+                }
+            } else {
+                return .single(nil)
+            }
+        }
+        let wakeupManager = SharedWakeupManager(activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1) }, liveLocationPolling: liveLocationPolling, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager)
         let sharedApplicationContext = SharedApplicationContext(sharedContext: sharedContext, notificationManager: notificationManager, wakeupManager: wakeupManager)
         self.sharedContextPromise.set(
         accountManager.transaction { transaction -> (SharedApplicationContext, LoggingSettings) in
