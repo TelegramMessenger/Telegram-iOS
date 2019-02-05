@@ -9,16 +9,17 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <libtgvoip/VoIPServerConfig.h>
-#include <libtgvoip/VoIPController.h>
-#include <libtgvoip/os/android/AudioOutputOpenSLES.h>
-#include <libtgvoip/os/android/AudioInputOpenSLES.h>
-#include <libtgvoip/os/android/AudioInputAndroid.h>
-#include <libtgvoip/os/android/AudioOutputAndroid.h>
-#include <libtgvoip/os/android/VideoSourceAndroid.h>
-#include <libtgvoip/os/android/VideoRendererAndroid.h>
-#include <libtgvoip/audio/Resampler.h>
-#include <libtgvoip/os/android/JNIUtilities.h>
+#include "../../VoIPServerConfig.h"
+#include "../../VoIPController.h"
+#include "../../os/android/AudioOutputOpenSLES.h"
+#include "../../os/android/AudioInputOpenSLES.h"
+#include "../../os/android/AudioInputAndroid.h"
+#include "../../os/android/AudioOutputAndroid.h"
+#include "../../os/android/VideoSourceAndroid.h"
+#include "../../os/android/VideoRendererAndroid.h"
+#include "../../audio/Resampler.h"
+#include "../../os/android/JNIUtilities.h"
+#include "../../PrivateDefines.h"
 
 #ifdef TGVOIP_HAS_CONFIG
 #include <tgvoip_config.h>
@@ -116,6 +117,18 @@ namespace tgvoip {
 
 #pragma mark - VoIPController
 
+	uint32_t AndroidCodecToFOURCC(std::string mime){
+		if(mime=="video/avc")
+			return CODEC_AVC;
+		else if(mime=="video/hevc")
+			return CODEC_HEVC;
+		else if(mime=="video/x-vnd.on2.vp8")
+			return CODEC_VP8;
+		else if(mime=="video/x-vnd.on2.vp9")
+			return CODEC_VP9;
+		return 0;
+	}
+
 	jlong VoIPController_nativeInit(JNIEnv* env, jobject thiz, jstring persistentStateFile) {
 		ImplDataAndroid* impl=new ImplDataAndroid();
 		impl->javaObject=env->NewGlobalRef(thiz);
@@ -147,6 +160,28 @@ namespace tgvoip {
 				fclose(f);
 			}
 		}
+		/*if(video::VideoRendererAndroid::availableDecoders.empty() || video::VideoSourceAndroid::availableEncoders.empty()){
+			video::VideoRendererAndroid::availableDecoders.clear();
+			video::VideoSourceAndroid::availableEncoders.clear();
+			jmethodID getCodecsMethod=env->GetStaticMethodID(jniUtilitiesClass, "getSupportedVideoCodecs", "()[[Ljava/lang/String;");
+			jobjectArray codecs=static_cast<jobjectArray>(env->CallStaticObjectMethod(jniUtilitiesClass, getCodecsMethod));
+			jobjectArray encoders=static_cast<jobjectArray>(env->GetObjectArrayElement(codecs, 0));
+			jobjectArray decoders=static_cast<jobjectArray>(env->GetObjectArrayElement(codecs, 1));
+			for(jsize i=0;i<env->GetArrayLength(encoders);i++){
+				std::string codec=jni::JavaStringToStdString(env, static_cast<jstring>(env->GetObjectArrayElement(encoders, i)));
+				uint32_t id=AndroidCodecToFOURCC(codec);
+				if(id)
+					video::VideoSourceAndroid::availableEncoders.push_back(id);
+			}
+			for(jsize i=0;i<env->GetArrayLength(decoders);i++){
+				std::string codec=jni::JavaStringToStdString(env, static_cast<jstring>(env->GetObjectArrayElement(decoders, i)));
+				uint32_t id=AndroidCodecToFOURCC(codec);
+				if(id)
+					video::VideoRendererAndroid::availableDecoders.push_back(id);
+			}
+			jmethodID getMaxResolutionMethod=env->GetStaticMethodID(jniUtilitiesClass, "getMaxVideoResolution", "()I");
+			video::VideoRendererAndroid::maxResolution=env->CallStaticIntMethod(jniUtilitiesClass, getMaxResolutionMethod);
+		}*/
 		return (jlong)(intptr_t)cntrlr;
 	}
 
@@ -258,6 +293,7 @@ namespace tgvoip {
 		if(statsDumpPath){
 			cfg.statsDumpFilePath=jni::JavaStringToStdString(env, statsDumpPath);
 		}
+
 		((VoIPController*)(intptr_t)inst)->SetConfig(cfg);
 	}
 
@@ -467,12 +503,14 @@ namespace tgvoip {
 
 	void VideoSource_nativeSetVideoStreamParameters(JNIEnv* env, jobject thiz, jlong inst, jobjectArray _csd, jint width, jint height){
 		std::vector<Buffer> csd;
-		for(int i=0;i<env->GetArrayLength(_csd);i++){
-			jobject _buf=env->GetObjectArrayElement(_csd, i);
-			size_t len=static_cast<size_t>(env->GetDirectBufferCapacity(_buf));
-			Buffer buf(len);
-			buf.CopyFrom(env->GetDirectBufferAddress(_buf), 0, len);
-			csd.push_back(std::move(buf));
+		if(_csd){
+			for(int i=0; i<env->GetArrayLength(_csd); i++){
+				jobject _buf=env->GetObjectArrayElement(_csd, i);
+				size_t len=static_cast<size_t>(env->GetDirectBufferCapacity(_buf));
+				Buffer buf(len);
+				buf.CopyFrom(env->GetDirectBufferAddress(_buf), 0, len);
+				csd.push_back(std::move(buf));
+			}
 		}
 		((video::VideoSourceAndroid*)(intptr_t)inst)->SetStreamParameters(std::move(csd), width, height);
 	}
@@ -480,7 +518,7 @@ namespace tgvoip {
 	void VideoSource_nativeSendFrame(JNIEnv* env, jobject thiz, jlong inst, jobject buffer, jint offset, jint length, jint flags){
 		size_t bufsize=(size_t)env->GetDirectBufferCapacity(buffer);
 		Buffer buf(static_cast<size_t>(length));
-		buf.CopyFrom(env->GetDirectBufferAddress(buffer)+offset, 0, static_cast<size_t>(length));
+		buf.CopyFrom(((char*)env->GetDirectBufferAddress(buffer))+offset, 0, static_cast<size_t>(length));
 		((video::VideoSourceAndroid*)(intptr_t)inst)->SendFrame(std::move(buf), static_cast<uint32_t>(flags));
 	}
 
@@ -533,7 +571,8 @@ extern "C" void tgvoipRegisterNatives(JNIEnv* env){
 
 		if(videoRenderer){
 			video::VideoRendererAndroid::decodeAndDisplayMethod=env->GetMethodID(videoRenderer, "decodeAndDisplay", "(Ljava/nio/ByteBuffer;IJ)V");
-			video::VideoRendererAndroid::resetMethod=env->GetMethodID(videoRenderer, "reset", "(III[[B)V");
+			video::VideoRendererAndroid::resetMethod=env->GetMethodID(videoRenderer, "reset", "(Ljava/lang/String;II[[B)V");
+			video::VideoRendererAndroid::setStreamEnabledMethod=env->GetMethodID(videoRenderer, "setStreamEnabled", "(Z)V");
 		}
 	}
 
@@ -572,7 +611,7 @@ extern "C" void tgvoipRegisterNatives(JNIEnv* env){
 			{"nativeSendGroupCallKey", "(J[B)V", (void*)&tgvoip::VoIPController_nativeSendGroupCallKey},
 			{"nativeRequestCallUpgrade", "(J)V", (void*)&tgvoip::VoIPController_nativeRequestCallUpgrade},
 			{"nativeNeedRate", "(J)Z", (void*)&tgvoip::VoIPController_nativeNeedRate},
-			{"getConnectionMaxLayer", "()I", (void*)&tgvoip::VoIPController_getConnectionMaxLayer}
+			{"getConnectionMaxLayer", "()I", (void*)&tgvoip::VoIPController_getConnectionMaxLayer},
 			//{"nativeSetVideoSource", "(JJ)V", (void*)&tgvoip::VoIPController_nativeSetVideoSource},
 			//{"nativeSetVideoRenderer", "(JJ)V", (void*)&tgvoip::VoIPController_nativeSetVideoRenderer}
 	};

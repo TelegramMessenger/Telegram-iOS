@@ -12,9 +12,12 @@ namespace tgvoip{
 	namespace video{
 		class VideoRenderer{
 		public:
+			static std::vector<uint32_t> GetAvailableDecoders();
 			virtual ~VideoRenderer(){};
 			virtual void Reset(uint32_t codec, unsigned int width, unsigned int height, std::vector<Buffer>& csd)=0;
-			virtual void DecodeAndDisplay(Buffer& frame, uint32_t pts)=0;
+			virtual void DecodeAndDisplay(Buffer frame, uint32_t pts)=0;
+			virtual void SetStreamEnabled(bool enabled)=0;
+			static int GetMaximumResolution();
 		};
 	}
 }

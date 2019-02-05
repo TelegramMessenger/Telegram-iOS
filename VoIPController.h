@@ -39,7 +39,7 @@
 #include "MessageThread.h"
 #include "utils.h"
 
-#define LIBTGVOIP_VERSION "2.4.2"
+#define LIBTGVOIP_VERSION "2.4.3"
 
 #ifdef _WIN32
 #undef GetCurrentTime
@@ -212,6 +212,9 @@ namespace tgvoip{
 
 			bool logPacketStats=false;
 			bool enableVolumeControl=false;
+
+			bool enableVideoSend=false;
+			bool enableVideoReceive=false;
 		};
 
 		struct TrafficStats{
@@ -504,8 +507,8 @@ namespace tgvoip{
 		void SendStreamCSD(Stream& stream);
 		void InitializeTimers();
 		void ResetEndpointPingStats();
-		void SendVideoFrame(const Buffer& frame, int32_t flags);
-		void ProcessIncomingVideoFrame(Buffer frame, uint32_t pts);
+		void SendVideoFrame(const Buffer& frame, uint32_t flags);
+		void ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool keyframe);
 		std::shared_ptr<Stream> GetStreamByType(int type, bool outgoing);
 		Endpoint* GetEndpointForPacket(const PendingOutgoingPacket& pkt);
 		bool SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue=true);
@@ -561,6 +564,11 @@ namespace tgvoip{
 			double timestamp;
 			int32_t length;
 		};
+		struct SentVideoFrame{
+			uint32_t num;
+			uint32_t fragmentCount;
+			std::vector<uint32_t> unacknowledgedPackets;
+		};
 
 		void RunRecvThread();
 		void RunSendThread();
@@ -595,6 +603,8 @@ namespace tgvoip{
 		void TickJitterBufferAngCongestionControl();
 		void ResetUdpAvailability();
 		std::string GetPacketTypeString(unsigned char type);
+		void SetupOutgoingVideoStream();
+		bool WasOutgoingPacketAcknowledged(uint32_t seq);
 
 		int state;
 		std::map<int64_t, Endpoint> endpoints;
@@ -602,7 +612,7 @@ namespace tgvoip{
 		int64_t preferredRelay=0;
 		int64_t peerPreferredRelay=0;
 		bool runReceiver;
-		uint32_t seq;
+		std::atomic<uint32_t> seq;
 		uint32_t lastRemoteSeq;
 		uint32_t lastRemoteAckSeq;
 		uint32_t lastSentSeq;
@@ -722,6 +732,9 @@ namespace tgvoip{
 		effects::Volume outputVolume;
 		effects::Volume inputVolume;
 
+		std::vector<uint32_t> peerVideoDecoders;
+        int peerMaxVideoResolution=0;
+
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
 		std::function<void(int16_t*, size_t)> audioInputDataCallback;
 		std::function<void(int16_t*, size_t)> audioOutputDataCallback;
@@ -733,6 +746,11 @@ namespace tgvoip{
 		video::VideoSource* videoSource=NULL;
 		video::VideoRenderer* videoRenderer=NULL;
 		double firstVideoFrameTime=0.0;
+		uint32_t videoFrameCount=0;
+		uint32_t lastReceivedVideoFrameNumber=UINT32_MAX;
+		std::vector<SentVideoFrame> sentVideoFrames;
+		Mutex sentVideoFramesMutex;
+		bool videoKeyframeRequested=false;
 		
 		/*** persistable state values ***/
 		bool proxySupportsUDP=true;

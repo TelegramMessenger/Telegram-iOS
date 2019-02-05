@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <functional>
+#include <unordered_map>
 
 #include "Buffers.h"
 
@@ -17,14 +18,16 @@ namespace tgvoip {
 		virtual ~PacketReassembler();
 
 		void Reset();
-		void AddFragment(Buffer pkt, unsigned int fragmentIndex, unsigned int fragmentCount, uint32_t pts);
-		void SetCallback(std::function<void(Buffer packet, uint32_t pts)> callback);
+		void AddFragment(Buffer pkt, unsigned int fragmentIndex, unsigned int fragmentCount, uint32_t pts, bool keyframe);
+		void SetCallback(std::function<void(Buffer packet, uint32_t pts, bool keyframe)> callback);
 
 	private:
 		uint32_t currentTimestamp;
 		unsigned int currentPacketPartCount=0;
-		std::vector<Buffer> parts;
-		std::function<void(Buffer, uint32_t)> callback;
+		std::array<Buffer, 255> parts;
+		std::function<void(Buffer, uint32_t, bool)> callback;
+		bool currentIsKeyframe;
+		unsigned int receivedPartCount=0;
 	};
 }
 

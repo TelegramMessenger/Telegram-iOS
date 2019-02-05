@@ -21,18 +21,22 @@ void PacketReassembler::Reset(){
 
 }
 
-void PacketReassembler::AddFragment(Buffer pkt, unsigned int fragmentIndex, unsigned int fragmentCount, uint32_t pts){
+void PacketReassembler::AddFragment(Buffer pkt, unsigned int fragmentIndex, unsigned int fragmentCount, uint32_t pts, bool keyframe){
 	//LOGD("add fragment: ts=%u, index=%u of %u", pts, fragmentIndex, fragmentCount);
-	if(fragmentCount==0 || fragmentCount==1){
-		callback(std::move(pkt), pts);
-		return;
-	}
 	if(pts!=currentTimestamp){
 		assert(fragmentCount<=255);
 		currentTimestamp=pts;
-		parts.clear();
-		parts.resize(fragmentCount);
+		/*for(Buffer& b:parts){
+			if(!b.IsEmpty())
+				b=Buffer();
+		}*/
 		currentPacketPartCount=fragmentCount;
+		currentIsKeyframe=keyframe;
+		receivedPartCount=0;
+	}
+	if(fragmentCount==0 || fragmentCount==1){
+		callback(std::move(pkt), pts, keyframe);
+		return;
 	}
 
 	if(fragmentIndex<currentPacketPartCount){
@@ -41,24 +45,30 @@ void PacketReassembler::AddFragment(Buffer pkt, unsigned int fragmentIndex, unsi
 	if(parts.size()<currentPacketPartCount)
 		return;
 
+	receivedPartCount++;
+
 	bool anyAreEmpty=false;
-	for(Buffer& b:parts){
-		if(b.Length()==0){
+	for(int i=0;i<currentPacketPartCount;i++){
+		if(parts[i].IsEmpty()){
 			anyAreEmpty=true;
 			break;
 		}
 	}
 
-	if(!anyAreEmpty){
+	if(!anyAreEmpty && receivedPartCount==currentPacketPartCount){
 		//LOGI("part count %u", (unsigned int)parts.size());
 		BufferOutputStream out(10240);
-		for(Buffer& b:parts){
-			out.WriteBytes(b);
+		for(int i=0;i<currentPacketPartCount;i++){
+			out.WriteBytes(parts[i]);
+			parts[i]=Buffer();
 		}
-		callback(Buffer(std::move(out)), currentTimestamp);
+		//LOGI("reassembled %u parts, %u bytes", (unsigned int)receivedPartCount, out.GetLength());
+		callback(Buffer(std::move(out)), currentTimestamp, currentIsKeyframe);
+		currentPacketPartCount=0;
+		currentTimestamp=0;
 	}
 }
 
-void PacketReassembler::SetCallback(std::function<void(Buffer packet, uint32_t pts)> callback){
+void PacketReassembler::SetCallback(std::function<void(Buffer packet, uint32_t pts, bool keyframe)> callback){
 	this->callback=callback;
 }

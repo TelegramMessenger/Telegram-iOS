@@ -16,9 +16,15 @@ using namespace tgvoip;
 
 #pragma mark - BufferInputStream
 
-BufferInputStream::BufferInputStream(unsigned char* data, size_t length){
+BufferInputStream::BufferInputStream(const unsigned char* data, size_t length){
 	this->buffer=data;
 	this->length=length;
+	offset=0;
+}
+
+BufferInputStream::BufferInputStream(const Buffer &buffer){
+	this->buffer=*buffer;
+	this->length=buffer.Length();
 	offset=0;
 }
 
@@ -100,6 +106,10 @@ void BufferInputStream::ReadBytes(unsigned char *to, size_t count){
 	EnsureEnoughRemaining(count);
 	memcpy(to, buffer+offset, count);
 	offset+=count;
+}
+
+void BufferInputStream::ReadBytes(Buffer &to){
+	ReadBytes(*to, to.Length());
 }
 
 BufferInputStream BufferInputStream::GetPartBuffer(size_t length, bool advance){

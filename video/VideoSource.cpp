@@ -20,7 +20,7 @@ std::shared_ptr<VideoSource> VideoSource::Create(){
 }
 
 
-void VideoSource::SetCallback(std::function<void(const Buffer &, int32_t)> callback){
+void VideoSource::SetCallback(std::function<void(const Buffer &, uint32_t)> callback){
 	this->callback=callback;
 }
 
@@ -30,4 +30,11 @@ bool VideoSource::Failed(){
 
 std::string VideoSource::GetErrorDescription(){
 	return error;
+}
+
+std::vector<uint32_t> VideoSource::GetAvailableEncoders(){
+#ifdef __ANDROID__
+	return VideoSourceAndroid::availableEncoders;
+#endif
+	return std::vector<uint32_t>();
 }

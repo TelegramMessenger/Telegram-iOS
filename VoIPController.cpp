@@ -245,12 +245,6 @@ VoIPController::VoIPController() : activeNetItfName(""),
 	stm->frameDuration=60;
 	outgoingStreams.push_back(stm);
 
-	shared_ptr<Stream> vstm=make_shared<Stream>();
-	vstm->id=2;
-	vstm->type=STREAM_TYPE_VIDEO;
-	vstm->codec=CODEC_HEVC;
-	vstm->enabled=1;
-	outgoingStreams.push_back(vstm);
 }
 
 VoIPController::~VoIPController(){
@@ -915,7 +909,7 @@ void VoIPController::InitializeTimers(){
 						GetCurrentTime()-connectionInitTime,
 						endpoints.at(currentEndpoint).rtts[0],
 						lastRemoteSeq,
-						seq,
+						(uint32_t)seq,
 						lastRemoteAckSeq,
 						recvLossCount,
 						conctl ? conctl->GetSendLossCount() : 0,
@@ -1018,7 +1012,7 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned 
 	if(stopping)
 		return;
 	unsentStreamPacketsHistory.Add(static_cast<unsigned int>(unsentStreamPackets));
-	if(unsentStreamPacketsHistory.Average()>=maxUnsentStreamPackets){
+	if(unsentStreamPacketsHistory.Average()>=maxUnsentStreamPackets && !videoSource){
 		LOGW("Resetting stalled send queue");
 		sendQueue.clear();
 		unsentStreamPacketsHistory.Reset();
@@ -1103,7 +1097,7 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned 
 
 void VoIPController::InitializeAudio(){
 	double t=GetCurrentTime();
-	shared_ptr<Stream>& outgoingAudioStream=outgoingStreams[0];
+	shared_ptr<Stream> outgoingAudioStream=GetStreamByType(STREAM_TYPE_AUDIO, true);
 	LOGI("before create audio io");
 	audioIO=audio::AudioIO::Create(currentAudioInput, currentAudioOutput);
 	audioInput=audioIO->GetInput();
@@ -1382,6 +1376,10 @@ void VoIPController::SendInit(){
 			uint32_t flags=0;
 			if(config.enableCallUpgrade)
 				flags|=INIT_FLAG_GROUP_CALLS_SUPPORTED;
+			if(config.enableVideoReceive)
+				flags|=INIT_FLAG_VIDEO_RECV_SUPPORTED;
+			if(config.enableVideoSend)
+				flags|=INIT_FLAG_VIDEO_SEND_SUPPORTED;
 			if(dataSavingMode)
 				flags|=INIT_FLAG_DATA_SAVING_ENABLED;
 			out.WriteInt32(flags);
@@ -1397,12 +1395,20 @@ void VoIPController::SendInit(){
 			}else{
 				out.WriteByte(1);
 				out.WriteInt32(CODEC_OPUS);
-				/*out.WriteByte(1);
-				out.WriteInt32(CODEC_AVC);
-				out.WriteByte(1);
-				out.WriteInt32(CODEC_AVC);*/
-				out.WriteByte(0);
-				out.WriteByte(0);
+				vector<uint32_t> decoders=config.enableVideoReceive ? video::VideoRenderer::GetAvailableDecoders() : vector<uint32_t>();
+				vector<uint32_t> encoders=config.enableVideoSend ? video::VideoSource::GetAvailableEncoders() : vector<uint32_t>();
+				out.WriteByte((unsigned char)decoders.size());
+				for(uint32_t id:decoders){
+					out.WriteInt32(id);
+				}
+				if(connectionMaxLayer>=92)
+					out.WriteByte((unsigned char)video::VideoRenderer::GetMaximumResolution());
+				else
+					out.WriteByte(0);
+				/*out.WriteByte((unsigned char)encoders.size());
+				for(uint32_t id:encoders){
+					out.WriteInt32(id);
+				}*/
 			}
 			SendOrEnqueuePacket(PendingOutgoingPacket{
 					/*.seq=*/initSeq,
@@ -1651,6 +1657,15 @@ void VoIPController::RunRecvThread(){
 	LOGI("=== recv thread exiting ===");
 }
 
+bool VoIPController::WasOutgoingPacketAcknowledged(uint32_t seq){
+	for(RecentOutgoingPacket& opkt:recentOutgoingPackets){
+		if(opkt.seq==seq && opkt.ackTime!=0.0){
+			return true;
+		}
+	}
+	return false;
+}
+
 void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcEndpoint){
 	unsigned char* buffer=packet.data;
 	size_t len=packet.length;
@@ -1713,7 +1728,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcE
 				unsigned char peerTag[16];
 				Endpoint p2p(p2pID, (uint16_t) peerPort, _peerAddr, emptyV6, Endpoint::Type::UDP_P2P_INET, peerTag);
 				endpoints[p2pID]=p2p;
-				LOGW("Received reflector peer info, my=%08X:%u, peer=%08X:%u", myAddr, myPort, peerAddr, peerPort);
+				LOGW("Received reflector peer info, my=%s:%u, peer=%s:%u", IPv4Address(myAddr).ToString().c_str(), myPort, IPv4Address(peerAddr).ToString().c_str(), peerPort);
 				if(myAddr==peerAddr){
 					LOGW("Detected LAN");
 					IPv4Address lanAddr(0);
@@ -2019,6 +2034,43 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			}
 			++x;
 		}
+		if(videoSource && !videoKeyframeRequested){
+			// video frames are stored in sentVideoFrames in order of increasing numbers
+			// so if a frame (or part of it) is acknowledged but isn't sentVideoFrames[0], we know there was a packet loss
+			MutexGuard m(sentVideoFramesMutex);
+			for(SentVideoFrame& f:sentVideoFrames){
+				for(vector<uint32_t>::iterator s=f.unacknowledgedPackets.begin(); s!=f.unacknowledgedPackets.end();){
+					if(WasOutgoingPacketAcknowledged(*s)){
+						s=f.unacknowledgedPackets.erase(s);
+					}else{
+						++s;
+					}
+				}
+			}
+			bool first=true;
+			for(vector<SentVideoFrame>::iterator f=sentVideoFrames.begin();f!=sentVideoFrames.end();){
+				if(f->unacknowledgedPackets.empty()){
+					LOGV("Video frame %u was acknowledged", f->num);
+					if(first){
+						f=sentVideoFrames.erase(f);
+						continue;
+					}else{
+						LOGE("!!!!!!!!!!!!!!11 VIDEO FRAME LOSS DETECTED [1]");
+						videoKeyframeRequested=true;
+						videoSource->RequestKeyFrame();
+						break;
+					}
+				}else if(first){
+					first=false;
+				}else if(!first && f->unacknowledgedPackets.size()<f->fragmentCount){
+					LOGE("!!!!!!!!!!!!!!11 VIDEO FRAME LOSS DETECTED [2]");
+					videoKeyframeRequested=true;
+					videoSource->RequestKeyFrame();
+					break;
+				}
+				++f;
+			}
+		}
 	}
 
 	Endpoint* _currentEndpoint=&endpoints.at(currentEndpoint);
@@ -2085,6 +2137,12 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			if(flags & INIT_FLAG_GROUP_CALLS_SUPPORTED){
 				peerCapabilities|=TGVOIP_PEER_CAP_GROUP_CALLS;
 			}
+			if(flags & INIT_FLAG_VIDEO_RECV_SUPPORTED){
+				peerCapabilities|=TGVOIP_PEER_CAP_VIDEO_DISPLAY;
+			}
+			if(flags & INIT_FLAG_VIDEO_SEND_SUPPORTED){
+				peerCapabilities|=TGVOIP_PEER_CAP_VIDEO_CAPTURE;
+			}
 		}
 
 		unsigned int i;
@@ -2095,12 +2153,18 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			else
 				in.ReadInt32();
 		}
-		unsigned int numSupportedVideoCodecs=in.ReadByte();
-		for(i=0; i<numSupportedVideoCodecs; i++){
-			if(peerVersion<5)
-				in.ReadByte(); // ignore for now
-			else
-				in.ReadInt32();
+		if(!receivedInit && ((flags & INIT_FLAG_VIDEO_SEND_SUPPORTED && config.enableVideoReceive) || (flags & INIT_FLAG_VIDEO_RECV_SUPPORTED && config.enableVideoSend))){
+			LOGD("Peer video decoders:");
+			unsigned int numSupportedVideoDecoders=in.ReadByte();
+			for(i=0; i<numSupportedVideoDecoders; i++){
+				uint32_t id=static_cast<uint32_t>(in.ReadInt32());
+				peerVideoDecoders.push_back(id);
+				char* _id=reinterpret_cast<char*>(&id);
+				LOGD("%c%c%c%c", _id[3], _id[2], _id[1], _id[0]);
+			}
+			peerMaxVideoResolution=in.ReadByte();
+
+			SetupOutgoingVideoStream();
 		}
 
 		BufferOutputStream out(1024);
@@ -2196,7 +2260,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 				}else if(stm->type==STREAM_TYPE_VIDEO){
 					if(!stm->packetReassembler){
 						stm->packetReassembler=make_shared<PacketReassembler>();
-						stm->packetReassembler->SetCallback(bind(&VoIPController::ProcessIncomingVideoFrame, this, placeholders::_1, placeholders::_2));
+						stm->packetReassembler->SetCallback(bind(&VoIPController::ProcessIncomingVideoFrame, this, placeholders::_1, placeholders::_2, placeholders::_3));
 					}
 				}else{
 					LOGW("Unknown incoming stream type: %d", stm->type);
@@ -2271,6 +2335,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			}
 			bool fragmented=static_cast<bool>(sdlen & STREAM_DATA_XFLAG_FRAGMENTED);
 			bool extraFEC=static_cast<bool>(sdlen & STREAM_DATA_XFLAG_EXTRA_FEC);
+			bool keyframe=static_cast<bool>(sdlen & STREAM_DATA_XFLAG_KEYFRAME);
 			if(fragmented){
 				fragmentIndex=in.ReadByte();
 				fragmentCount=in.ReadByte();
@@ -2304,7 +2369,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 				if(stm->packetReassembler){
 					Buffer pdata(sdlen);
 					pdata.CopyFrom(buffer+in.GetOffset(), 0, sdlen);
-					stm->packetReassembler->AddFragment(std::move(pdata), fragmentIndex, fragmentCount, pts);
+					stm->packetReassembler->AddFragment(std::move(pdata), fragmentIndex, fragmentCount, pts, keyframe);
 				}
 				//LOGV("Received video fragment %u of %u", fragmentIndex, fragmentCount);
 			}else{
@@ -2413,6 +2478,7 @@ void VoIPController::ProcessExtraData(Buffer &data){
 	if(lastReceivedExtrasByType[type]==hash){
 		return;
 	}
+	LOGE("ProcessExtraData");
 	lastReceivedExtrasByType[type]=hash;
 	if(type==EXTRA_TYPE_STREAM_FLAGS){
 		unsigned char id=in.ReadByte();
@@ -2420,6 +2486,7 @@ void VoIPController::ProcessExtraData(Buffer &data){
 		LOGV("Peer stream state: id %u flags %u", (unsigned int)id, (unsigned int)flags);
 		for(shared_ptr<Stream>& s:incomingStreams){
 			if(s->id==id){
+				bool prevEnabled=s->enabled;
 				s->enabled=(flags & STREAM_FLAG_ENABLED)==STREAM_FLAG_ENABLED;
 				if(flags & STREAM_FLAG_EXTRA_EC){
 					if(!s->extraECEnabled){
@@ -2434,6 +2501,8 @@ void VoIPController::ProcessExtraData(Buffer &data){
 							s->jitterBuffer->SetMinPacketCount(2);
 					}
 				}
+				if(prevEnabled!=s->enabled && s->type==STREAM_TYPE_VIDEO && videoRenderer)
+					videoRenderer->SetStreamEnabled(s->enabled);
 				UpdateAudioOutputState();
 				break;
 			}
@@ -2801,12 +2870,19 @@ void VoIPController::AddIPv6Relays(){
 
 void VoIPController::AddTCPRelays(){
 	if(!didAddTcpRelays){
+		bool wasSetCurrentToTCP=setCurrentEndpointToTCP;
+		LOGV("Adding TCP relays");
 		MutexGuard m(endpointsMutex);
 		vector<Endpoint> relays;
 		for(pair<const int64_t, Endpoint> &_e:endpoints){
 			Endpoint& e=_e.second;
 			if(e.type!=Endpoint::Type::UDP_RELAY)
 				continue;
+			if(wasSetCurrentToTCP && !useUDP){
+				e.rtts.Reset();
+				e.averageRTT=0;
+				e.lastPingSeq=0;
+			}
 			Endpoint tcpRelay(e);
 			tcpRelay.type=Endpoint::Type::TCP_RELAY;
 			tcpRelay.averageRTT=0;
@@ -2816,6 +2892,7 @@ void VoIPController::AddTCPRelays(){
 			tcpRelay.udpPongCount=0;
 			tcpRelay.id=tcpRelay.id ^ ((int64_t) (FOURCC('T', 'C', 'P', 0)) << 32);
 			if(setCurrentEndpointToTCP && endpoints.at(currentEndpoint).type!=Endpoint::Type::TCP_RELAY){
+				LOGV("Setting current endpoint to TCP");
 				setCurrentEndpointToTCP=false;
 				currentEndpoint=tcpRelay.id;
 				preferredRelay=tcpRelay.id;
@@ -3068,11 +3145,26 @@ void VoIPController::ResetEndpointPingStats(){
 #pragma mark - Video
 
 void VoIPController::SetVideoSource(video::VideoSource *source){
-	if(videoSource)
+	if(videoSource){
+		videoSource->Stop();
 		videoSource->SetCallback(nullptr);
+	}
 	videoSource=source;
-	if(videoSource)
+	shared_ptr<Stream> stm=GetStreamByType(STREAM_TYPE_VIDEO, true);
+	if(videoSource){
+		if(!stm->enabled){
+			stm->enabled=true;
+			SendStreamFlags(*stm);
+		}
+		videoSource->Reset(stm->codec, min(peerMaxVideoResolution, INIT_VIDEO_RES_1080));
+		videoSource->Start();
 		videoSource->SetCallback(bind(&VoIPController::SendVideoFrame, this, placeholders::_1, placeholders::_2));
+	}else{
+		if(stm->enabled){
+			stm->enabled=false;
+			SendStreamFlags(*stm);
+		}
+	}
 }
 
 void VoIPController::SetVideoRenderer(video::VideoRenderer *renderer){
@@ -3087,13 +3179,24 @@ void VoIPController::SetVideoCodecSpecificData(const std::vector<Buffer>& data){
 	LOGI("Set outgoing video stream CSD");
 }
 
-void VoIPController::SendVideoFrame(const Buffer &frame, int32_t flags){
-	LOGI("Send video frame %u", (unsigned int)frame.Length());
+void VoIPController::SendVideoFrame(const Buffer &frame, uint32_t flags){
+	LOGI("Send video frame %u flags %u", (unsigned int)frame.Length(), flags);
 	shared_ptr<Stream> stm=GetStreamByType(STREAM_TYPE_VIDEO, true);
 	if(stm){
 		if(firstVideoFrameTime==0.0)
 			firstVideoFrameTime=GetCurrentTime();
-		uint32_t pts=(uint32_t)round((GetCurrentTime()-firstVideoFrameTime)*1000);
+
+		if(videoKeyframeRequested){
+			if(flags & VIDEO_FRAME_FLAG_KEYFRAME){
+					sentVideoFrames.clear();
+				videoKeyframeRequested=false;
+			}else{
+				LOGV("Dropping input video frame waiting for key frame");
+				return;
+			}
+		}
+
+		uint32_t pts=videoFrameCount++;
 		if(!stm->csdIsValid){
 			vector<Buffer>& csd=videoSource->GetCodecSpecificData();
 			stm->codecSpecificData.clear();
@@ -3109,6 +3212,9 @@ void VoIPController::SendVideoFrame(const Buffer &frame, int32_t flags){
 		size_t segmentCount=frame.Length()/1024;
 		if(frame.Length()%1024>0)
 			segmentCount++;
+		SentVideoFrame sentFrame;
+		sentFrame.num=pts;
+		sentFrame.fragmentCount=static_cast<uint32_t>(segmentCount);
 		for(size_t seg=0;seg<segmentCount;seg++){
 			BufferOutputStream pkt(1500);
 			size_t offset=seg*1024;
@@ -3119,6 +3225,8 @@ void VoIPController::SendVideoFrame(const Buffer &frame, int32_t flags){
 			int16_t lengthAndFlags=static_cast<int16_t>(len & 0x7FF);
 			if(segmentCount>1)
 				lengthAndFlags |= STREAM_DATA_XFLAG_FRAGMENTED;
+			if(flags & VIDEO_FRAME_FLAG_KEYFRAME)
+				lengthAndFlags |= STREAM_DATA_XFLAG_KEYFRAME;
 			pkt.WriteInt16(lengthAndFlags);
 			//pkt.WriteInt32(audioTimestampOut);
 			pkt.WriteInt32(pts);
@@ -3128,16 +3236,21 @@ void VoIPController::SendVideoFrame(const Buffer &frame, int32_t flags){
 			}
 			//LOGV("Sending segment %u of %u", (unsigned int)seg, (unsigned int)segmentCount);
 			pkt.WriteBytes(frame, offset, len);
+			unsentStreamPackets++;
 
+			uint32_t seq=GenerateOutSeq();
 			PendingOutgoingPacket p{
-					/*.seq=*/GenerateOutSeq(),
+					/*.seq=*/seq,
 					/*.type=*/PKT_STREAM_DATA,
 					/*.len=*/pkt.GetLength(),
 					/*.data=*/Buffer(move(pkt)),
 					/*.endpoint=*/0,
 			};
 			SendOrEnqueuePacket(move(p));
+			sentFrame.unacknowledgedPackets.push_back(seq);
 		}
+		MutexGuard m(sentVideoFramesMutex);
+		sentVideoFrames.push_back(sentFrame);
 	}
 }
 
@@ -3158,7 +3271,7 @@ void VoIPController::SendStreamCSD(VoIPController::Stream &stream){
 	SendExtra(buf, EXTRA_TYPE_STREAM_CSD);
 }
 
-void VoIPController::ProcessIncomingVideoFrame(Buffer frame, uint32_t pts){
+void VoIPController::ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool keyframe){
 	//LOGI("Incoming video frame size %u pts %u", (unsigned int)frame.Length(), pts);
 	if(frame.Length()==0){
 		LOGE("EMPTY FRAME");
@@ -3166,11 +3279,38 @@ void VoIPController::ProcessIncomingVideoFrame(Buffer frame, uint32_t pts){
 	if(videoRenderer){
 		shared_ptr<Stream> stm=GetStreamByType(STREAM_TYPE_VIDEO, false);
 		if(!stm->csdIsValid){
-			videoRenderer->Reset(CODEC_HEVC, stm->width, stm->height, stm->codecSpecificData);
+			videoRenderer->Reset(stm->codec, stm->width, stm->height, stm->codecSpecificData);
 			stm->csdIsValid=true;
 		}
-		videoRenderer->DecodeAndDisplay(frame, pts);
+		if(lastReceivedVideoFrameNumber==UINT32_MAX || lastReceivedVideoFrameNumber==pts-1 || keyframe){
+			lastReceivedVideoFrameNumber=pts;
+			//LOGV("3 before decode %u", (unsigned int)frame.Length());
+			videoRenderer->DecodeAndDisplay(move(frame), pts);
+		}else{
+			LOGW("Skipping non-keyframe after packet loss...");
+		}
 	}
+}
+
+void VoIPController::SetupOutgoingVideoStream(){
+	vector<uint32_t> myEncoders=video::VideoSource::GetAvailableEncoders();
+	shared_ptr<Stream> vstm=make_shared<Stream>();
+	vstm->id=2;
+	vstm->type=STREAM_TYPE_VIDEO;
+
+	if(find(myEncoders.begin(), myEncoders.end(), CODEC_HEVC)!=myEncoders.end() && find(peerVideoDecoders.begin(), peerVideoDecoders.end(), CODEC_HEVC)!=peerVideoDecoders.end()){
+		vstm->codec=CODEC_HEVC;
+	}else if(find(myEncoders.begin(), myEncoders.end(), CODEC_AVC)!=myEncoders.end() && find(peerVideoDecoders.begin(), peerVideoDecoders.end(), CODEC_AVC)!=peerVideoDecoders.end()){
+		vstm->codec=CODEC_AVC;
+	}else if(find(myEncoders.begin(), myEncoders.end(), CODEC_VP8)!=myEncoders.end() && find(peerVideoDecoders.begin(), peerVideoDecoders.end(), CODEC_VP8)!=peerVideoDecoders.end()){
+		vstm->codec=CODEC_VP8;
+	}else{
+		LOGW("Can't setup outgoing video stream: no codecs in common");
+		return;
+	}
+
+	vstm->enabled=false;
+	outgoingStreams.push_back(vstm);
 }
 
 #pragma mark - Timer methods
@@ -3226,18 +3366,18 @@ void VoIPController::EvaluateUdpPingResults(){
 				needRate=true;
 			udpConnectivityState=UDP_NOT_AVAILABLE;
 			useTCP=true;
-			AddTCPRelays();
-			useUDP=false;
-			waitingForRelayPeerInfo=false;
+			useUDP=avgPongs>1.0;
 			if(endpoints.at(currentEndpoint).type!=Endpoint::Type::TCP_RELAY)
 				setCurrentEndpointToTCP=true;
+			AddTCPRelays();
+			waitingForRelayPeerInfo=false;
 		}else if(avgPongs<3.0){
 			if(needRateFlags & NEED_RATE_FLAG_UDP_BAD)
 				needRate=true;
 			udpConnectivityState=UDP_BAD;
 			useTCP=true;
-			AddTCPRelays();
 			setCurrentEndpointToTCP=true;
+			AddTCPRelays();
 			udpPingTimeoutID=messageThread.Post(std::bind(&VoIPController::SendUdpPings, this), 0.5, 0.5);
 		}else{
 			udpPingTimeoutID=MessageThread::INVALID_ID;
@@ -3262,6 +3402,8 @@ void VoIPController::SendRelayPings(){
 			Endpoint& endpoint=_endpoint.second;
 			if(endpoint.type==Endpoint::Type::TCP_RELAY && !useTCP)
 				continue;
+			if(endpoint.type==Endpoint::Type::UDP_RELAY && !useUDP)
+				continue;
 			if(GetCurrentTime()-endpoint.lastPingTime>=10){
 				LOGV("Sending ping to %s", endpoint.GetAddress().ToString().c_str());
 				SendOrEnqueuePacket(PendingOutgoingPacket{
@@ -3273,7 +3415,7 @@ void VoIPController::SendRelayPings(){
 				});
 				endpoint.lastPingTime=GetCurrentTime();
 			}
-			if(endpoint.type==Endpoint::Type::UDP_RELAY || (useTCP && endpoint.type==Endpoint::Type::TCP_RELAY)){
+			if((useUDP && endpoint.type==Endpoint::Type::UDP_RELAY) || (useTCP && endpoint.type==Endpoint::Type::TCP_RELAY)){
 				double k=endpoint.type==Endpoint::Type::UDP_RELAY ? 1 : 2;
 				if(endpoint.averageRTT>0 && endpoint.averageRTT*k<minPing*relaySwitchThreshold){
 					minPing=endpoint.averageRTT*k;
@@ -3290,7 +3432,7 @@ void VoIPController::SendRelayPings(){
 				_currentEndpoint=_preferredRelay;
 			}
 		}
-		if(_currentEndpoint->type==Endpoint::Type::UDP_RELAY){
+		if(_currentEndpoint->type==Endpoint::Type::UDP_RELAY && useUDP){
 			constexpr int64_t p2pID=(int64_t)(FOURCC('P','2','P','4')) << 32;
 			constexpr int64_t lanID=(int64_t)(FOURCC('L','A','N','4')) << 32;
 

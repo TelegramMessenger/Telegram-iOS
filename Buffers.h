@@ -25,7 +25,8 @@ namespace tgvoip{
 	class BufferInputStream{
 
 	public:
-		BufferInputStream(unsigned char* data, size_t length);
+		BufferInputStream(const unsigned char* data, size_t length);
+		BufferInputStream(const Buffer& buffer);
 		~BufferInputStream();
 		void Seek(size_t offset);
 		size_t GetLength();
@@ -37,11 +38,12 @@ namespace tgvoip{
 		int16_t ReadInt16();
 		int32_t ReadTlLength();
 		void ReadBytes(unsigned char* to, size_t count);
+		void ReadBytes(Buffer& to);
 		BufferInputStream GetPartBuffer(size_t length, bool advance);
 
 	private:
 		void EnsureEnoughRemaining(size_t need);
-		unsigned char* buffer;
+		const unsigned char* buffer;
 		size_t length;
 		size_t offset;
 	};
@@ -177,6 +179,9 @@ namespace tgvoip{
 		}
 		size_t Length() const{
 			return length;
+		}
+		bool IsEmpty() const{
+			return length==0;
 		}
 		static Buffer CopyOf(const Buffer& other){
 			Buffer buf(other.length);

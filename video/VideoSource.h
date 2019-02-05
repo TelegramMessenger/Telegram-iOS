@@ -17,9 +17,12 @@ namespace tgvoip{
 		public:
 			virtual ~VideoSource(){};
 			static std::shared_ptr<VideoSource> Create();
-			void SetCallback(std::function<void(const Buffer& buffer, int32_t flags)> callback);
+			static std::vector<uint32_t> GetAvailableEncoders();
+			void SetCallback(std::function<void(const Buffer& buffer, uint32_t flags)> callback);
 			virtual void Start()=0;
 			virtual void Stop()=0;
+			virtual void Reset(uint32_t codec, int maxResolution)=0;
+			virtual void RequestKeyFrame()=0;
 			bool Failed();
 			std::string GetErrorDescription();
 			std::vector<Buffer>& GetCodecSpecificData(){
@@ -33,7 +36,7 @@ namespace tgvoip{
 			}
 
 		protected:
-			std::function<void(const Buffer &, int32_t)> callback;
+			std::function<void(const Buffer &, uint32_t)> callback;
 			bool failed;
 			std::string error;
 			unsigned int width=0;

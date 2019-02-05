@@ -16,12 +16,20 @@ namespace tgvoip{
 		public:
 			VideoSourceAndroid(jobject jobj);
 			virtual ~VideoSourceAndroid();
-			virtual void Start();
-			virtual void Stop();
+			virtual void Start() override;
+			virtual void Stop() override;
+			virtual void Reset(uint32_t codec, int maxResolution) override;
 			void SendFrame(Buffer frame, uint32_t flags);
 			void SetStreamParameters(std::vector<Buffer> csd, unsigned int width, unsigned int height);
+			virtual void RequestKeyFrame() override;
+
+			static std::vector<uint32_t> availableEncoders;
 		private:
 			jobject javaObject;
+			jmethodID prepareEncoderMethod;
+			jmethodID startMethod;
+			jmethodID stopMethod;
+			jmethodID requestKeyFrameMethod;
 		};
 	}
 }

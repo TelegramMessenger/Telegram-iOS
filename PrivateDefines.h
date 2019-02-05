@@ -44,9 +44,12 @@
 
 #define CODEC_OPUS_OLD 1
 #define CODEC_OPUS FOURCC('O','P','U','S')
+
 #define CODEC_AVC FOURCC('A','V','C',' ')
 #define CODEC_HEVC FOURCC('H','E','V','C')
 #define CODEC_VP8 FOURCC('V','P','8','0')
+#define CODEC_VP9 FOURCC('V','P','9','0')
+#define CODEC_AV1 FOURCC('A','V','0','1')
 
 #define DEFAULT_MTU 1100
 
@@ -78,6 +81,17 @@
 
 #define INIT_FLAG_DATA_SAVING_ENABLED 1
 #define INIT_FLAG_GROUP_CALLS_SUPPORTED 2
+#define INIT_FLAG_VIDEO_SEND_SUPPORTED 4
+#define INIT_FLAG_VIDEO_RECV_SUPPORTED 8
+
+#define INIT_VIDEO_RES_NONE 0
+#define INIT_VIDEO_RES_240 1
+#define INIT_VIDEO_RES_360 2
+#define INIT_VIDEO_RES_480 3
+#define INIT_VIDEO_RES_720 4
+#define INIT_VIDEO_RES_1080 5
+#define INIT_VIDEO_RES_1440 6
+#define INIT_VIDEO_RES_4K 7
 
 #define TLID_DECRYPTED_AUDIO_BLOCK 0xDBF948C1
 #define TLID_SIMPLE_AUDIO_BLOCK 0xCC0D0E76
@@ -89,7 +103,7 @@
 #define TLID_VECTOR 0x1cb5c415
 #define PAD4(x) (4-(x+(x<=253 ? 1 : 0))%4)
 
-#define MAX_RECENT_PACKETS 64
+#define MAX_RECENT_PACKETS 128
 
 #define MAX(a,b) (a>b ? a : b)
 #define MIN(a,b) (a<b ? a : b)
@@ -114,5 +128,6 @@ inline bool seqgt(uint32_t s1, uint32_t s2){
 #define NEED_RATE_FLAG_UDP_BAD 4
 #define NEED_RATE_FLAG_RECONNECTING 8
 
+#define VIDEO_FRAME_FLAG_KEYFRAME 1
 
 #endif //TGVOIP_PRIVATEDEFINES_H
