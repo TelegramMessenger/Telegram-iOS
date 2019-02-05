@@ -257,13 +257,19 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.player.seek(timestamp: timestamp)
     }
     
-    func playOnceWithSound(playAndRecord: Bool) {
+    func playOnceWithSound(playAndRecord: Bool, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
         assert(Queue.mainQueue().isCurrent())
-        self.player.actionAtEnd = .loopDisablingSound({ [weak self] in
+        let action = { [weak self] in
             Queue.mainQueue().async {
                 self?.performActionAtEnd()
             }
-        })
+        }
+        switch actionAtEnd {
+            case .loopDisablingSound:
+                self.player.actionAtEnd = .loopDisablingSound(action)
+            case .stop:
+                self.player.actionAtEnd = .action(action)
+        }
         self.player.playOnceWithSound(playAndRecord: playAndRecord)
     }
     
@@ -276,8 +282,19 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.player.setBaseRate(baseRate)
     }
     
-    func continuePlayingWithoutSound() {
+    func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
         assert(Queue.mainQueue().isCurrent())
+        let action = { [weak self] in
+            Queue.mainQueue().async {
+                self?.performActionAtEnd()
+            }
+        }
+        switch actionAtEnd {
+            case .loopDisablingSound:
+                self.player.actionAtEnd = .loopDisablingSound(action)
+            case .stop:
+                self.player.actionAtEnd = .action(action)
+        }
         self.player.continuePlayingWithoutSound()
     }
     

@@ -635,14 +635,14 @@ func rawMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference) -> S
     }
 }
 
-public func chatMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference, synchronousLoad: Bool = false, tinyThumbnailData: TinyThumbnailData? = nil) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    return chatMessagePhotoInternal(photoData: chatMessagePhotoDatas(postbox: postbox, photoReference: photoReference, synchronousLoad: synchronousLoad), synchronousLoad: synchronousLoad, tinyThumbnailData: tinyThumbnailData)
+public func chatMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return chatMessagePhotoInternal(photoData: chatMessagePhotoDatas(postbox: postbox, photoReference: photoReference, synchronousLoad: synchronousLoad), synchronousLoad: synchronousLoad)
     |> map { _, generate in
         return generate
     }
 }
 
-public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoError>, synchronousLoad: Bool = false, tinyThumbnailData: TinyThumbnailData? = nil) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
+public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoError>, synchronousLoad: Bool = false) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
     return photoData
     |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return ({
@@ -686,22 +686,7 @@ public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoE
             if let thumbnailData = thumbnailData, let imageSource = CGImageSourceCreateWithData(thumbnailData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
                 thumbnailImage = image
             }
-            
-            if GlobalExperimentalSettings.forceTinyThumbnailsPreview {
-                if let fullSizeImageValue = fullSizeImage {
-                    if let data = compressTinyThumbnail(UIImage(cgImage: fullSizeImageValue)) {
-                        if let result = decompressTinyThumbnail(data: data) {
-                            fullSizeImage = nil
-                            thumbnailImage = result.cgImage
-                        }
-                    }
-                }
-            } else if let tinyThumbnailData = tinyThumbnailData {
-                if let result = decompressTinyThumbnail(data: tinyThumbnailData) {
-                    thumbnailImage = result.cgImage
-                }
-            }
-            
+                        
             var blurredThumbnailImage: UIImage?
             if let thumbnailImage = thumbnailImage {
                 let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)

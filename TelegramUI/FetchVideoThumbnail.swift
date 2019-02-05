@@ -19,7 +19,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
         }
     }
     return -1
-    //return Int32(bufferPointer)
+    return Int32(bufferPointer)
 }
 
 private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whence: Int32) -> Int64 {
@@ -64,14 +64,14 @@ private final class FetchVideoThumbnailSource {
     private var videoStream: SoftwareVideoStream?
     private var avIoContext: UnsafeMutablePointer<AVIOContext>?
     private var avFormatContext: UnsafeMutablePointer<AVFormatContext>?
-    
+ 
     init(mediaBox: MediaBox, resourceReference: MediaResourceReference, size: Int32) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
         
         self.mediaBox = mediaBox
         self.resourceReference = resourceReference
         self.size = size
-        
+ 
         var avFormatContextRef = avformat_alloc_context()
         guard let avFormatContext = avFormatContextRef else {
             self.readingError = true
@@ -82,7 +82,7 @@ private final class FetchVideoThumbnailSource {
         let avIoBuffer = av_malloc(ioBufferSize)!
         let avIoContextRef = avio_alloc_context(avIoBuffer.assumingMemoryBound(to: UInt8.self), Int32(ioBufferSize), 0, Unmanaged.passUnretained(self).toOpaque(), readPacketCallback, nil, seekCallback)
         self.avIoContext = avIoContextRef
-        
+ 
         avFormatContext.pointee.pb = self.avIoContext
         
         guard avformat_open_input(&avFormatContextRef, nil, nil, nil) >= 0 else {
@@ -94,7 +94,7 @@ private final class FetchVideoThumbnailSource {
             self.readingError = true
             return
         }
-        
+ 
         self.avFormatContext = avFormatContext
         
         var videoStream: SoftwareVideoStream?
@@ -111,7 +111,7 @@ private final class FetchVideoThumbnailSource {
                                 let (fps, timebase) = FFMpegMediaFrameSourceContextHelpers.streamFpsAndTimeBase(stream: avFormatContext.pointee.streams.advanced(by: streamIndex).pointee!, defaultTimeBase: CMTimeMake(1, 24))
                                 
                                 let duration = CMTimeMake(avFormatContext.pointee.streams.advanced(by: streamIndex).pointee!.pointee.duration, timebase.timescale)
-                                
+ 
                                 var rotationAngle: Double = 0.0
                                 if let rotationInfo = av_dict_get(avFormatContext.pointee.streams.advanced(by: streamIndex).pointee!.pointee.metadata, "rotate", nil, 0), let value = rotationInfo.pointee.value {
                                     if strcmp(value, "0") != 0 {
@@ -178,10 +178,10 @@ private final class FetchVideoThumbnailSource {
                     let avNoPtsRawValue: UInt64 = 0x8000000000000000
                     let avNoPtsValue = Int64(bitPattern: avNoPtsRawValue)
                     let packetPts = packet.packet.pts == avNoPtsValue ? packet.packet.dts : packet.packet.pts
-                    
+ 
                     let pts = CMTimeMake(packetPts, videoStream.timebase.timescale)
                     let dts = CMTimeMake(packet.packet.dts, videoStream.timebase.timescale)
-                    
+ 
                     let duration: CMTime
                     
                     let frameDuration = packet.packet.duration
@@ -198,7 +198,7 @@ private final class FetchVideoThumbnailSource {
                 self.readingError = true
             }
         }
-        
+ 
         return frames.first
     }
     
@@ -264,7 +264,7 @@ private final class FetchVideoThumbnailSourceThreadImpl: NSObject {
             }
         }
     }
-    
+ 
     @objc func fetch(_ parameters: FetchVideoThumbnailSourceParameters) {
         let source = FetchVideoThumbnailSource(mediaBox: parameters.mediaBox, resourceReference: parameters.resourceReference, size: parameters.size)
         let _ = source.readFrame()
@@ -396,7 +396,7 @@ func streamingVideoThumbnail(postbox: Postbox, fileReference: FileMediaReference
         let impl = FetchVideoThumbnailSourceThreadImpl()
         let thread = Thread(target: impl, selector: #selector(impl.entryPoint), object: nil)
         thread.name = "streamingVideoThumbnail"
-        //impl.perform(#selector(impl.fetch(_:)), on: thread, with: FetchVideoThumbnailSourceParameters(), waitUntilDone: false)
+        impl.perform(#selector(impl.fetch(_:)), on: thread, with: FetchVideoThumbnailSourceParameters(), waitUntilDone: false)
         thread.start()
         
         return ActionDisposable {

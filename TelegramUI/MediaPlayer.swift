@@ -48,6 +48,11 @@ enum MediaPlayerActionAtEnd {
     case stop
 }
 
+enum MediaPlayerPlayOnceWithSoundActionAtEnd {
+    case loopDisablingSound
+    case stop
+}
+
 private final class MediaPlayerAudioRendererContext {
     let renderer: MediaPlayerAudioRenderer
     var requestedFrames = false

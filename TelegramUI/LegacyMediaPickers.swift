@@ -303,13 +303,7 @@ func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signa
                                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                                             }
                                             
-                                            var text = caption ?? ""
-                                            if text.isEmpty && GlobalExperimentalSettings.enableTinyThumbnails {
-                                                if let tinyThumbnail = compressTinyThumbnail(scaledImage) {
-                                                    text = serializeTinyThumbnail(tinyThumbnail)
-                                                }
-                                            }
-                                            
+                                            var text = caption ?? ""                                            
                                             messages.append(.message(text: text, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId))
                                         }
                                     }

@@ -305,13 +305,13 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
         self.player.seek(to: CMTime(seconds: timestamp, preferredTimescale: 30))
     }
     
-    func playOnceWithSound(playAndRecord: Bool) {
+    func playOnceWithSound(playAndRecord: Bool, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
     }
     
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {
     }
     
-    func continuePlayingWithoutSound() {
+    func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
     }
     
     func setBaseRate(_ baseRate: Double) {

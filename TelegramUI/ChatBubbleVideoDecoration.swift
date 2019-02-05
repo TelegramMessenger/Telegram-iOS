@@ -5,6 +5,7 @@ import SwiftSignalKit
 
 final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     private let nativeSize: CGSize
+    private let contentMode: InteractiveMediaNodeContentMode
     
     let backgroundNode: ASDisplayNode? = nil
     let contentContainerNode: ASDisplayNode
@@ -14,11 +15,12 @@ final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     
     private var validLayoutSize: CGSize?
     
-    init(cornerRadius: CGFloat, nativeSize: CGSize, backgroudColor: UIColor) {
+    init(cornerRadius: CGFloat, nativeSize: CGSize, contentMode: InteractiveMediaNodeContentMode, backgroundColor: UIColor) {
         self.nativeSize = nativeSize
+        self.contentMode = contentMode
         
         self.contentContainerNode = ASDisplayNode()
-        self.contentContainerNode.backgroundColor = backgroudColor
+        self.contentContainerNode.backgroundColor = backgroundColor
         self.contentContainerNode.clipsToBounds = true
         self.contentContainerNode.cornerRadius = cornerRadius
     }
@@ -38,7 +40,13 @@ final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
                 if contentNode.supernode !== self.contentContainerNode {
                     self.contentContainerNode.addSubnode(contentNode)
                     if let size = self.validLayoutSize {
-                        var scaledSize = self.nativeSize.aspectFitted(size)
+                        var scaledSize: CGSize
+                        switch self.contentMode {
+                            case .aspectFit:
+                                scaledSize = self.nativeSize.aspectFitted(size)
+                            case .aspectFill:
+                                scaledSize = self.nativeSize.aspectFilled(size)
+                        }
                         if abs(scaledSize.width - size.width) < 2.0 {
                             scaledSize.width = size.width
                         }
@@ -68,7 +76,13 @@ final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
         }
         transition.updateFrame(node: self.contentContainerNode, frame: CGRect(origin: CGPoint(), size: size))
         if let contentNode = self.contentNode {
-            var scaledSize = self.nativeSize.aspectFitted(size)
+            var scaledSize: CGSize
+            switch self.contentMode {
+                case .aspectFit:
+                    scaledSize = self.nativeSize.aspectFitted(size)
+                case .aspectFill:
+                    scaledSize = self.nativeSize.aspectFilled(size)
+            }
             if abs(scaledSize.width - size.width) < 2.0 {
                 scaledSize.width = size.width
             }

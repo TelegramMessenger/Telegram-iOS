@@ -214,7 +214,7 @@ private final class RadialCloudProgressContentCancelNode: ASDisplayNode {
         if let parameters = parameters as? RadialCloudProgressContentCancelNodeParameters {
             let size: CGFloat = 8.0
             context.setFillColor(parameters.color.cgColor)
-            let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: floor((bounds.size.width - size) / 2.0), y: floor((bounds.size.height - size) / 2.0)), size: CGSize(width: size, height: size)), cornerRadius: 1.0)
+            let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: floor((bounds.size.width - size) / 2.0), y: floor((bounds.size.height - size) / 2.0)), size: CGSize(width: size, height: size)), cornerRadius: 2.0)
             path.fill()
         }
     }

@@ -100,7 +100,7 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
     public static var defaultSettings: AutomaticMediaDownloadSettings {
         let defaultCategory = AutomaticMediaDownloadCategories(
             photo: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: Int32.max),
-            video: AutomaticMediaDownloadCategory(cellular: false, wifi: false, sizeLimit: 1 * 1024 * 1024),
+            video: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: 10 * 1024 * 1024),
             file: AutomaticMediaDownloadCategory(cellular: false, wifi: false, sizeLimit: 1 * 1024 * 1024),
             voiceMessage: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: 1 * 1024 * 1024),
             videoMessage: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: 4 * 1024 * 1024),
