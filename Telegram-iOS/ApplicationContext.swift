@@ -63,12 +63,12 @@ final class UnauthorizedApplicationContext {
     
     let rootController: AuthorizationSequenceController
     
-    init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, hasOtherAccounts: Bool) {
+    init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: [String]) {
         self.sharedContext = sharedContext
         self.account = account
         self.strings = defaultPresentationStrings
         
-        self.rootController = AuthorizationSequenceController(sharedContext: sharedContext, account: account, hasOtherAccounts: hasOtherAccounts, strings: self.strings, openUrl: sharedContext.applicationBindings.openUrl, apiId: BuildConfig.shared().apiId, apiHash: BuildConfig.shared().apiHash)
+        self.rootController = AuthorizationSequenceController(sharedContext: sharedContext, account: account, otherAccountPhoneNumbers: otherAccountPhoneNumbers, strings: self.strings, openUrl: sharedContext.applicationBindings.openUrl, apiId: BuildConfig.shared().apiId, apiHash: BuildConfig.shared().apiHash)
         
         account.shouldBeServiceTaskMaster.set(sharedContext.applicationBindings.applicationInForeground |> map { value -> AccountServiceTaskMasterMode in
             if value {

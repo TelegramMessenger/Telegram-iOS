@@ -782,24 +782,43 @@ private final class SharedApplicationContext {
         |> deliverOnMainQueue
         |> mapToSignal { sharedApplicationContext -> Signal<UnauthorizedApplicationContext?, NoError> in
             return sharedApplicationContext.sharedContext.activeAccounts
-            |> map { _, accounts, auth -> (UnauthorizedAccount?, Bool) in
-                return (auth, !accounts.isEmpty)
+            |> map { _, accounts, auth -> (UnauthorizedAccount, [Account])? in
+                if let auth = auth {
+                    return (auth, Array(accounts.values))
+                } else {
+                    return nil
+                }
             }
             |> distinctUntilChanged(isEqual: { lhs, rhs in
-                if lhs.0 !== rhs.0 {
+                if lhs?.0 !== rhs?.0 {
                     return false
                 }
                 return true
             })
-            |> mapToSignal { account, hasOther -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, Bool)?, NoError> in
+            |> mapToSignal { authAndAccounts -> Signal<(UnauthorizedAccount, [String])?, NoError> in
+                if let (auth, accounts) = authAndAccounts {
+                    let phoneNumbers = combineLatest(accounts.map { account -> Signal<String?, NoError> in
+                        return account.postbox.transaction { transaction -> String? in
+                            return (transaction.getPeer(account.peerId) as? TelegramUser)?.phone
+                        }
+                    })
+                    return phoneNumbers
+                    |> map { phoneNumbers -> (UnauthorizedAccount, [String])? in
+                        return (auth, phoneNumbers.compactMap({ $0 }))
+                    }
+                } else {
+                    return .single(nil)
+                }
+            }
+            |> mapToSignal { accountAndOtherAccountPhoneNumbers -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, [String])?, NoError> in
                 return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings in
                     return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings ?? CallListSettings.defaultSettings
                     }
-                |> mapToSignal { callListSettings -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, Bool)?, NoError> in
-                    if let account = account {
-                        return account.postbox.transaction { transaction -> (UnauthorizedAccount, LimitsConfiguration, CallListSettings, Bool)? in
+                |> mapToSignal { callListSettings -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, [String])?, NoError> in
+                    if let (account, otherAccountPhoneNumbers) = accountAndOtherAccountPhoneNumbers {
+                        return account.postbox.transaction { transaction -> (UnauthorizedAccount, LimitsConfiguration, CallListSettings, [String])? in
                             let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
-                            return (account, limitsConfiguration, callListSettings, hasOther)
+                            return (account, limitsConfiguration, callListSettings, otherAccountPhoneNumbers)
                         }
                     } else {
                         return .single(nil)
@@ -808,8 +827,8 @@ private final class SharedApplicationContext {
             }
             |> deliverOnMainQueue
             |> map { accountAndSettings -> UnauthorizedApplicationContext? in
-                return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings, hasOther in
-                    return UnauthorizedApplicationContext(sharedContext: sharedApplicationContext.sharedContext, account: account, hasOtherAccounts: hasOther)
+                return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings, otherAccountPhoneNumbers in
+                    return UnauthorizedApplicationContext(sharedContext: sharedApplicationContext.sharedContext, account: account, otherAccountPhoneNumbers: otherAccountPhoneNumbers)
                 }
             }
         })

@@ -3969,3 +3969,5 @@ Unused sets are archived when you add more.";
 "Wallpaper.ResetWallpapersConfirmation" = "Reset Chat Backgrounds";
 
 "Proxy.TooltipUnavailable" = "The proxy may be unavailable. Try selecting another one.";
+
+"Login.PhoneNumberAlreadyAuthorized" = "This account is already logged in from this app.";
