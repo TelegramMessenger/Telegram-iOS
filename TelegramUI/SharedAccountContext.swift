@@ -291,7 +291,8 @@ public final class SharedAccountContext {
                 var primary: Account?
                 if let primaryId = primaryId {
                     primary = self.activeAccountsValue!.accounts[primaryId]
-                } else if !self.activeAccountsValue!.accounts.isEmpty {
+                }
+                if primary == nil && !self.activeAccountsValue!.accounts.isEmpty {
                     primary = self.activeAccountsValue!.accounts.sorted(by: { lhs, rhs in lhs.key < rhs.key }).first?.1
                 }
                 if primary !== self.activeAccountsValue!.primary {
