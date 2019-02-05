@@ -1017,7 +1017,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         let openChat: (Int) -> Void = { [weak self] index in
             if let strongSelf = self {
                 if index == 0 {
-                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.peerId(strongSelf.account.peerId))
+                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.peerId(strongSelf.context.account.peerId))
                 } else {
                     strongSelf.chatListDisplayNode.chatListNode.selectChat(.index(index - 1))
                 }

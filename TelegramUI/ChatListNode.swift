@@ -1219,7 +1219,7 @@ final class ChatListNode: ListView {
                 guard index < 10 else {
                     return
                 }
-                let _ = (chatListViewForLocation(groupId: nil, location: .initial(count: 10), account: self.account)
+                let _ = (chatListViewForLocation(groupId: nil, location: .initial(count: 10), account: self.context.account)
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { update in
                     let entries = update.view.entries

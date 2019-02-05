@@ -612,7 +612,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                     state.data.activity = true
                                     return state
                                 }, transition: .animated(duration: 0.5, curve: .spring))
-                                strongSelf.actionDisposable.set((updateTwoStepVerificationEmail(account: strongSelf.context.account, currentPassword: password, updatedEmail: email)
+                                strongSelf.actionDisposable.set((updateTwoStepVerificationEmail(network: strongSelf.context.account.network, currentPassword: password, updatedEmail: email)
                                 |> deliverOnMainQueue).start(next: { result in
                                     guard let strongSelf = self else {
                                         return

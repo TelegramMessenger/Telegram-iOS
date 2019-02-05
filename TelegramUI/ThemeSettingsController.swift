@@ -318,61 +318,36 @@ public func themeSettingsController(context: AccountContext) -> ViewController {
     let previousTheme = Atomic<PresentationTheme?>(value: nil)
     
     let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]))
-        |> deliverOnMainQueue
-        |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<ThemeSettingsControllerEntry>, ThemeSettingsControllerEntry.ItemGenerationArguments)) in
-            let theme: PresentationTheme
-            let fontSize: PresentationFontSize
-            let wallpaper: TelegramWallpaper
-            let strings: PresentationStrings
-            let dateTimeFormat: PresentationDateTimeFormat
-            let disableAnimations: Bool
-            
-            let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
-            switch settings.theme {
-                case let .builtin(reference):
-                    switch reference {
-                        case .dayClassic:
-                            theme = defaultPresentationTheme
-                        case .nightGrayscale:
-                            theme = defaultDarkPresentationTheme
-                        case .nightAccent:
-                            theme = defaultDarkAccentPresentationTheme
-                        case .day:
-                            theme = makeDefaultDayPresentationTheme(accentColor: settings.themeAccentColor ?? defaultDayAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
-                }
-            }
-            wallpaper = settings.chatWallpaper
-            fontSize = settings.fontSize
-            
-            if let localizationSettings = preferences.values[localizationSettingsKey] as? LocalizationSettings {
-                strings = PresentationStrings(primaryComponent: PresentationStringsComponent(languageCode: localizationSettings.primaryComponent.languageCode, localizedName: localizationSettings.primaryComponent.localizedName, pluralizationRulesCode: localizationSettings.primaryComponent.customPluralizationCode, dict: dictFromLocalization(localizationSettings.primaryComponent.localization)), secondaryComponent: localizationSettings.secondaryComponent.flatMap({ PresentationStringsComponent(languageCode: $0.languageCode, localizedName: $0.localizedName, pluralizationRulesCode: $0.customPluralizationCode, dict: dictFromLocalization($0.localization)) }))
-            } else {
-                strings = defaultPresentationStrings
-            }
-            
-            dateTimeFormat = presentationData.dateTimeFormat
-            disableAnimations = settings.disableAnimations
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: strings.Common_Back))
-            let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeAccentColor: settings.themeAccentColor, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, disableAnimations: disableAnimations), style: .blocks, animateChanges: false)
-            
-            if previousTheme.swap(theme)?.name != theme.name {
-                presentControllerImpl?(ThemeSettingsCrossfadeController())
+    |> deliverOnMainQueue
+    |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<ThemeSettingsControllerEntry>, ThemeSettingsControllerEntry.ItemGenerationArguments)) in
+        let theme: PresentationTheme
+        let fontSize: PresentationFontSize
+        let wallpaper: TelegramWallpaper
+        let strings: PresentationStrings
+        let dateTimeFormat: PresentationDateTimeFormat
+        let disableAnimations: Bool
+        
+        let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+        switch settings.theme {
+            case let .builtin(reference):
+                switch reference {
+                    case .dayClassic:
+                        theme = defaultPresentationTheme
+                    case .nightGrayscale:
+                        theme = defaultDarkPresentationTheme
+                    case .nightAccent:
+                        theme = defaultDarkAccentPresentationTheme
+                    case .day:
+                        theme = makeDefaultDayPresentationTheme(accentColor: settings.themeAccentColor ?? defaultDayAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
             }
         }
         wallpaper = settings.chatWallpaper
         fontSize = settings.fontSize
         
-        if let localizationSettings = sharedData.entries[SharedDataKeys.localizationSettings] as? LocalizationSettings {
-            strings = PresentationStrings(primaryComponent: PresentationStringsComponent(languageCode: localizationSettings.primaryComponent.languageCode, localizedName: localizationSettings.primaryComponent.localizedName, pluralizationRulesCode: localizationSettings.primaryComponent.customPluralizationCode, dict: dictFromLocalization(localizationSettings.primaryComponent.localization)), secondaryComponent: localizationSettings.secondaryComponent.flatMap({ PresentationStringsComponent(languageCode: $0.languageCode, localizedName: $0.localizedName, pluralizationRulesCode: $0.customPluralizationCode, dict: dictFromLocalization($0.localization)) }))
-        } else {
-            strings = defaultPresentationStrings
-        }
-        
         dateTimeFormat = presentationData.dateTimeFormat
         disableAnimations = settings.disableAnimations
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: strings.Common_Back))
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeAccentColor: settings.themeAccentColor, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, disableAnimations: disableAnimations), style: .blocks, animateChanges: false)
         
         if previousTheme.swap(theme)?.name != theme.name {
@@ -381,28 +356,6 @@ public func themeSettingsController(context: AccountContext) -> ViewController {
         
         return (controllerState, (listState, arguments))
     }
-    /*    wallpaper = settings.chatWallpaper
-        wallpaperMode = settings.chatWallpaperOptions
-        fontSize = settings.fontSize
-        
-        if let localizationSettings = sharedData.entries[SharedDataKeys.localizationSettings] as? LocalizationSettings {
-            strings = PresentationStrings(primaryComponent: PresentationStringsComponent(languageCode: localizationSettings.primaryComponent.languageCode, localizedName: localizationSettings.primaryComponent.localizedName, pluralizationRulesCode: localizationSettings.primaryComponent.customPluralizationCode, dict: dictFromLocalization(localizationSettings.primaryComponent.localization)), secondaryComponent: localizationSettings.secondaryComponent.flatMap({ PresentationStringsComponent(languageCode: $0.languageCode, localizedName: $0.localizedName, pluralizationRulesCode: $0.customPluralizationCode, dict: dictFromLocalization($0.localization)) }))
-        } else {
-            strings = defaultPresentationStrings
-        }
-        
-        dateTimeFormat = presentationData.dateTimeFormat
-        disableAnimations = settings.disableAnimations
-        
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: strings.Common_Back))
-        let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeAccentColor: settings.themeAccentColor, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, wallpaperMode: wallpaperMode, fontSize: fontSize, dateTimeFormat: dateTimeFormat, disableAnimations: disableAnimations), style: .blocks, animateChanges: false)
-        
-        if previousTheme.swap(theme)?.name != theme.name {
-            presentControllerImpl?(ThemeSettingsCrossfadeController())
-        }
-        
-        return (controllerState, (listState, arguments))
-    }*/
     
     let controller = ItemListController(context: context, state: signal)
     pushControllerImpl = { [weak controller] c in
