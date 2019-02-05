@@ -277,10 +277,6 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
                 return nil
             }
         })
-        if transaction.getCurrent()?.0 == id {
-            let updatedId = transaction.createRecord([])
-            transaction.setCurrentId(updatedId)
-        }
     }
 }
 
