@@ -373,15 +373,15 @@ private func networkUsageStatsControllerEntries(presentationData: PresentationDa
     return entries
 }
 
-func networkUsageStatsController(account: Account) -> ViewController {
+func networkUsageStatsController(context: AccountContext) -> ViewController {
     let section = ValuePromise<NetworkUsageControllerSection>(.cellular)
     let stats = Promise<NetworkUsageStats>()
-    stats.set(accountNetworkUsageStats(account: account, reset: []))
+    stats.set(accountNetworkUsageStats(account: context.account, reset: []))
     
     var presentControllerImpl: ((ViewController) -> Void)?
     
     let arguments = NetworkUsageStatsControllerArguments(resetStatistics: { [weak stats] section in
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
@@ -398,7 +398,7 @@ func networkUsageStatsController(account: Account) -> ViewController {
                         case .cellular:
                             reset = .cellular
                     }
-                    stats?.set(accountNetworkUsageStats(account: account, reset: reset))
+                    stats?.set(accountNetworkUsageStats(account: context.account, reset: reset))
                 }),
             ]),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
@@ -406,7 +406,7 @@ func networkUsageStatsController(account: Account) -> ViewController {
         presentControllerImpl?(controller)
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, section.get(), stats.get()) |> deliverOnMainQueue
+    let signal = combineLatest(context.sharedContext.presentationData, section.get(), stats.get()) |> deliverOnMainQueue
         |> map { presentationData, section, stats -> (ItemListControllerState, (ItemListNodeState<NetworkUsageStatsEntry>, NetworkUsageStatsEntry.ItemGenerationArguments)) in
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .sectionControl([presentationData.strings.NetworkUsageSettings_Cellular, presentationData.strings.NetworkUsageSettings_Wifi], 0), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
@@ -415,7 +415,7 @@ func networkUsageStatsController(account: Account) -> ViewController {
             return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     controller.titleControlValueChanged = { [weak section] index in
         section?.set(index == 0 ? .cellular : .wifi)
     }

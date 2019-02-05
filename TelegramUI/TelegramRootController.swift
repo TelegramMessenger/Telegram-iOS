@@ -5,7 +5,7 @@ import TelegramCore
 import SwiftSignalKit
 
 public final class TelegramRootController: NavigationController {
-    private let account: Account
+    private let context: AccountContext
     
     public var rootTabController: TabBarController?
     
@@ -18,14 +18,14 @@ public final class TelegramRootController: NavigationController {
     private var presentationDataDisposable: Disposable?
     private var presentationData: PresentationData
     
-    public init(account: Account) {
-        self.account = account
+    public init(context: AccountContext) {
+        self.context = context
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(mode: .automaticMasterDetail, theme: NavigationControllerTheme(presentationTheme: self.presentationData.theme))
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -49,12 +49,12 @@ public final class TelegramRootController: NavigationController {
     
     public func addRootControllers(showCallsTab: Bool) {
         let tabBarController = TabBarController(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme))
-        let chatListController = ChatListController(account: self.account, groupId: nil, controlsHistoryPreload: true)
-        let callListController = CallListController(account: self.account, mode: .tab)
+        let chatListController = ChatListController(context: self.context, groupId: nil, controlsHistoryPreload: true)
+        let callListController = CallListController(context: self.context, mode: .tab)
         
         var controllers: [ViewController] = []
         
-        let contactsController = ContactsController(account: self.account)
+        let contactsController = ContactsController(context: self.context)
         controllers.append(contactsController)
         
         if showCallsTab {
@@ -62,10 +62,14 @@ public final class TelegramRootController: NavigationController {
         }
         controllers.append(chatListController)
         
-        let accountSettingsController = settingsController(account: self.account, accountManager: self.account.telegramApplicationContext.accountManager)
+        let restoreSettignsController = self.context.sharedContext.switchingSettingsController
+        restoreSettignsController?.updateContext(context: self.context)
+        self.context.sharedContext.switchingSettingsController = nil
+        
+        let accountSettingsController = restoreSettignsController ?? settingsController(context: self.context, accountManager: context.sharedContext.accountManager)
         controllers.append(accountSettingsController)
         
-        tabBarController.setControllers(controllers, selectedIndex: controllers.count - 2)
+        tabBarController.setControllers(controllers, selectedIndex: restoreSettignsController != nil ? (controllers.count - 1) : (controllers.count - 2))
         
         self.contactsController = contactsController
         self.callListController = callListController
@@ -112,6 +116,6 @@ public final class TelegramRootController: NavigationController {
         guard let controller = self.viewControllers.last as? ViewController else {
             return
         }
-        presentedLegacyShortcutCamera(account: self.account, saveCapturedMedia: false, saveEditedPhotos: false, mediaGrouping: true, parentController: controller)
+        presentedLegacyShortcutCamera(context: self.context, saveCapturedMedia: false, saveEditedPhotos: false, mediaGrouping: true, parentController: controller)
     }
 }

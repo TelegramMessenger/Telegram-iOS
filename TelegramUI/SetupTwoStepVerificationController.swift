@@ -6,7 +6,7 @@ import SwiftSignalKit
 import TelegramCore
 
 class SetupTwoStepVerificationController: ViewController {
-    private let account: Account
+    private let context: AccountContext
     private let initialState: SetupTwoStepVerificationInitialState
     private let stateUpdated: (SetupTwoStepVerificationStateUpdate, Bool, SetupTwoStepVerificationController) -> Void
     
@@ -27,12 +27,12 @@ class SetupTwoStepVerificationController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(account: Account, initialState: SetupTwoStepVerificationInitialState, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate, Bool, SetupTwoStepVerificationController) -> Void) {
-        self.account = account
+    init(context: AccountContext, initialState: SetupTwoStepVerificationInitialState, stateUpdated: @escaping (SetupTwoStepVerificationStateUpdate, Bool, SetupTwoStepVerificationController) -> Void) {
+        self.context = context
         self.initialState = initialState
         self.stateUpdated = stateUpdated
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: self.presentationData.theme.rootController.navigationBar.accentTextColor, disabledButtonColor: self.presentationData.theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
@@ -40,7 +40,7 @@ class SetupTwoStepVerificationController: ViewController {
         
         self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -98,7 +98,7 @@ class SetupTwoStepVerificationController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = SetupTwoStepVerificationControllerNode(account: self.account, updateBackAction: { [weak self] action in
+        self.displayNode = SetupTwoStepVerificationControllerNode(context: self.context, updateBackAction: { [weak self] action in
             guard let strongSelf = self else {
                 return
             }

@@ -24,7 +24,7 @@ final class InstantPageArticleNode: ASDisplayNode, InstantPageNode {
     
     private var fetchedDisposable = MetaDisposable()
     
-    init(account: Account, item: InstantPageArticleItem, webPage: TelegramMediaWebpage, strings: PresentationStrings, theme: InstantPageTheme, contentItems: [InstantPageItem], contentSize: CGSize, cover: TelegramMediaImage?, url: String, webpageId: MediaId, rtl: Bool, openUrl: @escaping (InstantPageUrlItem) -> Void) {
+    init(context: AccountContext, item: InstantPageArticleItem, webPage: TelegramMediaWebpage, strings: PresentationStrings, theme: InstantPageTheme, contentItems: [InstantPageItem], contentSize: CGSize, cover: TelegramMediaImage?, url: String, webpageId: MediaId, rtl: Bool, openUrl: @escaping (InstantPageUrlItem) -> Void) {
         self.item = item
         self.url = url
         self.webpageId = webpageId
@@ -53,8 +53,8 @@ final class InstantPageArticleNode: ASDisplayNode, InstantPageNode {
             imageNode.isUserInteractionEnabled = false
             
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
-            imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photoReference: imageReference))
-            self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
+            imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, photoReference: imageReference))
+            self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
             
             self.imageNode = imageNode
             self.addSubnode(imageNode)

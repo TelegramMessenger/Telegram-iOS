@@ -200,7 +200,7 @@ public final class AvatarNode: ASDisplayNode {
         }
     }
     
-    public func setPeer(account: Account, peer: Peer, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, synchronousLoad: Bool = false) {
+    public func setPeer(account: Account, theme: PresentationTheme, peer: Peer, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, synchronousLoad: Bool = false) {
         var synchronousLoad = synchronousLoad
         var representation: TelegramMediaImageRepresentation?
         var icon = AvatarNodeIcon.none
@@ -229,8 +229,6 @@ public final class AvatarNode: ASDisplayNode {
             
             self.displaySuspended = true
             self.contents = nil
-            
-            let theme = account.telegramApplicationContext.currentPresentationData.with { $0 }.theme
             
             if let signal = peerAvatarImage(account: account, peer: peer, authorOfMessage: authorOfMessage, representation: representation, emptyColor: emptyColor, synchronousLoad: synchronousLoad) {
                 self.imageReady.set(self.imageNode.ready)

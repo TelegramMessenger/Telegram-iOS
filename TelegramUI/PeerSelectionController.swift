@@ -5,7 +5,7 @@ import TelegramCore
 import Postbox
 
 public final class PeerSelectionController: ViewController {
-    private let account: Account
+    private let context: AccountContext
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -44,11 +44,11 @@ public final class PeerSelectionController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(account: Account, filter: ChatListNodePeersFilter = [.onlyWriteable], hasContactSelector: Bool = true, title: String? = nil) {
-        self.account = account
+    public init(context: AccountContext, filter: ChatListNodePeersFilter = [.onlyWriteable], hasContactSelector: Bool = true, title: String? = nil) {
+        self.context = context
         self.filter = filter
         self.hasContactSelector = hasContactSelector
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
@@ -66,7 +66,7 @@ public final class PeerSelectionController: ViewController {
             }
         }
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -104,7 +104,7 @@ public final class PeerSelectionController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerSelectionControllerNode(account: self.account, filter: self.filter, hasContactSelector: hasContactSelector, present: { [weak self] c, a in
+        self.displayNode = PeerSelectionControllerNode(context: self.context, filter: self.filter, hasContactSelector: hasContactSelector, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, dismiss: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
@@ -128,7 +128,7 @@ public final class PeerSelectionController: ViewController {
         
         self.peerSelectionNode.requestOpenPeerFromSearch = { [weak self] peer in
             if let strongSelf = self {
-                let storedPeer = strongSelf.account.postbox.transaction { transaction -> Void in
+                let storedPeer = strongSelf.context.account.postbox.transaction { transaction -> Void in
                     if transaction.getPeer(peer.id) == nil {
                         updatePeers(transaction: transaction, peers: [peer], update: { previousPeer, updatedPeer in
                             return updatedPeer

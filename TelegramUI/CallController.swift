@@ -15,6 +15,7 @@ public final class CallController: ViewController {
         return self._ready
     }
     
+    private let sharedContext: SharedAccountContext
     private let account: Account
     public let call: PresentationCall
     
@@ -34,11 +35,12 @@ public final class CallController: ViewController {
     private var audioOutputStateDisposable: Disposable?
     private var audioOutputState: ([AudioSessionOutput], AudioSessionOutput?)?
     
-    public init(account: Account, call: PresentationCall) {
+    public init(sharedContext: SharedAccountContext, account: Account, call: PresentationCall) {
+        self.sharedContext = sharedContext
         self.account = account
         self.call = call
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
         
@@ -91,7 +93,7 @@ public final class CallController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = CallControllerNode(account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit)
+        self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit)
         self.displayNodeDidLoad()
         
         self.controllerNode.toggleMute = { [weak self] in
@@ -170,7 +172,7 @@ public final class CallController: ViewController {
                 
                 Queue.mainQueue().after(0.5, {
                     let window = strongSelf.window
-                    let controller = callRatingController(account: strongSelf.account, callId: callId, present: { c, a in
+                    let controller = callRatingController(sharedContext: strongSelf.sharedContext, account: strongSelf.account, callId: callId, present: { c, a in
                         if let window = window {
                             c.presentationArguments = a
                             window.present(c, on: .root, blockInteraction: false, completion: {})
@@ -186,7 +188,7 @@ public final class CallController: ViewController {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
-        self.peerDisposable = (account.postbox.peerView(id: self.call.peerId)
+        self.peerDisposable = (self.account.postbox.peerView(id: self.call.peerId)
         |> deliverOnMainQueue).start(next: { [weak self] view in
             if let strongSelf = self {
                 if let peer = view.peers[view.peerId] {

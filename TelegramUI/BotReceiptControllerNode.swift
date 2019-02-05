@@ -249,7 +249,7 @@ private func availablePaymentMethods(current: BotCheckoutPaymentMethod?) -> [Bot
 }
 
 final class BotReceiptControllerNode: ItemListControllerNode<BotReceiptEntry> {
-    private let account: Account
+    private let context: AccountContext
     private let dismissAnimated: () -> Void
     
     private var presentationData: PresentationData
@@ -259,15 +259,15 @@ final class BotReceiptControllerNode: ItemListControllerNode<BotReceiptEntry> {
     
     private let actionButton: BotCheckoutActionButton
     
-    init(navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, account: Account, invoice: TelegramMediaInvoice, messageId: MessageId, dismissAnimated: @escaping () -> Void) {
-        self.account = account
+    init(controller: ItemListController<BotReceiptEntry>?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, dismissAnimated: @escaping () -> Void) {
+        self.context = context
         self.dismissAnimated = dismissAnimated
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        let arguments = BotReceiptControllerArguments(account: account)
+        let arguments = BotReceiptControllerArguments(account: context.account)
         
-        let signal: Signal<(PresentationTheme, (ItemListNodeState<BotReceiptEntry>, BotReceiptEntry.ItemGenerationArguments)), NoError> = combineLatest(account.telegramApplicationContext.presentationData, receiptData.get(), account.postbox.loadedPeerWithId(messageId.peerId))
+        let signal: Signal<(PresentationTheme, (ItemListNodeState<BotReceiptEntry>, BotReceiptEntry.ItemGenerationArguments)), NoError> = combineLatest(context.sharedContext.presentationData, receiptData.get(), context.account.postbox.loadedPeerWithId(messageId.peerId))
             |> map { presentationData, receiptData, botPeer -> (PresentationTheme, (ItemListNodeState<BotReceiptEntry>, BotReceiptEntry.ItemGenerationArguments)) in
                 let nodeState = ItemListNodeState(entries: botReceiptControllerEntries(presentationData: presentationData, invoice: invoice, formInvoice: receiptData?.0, formInfo: receiptData?.1, shippingOption: receiptData?.2, paymentMethodTitle: receiptData?.3, botPeer: botPeer), style: .plain, focusItemTag: nil, emptyStateItem: nil, animateChanges: false)
                 
@@ -277,9 +277,9 @@ final class BotReceiptControllerNode: ItemListControllerNode<BotReceiptEntry> {
         self.actionButton = BotCheckoutActionButton(inactiveFillColor: self.presentationData.theme.list.plainBackgroundColor, activeFillColor: self.presentationData.theme.list.itemAccentColor, foregroundColor: self.presentationData.theme.list.plainBackgroundColor)
         self.actionButton.setState(.inactive(self.presentationData.strings.Common_Done))
         
-        super.init(navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
+        super.init(controller: controller, navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
         
-        self.dataRequestDisposable = (requestBotPaymentReceipt(network: account.network, messageId: messageId) |> deliverOnMainQueue).start(next: { [weak self] receipt in
+        self.dataRequestDisposable = (requestBotPaymentReceipt(network: context.account.network, messageId: messageId) |> deliverOnMainQueue).start(next: { [weak self] receipt in
             if let strongSelf = self {
                 strongSelf.receiptData.set(.single((receipt.invoice, receipt.info, receipt.shippingOption, receipt.credentialsTitle)))
             }

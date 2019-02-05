@@ -11,7 +11,7 @@ enum ChatContextQueryUpdate {
     case update(ChatPresentationInputQuery, Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>)
 }
 
-func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentQueryStates: inout [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)]) -> [ChatPresentationInputQueryKind: ChatContextQueryUpdate] {
+func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentQueryStates: inout [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)]) -> [ChatPresentationInputQueryKind: ChatContextQueryUpdate] {
     guard let peer = chatPresentationInterfaceState.renderedPeer?.peer else {
         return [:]
     }
@@ -33,7 +33,7 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
     for query in inputQueries {
         let previousQuery = currentQueryStates[query.kind]?.0
         if previousQuery != query {
-            let signal = updatedContextQueryResultStateForQuery(account: account, peer: peer, inputQuery: query, previousQuery: previousQuery)
+            let signal = updatedContextQueryResultStateForQuery(context: context, peer: peer, inputQuery: query, previousQuery: previousQuery)
             updates[query.kind] = .update(query, signal)
         }
     }
@@ -54,7 +54,7 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
     return updates
 }
 
-private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer, inputQuery: ChatPresentationInputQuery, previousQuery: ChatPresentationInputQuery?) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> {
+private func updatedContextQueryResultStateForQuery(context: AccountContext, peer: Peer, inputQuery: ChatPresentationInputQuery, previousQuery: ChatPresentationInputQuery?) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> {
     switch inputQuery {
         case let .emoji(query):
             var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
@@ -68,8 +68,8 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
             } else {
                 signal = .single({ _ in return .stickers([]) })
             }
-            let stickers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = account.postbox.transaction { transaction -> StickerSettings in
-                let stickerSettings: StickerSettings = (transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.stickerSettings) as? StickerSettings) ?? .defaultSettings
+            let stickers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = context.sharedContext.accountManager.transaction { transaction -> StickerSettings in
+                let stickerSettings: StickerSettings = (transaction.getSharedData(ApplicationSpecificSharedDataKeys.stickerSettings) as? StickerSettings) ?? .defaultSettings
                 return stickerSettings
             }
             |> mapToSignal { stickerSettings -> Signal<[FoundStickerItem], NoError> in
@@ -82,7 +82,7 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
                     case .installed:
                         scope = [.installed]
                 }
-                return searchStickers(account: account, query: query.firstEmoji, scope: scope)
+                return searchStickers(account: context.account, query: query.firstEmoji, scope: scope)
             }
             |> map { stickers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 return { _ in
@@ -103,7 +103,7 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
                 signal = .single({ _ in return .hashtags([]) })
             }
             
-            let hashtags: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = recentlyUsedHashtags(postbox: account.postbox) |> map { hashtags -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+            let hashtags: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = recentlyUsedHashtags(postbox: context.account.postbox) |> map { hashtags -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 let normalizedQuery = query.lowercased()
                 var result: [String] = []
                 for hashtag in hashtags {
@@ -130,8 +130,8 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
                 signal = .single({ _ in return .mentions([]) })
             }
             
-            let inlineBots: Signal<[(Peer, Double)], NoError> = types.contains(.contextBots) ? recentlyUsedInlineBots(postbox: account.postbox) : .single([])
-            let participants = combineLatest(inlineBots, searchPeerMembers(account: account, peerId: peer.id, query: query))
+            let inlineBots: Signal<[(Peer, Double)], NoError> = types.contains(.contextBots) ? recentlyUsedInlineBots(postbox: context.account.postbox) : .single([])
+            let participants = combineLatest(inlineBots, searchPeerMembers(context: context, peerId: peer.id, query: query))
             |> map { inlineBots, peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 let filteredInlineBots = inlineBots.sorted(by: { $0.1 > $1.1 }).filter { peer, rating in
                     if rating < 0.14 {
@@ -152,7 +152,7 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
                     if inlineBotPeerIds.contains(peer.id) {
                         return false
                     }
-                    if !types.contains(.accountPeer) && peer.id == account.peerId {
+                    if !types.contains(.accountPeer) && peer.id == context.account.peerId {
                         return false
                     }
                     return true
@@ -184,7 +184,7 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
                 signal = .single({ _ in return .commands([]) })
             }
             
-            let participants = peerCommands(account: account, id: peer.id)
+            let participants = peerCommands(account: context.account, id: peer.id)
                 |> map { commands -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                     let filteredCommands = commands.commands.filter { command in
                         if command.command.text.hasPrefix(normalizedQuery) {
@@ -215,21 +215,21 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
             }
             
             let chatPeer = peer
-            let contextBot = resolvePeerByName(account: account, name: addressName)
+            let contextBot = resolvePeerByName(account: context.account, name: addressName)
                 |> mapToSignal { peerId -> Signal<Peer?, NoError> in
                     if let peerId = peerId {
-                        return account.postbox.loadedPeerWithId(peerId)
-                            |> map { peer -> Peer? in
-                                return peer
-                            }
-                            |> take(1)
+                        return context.account.postbox.loadedPeerWithId(peerId)
+                        |> map { peer -> Peer? in
+                            return peer
+                        }
+                        |> take(1)
                     } else {
                         return .single(nil)
                     }
                 }
                 |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> in
                     if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-                        let contextResults = requestChatContextResults(account: account, botId: user.id, peerId: chatPeer.id, query: query, offset: "")
+                        let contextResults = requestChatContextResults(account: context.account, botId: user.id, peerId: chatPeer.id, query: query, offset: "")
                             |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                                 return { _ in
                                     return .contextRequestResult(user, results)
@@ -283,7 +283,7 @@ private func updatedContextQueryResultStateForQuery(account: Account, peer: Peer
     }
 }
 
-func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentQuery: ChatPresentationInputQuery?) -> (ChatPresentationInputQuery?, Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>)? {
+func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentQuery: ChatPresentationInputQuery?) -> (ChatPresentationInputQuery?, Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>)? {
     var inputQuery: ChatPresentationInputQuery?
     if let search = chatPresentationInterfaceState.search {
         switch search.domain {
@@ -311,7 +311,7 @@ func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPre
                             }
                         }
                         
-                        let participants = searchPeerMembers(account: account, peerId: peer.id, query: query)
+                        let participants = searchPeerMembers(context: context, peerId: peer.id, query: query)
                         |> map { peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                             let filteredPeers = peers
                             var sortedPeers: [Peer] = []
@@ -337,7 +337,7 @@ func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPre
 
 private let dataDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link]).rawValue)
 
-func urlPreviewStateForInputText(_ inputText: String?, account: Account, currentQuery: String?) -> (String?, Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError>)? {
+func urlPreviewStateForInputText(_ inputText: String?, context: AccountContext, currentQuery: String?) -> (String?, Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError>)? {
     guard let text = inputText else {
         if currentQuery != nil {
             return (nil, .single({ _ in return nil }))
@@ -358,7 +358,7 @@ func urlPreviewStateForInputText(_ inputText: String?, account: Account, current
         
         if detectedUrl != currentQuery {
             if let detectedUrl = detectedUrl {
-                return (detectedUrl, webpagePreview(account: account, url: detectedUrl) |> map { value in
+                return (detectedUrl, webpagePreview(account: context.account, url: detectedUrl) |> map { value in
                     return { _ in return value }
                 })
             } else {

@@ -3,16 +3,16 @@ import Display
 import TelegramCore
 
 final class UndoOverlayController: ViewController {
-    private let account: Account
+    private let context: AccountContext
     private let presentationData: PresentationData
     private let text: String
     private let action: (Bool) -> Void
     
     private var didPlayPresentationAnimation = false
     
-    init(account: Account, text: String, action: @escaping (Bool) -> Void) {
-        self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, text: String, action: @escaping (Bool) -> Void) {
+        self.context = context
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.text = text
         self.action = action
         

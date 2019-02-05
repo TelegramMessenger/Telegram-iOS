@@ -7,8 +7,7 @@ import Display
 
 import LegacyComponents
 
-var legacyComponentsApplication: UIApplication!
-private var legacyComponentsAccount: Account?
+var legacyComponentsApplication: UIApplication?
 
 private var legacyLocalization = TGLocalization(version: 0, code: "en", dict: [:], isActive: true)
 
@@ -20,24 +19,20 @@ func updateLegacyTheme() {
     TGCheckButtonView.resetCache()
 }
 
-public func updateLegacyComponentsAccount(_ account: Account?) {
-    legacyComponentsAccount = account
-}
-
 private var legacyDocumentsStorePath: String?
 private var legacyCanOpenUrl: (URL) -> Bool = { _ in return false }
 private var legacyOpenUrl: (URL) -> Void = { _ in }
-private weak var legacyAccount: Account?
+private weak var legacyContext: AccountContext?
 
-func legacyAccountGet() -> Account? {
-    return legacyAccount
+func legacyContextGet() -> AccountContext? {
+    return legacyContext
 }
 
 private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponentsAccessChecker {
-    private weak var applicationContext: TelegramApplicationContext?
+    private weak var context: AccountContext?
     
-    init(applicationContext: TelegramApplicationContext?) {
-        self.applicationContext = applicationContext
+    init(context: AccountContext?) {
+        self.context = context
     }
     
     public func checkAddressBookAuthorizationStatus(alertDismissComlpetion alertDismissCompletion: (() -> Void)!) -> Bool {
@@ -68,8 +63,8 @@ private final class LegacyComponentsAccessCheckerImpl: NSObject, LegacyComponent
             assertionFailure()
             subject = .send
         }
-        if let applicationContext = self.applicationContext {
-            DeviceAccess.authorizeAccess(to: .location(subject), presentationData: applicationContext.currentPresentationData.with { $0 }, present: applicationContext.presentGlobalController, openSettings: applicationContext.applicationBindings.openSettings, { value in
+        if let context = self.context {
+            DeviceAccess.authorizeAccess(to: .location(subject), presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
                 if !value {
                     alertDismissCompletion?()
                 }
@@ -105,7 +100,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func applicationWindows() -> [UIWindow]! {
-        return legacyComponentsApplication.windows
+        return legacyComponentsApplication?.windows ?? []
     }
     
     public func applicationStatusBarWindow() -> UIWindow! {
@@ -117,7 +112,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
             return nil
         }
         
-        for window in legacyComponentsApplication.windows {
+        for window in legacyComponentsApplication?.windows ?? [] {
             if window.isKind(of: keyboardWindowClass) {
                 return window
             }
@@ -172,7 +167,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func setIdleTimerDisabled(_ value: Bool) {
-        legacyComponentsApplication.isIdleTimerDisabled = value
+        legacyComponentsApplication?.isIdleTimerDisabled = value
     }
     
     public func pauseMusicPlayback() {
@@ -187,12 +182,12 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func accessChecker() -> LegacyComponentsAccessChecker! {
-        return LegacyComponentsAccessCheckerImpl(applicationContext: legacyAccount?.telegramApplicationContext)
+        return LegacyComponentsAccessCheckerImpl(context: legacyContext)
     }
     
     public func stickerPacksSignal() -> SSignal! {
-        if let legacyAccount = legacyAccount {
-            return legacyComponentsStickers(postbox: legacyAccount.postbox, namespace: Namespaces.ItemCollection.CloudStickerPacks)
+        if let legacyContext = legacyContext {
+            return legacyComponentsStickers(postbox: legacyContext.account.postbox, namespace: Namespaces.ItemCollection.CloudStickerPacks)
         } else {
             var dict: [AnyHashable: Any] = [:]
             dict["packs"] = NSArray()
@@ -201,8 +196,8 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func maskStickerPacksSignal() -> SSignal! {
-        if let legacyAccount = legacyAccount {
-            return legacyComponentsStickers(postbox: legacyAccount.postbox, namespace: Namespaces.ItemCollection.CloudMaskPacks)
+        if let legacyContext = legacyContext {
+            return legacyComponentsStickers(postbox: legacyContext.account.postbox, namespace: Namespaces.ItemCollection.CloudMaskPacks)
         } else {
             var dict: [AnyHashable: Any] = [:]
             dict["packs"] = NSArray()
@@ -215,7 +210,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func request(_ type: TGAudioSessionType, interrupted: (() -> Void)!) -> SDisposable! {
-        if let legacyAccount = legacyAccount {
+        if let legacyContext = legacyContext {
             let convertedType: ManagedAudioSessionType
             switch type {
                 case TGAudioSessionTypePlayAndRecord, TGAudioSessionTypePlayAndRecordHeadphones:
@@ -223,29 +218,29 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                 default:
                     convertedType = .play
             }
-            let disposable = legacyAccount.telegramApplicationContext.mediaManager?.audioSession.push(audioSessionType: convertedType, once: true, activate: { _ in
+            let disposable = legacyContext.sharedContext.mediaManager.audioSession.push(audioSessionType: convertedType, once: true, activate: { _ in
             }, deactivate: {
                 interrupted?()
                 return .complete()
             })
             
             return SBlockDisposable(block: {
-                disposable?.dispose()
+                disposable.dispose()
             })
         }
         return nil
     }
     
     public func currentWallpaperInfo() -> TGWallpaperInfo! {
-        if let account = legacyComponentsAccount {
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        if let legacyContext = legacyContext {
+            let presentationData = legacyContext.sharedContext.currentPresentationData.with { $0 }
             switch presentationData.chatWallpaper {
                 case .builtin:
                     return TGBuiltinWallpaperInfo()
                 case let .color(color):
                     return TGColorWallpaperInfo(color: UInt32(bitPattern: color))
                 case let .image(representations, _):
-                    if let resource = largestImageRepresentation(representations)?.resource, let path = account.postbox.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
+                    if let resource = largestImageRepresentation(representations)?.resource, let path = legacyContext.account.postbox.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
                         return TGCustomImageWallpaperInfo(image: image)
                     } else {
                         return TGBuiltinWallpaperInfo()
@@ -258,7 +253,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                             return TGBuiltinWallpaperInfo()
                         }
                     }
-                    else if let path = account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
+                    else if let path = legacyContext.account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
                         return TGCustomImageWallpaperInfo(image: image)
                     } else {
                         return TGBuiltinWallpaperInfo()
@@ -270,8 +265,8 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
     
     public func currentWallpaperImage() -> UIImage! {
-        if let account = legacyComponentsAccount {
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        if let legacyContext = legacyContext {
+            let presentationData = legacyContext.sharedContext.currentPresentationData.with { $0 }
             switch presentationData.chatWallpaper {
                 case .builtin:
                     return nil
@@ -285,7 +280,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                         context.fill(CGRect(origin: CGPoint(), size: size))
                     })
                 case let .image(representations, _):
-                    if let resource = largestImageRepresentation(representations)?.resource, let path = account.postbox.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
+                    if let resource = largestImageRepresentation(representations)?.resource, let path = legacyContext.account.postbox.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
                         return image
                     } else {
                         return nil
@@ -305,7 +300,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                             return nil
                         }
                     } else {
-                        if let path = account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
+                        if let path = legacyContext.account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
                             return image
                         } else {
                             return nil
@@ -385,8 +380,8 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     
     func navigationBarPallete() -> TGNavigationBarPallete! {
         let theme: PresentationTheme
-        if let account = legacyComponentsAccount {
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        if let legacyContext = legacyContext {
+            let presentationData = legacyContext.sharedContext.currentPresentationData.with { $0 }
             theme = presentationData.theme
         } else {
             theme = defaultPresentationTheme
@@ -397,8 +392,8 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     
     func menuSheetPallete() -> TGMenuSheetPallete! {
         let theme: PresentationTheme
-        if let account = legacyComponentsAccount {
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        if let legacyContext = legacyContext {
+            let presentationData = legacyContext.sharedContext.currentPresentationData.with { $0 }
             theme = presentationData.theme
         } else {
             theme = defaultPresentationTheme
@@ -410,8 +405,8 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     
     func mediaAssetsPallete() -> TGMediaAssetsPallete! {
         let presentationTheme: PresentationTheme
-        if let account = legacyComponentsAccount {
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        if let legacyContext = legacyContext {
+            let presentationData = legacyContext.sharedContext.currentPresentationData.with { $0 }
             presentationTheme = presentationData.theme
         } else {
             presentationTheme = defaultPresentationTheme
@@ -425,8 +420,8 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     
     func checkButtonPallete() -> TGCheckButtonPallete! {
         let presentationTheme: PresentationTheme
-        if let account = legacyComponentsAccount {
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        if let legacyContext = legacyContext {
+            let presentationData = legacyContext.sharedContext.currentPresentationData.with { $0 }
             presentationTheme = presentationData.theme
         } else {
             presentationTheme = defaultPresentationTheme
@@ -437,8 +432,8 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     }
 }
 
-public func setupLegacyComponents(account: Account) {
-    legacyAccount = account
+public func setupLegacyComponents(context: AccountContext) {
+    legacyContext = context
 }
 
 public func initializeLegacyComponents(application: UIApplication?, currentSizeClassGetter: @escaping () -> UIUserInterfaceSizeClass, currentHorizontalClassGetter: @escaping () -> UIUserInterfaceSizeClass, documentsPath: String, currentApplicationBounds: @escaping () -> CGRect, canOpenUrl: @escaping (URL) -> Bool, openUrl: @escaping (URL) -> Void) {
@@ -452,13 +447,13 @@ public func initializeLegacyComponents(application: UIApplication?, currentSizeC
     TGRemoteImageView.setSharedCache(TGCache())
     
     TGImageDataSource.register(LegacyStickerImageDataSource(account: {
-        return legacyAccount
+        return legacyContext?.account
     }))
     TGImageDataSource.register(LegacyPeerAvatarPlaceholderDataSource(account: {
-        return legacyAccount
+        return legacyContext?.account
     }))
     TGImageDataSource.register(LegacyLocationVenueIconDataSource(account: {
-        return legacyAccount
+        return legacyContext?.account
     }))
     ASActor.registerClass(LegacyImageDownloadActor.self)
     LegacyComponentsGlobals.setProvider(LegacyComponentsGlobalsProviderImpl())

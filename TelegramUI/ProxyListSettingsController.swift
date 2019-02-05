@@ -296,12 +296,12 @@ public enum ProxySettingsControllerMode {
     case modal
 }
 
-public func proxySettingsController(account: Account, mode: ProxySettingsControllerMode = .default) -> ViewController {
-    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-    return proxySettingsController(postbox: account.postbox, network: account.network, mode: mode, theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: account.telegramApplicationContext.presentationData |> map { ($0.theme, $0.strings) })
+public func proxySettingsController(context: AccountContext, mode: ProxySettingsControllerMode = .default) -> ViewController {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    return proxySettingsController(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, mode: mode, theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.sharedContext.presentationData |> map { ($0.theme, $0.strings) })
 }
 
-public func proxySettingsController(postbox: Postbox, network: Network, mode: ProxySettingsControllerMode, theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>) -> ViewController {
+public func proxySettingsController(accountManager: AccountManager, postbox: Postbox, network: Network, mode: ProxySettingsControllerMode, theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var dismissImpl: (() -> Void)?
     let stateValue = Atomic(value: ProxySettingsControllerState())
@@ -323,15 +323,15 @@ public func proxySettingsController(postbox: Postbox, network: Network, mode: Pr
     var shareProxyListImpl: (() -> Void)?
     
     let arguments = ProxySettingsControllerArguments(toggleEnabled: { value in
-        let _ = updateProxySettingsInteractively(postbox: postbox, network: network, { current in
+        let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
             current.enabled = value
             return current
         }).start()
     }, addNewServer: {
-        presentControllerImpl?(proxyServerSettingsController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, postbox: postbox, network: network, currentSettings: nil), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(proxyServerSettingsController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, accountManager: accountManager, postbox: postbox, network: network, currentSettings: nil), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, activateServer: { server in
-        let _ = updateProxySettingsInteractively(postbox: postbox, network: network, { current in
+        let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
             if current.activeServer != server {
                 if let _ = current.servers.index(of: server) {
@@ -342,9 +342,9 @@ public func proxySettingsController(postbox: Postbox, network: Network, mode: Pr
             return current
         }).start()
     }, editServer: { server in
-        presentControllerImpl?(proxyServerSettingsController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, postbox: postbox, network: network, currentSettings: server), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(proxyServerSettingsController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, accountManager: accountManager, postbox: postbox, network: network, currentSettings: server), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, removeServer: { server in
-        let _ = updateProxySettingsInteractively(postbox: postbox, network: network, { current in
+        let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
             if let index = current.servers.index(of: server) {
                 current.servers.remove(at: index)
@@ -364,7 +364,7 @@ public func proxySettingsController(postbox: Postbox, network: Network, mode: Pr
             return state
         }
     }, toggleUseForCalls: { value in
-        let _ = updateProxySettingsInteractively(postbox: postbox, network: network, { current in
+        let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
             current.useForCalls = value
             return current
@@ -374,14 +374,14 @@ public func proxySettingsController(postbox: Postbox, network: Network, mode: Pr
     })
     
     let proxySettings = Promise<ProxySettings>()
-    proxySettings.set(postbox.preferencesView(keys: [PreferencesKeys.proxySettings])
-        |> map { preferencesView -> ProxySettings in
-            if let value = preferencesView.values[PreferencesKeys.proxySettings] as? ProxySettings {
-                return value
-            } else {
-                return ProxySettings.defaultSettings
-            }
-        })
+    proxySettings.set(accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
+    |> map { sharedData -> ProxySettings in
+        if let value = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings {
+            return value
+        } else {
+            return ProxySettings.defaultSettings
+        }
+    })
     
     let statusesContext = ProxyServersStatuses(network: network, servers: proxySettings.get()
     |> map { proxySettings -> [ProxyServerSettings] in
@@ -454,7 +454,7 @@ public func proxySettingsController(postbox: Postbox, network: Network, mode: Pr
             afterAll = true
         }
 
-        let _ = updateProxySettingsInteractively(postbox: postbox, network: network, { current in
+        let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
             if let index = current.servers.index(of: fromServer) {
                 current.servers.remove(at: index)

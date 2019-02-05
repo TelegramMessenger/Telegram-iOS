@@ -4,7 +4,7 @@ import Postbox
 import TelegramCore
 import Display
 
-func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, reverse: Bool, account: Account, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, initialData: InitialMessageHistoryData?, keyboardButtonsMessage: Message?, cachedData: CachedPeerData?, cachedDataMessages: [MessageId: Message]?, readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?) -> Signal<ChatHistoryViewTransition, NoError> {
+func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, reverse: Bool, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, initialData: InitialMessageHistoryData?, keyboardButtonsMessage: Message?, cachedData: CachedPeerData?, cachedDataMessages: [MessageId: Message]?, readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?) -> Signal<ChatHistoryViewTransition, NoError> {
     return Signal { subscriber in
         let mergeResult: (deleteIndices: [Int], indicesAndItems: [(Int, ChatHistoryEntry, Int?)], updateIndices: [(Int, ChatHistoryEntry, Int)])
         let allUpdated = fromView?.associatedData != toView.associatedData

@@ -12,14 +12,14 @@ public final class NotificationContainerController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    public init(account: Account) {
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    public init(context: AccountContext) {
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
             |> deliverOnMainQueue).start(next: { [weak self] presentationData in
                 if let strongSelf = self {
                     let previousTheme = strongSelf.presentationData.theme

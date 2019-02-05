@@ -54,6 +54,7 @@ enum WallpaperUploadManagerStatus {
 }
 
 final class WallpaperUploadManager {
+    private let sharedContext: SharedAccountContext
     private let account: Account
     private var context: WallpaperUploadContext?
     
@@ -62,7 +63,8 @@ final class WallpaperUploadManager {
     
     private let statePromise = Promise<WallpaperUploadManagerStatus>(.none)
     
-    init(account: Account, presentationData: Signal<PresentationData, NoError>) {
+    init(sharedContext: SharedAccountContext, account: Account, presentationData: Signal<PresentationData, NoError>) {
+        self.sharedContext = sharedContext
         self.account = account
         self.presentationDataDisposable.set(presentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
@@ -91,6 +93,7 @@ final class WallpaperUploadManager {
                     let statePromise = Promise<WallpaperUploadManagerStatus>(.uploading(currentWallpaper, 0.0))
                     self.statePromise.set(statePromise.get())
                     
+                    let sharedContext = self.sharedContext
                     let account = self.account
                     disposable.set(uploadWallpaper(account: account, resource: currentResource, settings: currentWallpaper.settings ?? WallpaperSettings()).start(next: { [weak self] status in
                         guard let strongSelf = self else {
@@ -100,10 +103,11 @@ final class WallpaperUploadManager {
                             let updateWallpaper: (TelegramWallpaper) -> Void = { wallpaper in
                                 if let resource = wallpaper.mainResource {
                                     let _ = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start(completed: {})
+                                    let _ = sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start(completed: {})
                                 }
                                 
                                 if strongSelf.currentPresentationData?.theme.name == presentationData.theme.name {
-                                    let _ = (updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
+                                    let _ = (updatePresentationThemeSettingsInteractively(accountManager: sharedContext.accountManager, { current in
                                         let updatedWallpaper: TelegramWallpaper
                                         if let currentSettings = current.chatWallpaper.settings {
                                             updatedWallpaper = wallpaper.withUpdatedSettings(currentSettings)
@@ -120,6 +124,8 @@ final class WallpaperUploadManager {
                             
                             if case let .file(_, _, _, _, _, _, _, file, settings) = wallpaper, settings.blur {
                                 let _ = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+                                })
+                                let _ = sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
                                     updateWallpaper(wallpaper)
                                 })
                             } else {

@@ -88,7 +88,7 @@ enum BotCheckoutInfoControllerStatus {
 }
 
 final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let account: Account
+    private let context: AccountContext
     private let invoice: BotPaymentInvoice
     private let messageId: MessageId
     private var focus: BotCheckoutInfoControllerFocus?
@@ -118,8 +118,8 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
     private let verifyDisposable = MetaDisposable()
     private var isVerifying = false
     
-    init(account: Account, invoice: BotPaymentInvoice, messageId: MessageId, formInfo: BotPaymentRequestedInfo, focus: BotCheckoutInfoControllerFocus, theme: PresentationTheme, strings: PresentationStrings, dismiss: @escaping () -> Void, openCountrySelection: @escaping () -> Void, updateStatus: @escaping (BotCheckoutInfoControllerStatus) -> Void, formInfoUpdated: @escaping (BotPaymentRequestedInfo, BotPaymentValidatedFormInfo) -> Void, present: @escaping (ViewController, Any?) -> Void) {
-        self.account = account
+    init(context: AccountContext, invoice: BotPaymentInvoice, messageId: MessageId, formInfo: BotPaymentRequestedInfo, focus: BotCheckoutInfoControllerFocus, theme: PresentationTheme, strings: PresentationStrings, dismiss: @escaping () -> Void, openCountrySelection: @escaping () -> Void, updateStatus: @escaping (BotCheckoutInfoControllerStatus) -> Void, formInfoUpdated: @escaping (BotPaymentRequestedInfo, BotPaymentValidatedFormInfo) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+        self.context = context
         self.invoice = invoice
         self.messageId = messageId
         self.formInfo = formInfo
@@ -331,7 +331,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
     func verify() {
         self.isVerifying = true
         let formInfo = self.collectFormInfo()
-        self.verifyDisposable.set((validateBotPaymentForm(network: self.account.network, saveInfo: self.saveInfoItem.isOn, messageId: self.messageId, formInfo: formInfo) |> deliverOnMainQueue).start(next: { [weak self] result in
+        self.verifyDisposable.set((validateBotPaymentForm(network: self.context.account.network, saveInfo: self.saveInfoItem.isOn, messageId: self.messageId, formInfo: formInfo) |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.formInfoUpdated(formInfo, result)
             }

@@ -321,30 +321,27 @@ private func areSettingsValid(_ settings: AutomaticThemeSwitchSetting) -> Bool {
     }
 }
 
-public func themeAutoNightSettingsController(account: Account) -> ViewController {
-    var pushControllerImpl: ((ViewController) -> Void)?
+public func themeAutoNightSettingsController(context: AccountContext) -> ViewController {
     var presentControllerImpl: ((ViewController) -> Void)?
     
     let actionsDisposable = DisposableSet()
     let updateAutomaticBrightnessDisposable = MetaDisposable()
     
     let stagingSettingsPromise = ValuePromise<AutomaticThemeSwitchSetting?>(nil)
-    let themeSettingsKey = ApplicationSpecificPreferencesKeys.presentationThemeSettings
-    let localizationSettingsKey = PreferencesKeys.localizationSettings
-    let preferences = account.postbox.preferencesView(keys: [themeSettingsKey, localizationSettingsKey])
+    let sharedData = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
     
     let updateLocationDisposable = MetaDisposable()
     actionsDisposable.add(updateLocationDisposable)
     
     let updateSettings: (@escaping (AutomaticThemeSwitchSetting) -> AutomaticThemeSwitchSetting) -> Void = { f in
-        let _ = (combineLatest(stagingSettingsPromise.get(), preferences)
+        let _ = (combineLatest(stagingSettingsPromise.get(), sharedData)
         |> take(1)
-        |> deliverOnMainQueue).start(next: { stagingSettings, preferences in
-            let settings = (preferences.values[themeSettingsKey] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+        |> deliverOnMainQueue).start(next: { stagingSettings, sharedData in
+            let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
             let updated = f(stagingSettings ?? settings.automaticThemeSwitchSetting)
             stagingSettingsPromise.set(updated)
             if areSettingsValid(updated) {
-                let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
+                let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                     var current = current
                     current.automaticThemeSwitchSetting = updated
                     return current
@@ -355,7 +352,7 @@ public func themeAutoNightSettingsController(account: Account) -> ViewController
     
     let forceUpdateLocation: () -> Void = {
         let locationCoordinates = Signal<(Double, Double), NoError> { subscriber in
-            return account.telegramApplicationContext.locationManager!.push(mode: DeviceLocationMode.precise, updated: { coordinate in
+            return context.sharedContext.locationManager!.push(mode: DeviceLocationMode.precise, updated: { coordinate in
                 subscriber.putNext((coordinate.latitude, coordinate.longitude))
                 subscriber.putCompletion()
             })
@@ -459,29 +456,28 @@ public func themeAutoNightSettingsController(account: Account) -> ViewController
                     break
             }
             
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(ThemeAutoNightTimeSelectionActionSheet(account: account, currentValue: currentValue, applyValue: { value in
+            presentControllerImpl?(ThemeAutoNightTimeSelectionActionSheet(context: context, currentValue: currentValue, applyValue: { value in
                 guard let value = value else {
                     return
                 }
                 updateSettings { settings in
                     var settings = settings
                     switch settings.trigger {
-                    case let .timeBased(setting):
-                        switch setting {
-                        case var .manual(fromSeconds, toSeconds):
-                            switch field {
-                            case .from:
-                                fromSeconds = value
-                            case .to:
-                                toSeconds = value
+                        case let .timeBased(setting):
+                            switch setting {
+                            case var .manual(fromSeconds, toSeconds):
+                                switch field {
+                                case .from:
+                                    fromSeconds = value
+                                case .to:
+                                    toSeconds = value
+                                }
+                                settings.trigger = .timeBased(setting: .manual(fromSeconds: fromSeconds, toSeconds: toSeconds))
+                            default:
+                                break
                             }
-                            settings.trigger = .timeBased(setting: .manual(fromSeconds: fromSeconds, toSeconds: toSeconds))
                         default:
                             break
-                        }
-                    default:
-                        break
                     }
                     return settings
                 }
@@ -513,10 +509,10 @@ public func themeAutoNightSettingsController(account: Account) -> ViewController
         }
     })
     
-    let signal = combineLatest(account.telegramApplicationContext.presentationData, preferences, stagingSettingsPromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, sharedData, stagingSettingsPromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, preferences, stagingSettings -> (ItemListControllerState, (ItemListNodeState<ThemeAutoNightSettingsControllerEntry>, ThemeAutoNightSettingsControllerEntry.ItemGenerationArguments)) in
-        let settings = (preferences.values[themeSettingsKey] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+    |> map { presentationData, sharedData, stagingSettings -> (ItemListControllerState, (ItemListNodeState<ThemeAutoNightSettingsControllerEntry>, ThemeAutoNightSettingsControllerEntry.ItemGenerationArguments)) in
+        let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.AutoNightTheme_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(entries: themeAutoNightSettingsControllerEntries(theme: presentationData.theme, strings: presentationData.strings, switchSetting: stagingSettings ?? settings.automaticThemeSwitchSetting, dateTimeFormat: presentationData.dateTimeFormat), style: .blocks, animateChanges: false)
@@ -527,10 +523,7 @@ public func themeAutoNightSettingsController(account: Account) -> ViewController
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
-    pushControllerImpl = { [weak controller] c in
-        (controller?.navigationController as? NavigationController)?.pushViewController(c)
-    }
+    let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root))
     }

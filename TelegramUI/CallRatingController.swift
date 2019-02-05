@@ -331,8 +331,8 @@ func rateCallAndSendLogs(account: Account, callId: CallId, starsCount: Int, comm
     }
 }
 
-func callRatingController(account: Account, callId: CallId, present: @escaping (ViewController, Any?) -> Void) -> AlertController {
-    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+func callRatingController(sharedContext: SharedAccountContext, account: Account, callId: CallId, present: @escaping (ViewController, Any) -> Void) -> AlertController {
+    let presentationData = sharedContext.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings
     
@@ -347,7 +347,7 @@ func callRatingController(account: Account, callId: CallId, present: @escaping (
     }, apply: { rating in
         dismissImpl?(true)
         if rating < 4 {
-            let controller = callFeedbackController(account: account, callId: callId, rating: rating)
+            let controller = callFeedbackController(sharedContext: sharedContext, account: account, callId: callId, rating: rating)
             present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         } else {
             let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: "", includeLogs: false).start()

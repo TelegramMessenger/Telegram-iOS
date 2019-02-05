@@ -6,28 +6,28 @@ import WebKit
 import TelegramCore
 
 class ChatDocumentGalleryItem: GalleryItem {
-    let account: Account
+    let context: AccountContext
     let presentationData: PresentationData
     let message: Message
     let location: MessageHistoryEntryLocation?
     
-    init(account: Account, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?) {
+        self.context = context
         self.presentationData = presentationData
         self.message = message
         self.location = location
     }
     
     func node() -> GalleryItemNode {
-        let node = ChatDocumentGalleryItemNode(account: self.account, presentationData: self.presentationData)
+        let node = ChatDocumentGalleryItemNode(context: self.context, presentationData: self.presentationData)
         
         for media in self.message.media {
             if let file = media as? TelegramMediaFile {
-                node.setFile(account: account, fileReference: .message(message: MessageReference(self.message), media: file))
+                node.setFile(context: context, fileReference: .message(message: MessageReference(self.message), media: file))
                 break
             } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                 if let file = content.file {
-                    node.setFile(account: account, fileReference: .message(message: MessageReference(self.message), media: file))
+                    node.setFile(context: context, fileReference: .message(message: MessageReference(self.message), media: file))
                     break
                 }
             }
@@ -90,7 +90,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
     
     private let webView: UIView
     
-    private var accountAndFile: (Account, FileMediaReference)?
+    private var contextAndFile: (AccountContext, FileMediaReference)?
     private let dataDisposable = MetaDisposable()
     
     private var itemIsVisible = false
@@ -103,7 +103,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(account: Account, presentationData: PresentationData) {
+    init(context: AccountContext, presentationData: PresentationData) {
         if #available(iOSApplicationExtension 11.0, *) {
             let preferences = WKPreferences()
             preferences.javaScriptEnabled = false
@@ -120,7 +120,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
             webView.scalesPageToFit = true
             self.webView = webView
         }
-        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, presentationData: presentationData)
+        self.footerContentNode = ChatItemGalleryFooterContentNode(context: context, presentationData: presentationData)
         
         self.statusNodeContainer = HighlightableButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
@@ -162,9 +162,9 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
         return .single(.dark)
     }
     
-    func setFile(account: Account, fileReference: FileMediaReference) {
-        let updateFile = self.accountAndFile?.1.media != fileReference.media
-        self.accountAndFile = (account, fileReference)
+    func setFile(context: AccountContext, fileReference: FileMediaReference) {
+        let updateFile = self.contextAndFile?.1.media != fileReference.media
+        self.contextAndFile = (context, fileReference)
         if updateFile {
             if fileReference.media.mimeType.hasPrefix("image/") {
                 if let webView = self.webView as? WKWebView {
@@ -172,17 +172,17 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
                 }
             }
             self.maybeLoadContent()
-            self.setupStatus(account: account, resource: fileReference.media.resource)
+            self.setupStatus(context: context, resource: fileReference.media.resource)
         }
     }
     
-    private func setupStatus(account: Account, resource: MediaResource) {
-        self.statusDisposable.set((account.postbox.mediaBox.resourceStatus(resource)
-            |> deliverOnMainQueue).start(next: { [weak self] status in
-                if let strongSelf = self {
-                    let previousStatus = strongSelf.status
-                    strongSelf.status = status
-                    switch status {
+    private func setupStatus(context: AccountContext, resource: MediaResource) {
+        self.statusDisposable.set((context.account.postbox.mediaBox.resourceStatus(resource)
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            if let strongSelf = self {
+                let previousStatus = strongSelf.status
+                strongSelf.status = status
+                switch status {
                     case .Remote:
                         strongSelf.statusNode.isHidden = false
                         strongSelf.statusNode.alpha = 1.0
@@ -216,19 +216,19 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
                                 }
                             })
                         }
-                    }
                 }
-            }))
+            }
+        }))
     }
     
     private func maybeLoadContent() {
-        if let (account, fileReference) = self.accountAndFile {
+        if let (context, fileReference) = self.contextAndFile {
             var pathExtension: String?
             if let fileName = fileReference.media.fileName {
                 pathExtension = (fileName as NSString).pathExtension
             }
-            let data = account.postbox.mediaBox.resourceData(fileReference.media.resource, pathExtension: pathExtension, option: .complete(waitUntilFetchStatus: false))
-                |> deliverOnMainQueue
+            let data = context.account.postbox.mediaBox.resourceData(fileReference.media.resource, pathExtension: pathExtension, option: .complete(waitUntilFetchStatus: false))
+            |> deliverOnMainQueue
             self.dataDisposable.set(data.start(next: { [weak self] data in
                 if let strongSelf = self {
                     if data.complete {
@@ -372,12 +372,12 @@ class ChatDocumentGalleryItemNode: GalleryItemNode, WKNavigationDelegate {
     }
     
     @objc func statusPressed() {
-        if let (account, fileReference) = self.accountAndFile, let status = self.status {
+        if let (context, fileReference) = self.contextAndFile, let status = self.status {
             switch status {
                 case .Fetching:
-                    account.postbox.mediaBox.cancelInteractiveResourceFetch(fileReference.media.resource)
+                    context.account.postbox.mediaBox.cancelInteractiveResourceFetch(fileReference.media.resource)
                 case .Remote:
-                    self.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
+                    self.fetchDisposable.set(fetchedMediaResource(postbox: context.account.postbox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
                 default:
                     break
             }

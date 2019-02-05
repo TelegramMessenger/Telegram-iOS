@@ -8,7 +8,7 @@ import SwiftSignalKit
 final class ComposeControllerNode: ASDisplayNode {
     let contactListNode: ContactListNode
     
-    private let account: Account
+    private let context: AccountContext
     private var searchDisplayController: SearchDisplayController?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
@@ -25,16 +25,16 @@ final class ComposeControllerNode: ASDisplayNode {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(account: Account) {
-        self.account = account
+    init(context: AccountContext) {
+        self.context = context
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var openCreateNewGroupImpl: (() -> Void)?
         var openCreateNewSecretChatImpl: (() -> Void)?
         var openCreateNewChannelImpl: (() -> Void)?
         
-        self.contactListNode = ContactListNode(account: account, presentation: .single(.natural(options: [
+        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: [
             ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewGroup, icon: .generic(UIImage(bundleImageName: "Contact List/CreateGroupActionIcon")!), action: {
                 openCreateNewGroupImpl?()
             }),
@@ -66,7 +66,7 @@ final class ComposeControllerNode: ASDisplayNode {
             self?.openCreateNewChannel?()
         }
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
             |> deliverOnMainQueue).start(next: { [weak self] presentationData in
                 if let strongSelf = self {
                     let previousTheme = strongSelf.presentationData.theme
@@ -111,7 +111,7 @@ final class ComposeControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: false, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
             if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch, case let .peer(peer, _) = peer {
                 requestOpenPeerFromSearch(peer.id)
             }

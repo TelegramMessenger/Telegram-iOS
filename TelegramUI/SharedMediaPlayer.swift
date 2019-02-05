@@ -369,7 +369,7 @@ private enum SharedMediaPlaybackItem: Equatable {
 
 final class SharedMediaPlayer {
     private weak var mediaManager: MediaManager?
-    private let postbox: Postbox
+    let account: Account
     private let audioSession: ManagedAudioSession
     private let overlayMediaManager: OverlayMediaManager
     private let playerIndex: Int32
@@ -413,9 +413,9 @@ final class SharedMediaPlayer {
     private var currentPrefetchItems: (SharedMediaPlaybackDataSource, SharedMediaPlaybackDataSource)?
     private let prefetchDisposable = MetaDisposable()
     
-    init(mediaManager: MediaManager, inForeground: Signal<Bool, NoError>, postbox: Postbox, audioSession: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, playlist: SharedMediaPlaylist, initialOrder: MusicPlaybackSettingsOrder, initialLooping: MusicPlaybackSettingsLooping, initialPlaybackRate: AudioPlaybackRate, playerIndex: Int32, controlPlaybackWithProximity: Bool) {
+    init(mediaManager: MediaManager, inForeground: Signal<Bool, NoError>, account: Account, audioSession: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, playlist: SharedMediaPlaylist, initialOrder: MusicPlaybackSettingsOrder, initialLooping: MusicPlaybackSettingsLooping, initialPlaybackRate: AudioPlaybackRate, playerIndex: Int32, controlPlaybackWithProximity: Bool) {
         self.mediaManager = mediaManager
-        self.postbox = postbox
+        self.account = account
         self.audioSession = audioSession
         self.overlayMediaManager = overlayMediaManager
         playlist.setOrder(initialOrder)
@@ -466,13 +466,13 @@ final class SharedMediaPlayer {
                             case .voice, .music:
                                 switch playbackData.source {
                                     case let .telegramFile(fileReference):
-                                        strongSelf.playbackItem = .audio(MediaPlayer(audioSessionManager: strongSelf.audioSession, postbox: strongSelf.postbox, resourceReference: fileReference.resourceReference(fileReference.media.resource), streamable: playbackData.type == .music, video: false, preferSoftwareDecoding: false, enableSound: true, baseRate: rateValue, fetchAutomatically: true, playAndRecord: controlPlaybackWithProximity))
+                                        strongSelf.playbackItem = .audio(MediaPlayer(audioSessionManager: strongSelf.audioSession, postbox: strongSelf.account.postbox, resourceReference: fileReference.resourceReference(fileReference.media.resource), streamable: playbackData.type == .music, video: false, preferSoftwareDecoding: false, enableSound: true, baseRate: rateValue, fetchAutomatically: true, playAndRecord: controlPlaybackWithProximity))
                                 }
                             case .instantVideo:
                                 if let mediaManager = strongSelf.mediaManager, let item = item as? MessageMediaPlaylistItem {
                                     switch playbackData.source {
                                         case let .telegramFile(fileReference):
-                                            let videoNode = OverlayInstantVideoNode(postbox: strongSelf.postbox, audioSession: strongSelf.audioSession, manager: mediaManager.universalVideoManager, content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, fileReference.media.fileId), fileReference: fileReference, streamVideo: false, enableSound: false, baseRate: rateValue), close: { [weak mediaManager] in
+                                            let videoNode = OverlayInstantVideoNode(postbox: strongSelf.account.postbox, audioSession: strongSelf.audioSession, manager: mediaManager.universalVideoManager, content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, fileReference.media.fileId), fileReference: fileReference, streamVideo: false, enableSound: false, baseRate: rateValue), close: { [weak mediaManager] in
                                                 mediaManager?.setPlaylist(nil, type: .voice)
                                             })
                                             strongSelf.playbackItem = .instantVideo(videoNode)
@@ -714,7 +714,7 @@ final class SharedMediaPlayer {
                 let fetchedNextSignal: Signal<Never, NoError>
                 switch current {
                     case let .telegramFile(file):
-                        fetchedCurrentSignal = self.postbox.mediaBox.resourceData(file.media.resource)
+                        fetchedCurrentSignal = self.account.postbox.mediaBox.resourceData(file.media.resource)
                         |> mapToSignal { data -> Signal<Void, NoError> in
                             if data.complete {
                                 return .single(Void())
@@ -727,7 +727,7 @@ final class SharedMediaPlayer {
                 }
                 switch next {
                     case let .telegramFile(file):
-                        fetchedNextSignal = fetchedMediaResource(postbox: self.postbox, reference: file.resourceReference(file.media.resource))
+                        fetchedNextSignal = fetchedMediaResource(postbox: self.account.postbox, reference: file.resourceReference(file.media.resource))
                         |> ignoreValues
                         |> `catch` { _ -> Signal<Never, NoError> in
                             return .complete()

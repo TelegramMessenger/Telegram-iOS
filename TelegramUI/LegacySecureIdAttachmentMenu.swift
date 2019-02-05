@@ -26,8 +26,8 @@ struct SecureIdRecognizedDocumentData {
     let expiryDate: Date?
 }
 
-func presentLegacySecureIdAttachmentMenu(account: Account, present: @escaping (ViewController) -> Void, validLayout: ContainerViewLayout, type: SecureIdAttachmentMenuType, recognizeDocumentData: Bool, completion: @escaping ([TelegramMediaResource], SecureIdRecognizedDocumentData?) -> Void) {
-    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+func presentLegacySecureIdAttachmentMenu(context: AccountContext, present: @escaping (ViewController) -> Void, validLayout: ContainerViewLayout, type: SecureIdAttachmentMenuType, recognizeDocumentData: Bool, completion: @escaping ([TelegramMediaResource], SecureIdRecognizedDocumentData?) -> Void) {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: validLayout)
     legacyController.statusBar.statusBarStyle = .Ignore
     
@@ -53,12 +53,12 @@ func presentLegacySecureIdAttachmentMenu(account: Account, present: @escaping (V
     
     guard let attachMenu = TGPassportAttachMenu.present(with: legacyController.context, parentController: emptyController, menuController: nil, title: "", intent: mappedIntent, uploadAction: { signal, completed in
         if let signal = signal {
-            let _ = (processedLegacySecureIdAttachmentItems(postbox: account.postbox, signal: signal)
+            let _ = (processedLegacySecureIdAttachmentItems(postbox: context.account.postbox, signal: signal)
             |> mapToSignal { resources -> Signal<([TelegramMediaResource], SecureIdRecognizedDocumentData?), NoError> in
                 switch type {
                     case .generic, .idCard:
                         if recognizeDocumentData {
-                            return recognizedResources(postbox: account.postbox, resources: resources, shouldBeDriversLicense: false)
+                            return recognizedResources(postbox: context.account.postbox, resources: resources, shouldBeDriversLicense: false)
                                 |> map { data -> ([TelegramMediaResource], SecureIdRecognizedDocumentData?) in
                                     return (resources, data)
                             }

@@ -10,7 +10,7 @@ import SafariServices
 public class PeerMediaCollectionController: TelegramController {
     private var validLayout: ContainerViewLayout?
     
-    private let account: Account
+    private let context: AccountContext
     private let peerId: PeerId
     private let messageId: MessageId?
     
@@ -39,15 +39,15 @@ public class PeerMediaCollectionController: TelegramController {
     
     private var resolveUrlDisposable: MetaDisposable?
     
-    public init(account: Account, peerId: PeerId, messageId: MessageId? = nil) {
-        self.account = account
+    public init(context: AccountContext, peerId: PeerId, messageId: MessageId? = nil) {
+        self.context = context
         self.peerId = peerId
         self.messageId = messageId
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.interfaceState = PeerMediaCollectionInterfaceState(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
-        super.init(account: account, navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme).withUpdatedSeparatorColor(self.presentationData.theme.rootController.navigationBar.backgroundColor), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none)
+        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme).withUpdatedSeparatorColor(self.presentationData.theme.rootController.navigationBar.backgroundColor), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none)
         
         self.title = self.presentationData.strings.SharedMedia_TitleAll
         
@@ -63,7 +63,7 @@ public class PeerMediaCollectionController: TelegramController {
             }
         }
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -84,7 +84,7 @@ public class PeerMediaCollectionController: TelegramController {
                     return false
                 }
                 strongSelf.mediaCollectionDisplayNode.view.endEditing(true)
-                return openChatMessage(account: account, message: galleryMessage.message, standalone: false, reverseMessageGalleryOrder: true, excludeWebPageMedia: mode == .shared, navigationController: navigationController, dismissInput: {
+                return openChatMessage(context: context, message: galleryMessage.message, standalone: false, reverseMessageGalleryOrder: true, excludeWebPageMedia: mode == .shared, navigationController: navigationController, dismissInput: {
                     self?.mediaCollectionDisplayNode.view.endEditing(true)
                 }, present: { c, a in
                     self?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -108,10 +108,8 @@ public class PeerMediaCollectionController: TelegramController {
             }
             return false
             }, openPeer: { [weak self] id, navigation, _ in
-                if let strongSelf = self {
-                    if let id = id {
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(id), messageId: nil))
-                    }
+                if let strongSelf = self, let id = id, let navigationController = strongSelf.navigationController as? NavigationController {
+                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id))
                 }
             }, openPeerMention: { _ in
             }, openMessageContextMenu: { [weak self] message, _, _, _ in
@@ -125,7 +123,7 @@ public class PeerMediaCollectionController: TelegramController {
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.SharedMedia_ViewInChat, color: .accent, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                     if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                                        navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(strongSelf.peerId), messageId: message.id)
+                                        navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), messageId: message.id)
                                     }
                                 }),
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuForward, color: .accent, action: { [weak actionSheet] in
@@ -170,7 +168,7 @@ public class PeerMediaCollectionController: TelegramController {
                             }
                         }*/
                     } else {
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(id.peerId), messageId: id))
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(id.peerId), messageId: id))
                     }
                 }
             }, clickThroughMessage: { [weak self] in
@@ -191,11 +189,11 @@ public class PeerMediaCollectionController: TelegramController {
             }, sendBotCommand: { _, _ in
             }, openInstantPage: { [weak self] message in
                 if let strongSelf = self, strongSelf.isNodeLoaded, let navigationController = strongSelf.navigationController as? NavigationController, let message = strongSelf.mediaCollectionDisplayNode.messageForGallery(message.id)?.message {
-                    openChatInstantPage(account: strongSelf.account, message: message, navigationController: navigationController)
+                    openChatInstantPage(context: strongSelf.context, message: message, navigationController: navigationController)
                 }
             }, openWallpaper: { [weak self] message in
                 if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.mediaCollectionDisplayNode.messageForGallery(message.id)?.message {
-                    openChatWallpaper(account: strongSelf.account, message: message, present: { [weak self] c, a in
+                    openChatWallpaper(context: strongSelf.context, message: message, present: { [weak self] c, a in
                         self?.present(c, in: .window(.root), with: a, blockInteraction: true)
                     })
                 }
@@ -212,7 +210,7 @@ public class PeerMediaCollectionController: TelegramController {
                     strongSelf.view.endEditing(true)
                     switch content {
                         case let .url(url):
-                            let canOpenIn = availableOpenInOptions(applicationContext: strongSelf.account.telegramApplicationContext, item: .url(url: url)).count > 1
+                            let canOpenIn = availableOpenInOptions(context: strongSelf.context, item: .url(url: url)).count > 1
                             let openText = canOpenIn ? strongSelf.presentationData.strings.Conversation_FileOpenIn : strongSelf.presentationData.strings.Conversation_LinkDialogOpen
                             let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
@@ -220,9 +218,7 @@ public class PeerMediaCollectionController: TelegramController {
                                 ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                     if let strongSelf = self {
-                                        if let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
-                                            applicationContext.applicationBindings.openUrl(url)
-                                        }
+                                        strongSelf.context.sharedContext.applicationBindings.openUrl(url)
                                     }
                                 }),
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.ShareMenu_CopyShareLink, color: .accent, action: { [weak actionSheet] in
@@ -273,7 +269,7 @@ public class PeerMediaCollectionController: TelegramController {
             }
         }, reportSelectedMessages: { [weak self] in
             if let strongSelf = self, let messageIds = strongSelf.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
-                strongSelf.present(peerReportOptionsController(account: strongSelf.account, subject: .messages(Array(messageIds).sorted()), present: { c, a in
+                strongSelf.present(peerReportOptionsController(context: strongSelf.context, subject: .messages(Array(messageIds).sorted()), present: { c, a in
                     self?.present(c, in: .window(.root), with: a)
                 }), in: .window(.root))
             }
@@ -288,7 +284,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, forwardMessages: { _ in
         }, shareSelectedMessages: { [weak self] in
             if let strongSelf = self, let selectedIds = strongSelf.interfaceState.selectionState?.selectedIds, !selectedIds.isEmpty {
-                let _ = (strongSelf.account.postbox.transaction { transaction -> [Message] in
+                let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Message] in
                     var messages: [Message] = []
                     for id in selectedIds {
                         if let message = transaction.getMessage(id) {
@@ -302,7 +298,7 @@ public class PeerMediaCollectionController: TelegramController {
                                 $0.withoutSelectionState()
                             })
                             
-                            let shareController = ShareController(account: strongSelf.account, subject: .messages(messages.sorted(by: { lhs, rhs in
+                            let shareController = ShareController(context: strongSelf.context, subject: .messages(messages.sorted(by: { lhs, rhs in
                                 return MessageIndex(lhs) < MessageIndex(rhs)
                             })), externalShare: true, immediateExternalShare: true)
                             strongSelf.present(shareController, in: .window(.root))
@@ -358,7 +354,7 @@ public class PeerMediaCollectionController: TelegramController {
         
         self.updateInterfaceState(animated: false, { return $0 })
         
-        self.peer.set(account.postbox.peerView(id: peerId) |> map { $0.peers[$0.peerId] })
+        self.peer.set(context.account.postbox.peerView(id: peerId) |> map { $0.peers[$0.peerId] })
         
         peerDisposable.set((self.peer.get()
             |> deliverOnMainQueue).start(next: { [weak self] peer in
@@ -405,35 +401,34 @@ public class PeerMediaCollectionController: TelegramController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerMediaCollectionControllerNode(account: self.account, peerId: self.peerId, messageId: self.messageId, controllerInteraction: self.controllerInteraction!, interfaceInteraction: self.interfaceInteraction!, navigationBar: self.navigationBar, requestDeactivateSearch: { [weak self] in
+        self.displayNode = PeerMediaCollectionControllerNode(context: self.context, peerId: self.peerId, messageId: self.messageId, controllerInteraction: self.controllerInteraction!, interfaceInteraction: self.interfaceInteraction!, navigationBar: self.navigationBar, requestDeactivateSearch: { [weak self] in
             self?.deactivateSearch()
         })
     
-        if let mediaManager = self.account.telegramApplicationContext.mediaManager {
-            self.galleryHiddenMesageAndMediaDisposable.set(mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
-                if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                    var messageIdAndMedia: [MessageId: [Media]] = [:]
-                    
-                    for id in ids {
-                        if case let .chat(messageId, media) = id {
-                            messageIdAndMedia[messageId] = [media]
-                        }
+        let mediaManager = self.context.sharedContext.mediaManager
+        self.galleryHiddenMesageAndMediaDisposable.set(mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
+            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                var messageIdAndMedia: [MessageId: [Media]] = [:]
+                
+                for id in ids {
+                    if case let .chat(accountId, messageId, media) = id, accountId == strongSelf.context.account.id {
+                        messageIdAndMedia[messageId] = [media]
                     }
-                    
-                    //if controllerInteraction.hiddenMedia != messageIdAndMedia {
-                    controllerInteraction.hiddenMedia = messageIdAndMedia
-                    
-                    strongSelf.mediaCollectionDisplayNode.historyNode.forEachItemNode { itemNode in
-                        if let itemNode = itemNode as? GridMessageItemNode {
-                            itemNode.updateHiddenMedia()
-                        } else if let itemNode = itemNode as? ListMessageNode {
-                            itemNode.updateHiddenMedia()
-                        }
-                    }
-                    //}
                 }
-            }))
-        }
+                
+                //if controllerInteraction.hiddenMedia != messageIdAndMedia {
+                controllerInteraction.hiddenMedia = messageIdAndMedia
+                
+                strongSelf.mediaCollectionDisplayNode.historyNode.forEachItemNode { itemNode in
+                    if let itemNode = itemNode as? GridMessageItemNode {
+                        itemNode.updateHiddenMedia()
+                    } else if let itemNode = itemNode as? ListMessageNode {
+                        itemNode.updateHiddenMedia()
+                    }
+                }
+                //}
+            }
+        }))
         
         self.ready.set(combineLatest(self.mediaCollectionDisplayNode.historyNode.historyState.get(), self._peerReady.get()) |> map { $1 })
         
@@ -549,31 +544,31 @@ public class PeerMediaCollectionController: TelegramController {
         if external {
             resolvedUrl = .single(.externalUrl(url))
         } else {
-            resolvedUrl = resolveUrl(account: self.account, url: url)
+            resolvedUrl = resolveUrl(account: self.context.account, url: url)
         }
         
         disposable.set((resolvedUrl |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
-                openResolvedUrl(result, account: strongSelf.account, navigationController: strongSelf.navigationController as? NavigationController, openPeer: { peerId, navigation in
+                openResolvedUrl(result, context: strongSelf.context, navigationController: strongSelf.navigationController as? NavigationController, openPeer: { peerId, navigation in
                     if let strongSelf = self {
                         switch navigation {
                             case let .chat(_, messageId):
                                 if let navigationController = strongSelf.navigationController as? NavigationController {
-                                    navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), messageId: messageId, keepStack: .always)
+                                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId, keepStack: .always)
                                 }
                             case .info:
-                                strongSelf.navigationActionDisposable.set((strongSelf.account.postbox.loadedPeerWithId(peerId)
+                                strongSelf.navigationActionDisposable.set((strongSelf.context.account.postbox.loadedPeerWithId(peerId)
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { [weak self] peer in
                                     if let strongSelf = self, peer.restrictionText == nil {
-                                        if let infoController = peerInfoController(account: strongSelf.account, peer: peer) {
+                                        if let infoController = peerInfoController(context: strongSelf.context, peer: peer) {
                                             (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                                         }
                                     }
                                 }))
                             case let .withBotStartPayload(startPayload):
                                 if let navigationController = strongSelf.navigationController as? NavigationController {
-                                    navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), botStart: startPayload)
+                                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), botStart: startPayload)
                                 }
                             default:
                                 break
@@ -590,7 +585,7 @@ public class PeerMediaCollectionController: TelegramController {
     
     func forwardMessages(_ messageIds: Set<MessageId>) {
         let currentMessages = (self.mediaCollectionDisplayNode.searchDisplayController?.contentNode as? ChatHistorySearchContainerNode)?.currentMessages
-        let _ = (self.account.postbox.transaction { transaction -> Void in
+        let _ = (self.context.account.postbox.transaction { transaction -> Void in
             for id in messageIds {
                 if transaction.getMessage(id) == nil {
                     if let message = currentMessages?[id] {
@@ -605,10 +600,10 @@ public class PeerMediaCollectionController: TelegramController {
             }
             let forwardMessageIds = Array(messageIds).sorted()
             
-            let controller = PeerSelectionController(account: strongSelf.account)
+            let controller = PeerSelectionController(context: strongSelf.context)
             controller.peerSelected = { [weak controller] peerId in
                 if let strongSelf = self, let _ = controller {
-                    let _ = (strongSelf.account.postbox.transaction({ transaction -> Void in
+                    let _ = (strongSelf.context.account.postbox.transaction({ transaction -> Void in
                         transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
                             if let currentState = currentState as? ChatInterfaceState {
                                 return currentState.withUpdatedForwardMessageIds(forwardMessageIds)
@@ -628,7 +623,7 @@ public class PeerMediaCollectionController: TelegramController {
                                 }
                             }))
                             
-                            (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                            (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
                         }
                     })
                 }
@@ -639,7 +634,7 @@ public class PeerMediaCollectionController: TelegramController {
     
     func deleteMessages(_ messageIds: Set<MessageId>) {
         if !messageIds.isEmpty {
-            self.messageContextDisposable.set((combineLatest(chatAvailableMessageActions(postbox: self.account.postbox, accountPeerId: self.account.peerId, messageIds: messageIds), self.peer.get() |> take(1)) |> deliverOnMainQueue).start(next: { [weak self] actions, peer in
+            self.messageContextDisposable.set((combineLatest(chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: messageIds), self.peer.get() |> take(1)) |> deliverOnMainQueue).start(next: { [weak self] actions, peer in
                 if let strongSelf = self, let peer = peer, !actions.options.isEmpty {
                     let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                     var items: [ActionSheetItem] = []
@@ -664,13 +659,13 @@ public class PeerMediaCollectionController: TelegramController {
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
                                 strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
-                                let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
+                                let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
                             }
                         }))
                     }
                     if actions.options.contains(.deleteLocally) {
                         var localOptionText = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
-                        if strongSelf.account.peerId == strongSelf.peerId {
+                        if strongSelf.context.account.peerId == strongSelf.peerId {
                             if messageIds.count == 1 {
                                 localOptionText = strongSelf.presentationData.strings.Conversation_Moderate_Delete
                             } else {
@@ -681,7 +676,7 @@ public class PeerMediaCollectionController: TelegramController {
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
                                 strongSelf.updateInterfaceState(animated: true, { $0.withoutSelectionState() })
-                                let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                                let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
                             }
                         }))
                     }

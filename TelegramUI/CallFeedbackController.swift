@@ -204,7 +204,7 @@ private func callFeedbackControllerEntries(theme: PresentationTheme, strings: Pr
     return entries
 }
 
-public func callFeedbackController(account: Account, callId: CallId, rating: Int) -> ViewController {
+public func callFeedbackController(sharedContext: SharedAccountContext, account: Account, callId: CallId, rating: Int) -> ViewController {
     let initialState = CallFeedbackState()
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -232,7 +232,7 @@ public func callFeedbackController(account: Account, callId: CallId, rating: Int
         updateState { $0.withUpdatedIncludeLogs(value) }
     })
     
-    let signal = combineLatest(account.telegramApplicationContext.presentationData, statePromise.get())
+    let signal = combineLatest(sharedContext.presentationData, statePromise.get())
         |> deliverOnMainQueue
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<CallFeedbackControllerEntry>, CallFeedbackControllerEntry.ItemGenerationArguments)) in
             
@@ -267,7 +267,8 @@ public func callFeedbackController(account: Account, callId: CallId, rating: Int
             return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    
+    let controller = ItemListController(sharedContext: sharedContext, state: signal)
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }

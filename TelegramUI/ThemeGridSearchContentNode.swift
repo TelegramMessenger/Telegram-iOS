@@ -306,7 +306,7 @@ private struct ThemeGridSearchContext {
 }
 
 final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
-    private let account: Account
+    private let context: AccountContext
     
     private let recentListNode: ListView
     private let gridNode: GridNode
@@ -334,11 +334,11 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         return self._isSearching.get()
     }
     
-    init(account: Account, openResult: @escaping (ChatContextResult) -> Void) {
-        self.account = account
+    init(context: AccountContext, openResult: @escaping (ChatContextResult) -> Void) {
+        self.context = context
         self.queryPromise = Promise<WallpaperSearchQuery>(self.queryValue)
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationDataPromise = Promise(self.presentationData)
         
         self.dimNode = ASDisplayNode()
@@ -417,7 +417,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                 
                 let query = strongSelf.queryValue.query
                 if !query.isEmpty {
-                    let _ = addRecentWallpaperSearchQuery(postbox: strongSelf.account.postbox, string: query).start()
+                    let _ = addRecentWallpaperSearchQuery(postbox: strongSelf.context.account.postbox, string: query).start()
                 }
             }
         }, selectColor: { [weak self] color in
@@ -428,10 +428,10 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                 return query
             }, updateInterface: true)
         }, deleteRecentQuery: { query in
-            let _ = removeRecentWallpaperSearchQuery(postbox: account.postbox, string: query).start()
+            let _ = removeRecentWallpaperSearchQuery(postbox: context.account.postbox, string: query).start()
         })
         
-        let configuration = self.account.postbox.transaction { transaction -> SearchBotsConfiguration in
+        let configuration = self.context.account.postbox.transaction { transaction -> SearchBotsConfiguration in
             return currentSearchBotsConfiguration(transaction: transaction)
         }
         
@@ -454,10 +454,10 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                     guard let name = configuration.imageBotUsername else {
                         return .single(nil)
                     }
-                    return resolvePeerByName(account: account, name: name)
+                    return resolvePeerByName(account: context.account, name: name)
                     |> mapToSignal { peerId -> Signal<Peer?, NoError> in
                         if let peerId = peerId {
-                            return account.postbox.loadedPeerWithId(peerId)
+                            return context.account.postbox.loadedPeerWithId(peerId)
                             |> map { peer -> Peer? in
                                 return peer
                             }
@@ -474,7 +474,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                             if let searchContext = searchContext {
                                 if let _ = searchContext.loadMoreIndex, let nextOffset = searchContext.result.nextOffset {
                                     let collection = searchContext.result.collection
-                                    return requestChatContextResults(account: self.account, botId: collection.botId, peerId: collection.peerId, query: searchContext.result.query, location: .single(collection.geoPoint), offset: nextOffset)
+                                    return requestChatContextResults(account: self.context.account, botId: collection.botId, peerId: collection.peerId, query: searchContext.result.query, location: .single(collection.geoPoint), offset: nextOffset)
                                     |> map { nextResults -> (ChatContextResultCollection, String?) in
                                         var results: [ChatContextResult] = []
                                         var existingIds = Set<String>()
@@ -520,7 +520,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                         
                         return (.complete() |> delay(0.1, queue: Queue.concurrentDefaultQueue()))
                         |> then(
-                            requestContextResults(account: account, botId: user.id, query: wallpaperQuery, peerId: account.peerId, limit: 16)
+                            requestContextResults(account: context.account, botId: user.id, query: wallpaperQuery, peerId: context.account.peerId, limit: 16)
                             |> map { collection -> ([ThemeGridSearchEntry], Bool)? in
                                 guard let collection = collection else {
                                     return nil
@@ -547,7 +547,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         }
         
         let previousRecentItems = Atomic<[ThemeGridRecentEntry]?>(value: nil)
-        self.recentDisposable = (combineLatest(wallpaperSearchRecentQueries(postbox: self.account.postbox), self.presentationDataPromise.get())
+        self.recentDisposable = (combineLatest(wallpaperSearchRecentQueries(postbox: self.context.account.postbox), self.presentationDataPromise.get())
         |> deliverOnMainQueue).start(next: { [weak self] queries, presentationData in
             if let strongSelf = self {
                 var entries: [ThemeGridRecentEntry] = []
@@ -558,11 +558,11 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                 }
                 
                 let header = ChatListSearchItemHeader(type: .recentPeers, theme: presentationData.theme, strings: presentationData.strings, actionTitle: presentationData.strings.WebSearch_RecentSectionClear.uppercased(), action: {
-                    _ = clearRecentWallpaperSearchQueries(postbox: strongSelf.account.postbox).start()
+                    _ = clearRecentWallpaperSearchQueries(postbox: strongSelf.context.account.postbox).start()
                 })
                 
                 let previousEntries = previousRecentItems.swap(entries)
-                let transition = themeGridSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries, account: account, theme: presentationData.theme, strings: presentationData.strings, interaction: interaction, header: header)
+                let transition = themeGridSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries, account: context.account, theme: presentationData.theme, strings: presentationData.strings, interaction: interaction, header: header)
                 strongSelf.enqueueRecentTransition(transition, firstTime: previousEntries == nil)
             }
         })
@@ -580,12 +580,12 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                 }
                 
                 let firstTime = previousEntries == nil
-                let transition = themeGridSearchContainerPreparedTransition(from: previousEntries ?? [], to: entriesAndFlags?.0 ?? [], displayingResults: entriesAndFlags?.0 != nil, account: account, theme: presentationData.theme, isEmpty: isEmpty, query: query.query, interaction: interaction)
+                let transition = themeGridSearchContainerPreparedTransition(from: previousEntries ?? [], to: entriesAndFlags?.0 ?? [], displayingResults: entriesAndFlags?.0 != nil, account: context.account, theme: presentationData.theme, isEmpty: isEmpty, query: query.query, interaction: interaction)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
         }))
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -802,7 +802,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
     }
     
     private func clearRecentSearch() {
-        let _ = (clearRecentlySearchedPeers(postbox: self.account.postbox) |> deliverOnMainQueue).start()
+        let _ = (clearRecentlySearchedPeers(postbox: self.context.account.postbox) |> deliverOnMainQueue).start()
     }
     
     override func scrollToTop() {

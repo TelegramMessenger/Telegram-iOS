@@ -66,7 +66,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let message = item.message
                 
-                let incoming = item.message.effectivelyIncoming(item.account.peerId)
+                let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
                 
                 var maxTextWidth = CGFloat.greatestFiniteMagnitude
                 for media in item.message.media {
@@ -352,7 +352,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
                 } else {
-                    linkHighlightingNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingLinkHighlightColor : item.presentationData.theme.theme.chat.bubble.outgoingLinkHighlightColor)
+                    linkHighlightingNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingLinkHighlightColor : item.presentationData.theme.theme.chat.bubble.outgoingLinkHighlightColor)
                     self.linkHighlightingNode = linkHighlightingNode
                     self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
                 }

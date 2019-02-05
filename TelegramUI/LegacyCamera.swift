@@ -6,8 +6,8 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
-func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, sendMessagesWithSignals: @escaping ([Any]?) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }) {
-    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, sendMessagesWithSignals: @escaping ([Any]?) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }) {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
     legacyController.statusBar.statusBarStyle = .Hide
@@ -31,7 +31,7 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
                 return
             }
             
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let overlayLegacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
             overlayLegacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
             overlayLegacyController.statusBar.statusBarStyle = .Hide
@@ -53,9 +53,9 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
     controller.allowCaptionEntities = true
     controller.allowGrouping = mediaGrouping
     controller.inhibitDocumentCaptions = false
-    controller.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
+    controller.suggestionContext = legacySuggestionContext(account: context.account, peerId: peer.id)
     controller.recipientName = peer.displayTitle
-    if (peer is TelegramUser) && peer.id != account.peerId {
+    if (peer is TelegramUser) && peer.id != context.account.peerId {
         controller.hasTimer = true
     }
     
@@ -150,8 +150,8 @@ func presentedLegacyCamera(account: Account, peer: Peer, cameraView: TGAttachmen
     parentController.present(legacyController, in: .window(.root))
 }
 
-func presentedLegacyShortcutCamera(account: Account, saveCapturedMedia: Bool, saveEditedPhotos: Bool, mediaGrouping: Bool, parentController: ViewController) {
-    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedMedia: Bool, saveEditedPhotos: Bool, mediaGrouping: Bool, parentController: ViewController) {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
     legacyController.statusBar.statusBarStyle = .Hide
@@ -188,14 +188,14 @@ func presentedLegacyShortcutCamera(account: Account, saveCapturedMedia: Bool, sa
         if let selectionContext = selectionContext, let editingContext = editingContext {
             let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedMedia, saveEditedPhotos: saveEditedPhotos, descriptionGenerator: legacyAssetPickerItemGenerator())
             if let parentController = parentController {
-                parentController.present(ShareController(account: account, subject: .fromExternal({ peerIds, text in
-                    return legacyAssetPickerEnqueueMessages(account: account, signals: signals!)
+                parentController.present(ShareController(context: context, subject: .fromExternal({ peerIds, text in
+                    return legacyAssetPickerEnqueueMessages(account: context.account, signals: signals!)
                     |> `catch` { _ -> Signal<[EnqueueMessage], NoError> in
                         return .single([])
                     }
                     |> mapToSignal { messages -> Signal<ShareControllerExternalStatus, NoError> in
                         let resultSignals = peerIds.map({ peerId in
-                            return enqueueMessages(account: account, peerId: peerId, messages: messages)
+                            return enqueueMessages(account: context.account, peerId: peerId, messages: messages)
                             |> mapToSignal { _ -> Signal<ShareControllerExternalStatus, NoError> in
                                 return .complete()
                             }

@@ -9,7 +9,7 @@ final class ListMessageItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let dateTimeFormat: PresentationDateTimeFormat
-    let account: Account
+    let context: AccountContext
     let chatLocation: ChatLocation
     let controllerInteraction: ChatControllerInteraction
     let message: Message
@@ -19,11 +19,11 @@ final class ListMessageItem: ListViewItem {
     
     let selectable: Bool = true
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, account: Account, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, message: Message, selection: ChatHistoryMessageSelection, displayHeader: Bool) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, context: AccountContext, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, message: Message, selection: ChatHistoryMessageSelection, displayHeader: Bool) {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
-        self.account = account
+        self.context = context
         self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction
         self.message = message

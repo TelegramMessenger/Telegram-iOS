@@ -9,7 +9,7 @@ private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
 }
 
-func legacyLocationPickerController(account: Account, selfPeer: Peer, peer: Peer, sendLocation: @escaping (CLLocationCoordinate2D, MapVenue?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, theme: PresentationTheme) -> ViewController {
+func legacyLocationPickerController(context: AccountContext, selfPeer: Peer, peer: Peer, sendLocation: @escaping (CLLocationCoordinate2D, MapVenue?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, theme: PresentationTheme) -> ViewController {
     let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: theme)
     let controller = TGLocationPickerController(context: legacyController.context, intent: TGLocationPickerControllerDefaultIntent)!
     controller.peer = makeLegacyPeer(selfPeer)
@@ -41,13 +41,13 @@ func legacyLocationPickerController(account: Account, selfPeer: Peer, peer: Peer
     }
     controller.nearbyPlacesSignal = { query, location in
         return SSignal(generator: { subscriber in
-            let nearbyPlacesSignal: Signal<[TGLocationVenue], NoError> = resolvePeerByName(account: account, name: "foursquare")
+            let nearbyPlacesSignal: Signal<[TGLocationVenue], NoError> = resolvePeerByName(account: context.account, name: "foursquare")
             |> take(1)
             |> mapToSignal { peerId -> Signal<ChatContextResultCollection?, NoError> in
                 guard let peerId = peerId else {
                     return .single(nil)
                 }
-                return requestChatContextResults(account: account, botId: peerId, peerId: selfPeer.id, query: query ?? "", location: .single((location?.coordinate.latitude ?? 0.0, location?.coordinate.longitude ?? 0.0)), offset: "")
+                return requestChatContextResults(account: context.account, botId: peerId, peerId: selfPeer.id, query: query ?? "", location: .single((location?.coordinate.latitude ?? 0.0, location?.coordinate.longitude ?? 0.0)), offset: "")
             }
             |> mapToSignal { contextResult -> Signal<[TGLocationVenue], NoError> in
                 guard let contextResult = contextResult else {
@@ -84,7 +84,7 @@ func legacyLocationPickerController(account: Account, selfPeer: Peer, peer: Peer
             })
         })
     }
-    let presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak controller] presentationData in
+    let presentationDisposable = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
         if let controller = controller  {
             controller.pallete = legacyLocationPalette(from: presentationData.theme)
         }

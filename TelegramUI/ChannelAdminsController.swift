@@ -459,7 +459,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
-public func channelAdminsController(account: Account, peerId: PeerId, loadCompleted: @escaping () -> Void = {}) -> ViewController {
+public func channelAdminsController(context: AccountContext, peerId: PeerId, loadCompleted: @escaping () -> Void = {}) -> ViewController {
     let statePromise = ValuePromise(ChannelAdminsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelAdminsControllerState())
     let updateState: ((ChannelAdminsControllerState) -> ChannelAdminsControllerState) -> Void = { f in
@@ -482,7 +482,7 @@ public func channelAdminsController(account: Account, peerId: PeerId, loadComple
     
     let adminsPromise = Promise<[RenderedChannelParticipant]?>(nil)
     
-    let presentationDataSignal = (account.applicationContext as! TelegramApplicationContext).presentationData
+    let presentationDataSignal = context.sharedContext.presentationData
     
     var upgradedToSupergroupImpl: ((PeerId, @escaping () -> Void) -> Void)?
     
@@ -491,14 +491,14 @@ public func channelAdminsController(account: Account, peerId: PeerId, loadComple
     }
     
     let peerView = Promise<PeerView>()
-    peerView.set(account.viewTracker.peerView(peerId))
+    peerView.set(context.account.viewTracker.peerView(peerId))
     
-    let arguments = ChannelAdminsControllerArguments(account: account, openRecentActions: {
-        let _ = (account.postbox.loadedPeerWithId(peerId)
+    let arguments = ChannelAdminsControllerArguments(account: context.account, openRecentActions: {
+        let _ = (context.account.postbox.loadedPeerWithId(peerId)
         |> deliverOnMainQueue).start(next: { peer in
             if peer is TelegramGroup {
             } else {
-                pushControllerImpl?(ChatRecentActionsController(account: account, peer: peer))
+                pushControllerImpl?(ChatRecentActionsController(context: context, peer: peer))
             }
         })
     }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
@@ -514,14 +514,14 @@ public func channelAdminsController(account: Account, peerId: PeerId, loadComple
             return $0.withUpdatedRemovingPeerId(adminId)
         }
         if peerId.namespace == Namespaces.Peer.CloudGroup {
-            removeAdminDisposable.set((removeGroupAdmin(account: account, peerId: peerId, adminId: adminId)
+            removeAdminDisposable.set((removeGroupAdmin(account: context.account, peerId: peerId, adminId: adminId)
             |> deliverOnMainQueue).start(completed: {
                 updateState {
                     return $0.withUpdatedRemovingPeerId(nil)
                 }
             }))
         } else {
-            removeAdminDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: []))
+            removeAdminDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: []))
             |> deliverOnMainQueue).start(completed: {
                 updateState {
                     return $0.withUpdatedRemovingPeerId(nil)
@@ -534,10 +534,10 @@ public func channelAdminsController(account: Account, peerId: PeerId, loadComple
         |> deliverOnMainQueue).start(next: { peerView in
             updateState { current in
                 var dismissController: (() -> Void)?
-                let controller = ChannelMembersSearchController(account: account, peerId: peerId, mode: .promote, filters: [], openPeer: { peer, participant in
+                let controller = ChannelMembersSearchController(context: context, peerId: peerId, mode: .promote, filters: [], openPeer: { peer, participant in
                     dismissController?()
-                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                    if peer.id == account.peerId {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    if peer.id == context.account.peerId {
                         return
                     }
                     if let participant = participant {
@@ -547,7 +547,7 @@ public func channelAdminsController(account: Account, peerId: PeerId, loadComple
                             case let .member(_, _, _, banInfo):
                                 if let banInfo = banInfo {
                                     var canUnban = false
-                                    if banInfo.restrictedBy != account.peerId {
+                                    if banInfo.restrictedBy != context.account.peerId {
                                         canUnban = true
                                     }
                                     if let channel = peerView.peers[peerId] as? TelegramChannel {
@@ -562,7 +562,7 @@ public func channelAdminsController(account: Account, peerId: PeerId, loadComple
                                 }
                         }
                     }
-                    presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: peer.id, initialParticipant: participant?.participant, updated: { _ in
+                    presentControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: peer.id, initialParticipant: participant?.participant, updated: { _ in
                     }, upgradedToSupergroup: upgradedToSupergroup), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 })
                 dismissController = { [weak controller] in
@@ -574,14 +574,14 @@ public func channelAdminsController(account: Account, peerId: PeerId, loadComple
             }
         })
     }, openAdmin: { participant in
-        presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
+        presentControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
         }, upgradedToSupergroup: upgradedToSupergroup), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
     let membersAndLoadMoreControl: (Disposable, PeerChannelMemberCategoryControl?)
     if peerId.namespace == Namespaces.Peer.CloudChannel {
         var didReportLoadCompleted = false
-        membersAndLoadMoreControl = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId) { membersState in
+        membersAndLoadMoreControl = context.peerChannelMemberCategoriesContextsManager.admins(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId) { membersState in
             if case .loading = membersState.loadingState, membersState.list.isEmpty {
                 adminsPromise.set(.single(nil))
             } else {
@@ -623,7 +623,7 @@ public func channelAdminsController(account: Account, peerId: PeerId, loadComple
                             var peers: [PeerId: Peer] = [:]
                             peers[creator.id] = creator
                             peers[peer.id] = peer
-                            result.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == account.peerId), banInfo: nil), peer: peer, peers: peers))
+                            result.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil), peer: peer, peers: peers))
                         case .member:
                             break
                     }
@@ -690,13 +690,13 @@ public func channelAdminsController(account: Account, peerId: PeerId, loadComple
         
         var searchItem: ItemListControllerSearch?
         if state.searchingMembers {
-            searchItem = ChannelMembersSearchItem(account: account, peerId: peerId, searchMode: .searchAdmins, cancel: {
+            searchItem = ChannelMembersSearchItem(context: context, peerId: peerId, searchMode: .searchAdmins, cancel: {
                 updateState { state in
                     return state.withUpdatedSearchingMembers(false)
                 }
             }, openPeer: { _, participant in
                 if let participant = participant?.participant, case .member = participant {
-                    presentControllerImpl?(channelAdminController(account: account, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
+                    presentControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
                         updateState { state in
                             return state.withUpdatedSearchingMembers(false)
                         }
@@ -713,14 +713,14 @@ public func channelAdminsController(account: Account, peerId: PeerId, loadComple
         }
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(isGroup ? presentationData.strings.ChatAdmins_Title : presentationData.strings.Channel_Management_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(entries: channelAdminsControllerEntries(presentationData: presentationData, accountPeerId: account.peerId, view: view, state: state, participants: admins), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && admins != nil && previous!.count >= admins!.count)
+        let listState = ItemListNodeState(entries: channelAdminsControllerEntries(presentationData: presentationData, accountPeerId: context.account.peerId, view: view, state: state, participants: admins), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && admins != nil && previous!.count >= admins!.count)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }
@@ -734,15 +734,15 @@ public func channelAdminsController(account: Account, peerId: PeerId, loadComple
         guard let controller = controller, let navigationController = controller.navigationController as? NavigationController else {
             return
         }
-        navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(upgradedPeerId), keepStack: .never, animated: false, completion: {
-            navigationController.pushViewController(channelAdminsController(account: account, peerId: upgradedPeerId, loadCompleted: {
+        navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(upgradedPeerId), keepStack: .never, animated: false, completion: {
+            navigationController.pushViewController(channelAdminsController(context: context, peerId: upgradedPeerId, loadCompleted: {
                 f()
             }), animated: false)
         })
     }
     controller.visibleBottomContentOffsetChanged = { offset in
         if case let .known(value) = offset, value < 40.0 {
-            account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: loadMoreControl)
+            context.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: loadMoreControl)
         }
     }
     return controller

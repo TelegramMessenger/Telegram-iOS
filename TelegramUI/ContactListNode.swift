@@ -732,7 +732,7 @@ enum ContactListFilter {
 }
 
 final class ContactListNode: ASDisplayNode {
-    private let account: Account
+    private let context: AccountContext
     private var presentation: ContactListPresentation?
     private let filters: [ContactListFilter]
     
@@ -769,11 +769,11 @@ final class ContactListNode: ASDisplayNode {
             if value != self.enableUpdatesValue {
                 self.enableUpdatesValue = value
                 if value {
-                    self.contactPeersViewPromise.set(self.account.postbox.contactPeersView(accountPeerId: self.account.peerId, includePresences: true) |> mapToThrottled { next -> Signal<ContactPeersView, NoError> in
+                    self.contactPeersViewPromise.set(self.context.account.postbox.contactPeersView(accountPeerId: self.context.account.peerId, includePresences: true) |> mapToThrottled { next -> Signal<ContactPeersView, NoError> in
                         return .single(next) |> then(.complete() |> delay(5.0, queue: Queue.concurrentDefaultQueue()))
                     })
                 } else {
-                    self.contactPeersViewPromise.set(self.account.postbox.contactPeersView(accountPeerId: self.account.peerId, includePresences: true) |> take(1))
+                    self.contactPeersViewPromise.set(self.context.account.postbox.contactPeersView(accountPeerId: self.context.account.peerId, includePresences: true) |> take(1))
                 }
             }
         }
@@ -798,12 +798,12 @@ final class ContactListNode: ASDisplayNode {
     private var authorizationNode: PermissionContentNode
     private let displayPermissionPlaceholder: Bool
     
-    init(account: Account, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false) {
-        self.account = account
+    init(context: AccountContext, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false) {
+        self.context = context
         self.filters = filters
         self.displayPermissionPlaceholder = displayPermissionPlaceholder
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.listNode = ListView()
         self.listNode.dynamicBounceEnabled = !self.presentationData.disableAnimations
@@ -814,15 +814,15 @@ final class ContactListNode: ASDisplayNode {
         
         let contactsAuthorization = Promise<AccessType>()
         contactsAuthorization.set(.single(.allowed)
-        |> then(DeviceAccess.authorizationStatus(account: account, subject: .contacts)))
+        |> then(DeviceAccess.authorizationStatus(context: context, subject: .contacts)))
         
         let warningKey = PostboxViewKey.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())
-        let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
         let contactsWarningSuppressed = Promise<(Bool, Bool)>()
         contactsWarningSuppressed.set(.single((false, false))
-        |> then(account.postbox.combinedView(keys: [warningKey, preferencesKey])
-            |> map { combined -> (Bool, Bool) in
-                let synchronizeDeviceContacts: Bool = ((combined.views[preferencesKey] as? PreferencesView)?.values[ApplicationSpecificPreferencesKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)?.synchronizeDeviceContacts ?? true
+        |> then(
+            combineLatest(context.account.postbox.combinedView(keys: [warningKey]), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]))
+            |> map { combined, sharedData -> (Bool, Bool) in
+                let synchronizeDeviceContacts: Bool = (sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)?.synchronizeDeviceContacts ?? true
                 let suppressed: Bool
                 let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                 if let timestamp = timestamp, timestamp > 0 {
@@ -831,7 +831,8 @@ final class ContactListNode: ASDisplayNode {
                     suppressed = false
                 }
                 return (suppressed, !synchronizeDeviceContacts)
-            }))
+            }
+        ))
         
         var authorizeImpl: (() -> Void)?
         var openPrivacyPolicyImpl: (() -> Void)?
@@ -913,7 +914,7 @@ final class ContactListNode: ASDisplayNode {
             }
         }
         
-        let account = self.account
+        let context = self.context
         var firstTime: Int32 = 1
         let selectionStateSignal = self.selectionStatePromise.get()
         let transition: Signal<ContactsListNodeTransition, NoError>
@@ -931,7 +932,7 @@ final class ContactListNode: ASDisplayNode {
                 |> mapToSignal { query in
                     let foundLocalContacts: Signal<([Peer], [PeerId : PeerPresence]), NoError>
                     if searchChatList {
-                        let foundChatListPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: nil)
+                        let foundChatListPeers = context.account.postbox.searchPeers(query: query.lowercased(), groupId: nil)
                         foundLocalContacts = foundChatListPeers
                         |> mapToSignal { peers -> Signal<([Peer], [PeerId : PeerPresence]), NoError> in
                             var resultPeers: [Peer] = []
@@ -943,7 +944,7 @@ final class ContactListNode: ASDisplayNode {
                                     resultPeers.append(mainPeer)
                                 }
                             }
-                            return account.postbox.transaction { transaction -> ([Peer], [PeerId : PeerPresence]) in
+                            return context.account.postbox.transaction { transaction -> ([Peer], [PeerId : PeerPresence]) in
                                 var resultPresences: [PeerId: PeerPresence] = [:]
                                 for peer in resultPeers {
                                     if let presence = transaction.getPeerPresence(peerId: peer.id) {
@@ -954,17 +955,17 @@ final class ContactListNode: ASDisplayNode {
                             }
                         }
                     } else {
-                        foundLocalContacts = account.postbox.searchContacts(query: query.lowercased())
+                        foundLocalContacts = context.account.postbox.searchContacts(query: query.lowercased())
                     }
                     let foundRemoteContacts: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], []))
                     |> then(
-                        searchPeers(account: account, query: query)
+                        searchPeers(account: context.account, query: query)
                         |> map { ($0.0, $0.1) }
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     )
                     let foundDeviceContacts: Signal<[DeviceContactStableId: DeviceContactBasicData], NoError>
                     if searchDeviceContacts {
-                        foundDeviceContacts = account.telegramApplicationContext.contactDataManager.search(query: query)
+                        foundDeviceContacts = context.sharedContext.contactDataManager?.search(query: query) ?? .single([:])
                     } else {
                         foundDeviceContacts = .single([:])
                     }
@@ -979,7 +980,7 @@ final class ContactListNode: ASDisplayNode {
                             for filter in filters {
                                 switch filter {
                                     case .excludeSelf:
-                                        existingPeerIds.insert(account.peerId)
+                                        existingPeerIds.insert(context.account.peerId)
                                     case let .exclude(peerIds):
                                         existingPeerIds = existingPeerIds.union(peerIds)
                                     case let .disable(peerIds):
@@ -1032,7 +1033,7 @@ final class ContactListNode: ASDisplayNode {
                             
                             let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: themeAndStrings.0, strings: themeAndStrings.1, dateTimeFormat: themeAndStrings.2, sortOrder: themeAndStrings.3, displayOrder: themeAndStrings.4, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed, warningSuppressed: (true, true), displaySortOptions: false)
                             let previous = previousEntries.swap(entries)
-                            return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: false, generateIndexSections: generateSections, animation: .none))
+                            return .single(preparedContactListNodeTransition(account: context.account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: false, generateIndexSections: generateSections, animation: .none))
                         }
                         
                         if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
@@ -1052,7 +1053,7 @@ final class ContactListNode: ASDisplayNode {
                         for filter in filters {
                             switch filter {
                                 case .excludeSelf:
-                                    existingPeerIds.insert(account.peerId)
+                                    existingPeerIds.insert(context.account.peerId)
                                 case let .exclude(peerIds):
                                     existingPeerIds = existingPeerIds.union(peerIds)
                                 case let .disable(peerIds):
@@ -1103,7 +1104,7 @@ final class ContactListNode: ASDisplayNode {
                             animation = .none
                         }
                         
-                        return .single(preparedContactListNodeTransition(account: account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: isEmpty, generateIndexSections: generateSections, animation: animation))
+                        return .single(preparedContactListNodeTransition(account: context.account, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: isEmpty, generateIndexSections: generateSections, animation: animation))
                     }
             
                     if OSAtomicCompareAndSwap32(1, 0, &firstTime) {
@@ -1119,7 +1120,7 @@ final class ContactListNode: ASDisplayNode {
             self?.enqueueTransition(transition)
         }))
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -1179,14 +1180,14 @@ final class ContactListNode: ASDisplayNode {
         }
         
         authorizeImpl = {
-            let _ = (DeviceAccess.authorizationStatus(account: account, subject: .contacts)
+            let _ = (DeviceAccess.authorizationStatus(context: context, subject: .contacts)
             |> take(1)
             |> deliverOnMainQueue).start(next: { status in
                 switch status {
                     case .notDetermined:
                         DeviceAccess.authorizeAccess(to: .contacts)
                     case .denied, .restricted:
-                        account.telegramApplicationContext.applicationBindings.openSettings()
+                        context.sharedContext.applicationBindings.openSettings()
                     default:
                         break
                 }

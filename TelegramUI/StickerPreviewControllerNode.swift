@@ -6,7 +6,7 @@ import Postbox
 import TelegramCore
 
 final class StickerPreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
-    private let account: Account
+    private let context: AccountContext
     private let presentationData: PresentationData
     
     private let dimNode: ASDisplayNode
@@ -20,9 +20,9 @@ final class StickerPreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(account: Account) {
-        self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext) {
+        self.context = context
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.6)
@@ -133,7 +133,7 @@ final class StickerPreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(32.0), textColor: .black)
             break
         }
-        self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: false))
+        self.imageNode.setSignal(chatMessageSticker(account: context.account, file: item.file, small: false))
         
         if let (layout, navigationBarHeight) = self.containerLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)

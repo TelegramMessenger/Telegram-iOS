@@ -76,15 +76,15 @@ private final class ChangePhoneNumberIntroControllerNode: ASDisplayNode {
 }
 
 final class ChangePhoneNumberIntroController: ViewController {
-    private let account: Account
+    private let context: AccountContext
     private var didPlayPresentationAnimation = false
     
     private var presentationData: PresentationData
     
-    init(account: Account, phoneNumber: String) {
-        self.account = account
+    init(context: AccountContext, phoneNumber: String) {
+        self.context = context
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -132,7 +132,7 @@ final class ChangePhoneNumberIntroController: ViewController {
     func proceed() {
         self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: nil, text: self.presentationData.strings.PhoneNumberHelp_Alert, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
             if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChangePhoneNumberController(account: strongSelf.account), animated: true)
+                (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChangePhoneNumberController(context: strongSelf.context), animated: true)
             }
         })]), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }

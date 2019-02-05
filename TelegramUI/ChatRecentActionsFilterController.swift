@@ -356,7 +356,7 @@ private func channelRecentActionsFilterControllerEntries(presentationData: Prese
     return entries
 }
 
-public func channelRecentActionsFilterController(account: Account, peer: Peer, events: AdminLogEventsFlags, adminPeerIds: [PeerId]?, apply: @escaping (_ events: AdminLogEventsFlags, _ adminPeerIds: [PeerId]?) -> Void) -> ViewController {
+public func channelRecentActionsFilterController(context: AccountContext, peer: Peer, events: AdminLogEventsFlags, adminPeerIds: [PeerId]?, apply: @escaping (_ events: AdminLogEventsFlags, _ adminPeerIds: [PeerId]?) -> Void) -> ViewController {
     let statePromise = ValuePromise(ChatRecentActionsFilterControllerState(events: events, adminPeerIds: adminPeerIds), ignoreRepeated: true)
     let stateValue = Atomic(value: ChatRecentActionsFilterControllerState(events: events, adminPeerIds: adminPeerIds))
     let updateState: ((ChatRecentActionsFilterControllerState) -> ChatRecentActionsFilterControllerState) -> Void = { f in
@@ -367,11 +367,11 @@ public func channelRecentActionsFilterController(account: Account, peer: Peer, e
     
     let adminsPromise = Promise<[RenderedChannelParticipant]?>(nil)
     
-    let presentationDataSignal = (account.applicationContext as! TelegramApplicationContext).presentationData
+    let presentationDataSignal = context.sharedContext.presentationData
     
     let actionsDisposable = DisposableSet()
     
-    let arguments = ChatRecentActionsFilterControllerArguments(account: account, toggleAllActions: {
+    let arguments = ChatRecentActionsFilterControllerArguments(account: context.account, toggleAllActions: {
         updateState { current in
             if current.events.isEmpty {
                 return current.withUpdatedEvents(.all)
@@ -433,7 +433,7 @@ public func channelRecentActionsFilterController(account: Account, peer: Peer, e
     
     adminsPromise.set(.single(nil))
     
-    let (membersDisposable, _) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.admins(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peer.id) { membersState in
+    let (membersDisposable, _) = context.peerChannelMemberCategoriesContextsManager.admins(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peer.id) { membersState in
         if case .loading = membersState.loadingState, membersState.list.isEmpty {
             adminsPromise.set(.single(nil))
         } else {
@@ -467,7 +467,7 @@ public func channelRecentActionsFilterController(account: Account, peer: Peer, e
         
         var sortedAdmins: [RenderedChannelParticipant]?
         if let admins = admins {
-            sortedAdmins = admins.filter { $0.peer.id == account.peerId } + admins.filter({ $0.peer.id != account.peerId })
+            sortedAdmins = admins.filter { $0.peer.id == context.account.peerId } + admins.filter({ $0.peer.id != context.account.peerId })
         } else {
             sortedAdmins = nil
         }
@@ -476,7 +476,7 @@ public func channelRecentActionsFilterController(account: Account, peer: Peer, e
         previousPeers = sortedAdmins
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ChatAdmins_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(entries: channelRecentActionsFilterControllerEntries(presentationData: presentationData, accountPeerId: account.peerId, peer: peer, state: state, participants: sortedAdmins), style: .blocks, animateChanges: previous != nil && admins != nil && previous!.count >= sortedAdmins!.count)
+        let listState = ItemListNodeState(entries: channelRecentActionsFilterControllerEntries(presentationData: presentationData, accountPeerId: context.account.peerId, peer: peer, state: state, participants: sortedAdmins), style: .blocks, animateChanges: previous != nil && admins != nil && previous!.count >= sortedAdmins!.count)
         
         return (controllerState, (listState, arguments))
     }
@@ -484,7 +484,7 @@ public func channelRecentActionsFilterController(account: Account, peer: Peer, e
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     dismissImpl = { [weak controller] in
         controller?.dismiss()
     }

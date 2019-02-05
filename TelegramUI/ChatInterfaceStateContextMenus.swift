@@ -144,7 +144,7 @@ func updatedChatEditInterfaceMessagetState(state: ChatPresentationInterfaceState
     return updated
 }
 
-func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?) -> Signal<[ChatMessageContextMenuAction], NoError> {
+func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?) -> Signal<[ChatMessageContextMenuAction], NoError> {
     guard let interfaceInteraction = interfaceInteraction, let controllerInteraction = controllerInteraction else {
         return .single([])
     }
@@ -195,7 +195,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     } else if message.peers[message.id.peerId] is TelegramSecretChat {
         canDeleteMessage = true
     } else {
-        canDeleteMessage = account.peerId == message.author?.id
+        canDeleteMessage = context.account.peerId == message.author?.id
     }
     
     if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {
@@ -233,7 +233,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     
     var loadStickerSaveStatusSignal: Signal<Bool?, NoError> = .single(nil)
     if loadStickerSaveStatus != nil {
-        loadStickerSaveStatusSignal = account.postbox.transaction { transaction -> Bool? in
+        loadStickerSaveStatusSignal = context.account.postbox.transaction { transaction -> Bool? in
             var starStatus: Bool?
             if let loadStickerSaveStatus = loadStickerSaveStatus {
                 if getIsStickerSaved(transaction: transaction, fileId: loadStickerSaveStatus) {
@@ -249,16 +249,16 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     
     var loadResourceStatusSignal: Signal<MediaResourceStatus?, NoError> = .single(nil)
     if let loadCopyMediaResource = loadCopyMediaResource {
-        loadResourceStatusSignal = account.postbox.mediaBox.resourceStatus(loadCopyMediaResource)
+        loadResourceStatusSignal = context.account.postbox.mediaBox.resourceStatus(loadCopyMediaResource)
         |> take(1)
         |> map(Optional.init)
     }
     
-    let loadLimits = account.postbox.transaction { transaction -> LimitsConfiguration in
+    let loadLimits = context.account.postbox.transaction { transaction -> LimitsConfiguration in
         return transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
     }
     
-    dataSignal = combineLatest(loadLimits, loadStickerSaveStatusSignal, loadResourceStatusSignal, chatAvailableMessageActions(postbox: account.postbox, accountPeerId: account.peerId, messageIds: Set(messages.map { $0.id })))
+    dataSignal = combineLatest(loadLimits, loadStickerSaveStatusSignal, loadResourceStatusSignal, chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: Set(messages.map { $0.id })))
     |> map { limitsConfiguration, stickerSaveStatus, resourceStatus, messageActions -> MessageContextMenuData in
         var canEdit = false
         if messages[0].id.namespace == Namespaces.Message.Cloud && !isAction {
@@ -267,7 +267,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             var hasEditRights = false
             if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                 hasEditRights = false
-            } else if let author = message.author, author.id == account.peerId {
+            } else if let author = message.author, author.id == context.account.peerId {
                 hasEditRights = true
             } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
                 if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
@@ -318,7 +318,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 }
                 
                 if !hasUneditableAttributes {
-                    if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: account.peerId, message: message) {
+                    if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: context.account.peerId, message: message) {
                         canEdit = true
                     }
                 }
@@ -362,27 +362,27 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 if resourceAvailable {
                     for media in message.media {
                         if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
-                            let _ = (account.postbox.mediaBox.resourceData(largest.resource, option: .incremental(waitUntilFetchStatus: false))
-                                |> take(1)
-                                |> deliverOnMainQueue).start(next: { data in
-                                    if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                                        if let image = UIImage(data: imageData) {
-                                            if !message.text.isEmpty {
-                                                UIPasteboard.general.string = message.text
-                                                /*UIPasteboard.general.items = [
-                                                    [kUTTypeUTF8PlainText as String: message.text],
-                                                    [kUTTypePNG as String: image]
-                                                ]*/
-                                            } else {
-                                                UIPasteboard.general.image = image
-                                            }
-                                        } else {
+                            let _ = (context.account.postbox.mediaBox.resourceData(largest.resource, option: .incremental(waitUntilFetchStatus: false))
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { data in
+                                if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                                    if let image = UIImage(data: imageData) {
+                                        if !message.text.isEmpty {
                                             UIPasteboard.general.string = message.text
+                                            /*UIPasteboard.general.items = [
+                                                [kUTTypeUTF8PlainText as String: message.text],
+                                                [kUTTypePNG as String: image]
+                                            ]*/
+                                        } else {
+                                            UIPasteboard.general.image = image
                                         }
                                     } else {
                                         UIPasteboard.general.string = message.text
                                     }
-                                })
+                                } else {
+                                    UIPasteboard.general.string = message.text
+                                }
+                            })
                         }
                     }
                 } else {
@@ -433,7 +433,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 if messages[0].id.namespace == Namespaces.Message.Cloud {
                     if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                         hasEditRights = false
-                    } else if let author = message.author, author.id == account.peerId {
+                    } else if let author = message.author, author.id == context.account.peerId {
                         hasEditRights = true
                     } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
                         if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
@@ -479,7 +479,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                         if file.isVideo {
                             if file.isAnimated {
                                 actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_LinkDialogSave, action: {
-                                    let _ = addSavedGif(postbox: account.postbox, fileReference: .message(message: MessageReference(message), media: file)).start()
+                                    let _ = addSavedGif(postbox: context.account.postbox, fileReference: .message(message: MessageReference(message), media: file)).start()
                                 })))
                             }
                             break
@@ -510,7 +510,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             for media in message.media {
                 if let action = media as? TelegramMediaAction, case let .phoneCall(id, discardReason, _) = action.action {
                     if discardReason != .busy && discardReason != .missed {
-                        if let logName = callLogNameForId(id: id, account: account) {
+                        if let logName = callLogNameForId(id: id, account: context.account) {
                             let start = logName.index(logName.startIndex, offsetBy: "\(id)".count + 1)
                             let end = logName.index(logName.endIndex, offsetBy: -4)
                             let accessHash = logName[start..<end]
@@ -697,10 +697,10 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                             }
                         }
                         optionsMap[id]!.insert(.deleteLocally)
-                        if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message) {
-                            if !message.flags.contains(.Incoming) || limitsConfiguration.canRemoveIncomingMessagesInPrivateChats {
-                                optionsMap[id]!.insert(.deleteGlobally)
-                            }
+                        if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message) && !message.flags.contains(.Incoming) {
+                            optionsMap[id]!.insert(.deleteGlobally)
+                        } else if limitsConfiguration.canRemoveIncomingMessagesInPrivateChats {
+                            optionsMap[id]!.insert(.deleteGlobally)
                         }
                         if user.botInfo != nil {
                             optionsMap[id]!.insert(.report)

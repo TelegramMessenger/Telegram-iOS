@@ -37,7 +37,7 @@ private struct StickerPackPreviewGridTransaction {
 }
 
 final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let account: Account
+    private let context: AccountContext
     private let openShare: (() -> Void)?
     private var presentationData: PresentationData
     
@@ -78,10 +78,10 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     
     private var hapticFeedback: HapticFeedback?
     
-    init(account: Account, openShare: (() -> Void)?, openMention: @escaping (String) -> Void) {
-        self.account = account
+    init(context: AccountContext, openShare: (() -> Void)?, openMention: @escaping (String) -> Void) {
+        self.context = context
         self.openShare = openShare
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
@@ -192,7 +192,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.contentGridNode.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point -> Signal<(ASDisplayNode, PeekControllerContent)?, NoError>? in
             if let strongSelf = self {
                 if let itemNode = strongSelf.contentGridNode.itemNodeAtPoint(point) as? StickerPackPreviewGridItemNode, let item = itemNode.stickerPackItem {
-                    return strongSelf.account.postbox.transaction { transaction -> Bool in
+                    return strongSelf.context.account.postbox.transaction { transaction -> Bool in
                         return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
                     }
                     |> deliverOnMainQueue
@@ -210,15 +210,15 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                                 menuItems.append(PeekControllerMenuItem(title: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
                                         if let strongSelf = self {
                                             if isStarred {
-                                                let _ = removeSavedSticker(postbox: strongSelf.account.postbox, mediaId: item.file.fileId).start()
+                                                let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
                                             } else {
-                                                let _ = addSavedSticker(postbox: strongSelf.account.postbox, network: strongSelf.account.network, file: item.file).start()
+                                                let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                             }
                                         }
                                     }))
                                 menuItems.append(PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: {}))
                             }
-                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.account, item: .pack(item), menu: menuItems))
+                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                         } else {
                             return nil
                         }
@@ -375,7 +375,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                         self.contentTitleNode.attributedText = stringWithAppliedEntities(info.title, entities: entities, baseColor: self.presentationData.theme.actionSheet.primaryTextColor, linkColor: self.presentationData.theme.actionSheet.controlAccentColor, baseFont: Font.medium(20.0), linkFont: Font.medium(20.0), boldFont: Font.medium(20.0), italicFont: Font.medium(20.0), fixedFont: Font.medium(20.0))
                         animateIn = true
                     }
-                    transaction = StickerPackPreviewGridTransaction(previousList: self.currentItems, list: updatedItems, account: self.account, interaction: self.interaction)
+                    transaction = StickerPackPreviewGridTransaction(previousList: self.currentItems, list: updatedItems, account: self.context.account, interaction: self.interaction)
                     self.currentItems = updatedItems
             }
         }
@@ -509,10 +509,10 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
             switch stickerPack {
                 case let .result(info, items, installed):
                     if installed {
-                        let _ = removeStickerPackInteractively(postbox: self.account.postbox, id: info.id, option: .delete).start()
+                        let _ = removeStickerPackInteractively(postbox: self.context.account.postbox, id: info.id, option: .delete).start()
                         updateStickerPack(.result(info: info, items: items, installed: false))
                     } else {
-                        let _ = addStickerPackInteractively(postbox: self.account.postbox, info: info, items: items).start()
+                        let _ = addStickerPackInteractively(postbox: self.context.account.postbox, info: info, items: items).start()
                         if !dismissOnAction {
                             updateStickerPack(.result(info: info, items: items, installed: true))
                         }

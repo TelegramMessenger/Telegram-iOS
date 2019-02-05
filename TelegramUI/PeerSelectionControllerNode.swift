@@ -6,7 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 
 final class PeerSelectionControllerNode: ASDisplayNode {
-    private let account: Account
+    private let context: AccountContext
     private let present: (ViewController, Any?) -> Void
     private let dismiss: () -> Void
     private let filter: ChatListNodePeersFilter
@@ -49,14 +49,13 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         return self.readyValue.get()
     }
     
-    
-    init(account: Account, filter: ChatListNodePeersFilter, hasContactSelector: Bool, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, filter: ChatListNodePeersFilter, hasContactSelector: Bool, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
+        self.context = context
         self.present = present
         self.dismiss = dismiss
         self.filter = filter
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         if hasContactSelector {
             self.toolbarBackgroundNode = ASDisplayNode()
@@ -75,7 +74,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
        
         
-        self.chatListNode = ChatListNode(account: account, groupId: nil, controlsHistoryPreload: false, mode: .peers(filter: filter), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
+        self.chatListNode = ChatListNode(context: context, groupId: nil, controlsHistoryPreload: false, mode: .peers(filter: filter), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
         
         super.init()
         
@@ -102,7 +101,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         self.addSubnode(self.chatListNode)
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -217,7 +216,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         if self.chatListNode.supernode != nil {
-            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChatListSearchContainerNode(account: self.account, filter: self.filter, groupId: nil, openPeer: { [weak self] peer, _ in
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChatListSearchContainerNode(context: self.context, filter: self.filter, groupId: nil, openPeer: { [weak self] peer, _ in
                 if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                     requestOpenPeerFromSearch(peer)
                 }
@@ -244,11 +243,11 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }, placeholder: placeholderNode)
             
         } else if let contactListNode = self.contactListNode, contactListNode.supernode != nil {
-            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(account: self.account, onlyWriteable: true, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: true, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
                 if let strongSelf = self {
                     switch peer {
                         case let .peer(peer, _):
-                            let _ = (strongSelf.account.postbox.transaction { transaction -> Peer? in
+                            let _ = (strongSelf.context.account.postbox.transaction { transaction -> Peer? in
                                 return transaction.getPeer(peer.id)
                             } |> deliverOnMainQueue).start(next: { peer in
                                 if let strongSelf = self, let peer = peer {
@@ -327,7 +326,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     self.recursivelyEnsureDisplaySynchronously(true)
                     contactListNode.enableUpdates = true
                 } else {
-                    let contactListNode = ContactListNode(account: account, presentation: .single(.natural(options: [])))
+                    let contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: [])))
                     self.contactListNode = contactListNode
                     contactListNode.enableUpdates = true
                     contactListNode.activateSearch = { [weak self] in
@@ -340,7 +339,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     }
                     contactListNode.suppressPermissionWarning = { [weak self] in
                         if let strongSelf = self {
-                            presentContactsWarningSuppression(account: strongSelf.account, present: { c, a in
+                            presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
                                 strongSelf.present(c, a)
                             })
                         }

@@ -10,18 +10,18 @@ final class GameController: ViewController {
         return self.displayNode as! GameControllerNode
     }
     
-    private let account: Account
+    private let context: AccountContext
     private let url: String
     private let message: Message
     
     private var presentationData: PresentationData
     
-    init(account: Account, url: String, message: Message) {
-        self.account = account
+    init(context: AccountContext, url: String, message: Message) {
+        self.context = context
         self.url = url
         self.message = message
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -67,7 +67,7 @@ final class GameController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = GameControllerNode(account: self.account, presentationData: self.presentationData, url: self.url, present: { [weak self] c, a in
+        self.displayNode = GameControllerNode(context: self.context, presentationData: self.presentationData, url: self.url, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, message: self.message)
     }

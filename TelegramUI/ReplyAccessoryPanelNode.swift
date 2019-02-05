@@ -19,7 +19,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     
     var theme: PresentationTheme
     
-    init(account: Account, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
+    init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
         self.messageId = messageId
         
         self.theme = theme
@@ -56,7 +56,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.textNode)
         self.addSubnode(self.imageNode)
         
-        self.messageDisposable.set((account.postbox.messageAtId(messageId)
+        self.messageDisposable.set((context.account.postbox.messageAtId(messageId)
         |> deliverOnMainQueue).start(next: { [weak self] message in
             if let strongSelf = self {
                 var authorName = ""
@@ -65,7 +65,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     authorName = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                 }
                 if let message = message {
-                    (text, _) = descriptionStringForMessage(message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: account.peerId)
+                    (text, _) = descriptionStringForMessage(message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: context.account.peerId)
                 }
                 
                 var updatedMediaReference: AnyMediaReference?
@@ -116,12 +116,12 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 if mediaUpdated {
                     if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
                         if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
-                            updateImageSignal = chatMessagePhotoThumbnail(account: account, photoReference: imageReference)
+                            updateImageSignal = chatMessagePhotoThumbnail(account: context.account, photoReference: imageReference)
                         } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
                             if fileReference.media.isVideo {
-                                updateImageSignal = chatMessageVideoThumbnail(account: account, fileReference: fileReference)
+                                updateImageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)
                             } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                                updateImageSignal = chatWebpageSnippetFile(account: account, fileReference: fileReference, representation: iconImageRepresentation)
+                                updateImageSignal = chatWebpageSnippetFile(account: context.account, fileReference: fileReference, representation: iconImageRepresentation)
                             }
                         }
                     } else {
@@ -131,7 +131,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 
                 let isMedia: Bool
                 if let message = message {
-                    switch messageContentKind(message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: account.peerId) {
+                    switch messageContentKind(message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: context.account.peerId) {
                         case .text:
                             isMedia = false
                         default:

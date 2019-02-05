@@ -25,8 +25,8 @@ struct SecureIdDocumentGalleryEntry: Equatable {
         return lhs.index == rhs.index && lhs.resource.isEqual(to: rhs.resource) && lhs.location == rhs.location && lhs.error == rhs.error
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, context: SecureIdAccessContext, delete: @escaping (TelegramMediaResource) -> Void) -> GalleryItem {
-        return SecureIdDocumentGalleryItem(account: account, theme: theme, strings: strings, context: context, resource: self.resource, caption: self.error, location: self.location, delete: {
+    func item(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, secureIdContext: SecureIdAccessContext, delete: @escaping (TelegramMediaResource) -> Void) -> GalleryItem {
+        return SecureIdDocumentGalleryItem(context: context, theme: theme, strings: strings, secureIdContext: secureIdContext, resource: self.resource, caption: self.error, location: self.location, delete: {
             delete(self.resource)
         })
     }
@@ -45,8 +45,8 @@ class SecureIdDocumentGalleryController: ViewController {
         return self.displayNode as! GalleryControllerNode
     }
     
-    private let account: Account
-    private let context: SecureIdAccessContext
+    private let context: AccountContext
+    private let secureIdContext: SecureIdAccessContext
     private var presentationData: PresentationData
     
     private let _ready = Promise<Bool>()
@@ -75,12 +75,12 @@ class SecureIdDocumentGalleryController: ViewController {
     
     var deleteResource: ((TelegramMediaResource) -> Void)?
     
-    init(account: Account, context: SecureIdAccessContext, entries: [SecureIdDocumentGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void) {
-        self.account = account
+    init(context: AccountContext, secureIdContext: SecureIdAccessContext, entries: [SecureIdDocumentGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void) {
         self.context = context
+        self.secureIdContext = secureIdContext
         self.replaceRootController = replaceRootController
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: GalleryController.darkNavigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
@@ -97,7 +97,7 @@ class SecureIdDocumentGalleryController: ViewController {
                 strongSelf.centralEntryIndex = centralIndex
                 if strongSelf.isViewLoaded {
                     strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({
-                        $0.item(account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, context: strongSelf.context, delete: { resource in
+                        $0.item(context: context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, secureIdContext: strongSelf.secureIdContext, delete: { resource in
                             self?.deleteItem(resource)
                         })
                     }), centralItemIndex: centralIndex, keepFirst: false)
@@ -254,7 +254,7 @@ class SecureIdDocumentGalleryController: ViewController {
             firstLayout = false
         
             self.galleryNode.pager.replaceItems(self.entries.map({
-                $0.item(account: account, theme: self.presentationData.theme, strings: self.presentationData.strings, context: self.context, delete: { [weak self] resource in
+                $0.item(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, secureIdContext: self.secureIdContext, delete: { [weak self] resource in
                     self?.deleteItem(resource)
                 })
             }), centralItemIndex: self.centralEntryIndex)

@@ -219,7 +219,7 @@ private func passcodeOptionsControllerEntries(presentationData: PresentationData
     return entries
 }
 
-func passcodeOptionsController(account: Account) -> ViewController {
+func passcodeOptionsController(context: AccountContext) -> ViewController {
     let initialState = PasscodeOptionsControllerState()
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -233,22 +233,24 @@ func passcodeOptionsController(account: Account) -> ViewController {
     let actionsDisposable = DisposableSet()
     
     let passcodeOptionsDataPromise = Promise<PasscodeOptionsData>()
-    passcodeOptionsDataPromise.set(combineLatest(account.postbox.transaction { transaction -> PostboxAccessChallengeData in
-        return transaction.getAccessChallengeData()
-    }, account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.presentationPasscodeSettings]) |> take(1)) |> map { accessChallenge, preferences -> PasscodeOptionsData in
-        return PasscodeOptionsData(accessChallenge: accessChallenge, presentationSettings: (preferences.values[ApplicationSpecificPreferencesKeys.presentationPasscodeSettings] as? PresentationPasscodeSettings) ?? PresentationPasscodeSettings.defaultSettings)
+    passcodeOptionsDataPromise.set(context.sharedContext.accountManager.transaction { transaction -> (PostboxAccessChallengeData, PresentationPasscodeSettings) in
+        let passcodeSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationPasscodeSettings) as? PresentationPasscodeSettings ?? PresentationPasscodeSettings.defaultSettings
+        return (transaction.getAccessChallengeData(), passcodeSettings)
+    }
+    |> map { accessChallenge, passcodeSettings -> PasscodeOptionsData in
+        return PasscodeOptionsData(accessChallenge: accessChallenge, presentationSettings: passcodeSettings)
     })
     
     let arguments = PasscodeOptionsControllerArguments(turnPasscodeOn: {
         var dismissImpl: (() -> Void)?
         
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
         let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: TGPasscodeEntryControllerModeSetupSimple, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
             if let result = result {
                 let challenge = PostboxAccessChallengeData.numericalPassword(value: result, timeout: nil, attempts: nil)
-                let _ = account.postbox.transaction({ transaction -> Void in
+                let _ = (context.sharedContext.accountManager.transaction { transaction -> Void in
                     transaction.setAccessChallengeData(challenge)
                     updatePresentationPasscodeSettingsInternal(transaction: transaction, { current in
                         return current.withUpdatedAutolockTimeout(1 * 60 * 60)
@@ -273,14 +275,14 @@ func passcodeOptionsController(account: Account) -> ViewController {
             legacyController?.dismiss()
         }
     }, turnPasscodeOff: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.PasscodeSettings_TurnPasscodeOff, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 
                 let challenge = PostboxAccessChallengeData.none
-                let _ = account.postbox.transaction({ transaction -> Void in
+                let _ = context.sharedContext.accountManager.transaction({ transaction -> Void in
                     transaction.setAccessChallengeData(challenge)
                 }).start()
                 
@@ -295,8 +297,8 @@ func passcodeOptionsController(account: Account) -> ViewController {
             ])])
         presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, changePasscode: {
-        let _ = (account.postbox.transaction({ transaction -> Bool in
-            switch  transaction.getAccessChallengeData() {
+        let _ = (context.sharedContext.accountManager.transaction({ transaction -> Bool in
+            switch transaction.getAccessChallengeData() {
                 case .none, .numericalPassword:
                     return true
                 case .plaintextPassword:
@@ -306,12 +308,12 @@ func passcodeOptionsController(account: Account) -> ViewController {
         |> deliverOnMainQueue).start(next: { isSimple in
             var dismissImpl: (() -> Void)?
             
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
             let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: isSimple ? TGPasscodeEntryControllerModeSetupSimple : TGPasscodeEntryControllerModeSetupComplex, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
                 if let result = result {
-                    let _ = account.postbox.transaction({ transaction -> Void in
+                    let _ = context.sharedContext.accountManager.transaction({ transaction -> Void in
                         var data = transaction.getAccessChallengeData()
                         data = PostboxAccessChallengeData.numericalPassword(value: result, timeout: data.autolockDeadline, attempts: nil)
                         transaction.setAccessChallengeData(data)
@@ -335,14 +337,15 @@ func passcodeOptionsController(account: Account) -> ViewController {
             }
         })
     }, changePasscodeTimeout: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         var items: [ActionSheetItem] = []
         let setAction: (Int32?) -> Void = { value in
-            let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
+            let _ = (passcodeOptionsDataPromise.get()
+            |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
                 passcodeOptionsDataPromise?.set(.single(data.withUpdatedPresentationSettings(data.presentationSettings.withUpdatedAutolockTimeout(value))))
                 
-                let _ = updatePresentationPasscodeSettingsInteractively(postbox: account.postbox, { current in
+                let _ = updatePresentationPasscodeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                     return current.withUpdatedAutolockTimeout(value)
                 }).start()
             })
@@ -376,20 +379,20 @@ func passcodeOptionsController(account: Account) -> ViewController {
         let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
             passcodeOptionsDataPromise?.set(.single(data.withUpdatedPresentationSettings(data.presentationSettings.withUpdatedEnableBiometrics(value))))
             
-            let _ = updatePresentationPasscodeSettingsInteractively(postbox: account.postbox, { current in
+            let _ = updatePresentationPasscodeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                 return current.withUpdatedEnableBiometrics(value)
             }).start()
         })
     }, toggleSimplePasscode: { value in
         var dismissImpl: (() -> Void)?
         
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
         let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: value ? TGPasscodeEntryControllerModeSetupSimple : TGPasscodeEntryControllerModeSetupComplex, cancelEnabled: true, allowTouchId: false, attemptData: nil, completion: { result in
             if let result = result {
                 let challenge = value ? PostboxAccessChallengeData.numericalPassword(value: result, timeout: nil, attempts: nil) : PostboxAccessChallengeData.plaintextPassword(value: result, timeout: nil, attempts: nil)
-                let _ = account.postbox.transaction({ transaction -> Void in
+                let _ = (context.sharedContext.accountManager.transaction { transaction -> Void in
                     transaction.setAccessChallengeData(challenge)
                     updatePresentationPasscodeSettingsInternal(transaction: transaction, { current in
                         return current.withUpdatedAutolockTimeout(1 * 60 * 60)
@@ -414,7 +417,7 @@ func passcodeOptionsController(account: Account) -> ViewController {
         }
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), passcodeOptionsDataPromise.get()) |> deliverOnMainQueue
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), passcodeOptionsDataPromise.get()) |> deliverOnMainQueue
         |> map { presentationData, state, passcodeOptionsData -> (ItemListControllerState, (ItemListNodeState<PasscodeOptionsEntry>, PasscodeOptionsEntry.ItemGenerationArguments)) in
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.PasscodeSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
@@ -425,7 +428,7 @@ func passcodeOptionsController(account: Account) -> ViewController {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
@@ -435,8 +438,8 @@ func passcodeOptionsController(account: Account) -> ViewController {
     return controller
 }
 
-public func passcodeOptionsAccessController(account: Account, animateIn: Bool = true, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
-    return account.postbox.transaction { transaction -> PostboxAccessChallengeData in
+public func passcodeOptionsAccessController(context: AccountContext, animateIn: Bool = true, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
+    return context.sharedContext.accountManager.transaction { transaction -> PostboxAccessChallengeData in
         return transaction.getAccessChallengeData()
     }
     |> deliverOnMainQueue
@@ -451,7 +454,7 @@ public func passcodeOptionsAccessController(account: Account, animateIn: Bool = 
             }
             var dismissImpl: (() -> Void)?
             
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
             let mode: TGPasscodeEntryControllerMode
@@ -482,7 +485,7 @@ public func passcodeOptionsAccessController(account: Account, animateIn: Bool = 
                 }
             }
             controller.updateAttemptData = { attemptData in
-                let _ = account.postbox.transaction({ transaction -> Void in
+                let _ = context.sharedContext.accountManager.transaction({ transaction -> Void in
                     var attempts: AccessChallengeAttempts?
                     if let attemptData = attemptData {
                         attempts = AccessChallengeAttempts(count: Int32(attemptData.numberOfInvalidAttempts), timestamp: Int32(attemptData.dateOfLastInvalidAttempt))
@@ -510,10 +513,15 @@ public func passcodeOptionsAccessController(account: Account, animateIn: Bool = 
     }
 }
 
-public func passcodeEntryController(account: Account, animateIn: Bool = true, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
-    return account.postbox.transaction { transaction -> (PostboxAccessChallengeData, PresentationPasscodeSettings?) in
-        let passcodeSettings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationPasscodeSettings) as? PresentationPasscodeSettings
-        return (transaction.getAccessChallengeData(), passcodeSettings)
+public func passcodeEntryController(context: AccountContext, animateIn: Bool = true, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
+    return context.sharedContext.accountManager.transaction { transaction -> PostboxAccessChallengeData in
+        return transaction.getAccessChallengeData()
+    }
+    |> mapToSignal { accessChallengeData -> Signal<(PostboxAccessChallengeData, PresentationPasscodeSettings?), NoError> in
+        return context.sharedContext.accountManager.transaction { transaction -> (PostboxAccessChallengeData, PresentationPasscodeSettings?) in
+            let passcodeSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationPasscodeSettings) as? PresentationPasscodeSettings
+            return (accessChallengeData, passcodeSettings)
+        }
     }
     |> deliverOnMainQueue
     |> map { (challenge, passcodeSettings) -> ViewController? in
@@ -527,7 +535,7 @@ public func passcodeEntryController(account: Account, animateIn: Bool = true, co
             }
             var dismissImpl: (() -> Void)?
             
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: true), theme: presentationData.theme)
             let mode: TGPasscodeEntryControllerMode
@@ -562,7 +570,7 @@ public func passcodeEntryController(account: Account, animateIn: Bool = true, co
                 }
             }
             controller.updateAttemptData = { attemptData in
-                let _ = account.postbox.transaction({ transaction -> Void in
+                let _ = context.sharedContext.accountManager.transaction({ transaction -> Void in
                     var attempts: AccessChallengeAttempts?
                     if let attemptData = attemptData {
                         attempts = AccessChallengeAttempts(count: Int32(attemptData.numberOfInvalidAttempts), timestamp: Int32(attemptData.dateOfLastInvalidAttempt))

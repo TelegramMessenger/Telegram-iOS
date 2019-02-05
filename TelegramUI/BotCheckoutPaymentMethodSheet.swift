@@ -33,14 +33,14 @@ enum BotCheckoutPaymentMethod: Equatable {
 final class BotCheckoutPaymentMethodSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?
     
-    init(account: Account, currentMethod: BotCheckoutPaymentMethod?, methods: [BotCheckoutPaymentMethod], applyValue: @escaping (BotCheckoutPaymentMethod) -> Void, newCard: @escaping () -> Void) {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, currentMethod: BotCheckoutPaymentMethod?, methods: [BotCheckoutPaymentMethod], applyValue: @escaping (BotCheckoutPaymentMethod) -> Void, newCard: @escaping () -> Void) {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let theme = presentationData.theme
         let strings = presentationData.strings
         
         super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
         
-        self.presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak self] presentationData in
+        self.presentationDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)
             }

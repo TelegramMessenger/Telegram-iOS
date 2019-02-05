@@ -711,7 +711,7 @@ private final class DeviceContactInfoController: ItemListController<DeviceContac
     }
 }
 
-public func deviceContactInfoController(account: Account, subject: DeviceContactInfoSubject, completed: (() -> Void)? = nil, cancelled: (() -> Void)? = nil) -> ViewController {
+public func deviceContactInfoController(context: AccountContext, subject: DeviceContactInfoSubject, completed: (() -> Void)? = nil, cancelled: (() -> Void)? = nil) -> ViewController {
     var initialState = DeviceContactInfoState()
     if case let .create(peer, contactData, _) = subject {
         var peerPhoneNumber: String?
@@ -755,7 +755,7 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
     var displayCopyContextMenuImpl: ((DeviceContactInfoEntryTag, String) -> Void)?
     
     let callImpl: (String) -> Void = { number in
-        let _ = (account.postbox.transaction { transaction -> TelegramUser? in
+        let _ = (context.account.postbox.transaction { transaction -> TelegramUser? in
             if let peer = subject.peer {
                 return transaction.getPeer(peer.id) as? TelegramUser
             }
@@ -763,7 +763,7 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
         }
         |> deliverOnMainQueue).start(next: { user in
             if let user = user, let phone = user.phone, formatPhoneNumber(phone) == formatPhoneNumber(number) {
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let controller = ActionSheetController(presentationTheme: presentationData.theme)
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()
@@ -772,18 +772,18 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
                     ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.UserInfo_TelegramCall, action: {
                             dismissAction()
-                            let callResult = account.telegramApplicationContext.callManager?.requestCall(peerId: user.id, endCurrentIfAny: false)
+                            let callResult = context.sharedContext.callManager?.requestCall(account: context.account, peerId: user.id, endCurrentIfAny: false)
                             if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                                 if currentPeerId == user.id {
-                                    account.telegramApplicationContext.navigateToCurrentCall?()
+                                    context.sharedContext.navigateToCurrentCall()
                                 } else {
-                                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                                    let _ = (account.postbox.transaction { transaction -> (Peer?, Peer?) in
+                                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                    let _ = (context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
                                         return (transaction.getPeer(user.id), transaction.getPeer(currentPeerId))
                                         } |> deliverOnMainQueue).start(next: { peer, current in
                                             if let peer = peer, let current = current {
                                                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                                    let _ = account.telegramApplicationContext.callManager?.requestCall(peerId: peer.id, endCurrentIfAny: true)
+                                                    let _ = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, endCurrentIfAny: true)
                                                 })]), nil)
                                             }
                                         })
@@ -792,19 +792,19 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
                         }),
                         ActionSheetButtonItem(title: presentationData.strings.UserInfo_PhoneCall, action: {
                             dismissAction()
-                            account.telegramApplicationContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
+                            context.sharedContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
                         }),
                     ]),
                     ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
                 ])
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             } else {
-                account.telegramApplicationContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
+                context.sharedContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(number).replacingOccurrences(of: " ", with: ""))")
             }
         })
     }
     
-    let arguments = DeviceContactInfoControllerArguments(account: account, updateEditingName: { editingName in
+    let arguments = DeviceContactInfoControllerArguments(account: context.account, updateEditingName: { editingName in
         updateState { state in
             var state = state
             if let _ = state.editingState {
@@ -861,7 +861,7 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
                 if subject.contactData.basicData.phoneNumbers.count == 1 {
                     inviteAction(subject.contactData.basicData.phoneNumbers[0].value)
                 } else {
-                    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let controller = ActionSheetController(presentationTheme: presentationData.theme)
                     let dismissAction: () -> Void = { [weak controller] in
                         controller?.dismissAnimated()
@@ -881,7 +881,7 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
                     presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 }
             case .createContact:
-                presentControllerImpl?(deviceContactInfoController(account: account, subject: .create(peer: subject.peer, contactData: subject.contactData, completion: { peer, stableId, contactData in
+                presentControllerImpl?(deviceContactInfoController(context: context, subject: .create(peer: subject.peer, contactData: subject.contactData, completion: { peer, stableId, contactData in
                     dismissImpl?(false)
                     if let peer = peer {
                         
@@ -927,7 +927,7 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
     }
     
     let previousEditingPhoneIds = Atomic<Set<Int64>?>(value: nil)
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), contactData)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), contactData)
     |> map { presentationData, state, peerAndContactData -> (ItemListControllerState, (ItemListNodeState<DeviceContactInfoEntry>, DeviceContactInfoEntry.ItemGenerationArguments)) in
         var leftNavigationButton: ItemListNavigationButton?
         switch subject {
@@ -968,19 +968,21 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
                         state.savingData = true
                         return state
                     }
-                    let _ = (account.telegramApplicationContext.contactDataManager.createContactWithData(composedContactData)
-                    |> deliverOnMainQueue).start(next: { contactIdAndData in
-                        updateState { state in
-                            var state = state
-                            state.savingData = false
-                            return state
-                        }
-                        if let contactIdAndData = contactIdAndData {
-                            //completion(nil, contactIdAndData.0, contactIdAndData.1)
-                        }
-                        completed?()
-                        dismissImpl?(true)
-                    })
+                    if let contactDataManager = context.sharedContext.contactDataManager {
+                        let _ = (contactDataManager.createContactWithData(composedContactData)
+                        |> deliverOnMainQueue).start(next: { contactIdAndData in
+                            updateState { state in
+                                var state = state
+                                state.savingData = false
+                                return state
+                            }
+                            if let contactIdAndData = contactIdAndData {
+                                //completion(nil, contactIdAndData.0, contactIdAndData.1)
+                            }
+                            completed?()
+                            dismissImpl?(true)
+                        })
+                    }
                 }
             })
         }
@@ -1022,7 +1024,7 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
             focusItemTag = DeviceContactInfoEntryTag.editingPhone(insertedPhoneId)
         }
         
-        let listState = ItemListNodeState(entries: deviceContactInfoEntries(account: account, presentationData: presentationData, peer: peerAndContactData.0, contactData: peerAndContactData.2, isContact: peerAndContactData.1 != nil, state: state, selecting: selecting, editingPhoneNumbers: editingPhones), style: .plain, focusItemTag: focusItemTag)
+        let listState = ItemListNodeState(entries: deviceContactInfoEntries(account: context.account, presentationData: presentationData, peer: peerAndContactData.0, contactData: peerAndContactData.2, isContact: peerAndContactData.1 != nil, state: state, selecting: selecting, editingPhoneNumbers: editingPhones), style: .plain, focusItemTag: focusItemTag)
         
         return (controllerState, (listState, arguments))
     }
@@ -1030,18 +1032,18 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
         actionsDisposable.dispose()
     }
     
-    let controller = DeviceContactInfoController(account: account, state: signal)
+    let controller = DeviceContactInfoController(context: context, state: signal)
     addToExistingImpl = { [weak controller] in
         guard let controller = controller else {
             return
         }
-        addContactToExisting(account: account, parentController: controller, contactData: subject.contactData, completion: { peer, contactId, contactData in
-            replaceControllerImpl?(deviceContactInfoController(account: account, subject: .vcard(peer, contactId, contactData)))
+        addContactToExisting(context: context, parentController: controller, contactData: subject.contactData, completion: { peer, contactId, contactData in
+            replaceControllerImpl?(deviceContactInfoController(context: context, subject: .vcard(peer, contactId, contactData)))
         })
     }
     openChatImpl = { [weak controller] peerId in
         if let navigationController = (controller?.navigationController as? NavigationController) {
-            navigateToChatController(navigationController: navigationController, account: account, chatLocation: .peer(peerId))
+            navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId))
         }
     }
     replaceControllerImpl = { [weak controller] value in
@@ -1059,7 +1061,7 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
         }
     }
     inviteImpl = { [weak controller] numbers in
-        controller?.inviteContact(presentationData: account.telegramApplicationContext.currentPresentationData.with { $0 }, numbers: numbers)
+        controller?.inviteContact(presentationData: context.sharedContext.currentPresentationData.with { $0 }, numbers: numbers)
     }
     openAddressImpl = { [weak controller] address in
         guard let _ = controller else {
@@ -1070,14 +1072,14 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
         guard let controller = controller else {
             return
         }
-        openExternalUrl(account: account, url: url, presentationData: account.telegramApplicationContext.currentPresentationData.with { $0 }, applicationContext: account.telegramApplicationContext, navigationController: controller.navigationController as? NavigationController, dismissInput: { [weak controller] in
+        openExternalUrl(context: context, url: url, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: controller.navigationController as? NavigationController, dismissInput: { [weak controller] in
             controller?.view.endEditing(true)
         })
     }
     
     displayCopyContextMenuImpl = { [weak controller] tag, value in
         if let strongController = controller {
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             var resultItemNode: ListViewItemNode?
             let _ = strongController.frameForItemNode({ itemNode in
                 if let itemNode = itemNode as? ItemListTextWithLabelItemNode {
@@ -1109,8 +1111,8 @@ public func deviceContactInfoController(account: Account, subject: DeviceContact
     return controller
 }
 
-private func addContactToExisting(account: Account, parentController: ViewController, contactData: DeviceContactExtendedData, completion: @escaping (Peer?, DeviceContactStableId, DeviceContactExtendedData) -> Void) {
-    let contactsController = ContactSelectionController(account: account, title: { $0.Contacts_Title }, displayDeviceContacts: true)
+private func addContactToExisting(context: AccountContext, parentController: ViewController, contactData: DeviceContactExtendedData, completion: @escaping (Peer?, DeviceContactStableId, DeviceContactExtendedData) -> Void) {
+    let contactsController = ContactSelectionController(context: context, title: { $0.Contacts_Title }, displayDeviceContacts: true)
     parentController.present(contactsController, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     let _ = (contactsController.result
     |> deliverOnMainQueue).start(next: { peer in
@@ -1121,7 +1123,7 @@ private func addContactToExisting(account: Account, parentController: ViewContro
                     guard let contact = contact as? TelegramUser, let phoneNumber = contact.phone else {
                         return
                     }
-                    dataSignal = account.telegramApplicationContext.contactDataManager.basicData()
+                    dataSignal = (context.sharedContext.contactDataManager?.basicData() ?? .single([:]))
                     |> take(1)
                     |> mapToSignal { basicData -> Signal<(Peer?, DeviceContactStableId?), NoError> in
                         var stableId: String?
@@ -1142,42 +1144,44 @@ private func addContactToExisting(account: Account, parentController: ViewContro
             let _ = (dataSignal
             |> deliverOnMainQueue).start(next: { peer, stableId in
                 guard let stableId = stableId else {
-                    parentController.present(deviceContactInfoController(account: account, subject: .create(peer: peer, contactData: contactData, completion: { peer, stableId, contactData in
+                    parentController.present(deviceContactInfoController(context: context, subject: .create(peer: peer, contactData: contactData, completion: { peer, stableId, contactData in
                         
                     })), in: .window(.root))
                     return
                 }
-                let _ = (account.telegramApplicationContext.contactDataManager.appendContactData(contactData, to: stableId)
-                |> deliverOnMainQueue).start(next: { contactData in
-                    guard let contactData = contactData else {
-                        return
-                    }
-                    let _ = (account.postbox.contactPeersView(accountPeerId: nil, includePresences: false)
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { view in
-                        let phones = Set<String>(contactData.basicData.phoneNumbers.map {
-                            return formatPhoneNumber($0.value)
-                        })
-                        var foundPeer: Peer?
-                        for peer in view.peers {
-                            if let user = peer as? TelegramUser, let phone = user.phone {
-                                let phone = formatPhoneNumber(phone)
-                                if phones.contains(phone) {
-                                    foundPeer = peer
-                                    break
+                if let contactDataManager = context.sharedContext.contactDataManager {
+                    let _ = (contactDataManager.appendContactData(contactData, to: stableId)
+                    |> deliverOnMainQueue).start(next: { contactData in
+                        guard let contactData = contactData else {
+                            return
+                        }
+                        let _ = (context.account.postbox.contactPeersView(accountPeerId: nil, includePresences: false)
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { view in
+                            let phones = Set<String>(contactData.basicData.phoneNumbers.map {
+                                return formatPhoneNumber($0.value)
+                            })
+                            var foundPeer: Peer?
+                            for peer in view.peers {
+                                if let user = peer as? TelegramUser, let phone = user.phone {
+                                    let phone = formatPhoneNumber(phone)
+                                    if phones.contains(phone) {
+                                        foundPeer = peer
+                                        break
+                                    }
                                 }
                             }
-                        }
-                        completion(foundPeer, stableId, contactData)
+                            completion(foundPeer, stableId, contactData)
+                        })
                     })
-                })
+                }
             })
         }
     })
 }
 
-func addContactOptionsController(account: Account, peer: Peer?, contactData: DeviceContactExtendedData) -> ActionSheetController {
-    let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+func addContactOptionsController(context: AccountContext, peer: Peer?, contactData: DeviceContactExtendedData) -> ActionSheetController {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let controller = ActionSheetController(presentationTheme: presentationData.theme)
     let dismissAction: () -> Void = { [weak controller] in
         controller?.dismissAnimated()
@@ -1186,7 +1190,7 @@ func addContactOptionsController(account: Account, peer: Peer?, contactData: Dev
     controller.setItemGroups([
         ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.Profile_CreateNewContact, action: { [weak controller] in
-                controller?.present(deviceContactInfoController(account: account, subject: .create(peer: peer, contactData: contactData, completion: { peer, stableId, contactData in
+                controller?.present(deviceContactInfoController(context: context, subject: .create(peer: peer, contactData: contactData, completion: { peer, stableId, contactData in
                     
                     if let peer = peer {
                         
@@ -1200,7 +1204,7 @@ func addContactOptionsController(account: Account, peer: Peer?, contactData: Dev
                 guard let controller = controller else {
                     return
                 }
-                addContactToExisting(account: account, parentController: controller, contactData: contactData, completion: { peer, contactId, contactData in
+                addContactToExisting(context: context, parentController: controller, contactData: contactData, completion: { peer, contactId, contactData in
                     
                 })
                 dismissAction()

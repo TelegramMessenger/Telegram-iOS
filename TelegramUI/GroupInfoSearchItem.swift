@@ -6,7 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 
 final class ChannelMembersSearchItem: ItemListControllerSearch {
-    let account: Account
+    let context: AccountContext
     let peerId: PeerId
     let cancel: () -> Void
     let openPeer: (Peer, RenderedChannelParticipant?) -> Void
@@ -17,8 +17,8 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
     private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
     private let activityDisposable = MetaDisposable()
     
-    init(account: Account, peerId: PeerId, searchMode: ChannelMembersSearchMode = .searchMembers, cancel: @escaping () -> Void, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
-        self.account = account
+    init(context: AccountContext, peerId: PeerId, searchMode: ChannelMembersSearchMode = .searchMembers, cancel: @escaping () -> Void, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+        self.context = context
         self.peerId = peerId
         self.cancel = cancel
         self.openPeer = openPeer
@@ -41,7 +41,7 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
     
     func isEqual(to: ItemListControllerSearch) -> Bool {
         if let to = to as? ChannelMembersSearchItem {
-            if self.account !== to.account {
+            if self.context !== to.context {
                 return false
             }
             if self.peerId != to.peerId {
@@ -57,7 +57,7 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
         if let current = current as? GroupInfoSearchNavigationContentNode {
             return current
         } else {
-            let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             return GroupInfoSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, mode: self.searchMode, cancel: self.cancel, updateActivity: { [weak self] value in
                 self?.updateActivity = value
             })
@@ -65,7 +65,7 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
     }
     
     func node(current: ItemListControllerSearchNode?) -> ItemListControllerSearchNode {
-        return ChannelMembersSearchItemNode(account: self.account, peerId: self.peerId, searchMode: self.searchMode, openPeer: self.openPeer, cancel: self.cancel, updateActivity: { [weak self] value in
+        return ChannelMembersSearchItemNode(context: self.context, peerId: self.peerId, searchMode: self.searchMode, openPeer: self.openPeer, cancel: self.cancel, updateActivity: { [weak self] value in
             self?.activity.set(value)
         }, present: { [weak self] c, a in
             self?.present(c, a)
@@ -76,8 +76,8 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
 private final class ChannelMembersSearchItemNode: ItemListControllerSearchNode {
     private let containerNode: ChannelMembersSearchContainerNode
     
-    init(account: Account, peerId: PeerId, searchMode: ChannelMembersSearchMode, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
-        self.containerNode = ChannelMembersSearchContainerNode(account: account, peerId: peerId, mode: searchMode, filters: [], openPeer: { peer, participant in
+    init(context: AccountContext, peerId: PeerId, searchMode: ChannelMembersSearchMode, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+        self.containerNode = ChannelMembersSearchContainerNode(context: context, peerId: peerId, mode: searchMode, filters: [], openPeer: { peer, participant in
             openPeer(peer, participant)
         }, updateActivity: updateActivity, present: present)
         self.containerNode.cancel = {

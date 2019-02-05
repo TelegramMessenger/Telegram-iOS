@@ -168,11 +168,11 @@ protocol ChangePhoneNumberCodeController: class {
 private final class ChangePhoneNumberCodeControllerImpl: ItemListController<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeController {
     private let applyCodeImpl: (Int) -> Void
     
-    init(account: Account, state: Signal<(ItemListControllerState, (ItemListNodeState<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeEntry.ItemGenerationArguments)), NoError>, applyCodeImpl: @escaping (Int) -> Void) {
+    init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeEntry.ItemGenerationArguments)), NoError>, applyCodeImpl: @escaping (Int) -> Void) {
         self.applyCodeImpl = applyCodeImpl
         
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        super.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: account.telegramApplicationContext.presentationData |> map { ($0.theme, $0.strings) }, state: state, tabBarItem: nil)
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        super.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.sharedContext.presentationData |> map { ($0.theme, $0.strings) }, state: state, tabBarItem: nil)
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -184,7 +184,7 @@ private final class ChangePhoneNumberCodeControllerImpl: ItemListController<Chan
     }
 }
 
-func changePhoneNumberCodeController(account: Account, phoneNumber: String, codeData: ChangeAccountPhoneNumberData) -> ViewController {
+func changePhoneNumberCodeController(context: AccountContext, phoneNumber: String, codeData: ChangeAccountPhoneNumberData) -> ViewController {
     let initialState = ChangePhoneNumberCodeControllerState(codeText: "", checking: false)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -218,7 +218,7 @@ func changePhoneNumberCodeController(account: Account, phoneNumber: String, code
                     |> take(1)
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return Signal { subscriber in
-                            return requestNextChangeAccountPhoneNumberVerification(account: account, phoneNumber: phoneNumber, phoneCodeHash: data.hash).start(next: { next in
+                            return requestNextChangeAccountPhoneNumberVerification(account: context.account, phoneNumber: phoneNumber, phoneCodeHash: data.hash).start(next: { next in
                                 currentDataPromise?.set(.single(next))
                             }, error: { error in
                                 
@@ -242,11 +242,11 @@ func changePhoneNumberCodeController(account: Account, phoneNumber: String, code
             }
         }
         if let code = code {
-            changePhoneDisposable.set((requestChangeAccountPhoneNumber(account: account, phoneNumber: phoneNumber, phoneCodeHash: codeData.hash, phoneCode: code) |> deliverOnMainQueue).start(error: { error in
+            changePhoneDisposable.set((requestChangeAccountPhoneNumber(account: context.account, phoneNumber: phoneNumber, phoneCodeHash: codeData.hash, phoneCode: code) |> deliverOnMainQueue).start(error: { error in
                 updateState {
                     return $0.withUpdatedChecking(false)
                 }
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let alertText: String
                 switch error {
                     case .generic:
@@ -263,7 +263,7 @@ func changePhoneNumberCodeController(account: Account, phoneNumber: String, code
                 updateState {
                     return $0.withUpdatedChecking(false)
                 }
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
                 dismissImpl?()
             }))
@@ -285,7 +285,7 @@ func changePhoneNumberCodeController(account: Account, phoneNumber: String, code
         checkCode()
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, currentDataPromise.get() |> deliverOnMainQueue, timeout.get() |> deliverOnMainQueue)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, currentDataPromise.get() |> deliverOnMainQueue, timeout.get() |> deliverOnMainQueue)
         |> deliverOnMainQueue
         |> map { presentationData, state, data, timeout -> (ItemListControllerState, (ItemListNodeState<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
@@ -309,7 +309,7 @@ func changePhoneNumberCodeController(account: Account, phoneNumber: String, code
             actionsDisposable.dispose()
     }
     
-    let controller = ChangePhoneNumberCodeControllerImpl(account: account, state: signal, applyCodeImpl: { code in
+    let controller = ChangePhoneNumberCodeControllerImpl(context: context, state: signal, applyCodeImpl: { code in
         updateState { state in
             return state.withUpdatedCodeText("\(code)")
         }

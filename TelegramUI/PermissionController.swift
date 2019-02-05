@@ -5,7 +5,7 @@ import SwiftSignalKit
 import TelegramCore
 
 public final class PermissionController : ViewController {
-    private let account: Account
+    private let context: AccountContext
     private let splitTest: PermissionUISplitTest
     private var state: PermissionState?
     
@@ -27,10 +27,10 @@ public final class PermissionController : ViewController {
     private var skip: (() -> Void)?
     public var proceed: ((Bool) -> Void)?
     
-    public init(account: Account, splitTest: PermissionUISplitTest) {
-        self.account = account
+    public init(context: AccountContext, splitTest: PermissionUISplitTest) {
+        self.context = context
         self.splitTest = splitTest
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: self.presentationData.theme.rootController.navigationBar.accentTextColor, disabledButtonColor: self.presentationData.theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
@@ -38,19 +38,19 @@ public final class PermissionController : ViewController {
         
         self.updateThemeAndStrings()
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-                if let strongSelf = self {
-                    let previousTheme = strongSelf.presentationData.theme
-                    let previousStrings = strongSelf.presentationData.strings
-                    
-                    strongSelf.presentationData = presentationData
-                    
-                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
-                        strongSelf.updateThemeAndStrings()
-                    }
+        self.presentationDataDisposable = (context.sharedContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                let previousStrings = strongSelf.presentationData.strings
+                
+                strongSelf.presentationData = presentationData
+                
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                    strongSelf.updateThemeAndStrings()
                 }
-            })
+            }
+        })
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -81,7 +81,7 @@ public final class PermissionController : ViewController {
     }
     
     private func openAppSettings() {
-        self.account.telegramApplicationContext.applicationBindings.openSettings()
+        self.context.sharedContext.applicationBindings.openSettings()
     }
     
     public func setState(_ state: PermissionState, animated: Bool) {
@@ -99,7 +99,7 @@ public final class PermissionController : ViewController {
                         switch status {
                             case .requestable:
                                 strongSelf.splitTest.addEvent(.ContactsRequest)
-                                DeviceAccess.authorizeAccess(to: .contacts, account: strongSelf.account, { [weak self] result in
+                                DeviceAccess.authorizeAccess(to: .contacts, context: strongSelf.context, { [weak self] result in
                                     if let strongSelf = self {
                                         if result {
                                             strongSelf.splitTest.addEvent(.ContactsAllowed)
@@ -125,7 +125,7 @@ public final class PermissionController : ViewController {
                         switch status {
                             case .requestable:
                                 strongSelf.splitTest.addEvent(.NotificationsRequest)
-                                DeviceAccess.authorizeAccess(to: .notifications, account: strongSelf.account, { [weak self] result in
+                                DeviceAccess.authorizeAccess(to: .notifications, context: strongSelf.context, { [weak self] result in
                                     if let strongSelf = self {
                                         if result {
                                             strongSelf.splitTest.addEvent(.NotificationsAllowed)
@@ -147,7 +147,7 @@ public final class PermissionController : ViewController {
                 self.allow = { [weak self] in
                     self?.proceed?(true)
                 }
-            case let .cellularData:
+            case .cellularData:
                 self.allow = { [weak self] in
                     self?.proceed?(true)
                 }
@@ -160,7 +160,7 @@ public final class PermissionController : ViewController {
     }
     
     public override func loadDisplayNode() {
-        self.displayNode = PermissionControllerNode(account: self.account, splitTest: self.splitTest)
+        self.displayNode = PermissionControllerNode(context: self.context, splitTest: self.splitTest)
         self.displayNodeDidLoad()
         
         self.controllerNode.allow = { [weak self] in
@@ -168,7 +168,7 @@ public final class PermissionController : ViewController {
         }
         self.controllerNode.openPrivacyPolicy = { [weak self] in
             if let strongSelf = self {
-                openExternalUrl(account: strongSelf.account, context: .generic, url: "https://telegram.org/privacy", forceExternal: true, presentationData: strongSelf.account.telegramApplicationContext.currentPresentationData.with { $0 }, applicationContext: strongSelf.account.telegramApplicationContext, navigationController: nil, dismissInput: {})
+                openExternalUrl(context: strongSelf.context, urlContext: .generic, url: "https://telegram.org/privacy", forceExternal: true, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
             }
         }
     }

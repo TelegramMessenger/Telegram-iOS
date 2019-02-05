@@ -6,20 +6,20 @@ import Postbox
 import TelegramCore
 
 class SecureIdDocumentGalleryItem: GalleryItem {
-    let account: Account
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let context: SecureIdAccessContext
+    let secureIdContext: SecureIdAccessContext
     let resource: TelegramMediaResource
     let caption: String
     let location: SecureIdDocumentGalleryEntryLocation
     let delete: () -> Void
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, context: SecureIdAccessContext, resource: TelegramMediaResource, caption: String, location: SecureIdDocumentGalleryEntryLocation, delete: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, secureIdContext: SecureIdAccessContext, resource: TelegramMediaResource, caption: String, location: SecureIdDocumentGalleryEntryLocation, delete: @escaping () -> Void) {
+        self.context = context
         self.theme = theme
         self.strings = strings
-        self.context = context
+        self.secureIdContext = secureIdContext
         self.resource = resource
         self.caption = caption
         self.location = location
@@ -27,9 +27,9 @@ class SecureIdDocumentGalleryItem: GalleryItem {
     }
     
     func node() -> GalleryItemNode {
-        let node = SecureIdDocumentGalleryItemNode(account: self.account, theme: self.theme, strings: self.strings)
+        let node = SecureIdDocumentGalleryItemNode(context: self.context, theme: self.theme, strings: self.strings)
         
-        node.setResource(context: self.context, resource: self.resource)
+        node.setResource(secureIdContext: self.secureIdContext, resource: self.resource)
         
         node._title.set(.single("\(self.location.position + 1) \(self.strings.Common_of) \(self.location.totalCount)"))
         
@@ -54,14 +54,14 @@ class SecureIdDocumentGalleryItem: GalleryItem {
 }
 
 final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let account: Account
+    private let context: AccountContext
     
     private let imageNode: TransformImageNode
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
     private let footerContentNode: SecureIdDocumentGalleryFooterContentNode
     
-    private var accountAndMedia: (Account, SecureIdAccessContext, TelegramMediaResource)?
+    private var contextAndMedia: (AccountContext, SecureIdAccessContext, TelegramMediaResource)?
     
     private var fetchDisposable = MetaDisposable()
     
@@ -71,11 +71,11 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+        self.context = context
         
         self.imageNode = TransformImageNode()
-        self.footerContentNode = SecureIdDocumentGalleryFooterContentNode(account: account, theme: theme, strings: strings)
+        self.footerContentNode = SecureIdDocumentGalleryFooterContentNode(context: context, theme: theme, strings: strings)
         
         super.init()
         
@@ -103,11 +103,11 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.setup(caption: caption)
     }
     
-    fileprivate func setResource(context: SecureIdAccessContext, resource: TelegramMediaResource) {
-        if self.accountAndMedia == nil || !self.accountAndMedia!.2.isEqual(to: resource) {
+    fileprivate func setResource(secureIdContext: SecureIdAccessContext, resource: TelegramMediaResource) {
+        if self.contextAndMedia == nil || !self.contextAndMedia!.2.isEqual(to: resource) {
             let displaySize = CGSize(width: 1280.0, height: 1280.0)
             //self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-            self.imageNode.setSignal(securePhotoInternal(account: account, resource: resource, accessContext: context) |> beforeNext { [weak self] value in
+            self.imageNode.setSignal(securePhotoInternal(account: context.account, resource: resource, accessContext: secureIdContext) |> beforeNext { [weak self] value in
                 Queue.mainQueue().async {
                     if let strongSelf = self {
                         if let size = value.0(), strongSelf.zoomableContent?.0 != size {
@@ -120,9 +120,9 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
                 return value.1
             })
             self.zoomableContent = (displaySize, self.imageNode)
-            self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(resource, parameters: nil).start())
+            self.fetchDisposable.set(context.account.postbox.mediaBox.fetchedResource(resource, parameters: nil).start())
         }
-        self.accountAndMedia = (account, context, resource)
+        self.contextAndMedia = (context, secureIdContext, resource)
     }
     
     override func animateIn(from node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void) {

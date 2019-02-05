@@ -30,16 +30,16 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                         let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
                     }
                     self.canDeleteMessagesDisposable.set(nil)
-                } else if let account = self.account {
-                    self.canDeleteMessagesDisposable.set((chatAvailableMessageActions(postbox: account.postbox, accountPeerId: account.peerId, messageIds: self.selectedMessages)
-                        |> deliverOnMainQueue).start(next: { [weak self] actions in
-                            if let strongSelf = self {
-                                strongSelf.actions = actions
-                                if let (width, leftInset, rightInset, maxHeight, metrics) = strongSelf.validLayout, let interfaceState = strongSelf.presentationInterfaceState {
-                                    let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
-                                }
+                } else if let context = self.context {
+                    self.canDeleteMessagesDisposable.set((chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: self.selectedMessages)
+                    |> deliverOnMainQueue).start(next: { [weak self] actions in
+                        if let strongSelf = self {
+                            strongSelf.actions = actions
+                            if let (width, leftInset, rightInset, maxHeight, metrics) = strongSelf.validLayout, let interfaceState = strongSelf.presentationInterfaceState {
+                                let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
                             }
-                        }))
+                        }
+                    }))
                 }
             }
         }

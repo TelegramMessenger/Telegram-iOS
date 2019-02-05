@@ -7,14 +7,14 @@ import Display
 import Postbox
 
 class WebSearchVideoGalleryItem: GalleryItem {
-    let account: Account
+    let context: AccountContext
     let presentationData: PresentationData
     let result: ChatContextResult
     let content: UniversalVideoContent
     let controllerInteraction: WebSearchGalleryControllerInteraction?
     
-    init(account: Account, presentationData: PresentationData, result: ChatContextResult, content: UniversalVideoContent, controllerInteraction: WebSearchGalleryControllerInteraction?) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, result: ChatContextResult, content: UniversalVideoContent, controllerInteraction: WebSearchGalleryControllerInteraction?) {
+        self.context = context
         self.presentationData = presentationData
         self.result = result
         self.content = content
@@ -22,7 +22,7 @@ class WebSearchVideoGalleryItem: GalleryItem {
     }
     
     func node() -> GalleryItemNode {
-        let node = WebSearchVideoGalleryItemNode(account: self.account, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction)
+        let node = WebSearchVideoGalleryItemNode(context: self.context, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction)
         node.setupItem(self)
         return node
     }
@@ -44,7 +44,7 @@ private struct FetchControls {
 }
 
 final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let account: Account
+    private let context: AccountContext
     private let strings: PresentationStrings
     private let controllerInteraction: WebSearchGalleryControllerInteraction?
     
@@ -73,12 +73,12 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     var playbackCompleted: (() -> Void)?
     
-    init(account: Account, presentationData: PresentationData, controllerInteraction: WebSearchGalleryControllerInteraction?) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, controllerInteraction: WebSearchGalleryControllerInteraction?) {
+        self.context = context
         self.strings = presentationData.strings
         self.controllerInteraction = controllerInteraction
     
-        self.footerContentNode = WebSearchGalleryFooterContentNode(account: account, presentationData: presentationData)
+        self.footerContentNode = WebSearchGalleryFooterContentNode(context: context, presentationData: presentationData)
         
         self.statusButtonNode = HighlightableButtonNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
@@ -110,7 +110,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 switch gesture {
                     case .tap:
                         if let item = self.item, let selectionState = item.controllerInteraction?.selectionState {
-                            let legacyItem = legacyWebSearchItem(account: item.account, result: item.result)
+                            let legacyItem = legacyWebSearchItem(account: item.context.account, result: item.result)
                             selectionState.toggleItemSelection(legacyItem)
                         }
                     case .doubleTap:
@@ -151,11 +151,9 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 videoNode.removeFromSupernode()
             }
             
-            guard let mediaManager = item.account.telegramApplicationContext.mediaManager else {
-                preconditionFailure()
-            }
+            let mediaManager = item.context.sharedContext.mediaManager
             
-            let videoNode = UniversalVideoNode(postbox: item.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
+            let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
             let videoSize = CGSize(width: item.content.dimensions.width * 2.0, height: item.content.dimensions.height * 2.0)
             videoNode.updateLayout(size: videoSize, transition: .immediate)
             self.videoNode = videoNode
@@ -166,7 +164,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             self.requiresDownload = true
             var mediaFileStatus: Signal<MediaResourceStatus?, NoError> = .single(nil)
             if let mediaResource = mediaResource {
-                mediaFileStatus = item.account.postbox.mediaBox.resourceStatus(mediaResource)
+                mediaFileStatus = item.context.account.postbox.mediaBox.resourceStatus(mediaResource)
                 |> map(Optional.init)
             }
             
@@ -295,7 +293,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let transform = CATransform3DScale(videoNode.layer.transform, transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height, 1.0)
             videoNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: videoNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
             
-            self.account.telegramApplicationContext.mediaManager?.setOverlayVideoNode(nil)
+            self.context.sharedContext.mediaManager.setOverlayVideoNode(nil)
         } else {
             var transformedFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view)
             let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view.superview)

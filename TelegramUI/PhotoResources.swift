@@ -97,7 +97,6 @@ func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaReference
                     }
                 }
                 
-                
                 return thumbnail
                 |> mapToSignal { thumbnailData in
                     if let thumbnailData = thumbnailData {
@@ -636,7 +635,7 @@ func rawMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference) -> S
 }
 
 public func chatMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    return chatMessagePhotoInternal(photoData: chatMessagePhotoDatas(postbox: postbox, photoReference: photoReference, synchronousLoad: synchronousLoad), synchronousLoad: synchronousLoad)
+    return chatMessagePhotoInternal(photoData: chatMessagePhotoDatas(postbox: postbox, photoReference: photoReference, tryAdditionalRepresentations: true, synchronousLoad: synchronousLoad), synchronousLoad: synchronousLoad)
     |> map { _, generate in
         return generate
     }
@@ -691,33 +690,37 @@ public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoE
             if let thumbnailImage = thumbnailImage {
                 let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
                 
-                let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 90.0, height: 90.0))
-                
-                let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
-                let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
-                thumbnailContext.withFlippedContext { c in
-                    c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
-                }
-                telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
-                
-                var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
-                if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
-                    thumbnailContextFittingSize = thumbnailContextFittingSize.aspectFilled(CGSize(width: 150.0, height: 150.0))
-                }
-                
-                if thumbnailContextFittingSize.width > thumbnailContextSize.width {
-                    let additionalContextSize = thumbnailContextFittingSize
-                    let additionalBlurContext = DrawingContext(size: additionalContextSize, scale: 1.0)
-                    additionalBlurContext.withFlippedContext { c in
-                        c.interpolationQuality = .default
-                        if let image = thumbnailContext.generateImage()?.cgImage {
-                            c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
-                        }
-                    }
-                    telegramFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
-                    blurredThumbnailImage = additionalBlurContext.generateImage()
+                if thumbnailSize.width > arguments.drawingSize.width * 0.7 && thumbnailSize.height > arguments.drawingSize.height * 0.7 {
+                    blurredThumbnailImage = UIImage(cgImage: thumbnailImage)
                 } else {
-                    blurredThumbnailImage = thumbnailContext.generateImage()
+                    let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 90.0, height: 90.0))
+                    
+                    let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
+                    let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                    thumbnailContext.withFlippedContext { c in
+                        c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                    }
+                    telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                    
+                    var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
+                    if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
+                        thumbnailContextFittingSize = thumbnailContextFittingSize.aspectFilled(CGSize(width: 150.0, height: 150.0))
+                    }
+                    
+                    if thumbnailContextFittingSize.width > thumbnailContextSize.width {
+                        let additionalContextSize = thumbnailContextFittingSize
+                        let additionalBlurContext = DrawingContext(size: additionalContextSize, scale: 1.0)
+                        additionalBlurContext.withFlippedContext { c in
+                            c.interpolationQuality = .default
+                            if let image = thumbnailContext.generateImage()?.cgImage {
+                                c.draw(image, in: CGRect(origin: CGPoint(), size: additionalContextSize))
+                            }
+                        }
+                        telegramFastBlur(Int32(additionalContextSize.width), Int32(additionalContextSize.height), Int32(additionalBlurContext.bytesPerRow), additionalBlurContext.bytes)
+                        blurredThumbnailImage = additionalBlurContext.generateImage()
+                    } else {
+                        blurredThumbnailImage = thumbnailContext.generateImage()
+                    }
                 }
             }
             
@@ -1666,20 +1669,31 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
     }
 }
 
-func chatMessagePhotoStatus(account: Account, messageId: MessageId, photoReference: ImageMediaReference) -> Signal<MediaResourceStatus, NoError> {
+func chatMessagePhotoStatus(context: AccountContext, messageId: MessageId, photoReference: ImageMediaReference) -> Signal<MediaResourceStatus, NoError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
-        return account.telegramApplicationContext.fetchManager.fetchStatus(category: .image, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: largestRepresentation.resource)
+        return context.fetchManager.fetchStatus(category: .image, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: largestRepresentation.resource)
     } else {
         return .never()
     }
 }
 
-public func chatMessagePhotoInteractiveFetched(account: Account, photoReference: ImageMediaReference, storeToDownloadsPeerType: AutomaticMediaDownloadPeerType?) -> Signal<FetchResourceSourceType, FetchResourceError> {
+public func standaloneChatMessagePhotoInteractiveFetched(account: Account, photoReference: ImageMediaReference) -> Signal<FetchResourceSourceType, FetchResourceError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
         return fetchedMediaResource(postbox: account.postbox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image, reportResultStatus: true)
         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
+            return .single(type)
+        }
+    } else {
+        return .never()
+    }
+}
+
+public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoReference: ImageMediaReference, storeToDownloadsPeerType: AutomaticMediaDownloadPeerType?) -> Signal<FetchResourceSourceType, FetchResourceError> {
+    if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
+        return fetchedMediaResource(postbox: context.account.postbox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image, reportResultStatus: true)
+        |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
             if case .remote = type, let peerType = storeToDownloadsPeerType {
-                return storeDownloadedMedia(storeManager: account.telegramApplicationContext.mediaManager?.downloadedMediaStoreManager, media: photoReference.abstract, peerType: peerType)
+                return storeDownloadedMedia(storeManager: context.downloadedMediaStoreManager, media: photoReference.abstract, peerType: peerType)
                 |> introduceError(FetchResourceError.self)
                 |> mapToSignal { _ -> Signal<FetchResourceSourceType, FetchResourceError> in
                     return .complete()

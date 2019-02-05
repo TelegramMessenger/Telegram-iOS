@@ -142,7 +142,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         for media in item.message.media {
             if let telegramFile = media as? TelegramMediaFile {
                 if self.telegramFile != telegramFile {
-                    let signal = chatMessageAnimatedStickerDatas(postbox: item.account.postbox, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: telegramFile), synchronousLoad: false)
+                    let signal = chatMessageAnimatedStickerDatas(postbox: item.context.account.postbox, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: telegramFile), synchronousLoad: false)
                     |> mapToSignal { data, completed -> Signal<Data, NoError> in
                         if completed, let data = data {
                             return .single(data)
@@ -152,7 +152,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     self.telegramFile = telegramFile
                     self.animationNode.setSignal(signal)
-                    self.fetchDisposable.set(freeMediaFileInteractiveFetched(account: item.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
+                    self.fetchDisposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
                     
                     self.animationNode.play()
                 }
@@ -175,7 +175,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         let currentItem = self.item
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
-            let incoming = item.message.effectivelyIncoming(item.account.peerId)
+            let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             var imageSize: CGSize = CGSize(width: 162.0, height: 162.0)
             if let telegramFile = telegramFile {
                 if let dimensions = telegramFile.dimensions {
@@ -190,7 +190,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             switch item.chatLocation {
             case let .peer(peerId):
-                if peerId != item.account.peerId {
+                if peerId != item.context.account.peerId {
                     if peerId.isGroupOrChannel && item.message.author != nil {
                         var isBroadcastChannel = false
                         if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
@@ -215,14 +215,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             var needShareButton = false
-            if item.message.id.peerId == item.account.peerId {
+            if item.message.id.peerId == item.context.account.peerId {
                 for attribute in item.content.firstMessage.attributes {
                     if let _ = attribute as? SourceReferenceMessageAttribute {
                         needShareButton = true
                         break
                     }
                 }
-            } else if item.message.effectivelyIncoming(item.account.peerId) {
+            } else if item.message.effectivelyIncoming(item.context.account.peerId) {
                 if let peer = item.message.peers[item.message.id.peerId] {
                     if let channel = peer as? TelegramChannel {
                         if case .broadcast = channel.info {
@@ -270,7 +270,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             let imageApply = imageLayout(arguments)
             
             let statusType: ChatMessageDateAndStatusType
-            if item.message.effectivelyIncoming(item.account.peerId) {
+            if item.message.effectivelyIncoming(item.context.account.peerId) {
                 statusType = .FreeIncoming
             } else {
                 if item.message.flags.contains(.Failed) {
@@ -305,7 +305,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             for attribute in item.message.attributes {
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                     let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - imageSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
-                    replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.account, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                    replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                     
                     if let currentReplyBackgroundNode = currentReplyBackgroundNode {
                         updatedReplyBackgroundNode = currentReplyBackgroundNode
@@ -327,7 +327,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     updatedShareButtonNode = currentShareButtonNode
                     if item.presentationData.theme !== currentItem?.presentationData.theme {
                         let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
-                        if item.message.id.peerId == item.account.peerId {
+                        if item.message.id.peerId == item.context.account.peerId {
                             updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
                         } else {
                             updatedShareButtonBackground = graphics.chatBubbleShareButtonImage
@@ -337,7 +337,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     let buttonNode = HighlightableButtonNode()
                     let buttonIcon: UIImage?
                     let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
-                    if item.message.id.peerId == item.account.peerId {
+                    if item.message.id.peerId == item.context.account.peerId {
                         buttonIcon = graphics.chatBubbleNavigateButtonImage
                     } else {
                         buttonIcon = graphics.chatBubbleShareButtonImage
@@ -422,7 +422,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
                         if let item = self.item, let author = item.content.firstMessage.author {
                             let navigate: ChatControllerInteractionNavigateToPeer
-                            if item.content.firstMessage.id.peerId == item.account.peerId {
+                            if item.content.firstMessage.id.peerId == item.context.account.peerId {
                                 navigate = .chat(textInputState: nil, messageId: nil)
                             } else {
                                 navigate = .info
@@ -465,7 +465,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     @objc func shareButtonPressed() {
         if let item = self.item {
-            if item.content.firstMessage.id.peerId == item.account.peerId {
+            if item.content.firstMessage.id.peerId == item.context.account.peerId {
                 for attribute in item.content.firstMessage.attributes {
                     if let attribute = attribute as? SourceReferenceMessageAttribute {
                         item.controllerInteraction.navigateToMessage(item.content.firstMessage.id, attribute.messageId)
@@ -559,7 +559,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var incoming = true
             
             selected = selectionState.selectedIds.contains(item.message.id)
-            incoming = item.message.effectivelyIncoming(item.account.peerId)
+            incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             
             let offset: CGFloat = incoming ? 42.0 : 0.0
             

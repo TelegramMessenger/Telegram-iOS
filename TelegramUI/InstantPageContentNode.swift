@@ -6,7 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 
 final class InstantPageContentNode : ASDisplayNode {
-    private let account: Account
+    private let context: AccountContext
     private let strings: PresentationStrings
     private let theme: InstantPageTheme
     
@@ -34,8 +34,8 @@ final class InstantPageContentNode : ASDisplayNode {
     
     private var previousVisibleBounds: CGRect?
     
-    init(account: Account, strings: PresentationStrings, theme: InstantPageTheme, items: [InstantPageItem], contentSize: CGSize, inOverlayPanel: Bool = false, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void) {
-        self.account = account
+    init(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, items: [InstantPageItem], contentSize: CGSize, inOverlayPanel: Bool = false, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void) {
+        self.context = context
         self.strings = strings
         self.theme = theme
         
@@ -180,7 +180,7 @@ final class InstantPageContentNode : ASDisplayNode {
                 if itemNode == nil {
                     let itemIndex = itemIndex
                     let detailsIndex = detailsIndex
-                    if let newNode = item.node(account: self.account, strings: self.strings, theme: theme, openMedia: { [weak self] media in
+                    if let newNode = item.node(context: self.context, strings: self.strings, theme: theme, openMedia: { [weak self] media in
                         self?.openMedia(media)
                         }, longPressMedia: { [weak self] media in
                             self?.longPressMedia(media)
@@ -188,7 +188,7 @@ final class InstantPageContentNode : ASDisplayNode {
                             self?.openPeer(peerId)
                         }, openUrl: { [weak self] url in
                             self?.openUrl(url)
-                        }, updateWebEmbedHeight: { [weak self] height in
+                        }, updateWebEmbedHeight: { _ in
                         }, updateDetailsExpanded: { [weak self] expanded in
                             self?.updateDetailsExpanded(detailsIndex, expanded)
                         }, currentExpandedDetails: self.currentExpandedDetails) {

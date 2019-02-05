@@ -129,7 +129,7 @@ private func groupsInCommonControllerEntries(presentationData: PresentationData,
     return entries
 }
 
-public func groupsInCommonController(account: Account, peerId: PeerId) -> ViewController {
+public func groupsInCommonController(context: AccountContext, peerId: PeerId) -> ViewController {
     let statePromise = ValuePromise(GroupsInCommonControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: GroupsInCommonControllerState())
     let updateState: ((GroupsInCommonControllerState) -> GroupsInCommonControllerState) -> Void = { f in
@@ -142,12 +142,12 @@ public func groupsInCommonController(account: Account, peerId: PeerId) -> ViewCo
     
     var pushControllerImpl: ((ViewController) -> Void)?
     
-    let arguments = GroupsInCommonControllerArguments(account: account, openPeer: { memberId in
-        pushControllerImpl?(ChatController(account: account, chatLocation: .peer(memberId)))
+    let arguments = GroupsInCommonControllerArguments(account: context.account, openPeer: { memberId in
+        pushControllerImpl?(ChatController(context: context, chatLocation: .peer(memberId)))
     })
     
-    let peersSignal: Signal<[Peer]?, NoError> = .single(nil) |> then(groupsInCommon(account: account, peerId: peerId) |> mapToSignal { peerIds -> Signal<[Peer], NoError> in
-            return account.postbox.transaction { transaction -> [Peer] in
+    let peersSignal: Signal<[Peer]?, NoError> = .single(nil) |> then(groupsInCommon(account: context.account, peerId: peerId) |> mapToSignal { peerIds -> Signal<[Peer], NoError> in
+            return context.account.postbox.transaction { transaction -> [Peer] in
                 var result: [Peer] = []
                 for id in peerIds {
                     if let peer = transaction.getPeer(id) {
@@ -163,7 +163,7 @@ public func groupsInCommonController(account: Account, peerId: PeerId) -> ViewCo
     
     var previousPeers: [Peer]?
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peersPromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peersPromise.get())
         |> deliverOnMainQueue
         |> map { presentationData, state, peers -> (ItemListControllerState, (ItemListNodeState<GroupsInCommonEntry>, GroupsInCommonEntry.ItemGenerationArguments)) in
             var emptyStateItem: ItemListControllerEmptyStateItem?
@@ -182,7 +182,7 @@ public func groupsInCommonController(account: Account, peerId: PeerId) -> ViewCo
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     pushControllerImpl = { [weak controller] c in
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.pushViewController(c)

@@ -154,11 +154,11 @@ protocol ConfirmPhoneNumberCodeController: class {
 private final class ConfirmPhoneNumberCodeControllerImpl: ItemListController<ConfirmPhoneNumberCodeEntry>, ConfirmPhoneNumberCodeController {
     private let applyCodeImpl: (Int) -> Void
     
-    init(account: Account, state: Signal<(ItemListControllerState, (ItemListNodeState<ConfirmPhoneNumberCodeEntry>, ConfirmPhoneNumberCodeEntry.ItemGenerationArguments)), NoError>, applyCodeImpl: @escaping (Int) -> Void) {
+    init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<ConfirmPhoneNumberCodeEntry>, ConfirmPhoneNumberCodeEntry.ItemGenerationArguments)), NoError>, applyCodeImpl: @escaping (Int) -> Void) {
         self.applyCodeImpl = applyCodeImpl
         
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-        super.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: account.telegramApplicationContext.presentationData |> map { ($0.theme, $0.strings) }, state: state, tabBarItem: nil)
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        super.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.sharedContext.presentationData |> map { ($0.theme, $0.strings) }, state: state, tabBarItem: nil)
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -170,7 +170,7 @@ private final class ConfirmPhoneNumberCodeControllerImpl: ItemListController<Con
     }
 }
 
-func confirmPhoneNumberCodeController(account: Account, phoneNumber: String, codeData: CancelAccountResetData) -> ViewController {
+func confirmPhoneNumberCodeController(context: AccountContext, phoneNumber: String, codeData: CancelAccountResetData) -> ViewController {
     let initialState = ConfirmPhoneNumberCodeControllerState(codeText: "", checking: false)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -205,7 +205,7 @@ func confirmPhoneNumberCodeController(account: Account, phoneNumber: String, cod
             |> take(1)
             |> mapToSignal { _ -> Signal<Void, NoError> in
                 return Signal { subscriber in
-                    return requestNextCancelAccountResetOption(network: account.network, phoneNumber: phoneNumber, phoneCodeHash: data.hash).start(next: { next in
+                    return requestNextCancelAccountResetOption(network: context.account.network, phoneNumber: phoneNumber, phoneCodeHash: data.hash).start(next: { next in
                         currentDataPromise?.set(.single(next))
                     }, error: { error in
                         
@@ -231,14 +231,14 @@ func confirmPhoneNumberCodeController(account: Account, phoneNumber: String, cod
             }
         }
         if let code = code {
-            confirmPhoneDisposable.set((requestCancelAccountReset(network: account.network, phoneCodeHash: codeData.hash, phoneCode: code)
+            confirmPhoneDisposable.set((requestCancelAccountReset(network: context.account.network, phoneCodeHash: codeData.hash, phoneCode: code)
             |> deliverOnMainQueue).start(error: { error in
                 updateState { state in
                     var state = state
                     state.checking = false
                     return state
                 }
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let alertText: String
                 switch error {
                     case .generic:
@@ -257,7 +257,7 @@ func confirmPhoneNumberCodeController(account: Account, phoneNumber: String, cod
                     state.checking = false
                     return state
                 }
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.CancelResetAccount_Success(formatPhoneNumber(phoneNumber)).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 dismissImpl?()
             }))
@@ -281,7 +281,7 @@ func confirmPhoneNumberCodeController(account: Account, phoneNumber: String, cod
         checkCode()
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, currentDataPromise.get() |> deliverOnMainQueue, timeout.get() |> deliverOnMainQueue)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, currentDataPromise.get() |> deliverOnMainQueue, timeout.get() |> deliverOnMainQueue)
     |> deliverOnMainQueue
     |> map { presentationData, state, data, timeout -> (ItemListControllerState, (ItemListNodeState<ConfirmPhoneNumberCodeEntry>, ConfirmPhoneNumberCodeEntry.ItemGenerationArguments)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
@@ -309,7 +309,7 @@ func confirmPhoneNumberCodeController(account: Account, phoneNumber: String, cod
         actionsDisposable.dispose()
     }
     
-    let controller = ConfirmPhoneNumberCodeControllerImpl(account: account, state: signal, applyCodeImpl: { code in
+    let controller = ConfirmPhoneNumberCodeControllerImpl(context: context, state: signal, applyCodeImpl: { code in
         updateState { state in
             var state = state
             state.codeText = "\(code)"

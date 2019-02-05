@@ -106,7 +106,7 @@ enum ResetPasswordState: Equatable {
     case pendingVerification(emailPattern: String)
 }
 
-func resetPasswordController(account: Account, emailPattern: String, completion: @escaping () -> Void) -> ViewController {
+func resetPasswordController(context: AccountContext, emailPattern: String, completion: @escaping () -> Void) -> ViewController {
     let statePromise = ValuePromise(ResetPasswordControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ResetPasswordControllerState())
     let updateState: ((ResetPasswordControllerState) -> ResetPasswordControllerState) -> Void = { f in
@@ -128,13 +128,13 @@ func resetPasswordController(account: Account, emailPattern: String, completion:
             return state
         }
     }, openHelp: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
     })
     
     var initialFocusImpl: (() -> Void)?
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
     |> deliverOnMainQueue
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<ResetPasswordEntry>, ResetPasswordEntry.ItemGenerationArguments)) in
         
@@ -157,7 +157,7 @@ func resetPasswordController(account: Account, emailPattern: String, completion:
                         state.checking = true
                         return state
                     }
-                    saveDisposable.set((recoverTwoStepVerificationPassword(network: account.network, code: state.code)
+                    saveDisposable.set((recoverTwoStepVerificationPassword(network: context.account.network, code: state.code)
                     |> deliverOnMainQueue).start(error: { error in
                         updateState { state in
                             var state = state
@@ -175,7 +175,7 @@ func resetPasswordController(account: Account, emailPattern: String, completion:
                             case .generic:
                                 text = presentationData.strings.Login_UnknownError
                         }
-                        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                     }, completed: {
                         completion()
@@ -193,7 +193,7 @@ func resetPasswordController(account: Account, emailPattern: String, completion:
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()

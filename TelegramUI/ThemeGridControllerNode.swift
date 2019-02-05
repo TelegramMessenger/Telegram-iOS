@@ -105,8 +105,8 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
         }
     }
     
-    func item(account: Account, interaction: ThemeGridControllerInteraction) -> ThemeGridControllerItem {
-        return ThemeGridControllerItem(account: account, wallpaper: self.wallpaper, index: self.index, selected: self.selected, interaction: interaction)
+    func item(context: AccountContext, interaction: ThemeGridControllerInteraction) -> ThemeGridControllerItem {
+        return ThemeGridControllerItem(context: context, wallpaper: self.wallpaper, index: self.index, selected: self.selected, interaction: interaction)
     }
 }
 
@@ -121,15 +121,15 @@ private struct ThemeGridEntryTransition {
     let synchronousLoad: Bool
 }
 
-private func preparedThemeGridEntryTransition(account: Account, from fromEntries: [ThemeGridControllerEntry], to toEntries: [ThemeGridControllerEntry], interaction: ThemeGridControllerInteraction) -> ThemeGridEntryTransition {
+private func preparedThemeGridEntryTransition(context: AccountContext, from fromEntries: [ThemeGridControllerEntry], to toEntries: [ThemeGridControllerEntry], interaction: ThemeGridControllerInteraction) -> ThemeGridEntryTransition {
     let stationaryItems: GridNodeStationaryItems = .none
     let scrollToItem: GridNodeScrollToItem? = nil
     
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interaction: interaction), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction)) }
     
     var hasEditableItems = false
     loop: for entry in toEntries {
@@ -172,7 +172,7 @@ private func selectedWallpapers(entries: [ThemeGridControllerEntry]?, state: The
 }
 
 final class ThemeGridControllerNode: ASDisplayNode {
-    private let account: Account
+    private let context: AccountContext
     private var presentationData: PresentationData
     private var controllerInteraction: ThemeGridControllerInteraction?
     
@@ -223,8 +223,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(account: Account, presentationData: PresentationData, presentPreviewController: @escaping (WallpaperListSource) -> Void, presentGallery: @escaping () -> Void, presentColors: @escaping () -> Void, emptyStateUpdated: @escaping (Bool) -> Void, deleteWallpapers: @escaping ([TelegramWallpaper], @escaping () -> Void) -> Void, shareWallpapers: @escaping ([TelegramWallpaper]) -> Void, resetWallpapers: @escaping () -> Void, popViewController: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, presentPreviewController: @escaping (WallpaperListSource) -> Void, presentGallery: @escaping () -> Void, presentColors: @escaping () -> Void, emptyStateUpdated: @escaping (Bool) -> Void, deleteWallpapers: @escaping ([TelegramWallpaper], @escaping () -> Void) -> Void, shareWallpapers: @escaping ([TelegramWallpaper]) -> Void, resetWallpapers: @escaping () -> Void, popViewController: @escaping () -> Void) {
+        self.context = context
         self.presentationData = presentationData
         self.presentPreviewController = presentPreviewController
         self.presentGallery = presentGallery
@@ -268,7 +268,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
         let wallpapersPromise = Promise<[TelegramWallpaper]>()
-        wallpapersPromise.set(telegramWallpapers(postbox: account.postbox, network: account.network))
+        wallpapersPromise.set(telegramWallpapers(postbox: context.account.postbox, network: context.account.network))
         self.wallpapersPromise = wallpapersPromise
         
         let deletedWallpaperSlugsValue = Atomic<Set<String>>(value: Set())
@@ -350,7 +350,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         })
         self.controllerInteraction = interaction
         
-        let transition = combineLatest(wallpapersPromise.get(), deletedWallpaperSlugsPromise.get(), account.telegramApplicationContext.presentationData)
+        let transition = combineLatest(wallpapersPromise.get(), deletedWallpaperSlugsPromise.get(), context.sharedContext.presentationData)
         |> map { wallpapers, deletedWallpaperSlugs, presentationData -> (ThemeGridEntryTransition, Bool) in
             var entries: [ThemeGridControllerEntry] = []
             var index = 1
@@ -384,7 +384,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             }
             
             let previous = previousEntries.swap(entries)
-            return (preparedThemeGridEntryTransition(account: account, from: previous ?? [], to: entries, interaction: interaction), previous == nil)
+            return (preparedThemeGridEntryTransition(context: context, from: previous ?? [], to: entries, interaction: interaction), previous == nil)
         }
         self.disposable = (transition |> deliverOnMainQueue).start(next: { [weak self] (transition, _) in
             if let strongSelf = self {
@@ -473,7 +473,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
     }
     
     func updateWallpapers() {
-        self.wallpapersPromise.set(telegramWallpapers(postbox: self.account.postbox, network: self.account.network))
+        self.wallpapersPromise.set(telegramWallpapers(postbox: self.context.account.postbox, network: self.context.account.network))
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -681,7 +681,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ThemeGridSearchContentNode(account: account, openResult: { [weak self] result in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ThemeGridSearchContentNode(context: context, openResult: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.presentPreviewController(.contextResult(result))
             }

@@ -16,8 +16,8 @@ private final class ChatListControllerNodeView: UITracingLayerView, PreviewingHo
     weak var controller: ChatListController?
 }
 
-class ChatListControllerNode: ASDisplayNode {
-    private let account: Account
+final class ChatListControllerNode: ASDisplayNode {
+    private let context: AccountContext
     private let groupId: PeerGroupId?
     private var presentationData: PresentationData
     
@@ -37,12 +37,21 @@ class ChatListControllerNode: ASDisplayNode {
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
     var requestAddContact: ((String) -> Void)?
     
-    init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListController) {
-        self.account = account
+    override var accessibilityElements: [Any]? {
+        get {
+            var accessibilityElements: [Any] = []
+            addAccessibilityChildren(of: self.chatListNode, to: &accessibilityElements)
+            return accessibilityElements
+        } set(value) {
+        }
+    }
+    
+    init(context: AccountContext, groupId: PeerGroupId?, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListController) {
+        self.context = context
         self.groupId = groupId
         self.presentationData = presentationData
         
-        self.chatListNode = ChatListNode(account: account, groupId: groupId, controlsHistoryPreload: controlsHistoryPreload, mode: .chatList, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
+        self.chatListNode = ChatListNode(context: context, groupId: groupId, controlsHistoryPreload: controlsHistoryPreload, mode: .chatList, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
         
         self.controller = controller
         
@@ -171,7 +180,7 @@ class ChatListControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChatListSearchContainerNode(account: self.account, filter: [], groupId: self.groupId, openPeer: { [weak self] peer, dismissSearch in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChatListSearchContainerNode(context: self.context, filter: [], groupId: self.groupId, openPeer: { [weak self] peer, dismissSearch in
             self?.requestOpenPeerFromSearch?(peer, dismissSearch)
         }, openRecentPeerOptions: { [weak self] peer in
             self?.requestOpenRecentPeerOptions?(peer)

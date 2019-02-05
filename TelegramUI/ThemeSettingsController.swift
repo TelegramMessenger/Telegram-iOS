@@ -5,7 +5,7 @@ import Postbox
 import TelegramCore
 
 private final class ThemeSettingsControllerArguments {
-    let account: Account
+    let context: AccountContext
     let selectTheme: (Int32) -> Void
     let selectFontSize: (PresentationFontSize) -> Void
     let openWallpaperSettings: () -> Void
@@ -13,8 +13,8 @@ private final class ThemeSettingsControllerArguments {
     let openAutoNightTheme: () -> Void
     let disableAnimations: (Bool) -> Void
     
-    init(account: Account, selectTheme: @escaping (Int32) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, openAccentColor: @escaping (Int32) -> Void, openAutoNightTheme: @escaping () -> Void, disableAnimations: @escaping (Bool) -> Void) {
-        self.account = account
+    init(context: AccountContext, selectTheme: @escaping (Int32) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, openAccentColor: @escaping (Int32) -> Void, openAutoNightTheme: @escaping () -> Void, disableAnimations: @escaping (Bool) -> Void) {
+        self.context = context
         self.selectTheme = selectTheme
         self.selectFontSize = selectFontSize
         self.openWallpaperSettings = openWallpaperSettings
@@ -179,7 +179,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
             case let .chatPreviewHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .chatPreview(theme, componentTheme, wallpaper, fontSize, strings, dateTimeFormat, nameDisplayOrder):
-                return ThemeSettingsChatPreviewItem(account: arguments.account, theme: theme, componentTheme: componentTheme, strings: strings, sectionId: self.section, fontSize: fontSize, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder)
+                return ThemeSettingsChatPreviewItem(context: arguments.context, theme: theme, componentTheme: componentTheme, strings: strings, sectionId: self.section, fontSize: fontSize, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder)
             case let .wallpaper(theme, text):
                 return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openWallpaperSettings()
@@ -247,13 +247,13 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
-public func themeSettingsController(account: Account) -> ViewController {
+public func themeSettingsController(context: AccountContext) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     
-    let _ = telegramWallpapers(postbox: account.postbox, network: account.network).start()
+    let _ = telegramWallpapers(postbox: context.account.postbox, network: context.account.network).start()
     
-    let arguments = ThemeSettingsControllerArguments(account: account, selectTheme: { index in
+    let arguments = ThemeSettingsControllerArguments(context: context, selectTheme: { index in
         let theme: PresentationThemeReference
         switch index {
             case 1:
@@ -266,8 +266,8 @@ public func themeSettingsController(account: Account) -> ViewController {
                 theme = .builtin(.dayClassic)
         }
         
-        let _ = (account.postbox.transaction { transaction -> Void in
-            transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.presentationThemeSettings, { entry in
+        let _ = (context.sharedContext.accountManager.transaction { transaction -> Void in
+            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
                 let current: PresentationThemeSettings
                 if let entry = entry as? PresentationThemeSettings {
                     current = entry
@@ -276,7 +276,6 @@ public func themeSettingsController(account: Account) -> ViewController {
                 }
                 
                 let wallpaper: TelegramWallpaper
-                let wallpaperOptions: WallpaperPresentationOptions
                 
                 if let themeSpecificWallpaper = current.themeSpecificChatWallpapers[theme.index] {
                     wallpaper = themeSpecificWallpaper
@@ -297,78 +296,68 @@ public func themeSettingsController(account: Account) -> ViewController {
             })
         }).start()
     }, selectFontSize: { size in
-        let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
+        let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: size, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
         }).start()
     }, openWallpaperSettings: {
-        pushControllerImpl?(ThemeGridController(account: account))
+        pushControllerImpl?(ThemeGridController(context: context))
     }, openAccentColor: { color in
-        presentControllerImpl?(ThemeAccentColorActionSheet(account: account, currentValue: color, applyValue: { color in
-            let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
+        presentControllerImpl?(ThemeAccentColorActionSheet(context: context, currentValue: color, applyValue: { color in
+            let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                 return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: color, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
             }).start()
         }))
     }, openAutoNightTheme: {
-        pushControllerImpl?(themeAutoNightSettingsController(account: account))
+        pushControllerImpl?(themeAutoNightSettingsController(context: context))
     }, disableAnimations: { disabled in
-        let _ = updatePresentationThemeSettingsInteractively(postbox: account.postbox, { current in
+        let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: disabled)
         }).start()
     })
     
-    let themeSettingsKey = ApplicationSpecificPreferencesKeys.presentationThemeSettings
-    let localizationSettingsKey = PreferencesKeys.localizationSettings
-    let preferences = account.postbox.preferencesView(keys: [themeSettingsKey, localizationSettingsKey])
-    
     let previousTheme = Atomic<PresentationTheme?>(value: nil)
     
-    let signal = combineLatest(account.telegramApplicationContext.presentationData, preferences)
-        |> deliverOnMainQueue
-        |> map { presentationData, preferences -> (ItemListControllerState, (ItemListNodeState<ThemeSettingsControllerEntry>, ThemeSettingsControllerEntry.ItemGenerationArguments)) in
-            let theme: PresentationTheme
-            let fontSize: PresentationFontSize
-            let wallpaper: TelegramWallpaper
-            let strings: PresentationStrings
-            let dateTimeFormat: PresentationDateTimeFormat
-            let disableAnimations: Bool
-            
-            let settings = (preferences.values[themeSettingsKey] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
-            switch settings.theme {
-                case let .builtin(reference):
-                    switch reference {
-                        case .dayClassic:
-                            theme = defaultPresentationTheme
-                        case .nightGrayscale:
-                            theme = defaultDarkPresentationTheme
-                        case .nightAccent:
-                            theme = defaultDarkAccentPresentationTheme
-                        case .day:
-                            theme = makeDefaultDayPresentationTheme(accentColor: settings.themeAccentColor ?? defaultDayAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
-                }
+    let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]))
+    |> deliverOnMainQueue
+    |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<ThemeSettingsControllerEntry>, ThemeSettingsControllerEntry.ItemGenerationArguments)) in
+        let theme: PresentationTheme
+        let fontSize: PresentationFontSize
+        let wallpaper: TelegramWallpaper
+        let strings: PresentationStrings
+        let dateTimeFormat: PresentationDateTimeFormat
+        let disableAnimations: Bool
+        
+        let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+        switch settings.theme {
+            case let .builtin(reference):
+                switch reference {
+                    case .dayClassic:
+                        theme = defaultPresentationTheme
+                    case .nightGrayscale:
+                        theme = defaultDarkPresentationTheme
+                    case .nightAccent:
+                        theme = defaultDarkAccentPresentationTheme
+                    case .day:
+                        theme = makeDefaultDayPresentationTheme(accentColor: settings.themeAccentColor ?? defaultDayAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
             }
-            wallpaper = settings.chatWallpaper
-            fontSize = settings.fontSize
-            
-            if let localizationSettings = preferences.values[localizationSettingsKey] as? LocalizationSettings {
-                strings = PresentationStrings(primaryComponent: PresentationStringsComponent(languageCode: localizationSettings.primaryComponent.languageCode, localizedName: localizationSettings.primaryComponent.localizedName, pluralizationRulesCode: localizationSettings.primaryComponent.customPluralizationCode, dict: dictFromLocalization(localizationSettings.primaryComponent.localization)), secondaryComponent: localizationSettings.secondaryComponent.flatMap({ PresentationStringsComponent(languageCode: $0.languageCode, localizedName: $0.localizedName, pluralizationRulesCode: $0.customPluralizationCode, dict: dictFromLocalization($0.localization)) }))
-            } else {
-                strings = defaultPresentationStrings
-            }
-            
-            dateTimeFormat = presentationData.dateTimeFormat
-            disableAnimations = settings.disableAnimations
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: strings.Common_Back))
-            let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeAccentColor: settings.themeAccentColor, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, disableAnimations: disableAnimations), style: .blocks, animateChanges: false)
-            
-            if previousTheme.swap(theme)?.name != theme.name {
-                presentControllerImpl?(ThemeSettingsCrossfadeController())
-            }
-            
-            return (controllerState, (listState, arguments))
+        }
+        wallpaper = settings.chatWallpaper
+        fontSize = settings.fontSize
+        
+        dateTimeFormat = presentationData.dateTimeFormat
+        disableAnimations = settings.disableAnimations
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeAccentColor: settings.themeAccentColor, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, disableAnimations: disableAnimations), style: .blocks, animateChanges: false)
+        
+        if previousTheme.swap(theme)?.name != theme.name {
+            presentControllerImpl?(ThemeSettingsCrossfadeController())
+        }
+        
+        return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }

@@ -7,7 +7,7 @@ import TelegramCore
 import MessageUI
 
 public class InviteContactsController: ViewController, MFMessageComposeViewControllerDelegate, UINavigationControllerDelegate {
-    private let account: Account
+    private let context: AccountContext
     
     private var contactsNode: InviteContactsControllerNode {
         return self.displayNode as! InviteContactsControllerNode
@@ -25,10 +25,10 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(account: Account) {
-        self.account = account
+    public init(context: AccountContext) {
+        self.context = context
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -48,7 +48,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
             }
         }
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -85,7 +85,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = InviteContactsControllerNode(account: self.account)
+        self.displayNode = InviteContactsControllerNode(context: self.context)
         self._ready.set(self.contactsNode.ready)
         
         self.contactsNode.navigationBar = self.navigationBar
@@ -103,7 +103,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
                 let url = strongSelf.presentationData.strings.InviteText_URL
                 let body = strongSelf.presentationData.strings.InviteText_SingleContact(url).0
                 
-                let shareController = ShareController(account: strongSelf.account, subject: .text(body), externalShare: true, immediateExternalShare: true)
+                let shareController = ShareController(context: strongSelf.context, subject: .text(body), externalShare: true, immediateExternalShare: true)
                 strongSelf.present(shareController, in: .window(.root))
             }
         }

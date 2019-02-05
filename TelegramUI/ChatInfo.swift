@@ -3,6 +3,6 @@ import Postbox
 import TelegramCore
 import Display
 
-func peerSharedMediaController(account: Account, peerId: PeerId) -> ViewController? {
-    return PeerMediaCollectionController(account: account, peerId: peerId)
+func peerSharedMediaController(context: AccountContext, peerId: PeerId) -> ViewController? {
+    return PeerMediaCollectionController(context: context, peerId: peerId)
 }

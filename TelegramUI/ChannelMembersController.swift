@@ -245,7 +245,7 @@ private struct ChannelMembersControllerState: Equatable {
     }
 }
 
-private func ChannelMembersControllerEntries(account: Account, presentationData: PresentationData, view: PeerView, state: ChannelMembersControllerState, participants: [RenderedChannelParticipant]?) -> [ChannelMembersEntry] {
+private func ChannelMembersControllerEntries(context: AccountContext, presentationData: PresentationData, view: PeerView, state: ChannelMembersControllerState, participants: [RenderedChannelParticipant]?) -> [ChannelMembersEntry] {
     if participants == nil || participants?.count == nil {
         return []
     }
@@ -291,7 +291,7 @@ private func ChannelMembersControllerEntries(account: Account, presentationData:
                 canEditMembers = peer.hasPermission(.banMembers)
             }
             
-            if participant.peer.id == account.peerId {
+            if participant.peer.id == context.account.peerId {
                 editable = false
             } else {
                 switch participant.participant {
@@ -309,7 +309,7 @@ private func ChannelMembersControllerEntries(account: Account, presentationData:
     return entries
 }
 
-public func channelMembersController(account: Account, peerId: PeerId) -> ViewController {
+public func channelMembersController(context: AccountContext, peerId: PeerId) -> ViewController {
     let statePromise = ValuePromise(ChannelMembersControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelMembersControllerState())
     let updateState: ((ChannelMembersControllerState) -> ChannelMembersControllerState) -> Void = { f in
@@ -329,12 +329,12 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
     
     let peersPromise = Promise<[RenderedChannelParticipant]?>(nil)
     
-    let arguments = ChannelMembersControllerArguments(account: account, addMember: {
+    let arguments = ChannelMembersControllerArguments(account: context.account, addMember: {
         actionsDisposable.add((peersPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { members in
             let disabledIds = members?.compactMap({$0.peer.id}) ?? []
-            let contactsController = ContactMultiselectionController(account: account, mode: .peerSelection(searchChatList: false), options: [], filters: [.excludeSelf, .disable(disabledIds)])
+            let contactsController = ContactMultiselectionController(context: context, mode: .peerSelection(searchChatList: false), options: [], filters: [.excludeSelf, .disable(disabledIds)])
             
             addMembersDisposable.set((contactsController.result
             |> deliverOnMainQueue
@@ -342,7 +342,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
             |> mapToSignal { [weak contactsController] contacts -> Signal<Never, AddChannelMemberError> in
                 contactsController?.displayProgress = true
                 
-                let signal = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.addMembers(account: account, peerId: peerId, memberIds: contacts.compactMap({ contact -> PeerId? in
+                let signal = context.peerChannelMemberCategoriesContextsManager.addMembers(account: context.account, peerId: peerId, memberIds: contacts.compactMap({ contact -> PeerId? in
                     switch contact {
                         case let .peer(contactId):
                             return contactId
@@ -358,7 +358,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
                     contactsController?.dismiss()
                 }
             }).start(error: { [weak contactsController] error in
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let text: String
                 switch error {
                     case .limitExceeded:
@@ -388,30 +388,30 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
             return $0.withUpdatedRemovingPeerId(memberId)
         }
         
-        removePeerDisposable.set((account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: account, peerId: peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
+        removePeerDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: context.account, peerId: peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
         |> deliverOnMainQueue).start(completed: {
             updateState {
                 return $0.withUpdatedRemovingPeerId(nil)
             }
         }))
     }, openPeer: { peer in
-        if let controller = peerInfoController(account: account, peer: peer) {
+        if let controller = peerInfoController(context: context, peer: peer) {
             pushControllerImpl?(controller)
         }
     }, inviteViaLink: {
-        presentControllerImpl?(channelVisibilityController(account: account, peerId: peerId, mode: .privateLink, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(channelVisibilityController(context: context, peerId: peerId, mode: .privateLink, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
-    let peerView = account.viewTracker.peerView(peerId)
+    let peerView = context.account.viewTracker.peerView(peerId)
     
-    let (disposable, loadMoreControl) = account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.recent(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: peerId, updated: { state in
+    let (disposable, loadMoreControl) = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { state in
         peersPromise.set(.single(state.list))
     })
     actionsDisposable.add(disposable)
     
     var previousPeers: [RenderedChannelParticipant]?
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get(), peerView, peersPromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peerView, peersPromise.get())
         |> deliverOnMainQueue
         |> map { presentationData, state, view, peers -> (ItemListControllerState, (ItemListNodeState<ChannelMembersEntry>, ChannelMembersEntry.ItemGenerationArguments)) in
             var rightNavigationButton: ItemListNavigationButton?
@@ -442,12 +442,12 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
             
             var searchItem: ItemListControllerSearch?
             if state.searchingMembers {
-                searchItem = ChannelMembersSearchItem(account: account, peerId: peerId, cancel: {
+                searchItem = ChannelMembersSearchItem(context: context, peerId: peerId, cancel: {
                     updateState { state in
                         return state.withUpdatedSearchingMembers(false)
                     }
                 }, openPeer: { peer, _ in
-                    if let infoController = peerInfoController(account: account, peer: peer) {
+                    if let infoController = peerInfoController(context: context, peer: peer) {
                         pushControllerImpl?(infoController)
                        // arguments.pushController(infoController)
                     }
@@ -465,14 +465,14 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
             previousPeers = peers
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Channel_Subscribers_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-            let listState = ItemListNodeState(entries: ChannelMembersControllerEntries(account: account, presentationData: presentationData, view: view, state: state, participants: peers), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
+            let listState = ItemListNodeState(entries: ChannelMembersControllerEntries(context: context, presentationData: presentationData, view: view, state: state, participants: peers), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && peers != nil && previous!.count >= peers!.count)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
@@ -485,7 +485,7 @@ public func channelMembersController(account: Account, peerId: PeerId) -> ViewCo
     }
     controller.visibleBottomContentOffsetChanged = { offset in
         if let loadMoreControl = loadMoreControl, case let .known(value) = offset, value < 40.0 {
-            account.telegramApplicationContext.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: loadMoreControl)
+            context.peerChannelMemberCategoriesContextsManager.loadMore(peerId: peerId, control: loadMoreControl)
         }
     }
     return controller

@@ -105,7 +105,7 @@ final class ChatMediaInputPeerSpecificItemNode: ListViewItemNode {
             self.highlightNode.image = PresentationResourcesChat.chatMediaInputPanelHighlightedIconImage(theme)
         }
         
-        self.avatarNode.setPeer(account: account, peer: peer)
+        self.avatarNode.setPeer(account: account, theme: theme, peer: peer)
     }
     
     func updateIsHighlighted() {

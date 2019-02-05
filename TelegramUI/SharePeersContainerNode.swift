@@ -54,7 +54,7 @@ private func preparedGridEntryTransition(account: Account, from fromEntries: [Sh
 }
 
 final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
-    private let account: Account
+    private let context: AccountContext
     private let theme: PresentationTheme
     private let strings: PresentationStrings
     private let controllerInteraction: ShareControllerInteraction
@@ -82,8 +82,8 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var validLayout: (CGSize, CGFloat)?
     private var overrideGridOffsetTransition: ContainedViewLayoutTransition?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, peers: [RenderedPeer], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peers: [RenderedPeer], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.controllerInteraction = controllerInteraction
@@ -157,7 +157,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
                 strongSelf.entries = entries
                 
                 let firstTime = previousEntries == nil
-                let transition = preparedGridEntryTransition(account: account, from: previousEntries ?? [], to: entries, interfaceInteraction: controllerInteraction)
+                let transition = preparedGridEntryTransition(account: context.account, from: previousEntries ?? [], to: entries, interfaceInteraction: controllerInteraction)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
         }))

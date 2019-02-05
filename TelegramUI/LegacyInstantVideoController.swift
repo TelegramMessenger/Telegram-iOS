@@ -89,7 +89,7 @@ func legacyInputMicPalette(from theme: PresentationTheme) -> TGModernConversatio
     return TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: inputPanelTheme.panelBackgroundColor, borderColor: inputPanelTheme.panelStrokeColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor)
 }
 
-func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, account: Account, peerId: PeerId, send: @escaping (EnqueueMessage) -> Void) -> InstantVideoController {
+func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, context: AccountContext, peerId: PeerId, send: @escaping (EnqueueMessage) -> Void) -> InstantVideoController {
     let legacyController = InstantVideoController(presentation: .custom, theme: theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
     legacyController.lockOrientation = true
@@ -101,7 +101,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
             legacyController.view.disablesInteractiveTransitionGestureRecognizer = true
             var uploadInterface: LegacyLiveUploadInterface?
             if peerId.namespace != Namespaces.Peer.SecretChat {
-                uploadInterface = LegacyLiveUploadInterface(account: account)
+                uploadInterface = LegacyLiveUploadInterface(account: context.account)
             }
             let controller = TGVideoMessageCaptureController(context: legacyController.context, assets: TGVideoMessageCaptureControllerAssets(send: PresentationResourcesChat.chatInputPanelSendButtonImage(theme)!, slideToCancel: PresentationResourcesChat.chatInputPanelMediaRecordingCancelArrowImage(theme)!, actionDelete: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor))!, transitionInView: {
                 return nil
@@ -122,7 +122,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                     let thumbnailSize = finalDimensions.aspectFitted(CGSize(width: 320.0, height: 320.0))
                     let thumbnailImage = TGScaleImageToPixelSize(previewImage, thumbnailSize)!
                     if let thumbnailData = UIImageJPEGRepresentation(thumbnailImage, 0.4) {
-                        account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
+                        context.account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
                         previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: thumbnailSize, resource: resource))
                     }
                 }
@@ -147,14 +147,14 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                 let resource: TelegramMediaResource
                 if let liveUploadData = liveUploadData as? LegacyLiveUploadInterfaceResult, resourceAdjustments == nil, let data = try? Data(contentsOf: videoUrl) {
                     resource = LocalFileMediaResource(fileId: liveUploadData.id)
-                    account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                    context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                 } else {
                     resource = LocalFileVideoMediaResource(randomId: arc4random64(), path: videoUrl.path, adjustments: resourceAdjustments)
                 }
                 
                 if let previewImage = previewImage {
                     if let data = compressImageToJPEG(previewImage, quality: 0.7) {
-                    account.postbox.mediaBox.storeCachedResourceRepresentation(resource, representation: CachedVideoFirstFrameRepresentation(), data: data)
+                    context.account.postbox.mediaBox.storeCachedResourceRepresentation(resource, representation: CachedVideoFirstFrameRepresentation(), data: data)
                     }
                 }
                 
@@ -169,7 +169,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
             }
             legacyController.bindCaptureController(controller)
             
-            let presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak controller] presentationData in
+            let presentationDisposable = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
                 if let controller = controller {
                     controller.pallete = legacyInputMicPalette(from: presentationData.theme)
                 }

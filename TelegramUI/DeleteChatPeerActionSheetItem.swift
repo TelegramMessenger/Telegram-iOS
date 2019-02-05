@@ -4,20 +4,20 @@ import Postbox
 import TelegramCore
 
 final class DeleteChatPeerActionSheetItem: ActionSheetItem {
-    let account: Account
+    let context: AccountContext
     let peer: Peer
     let chatPeer: Peer
     let strings: PresentationStrings
     
-    init(account: Account, peer: Peer, chatPeer: Peer, strings: PresentationStrings) {
-        self.account = account
+    init(context: AccountContext, peer: Peer, chatPeer: Peer, strings: PresentationStrings) {
+        self.context = context
         self.peer = peer
         self.chatPeer = chatPeer
         self.strings = strings
     }
     
     func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
-        return DeleteChatPeerActionSheetItemNode(theme: theme, strings: self.strings, account: self.account, peer: self.peer, chatPeer: self.chatPeer)
+        return DeleteChatPeerActionSheetItemNode(theme: theme, strings: self.strings, context: self.context, peer: self.peer, chatPeer: self.chatPeer)
     }
     
     func updateNode(_ node: ActionSheetItemNode) {
@@ -33,7 +33,7 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
     private let avatarNode: AvatarNode
     private let textNode: ImmediateTextNode
     
-    init(theme: ActionSheetControllerTheme, strings: PresentationStrings, account: Account, peer: Peer, chatPeer: Peer) {
+    init(theme: ActionSheetControllerTheme, strings: PresentationStrings, context: AccountContext, peer: Peer, chatPeer: Peer) {
         self.theme = theme
         self.strings = strings
         
@@ -48,7 +48,7 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.textNode)
         
-        self.avatarNode.setPeer(account: account, peer: peer)
+        self.avatarNode.setPeer(account: context.account, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer)
         
         let text: (String, [(Int, NSRange)])
         if chatPeer is TelegramGroup || chatPeer is TelegramChannel {

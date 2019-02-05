@@ -63,7 +63,7 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let message = item.message
                 
-                let incoming = item.message.effectivelyIncoming(item.account.peerId)
+                let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
                 
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 let textConstrainedSize = CGSize(width: constrainedSize.width - horizontalInset, height: constrainedSize.height)
@@ -142,7 +142,7 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 var attributedLabel: NSAttributedString?
-                attributedLabel = NSAttributedString(string: statusText, font: labelFont, textColor: message.effectivelyIncoming(item.account.peerId) ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
+                attributedLabel = NSAttributedString(string: statusText, font: labelFont, textColor: message.effectivelyIncoming(item.context.account.peerId) ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
                 
                 let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedTitle, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: attributedLabel, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

@@ -114,29 +114,29 @@ private func voiceCallDataSavingControllerEntries(presentationData: Presentation
     return entries
 }
 
-func voiceCallDataSavingController(account: Account) -> ViewController {
+func voiceCallDataSavingController(context: AccountContext) -> ViewController {
     let voiceCallSettingsPromise = Promise<VoiceCallSettings>()
-    voiceCallSettingsPromise.set(account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.voiceCallSettings])
-        |> map { view -> VoiceCallSettings in
-            let voiceCallSettings: VoiceCallSettings
-            if let value = view.values[ApplicationSpecificPreferencesKeys.voiceCallSettings] as? VoiceCallSettings {
-                voiceCallSettings = value
-            } else {
-                voiceCallSettings = VoiceCallSettings.defaultSettings
-            }
-            
-            return voiceCallSettings
-        })
+    voiceCallSettingsPromise.set(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings])
+    |> map { sharedData -> VoiceCallSettings in
+        let voiceCallSettings: VoiceCallSettings
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings {
+            voiceCallSettings = value
+        } else {
+            voiceCallSettings = VoiceCallSettings.defaultSettings
+        }
+        
+        return voiceCallSettings
+    })
     
     let arguments = VoiceCallDataSavingControllerArguments(updateSelection: { option in
-        let _ = updateVoiceCallSettingsSettingsInteractively(postbox: account.postbox, { current in
+        let _ = updateVoiceCallSettingsSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             var current = current
             current.dataSaving = option
             return current
         }).start()
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, voiceCallSettingsPromise.get()) |> deliverOnMainQueue
+    let signal = combineLatest(context.sharedContext.presentationData, voiceCallSettingsPromise.get()) |> deliverOnMainQueue
         |> map { presentationData, data -> (ItemListControllerState, (ItemListNodeState<VoiceCallDataSavingEntry>, VoiceCallDataSavingEntry.ItemGenerationArguments)) in
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.CallSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
@@ -145,6 +145,6 @@ func voiceCallDataSavingController(account: Account) -> ViewController {
             return (controllerState, (listState, arguments))
         }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     return controller
 }

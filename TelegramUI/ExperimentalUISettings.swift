@@ -30,9 +30,9 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
     }
 }
 
-func updateExperimentalUISettingsInteractively(postbox: Postbox, _ f: @escaping (ExperimentalUISettings) -> ExperimentalUISettings) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.experimentalUISettings, { entry in
+func updateExperimentalUISettingsInteractively(accountManager: AccountManager, _ f: @escaping (ExperimentalUISettings) -> ExperimentalUISettings) -> Signal<Void, NoError> {
+    return accountManager.transaction { transaction -> Void in
+        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { entry in
             let currentSettings: ExperimentalUISettings
             if let entry = entry as? ExperimentalUISettings {
                 currentSettings = entry

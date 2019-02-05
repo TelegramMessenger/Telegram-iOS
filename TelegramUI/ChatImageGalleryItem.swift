@@ -69,15 +69,15 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class ChatImageGalleryItem: GalleryItem {
-    let account: Account
+    let context: AccountContext
     let presentationData: PresentationData
     let message: Message
     let location: MessageHistoryEntryLocation?
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    init(account: Account, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+        self.context = context
         self.presentationData = presentationData
         self.message = message
         self.location = location
@@ -86,21 +86,21 @@ class ChatImageGalleryItem: GalleryItem {
     }
     
     func node() -> GalleryItemNode {
-        let node = ChatImageGalleryItemNode(account: self.account, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions)
+        let node = ChatImageGalleryItemNode(context: self.context, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions)
         
         for media in self.message.media {
             if let image = media as? TelegramMediaImage {
                 node.setImage(imageReference: .message(message: MessageReference(self.message), media: image))
                 break
             } else if let file = media as? TelegramMediaFile, file.mimeType.hasPrefix("image/") {
-                node.setFile(account: account, fileReference: .message(message: MessageReference(self.message), media: file))
+                node.setFile(context: self.context, fileReference: .message(message: MessageReference(self.message), media: file))
                 break
             } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                 if let image = content.image {
                     node.setImage(imageReference: .message(message: MessageReference(self.message), media: image))
                     break
                 } else if let file = content.file, file.mimeType.hasPrefix("image/") {
-                    node.setFile(account: account, fileReference: .message(message: MessageReference(self.message), media: file))
+                    node.setFile(context: self.context, fileReference: .message(message: MessageReference(self.message), media: file))
                     break
                 }
             }
@@ -134,7 +134,7 @@ class ChatImageGalleryItem: GalleryItem {
                 }
             }
             if let mediaReference = mediaReference {
-                if let item = ChatMediaGalleryThumbnailItem(account: self.account, mediaReference: mediaReference) {
+                if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, mediaReference: mediaReference) {
                     return (Int64(id), item)
                 }
             }
@@ -144,7 +144,7 @@ class ChatImageGalleryItem: GalleryItem {
 }
 
 final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let account: Account
+    private let context: AccountContext
     private var message: Message?
     
     private let imageNode: TransformImageNode
@@ -154,17 +154,17 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusNode: RadialStatusNode
     private let footerContentNode: ChatItemGalleryFooterContentNode
     
-    private var accountAndMedia: (Account, AnyMediaReference)?
+    private var contextAndMedia: (AccountContext, AnyMediaReference)?
     
     private var fetchDisposable = MetaDisposable()
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(account: Account, presentationData: PresentationData,performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData,performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+        self.context = context
         
         self.imageNode = TransformImageNode()
-        self.footerContentNode = ChatItemGalleryFooterContentNode(account: account, presentationData: presentationData)
+        self.footerContentNode = ChatItemGalleryFooterContentNode(context: context, presentationData: presentationData)
         self.footerContentNode.performAction = performAction
         self.footerContentNode.openActionOptions = openActionOptions
         
@@ -212,24 +212,24 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     fileprivate func setImage(imageReference: ImageMediaReference) {
-        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(to: imageReference.media) {
+        if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: imageReference.media) {
             if let largestSize = largestRepresentationForPhoto(imageReference.media) {
                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photoReference: imageReference), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, photoReference: imageReference), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
                 
-                self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: imageReference.resourceReference(largestSize.resource)).start())
+                self.fetchDisposable.set(fetchedMediaResource(postbox: self.context.account.postbox, reference: imageReference.resourceReference(largestSize.resource)).start())
                 self.setupStatus(resource: largestSize.resource)
             } else {
                 self._ready.set(.single(Void()))
             }
         }
-        self.accountAndMedia = (account, imageReference.abstract)
+        self.contextAndMedia = (self.context, imageReference.abstract)
     }
     
-    func setFile(account: Account, fileReference: FileMediaReference) {
-        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(to: fileReference.media) {
+    func setFile(context: AccountContext, fileReference: FileMediaReference) {
+        if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: fileReference.media) {
             if var largestSize = fileReference.media.dimensions {
                 var displaySize = largestSize.dividedByScreenScale()
                 if let previewDimensions = largestImageRepresentation(fileReference.media.previewRepresentations)?.dimensions {
@@ -241,18 +241,18 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 }
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(chatMessageImageFile(account: account, fileReference: fileReference, thumbnail: false), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(chatMessageImageFile(account: context.account, fileReference: fileReference, thumbnail: false), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize, self.imageNode)
                 self.setupStatus(resource: fileReference.media.resource)
             } else {
                 self._ready.set(.single(Void()))
             }
         }
-        self.accountAndMedia = (account, fileReference.abstract)
+        self.contextAndMedia = (context, fileReference.abstract)
     }
     
     private func setupStatus(resource: MediaResource) {
-        self.statusDisposable.set((account.postbox.mediaBox.resourceStatus(resource)
+        self.statusDisposable.set((self.context.account.postbox.mediaBox.resourceStatus(resource)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let strongSelf = self {
                 let previousStatus = strongSelf.status
@@ -423,7 +423,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     override func visibilityUpdated(isVisible: Bool) {
         super.visibilityUpdated(isVisible: isVisible)
         
-        if let (account, mediaReference) = self.accountAndMedia, let fileReference = mediaReference.concrete(TelegramMediaFile.self) {
+        if let (context, mediaReference) = self.contextAndMedia, let fileReference = mediaReference.concrete(TelegramMediaFile.self) {
             if isVisible {
             } else {
                 self.fetchDisposable.set(nil)
@@ -440,7 +440,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     @objc func statusPressed() {
-        if let (_, mediaReference) = self.accountAndMedia, let status = self.status {
+        if let (_, mediaReference) = self.contextAndMedia, let status = self.status {
             var resource: MediaResourceReference?
             var statsCategory: MediaResourceStatsCategory?
             if let fileReference = mediaReference.concrete(TelegramMediaFile.self) {
@@ -453,9 +453,9 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             if let resource = resource {
                 switch status {
                     case .Fetching:
-                        self.account.postbox.mediaBox.cancelInteractiveResourceFetch(resource.resource)
+                        self.context.account.postbox.mediaBox.cancelInteractiveResourceFetch(resource.resource)
                     case .Remote:
-                        self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: resource, statsCategory: statsCategory ?? .generic).start())
+                        self.fetchDisposable.set(fetchedMediaResource(postbox: self.context.account.postbox, reference: resource, statsCategory: statsCategory ?? .generic).start())
                     default:
                         break
                 }

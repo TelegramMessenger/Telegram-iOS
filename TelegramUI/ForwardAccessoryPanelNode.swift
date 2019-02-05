@@ -71,7 +71,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     
     var theme: PresentationTheme
     
-    init(account: Account, messageIds: [MessageId], theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, messageIds: [MessageId], theme: PresentationTheme, strings: PresentationStrings) {
         self.messageIds = messageIds
         self.theme = theme
         
@@ -102,34 +102,34 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         
-        self.messageDisposable.set((account.postbox.messagesAtIds(messageIds)
-            |> deliverOnMainQueue).start(next: { [weak self] messages in
-                if let strongSelf = self {
-                    var authors = ""
-                    var uniquePeerIds = Set<PeerId>()
-                    var text = ""
-                    for message in messages {
-                        if let author = message.author, !uniquePeerIds.contains(author.id) {
-                            uniquePeerIds.insert(author.id)
-                            if !authors.isEmpty {
-                                authors.append(", ")
-                            }
-                            authors.append(author.compactDisplayTitle)
+        self.messageDisposable.set((context.account.postbox.messagesAtIds(messageIds)
+        |> deliverOnMainQueue).start(next: { [weak self] messages in
+            if let strongSelf = self {
+                var authors = ""
+                var uniquePeerIds = Set<PeerId>()
+                var text = ""
+                for message in messages {
+                    if let author = message.author, !uniquePeerIds.contains(author.id) {
+                        uniquePeerIds.insert(author.id)
+                        if !authors.isEmpty {
+                            authors.append(", ")
                         }
+                        authors.append(author.compactDisplayTitle)
                     }
-                    if messages.count == 1 {
-                        let (string, _) = textStringForForwardedMessage(messages[0], strings: strings)
-                        text = string
-                    } else {
-                        text = strings.ForwardedMessages(Int32(messages.count))
-                    }
-                    
-                    strongSelf.titleNode.attributedText = NSAttributedString(string: authors, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
-                    strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
-                    
-                    strongSelf.setNeedsLayout()
                 }
-            }))
+                if messages.count == 1 {
+                    let (string, _) = textStringForForwardedMessage(messages[0], strings: strings)
+                    text = string
+                } else {
+                    text = strings.ForwardedMessages(Int32(messages.count))
+                }
+                
+                strongSelf.titleNode.attributedText = NSAttributedString(string: authors, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
+                strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
+                
+                strongSelf.setNeedsLayout()
+            }
+        }))
     }
     
     deinit {

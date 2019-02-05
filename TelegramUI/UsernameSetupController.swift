@@ -204,7 +204,7 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
-public func usernameSetupController(account: Account) -> ViewController {
+public func usernameSetupController(context: AccountContext) -> ViewController {
     let statePromise = ValuePromise(UsernameSetupControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: UsernameSetupControllerState())
     let updateState: ((UsernameSetupControllerState) -> UsernameSetupControllerState) -> Void = { f in
@@ -222,7 +222,7 @@ public func usernameSetupController(account: Account) -> ViewController {
     let updateAddressNameDisposable = MetaDisposable()
     actionsDisposable.add(updateAddressNameDisposable)
     
-    let arguments = UsernameSetupControllerArguments(account: account, updatePublicLinkText: { currentText, text in
+    let arguments = UsernameSetupControllerArguments(account: context.account, updatePublicLinkText: { currentText, text in
         if text.isEmpty {
             checkAddressNameDisposable.set(nil)
             updateState { state in
@@ -238,7 +238,7 @@ public func usernameSetupController(account: Account) -> ViewController {
                 return state.withUpdatedEditingPublicLinkText(text)
             }
             
-            checkAddressNameDisposable.set((validateAddressNameInteractive(account: account, domain: .account, name: text)
+            checkAddressNameDisposable.set((validateAddressNameInteractive(account: context.account, domain: .account, name: text)
                 |> deliverOnMainQueue).start(next: { result in
                     updateState { state in
                         return state.withUpdatedAddressNameValidationStatus(result)
@@ -246,7 +246,7 @@ public func usernameSetupController(account: Account) -> ViewController {
                 }))
         }
     }, shareLink: {
-        let _ = (account.postbox.loadedPeerWithId(account.peerId)
+        let _ = (context.account.postbox.loadedPeerWithId(context.account.peerId)
         |> take(1)
         |> deliverOnMainQueue).start(next: { peer in
             var currentAddressName: String = peer.addressName ?? ""
@@ -257,15 +257,15 @@ public func usernameSetupController(account: Account) -> ViewController {
                 return state
             }
             if !currentAddressName.isEmpty {
-                presentControllerImpl?(ShareController(account: account, subject: .url("https://t.me/\(currentAddressName)")), nil)
+                presentControllerImpl?(ShareController(context: context, subject: .url("https://t.me/\(currentAddressName)")), nil)
             }
         })
     })
     
-    let peerView = account.viewTracker.peerView(account.peerId)
+    let peerView = context.account.viewTracker.peerView(context.account.peerId)
     |> deliverOnMainQueue
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, peerView)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, peerView)
         |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<UsernameSetupEntry>, UsernameSetupEntry.ItemGenerationArguments)) in
             let peer = peerViewMainPeer(view)
             
@@ -297,7 +297,7 @@ public func usernameSetupController(account: Account) -> ViewController {
                     }
                     
                     if let updatedAddressNameValue = updatedAddressNameValue {
-                        updateAddressNameDisposable.set((updateAddressName(account: account, domain: .account, name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
+                        updateAddressNameDisposable.set((updateAddressName(account: context.account, domain: .account, name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
                             |> deliverOnMainQueue).start(error: { _ in
                                 updateState { state in
                                     return state.withUpdatedUpdatingAddressName(false)
@@ -327,7 +327,7 @@ public func usernameSetupController(account: Account) -> ViewController {
             actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     controller.enableInteractiveDismiss = true
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)

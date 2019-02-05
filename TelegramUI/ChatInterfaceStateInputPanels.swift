@@ -2,7 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import TelegramCore
 
-func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputPanelNode? {
+func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputPanelNode? {
     if let renderedPeer = chatPresentationInterfaceState.renderedPeer, renderedPeer.peer?.restrictionText != nil {
         return nil
     }
@@ -21,7 +21,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 return currentPanel
             } else {
                 let panel = ChatSearchInputPanelNode(theme: chatPresentationInterfaceState.theme)
-                panel.account = account
+                panel.context = context
                 panel.interfaceInteraction = interfaceInteraction
                 return panel
             }
@@ -36,7 +36,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             return currentPanel
         } else {
             let panel = ChatMessageSelectionInputPanelNode(theme: chatPresentationInterfaceState.theme)
-            panel.account = account
+            panel.context = context
             panel.selectedMessages = selectionState.selectedIds
             panel.interfaceInteraction = interfaceInteraction
             return panel
@@ -49,7 +49,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             return currentPanel
         } else {
             let panel = ChatUnblockInputPanelNode(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
-            panel.account = account
+            panel.context = context
             panel.interfaceInteraction = interfaceInteraction
             return panel
         }
@@ -67,7 +67,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 return currentPanel
             } else {
                 let panel = ChatFeedNavigationInputPanelNode(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
-                panel.account = account
+                panel.context = context
                 panel.interfaceInteraction = interfaceInteraction
                 return panel
             }
@@ -82,7 +82,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                         return currentPanel
                     } else {
                         let panel = SecretChatHandshakeStatusInputPanelNode()
-                        panel.account = account
+                        panel.context = context
                         panel.interfaceInteraction = interfaceInteraction
                         return panel
                     }
@@ -91,7 +91,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                         return currentPanel
                     } else {
                         let panel = DeleteChatInputPanelNode()
-                        panel.account = account
+                        panel.context = context
                         panel.interfaceInteraction = interfaceInteraction
                         return panel
                     }
@@ -104,7 +104,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                     return currentPanel
                 } else {
                     let panel = ChatRestrictedInputPanelNode()
-                    panel.account = account
+                    panel.context = context
                     panel.interfaceInteraction = interfaceInteraction
                     return panel
                 }
@@ -116,7 +116,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                         return currentPanel
                     } else {
                         let panel = DeleteChatInputPanelNode()
-                        panel.account = account
+                        panel.context = context
                         panel.interfaceInteraction = interfaceInteraction
                         return panel
                     }
@@ -132,7 +132,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                             return currentPanel
                         } else {
                             let panel = ChatChannelSubscriberInputPanelNode()
-                            panel.account = account
+                            panel.context = context
                             return panel
                         }
                     }
@@ -143,7 +143,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                                 return currentPanel
                             } else {
                                 let panel = ChatChannelSubscriberInputPanelNode()
-                                panel.account = account
+                                panel.context = context
                                 return panel
                             }
                         case .member:
@@ -157,7 +157,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                         return currentPanel
                     } else {
                         let panel = DeleteChatInputPanelNode()
-                        panel.account = account
+                        panel.context = context
                         panel.interfaceInteraction = interfaceInteraction
                         return panel
                     }
@@ -170,7 +170,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                     return currentPanel
                 } else {
                     let panel = ChatRestrictedInputPanelNode()
-                    panel.account = account
+                    panel.context = context
                     panel.interfaceInteraction = interfaceInteraction
                     return panel
                 }
@@ -192,7 +192,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 return currentPanel
             } else {
                 let panel = ChatBotStartInputPanelNode(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
-                panel.account = account
+                panel.context = context
                 panel.interfaceInteraction = interfaceInteraction
                 return panel
             }
@@ -203,7 +203,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                     return currentPanel
                 } else {
                     let panel = ChatRecordingPreviewInputPanelNode(theme: chatPresentationInterfaceState.theme)
-                    panel.account = account
+                    panel.context = context
                     panel.interfaceInteraction = interfaceInteraction
                     return panel
                 }
@@ -224,14 +224,14 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         } else {
             if let textInputPanelNode = textInputPanelNode {
                 textInputPanelNode.interfaceInteraction = interfaceInteraction
-                textInputPanelNode.account = account
+                textInputPanelNode.context = context
                 return textInputPanelNode
             } else {
                 let panel = ChatTextInputPanelNode(theme: chatPresentationInterfaceState.theme, presentController: { [weak interfaceInteraction] controller in
                     interfaceInteraction?.presentController(controller, nil)
                 })
                 panel.interfaceInteraction = interfaceInteraction
-                panel.account = account
+                panel.context = context
                 return panel
             }
         }

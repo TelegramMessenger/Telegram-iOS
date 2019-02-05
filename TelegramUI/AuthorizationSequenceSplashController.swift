@@ -13,6 +13,7 @@ final class AuthorizationSequenceSplashController: ViewController {
         return self.displayNode as! AuthorizationSequenceSplashControllerNode
     }
     
+    private let accountManager: AccountManager
     private let postbox: Postbox
     private let network: Network
     private let theme: AuthorizationTheme
@@ -24,7 +25,8 @@ final class AuthorizationSequenceSplashController: ViewController {
     private let suggestedLocalization = Promise<SuggestedLocalizationInfo?>()
     private let activateLocalizationDisposable = MetaDisposable()
     
-    init(postbox: Postbox, network: Network, theme: AuthorizationTheme) {
+    init(accountManager: AccountManager, postbox: Postbox, network: Network, theme: AuthorizationTheme) {
+        self.accountManager = accountManager
         self.postbox = postbox
         self.network = network
         self.theme = theme
@@ -143,8 +145,8 @@ final class AuthorizationSequenceSplashController: ViewController {
     }
     
     private func activateLocalization(_ code: String) {
-        let currentCode = self.postbox.transaction { transaction -> String in
-            if let current = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
+        let currentCode = self.accountManager.transaction { transaction -> String in
+            if let current = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings {
                 return current.primaryComponent.languageCode
             } else {
                 return "en"
@@ -172,12 +174,13 @@ final class AuthorizationSequenceSplashController: ViewController {
             }
             
             strongSelf.controller.isEnabled = false
+            let accountManager = strongSelf.accountManager
             let postbox = strongSelf.postbox
             
-            strongSelf.activateLocalizationDisposable.set(downloadAndApplyLocalization(postbox: postbox, network: strongSelf.network, languageCode: code).start(completed: {
-                let _ = (postbox.transaction { transaction -> PresentationStrings? in
+            strongSelf.activateLocalizationDisposable.set(downloadAndApplyLocalization(accountManager: accountManager, postbox: postbox, network: strongSelf.network, languageCode: code).start(completed: {
+                let _ = (accountManager.transaction { transaction -> PresentationStrings? in
                     let localizationSettings: LocalizationSettings?
-                    if let current = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
+                    if let current = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings {
                         localizationSettings = current
                     } else {
                         localizationSettings = nil

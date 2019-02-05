@@ -10,7 +10,7 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     
-    init(account: Account, localizationInfo: LocalizationInfo, theme: PresentationTheme, strings: PresentationStrings, openTranslationUrl: @escaping (String) -> Void) {
+    init(context: AccountContext, localizationInfo: LocalizationInfo, theme: PresentationTheme, strings: PresentationStrings, openTranslationUrl: @escaping (String) -> Void) {
         self.titleNode = ImmediateTextNode()
         self.titleNode.textAlignment = .center
         

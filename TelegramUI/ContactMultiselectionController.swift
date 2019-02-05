@@ -12,7 +12,7 @@ enum ContactMultiselectionControllerMode {
 }
 
 class ContactMultiselectionController: ViewController {
-    private let account: Account
+    private let context: AccountContext
     private let mode: ContactMultiselectionControllerMode
     
     private let titleView: CounterContollerTitleView
@@ -62,12 +62,12 @@ class ContactMultiselectionController: ViewController {
     private let options: [ContactListAdditionalOption]
     private let filters: [ContactListFilter]
     
-    init(account: Account, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter] = [.excludeSelf]) {
-        self.account = account
+    init(context: AccountContext, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter] = [.excludeSelf]) {
+        self.context = context
         self.mode = mode
         self.options = options
         self.filters = filters
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.titleView = CounterContollerTitleView(theme: self.presentationData.theme)
         
@@ -84,7 +84,7 @@ class ContactMultiselectionController: ViewController {
             }
         }
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -98,7 +98,7 @@ class ContactMultiselectionController: ViewController {
             }
         })
         
-        self.limitsConfigurationDisposable = (account.postbox.transaction { transaction -> LimitsConfiguration in
+        self.limitsConfigurationDisposable = (context.account.postbox.transaction { transaction -> LimitsConfiguration in
             return currentLimitsConfiguration(transaction: transaction)
         } |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
@@ -154,7 +154,7 @@ class ContactMultiselectionController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactMultiselectionControllerNode(account: self.account, mode: self.mode, options: self.options, filters: filters)
+        self.displayNode = ContactMultiselectionControllerNode(context: self.context, mode: self.mode, options: self.options, filters: filters)
         self._listReady.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.dismiss = { [weak self] in

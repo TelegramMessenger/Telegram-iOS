@@ -218,7 +218,7 @@ enum CreatePasswordState: Equatable {
     case pendingVerification(emailPattern: String)
 }
 
-func createPasswordController(account: Account, context: CreatePasswordContext, state: CreatePasswordState, completion: @escaping (String, String, Bool) -> Void, updatePasswordEmailConfirmation: @escaping ((String, String)?) -> Void, processPasswordEmailConfirmation: Bool = true) -> ViewController {
+func createPasswordController(context: AccountContext, createPasswordContext: CreatePasswordContext, state: CreatePasswordState, completion: @escaping (String, String, Bool) -> Void, updatePasswordEmailConfirmation: @escaping ((String, String)?) -> Void, processPasswordEmailConfirmation: Bool = true) -> ViewController {
     let statePromise = ValuePromise(CreatePasswordControllerState(state: state), ignoreRepeated: true)
     let stateValue = Atomic(value: CreatePasswordControllerState(state: state))
     let updateState: ((CreatePasswordControllerState) -> CreatePasswordControllerState) -> Void = { f in
@@ -244,7 +244,7 @@ func createPasswordController(account: Account, context: CreatePasswordContext, 
             return s
         }
         if let state = state {
-            let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             if state.passwordText.isEmpty {
             } else if state.passwordText != state.passwordConfirmationText {
                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.TwoStepAuth_SetupPasswordConfirmFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
@@ -265,7 +265,7 @@ func createPasswordController(account: Account, context: CreatePasswordContext, 
                         state.saving = true
                         return state
                     }
-                    saveDisposable.set((updateTwoStepVerificationPassword(network: account.network, currentPassword: currentPassword, updatedPassword: .password(password: state.passwordText, hint: state.hintText, email: email))
+                    saveDisposable.set((updateTwoStepVerificationPassword(network: context.account.network, currentPassword: currentPassword, updatedPassword: .password(password: state.passwordText, hint: state.hintText, email: email))
                         |> deliverOnMainQueue).start(next: { update in
                             switch update {
                             case .none:
@@ -347,7 +347,7 @@ func createPasswordController(account: Account, context: CreatePasswordContext, 
             return state
         }
         
-        saveDisposable.set((updateTwoStepVerificationPassword(network: account.network, currentPassword: currentPassword, updatedPassword: .none)
+        saveDisposable.set((updateTwoStepVerificationPassword(network: context.account.network, currentPassword: currentPassword, updatedPassword: .none)
             |> deliverOnMainQueue).start(next: { _ in
                 updateState { state in
                     var state = state
@@ -365,7 +365,7 @@ func createPasswordController(account: Account, context: CreatePasswordContext, 
             }))
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
     |> deliverOnMainQueue
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<CreatePasswordEntry>, CreatePasswordEntry.ItemGenerationArguments)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
@@ -398,7 +398,7 @@ func createPasswordController(account: Account, context: CreatePasswordContext, 
         }
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: createPasswordControllerEntries(presentationData: presentationData, context: context, state: state), style: .blocks, focusItemTag: CreatePasswordEntryTag.password, emptyStateItem: nil, animateChanges: false)
+        let listState = ItemListNodeState(entries: createPasswordControllerEntries(presentationData: presentationData, context: createPasswordContext, state: state), style: .blocks, focusItemTag: CreatePasswordEntryTag.password, emptyStateItem: nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
@@ -406,7 +406,7 @@ func createPasswordController(account: Account, context: CreatePasswordContext, 
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()

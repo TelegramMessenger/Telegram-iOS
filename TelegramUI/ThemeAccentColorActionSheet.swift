@@ -13,14 +13,14 @@ final class ThemeAccentColorActionSheet: ActionSheetController {
         return self._ready
     }
     
-    init(account: Account, currentValue: Int32, applyValue: @escaping (Int32) -> Void) {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, currentValue: Int32, applyValue: @escaping (Int32) -> Void) {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let theme = presentationData.theme
         let strings = presentationData.strings
         
         super.init(theme: ActionSheetControllerTheme(presentationTheme: theme))
        
-        self.presentationDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.theme = ActionSheetControllerTheme(presentationTheme: presentationData.theme)

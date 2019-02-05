@@ -761,7 +761,7 @@ public enum ChannelVisibilityControllerMode {
     case privateLink
 }
 
-public func channelVisibilityController(account: Account, peerId: PeerId, mode: ChannelVisibilityControllerMode, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void) -> ViewController {
+public func channelVisibilityController(context: AccountContext, peerId: PeerId, mode: ChannelVisibilityControllerMode, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void) -> ViewController {
     let statePromise = ValuePromise(ChannelVisibilityControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelVisibilityControllerState())
     let updateState: ((ChannelVisibilityControllerState) -> ChannelVisibilityControllerState) -> Void = { f in
@@ -769,9 +769,9 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
     }
     
     let peersDisablingAddressNameAssignment = Promise<[Peer]?>()
-    peersDisablingAddressNameAssignment.set(.single(nil) |> then(channelAddressNameAssignmentAvailability(account: account, peerId: peerId.namespace == Namespaces.Peer.CloudChannel ? peerId : nil) |> mapToSignal { result -> Signal<[Peer]?, NoError> in
+    peersDisablingAddressNameAssignment.set(.single(nil) |> then(channelAddressNameAssignmentAvailability(account: context.account, peerId: peerId.namespace == Namespaces.Peer.CloudChannel ? peerId : nil) |> mapToSignal { result -> Signal<[Peer]?, NoError> in
         if case .addressNameLimitReached = result {
-            return adminedPublicChannels(account: account)
+            return adminedPublicChannels(account: context.account)
                 |> map(Optional.init)
         } else {
             return .single([])
@@ -798,11 +798,11 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
     let revokeLinkDisposable = MetaDisposable()
     actionsDisposable.add(revokeLinkDisposable)
     
-    actionsDisposable.add( (account.viewTracker.peerView(peerId) |> filter { $0.cachedData != nil } |> take(1) |> mapToSignal { view -> Signal<Void, NoError> in
-        return ensuredExistingPeerExportedInvitation(account: account, peerId: peerId)
+    actionsDisposable.add( (context.account.viewTracker.peerView(peerId) |> filter { $0.cachedData != nil } |> take(1) |> mapToSignal { view -> Signal<Void, NoError> in
+        return ensuredExistingPeerExportedInvitation(account: context.account, peerId: peerId)
     }).start())
     
-    let arguments = ChannelVisibilityControllerArguments(account: account, updateCurrentType: { type in
+    let arguments = ChannelVisibilityControllerArguments(account: context.account, updateCurrentType: { type in
         updateState { state in
             return state.withUpdatedSelectedType(type)
         }
@@ -822,7 +822,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                 return state.withUpdatedEditingPublicLinkText(text)
             }
             
-            checkAddressNameDisposable.set((validateAddressNameInteractive(account: account, domain: .peer(peerId), name: text)
+            checkAddressNameDisposable.set((validateAddressNameInteractive(account: context.account, domain: .peer(peerId), name: text)
                 |> deliverOnMainQueue).start(next: { result in
                     updateState { state in
                         return state.withUpdatedAddressNameValidationStatus(result)
@@ -846,7 +846,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
             return state.withUpdatedRevokingPeerId(peerId)
         }
         
-        revokeAddressNameDisposable.set((updateAddressName(account: account, domain: .peer(peerId), name: nil) |> deliverOnMainQueue).start(error: { _ in
+        revokeAddressNameDisposable.set((updateAddressName(account: context.account, domain: .peer(peerId), name: nil) |> deliverOnMainQueue).start(error: { _ in
             updateState { state in
                 return state.withUpdatedRevokingPeerId(nil)
             }
@@ -858,7 +858,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
             })
         }))
     }, copyPrivateLink: {
-        let _ = (account.postbox.transaction { transaction -> String? in
+        let _ = (context.account.postbox.transaction { transaction -> String? in
             if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
                 if let cachedData = cachedData as? CachedChannelData {
                     return cachedData.exportedInvitation?.link
@@ -870,12 +870,12 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
         } |> deliverOnMainQueue).start(next: { link in
             if let link = link {
                 UIPasteboard.general.string = link
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Username_LinkCopied)), nil)
             }
         })
     }, revokePrivateLink: {
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationTheme: presentationData.theme)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
@@ -896,7 +896,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                         }
                     }
                     if revoke {
-                        revokeLinkDisposable.set((ensuredExistingPeerExportedInvitation(account: account, peerId: peerId, revokeExisted: true) |> deliverOnMainQueue).start(completed: {
+                        revokeLinkDisposable.set((ensuredExistingPeerExportedInvitation(account: context.account, peerId: peerId, revokeExisted: true) |> deliverOnMainQueue).start(completed: {
                             updateState {
                                 $0.withUpdatedRevokingPrivateLink(false)
                             }
@@ -908,7 +908,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, sharePrivateLink: {
-        let _ = (account.postbox.transaction { transaction -> String? in
+        let _ = (context.account.postbox.transaction { transaction -> String? in
             if let cachedData = transaction.getPeerCachedData(peerId: peerId) {
                 if let cachedData = cachedData as? CachedChannelData {
                     return cachedData.exportedInvitation?.link
@@ -919,19 +919,19 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
             return nil
         } |> deliverOnMainQueue).start(next: { link in
             if let link = link {
-                let shareController = ShareController(account: account, subject: .url(link))
+                let shareController = ShareController(context: context, subject: .url(link))
                 presentControllerImpl?(shareController, nil)
             }
         })
     })
     
     
-    let peerView = account.viewTracker.peerView(peerId)
+    let peerView = context.account.viewTracker.peerView(peerId)
     |> deliverOnMainQueue
     
     let previousHadNamesToRevoke = Atomic<Bool?>(value: nil)
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue)
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue)
     |> deliverOnMainQueue
     |> map { presentationData, state, view, publicChannelsToRevoke -> (ItemListControllerState, (ItemListNodeState<ChannelVisibilityEntry>, ChannelVisibilityEntry.ItemGenerationArguments)) in
         let peer = peerViewMainPeer(view)
@@ -969,9 +969,9 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                         updateState { state in
                             return state.withUpdatedUpdatingAddressName(true)
                         }
-                        _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(postbox: account.postbox).start()
+                        _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(postbox: context.account.postbox).start()
                         
-                        updateAddressNameDisposable.set((updateAddressName(account: account, domain: .peer(peerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue) |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
+                        updateAddressNameDisposable.set((updateAddressName(account: context.account, domain: .peer(peerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue) |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                             |> deliverOnMainQueue).start(error: { _ in
                                 updateState { state in
                                     return state.withUpdatedUpdatingAddressName(false)
@@ -993,7 +993,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                         
                     }
                     
-                    _ = (ApplicationSpecificNotice.getSetPublicChannelLink(postbox: account.postbox) |> deliverOnMainQueue).start(next: { showAlert in
+                    _ = (ApplicationSpecificNotice.getSetPublicChannelLink(postbox: context.account.postbox) |> deliverOnMainQueue).start(next: { showAlert in
                         if showAlert {
                             let confirm = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Channel_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)])
                             
@@ -1043,9 +1043,9 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                         updateState { state in
                             return state.withUpdatedUpdatingAddressName(true)
                         }
-                        _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(postbox: account.postbox).start()
+                        _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(postbox: context.account.postbox).start()
                         
-                        let signal = convertGroupToSupergroup(account: account, peerId: peerId)
+                        let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
                         |> map(Optional.init)
                         |> `catch` { _ -> Signal<PeerId?, NoError> in
                             return .single(nil)
@@ -1054,7 +1054,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                             guard let upgradedPeerId = upgradedPeerId else {
                                 return .single(nil)
                             }
-                            return updateAddressName(account: account, domain: .peer(upgradedPeerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
+                            return updateAddressName(account: context.account, domain: .peer(upgradedPeerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
                             |> `catch` { _ -> Signal<Void, NoError> in
                                 return .complete()
                             }
@@ -1083,7 +1083,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                         }))
                     }
                     
-                    _ = (ApplicationSpecificNotice.getSetPublicChannelLink(postbox: account.postbox) |> deliverOnMainQueue).start(next: { showAlert in
+                    _ = (ApplicationSpecificNotice.getSetPublicChannelLink(postbox: context.account.postbox) |> deliverOnMainQueue).start(next: { showAlert in
                         if showAlert {
                             let confirm = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Channel_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)])
                             
@@ -1164,7 +1164,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()
@@ -1172,7 +1172,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
     nextImpl = { [weak controller] in
         if let controller = controller {
             if case .initialSetup = mode {
-                let selectionController = ContactMultiselectionController(account: account, mode: .channelCreation, options: [])
+                let selectionController = ContactMultiselectionController(context: context, mode: .channelCreation, options: [])
                 (controller.navigationController as? NavigationController)?.replaceAllButRootController(selectionController, animated: true)
                 let _ = (selectionController.result
                     |> deliverOnMainQueue).start(next: { [weak selectionController] peerIds in
@@ -1187,21 +1187,21 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                             }
                         })
                         if filteredPeerIds.isEmpty {
-                            navigateToChatController(navigationController: navigationController, chatController: nil, account: account, chatLocation: .peer(peerId), keepStack: .never, animated: true)
+                            navigateToChatController(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peerId), keepStack: .never, animated: true)
                         } else {
                             selectionController.displayProgress = true
-                            let _ = (addChannelMembers(account: account, peerId: peerId, memberIds: filteredPeerIds)
+                            let _ = (addChannelMembers(account: context.account, peerId: peerId, memberIds: filteredPeerIds)
                             |> deliverOnMainQueue).start(completed: { [weak selectionController] in
                                 guard let selectionController = selectionController, let navigationController = selectionController.navigationController as? NavigationController else {
                                     return
                                 }
                                 
-                                navigateToChatController(navigationController: navigationController, chatController: nil, account: account, chatLocation: .peer(peerId), keepStack: .never, animated: true)
+                                navigateToChatController(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peerId), keepStack: .never, animated: true)
                             })
                         }
                     })
             } else {
-                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatController(account: account, chatLocation: .peer(peerId)), animated: true)
+                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatController(context: context, chatLocation: .peer(peerId)), animated: true)
             }
         }
     }
@@ -1220,7 +1220,7 @@ public func channelVisibilityController(account: Account, peerId: PeerId, mode: 
                 return false
             })
             if let resultItemNode = resultItemNode {
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(presentationData.strings.Conversation_ContextMenuCopyLink), action: {
                     UIPasteboard.general.string = text
                 })])

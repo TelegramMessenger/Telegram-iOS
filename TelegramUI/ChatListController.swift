@@ -11,8 +11,9 @@ public func useSpecialTabBarIcons() -> Bool {
 public class ChatListController: TelegramController, KeyShortcutResponder, UIViewControllerPreviewingDelegate {
     private var validLayout: ContainerViewLayout?
     
-    private let account: Account
+    private let context: AccountContext
     private let controlsHistoryPreload: Bool
+    private let hideNetworkActivityStatus: Bool
     
     public let groupId: PeerGroupId?
     
@@ -48,18 +49,19 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(account: Account, groupId: PeerGroupId?, controlsHistoryPreload: Bool) {
-        self.account = account
+    public init(context: AccountContext, groupId: PeerGroupId?, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool = false) {
+        self.context = context
         self.controlsHistoryPreload = controlsHistoryPreload
+        self.hideNetworkActivityStatus = hideNetworkActivityStatus
         
         self.groupId = groupId
         
-        self.presentationData = (account.telegramApplicationContext.currentPresentationData.with { $0 })
+        self.presentationData = (context.sharedContext.currentPresentationData.with { $0 })
         self.presentationDataValue.set(.single(self.presentationData))
         
         self.titleView = NetworkStatusTitleView(theme: self.presentationData.theme)
         
-        super.init(account: account, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary)
+        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
@@ -80,14 +82,23 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             self.tabBarItem.image = icon
             self.tabBarItem.selectedImage = icon
             
-            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
-            self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
+            let leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+            leftBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Edit
+            self.navigationItem.leftBarButtonItem = leftBarButtonItem
+            
+            let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
+            rightBarButtonItem.accessibilityLabel = "Compose"
+            self.navigationItem.rightBarButtonItem = rightBarButtonItem
         } else {
             self.navigationItem.title = "Channels"
-            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+            let rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+            rightBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Edit
+            self.navigationItem.rightBarButtonItem = rightBarButtonItem
         }
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
+        let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
+        backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
+        self.navigationItem.backBarButtonItem = backBarButtonItem
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -125,9 +136,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
-        let hasProxy = account.postbox.preferencesView(keys: [PreferencesKeys.proxySettings])
-        |> map { preferences -> (Bool, Bool) in
-            if let settings = preferences.values[PreferencesKeys.proxySettings] as? ProxySettings {
+        let hasProxy = context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
+        |> map { sharedData -> (Bool, Bool) in
+            if let settings = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings {
                 return (!settings.servers.isEmpty, settings.enabled)
             } else {
                 return (false, false)
@@ -137,62 +148,64 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             return lhs == rhs
         })
         
-        let passcode = account.postbox.combinedView(keys: [.accessChallengeData])
+        let passcode = context.sharedContext.accountManager.accessChallengeData()
         |> map { view -> (Bool, Bool) in
-            let data = (view.views[.accessChallengeData] as! AccessChallengeDataView).data
+            let data = view.data
             return (data.isLockable, data.autolockDeadline == 0)
         }
         
-        self.titleDisposable = (combineLatest(account.networkState |> deliverOnMainQueue, hasProxy |> deliverOnMainQueue, passcode |> deliverOnMainQueue)).start(next: { [weak self] state, proxy, passcode in
-            if let strongSelf = self {
-                let (hasProxy, connectsViaProxy) = proxy
-                let (isPasscodeSet, isManuallyLocked) = passcode
-                var checkProxy = false
-                switch state {
-                    case .waitingForNetwork:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
-                    case let .connecting(proxy):
-                        var text = strongSelf.presentationData.strings.State_Connecting
-                        if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {
-                            text = strongSelf.presentationData.strings.State_ConnectingToProxy
-                        }
-                        if let proxy = proxy, proxy.hasConnectionIssues {
-                            checkProxy = true
-                        }
-                        strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
-                    case .updating:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
-                    case .online:
-                        strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.DialogList_Title, activity: false, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
-                }
-                if checkProxy {
-                    if strongSelf.proxyUnavailableTooltipController == nil && !strongSelf.didShowProxyUnavailableTooltipController && strongSelf.isNodeLoaded && strongSelf.displayNode.view.window != nil {
-                        strongSelf.didShowProxyUnavailableTooltipController = true
-                        let tooltipController = TooltipController(text: strongSelf.presentationData.strings.Proxy_TooltipUnavailable, timeout: 60.0, dismissByTapOutside: true)
-                        strongSelf.proxyUnavailableTooltipController = tooltipController
-                        tooltipController.dismissed = { [weak tooltipController] in
-                            if let strongSelf = self, let tooltipController = tooltipController, strongSelf.proxyUnavailableTooltipController === tooltipController {
-                                strongSelf.proxyUnavailableTooltipController = nil
+        if !self.hideNetworkActivityStatus {
+            self.titleDisposable = combineLatest(queue: .mainQueue(), context.account.networkState, hasProxy, passcode).start(next: { [weak self] state, proxy, passcode in
+                if let strongSelf = self {
+                    let (hasProxy, connectsViaProxy) = proxy
+                    let (isPasscodeSet, isManuallyLocked) = passcode
+                    var checkProxy = false
+                    switch state {
+                        case .waitingForNetwork:
+                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
+                        case let .connecting(proxy):
+                            var text = strongSelf.presentationData.strings.State_Connecting
+                            if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {
+                                text = strongSelf.presentationData.strings.State_ConnectingToProxy
                             }
-                        }
-                        strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: {
-                            if let strongSelf = self, let rect = strongSelf.titleView.proxyButtonFrame {
-                                return (strongSelf.titleView, rect.insetBy(dx: 0.0, dy: -4.0))
+                            if let proxy = proxy, proxy.hasConnectionIssues {
+                                checkProxy = true
                             }
-                            return nil
-                        }))
+                            strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
+                        case .updating:
+                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
+                        case .online:
+                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.DialogList_Title, activity: false, hasProxy: hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isPasscodeSet, isManuallyLocked: isManuallyLocked)
                     }
-                } else {
-                    strongSelf.didShowProxyUnavailableTooltipController = false
-                    if let proxyUnavailableTooltipController = strongSelf.proxyUnavailableTooltipController {
-                        strongSelf.proxyUnavailableTooltipController = nil
-                        proxyUnavailableTooltipController.dismiss()
+                    if checkProxy {
+                        if strongSelf.proxyUnavailableTooltipController == nil && !strongSelf.didShowProxyUnavailableTooltipController && strongSelf.isNodeLoaded && strongSelf.displayNode.view.window != nil {
+                            strongSelf.didShowProxyUnavailableTooltipController = true
+                            let tooltipController = TooltipController(text: strongSelf.presentationData.strings.Proxy_TooltipUnavailable, timeout: 60.0, dismissByTapOutside: true)
+                            strongSelf.proxyUnavailableTooltipController = tooltipController
+                            tooltipController.dismissed = { [weak tooltipController] in
+                                if let strongSelf = self, let tooltipController = tooltipController, strongSelf.proxyUnavailableTooltipController === tooltipController {
+                                    strongSelf.proxyUnavailableTooltipController = nil
+                                }
+                            }
+                            strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: {
+                                if let strongSelf = self, let rect = strongSelf.titleView.proxyButtonFrame {
+                                    return (strongSelf.titleView, rect.insetBy(dx: 0.0, dy: -4.0))
+                                }
+                                return nil
+                            }))
+                        }
+                    } else {
+                        strongSelf.didShowProxyUnavailableTooltipController = false
+                        if let proxyUnavailableTooltipController = strongSelf.proxyUnavailableTooltipController {
+                            strongSelf.proxyUnavailableTooltipController = nil
+                            proxyUnavailableTooltipController.dismiss()
+                        }
                     }
                 }
-            }
-        })
+            })
+        }
         
-        self.badgeDisposable = (renderedTotalUnreadCount(postbox: account.postbox) |> deliverOnMainQueue).start(next: { [weak self] count in
+        self.badgeDisposable = (renderedTotalUnreadCount(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox) |> deliverOnMainQueue).start(next: { [weak self] count in
             if let strongSelf = self {
                 if count.0 == 0 {
                     strongSelf.tabBarItem.badgeValue = ""
@@ -208,7 +221,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         
         self.titleView.toggleIsLocked = { [weak self] in
             if let strongSelf = self {
-                let _ = (strongSelf.account.postbox.transaction({ transaction -> Void in
+                let _ = (strongSelf.context.sharedContext.accountManager.transaction({ transaction -> Void in
                     var data = transaction.getAccessChallengeData()
                     if data.isLockable {
                         if data.autolockDeadline != 0 {
@@ -229,11 +242,11 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         
         self.titleView.openProxySettings = { [weak self] in
             if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(proxySettingsController(account: account))
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(proxySettingsController(context: context))
             }
         }
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -278,7 +291,11 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     
     private func updateThemeAndStrings() {
         self.tabBarItem.title = self.presentationData.strings.DialogList_Title
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
+        
+        let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
+        backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
+        self.navigationItem.backBarButtonItem = backBarButtonItem
+        
         self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel)
         var editing = false
         self.chatListDisplayNode.chatListNode.updateState { state in
@@ -288,12 +305,16 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         let editItem: UIBarButtonItem
         if editing {
             editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+            editItem.accessibilityLabel = self.presentationData.strings.Common_Done
         } else {
             editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+            editItem.accessibilityLabel = self.presentationData.strings.Common_Edit
         }
         if self.groupId == nil {
             self.navigationItem.leftBarButtonItem = editItem
-            self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
+            let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
+            rightBarButtonItem.accessibilityLabel = "Compose"
+            self.navigationItem.rightBarButtonItem = rightBarButtonItem
         } else {
             self.navigationItem.rightBarButtonItem = editItem
         }
@@ -309,7 +330,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatListControllerNode(account: self.account, groupId: self.groupId, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, controller: self)
+        self.displayNode = ChatListControllerNode(context: self.context, groupId: self.groupId, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, controller: self)
         
         self.chatListDisplayNode.navigationBar = self.navigationBar
         
@@ -331,7 +352,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             guard let strongSelf = self else {
                 return
             }
-            let _ = (strongSelf.account.postbox.transaction { transaction -> RenderedPeer? in
+            let _ = (strongSelf.context.account.postbox.transaction { transaction -> RenderedPeer? in
                 guard let peer = transaction.getPeer(peerId) else {
                     return nil
                 }
@@ -371,7 +392,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 } else if let _ = chatPeer as? TelegramSecretChat {
                     deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
                 }
-                items.append(DeleteChatPeerActionSheetItem(account: strongSelf.account, peer: mainPeer, chatPeer: chatPeer, strings: strongSelf.presentationData.strings))
+                items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, strings: strongSelf.presentationData.strings))
                 if canClear {
                     items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DialogList_ClearHistoryConfirmation, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
@@ -384,12 +405,12 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                             state.pendingClearHistoryPeerIds.insert(peer.peerId)
                             return state
                         })
-                        strongSelf.present(UndoOverlayController(account: strongSelf.account, text: strongSelf.presentationData.strings.Undo_MessagesDeleted, action: { shouldCommit in
+                        strongSelf.present(UndoOverlayController(context: strongSelf.context, text: strongSelf.presentationData.strings.Undo_MessagesDeleted, action: { shouldCommit in
                             guard let strongSelf = self else {
                                 return
                             }
                             if shouldCommit {
-                                let _ = clearHistoryInteractively(postbox: strongSelf.account.postbox, peerId: peerId).start(completed: {
+                                let _ = clearHistoryInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId).start(completed: {
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -424,10 +445,10 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         
                         if let strongSelf = self {
                             strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
-                            let _ = removePeerChat(postbox: strongSelf.account.postbox, peerId: peerId, reportChatSpam: false).start(completed: {
+                            let _ = removePeerChat(postbox: strongSelf.context.account.postbox, peerId: peerId, reportChatSpam: false).start(completed: {
                                 self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
                             })
-                            let _ = requestUpdatePeerIsBlocked(account: strongSelf.account, peerId: peer.peerId, isBlocked: true).start()
+                            let _ = requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.peerId, isBlocked: true).start()
                         }
                     }))
                 }
@@ -447,7 +468,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
                     if isAd {
-                        let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(postbox: strongSelf.account.postbox)
+                        let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(postbox: strongSelf.context.account.postbox)
                         |> deliverOnMainQueue).start(next: { value in
                             guard let strongSelf = self else {
                                 return
@@ -455,7 +476,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                             if !value {
                                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.DialogList_AdNoticeAlert, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                                     if let strongSelf = self {
-                                        let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(postbox: strongSelf.account.postbox).start()
+                                        let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(postbox: strongSelf.context.account.postbox).start()
                                     }
                                 })]), in: .window(.root))
                             }
@@ -466,7 +487,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                         scrollToEndIfExists = true
                     }
-                    navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peerId), scrollToEndIfExists: scrollToEndIfExists, animated: animated, completion: { [weak self] in
+                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), scrollToEndIfExists: scrollToEndIfExists, animated: animated, completion: { [weak self] in
                         self?.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                     })
                 }
@@ -480,7 +501,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                         scrollToEndIfExists = true
                     }
-                    navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .group(groupId), scrollToEndIfExists: scrollToEndIfExists)
+                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .group(groupId), scrollToEndIfExists: scrollToEndIfExists)
                     strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                 }
             }
@@ -488,17 +509,17 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         
         self.chatListDisplayNode.chatListNode.updatePeerGrouping = { [weak self] peerId, group in
             if let strongSelf = self {
-                let _ = updatePeerGroupIdInteractively(postbox: strongSelf.account.postbox, peerId: peerId, groupId: group ? Namespaces.PeerGroup.feed : nil).start()
+                let _ = updatePeerGroupIdInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, groupId: group ? Namespaces.PeerGroup.feed : nil).start()
             }
         }
         
         self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, messageId in
             if let strongSelf = self {
-                strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.account, peer: peer)
+                strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.context.account, peer: peer)
                 |> deliverOnMainQueue).start(next: { [weak strongSelf] actualPeerId in
                     if let strongSelf = strongSelf {
                         if let navigationController = strongSelf.navigationController as? NavigationController {
-                            navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(actualPeerId), messageId: messageId, purposefulAction: {
+                            navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), messageId: messageId, purposefulAction: {
                                 self?.deactivateSearch(animated: false)
                             })
                             strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
@@ -510,7 +531,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         
         self.chatListDisplayNode.requestOpenPeerFromSearch = { [weak self] peer, dismissSearch in
             if let strongSelf = self {
-                let storedPeer = strongSelf.account.postbox.transaction { transaction -> Void in
+                let storedPeer = strongSelf.context.account.postbox.transaction { transaction -> Void in
                     if transaction.getPeer(peer.id) == nil {
                         updatePeers(transaction: transaction, peers: [peer], update: { previousPeer, updatedPeer in
                             return updatedPeer
@@ -523,7 +544,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                             strongSelf.dismissSearchOnDisappear = true
                         }
                         if let navigationController = strongSelf.navigationController as? NavigationController {
-                            navigateToChatController(navigationController: navigationController, account: strongSelf.account, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
+                            navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
                                 self?.deactivateSearch(animated: false)
                             })
                             strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
@@ -544,7 +565,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                             actionSheet?.dismissAnimated()
                             
                             if let strongSelf = self {
-                                let _ = removeRecentPeer(account: strongSelf.account, peerId: peer.id).start()
+                                let _ = removeRecentPeer(account: strongSelf.context.account, peerId: peer.id).start()
                                 let searchContainer = strongSelf.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode
                                 searchContainer?.removePeerFromTopPeers(peer.id)
                             }
@@ -563,7 +584,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         self.chatListDisplayNode.requestAddContact = { [weak self] phoneNumber in
             if let strongSelf = self {
                 strongSelf.view.endEditing(true)
-                openAddContact(account: strongSelf.account, phoneNumber: phoneNumber, present: { [weak self] controller, arguments in
+                openAddContact(context: strongSelf.context, phoneNumber: phoneNumber, present: { [weak self] controller, arguments in
                     self?.present(controller, in: .window(.root), with: arguments)
                 }, completed: {
                     self?.deactivateSearch(animated: false)
@@ -585,7 +606,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
-        let account = self.account
+        let context = self.context
         let peerIdsAndOptions: Signal<(ChatListSelectionOptions, Set<PeerId>)?, NoError> = self.chatListDisplayNode.chatListNode.state
         |> map { state -> Set<PeerId>? in
             if !state.editing {
@@ -596,7 +617,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         |> distinctUntilChanged
         |> mapToSignal { selectedPeerIds -> Signal<(ChatListSelectionOptions, Set<PeerId>)?, NoError> in
             if let selectedPeerIds = selectedPeerIds {
-                return chatListSelectionOptions(postbox: account.postbox, peerIds: selectedPeerIds)
+                return chatListSelectionOptions(postbox: context.account.postbox, peerIds: selectedPeerIds)
                 |> map { options -> (ChatListSelectionOptions, Set<PeerId>)? in
                     return (options, selectedPeerIds)
                 }
@@ -643,12 +664,15 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         super.viewDidAppear(animated)
         
         #if DEBUG
-        DispatchQueue.main.async {
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
             let count = ChatControllerCount.with({ $0 })
             if count != 0 {
-                self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: "", text: "ChatControllerCount \(count)", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: "", text: "ChatControllerCount \(count)", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
             }
-        }
+        })
         #endif
         
         if !self.didSetup3dTouch {
@@ -659,13 +683,12 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         }
         
         if let lockViewFrame = self.titleView.lockViewFrame, !self.didShowPasscodeLockTooltipController {
-            self.passcodeLockTooltipDisposable.set((combineLatest(ApplicationSpecificNotice.getPasscodeLockTips(postbox: self.account.postbox), account.postbox.combinedView(keys: [.accessChallengeData]) |> take(1))
-                |> deliverOnMainQueue).start(next: { [weak self] tooltipValue, passcodeView in
+            self.passcodeLockTooltipDisposable.set(combineLatest(queue: .mainQueue(), ApplicationSpecificNotice.getPasscodeLockTips(postbox: self.context.account.postbox), self.context.sharedContext.accountManager.accessChallengeData() |> take(1)).start(next: { [weak self] tooltipValue, passcodeView in
                     if let strongSelf = self {
                         if !tooltipValue {
-                            let hasPasscode = (passcodeView.views[.accessChallengeData] as! AccessChallengeDataView).data.isLockable
+                            let hasPasscode = passcodeView.data.isLockable
                             if hasPasscode {
-                                let _ = ApplicationSpecificNotice.setPasscodeLockTips(postbox: strongSelf.account.postbox).start()
+                                let _ = ApplicationSpecificNotice.setPasscodeLockTips(postbox: strongSelf.context.account.postbox).start()
                                 
                                 let tooltipController = TooltipController(text: strongSelf.presentationData.strings.DialogList_PasscodeLockHelp, dismissByTapOutside: true)
                                 strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: { [weak self] in
@@ -686,10 +709,10 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         if !self.didSuggestLocalization {
             self.didSuggestLocalization = true
             
-            let network = self.account.network
-            let signal = self.account.postbox.transaction { transaction -> (String, SuggestedLocalizationEntry?) in
+            let network = self.context.account.network
+            let signal = combineLatest(self.context.sharedContext.accountManager.transaction { transaction -> String in
                 let languageCode: String
-                if let current = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
+                if let current = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings {
                     let code = current.primaryComponent.languageCode
                     let rawSuffix = "-raw"
                     if code.hasSuffix(rawSuffix) {
@@ -700,12 +723,15 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 } else {
                     languageCode = "en"
                 }
+                return languageCode
+            }, self.context.account.postbox.transaction { transaction -> SuggestedLocalizationEntry? in
                 var suggestedLocalization: SuggestedLocalizationEntry?
                 if let localization = transaction.getPreferencesEntry(key: PreferencesKeys.suggestedLocalization) as? SuggestedLocalizationEntry {
                     suggestedLocalization = localization
                 }
-                return (languageCode, suggestedLocalization)
-            } |> mapToSignal({ value -> Signal<(String, SuggestedLocalizationInfo)?, NoError> in
+                return suggestedLocalization
+            })
+            |> mapToSignal({ value -> Signal<(String, SuggestedLocalizationInfo)?, NoError> in
                 guard let suggestedLocalization = value.1, !suggestedLocalization.isSeen && suggestedLocalization.languageCode != "en" && suggestedLocalization.languageCode != value.0 else {
                     return .single(nil)
                 }
@@ -719,14 +745,14 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 guard let strongSelf = self, let (currentLanguageCode, suggestedLocalization) = suggestedLocalization else {
                     return
                 }
-                if let controller = languageSuggestionController(account: strongSelf.account, suggestedLocalization: suggestedLocalization, currentLanguageCode: currentLanguageCode, openSelection: { [weak self] in
+                if let controller = languageSuggestionController(context: strongSelf.context, suggestedLocalization: suggestedLocalization, currentLanguageCode: currentLanguageCode, openSelection: { [weak self] in
                     if let strongSelf = self {
-                        let controller = LocalizationListController(account: strongSelf.account)
+                        let controller = LocalizationListController(context: strongSelf.context)
                         (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
                     }
                 }) {
                     strongSelf.present(controller, in: .window(.root))
-                    _ = markSuggestedLocalizationAsSeenInteractively(postbox: strongSelf.account.postbox, languageCode: suggestedLocalization.languageCode).start()
+                    _ = markSuggestedLocalizationAsSeenInteractively(postbox: strongSelf.context.account.postbox, languageCode: suggestedLocalization.languageCode).start()
                 }
             }))
         }
@@ -771,6 +797,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     
     @objc func editPressed() {
         let editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+        editItem.accessibilityLabel = self.presentationData.strings.Common_Done
         if self.groupId == nil {
             self.navigationItem.leftBarButtonItem = editItem
         } else {
@@ -787,6 +814,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     
     @objc func donePressed() {
         let editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+        editItem.accessibilityLabel = self.presentationData.strings.Common_Edit
         if self.groupId == nil {
             self.navigationItem.leftBarButtonItem = editItem
         } else {
@@ -831,7 +859,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     }
     
     @objc func composePressed() {
-        (self.navigationController as? NavigationController)?.replaceAllButRootController(ComposeController(account: self.account), animated: true)
+        (self.navigationController as? NavigationController)?.replaceAllButRootController(ComposeController(context: self.context), animated: true)
     }
     
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
@@ -867,7 +895,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     sourceRect = CGRect(x: sourceRect.minX, y: sourceRect.minY + bounds.minY, width: bounds.width, height: bounds.height)
                     sourceRect.size.height -= UIScreenPixel
                     
-                    let chatController = ChatController(account: self.account, chatLocation: .peer(peerId), mode: .standard(previewing: true))
+                    let chatController = ChatController(context: self.context, chatLocation: .peer(peerId), mode: .standard(previewing: true))
                     chatController.canReadHistory.set(false)
                     chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
                     return (chatController, sourceRect)
@@ -876,7 +904,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     sourceRect = CGRect(x: sourceRect.minX, y: sourceRect.minY + bounds.minY, width: bounds.width, height: bounds.height)
                     sourceRect.size.height -= UIScreenPixel
                     
-                    let chatController = ChatController(account: self.account, chatLocation: .peer(messageId.peerId), messageId: messageId, mode: .standard(previewing: true))
+                    let chatController = ChatController(context: self.context, chatLocation: .peer(messageId.peerId), messageId: messageId, mode: .standard(previewing: true))
                     chatController.canReadHistory.set(false)
                     chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
                     return (chatController, sourceRect)
@@ -909,7 +937,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             switch item.content {
                 case let .peer(_, peer, _, _, _, _, _, _, _):
                     if peer.peerId.namespace != Namespaces.Peer.SecretChat {
-                        let chatController = ChatController(account: self.account, chatLocation: .peer(peer.peerId), mode: .standard(previewing: true))
+                        let chatController = ChatController(context: self.context, chatLocation: .peer(peer.peerId), mode: .standard(previewing: true))
                         chatController.canReadHistory.set(false)
                         chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
                         return (chatController, sourceRect)
@@ -917,7 +945,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         return nil
                     }
                 case let .groupReference(groupId, _, _, _):
-                    let chatListController = ChatListController(account: self.account, groupId: groupId, controlsHistoryPreload: false)
+                    let chatListController = ChatListController(context: self.context, groupId: groupId, controlsHistoryPreload: false)
                     chatListController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
                     return (chatListController, sourceRect)
             }
@@ -936,7 +964,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 chatController.canReadHistory.set(true)
                 chatController.updatePresentationMode(.standard(previewing: false))
                 if let navigationController = self.navigationController as? NavigationController {
-                    navigateToChatController(navigationController: navigationController, chatController: chatController, account: self.account, chatLocation: chatController.chatLocation, animated: false)
+                    navigateToChatController(navigationController: navigationController, chatController: chatController, context: self.context, chatLocation: chatController.chatLocation, animated: false)
                     self.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                 }
             }
@@ -989,7 +1017,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         let openChat: (Int) -> Void = { [weak self] index in
             if let strongSelf = self {
                 if index == 0 {
-                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.peerId(strongSelf.account.peerId))
+                    strongSelf.chatListDisplayNode.chatListNode.selectChat(.peerId(strongSelf.context.account.peerId))
                 } else {
                     strongSelf.chatListDisplayNode.chatListNode.selectChat(.index(index - 1))
                 }
@@ -1009,16 +1037,16 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         let peerIds = self.chatListDisplayNode.chatListNode.currentState.selectedPeerIds
         if left {
             let signal: Signal<Void, NoError>
-            let account = self.account
+            let context = self.context
             if !peerIds.isEmpty {
-                signal = self.account.postbox.transaction { transaction -> Void in
+                signal = self.context.account.postbox.transaction { transaction -> Void in
                     for peerId in peerIds {
-                        togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: account.viewTracker, peerId: peerId, setToValue: false)
+                        togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: context.account.viewTracker, peerId: peerId, setToValue: false)
                     }
                 }
             } else {
-                signal = self.account.postbox.transaction { transaction -> Void in
-                    markAllChatsAsReadInteractively(transaction: transaction, viewTracker: account.viewTracker)
+                signal = self.context.account.postbox.transaction { transaction -> Void in
+                    markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker)
                 }
             }
             let _ = (signal
@@ -1035,7 +1063,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     return
                 }
                 
-                let account = strongSelf.account
+                let context = strongSelf.context
                 let presentationData = strongSelf.presentationData
                 let progressSignal = Signal<Never, NoError> { subscriber in
                     let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
@@ -1050,9 +1078,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 |> delay(0.8, queue: Queue.mainQueue())
                 let progressDisposable = progressSignal.start()
                 
-                let signal: Signal<Void, NoError> = strongSelf.account.postbox.transaction { transaction -> Void in
+                let signal: Signal<Void, NoError> = strongSelf.context.account.postbox.transaction { transaction -> Void in
                     for peerId in peerIds {
-                        removePeerChat(transaction: transaction, mediaBox: account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: false)
+                        removePeerChat(transaction: transaction, mediaBox: context.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: false)
                     }
                 }
                 |> afterDisposed {
@@ -1116,13 +1144,13 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         } else {
             statusText = self.presentationData.strings.Undo_ChatDeleted
         }
-        self.present(UndoOverlayController(account: self.account, text: statusText, action: { [weak self] shouldCommit in
+        self.present(UndoOverlayController(context: self.context, text: statusText, action: { [weak self] shouldCommit in
             guard let strongSelf = self else {
                 return
             }
             if shouldCommit {
                 strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
-                let _ = removePeerChat(postbox: strongSelf.account.postbox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: deleteGloballyIfPossible).start(completed: {
+                let _ = removePeerChat(postbox: strongSelf.context.account.postbox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: deleteGloballyIfPossible).start(completed: {
                     guard let strongSelf = self else {
                         return
                     }

@@ -15,7 +15,7 @@ final class BotReceiptController: ViewController {
         return self._ready
     }
     
-    private let account: Account
+    private let context: AccountContext
     private let invoice: TelegramMediaInvoice
     private let messageId: MessageId
     
@@ -23,12 +23,12 @@ final class BotReceiptController: ViewController {
     
     private var didPlayPresentationAnimation = false
     
-    init(account: Account, invoice: TelegramMediaInvoice, messageId: MessageId) {
-        self.account = account
+    init(context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId) {
+        self.context = context
         self.invoice = invoice
         self.messageId = messageId
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -46,11 +46,11 @@ final class BotReceiptController: ViewController {
     }
     
     override func loadDisplayNode() {
-        let displayNode = BotReceiptControllerNode(navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
+        let displayNode = BotReceiptControllerNode(controller: nil, navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
             if let strongSelf = self {
                 strongSelf.navigationOffset = offset
             }
-        }, account: self.account, invoice: self.invoice, messageId: self.messageId, dismissAnimated: { [weak self] in
+        }, context: self.context, invoice: self.invoice, messageId: self.messageId, dismissAnimated: { [weak self] in
             self?.dismiss()
         })
         

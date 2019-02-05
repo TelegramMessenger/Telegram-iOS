@@ -26,7 +26,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     
     var patternChanged: ((TelegramWallpaper, Int32?, Bool) -> Void)?
 
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
         
         self.backgroundNode = ASDisplayNode()
@@ -48,7 +48,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         
         self.addSubnode(self.labelNode)
         
-        self.disposable = ((telegramWallpapers(postbox: account.postbox, network: account.network)
+        self.disposable = ((telegramWallpapers(postbox: context.account.postbox, network: context.account.network)
         |> map { wallpapers in
             return wallpapers.filter { wallpaper in
                 if case let .file(file) = wallpaper, file.isPattern, file.file.mimeType != "image/webp" {
@@ -78,7 +78,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
                         updatedWallpaper = .file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: settings)
                     }
                     
-                    node.setWallpaper(account: account, wallpaper: updatedWallpaper, selected: selected, size: itemSize)
+                    node.setWallpaper(context: context, wallpaper: updatedWallpaper, selected: selected, size: itemSize)
                     node.pressed = { [weak self, weak node] in
                         if let strongSelf = self {
                             strongSelf.currentWallpaper = updatedWallpaper

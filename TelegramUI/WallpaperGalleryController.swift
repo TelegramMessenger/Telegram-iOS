@@ -115,7 +115,7 @@ class WallpaperGalleryController: ViewController {
         return self.displayNode as! GalleryControllerNode
     }
     
-    private let account: Account
+    private let context: AccountContext
     private let source: WallpaperListSource
     var apply: ((WallpaperGalleryEntry, WallpaperPresentationOptions, CGRect?) -> Void)?
     
@@ -153,10 +153,10 @@ class WallpaperGalleryController: ViewController {
     private var colorPanelEnabled = false
     private var patternPanelEnabled = false
     
-    init(account: Account, source: WallpaperListSource) {
-        self.account = account
+    init(context: AccountContext, source: WallpaperListSource) {
+        self.context = context
         self.source = source
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
         
@@ -204,7 +204,7 @@ class WallpaperGalleryController: ViewController {
         self.initialEntries = entries
         self.centralEntryIndex = centralEntryIndex
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -282,7 +282,7 @@ class WallpaperGalleryController: ViewController {
         var i: Int = 0
         var updateItems: [GalleryPagerUpdateItem] = []
         for entry in entries {
-            let item = GalleryPagerUpdateItem(index: i, previousIndex: i, item: WallpaperGalleryItem(account: self.account, entry: entry, arguments: arguments))
+            let item = GalleryPagerUpdateItem(index: i, previousIndex: i, item: WallpaperGalleryItem(context: self.context, entry: entry, arguments: arguments))
             updateItems.append(item)
             i += 1
         }
@@ -324,7 +324,7 @@ class WallpaperGalleryController: ViewController {
                 break
         }
         
-        let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let overlayNode = WallpaperGalleryOverlayNode()
         self.overlayNode = overlayNode
         self.galleryNode.overlayNode = overlayNode
@@ -374,7 +374,7 @@ class WallpaperGalleryController: ViewController {
                                     let updatedSettings = WallpaperSettings(blur: options.contains(.blur), motion: options.contains(.motion), color: baseSettings?.color, intensity: baseSettings?.intensity)
                                     let wallpaper = wallpaper.withUpdatedSettings(updatedSettings)
                                     
-                                    let _ = (updatePresentationThemeSettingsInteractively(postbox: strongSelf.account.postbox, { current in
+                                    let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                         themeSpecificChatWallpapers[current.theme.index] = wallpaper
                                         return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
@@ -383,21 +383,21 @@ class WallpaperGalleryController: ViewController {
                                     })
                                 
                                     if case .wallpaper = strongSelf.source {
-                                        let _ = saveWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
+                                        let _ = saveWallpaper(account: strongSelf.context.account, wallpaper: wallpaper).start()
                                     }
-                                    let _ = installWallpaper(account: strongSelf.account, wallpaper: wallpaper).start()
+                                    let _ = installWallpaper(account: strongSelf.context.account, wallpaper: wallpaper).start()
                                 }
                                 
                                 let applyWallpaper: (TelegramWallpaper) -> Void = { wallpaper in
                                     if options.contains(.blur) {
                                         if let resource = resource {
-                                            let _ = strongSelf.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+                                            let _ = strongSelf.context.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
                                                 completion(wallpaper)
                                             })
                                         }
                                     } else {
                                         if case let .file(file) = wallpaper, file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
-                                            let _ = strongSelf.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true).start(completed: {
+                                            let _ = strongSelf.context.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true).start(completed: {
                                                 completion(wallpaper)
                                             })
                                         } else {
@@ -407,7 +407,7 @@ class WallpaperGalleryController: ViewController {
                                 }
                             
                                 if case let .image(currentRepresentations, currentSettings) = wallpaper {
-                                    let _ = (strongSelf.account.telegramApplicationContext.wallpaperUploadManager!.stateSignal()
+                                    let _ = (strongSelf.context.wallpaperUploadManager!.stateSignal()
                                     |> take(1)
                                     |> deliverOnMainQueue).start(next: { status in
                                         switch status {
@@ -546,7 +546,7 @@ class WallpaperGalleryController: ViewController {
     private func updateMessagesLayout(layout: ContainerViewLayout, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         var items: [ChatMessageItem] = []
         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 1)
-        let otherPeerId = self.account.peerId
+        let otherPeerId = self.context.account.peerId
         var peers = SimpleDictionary<PeerId, Peer>()
         let messages = SimpleDictionary<MessageId, Message>()
         peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
@@ -588,9 +588,9 @@ class WallpaperGalleryController: ViewController {
             bottomMessageText = presentationData.strings.WallpaperPreview_CustomColorBottomText
         }
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: false))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: false))
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, account: self.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: false))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: false))
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
         if let messageNodes = self.messageNodes {
@@ -670,7 +670,7 @@ class WallpaperGalleryController: ViewController {
         if let patternPanelNode = self.patternPanelNode {
             currentPatternPanelNode = patternPanelNode
         } else {
-            let patternPanelNode = WallpaperPatternPanelNode(account: self.account, theme: presentationData.theme, strings: presentationData.strings)
+            let patternPanelNode = WallpaperPatternPanelNode(context: self.context, theme: presentationData.theme, strings: presentationData.strings)
             patternPanelNode.patternChanged = { [weak self] pattern, intensity, preview in
                 if let strongSelf = self, strongSelf.validLayout != nil {
                     strongSelf.updateEntries(pattern: pattern, intensity: intensity, preview: preview)
@@ -700,7 +700,7 @@ class WallpaperGalleryController: ViewController {
                 colors = true
             }
             
-            self.galleryNode.pager.replaceItems(self.entries.map({ WallpaperGalleryItem(account: self.account, entry: $0, arguments: WallpaperGalleryItemArguments(isColorsList: colors)) }), centralItemIndex: self.centralEntryIndex)
+            self.galleryNode.pager.replaceItems(self.entries.map({ WallpaperGalleryItem(context: self.context, entry: $0, arguments: WallpaperGalleryItemArguments(isColorsList: colors)) }), centralItemIndex: self.centralEntryIndex)
             
             if let initialOptions = self.initialOptions, let itemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
                 itemNode.options = initialOptions
@@ -725,10 +725,10 @@ class WallpaperGalleryController: ViewController {
             options.append("mode=motion")
         }
         
-        let account = self.account
+        let context = self.context
         switch wallpaper {
             case .image:
-                let _ = (self.account.telegramApplicationContext.wallpaperUploadManager!.stateSignal()
+                let _ = (context.wallpaperUploadManager!.stateSignal()
                 |> take(1)
                 |> filter { status -> Bool in
                     return status.wallpaper == wallpaper
@@ -739,7 +739,7 @@ class WallpaperGalleryController: ViewController {
                             optionsString = "?\(options.joined(separator: "&"))"
                         }
                         
-                        let controller = ShareController(account: account, subject: .url("https://t.me/bg/\(file.slug)\(optionsString)"))
+                        let controller = ShareController(context: context, subject: .url("https://t.me/bg/\(file.slug)\(optionsString)"))
                         self?.present(controller, in: .window(.root), blockInteraction: true)
                     }
                 })
@@ -758,9 +758,9 @@ class WallpaperGalleryController: ViewController {
                     optionsString = "?\(options.joined(separator: "&"))"
                 }
                 
-                controller = ShareController(account: account, subject: .url("https://t.me/bg/\(slug)\(optionsString)"))
+                controller = ShareController(context: context, subject: .url("https://t.me/bg/\(slug)\(optionsString)"))
             case let .color(color):
-                controller = ShareController(account: account, subject: .url("https://t.me/bg/\(UIColor(rgb: UInt32(bitPattern: color)).hexString)"))
+                controller = ShareController(context: context, subject: .url("https://t.me/bg/\(UIColor(rgb: UInt32(bitPattern: color)).hexString)"))
             default:
                 break
         }

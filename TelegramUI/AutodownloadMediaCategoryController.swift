@@ -344,9 +344,9 @@ private func autodownloadMediaCategoryControllerEntries(presentationData: Presen
     return entries
 }
 
-func autodownloadMediaCategoryController(account: Account, category: AutomaticDownloadCategory) -> ViewController {
+func autodownloadMediaCategoryController(context: AccountContext, category: AutomaticDownloadCategory) -> ViewController {
     let arguments = AutodownloadMediaCategoryControllerArguments(toggle: { connection, type in
-        let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             switch category {
                 case .photo:
@@ -508,7 +508,7 @@ func autodownloadMediaCategoryController(account: Account, category: AutomaticDo
             return settings
         }).start()
     }, adjustSize: { size in
-        let _ = updateMediaDownloadSettingsInteractively(postbox: account.postbox, { settings in
+        let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             switch category {
                 case .photo:
@@ -541,36 +541,36 @@ func autodownloadMediaCategoryController(account: Account, category: AutomaticDo
         }).start()
     })
     
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings])) |> deliverOnMainQueue
-        |> map { presentationData, prefs -> (ItemListControllerState, (ItemListNodeState<AutodownloadMediaCategoryEntry>, AutodownloadMediaCategoryEntry.ItemGenerationArguments)) in
-            let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
-            if let value = prefs.values[ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
-                automaticMediaDownloadSettings = value
-            } else {
-                automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
-            }
-            
-            let title: String
-            switch category {
-                case .photo:
-                    title = presentationData.strings.AutoDownloadSettings_PhotosTitle
-                case .video:
-                    title = presentationData.strings.AutoDownloadSettings_VideosTitle
-                case .file:
-                    title = presentationData.strings.AutoDownloadSettings_DocumentsTitle
-                case .voiceMessage:
-                    title = presentationData.strings.AutoDownloadSettings_VoiceMessagesTitle
-                case .videoMessage:
-                    title = presentationData.strings.AutoDownloadSettings_VideoMessagesTitle
-            }
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: autodownloadMediaCategoryControllerEntries(presentationData: presentationData, category: category, settings: automaticMediaDownloadSettings), style: .blocks, emptyStateItem: nil, animateChanges: false)
-            
-            return (controllerState, (listState, arguments))
+    let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])) |> deliverOnMainQueue
+    |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<AutodownloadMediaCategoryEntry>, AutodownloadMediaCategoryEntry.ItemGenerationArguments)) in
+        let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
+            automaticMediaDownloadSettings = value
+        } else {
+            automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
+        }
+        
+        let title: String
+        switch category {
+            case .photo:
+                title = presentationData.strings.AutoDownloadSettings_PhotosTitle
+            case .video:
+                title = presentationData.strings.AutoDownloadSettings_VideosTitle
+            case .file:
+                title = presentationData.strings.AutoDownloadSettings_DocumentsTitle
+            case .voiceMessage:
+                title = presentationData.strings.AutoDownloadSettings_VoiceMessagesTitle
+            case .videoMessage:
+                title = presentationData.strings.AutoDownloadSettings_VideoMessagesTitle
+        }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let listState = ItemListNodeState(entries: autodownloadMediaCategoryControllerEntries(presentationData: presentationData, category: category, settings: automaticMediaDownloadSettings), style: .blocks, emptyStateItem: nil, animateChanges: false)
+        
+        return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     return controller
 }
 

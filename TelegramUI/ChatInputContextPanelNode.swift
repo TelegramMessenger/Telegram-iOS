@@ -9,13 +9,15 @@ enum ChatInputContextPanelPlacement {
 }
 
 class ChatInputContextPanelNode: ASDisplayNode {
-    let account: Account
+    let context: AccountContext
     var interfaceInteraction: ChatPanelInterfaceInteraction?
     var placement: ChatInputContextPanelPlacement = .overPanels
     var theme: PresentationTheme
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        self.account = account
+    
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+        self.context = context
         self.theme = theme
+        
         super.init()
     }
     

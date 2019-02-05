@@ -5,7 +5,7 @@ import SwiftSignalKit
 import Display
 
 final class InstantPageController: ViewController {
-    private let account: Account
+    private let context: AccountContext
     private var webPage: TelegramMediaWebpage
     private let anchor: String?
     
@@ -25,9 +25,9 @@ final class InstantPageController: ViewController {
     private var settings: InstantPagePresentationSettings?
     private var settingsDisposable: Disposable?
     
-    init(account: Account, webPage: TelegramMediaWebpage, anchor: String? = nil) {
-        self.account = account
-        self.presentationData = (account.telegramApplicationContext.currentPresentationData.with { $0 })
+    init(context: AccountContext, webPage: TelegramMediaWebpage, anchor: String? = nil) {
+        self.context = context
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.webPage = webPage
         self.anchor = anchor
@@ -36,7 +36,7 @@ final class InstantPageController: ViewController {
         
         self.statusBar.statusBarStyle = .White
         
-        self.webpageDisposable = (actualizedWebpage(postbox: self.account.postbox, network: self.account.network, webpage: webPage) |> deliverOnMainQueue).start(next: { [weak self] result in
+        self.webpageDisposable = (actualizedWebpage(postbox: self.context.account.postbox, network: self.context.account.network, webpage: webPage) |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.webPage = result
                 if strongSelf.isNodeLoaded {
@@ -45,10 +45,11 @@ final class InstantPageController: ViewController {
             }
         })
         
-        self.settingsDisposable = (self.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.instantPagePresentationSettings]) |> deliverOnMainQueue).start(next: { [weak self] view in
+        self.settingsDisposable = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.instantPagePresentationSettings])
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             if let strongSelf = self {
                 let settings: InstantPagePresentationSettings
-                if let current = view.values[ApplicationSpecificPreferencesKeys.instantPagePresentationSettings] as? InstantPagePresentationSettings {
+                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.instantPagePresentationSettings] as? InstantPagePresentationSettings {
                     settings = current
                 } else {
                     settings = InstantPagePresentationSettings.defaultSettings
@@ -71,11 +72,11 @@ final class InstantPageController: ViewController {
     }
     
     override func viewWillDisappear(_ animated: Bool) {
-        let _ = updateInstantPageStoredStateInteractively(postbox: self.account.postbox, webPage: self.webPage, state: self.controllerNode.currentState).start()
+        let _ = updateInstantPageStoredStateInteractively(postbox: self.context.account.postbox, webPage: self.webPage, state: self.controllerNode.currentState).start()
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = InstantPageControllerNode(account: self.account, settings: self.settings, presentationTheme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, statusBar: self.statusBar, getNavigationController: { [weak self] in
+        self.displayNode = InstantPageControllerNode(context: self.context, settings: self.settings, presentationTheme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, statusBar: self.statusBar, getNavigationController: { [weak self] in
             return self?.navigationController as? NavigationController
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
@@ -83,7 +84,7 @@ final class InstantPageController: ViewController {
             (self?.navigationController as? NavigationController)?.pushViewController(c)
         }, openPeer: { [weak self] peerId in
             if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, chatLocation: .peer(peerId)))
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId)))
             }
         }, navigateBack: { [weak self] in
             if let strongSelf = self, let controllers = strongSelf.navigationController?.viewControllers.reversed() {
@@ -97,7 +98,7 @@ final class InstantPageController: ViewController {
             }
         })
         
-        let _ = (instantPageStoredState(postbox: self.account.postbox, webPage: self.webPage)
+        let _ = (instantPageStoredState(postbox: self.context.account.postbox, webPage: self.webPage)
         |> deliverOnMainQueue).start(next: { [weak self] state in
             if let strongSelf = self {
                 strongSelf.controllerNode.updateWebPage(strongSelf.webPage, anchor: strongSelf.anchor, state: state)

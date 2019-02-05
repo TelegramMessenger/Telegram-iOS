@@ -57,7 +57,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         self.statusNode.transitionToState(state, animated: animated, completion: {})
     }
     
-    func setWallpaper(account: Account, wallpaper: TelegramWallpaper, selected: Bool, size: CGSize, cornerRadius: CGFloat = 0.0, synchronousLoad: Bool = false) {
+    func setWallpaper(context: AccountContext, wallpaper: TelegramWallpaper, selected: Bool, size: CGSize, cornerRadius: CGFloat = 0.0, synchronousLoad: Bool = false) {
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -76,14 +76,14 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                 case .builtin:
                     self.imageNode.isHidden = false
                     self.backgroundNode.isHidden = true
-                    self.imageNode.setSignal(settingsBuiltinWallpaperImage(account: account))
+                    self.imageNode.setSignal(settingsBuiltinWallpaperImage(account: context.account))
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                 case let .color(color):
                     if color == 0x00ffffff {
                         self.imageNode.isHidden = false
                         self.backgroundNode.isHidden = true
-                        self.imageNode.setSignal(whiteColorImage(theme: account.telegramApplicationContext.currentPresentationData.with { $0 }.theme))
+                        self.imageNode.setSignal(whiteColorImage(theme: context.sharedContext.currentPresentationData.with { $0 }.theme))
                         let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                         apply()
                     } else {
@@ -96,7 +96,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     self.backgroundNode.isHidden = true
                     
                     let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
-                    self.imageNode.setSignal(wallpaperImage(account: account, representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad))
+                    self.imageNode.setSignal(wallpaperImage(account: context.account, representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad))
                   
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: largestImageRepresentation(representations)!.dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
@@ -121,11 +121,11 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                         }
                         self.backgroundNode.backgroundColor = patternColor
                         self.color = patternColor
-                        imageSignal = patternWallpaperImage(account: account, representations: convertedRepresentations, mode: .thumbnail, autoFetchFullSize: true)
+                        imageSignal = patternWallpaperImage(account: context.account, representations: convertedRepresentations, mode: .thumbnail, autoFetchFullSize: true)
                     } else {
                         self.backgroundNode.isHidden = true
                         
-                        imageSignal = wallpaperImage(account: account, fileReference: .standalone(media: file.file), representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad)
+                        imageSignal = wallpaperImage(account: context.account, fileReference: .standalone(media: file.file), representations: convertedRepresentations, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad)
                     }
                     self.imageNode.setSignal(imageSignal, attemptSynchronously: synchronousLoad)
                     

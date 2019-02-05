@@ -267,7 +267,7 @@ private func proxyServerSettings(with state: ProxyServerSettingsControllerState)
     return nil
 }
 
-func proxyServerSettingsController(theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>, postbox: Postbox, network: Network, currentSettings: ProxyServerSettings?) -> ViewController {
+func proxyServerSettingsController(theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>, accountManager: AccountManager, postbox: Postbox, network: Network, currentSettings: ProxyServerSettings?) -> ViewController {
     var currentMode: ProxyServerSettingsControllerMode = .socks5
     var currentUsername: String?
     var currentPassword: String?
@@ -337,7 +337,7 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
         })
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: state.isComplete, action: {
             if let proxyServerSettings = proxyServerSettings(with: state) {
-                let _ = (updateProxySettingsInteractively(postbox: postbox, network: network, { settings in
+                let _ = (updateProxySettingsInteractively(accountManager: accountManager, { settings in
                     var settings = settings
                     if let currentSettings = currentSettings {
                         if let index = settings.servers.index(of: currentSettings) {

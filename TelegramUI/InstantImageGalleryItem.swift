@@ -29,7 +29,7 @@ private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class InstantImageGalleryItem: GalleryItem {
-    let account: Account
+    let context: AccountContext
     let presentationData: PresentationData
     let imageReference: ImageMediaReference
     let caption: NSAttributedString
@@ -38,8 +38,8 @@ class InstantImageGalleryItem: GalleryItem {
     let openUrl: (InstantPageUrlItem) -> Void
     let openUrlOptions: (InstantPageUrlItem) -> Void
     
-    init(account: Account, presentationData: PresentationData, imageReference: ImageMediaReference, caption: NSAttributedString, credit: NSAttributedString, location: InstantPageGalleryEntryLocation?, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, imageReference: ImageMediaReference, caption: NSAttributedString, credit: NSAttributedString, location: InstantPageGalleryEntryLocation?, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
+        self.context = context
         self.presentationData = presentationData
         self.imageReference = imageReference
         self.caption = caption
@@ -50,7 +50,7 @@ class InstantImageGalleryItem: GalleryItem {
     }
     
     func node() -> GalleryItemNode {
-        let node = InstantImageGalleryItemNode(account: self.account, presentationData: self.presentationData, openUrl: self.openUrl, openUrlOptions: self.openUrlOptions)
+        let node = InstantImageGalleryItemNode(context: self.context, presentationData: self.presentationData, openUrl: self.openUrl, openUrlOptions: self.openUrlOptions)
         
         node.setImage(imageReference: self.imageReference)
     
@@ -74,27 +74,27 @@ class InstantImageGalleryItem: GalleryItem {
     }
     
     func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
-        return (0, InstantImageGalleryThumbnailItem(account: self.account, mediaReference: imageReference.abstract))
+        return (0, InstantImageGalleryThumbnailItem(account: self.context.account, mediaReference: imageReference.abstract))
     }
 }
 
 final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
-    private let account: Account
+    private let context: AccountContext
     
     private let imageNode: TransformImageNode
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
     private let footerContentNode: InstantPageGalleryFooterContentNode
     
-    private var accountAndMedia: (Account, AnyMediaReference)?
+    private var contextAndMedia: (AccountContext, AnyMediaReference)?
     
     private var fetchDisposable = MetaDisposable()
     
-    init(account: Account, presentationData: PresentationData, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlOptions: @escaping (InstantPageUrlItem) -> Void) {
+        self.context = context
         
         self.imageNode = TransformImageNode()
-        self.footerContentNode = InstantPageGalleryFooterContentNode(account: account, presentationData: presentationData)
+        self.footerContentNode = InstantPageGalleryFooterContentNode(context: context, presentationData: presentationData)
         self.footerContentNode.openUrl = openUrl
         self.footerContentNode.openUrlOptions = openUrlOptions
         
@@ -125,33 +125,33 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     fileprivate func setImage(imageReference: ImageMediaReference) {
-        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(to: imageReference.media) {
+        if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: imageReference.media) {
             if let largestSize = largestRepresentationForPhoto(imageReference.media) {
                 let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: .black))()
-                self.imageNode.setSignal(chatMessagePhoto(postbox: account.postbox, photoReference: imageReference), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(chatMessagePhoto(postbox: self.context.account.postbox, photoReference: imageReference), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
-                self.fetchDisposable.set(fetchedMediaResource(postbox: self.account.postbox, reference: imageReference.resourceReference(largestSize.resource)).start())
+                self.fetchDisposable.set(fetchedMediaResource(postbox: self.context.account.postbox, reference: imageReference.resourceReference(largestSize.resource)).start())
             } else {
                 self._ready.set(.single(Void()))
             }
         }
-        self.accountAndMedia = (account, imageReference.abstract)
+        self.contextAndMedia = (self.context, imageReference.abstract)
         self.footerContentNode.setShareMedia(imageReference.abstract)
     }
     
-    func setFile(account: Account, fileReference: FileMediaReference) {
-        if self.accountAndMedia == nil || !self.accountAndMedia!.1.media.isEqual(to: fileReference.media) {
+    func setFile(context: AccountContext, fileReference: FileMediaReference) {
+        if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: fileReference.media) {
             if let largestSize = fileReference.media.dimensions {
                 let displaySize = largestSize.dividedByScreenScale()
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.setSignal(chatMessageImageFile(account: account, fileReference: fileReference, thumbnail: false), dispatchOnDisplayLink: false)
+                self.imageNode.setSignal(chatMessageImageFile(account: context.account, fileReference: fileReference, thumbnail: false), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize, self.imageNode)
             } else {
                 self._ready.set(.single(Void()))
             }
         }
-        self.accountAndMedia = (account, fileReference.abstract)
+        self.contextAndMedia = (context, fileReference.abstract)
         self.footerContentNode.setShareMedia(fileReference.abstract)
     }
     
@@ -282,9 +282,9 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
     override func visibilityUpdated(isVisible: Bool) {
         super.visibilityUpdated(isVisible: isVisible)
         
-        if let (account, media) = self.accountAndMedia, let fileReference = media.concrete(TelegramMediaFile.self) {
+        if let (context, media) = self.contextAndMedia, let fileReference = media.concrete(TelegramMediaFile.self) {
             if isVisible {
-                self.fetchDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
+                self.fetchDisposable.set(fetchedMediaResource(postbox: context.account.postbox, reference: fileReference.resourceReference(fileReference.media.resource)).start())
             } else {
                 self.fetchDisposable.set(nil)
             }

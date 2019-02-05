@@ -21,7 +21,7 @@ func openExternalShare(state: () -> Signal<ShareExternalState, NoError>) {
 }
 
 final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let account: Account
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let externalShare: Bool
     private let immediateExternalShare: Bool
@@ -67,9 +67,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private var hapticFeedback: HapticFeedback?
     
-    init(account: Account, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, externalShare: Bool, immediateExternalShare: Bool) {
-        self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, externalShare: Bool, immediateExternalShare: Bool) {
+        self.context = context
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare
         
@@ -584,15 +584,15 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     }
     
     func updatePeers(peers: [RenderedPeer], accountPeer: Peer, defaultAction: ShareControllerAction?) {
-        let peersContentNode = SharePeersContainerNode(account: self.account, theme: self.presentationData.theme, strings: self.presentationData.strings, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare)
+        let peersContentNode = SharePeersContainerNode(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare)
         self.peersContentNode = peersContentNode
         peersContentNode.openSearch = { [weak self] in
             if let strongSelf = self {
-                let _ = (recentlySearchedPeers(postbox: strongSelf.account.postbox)
+                let _ = (recentlySearchedPeers(postbox: strongSelf.context.account.postbox)
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { peers in
                     if let strongSelf = self {
-                        let searchContentNode = ShareSearchContainerNode(account: strongSelf.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction!, recentPeers: peers.filter({ $0.peer.peerId.namespace != Namespaces.Peer.SecretChat }).map({ $0.peer }))
+                        let searchContentNode = ShareSearchContainerNode(context: strongSelf.context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction!, recentPeers: peers.filter({ $0.peer.peerId.namespace != Namespaces.Peer.SecretChat }).map({ $0.peer }))
                         searchContentNode.cancel = {
                             if let strongSelf = self, let peersContentNode = strongSelf.peersContentNode {
                                 strongSelf.transitionToContentNode(peersContentNode)

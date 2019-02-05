@@ -9,7 +9,7 @@ final class ChatRecentActionsController: TelegramController {
         return self.displayNode as! ChatRecentActionsControllerNode
     }
     
-    private let account: Account
+    private let context: AccountContext
     private let peer: Peer
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -19,15 +19,15 @@ final class ChatRecentActionsController: TelegramController {
     
     private let titleView: ChatRecentActionsTitleView
     
-    init(account: Account, peer: Peer) {
-        self.account = account
+    init(context: AccountContext, peer: Peer) {
+        self.context = context
         self.peer = peer
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.titleView = ChatRecentActionsTitleView(color: self.presentationData.theme.rootController.navigationBar.primaryTextColor)
         
-        super.init(account: account, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none)
+        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
@@ -104,7 +104,7 @@ final class ChatRecentActionsController: TelegramController {
             self?.openFilterSetup()
         }
         
-        self.presentationDataDisposable = (account.telegramApplicationContext.presentationData
+        self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -135,7 +135,7 @@ final class ChatRecentActionsController: TelegramController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ChatRecentActionsControllerNode(account: self.account, peer: self.peer, presentationData: self.presentationData, interaction: self.interaction, pushController: { [weak self] c in
+        self.displayNode = ChatRecentActionsControllerNode(context: self.context, peer: self.peer, presentationData: self.presentationData, interaction: self.interaction, pushController: { [weak self] c in
             (self?.navigationController as? NavigationController)?.pushViewController(c)
         }, presentController: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -176,7 +176,7 @@ final class ChatRecentActionsController: TelegramController {
     }
     
     private func openFilterSetup() {
-        self.present(channelRecentActionsFilterController(account: self.account, peer: self.peer, events: self.controllerNode.filter.events, adminPeerIds: self.controllerNode.filter.adminPeerIds, apply: { [weak self] events, adminPeerIds in
+        self.present(channelRecentActionsFilterController(context: self.context, peer: self.peer, events: self.controllerNode.filter.events, adminPeerIds: self.controllerNode.filter.adminPeerIds, apply: { [weak self] events, adminPeerIds in
             self?.controllerNode.updateFilter(events: events, adminPeerIds: adminPeerIds)
             self?.updateTitle()
         }), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

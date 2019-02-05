@@ -12,7 +12,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     
     var chatController: ChatController?
     
-    private let account: Account
+    private let context: AccountContext
     private let query: String
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
@@ -21,8 +21,8 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     
     var navigationBar: NavigationBar?
     
-    init(account: Account, peer: Peer?, query: String, theme: PresentationTheme, strings: PresentationStrings) {
-        self.account = account
+    init(context: AccountContext, peer: Peer?, query: String, theme: PresentationTheme, strings: PresentationStrings) {
+        self.context = context
         self.query = query
         self.listNode = ListView()
         
@@ -37,7 +37,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.segmentedControl.selectedSegmentIndex = 0
         
         if let peer = peer {
-            self.chatController = ChatController(account: account, chatLocation: .peer(peer.id), messageId: nil, botStart: nil, mode: .inline)
+            self.chatController = ChatController(context: context, chatLocation: .peer(peer.id), messageId: nil, botStart: nil, mode: .inline)
         } else {
             self.chatController = nil
         }

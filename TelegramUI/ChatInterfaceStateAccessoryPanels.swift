@@ -2,7 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import TelegramCore
 
-func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: AccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> AccessoryPanelNode? {
+func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: AccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> AccessoryPanelNode? {
     if let _ = chatPresentationInterfaceState.interfaceState.selectionState {
         return nil
     }
@@ -18,7 +18,7 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
                 previewPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                 return previewPanelNode
             } else {
-                let panelNode = WebpagePreviewAccessoryPanelNode(account: account, url: editingUrlPreview.0, webpage: editingUrlPreview.1, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+                let panelNode = WebpagePreviewAccessoryPanelNode(context: context, url: editingUrlPreview.0, webpage: editingUrlPreview.1, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                 panelNode.interfaceInteraction = interfaceInteraction
                 return panelNode
             }
@@ -29,7 +29,7 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
             editPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             return editPanelNode
         } else {
-            let panelNode = EditAccessoryPanelNode(account: account, messageId: editMessage.messageId, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder)
+            let panelNode = EditAccessoryPanelNode(context: context, messageId: editMessage.messageId, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder)
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }
@@ -40,7 +40,7 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
             previewPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             return previewPanelNode
         } else {
-            let panelNode = WebpagePreviewAccessoryPanelNode(account: account, url: urlPreview.0, webpage: urlPreview.1, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+            let panelNode = WebpagePreviewAccessoryPanelNode(context: context, url: urlPreview.0, webpage: urlPreview.1, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }
@@ -50,7 +50,7 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
             forwardPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             return forwardPanelNode
         } else {
-            let panelNode = ForwardAccessoryPanelNode(account: account, messageIds: forwardMessageIds, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+            let panelNode = ForwardAccessoryPanelNode(context: context, messageIds: forwardMessageIds, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }
@@ -60,7 +60,7 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
             replyPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             return replyPanelNode
         } else {
-            let panelNode = ReplyAccessoryPanelNode(account: account, messageId: replyMessageId, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder)
+            let panelNode = ReplyAccessoryPanelNode(context: context, messageId: replyMessageId, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder)
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }

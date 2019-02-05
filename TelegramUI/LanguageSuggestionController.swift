@@ -321,12 +321,12 @@ private final class LanguageSuggestionAlertContentNode: AlertContentNode {
     }
 }
 
-func languageSuggestionController(account: Account, suggestedLocalization: SuggestedLocalizationInfo, currentLanguageCode: String, openSelection: @escaping () -> Void) -> AlertController? {
+func languageSuggestionController(context: AccountContext, suggestedLocalization: SuggestedLocalizationInfo, currentLanguageCode: String, openSelection: @escaping () -> Void) -> AlertController? {
     guard let localization = suggestedLocalization.availableLocalizations.filter({ $0.languageCode == suggestedLocalization.languageCode }).first else {
         return nil
     }
     
-    let theme = account.telegramApplicationContext.currentPresentationData.with { $0 }.theme
+    let theme = context.sharedContext.currentPresentationData.with { $0 }.theme
     let strings = LanguageSuggestionControllerStrings(localization: suggestedLocalization)
     guard let mainPath = Bundle.main.path(forResource: "en", ofType: "lproj") else {
         return nil
@@ -344,7 +344,7 @@ func languageSuggestionController(account: Account, suggestedLocalization: Sugge
             dismissImpl?(true)
         } else {
             startActivity()
-            disposable.set((downloadAndApplyLocalization(postbox: account.postbox, network: account.network, languageCode: languageCode)
+            disposable.set((downloadAndApplyLocalization(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, languageCode: languageCode)
             |> deliverOnMainQueue).start(completed: {
                 dismissImpl?(true)
             }))

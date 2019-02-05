@@ -15,7 +15,7 @@ final class BotCheckoutController: ViewController {
         return self._ready
     }
     
-    private let account: Account
+    private let context: AccountContext
     private let invoice: TelegramMediaInvoice
     private let messageId: MessageId
     
@@ -23,12 +23,12 @@ final class BotCheckoutController: ViewController {
     
     private var didPlayPresentationAnimation = false
     
-    init(account: Account, invoice: TelegramMediaInvoice, messageId: MessageId) {
-        self.account = account
+    init(context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId) {
+        self.context = context
         self.invoice = invoice
         self.messageId = messageId
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -48,11 +48,11 @@ final class BotCheckoutController: ViewController {
     }
     
     override func loadDisplayNode() {
-        let displayNode = BotCheckoutControllerNode(navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
+        let displayNode = BotCheckoutControllerNode(controller: nil, navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
             if let strongSelf = self {
                 strongSelf.navigationOffset = offset
             }
-        }, account: self.account, invoice: self.invoice, messageId: self.messageId, present: { [weak self] c, a in
+        }, context: self.context, invoice: self.invoice, messageId: self.messageId, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, dismissAnimated: { [weak self] in
             self?.dismiss()

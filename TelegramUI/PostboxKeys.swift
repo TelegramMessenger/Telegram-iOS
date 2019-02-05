@@ -3,6 +3,14 @@ import TelegramCore
 import Postbox
 
 private enum ApplicationSpecificPreferencesKeyValues: Int32 {
+    case voipDerivedState = 16
+}
+
+public struct ApplicationSpecificPreferencesKeys {
+    public static let voipDerivedState = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.voipDerivedState.rawValue)
+}
+
+private enum ApplicationSpecificSharedDataKeyValues: Int32 {
     case inAppNotificationSettings = 0
     case presentationPasscodeSettings = 1
     case automaticMediaDownloadSettings = 2
@@ -15,31 +23,29 @@ private enum ApplicationSpecificPreferencesKeyValues: Int32 {
     case musicPlaybackSettings = 9
     case mediaInputSettings = 10
     case experimentalUISettings = 11
-    case contactSynchronizationSettings = 12
-    case stickerSettings = 13
-    case watchPresetSettings = 14
-    case webSearchSettings = 15
-    case voipDerivedState = 16
+    case stickerSettings = 12
+    case watchPresetSettings = 13
+    case webSearchSettings = 14
+    case contactSynchronizationSettings = 15
 }
 
-public struct ApplicationSpecificPreferencesKeys {
-    public static let inAppNotificationSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.inAppNotificationSettings.rawValue)
-    public static let presentationPasscodeSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.presentationPasscodeSettings.rawValue)
-    public static let automaticMediaDownloadSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.automaticMediaDownloadSettings.rawValue)
-    public static let generatedMediaStoreSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.generatedMediaStoreSettings.rawValue)
-    public static let voiceCallSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.voiceCallSettings.rawValue)
-    public static let presentationThemeSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.presentationThemeSettings.rawValue)
-    public static let instantPagePresentationSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.instantPagePresentationSettings.rawValue)
-    public static let callListSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.callListSettings.rawValue)
-    public static let experimentalSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.experimentalSettings.rawValue)
-    public static let musicPlaybackSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.musicPlaybackSettings.rawValue)
-    public static let mediaInputSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.mediaInputSettings.rawValue)
-    public static let experimentalUISettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.experimentalUISettings.rawValue)
-    public static let contactSynchronizationSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.contactSynchronizationSettings.rawValue)
-    public static let stickerSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.stickerSettings.rawValue)
-    public static let watchPresetSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.watchPresetSettings.rawValue)
-    public static let webSearchSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.webSearchSettings.rawValue)
-    public static let voipDerivedState = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.voipDerivedState.rawValue)
+public struct ApplicationSpecificSharedDataKeys {
+    public static let inAppNotificationSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.inAppNotificationSettings.rawValue)
+    public static let presentationPasscodeSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.presentationPasscodeSettings.rawValue)
+    public static let automaticMediaDownloadSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.automaticMediaDownloadSettings.rawValue)
+    public static let generatedMediaStoreSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.generatedMediaStoreSettings.rawValue)
+    public static let voiceCallSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.voiceCallSettings.rawValue)
+    public static let presentationThemeSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.presentationThemeSettings.rawValue)
+    public static let instantPagePresentationSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.instantPagePresentationSettings.rawValue)
+    public static let callListSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.callListSettings.rawValue)
+    public static let experimentalSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.experimentalSettings.rawValue)
+    public static let musicPlaybackSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.musicPlaybackSettings.rawValue)
+    public static let mediaInputSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.mediaInputSettings.rawValue)
+    public static let experimentalUISettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.experimentalUISettings.rawValue)
+    public static let stickerSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.stickerSettings.rawValue)
+    public static let watchPresetSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.watchPresetSettings.rawValue)
+    public static let webSearchSettings = applicationSpecificSharedDataKey(ApplicationSpecificSharedDataKeyValues.webSearchSettings.rawValue)
+    public static let contactSynchronizationSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.contactSynchronizationSettings.rawValue)
 }
 
 private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {

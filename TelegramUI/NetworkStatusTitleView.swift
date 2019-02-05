@@ -25,7 +25,8 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
     var title: NetworkStatusTitle = NetworkStatusTitle(text: "", activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false) {
         didSet {
             if self.title != oldValue {
-                self.titleNode.attributedText = NSAttributedString(string: title.text, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                self.accessibilityLabel = self.title.text
                 self.activityIndicator.isHidden = !self.title.activity
                 if self.title.connectsViaProxy {
                     self.proxyNode.status = self.title.activity ? .connecting : .connected
@@ -96,6 +97,9 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
         self.proxyButton.isHidden = true
         
         super.init(frame: CGRect())
+        
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = UIAccessibilityTraitHeader
         
         self.addSubnode(self.activityIndicator)
         self.addSubnode(self.titleNode)

@@ -515,7 +515,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
-                let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: item.message, accountPeerId: item.account.peerId)
+                let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: item.message, accountPeerId: item.context.account.peerId)
             
                 var image: TelegramMediaImage?
                 for media in item.message.media {
@@ -585,8 +585,8 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     apply()
                                     
                                 }
-                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: item.account, photoReference: .message(message: MessageReference(item.message), media: image), storeToDownloadsPeerType: nil).start())
-                                let updateImageSignal = chatMessagePhoto(postbox: item.account.postbox, photoReference: .message(message: MessageReference(item.message), media: image))
+                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, photoReference: .message(message: MessageReference(item.message), media: image), storeToDownloadsPeerType: nil).start())
+                                let updateImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, photoReference: .message(message: MessageReference(item.message), media: image))
 
                                 imageNode.setSignal(updateImageSignal)
                                 

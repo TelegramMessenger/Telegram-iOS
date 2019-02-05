@@ -144,22 +144,22 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updatedAutomaticMediaDownloadSettings(postbox: Postbox) -> Signal<AutomaticMediaDownloadSettings, NoError> {
-    return postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings])
-        |> map { view -> AutomaticMediaDownloadSettings in
-            let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
-            if let value = view.values[ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
-                automaticMediaDownloadSettings = value
-            } else {
-                automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
-            }
-            return automaticMediaDownloadSettings
+public func updatedAutomaticMediaDownloadSettings(accountManager: AccountManager) -> Signal<AutomaticMediaDownloadSettings, NoError> {
+    return accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
+    |> map { view -> AutomaticMediaDownloadSettings in
+        let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
+        if let value = view.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
+            automaticMediaDownloadSettings = value
+        } else {
+            automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
         }
+        return automaticMediaDownloadSettings
+    }
 }
 
-func updateMediaDownloadSettingsInteractively(postbox: Postbox, _ f: @escaping (AutomaticMediaDownloadSettings) -> AutomaticMediaDownloadSettings) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.automaticMediaDownloadSettings, { entry in
+func updateMediaDownloadSettingsInteractively(accountManager: AccountManager, _ f: @escaping (AutomaticMediaDownloadSettings) -> AutomaticMediaDownloadSettings) -> Signal<Void, NoError> {
+    return accountManager.transaction { transaction -> Void in
+        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings, { entry in
             let currentSettings: AutomaticMediaDownloadSettings
             if let entry = entry as? AutomaticMediaDownloadSettings {
                 currentSettings = entry

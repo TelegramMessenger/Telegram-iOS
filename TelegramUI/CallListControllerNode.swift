@@ -152,7 +152,7 @@ private final class CallListOpaqueTransactionState {
 }
 
 final class CallListControllerNode: ASDisplayNode {
-    private let account: Account
+    private let context: AccountContext
     private let mode: CallListControllerMode
     private var presentationData: PresentationData
     
@@ -191,8 +191,8 @@ final class CallListControllerNode: ASDisplayNode {
     private let emptyStatePromise = Promise<Bool>()
     private let emptyStateDisposable = MetaDisposable()
     
-    init(account: Account, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
-        self.account = account
+    init(context: AccountContext, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
+        self.context = context
         self.mode = mode
         self.presentationData = presentationData
         self.call = call
@@ -244,11 +244,11 @@ final class CallListControllerNode: ASDisplayNode {
             self?.openInfo(peerId, messages)
         }, delete: { [weak self] messageIds in
             if let strongSelf = self {
-                let _ = deleteMessagesInteractively(postbox: strongSelf.account.postbox, messageIds: messageIds, type: .forLocalPeer).start()
+                let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: messageIds, type: .forLocalPeer).start()
             }
         }, updateShowCallsTab: { [weak self] value in
             if let strongSelf = self {
-                let _ = updateCallListSettingsInteractively(postbox: strongSelf.account.postbox, {
+                let _ = updateCallListSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, {
                     $0.withUpdatedShowTab(value)
                 }).start()
             }
@@ -259,7 +259,7 @@ final class CallListControllerNode: ASDisplayNode {
         let callListViewUpdate = self.callListLocationAndType.get()
             |> distinctUntilChanged
             |> mapToSignal { locationAndType in
-                return callListViewForLocationAndType(locationAndType: locationAndType, account: account)
+                return callListViewForLocationAndType(locationAndType: locationAndType, account: context.account)
             }
         
         let previousView = Atomic<CallListNodeView?>(value: nil)
@@ -272,14 +272,14 @@ final class CallListControllerNode: ASDisplayNode {
                 showSettings = true
         }
         
-        let showCallsTab = account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.callListSettings])
-            |> map { view -> Bool in
-                var value = true
-                if let settings = view.values[ApplicationSpecificPreferencesKeys.callListSettings] as? CallListSettings {
-                    value = settings.showTab
-                }
-                return value
+        let showCallsTab = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.callListSettings])
+        |> map { sharedData -> Bool in
+            var value = true
+            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.callListSettings] as? CallListSettings {
+                value = settings.showTab
             }
+            return value
+        }
         
         let callListNodeViewTransition = combineLatest(callListViewUpdate, self.statePromise.get(), showCallsTab) |> mapToQueue { (update, state, showCallsTab) -> Signal<CallListNodeListViewTransition, NoError> in
             let processedView = CallListNodeView(originalView: update.view, filteredEntries: callListNodeEntriesForView(update.view, state: state, showSettings: showSettings, showCallsTab: showCallsTab))
@@ -324,8 +324,8 @@ final class CallListControllerNode: ASDisplayNode {
                 }
             }
             
-            return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, disableAnimations: false, account: account, scrollPosition: update.scrollPosition)
-                |> map({ mappedCallListNodeViewListTransition(account: account, showSettings: showSettings, nodeInteraction: nodeInteraction, transition: $0) })
+            return preparedCallListNodeViewTransition(from: previous, to: processedView, reason: reason, disableAnimations: false, account: context.account, scrollPosition: update.scrollPosition)
+                |> map({ mappedCallListNodeViewListTransition(account: context.account, showSettings: showSettings, nodeInteraction: nodeInteraction, transition: $0) })
                 |> runOn(prepareOnMainQueue ? Queue.mainQueue() : viewProcessingQueue)
         }
         

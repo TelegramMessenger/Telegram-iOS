@@ -623,8 +623,8 @@ enum SecureIdPlaintextFormEntry: FormControllerEntry {
 }
 
 struct SecureIdPlaintextFormControllerNodeInitParams {
-    let account: Account
-    let context: SecureIdAccessContext
+    let context: AccountContext
+    let secureIdContext: SecureIdAccessContext
 }
 
 final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlaintextFormControllerNodeInitParams, SecureIdPlaintextFormInnerState> {
@@ -636,8 +636,8 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     
-    private let account: Account
-    private let context: SecureIdAccessContext
+    private let context: AccountContext
+    private let secureIdContext: SecureIdAccessContext
     
     var actionInputStateUpdated: ((SecureIdPlaintextFormInputState) -> Void)?
     var completedWithValue: ((SecureIdValueWithContext?) -> Void)?
@@ -648,8 +648,8 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
     required init(initParams: SecureIdPlaintextFormControllerNodeInitParams, presentationData: PresentationData) {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
-        self.account = initParams.account
         self.context = initParams.context
+        self.secureIdContext = initParams.secureIdContext
         
         super.init(initParams: initParams, presentationData: presentationData)
         
@@ -752,7 +752,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                         innerState.actionState = .saving
                         self.updateInnerState(transition: .immediate, with: innerState)
                         
-                        self.actionDisposable.set((secureIdCommitEmailVerification(postbox: self.account.postbox, network: self.account.network, context: self.context, payload: verify.payload, code: verify.code)
+                        self.actionDisposable.set((secureIdCommitEmailVerification(postbox: self.context.account.postbox, network: self.context.account.network, context: self.secureIdContext, payload: verify.payload, code: verify.code)
                         |> deliverOnMainQueue).start(next: { [weak self] result in
                             if let strongSelf = self {
                                 guard let innerState = strongSelf.innerState else {
@@ -803,7 +803,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
         let inputPhone = cleanPhoneNumber(value)
         self.updateInnerState(transition: .immediate, with: innerState)
         
-        self.actionDisposable.set((secureIdPreparePhoneVerification(network: self.account.network, value: SecureIdPhoneValue(phone: inputPhone))
+        self.actionDisposable.set((secureIdPreparePhoneVerification(network: self.context.account.network, value: SecureIdPhoneValue(phone: inputPhone))
             |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let strongSelf = self {
                     guard var innerState = strongSelf.innerState else {
@@ -849,7 +849,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
         innerState.actionState = .saving
         self.updateInnerState(transition: .immediate, with: innerState)
         
-        self.actionDisposable.set((saveSecureIdValue(postbox: self.account.postbox, network: self.account.network, context: self.context, value: .email(SecureIdEmailValue(email: value)), uploadedFiles: [:])
+        self.actionDisposable.set((saveSecureIdValue(postbox: self.context.account.postbox, network: self.context.account.network, context: self.secureIdContext, value: .email(SecureIdEmailValue(email: value)), uploadedFiles: [:])
         |> deliverOnMainQueue).start(next: { [weak self] result in
             guard let strongSelf = self else {
                 return
@@ -859,7 +859,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
             guard let strongSelf = self else {
                 return
             }
-        strongSelf.actionDisposable.set((secureIdPrepareEmailVerification(network: strongSelf.account.network, value: SecureIdEmailValue(email: value))
+        strongSelf.actionDisposable.set((secureIdPrepareEmailVerification(network: strongSelf.context.account.network, value: SecureIdEmailValue(email: value))
             |> deliverOnMainQueue).start(next: { result in
                 guard let strongSelf = self else {
                     return
@@ -913,7 +913,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
         innerState.actionState = .saving
         self.updateInnerState(transition: .immediate, with: innerState)
         
-        self.actionDisposable.set((secureIdCommitPhoneVerification(postbox: self.account.postbox, network: self.account.network, context: self.context, payload: verify.payload, code: verify.code)
+        self.actionDisposable.set((secureIdCommitPhoneVerification(postbox: self.context.account.postbox, network: self.context.account.network, context: self.secureIdContext, payload: verify.payload, code: verify.code)
     |> deliverOnMainQueue).start(next: { [weak self] result in
         if let strongSelf = self {
             guard let innerState = strongSelf.innerState else {

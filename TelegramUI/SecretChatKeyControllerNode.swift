@@ -21,7 +21,7 @@ private func processHexString(_ string: String) -> String {
 }
 
 final class SecretChatKeyControllerNode: ViewControllerTracingNode {
-    private let account: Account
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let fingerprint: SecretChatKeyFingerprint
     private let peer: Peer
@@ -34,8 +34,8 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
     
     private var validImageSize: CGSize?
     
-    init(account: Account, presentationData: PresentationData, fingerprint: SecretChatKeyFingerprint, peer: Peer, getNavigationController: @escaping () -> NavigationController?) {
-        self.account = account
+    init(context: AccountContext, presentationData: PresentationData, fingerprint: SecretChatKeyFingerprint, peer: Peer, getNavigationController: @escaping () -> NavigationController?) {
+        self.context = context
         self.presentationData = presentationData
         self.fingerprint = fingerprint
         self.peer = peer
@@ -152,7 +152,7 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
             let point = recognizer.location(in: recognizer.view)
             if let attributes = self.infoNode.attributesAtPoint(point)?.1 {
                 if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
-                    openExternalUrl(account: self.account, url: url, presentationData: self.presentationData, applicationContext: self.account.telegramApplicationContext, navigationController: self.getNavigationController(), dismissInput: { [weak self] in
+                    openExternalUrl(context: self.context, url: url, presentationData: self.presentationData, navigationController: self.getNavigationController(), dismissInput: { [weak self] in
                         self?.view.endEditing(true)
                     })
                 }

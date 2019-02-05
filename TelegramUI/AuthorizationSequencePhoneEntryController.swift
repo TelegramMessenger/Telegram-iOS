@@ -9,10 +9,13 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         return self.displayNode as! AuthorizationSequencePhoneEntryControllerNode
     }
     
+    private let otherAccountPhoneNumbers: [String]
     private let network: Network
     private let strings: PresentationStrings
     private let theme: AuthorizationTheme
     private let openUrl: (String) -> Void
+    
+    private let back: () -> Void
     
     private var currentData: (Int32, String?, String)?
     
@@ -33,11 +36,13 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(network: Network, strings: PresentationStrings, theme: AuthorizationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+    init(otherAccountPhoneNumbers: [String], network: Network, strings: PresentationStrings, theme: AuthorizationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+        self.otherAccountPhoneNumbers = otherAccountPhoneNumbers
         self.network = network
         self.strings = strings
         self.theme = theme
         self.openUrl = openUrl
+        self.back = back
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
@@ -53,6 +58,9 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
             back()
         }
         
+        if !otherAccountPhoneNumbers.isEmpty {
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        }
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
     }
     
@@ -62,6 +70,10 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     
     deinit {
         self.termsDisposable.dispose()
+    }
+    
+    @objc private func cancelPressed() {
+        self.back()
     }
     
     func updateData(countryCode: Int32, countryName: String?, number: String) {
@@ -119,7 +131,11 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     @objc func nextPressed() {
         let (_, _, number) = self.controllerNode.codeAndNumber
         if !number.isEmpty {
-            self.loginWithNumber?(self.controllerNode.currentNumber)
+            if self.otherAccountPhoneNumbers.lazy.map(formatPhoneNumber).contains(formatPhoneNumber(self.controllerNode.currentNumber)) {
+                self.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: self.theme), title: nil, text: self.strings.Login_PhoneNumberAlreadyAuthorized, actions: [TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {})]), in: .window(.root))
+            } else {
+                self.loginWithNumber?(self.controllerNode.currentNumber)
+            }
         } else {
             hapticFeedback.error()
             self.controllerNode.animateError()

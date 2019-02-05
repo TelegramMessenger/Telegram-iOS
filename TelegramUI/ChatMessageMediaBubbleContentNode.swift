@@ -104,7 +104,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     sizeCalculation = .unconstrained
             }
             
-            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.account, item.presentationData.theme.theme, item.presentationData.strings, item.message, selectedMedia!, automaticDownload, item.associatedData.automaticDownloadPeerType, automaticPlayback, sizeCalculation, layoutConstants, contentMode)
+            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData.theme.theme, item.presentationData.strings, item.message, selectedMedia!, automaticDownload, item.associatedData.automaticDownloadPeerType, automaticPlayback, sizeCalculation, layoutConstants, contentMode)
             
             var forceFullCorners = false
             if let media = selectedMedia as? TelegramMediaFile, media.isVideo || media.isAnimated {
@@ -152,7 +152,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     let statusType: ChatMessageDateAndStatusType?
                     switch position {
                         case .linear(_, .None):
-                            if item.message.effectivelyIncoming(item.account.peerId) {
+                            if item.message.effectivelyIncoming(item.context.account.peerId) {
                                 statusType = .ImageIncoming
                             } else {
                                 if item.message.flags.contains(.Failed) {

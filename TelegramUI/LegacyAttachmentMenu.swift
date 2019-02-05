@@ -6,7 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: MessageMediaEditingOptions?, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
+func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions: MessageMediaEditingOptions?, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
     let controller = TGMenuSheetController(context: parentController.context, dark: false)!
@@ -35,18 +35,18 @@ func legacyAttachmentMenu(account: Account, peer: Peer, editMediaOptions: Messag
     if canSendImageOrVideo {
         let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: editMediaOptions == nil && allowGrouping, allowSelection: editMediaOptions == nil, allowEditing: true, document: false)!
         carouselItemView = carouselItem
-        carouselItem.suggestionContext = legacySuggestionContext(account: account, peerId: peer.id)
+        carouselItem.suggestionContext = legacySuggestionContext(account: context.account, peerId: peer.id)
         carouselItem.recipientName = peer.displayTitle
         carouselItem.cameraPressed = { [weak controller] cameraView in
             if let controller = controller {
-                DeviceAccess.authorizeAccess(to: .camera, presentationData: account.telegramApplicationContext.currentPresentationData.with { $0 }, present: account.telegramApplicationContext.presentGlobalController, openSettings: account.telegramApplicationContext.applicationBindings.openSettings, { value in
+                DeviceAccess.authorizeAccess(to: .camera, presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
                     if value {
                         openCamera(cameraView, controller)
                     }
                 })
             }
         }
-        if (peer is TelegramUser) && peer.id != account.peerId {
+        if (peer is TelegramUser) && peer.id != context.account.peerId {
             carouselItem.hasTimer = true
         }
         carouselItem.sendPressed = { [weak controller, weak carouselItem] currentItem, asFiles in
@@ -151,7 +151,7 @@ func legacyMenuPaletteFromTheme(_ theme: PresentationTheme) -> TGMenuSheetPallet
     return TGMenuSheetPallete(dark: theme.overallDarkAppearance, backgroundColor: sheetTheme.opaqueItemBackgroundColor, selectionColor: sheetTheme.opaqueItemHighlightedBackgroundColor, separatorColor: sheetTheme.opaqueItemSeparatorColor, accentColor: sheetTheme.controlAccentColor, destructiveColor: sheetTheme.destructiveActionTextColor, textColor: sheetTheme.primaryTextColor, secondaryTextColor: sheetTheme.secondaryTextColor, spinnerColor: sheetTheme.secondaryTextColor, badgeTextColor: sheetTheme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: sheetTheme.opaqueItemBackgroundColor))
 }
 
-func presentLegacyPasteMenu(account: Account, peer: Peer, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, images: [UIImage], sendMessagesWithSignals: @escaping ([Any]?) -> Void, present: (ViewController, Any?) -> Void, initialLayout: ContainerViewLayout? = nil) -> ViewController {
+func presentLegacyPasteMenu(context: AccountContext, peer: Peer, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, images: [UIImage], sendMessagesWithSignals: @escaping ([Any]?) -> Void, present: (ViewController, Any?) -> Void, initialLayout: ContainerViewLayout? = nil) -> ViewController {
     let legacyController = LegacyController(presentation: .custom, theme: theme, initialLayout: initialLayout)
     legacyController.statusBar.statusBarStyle = .Ignore
     legacyController.controllerLoaded = { [weak legacyController] in
@@ -164,7 +164,7 @@ func presentLegacyPasteMenu(account: Account, peer: Peer, saveEditedPhotos: Bool
     legacyController.bind(controller: navigationController)
     
     var hasTimer = false
-    if (peer is TelegramUser) && peer.id != account.peerId {
+    if (peer is TelegramUser) && peer.id != context.account.peerId {
         hasTimer = true
     }
     let recipientName = peer.displayTitle
@@ -181,7 +181,7 @@ func presentLegacyPasteMenu(account: Account, peer: Peer, saveEditedPhotos: Bool
         legacyController?.dismiss()
     }
     
-    let presentationDisposable = account.telegramApplicationContext.presentationData.start(next: { [weak legacyController] presentationData in
+    let presentationDisposable = context.sharedContext.presentationData.start(next: { [weak legacyController] presentationData in
         if let legacyController = legacyController, let controller = legacyController.legacyController as? TGMenuSheetController  {
             controller.pallete = legacyMenuPaletteFromTheme(presentationData.theme)
         }

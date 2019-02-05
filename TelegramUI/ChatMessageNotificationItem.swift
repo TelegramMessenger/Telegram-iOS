@@ -6,7 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 
 public final class ChatMessageNotificationItem: NotificationItem {
-    let account: Account
+    let context: AccountContext
     let strings: PresentationStrings
     let nameDisplayOrder: PresentationPersonNameOrder
     let messages: [Message]
@@ -17,8 +17,8 @@ public final class ChatMessageNotificationItem: NotificationItem {
         return messages.first?.id.peerId
     }
     
-    public init(account: Account, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, messages: [Message], tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
-        self.account = account
+    public init(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, messages: [Message], tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
+        self.context = context
         self.strings = strings
         self.nameDisplayOrder = nameDisplayOrder
         self.messages = messages
@@ -96,11 +96,11 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         if compact {
             self.avatarNode.font = compactAvatarFont
         }
-        let presentationData = item.account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
         
         var title: String?
         if let firstMessage = item.messages.first, let peer = messageMainPeer(firstMessage) {
-            self.avatarNode.setPeer(account: item.account, peer: peer, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
+            self.avatarNode.setPeer(account: item.context.account, theme: presentationData.theme, peer: peer, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
             
             if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                 title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
@@ -140,7 +140,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             if message.containsSecretMedia {
                 imageDimensions = nil
             }
-            messageText = descriptionStringForMessage(message, strings: item.strings, nameDisplayOrder: item.nameDisplayOrder, accountPeerId: item.account.peerId).0
+            messageText = descriptionStringForMessage(message, strings: item.strings, nameDisplayOrder: item.nameDisplayOrder, accountPeerId: item.context.account.peerId).0
         } else if item.messages.count > 1, let peer = item.messages[0].peers[item.messages[0].id.peerId] {
             var displayAuthor = true
             if let channel = peer as? TelegramChannel {
@@ -175,9 +175,9 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                     }
                 }
             } else if item.messages[0].groupingKey != nil {
-                var kind = messageContentKind(item.messages[0], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: item.account.peerId).key
+                var kind = messageContentKind(item.messages[0], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId).key
                 for i in 1 ..< item.messages.count {
-                    let nextKind = messageContentKind(item.messages[i], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: item.account.peerId)
+                    let nextKind = messageContentKind(item.messages[i], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                     if kind != nextKind.key {
                         kind = .text
                         break
@@ -281,12 +281,12 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
         if let firstMessage = item.messages.first, let updatedMedia = updatedMedia, imageDimensions != nil {
             if let image = updatedMedia as? TelegramMediaImage {
-                updateImageSignal = mediaGridMessagePhoto(account: item.account, photoReference: .message(message: MessageReference(firstMessage), media: image))
+                updateImageSignal = mediaGridMessagePhoto(account: item.context.account, photoReference: .message(message: MessageReference(firstMessage), media: image))
             } else if let file = updatedMedia as? TelegramMediaFile {
                 if file.isSticker {
-                    updateImageSignal = chatMessageSticker(account: item.account, file: file, small: true, fetched: true)
+                    updateImageSignal = chatMessageSticker(account: item.context.account, file: file, small: true, fetched: true)
                 } else if file.isVideo {
-                    updateImageSignal = mediaGridMessageVideo(postbox: item.account.postbox, videoReference: .message(message: MessageReference(firstMessage), media: file))
+                    updateImageSignal = mediaGridMessageVideo(postbox: item.context.account.postbox, videoReference: .message(message: MessageReference(firstMessage), media: file))
                 }
             }
         }

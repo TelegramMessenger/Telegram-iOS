@@ -338,7 +338,7 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
     return entries
 }
 
-public func privacyAndSecurityController(account: Account, initialSettings: Signal<AccountPrivacySettings?, NoError>) -> ViewController {
+public func privacyAndSecurityController(context: AccountContext, initialSettings: Signal<AccountPrivacySettings?, NoError>) -> ViewController {
     let statePromise = ValuePromise(PrivacyAndSecurityControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PrivacyAndSecurityControllerState())
     let updateState: ((PrivacyAndSecurityControllerState) -> PrivacyAndSecurityControllerState) -> Void = { f in
@@ -360,15 +360,15 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
     let privacySettingsPromise = Promise<AccountPrivacySettings?>()
     privacySettingsPromise.set(initialSettings)
     
-    let arguments = PrivacyAndSecurityControllerArguments(account: account, openBlockedUsers: {
-        pushControllerImpl?(blockedPeersController(account: account))
+    let arguments = PrivacyAndSecurityControllerArguments(account: context.account, openBlockedUsers: {
+        pushControllerImpl?(blockedPeersController(context: context))
     }, openLastSeenPrivacy: {
         let signal = privacySettingsPromise.get()
             |> take(1)
             |> deliverOnMainQueue
         currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(account: account, kind: .presence, current: info.presence, updated: { updated, _ in
+                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .presence, current: info.presence, updated: { updated, _ in
                     if let currentInfoDisposable = currentInfoDisposable {
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                             |> filter { $0 != nil }
@@ -391,7 +391,7 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
             |> deliverOnMainQueue
         currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(account: account, kind: .groupInvitations, current: info.groupInvitations, updated: { updated, _ in
+                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .groupInvitations, current: info.groupInvitations, updated: { updated, _ in
                     if let currentInfoDisposable = currentInfoDisposable {
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                             |> filter { $0 != nil }
@@ -412,10 +412,10 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
         let privacySignal = privacySettingsPromise.get()
             |> take(1)
         
-        let callsSignal = account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.voiceCallSettings, PreferencesKeys.voipConfiguration])
+        let callsSignal = combineLatest(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings]), context.account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration]))
         |> take(1)
-        |> map { view -> (VoiceCallSettings, VoipConfiguration) in
-            let voiceCallSettings: VoiceCallSettings = view.values[ApplicationSpecificPreferencesKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
+        |> map { sharedData, view -> (VoiceCallSettings, VoipConfiguration) in
+            let voiceCallSettings: VoiceCallSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
             let voipConfiguration = view.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
             
             return (voiceCallSettings, voipConfiguration)
@@ -424,9 +424,9 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
         currentInfoDisposable.set((combineLatest(privacySignal, callsSignal)
         |> deliverOnMainQueue).start(next: { [weak currentInfoDisposable] info, callSettings in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(account: account, kind: .voiceCalls, current: info.voiceCalls, callSettings: (info.voiceCallsP2P, callSettings.0), voipConfiguration: callSettings.1, callIntegrationAvailable: CallKitIntegration.isAvailable, updated: { updated, updatedCallSettings in
+                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .voiceCalls, current: info.voiceCalls, callSettings: (info.voiceCallsP2P, callSettings.0), voipConfiguration: callSettings.1, callIntegrationAvailable: CallKitIntegration.isAvailable, updated: { updated, updatedCallSettings in
                     if let currentInfoDisposable = currentInfoDisposable, let (updatedCallsPrivacy, updatedCallSettings) = updatedCallSettings  {
-                        let _ = updateVoiceCallSettingsSettingsInteractively(postbox: account.postbox, { _ in
+                        let _ = updateVoiceCallSettingsSettingsInteractively(accountManager: context.sharedContext.accountManager, { _ in
                             return updatedCallSettings
                         }).start()
                         
@@ -446,11 +446,11 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
             }
         }))
     }, openPasscode: {
-        let _ = passcodeOptionsAccessController(account: account, completion: { animated in
+        let _ = passcodeOptionsAccessController(context: context, completion: { animated in
             if animated {
-                pushControllerImpl?(passcodeOptionsController(account: account))
+                pushControllerImpl?(passcodeOptionsController(context: context))
             } else {
-                pushControllerInstantImpl?(passcodeOptionsController(account: account))
+                pushControllerInstantImpl?(passcodeOptionsController(context: context))
             }
         }).start(next: { controller in
             if let controller = controller {
@@ -458,16 +458,16 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
             }
         })
     }, openTwoStepVerification: {
-        pushControllerImpl?(twoStepVerificationUnlockSettingsController(account: account, mode: .access))
+        pushControllerImpl?(twoStepVerificationUnlockSettingsController(context: context, mode: .access))
     }, openActiveSessions: {
-        pushControllerImpl?(recentSessionsController(account: account))
+        pushControllerImpl?(recentSessionsController(context: context))
     }, setupAccountAutoremove: {
         let signal = privacySettingsPromise.get()
             |> take(1)
             |> deliverOnMainQueue
         updateAccountTimeoutDisposable.set(signal.start(next: { [weak updateAccountTimeoutDisposable] privacySettingsValue in
             if let _ = privacySettingsValue {
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let controller = ActionSheetController(presentationTheme: presentationData.theme)
                 let dismissAction: () -> Void = { [weak controller] in
                     controller?.dismissAnimated()
@@ -489,7 +489,7 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
                                 }
                                 return .complete()
                             }
-                        updateAccountTimeoutDisposable.set((updateAccountRemovalTimeout(account: account, timeout: timeout)
+                        updateAccountTimeoutDisposable.set((updateAccountRemovalTimeout(account: context.account, timeout: timeout)
                             |> then(applyTimeout)
                             |> deliverOnMainQueue).start(completed: {
                                 updateState { state in
@@ -520,35 +520,34 @@ public func privacyAndSecurityController(account: Account, initialSettings: Sign
             }
         }))
     }, openDataSettings: {
-        pushControllerImpl?(dataPrivacyController(account: account))
+        pushControllerImpl?(dataPrivacyController(context: context))
     })
     
     let previousState = Atomic<PrivacyAndSecurityControllerState?>(value: nil)
     
-    let preferencesKey = PostboxViewKey.preferences(keys: Set([ApplicationSpecificPreferencesKeys.contactSynchronizationSettings]))
+    actionsDisposable.add(managedUpdatedRecentPeers(accountPeerId: context.account.peerId, postbox: context.account.postbox, network: context.account.network).start())
     
-    actionsDisposable.add(managedUpdatedRecentPeers(accountPeerId: account.peerId, postbox: account.postbox, network: account.network).start())
-    
-    let signal = combineLatest((account.applicationContext as! TelegramApplicationContext).presentationData, statePromise.get() |> deliverOnMainQueue, privacySettingsPromise.get(), account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.secretChatLinkPreviewsKey()), preferencesKey]), recentPeers(account: account))
-        |> map { presentationData, state, privacySettings, combined, recentPeers -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
-            var rightNavigationButton: ItemListNavigationButton?
-            if privacySettings == nil || state.updatingAccountTimeoutValue != nil {
-                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
-            }
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.PrivacySettings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            
-            let previousStateValue = previousState.swap(state)
-            let animateChanges = false
-            
-            let listState = ItemListNodeState(entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings), style: .blocks, animateChanges: animateChanges)
-            
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, privacySettingsPromise.get(), context.account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.secretChatLinkPreviewsKey())]), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), recentPeers(account: context.account))
+    |> map { presentationData, state, privacySettings, combined, sharedData, recentPeers -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
+        var rightNavigationButton: ItemListNavigationButton?
+        if privacySettings == nil || state.updatingAccountTimeoutValue != nil {
+            rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
         }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.PrivacySettings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        
+        let previousStateValue = previousState.swap(state)
+        let animateChanges = false
+        
+        let listState = ItemListNodeState(entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings), style: .blocks, animateChanges: animateChanges)
+        
+        return (controllerState, (listState, arguments))
+    }
+    |> afterDisposed {
+        actionsDisposable.dispose()
+    }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }

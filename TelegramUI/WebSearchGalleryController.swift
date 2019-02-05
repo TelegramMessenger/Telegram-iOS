@@ -28,16 +28,16 @@ struct WebSearchGalleryEntry: Equatable {
         return lhs.result == rhs.result
     }
     
-    func item(account: Account, presentationData: PresentationData, controllerInteraction: WebSearchGalleryControllerInteraction?) -> GalleryItem {
+    func item(context: AccountContext, presentationData: PresentationData, controllerInteraction: WebSearchGalleryControllerInteraction?) -> GalleryItem {
         switch self.result {
             case let .externalReference(_, _, type, _, _, _, content, thumbnail, _):
                 if let content = content, type == "gif", let thumbnailResource = thumbnail?.resource, let dimensions = content.dimensions {
                     let fileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])]))
-                    return WebSearchVideoGalleryItem(account: account, presentationData: presentationData, result: self.result, content: NativeVideoContent(id: .contextResult(self.result.queryId, self.result.id), fileReference: fileReference, streamVideo: false, loopVideo: true, enableSound: false, fetchAutomatically: true), controllerInteraction: controllerInteraction)
+                    return WebSearchVideoGalleryItem(context: context, presentationData: presentationData, result: self.result, content: NativeVideoContent(id: .contextResult(self.result.queryId, self.result.id), fileReference: fileReference, streamVideo: false, loopVideo: true, enableSound: false, fetchAutomatically: true), controllerInteraction: controllerInteraction)
                 }
             case let .internalReference(_, _, _, _, _, _, file, _):
                 if let file = file {
-                    return WebSearchVideoGalleryItem(account: account, presentationData: presentationData, result: self.result, content: NativeVideoContent(id: .contextResult(self.result.queryId, self.result.id), fileReference: .standalone(media: file), streamVideo: false, loopVideo: true, enableSound: false, fetchAutomatically: true), controllerInteraction: controllerInteraction)
+                    return WebSearchVideoGalleryItem(context: context, presentationData: presentationData, result: self.result, content: NativeVideoContent(id: .contextResult(self.result.queryId, self.result.id), fileReference: .standalone(media: file), streamVideo: false, loopVideo: true, enableSound: false, fetchAutomatically: true), controllerInteraction: controllerInteraction)
                 }
         }
         preconditionFailure()
@@ -61,7 +61,7 @@ class WebSearchGalleryController: ViewController {
         return self.displayNode as! GalleryControllerNode
     }
     
-    private let account: Account
+    private let context: AccountContext
     private var presentationData: PresentationData
     private var controllerInteraction: WebSearchGalleryControllerInteraction?
     
@@ -93,12 +93,12 @@ class WebSearchGalleryController: ViewController {
     private let replaceRootController: (ViewController, ValuePromise<Bool>?) -> Void
     private let baseNavigationController: NavigationController?
     
-    init(account: Account, peer: Peer?, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext, entries: [WebSearchGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, sendCurrent: @escaping (ChatContextResult) -> Void) {
-        self.account = account
+    init(context: AccountContext, peer: Peer?, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext, entries: [WebSearchGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, sendCurrent: @escaping (ChatContextResult) -> Void) {
+        self.context = context
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: WebSearchGalleryController.navigationTheme, strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
@@ -131,7 +131,7 @@ class WebSearchGalleryController: ViewController {
                 strongSelf.centralEntryIndex = centralIndex
                 if strongSelf.isViewLoaded {
                     strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({
-                        $0.item(account: account, presentationData: strongSelf.presentationData, controllerInteraction: strongSelf.controllerInteraction)
+                        $0.item(context: context, presentationData: strongSelf.presentationData, controllerInteraction: strongSelf.controllerInteraction)
                     }), centralItemIndex: centralIndex, keepFirst: false)
                     
                     let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
@@ -244,7 +244,7 @@ class WebSearchGalleryController: ViewController {
         }
         
         self.galleryNode.pager.replaceItems(self.entries.map({
-            $0.item(account: account, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction)
+            $0.item(context: self.context, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction)
         }), centralItemIndex: self.centralEntryIndex)
         
         self.galleryNode.pager.centralItemIndexUpdated = { [weak self] index in

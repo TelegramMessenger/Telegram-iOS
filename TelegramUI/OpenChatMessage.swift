@@ -20,7 +20,7 @@ private enum ChatMessageGalleryControllerData {
     case chatAvatars(AvatarGalleryController, Media)
 }
 
-private func chatMessageGalleryControllerData(account: Account, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, stream: Bool, synchronousLoad: Bool, excludeWebPageMedia: Bool = false, actionInteraction: GalleryControllerActionInteraction?) -> ChatMessageGalleryControllerData? {
+private func chatMessageGalleryControllerData(context: AccountContext, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, stream: Bool, synchronousLoad: Bool, excludeWebPageMedia: Bool = false, actionInteraction: GalleryControllerActionInteraction?) -> ChatMessageGalleryControllerData? {
     var galleryMedia: Media?
     var otherMedia: Media?
     var instantPageMedia: (TelegramMediaWebpage, [InstantPageGalleryEntry])?
@@ -30,7 +30,7 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
             case let .photoUpdated(image):
                 if let peer = messageMainPeer(message), let image = image {
                     let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), peer, message.timestamp, nil)])
-                    let galleryController = AvatarGalleryController(account: account, peer: peer, remoteEntries: promise, replaceRootController: { controller, ready in
+                    let galleryController = AvatarGalleryController(context: context, peer: peer, remoteEntries: promise, replaceRootController: { controller, ready in
                         
                     })
                     return .chatAvatars(galleryController, image)
@@ -78,7 +78,7 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
             }
         }
         
-        let gallery = InstantPageGalleryController(account: account, webPage: webPage, entries: instantPageMedia, centralIndex: centralIndex, replaceRootController: { [weak navigationController] controller, ready in
+        let gallery = InstantPageGalleryController(context: context, webPage: webPage, entries: instantPageMedia, centralIndex: centralIndex, replaceRootController: { [weak navigationController] controller, ready in
             if let navigationController = navigationController {
                 navigationController.replaceTopController(controller, animated: false, ready: ready)
             }
@@ -109,7 +109,7 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
                     }
                     #if DEBUG
                     if ext == "mkv" {
-                        let gallery = GalleryController(account: account, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                        let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                             navigationController?.replaceTopController(controller, animated: false, ready: ready)
                             }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
                         return .gallery(gallery)
@@ -123,10 +123,10 @@ private func chatMessageGalleryControllerData(account: Account, message: Message
             }
             
             if message.containsSecretMedia {
-                let gallery = SecretMediaPreviewController(account: account, messageId: message.id)
+                let gallery = SecretMediaPreviewController(context: context, messageId: message.id)
                 return .secretGallery(gallery)
             } else {
-                let gallery = GalleryController(account: account, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                     navigationController?.replaceTopController(controller, animated: false, ready: ready)
                     }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
                 return .gallery(gallery)
@@ -145,8 +145,8 @@ enum ChatMessagePreviewControllerData {
     case gallery(GalleryController)
 }
 
-func chatMessagePreviewControllerData(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?) -> ChatMessagePreviewControllerData? {
-    if let mediaData = chatMessageGalleryControllerData(account: account, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, stream: false, synchronousLoad: true, actionInteraction: nil) {
+func chatMessagePreviewControllerData(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?) -> ChatMessagePreviewControllerData? {
+    if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, stream: false, synchronousLoad: true, actionInteraction: nil) {
         switch mediaData {
             case let .gallery(gallery):
                 return .gallery(gallery)
@@ -159,14 +159,14 @@ func chatMessagePreviewControllerData(account: Account, message: Message, standa
     return nil
 }
 
-func openChatMessage(account: Account, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, stream: Bool = false, excludeWebPageMedia: Bool = false, navigationController: NavigationController?, modal: Bool = false, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> UIView?)?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void, chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void, actionInteraction: GalleryControllerActionInteraction? = nil) -> Bool {
-    if let mediaData = chatMessageGalleryControllerData(account: account, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, stream: stream, synchronousLoad: false, excludeWebPageMedia: excludeWebPageMedia, actionInteraction: actionInteraction) {
+func openChatMessage(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, stream: Bool = false, excludeWebPageMedia: Bool = false, navigationController: NavigationController?, modal: Bool = false, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> UIView?)?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void, chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void, actionInteraction: GalleryControllerActionInteraction? = nil) -> Bool {
+    if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, stream: stream, synchronousLoad: false, excludeWebPageMedia: excludeWebPageMedia, actionInteraction: actionInteraction) {
         switch mediaData {
             case let .url(url):
                 openUrl(url)
                 return true
             case let .pass(file):
-                let _ = (account.postbox.mediaBox.resourceData(file.resource, option: .complete(waitUntilFetchStatus: true))
+                let _ = (context.account.postbox.mediaBox.resourceData(file.resource, option: .complete(waitUntilFetchStatus: true))
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { data in
                     guard let navigationController = navigationController else {
@@ -204,13 +204,13 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
             case let .map(mapMedia):
                 dismissInput()
                 
-                let controller = legacyLocationController(message: message, mapMedia: mapMedia, account: account, isModal: modal, openPeer: { peer in
+                let controller = legacyLocationController(message: message, mapMedia: mapMedia, context: context, isModal: modal, openPeer: { peer in
                     openPeer(peer, .info)
                 }, sendLiveLocation: { coordinate, period in
                     let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period)), replyToMessageId: nil, localGroupingKey: nil)
                     enqueueMessage(outMessage)
                 }, stopLiveLocation: {
-                    account.telegramApplicationContext.liveLocationManager?.cancelLiveLocation(peerId: message.id.peerId)
+                    context.liveLocationManager?.cancelLiveLocation(peerId: message.id.peerId)
                 }, openUrl: openUrl)
                 
                 if modal {
@@ -220,15 +220,15 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                 }
                 return true
             case let .stickerPack(reference):
-                let controller = StickerPackPreviewController(account: account, stickerPack: reference, parentNavigationController: navigationController)
+                let controller = StickerPackPreviewController(context: context, stickerPack: reference, parentNavigationController: navigationController)
                 controller.sendSticker = sendSticker
                 dismissInput()
                 present(controller, nil)
                 return true
             case let .document(file):
-                let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 if let rootController = navigationController?.view.window?.rootViewController {
-                    presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: account.postbox, file: file)
+                    presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: context.account.postbox, file: file)
                 }
                 //present(ShareController(account: account, subject: .messages([message]), showInChat: nil, externalShare: true, immediateExternalShare: true), nil)
                 return true
@@ -257,7 +257,7 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                     }
                     playerType = (file.isVoice || file.isInstantVideo) ? .voice : .music
                 }
-                account.telegramApplicationContext.mediaManager?.setPlaylist(PeerMessagesMediaPlaylist(postbox: account.postbox, network: account.network, location: location), type: playerType)
+                context.sharedContext.mediaManager.setPlaylist((context.account, PeerMessagesMediaPlaylist(postbox: context.account.postbox, network: context.account.network, location: location)), type: playerType)
                 return true
             case let .gallery(gallery):
                 dismissInput()
@@ -281,7 +281,7 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                 return true
             case let .other(otherMedia):
                 if let contact = otherMedia as? TelegramMediaContact {
-                    let _ = (account.postbox.transaction { transaction -> (Peer?, Bool?) in
+                    let _ = (context.account.postbox.transaction { transaction -> (Peer?, Bool?) in
                         if let peerId = contact.peerId {
                             return (transaction.getPeer(peerId), transaction.isPeerContact(peerId: peerId))
                         } else {
@@ -294,7 +294,7 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                         } else {
                             contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName, lastName: contact.lastName, phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Home>!$_", value: contact.phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
                         }
-                        let controller = deviceContactInfoController(account: account, subject: .vcard(peer, nil, contactData))
+                        let controller = deviceContactInfoController(context: context, subject: .vcard(peer, nil, contactData))
                         navigationController?.pushViewController(controller)
                         
                         guard let peer = peer else {
@@ -327,7 +327,7 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
                         }
                         items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_PhoneCall, action: {
                             dismissAction()
-                            account.telegramApplicationContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(contact.phoneNumber).replacingOccurrences(of: " ", with: ""))")
+                            account.telegramApplicationcontext.sharedContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(contact.phoneNumber).replacingOccurrences(of: " ", with: ""))")
                         }))
                         controller.setItemGroups([
                             ActionSheetItemGroup(items: items),
@@ -359,7 +359,7 @@ func openChatMessage(account: Account, message: Message, standalone: Bool, rever
     return false
 }
 
-func openChatInstantPage(account: Account, message: Message, navigationController: NavigationController) {
+func openChatInstantPage(context: AccountContext, message: Message, navigationController: NavigationController) {
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
             if let _ = content.instantPage {
@@ -401,7 +401,7 @@ func openChatInstantPage(account: Account, message: Message, navigationControlle
                     anchor = String(textUrl[anchorRange.upperBound...])
                 }
                 
-                let pageController = InstantPageController(account: account, webPage: webpage, anchor: anchor)
+                let pageController = InstantPageController(context: context, webPage: webpage, anchor: anchor)
                 navigationController.pushViewController(pageController)
             }
             break
@@ -409,10 +409,10 @@ func openChatInstantPage(account: Account, message: Message, navigationControlle
     }
 }
 
-func openChatWallpaper(account: Account, message: Message, present: @escaping (ViewController, Any?) -> Void) {
+func openChatWallpaper(context: AccountContext, message: Message, present: @escaping (ViewController, Any?) -> Void) {
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-            let _ = (resolveUrl(account: account, url: content.url)
+            let _ = (resolveUrl(account: context.account, url: content.url)
             |> deliverOnMainQueue).start(next: { resolvedUrl in
                 if case let .wallpaper(parameter) = resolvedUrl {
                     let source: WallpaperListSource
@@ -423,7 +423,7 @@ func openChatWallpaper(account: Account, message: Message, present: @escaping (V
                             source = .wallpaper(.color(Int32(color.rgb)), nil, nil, nil, message)
                     }
                     
-                    let controller = WallpaperGalleryController(account: account, source: source)
+                    let controller = WallpaperGalleryController(context: context, source: source)
                     present(controller, nil)
                 }
             })

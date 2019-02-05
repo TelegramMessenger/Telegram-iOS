@@ -43,7 +43,7 @@ private func localizedString(for key: String, strings: PresentationStrings, fall
 }
 
 final class PermissionControllerNode: ASDisplayNode {
-    private let account: Account
+    private let context: AccountContext
     private var presentationData: PresentationData
     private let splitTest: PermissionUISplitTest
     
@@ -55,9 +55,9 @@ final class PermissionControllerNode: ASDisplayNode {
     var openPrivacyPolicy: (() -> Void)?
     var dismiss: (() -> Void)?
     
-    init(account: Account, splitTest: PermissionUISplitTest) {
-        self.account = account
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, splitTest: PermissionUISplitTest) {
+        self.context = context
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.splitTest = splitTest
         self.innerState = PermissionControllerInnerState(layout: nil, data: PermissionControllerDataState(state: nil))
         

@@ -22,7 +22,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     var theme: PresentationTheme
     var strings: PresentationStrings
     
-    init(account: Account, url: String, webpage: TelegramMediaWebpage, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, url: String, webpage: TelegramMediaWebpage, theme: PresentationTheme, strings: PresentationStrings) {
         self.url = url
         self.webpage = webpage
         self.theme = theme

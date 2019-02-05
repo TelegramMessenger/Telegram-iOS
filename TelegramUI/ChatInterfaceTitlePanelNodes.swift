@@ -1,7 +1,7 @@
 import Foundation
 import TelegramCore
 
-func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: ChatTitleAccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatTitleAccessoryPanelNode? {
+func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatTitleAccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatTitleAccessoryPanelNode? {
     if case .overlay = chatPresentationInterfaceState.mode {
         return nil
     }
@@ -43,7 +43,7 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
                 if let currentPanel = currentPanel as? ChatPinnedMessageTitlePanelNode {
                     return currentPanel
                 } else {
-                    let panel = ChatPinnedMessageTitlePanelNode(account: account)
+                    let panel = ChatPinnedMessageTitlePanelNode(context: context)
                     panel.interfaceInteraction = interfaceInteraction
                     return panel
                 }

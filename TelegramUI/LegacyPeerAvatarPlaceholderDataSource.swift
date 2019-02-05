@@ -47,16 +47,16 @@ final class LegacyPeerAvatarPlaceholderDataSource: TGImageDataSource {
     
     override func loadDataAsync(withUri uri: String!, progress: ((Float) -> Void)!, partialCompletion: ((TGDataResource?) -> Void)!, completion: ((TGDataResource?) -> Void)!) -> Any! {
         if let account = self.account() {
-            let task = ThreadPoolTask { state in
+            let signal: Signal<Never, NoError> = Signal { subscriber in
                 let args: [AnyHashable : Any]
                 let argumentsString = String(uri[uri.index(uri.startIndex, offsetBy: "placeholder://?".characters.count)...])
                 args = TGStringUtils.argumentDictionary(inUrlString: argumentsString)!
                 
                 guard let width = Int((args["w"] as! String)), width > 1 else {
-                    return
+                    return EmptyDisposable
                 }
                 guard let height = Int((args["h"] as! String)), height > 1 else {
-                    return
+                    return EmptyDisposable
                 }
                 
                 var peerId = PeerId(namespace: 0, id: 0)
@@ -100,13 +100,13 @@ final class LegacyPeerAvatarPlaceholderDataSource: TGImageDataSource {
                 
                 sharedImageCache.setImage(image, forKey: uri, attributes: nil)
                 completion?(TGDataResource(image: image, decoded: true))
+                
+                subscriber.putCompletion()
+                
+                return EmptyDisposable
             }
             
-            account.graphicsThreadPool.addTask(task)
-            
-            return ActionDisposable {
-                task.cancel()
-            }
+            return (signal |> runOn(Queue.concurrentDefaultQueue())).start()
         } else {
             return nil
         }

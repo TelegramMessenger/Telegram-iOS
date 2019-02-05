@@ -6,7 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 
 final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
-    private let account: Account
+    private let context: AccountContext
     private let tapButton: HighlightTrackingButtonNode
     private let closeButton: HighlightableButtonNode
     private let lineNode: ASImageNode
@@ -22,8 +22,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
 
     private let queue = Queue()
     
-    init(account: Account) {
-        self.account = account
+    init(context: AccountContext) {
+        self.context = context
         
         self.tapButton = HighlightTrackingButtonNode()
         
@@ -115,7 +115,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.currentMessage = interfaceState.pinnedMessage
             
             if let currentMessage = currentMessage, let currentLayout = self.currentLayout {
-                self.enqueueTransition(width: currentLayout.0, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, message: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, accountPeerId: self.account.peerId, firstTime: previousMessageWasNil)
+                self.enqueueTransition(width: currentLayout.0, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, message: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil)
             }
         }
         
@@ -147,7 +147,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         let imageNodeLayout = self.imageNode.asyncLayout()
         
         let previousMediaReference = self.previousMediaReference
-        let account = self.account
+        let context = self.context
         
         let targetQueue: Queue
         if firstTime {
@@ -204,12 +204,12 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             if mediaUpdated {
                 if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
                     if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
-                        updateImageSignal = chatMessagePhotoThumbnail(account: account, photoReference: imageReference)
+                        updateImageSignal = chatMessagePhotoThumbnail(account: context.account, photoReference: imageReference)
                     } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
                         if fileReference.media.isVideo {
-                            updateImageSignal = chatMessageVideoThumbnail(account: account, fileReference: fileReference)
+                            updateImageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)
                         } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                            updateImageSignal = chatWebpageSnippetFile(account: account, fileReference: fileReference, representation: iconImageRepresentation)
+                            updateImageSignal = chatWebpageSnippetFile(account: context.account, fileReference: fileReference, representation: iconImageRepresentation)
                         }
                     }
                 } else {

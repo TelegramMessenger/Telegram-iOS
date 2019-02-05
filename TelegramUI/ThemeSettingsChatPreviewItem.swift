@@ -6,7 +6,7 @@ import TelegramCore
 import Postbox
 
 class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
-    let account: Account
+    let context: AccountContext
     let theme: PresentationTheme
     let componentTheme: PresentationTheme
     let strings: PresentationStrings
@@ -16,8 +16,8 @@ class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
     let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
     
-    init(account: Account, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder) {
-        self.account = account
+    init(context: AccountContext, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder) {
+        self.context = context
         self.theme = theme
         self.componentTheme = componentTheme
         self.strings = strings
@@ -123,21 +123,21 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                         if let largest = largestImageRepresentation(representations) {
                             if settings.blur {
                                 var image: UIImage?
-                                let _ = item.account.postbox.mediaBox.cachedResourceRepresentation(largest.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                                let _ = item.context.account.postbox.mediaBox.cachedResourceRepresentation(largest.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                                     if data.complete {
                                         image = UIImage(contentsOfFile: data.path)?.precomposed()
                                     }
                                 })
                                 updatedBackgroundImage = image
                             }
-                            if updatedBackgroundImage == nil, let path = item.account.postbox.mediaBox.completedResourcePath(largest.resource) {
+                            if updatedBackgroundImage == nil, let path = item.context.account.postbox.mediaBox.completedResourcePath(largest.resource) {
                                 updatedBackgroundImage = UIImage(contentsOfFile: path)?.precomposed()
                             }
                         }
                     case let .file(file):
                         if file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
                             var image: UIImage?
-                            let _ = item.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                            let _ = item.context.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                                 if data.complete {
                                     image = UIImage(contentsOfFile: data.path)?.precomposed()
                                 }
@@ -145,14 +145,14 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                             updatedBackgroundImage = image
                         } else if file.settings.blur {
                             var image: UIImage?
-                            let _ = item.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                            let _ = item.context.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                                 if data.complete {
                                     image = UIImage(contentsOfFile: data.path)?.precomposed()
                                 }
                             })
                             updatedBackgroundImage = image
                         }
-                        if updatedBackgroundImage == nil, let path = item.account.postbox.mediaBox.completedResourcePath(file.file.resource) {
+                        if updatedBackgroundImage == nil, let path = item.context.account.postbox.mediaBox.completedResourcePath(file.file.resource) {
                             updatedBackgroundImage = UIImage(contentsOfFile: path)?.precomposed()
                         }
                 }
@@ -172,8 +172,8 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
             
             let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: item.componentTheme, wallpaper: item.wallpaper), fontSize: item.fontSize, strings: item.strings, dateTimeFormat: item.dateTimeFormat, nameDisplayOrder: item.nameDisplayOrder, disableAnimations: false)
             
-            let item2: ChatMessageItem = ChatMessageItem(presentationData: chatPresentationData, account: item.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: item.strings.Appearance_PreviewIncomingText, attributes: [ReplyMessageAttribute(messageId: replyMessageId)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true)
-            let item1: ChatMessageItem = ChatMessageItem(presentationData: chatPresentationData, account: item.account, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: TelegramUser(id: item.account.peerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), text: item.strings.Appearance_PreviewOutgoingText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true)
+            let item2: ChatMessageItem = ChatMessageItem(presentationData: chatPresentationData, context: item.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: item.strings.Appearance_PreviewIncomingText, attributes: [ReplyMessageAttribute(messageId: replyMessageId)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true)
+            let item1: ChatMessageItem = ChatMessageItem(presentationData: chatPresentationData, context: item.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: TelegramUser(id: item.context.account.peerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), text: item.strings.Appearance_PreviewOutgoingText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, isAdmin: false), disableDate: true)
             
             var node1: ListViewItemNode?
             if let current = currentNode1 {

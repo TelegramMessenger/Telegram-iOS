@@ -17,7 +17,7 @@ enum ChannelMembersSearchFilter {
 final class ChannelMembersSearchController: ViewController {
     private let queue = Queue()
     
-    private let account: Account
+    private let context: AccountContext
     private let peerId: PeerId
     private let mode: ChannelMembersSearchControllerMode
     private let filters: [ChannelMembersSearchFilter]
@@ -33,13 +33,13 @@ final class ChannelMembersSearchController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    init(account: Account, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter] = [], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
-        self.account = account
+    init(context: AccountContext, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter] = [], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
+        self.context = context
         self.peerId = peerId
         self.mode = mode
         self.openPeer = openPeer
         self.filters = filters
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -68,7 +68,7 @@ final class ChannelMembersSearchController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ChannelMembersSearchControllerNode(account: self.account, presentationData: self.presentationData, peerId: self.peerId, mode: self.mode, filters: self.filters)
+        self.displayNode = ChannelMembersSearchControllerNode(context: self.context, presentationData: self.presentationData, peerId: self.peerId, mode: self.mode, filters: self.filters)
         self.controllerNode.navigationBar = self.navigationBar
         self.controllerNode.requestActivateSearch = { [weak self] in
             self?.activateSearch()

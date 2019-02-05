@@ -570,7 +570,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let message = item.message
                 
-                let incoming = item.message.effectivelyIncoming(item.account.peerId)
+                let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
                 
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 let textConstrainedSize = CGSize(width: constrainedSize.width - horizontalInset, height: constrainedSize.height)
@@ -732,7 +732,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         } else if poll.isClosed {
                             optionResult = ChatMessagePollOptionResult(normalized: 0, percent: 0)
                         }
-                        let result = makeLayout(item.account.peerId, item.presentationData, item.message, option, optionResult, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
+                        let result = makeLayout(item.context.account.peerId, item.presentationData, item.message, option, optionResult, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
                         boundingSize.width = max(boundingSize.width, result.minimumWidth + layoutConstants.bubble.borderInset * 2.0)
                         pollOptionsFinalizeLayouts.append(result.1)
                     }

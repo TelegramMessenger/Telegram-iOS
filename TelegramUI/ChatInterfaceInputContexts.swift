@@ -194,7 +194,7 @@ func inputContextQueriesForChatPresentationIntefaceState(_ chatPresentationInter
     return result
 }
 
-func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account) -> ChatTextInputPanelState {
+func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext) -> ChatTextInputPanelState {
     var contextPlaceholder: NSAttributedString?
     loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
         if case let .contextRequestResult(peer, _) = result, let botUser = peer as? TelegramUser, let botInfo = botUser.botInfo, let inlinePlaceholder = botInfo.inlinePlaceholder {

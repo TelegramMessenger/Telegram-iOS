@@ -94,7 +94,7 @@ final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 62.0, height: 74.0))
                     strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 9.0), size: CGSize(width: 42.0, height: 42.0))
                     if let peer = peer {
-                        strongSelf.avatarNode.setPeer(account: account, peer: peer)
+                        strongSelf.avatarNode.setPeer(account: account, theme: theme, peer: peer)
                         strongSelf.avatarNode.isHidden = false
                         
                         if let liveActive = liveActive {

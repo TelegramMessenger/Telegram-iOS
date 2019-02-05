@@ -123,8 +123,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     
-    override init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
@@ -133,7 +132,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         self.listView.isHidden = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         
-        super.init(account: account, theme: theme, strings: strings)
+        super.init(context: context, theme: theme, strings: strings)
         
         self.isOpaque = false
         self.clipsToBounds = true
@@ -167,7 +166,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     
     private func prepareTransition(from: [VerticalListContextResultsChatInputContextPanelEntry]?, to: [VerticalListContextResultsChatInputContextPanelEntry], results: ChatContextResultCollection) {
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: from ?? [], to: to, account: self.account, actionSelected: { [weak self] in
+        let transition = preparedTransition(from: from ?? [], to: to, account: self.context.account, actionSelected: { [weak self] in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction, let switchPeer = results.switchPeer {
                 interfaceInteraction.botSwitchChatWithPayload(results.botId, switchPeer.startParam)
             }

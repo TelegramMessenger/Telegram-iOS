@@ -105,13 +105,13 @@ private func watchSettingsControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
-public func watchSettingsController(account: Account) -> ViewController {
+public func watchSettingsController(context: AccountContext) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     
     let updateDisposable = MetaDisposable()
     let arguments = WatchSettingsControllerArguments(updatePreset: { identifier, text in
-        updateDisposable.set((.complete() |> delay(1.0, queue: Queue.mainQueue()) |> then(updateWatchPresetSettingsInteractively(postbox: account.postbox, { current in
+        updateDisposable.set((.complete() |> delay(1.0, queue: Queue.mainQueue()) |> then(updateWatchPresetSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             var updatedPresets = current.customPresets
             if !text.isEmpty {
                 updatedPresets[identifier] = text
@@ -122,21 +122,18 @@ public func watchSettingsController(account: Account) -> ViewController {
         }))).start())
     })
     
-    let watchPresetSettingsKey = ApplicationSpecificPreferencesKeys.watchPresetSettings
-    let preferences = account.postbox.preferencesView(keys: [watchPresetSettingsKey])
-    
-    let signal = combineLatest(account.telegramApplicationContext.presentationData, preferences)
-        |> deliverOnMainQueue
-        |> map { presentationData, preferences -> (ItemListControllerState, (ItemListNodeState<WatchSettingsControllerEntry>, WatchSettingsControllerEntry.ItemGenerationArguments)) in
-            let settings = (preferences.values[watchPresetSettingsKey] as? WatchPresetSettings) ?? WatchPresetSettings.defaultSettings
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.AppleWatch_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: watchSettingsControllerEntries(presentationData: presentationData, customPresets: settings.customPresets), style: .blocks, animateChanges: false)
-            
-            return (controllerState, (listState, arguments))
+    let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.watchPresetSettings]))
+    |> deliverOnMainQueue
+    |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<WatchSettingsControllerEntry>, WatchSettingsControllerEntry.ItemGenerationArguments)) in
+        let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.watchPresetSettings] as? WatchPresetSettings) ?? WatchPresetSettings.defaultSettings
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.AppleWatch_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(entries: watchSettingsControllerEntries(presentationData: presentationData, customPresets: settings.customPresets), style: .blocks, animateChanges: false)
+        
+        return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(account: account, state: signal)
+    let controller = ItemListController(context: context, state: signal)
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }

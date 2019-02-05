@@ -19,18 +19,18 @@ struct WallpaperGalleryItemArguments {
 }
 
 class WallpaperGalleryItem: GalleryItem {
-    let account: Account
+    let context: AccountContext
     let entry: WallpaperGalleryEntry
     let arguments: WallpaperGalleryItemArguments
     
-    init(account: Account, entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments) {
-        self.account = account
+    init(context: AccountContext, entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments) {
+        self.context = context
         self.entry = entry
         self.arguments = arguments
     }
     
     func node() -> GalleryItemNode {
-        let node = WallpaperGalleryItemNode(account: self.account)
+        let node = WallpaperGalleryItemNode(context: self.context)
         node.setEntry(self.entry, arguments: self.arguments)
         return node
     }
@@ -57,7 +57,7 @@ private func reference(for resource: MediaResource, media: Media, message: Messa
 }
 
 final class WallpaperGalleryItemNode: GalleryItemNode {
-    private let account: Account
+    private let context: AccountContext
     var entry: WallpaperGalleryEntry?
     private var colorPreview: Bool = false
     private var contentSize: CGSize?
@@ -87,8 +87,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     private var validLayout: ContainerViewLayout?
     private var validOffset: CGFloat?
     
-    init(account: Account) {
-        self.account = account
+    init(context: AccountContext) {
+        self.context = context
         
         self.wrapperNode = ASDisplayNode()
         self.imageNode = TransformImageNode()
@@ -100,7 +100,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         self.blurredNode = BlurredImageNode()
         
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.blurButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Blurred, value: .check(false))
         self.blurButtonNode.setEnabled(false)
         self.motionButtonNode = WallpaperOptionButtonNode(title: presentationData.strings.WallpaperPreview_Motion, value: .check(false))
@@ -192,7 +192,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             let displaySize: CGSize
             let contentSize: CGSize
             
-            let presentationData = self.account.telegramApplicationContext.currentPresentationData.with { $0 }
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             let defaultAction = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: presentationData.theme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.actionPressed))
             let progressAction = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: presentationData.theme.rootController.navigationBar.accentTextColor))
             
@@ -204,11 +204,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         case .builtin:
                             displaySize = CGSize(width: 1308.0, height: 2688.0).fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                             contentSize = displaySize
-                            signal = settingsBuiltinWallpaperImage(account: account)
+                            signal = settingsBuiltinWallpaperImage(account: context.account)
                             fetchSignal = .complete()
                             statusSignal = .single(.Local)
                             subtitleSignal = .single(nil)
-                            colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, postbox: self.account.postbox)
+                            colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, postbox: self.context.account.postbox)
                             isBlurrable = false
                         case let .color(color):
                             displaySize = CGSize(width: 1.0, height: 1.0)
@@ -218,7 +218,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             statusSignal = .single(.Local)
                             subtitleSignal = .single(nil)
                             actionSignal = .single(defaultAction)
-                            colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, postbox: self.account.postbox)
+                            colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, postbox: self.context.account.postbox)
                             isBlurrable = false
                             //self.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
                         case let .file(file):
@@ -265,8 +265,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 
                                 self.colorPreview = self.arguments.colorPreview
                                 
-                                signal = patternWallpaperImage(account: account, representations: convertedRepresentations, mode: self.arguments.colorPreview ? .fastScreen : .screen, autoFetchFullSize: true)
-                                colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, postbox: self.account.postbox)
+                                signal = patternWallpaperImage(account: context.account, representations: convertedRepresentations, mode: self.arguments.colorPreview ? .fastScreen : .screen, autoFetchFullSize: true)
+                                colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, postbox: context.account.postbox)
                                 
                                 isBlurrable = false
                             } else {
@@ -276,10 +276,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 } else {
                                     fileReference = .standalone(media: file.file)
                                 }
-                                signal = wallpaperImage(account: account, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
+                                signal = wallpaperImage(account: context.account, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
                             }
-                            fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
-                            statusSignal = account.postbox.mediaBox.resourceStatus(file.file.resource)
+                            fetchSignal = fetchedMediaResource(postbox: context.account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
+                            statusSignal = context.account.postbox.mediaBox.resourceStatus(file.file.resource)
                             if let fileSize = file.file.size {
                                 subtitleSignal = .single(dataSizeString(fileSize))
                             } else {
@@ -292,21 +292,21 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 displaySize = largestSize.dimensions.dividedByScreenScale().integralFloor
                                 
                                 let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
-                                signal = wallpaperImage(account: account, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
+                                signal = wallpaperImage(account: context.account, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
                                 
                                 if let largestIndex = convertedRepresentations.index(where: { $0.representation == largestSize }) {
-                                    fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: convertedRepresentations[largestIndex].reference)
+                                    fetchSignal = fetchedMediaResource(postbox: context.account.postbox, reference: convertedRepresentations[largestIndex].reference)
                                 } else {
                                     fetchSignal = .complete()
                                 }
-                                statusSignal = account.postbox.mediaBox.resourceStatus(largestSize.resource)
+                                statusSignal = context.account.postbox.mediaBox.resourceStatus(largestSize.resource)
                                 if let fileSize = largestSize.resource.size {
                                     subtitleSignal = .single(dataSizeString(fileSize))
                                 } else {
                                     subtitleSignal = .single(nil)
                                 }
                                 
-                                actionSignal = self.account.telegramApplicationContext.wallpaperUploadManager!.stateSignal()
+                                actionSignal = self.context.wallpaperUploadManager!.stateSignal()
                                 |> filter { state in
                                     return state.wallpaper == wallpaper
                                 }
@@ -334,7 +334,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     let dimensions = CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
                     contentSize = dimensions
                     displaySize = dimensions.dividedByScreenScale().integralFloor
-                    signal = photoWallpaper(postbox: account.postbox, photoLibraryResource: PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64()))
+                    signal = photoWallpaper(postbox: context.account.postbox, photoLibraryResource: PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64()))
                     fetchSignal = .complete()
                     statusSignal = .single(.Local)
                     subtitleSignal = .single(nil)
@@ -380,9 +380,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         representations.append(TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: imageResource))
                         let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil)
                         
-                        signal = chatMessagePhoto(postbox: account.postbox, photoReference: .standalone(media: tmpImage))
-                        fetchSignal = fetchedMediaResource(postbox: account.postbox, reference: .media(media: .standalone(media: tmpImage), resource: imageResource))
-                        statusSignal = account.postbox.mediaBox.resourceStatus(imageResource)
+                        signal = chatMessagePhoto(postbox: context.account.postbox, photoReference: .standalone(media: tmpImage))
+                        fetchSignal = fetchedMediaResource(postbox: context.account.postbox, reference: .media(media: .standalone(media: tmpImage), resource: imageResource))
+                        statusSignal = context.account.postbox.mediaBox.resourceStatus(imageResource)
                     } else {
                         displaySize = CGSize(width: 1.0, height: 1.0)
                         contentSize = displaySize
@@ -577,7 +577,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     private func preparePatternEditing() {
         if let entry = self.entry, case let .wallpaper(wallpaper, _) = entry, case let .file(file) = wallpaper {
             if let size = file.file.dimensions?.fitted(CGSize(width: 1280.0, height: 1280.0)) {
-                let _ = self.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size), complete: false, fetch: true).start()
+                let _ = self.context.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperMaskRepresentation(size: size), complete: false, fetch: true).start()
             }
         }
     }

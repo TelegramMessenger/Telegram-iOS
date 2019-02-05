@@ -8,6 +8,7 @@ import SwiftSignalKit
 import TelegramUIPrivateModule
 
 final class CallControllerNode: ASDisplayNode {
+    private let sharedContext: SharedAccountContext
     private let account: Account
     
     private let statusBar: StatusBar
@@ -54,7 +55,8 @@ final class CallControllerNode: ASDisplayNode {
     var dismissedInteractively: (() -> Void)?
     var presentCallRating: ((CallId) -> Void)?
     
-    init(account: Account, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false) {
+    init(sharedContext: SharedAccountContext, account: Account, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false) {
+        self.sharedContext = sharedContext
         self.account = account
         self.presentationData = presentationData
         self.statusBar = statusBar

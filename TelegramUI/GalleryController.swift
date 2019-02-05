@@ -131,12 +131,12 @@ private func galleryMessageCaptionText(_ message: Message) -> String {
     return message.text
 }
 
-func galleryItemForEntry(account: Account, presentationData: PresentationData, entry: MessageHistoryEntry, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, tempFilePath: String? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }) -> GalleryItem? {
+func galleryItemForEntry(context: AccountContext, presentationData: PresentationData, entry: MessageHistoryEntry, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, tempFilePath: String? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }) -> GalleryItem? {
     switch entry {
         case let .MessageEntry(message, _, location, _):
             if let (media, mediaImage) = mediaForMessage(message: message) {
                 if let _ = media as? TelegramMediaImage {
-                    return ChatImageGalleryItem(account: account, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions)
+                    return ChatImageGalleryItem(context: context, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions)
                 } else if let file = media as? TelegramMediaFile {
                     var isVideo = file.isVideo
                     #if DEBUG
@@ -164,7 +164,7 @@ func galleryItemForEntry(account: Account, presentationData: PresentationData, e
                             }
                         }
                         let caption = galleryCaptionStringWithAppliedEntities(galleryMessageCaptionText(message), entities: entities)
-                        return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, hideControls: hideControls, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions)
+                        return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, hideControls: hideControls, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions)
                     } else {
                         if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
                             var pixelsCount: Int = 0
@@ -172,28 +172,25 @@ func galleryItemForEntry(account: Account, presentationData: PresentationData, e
                                 pixelsCount = Int(dimensions.width) * Int(dimensions.height)
                             }
                             if (file.size == nil || file.size! < 4 * 1024 * 1024) && pixelsCount < 4096 * 4096 {
-                                return ChatImageGalleryItem(account: account, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions)
+                                return ChatImageGalleryItem(context: context, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions)
                             } else {
-                                return ChatDocumentGalleryItem(account: account, presentationData: presentationData, message: message, location: location)
+                                return ChatDocumentGalleryItem(context: context, presentationData: presentationData, message: message, location: location)
                             }
                         } else if internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName) {
-                            return ChatDocumentGalleryItem(account: account, presentationData: presentationData, message: message, location: location)
+                            return ChatDocumentGalleryItem(context: context, presentationData: presentationData, message: message, location: location)
                         } else {
-                            return ChatExternalFileGalleryItem(account: account, presentationData: presentationData, message: message, location: location)
+                            return ChatExternalFileGalleryItem(context: context, presentationData: presentationData, message: message, location: location)
                         }
                     }
                 } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(webpageContent) = webpage.content {
                     switch websiteType(of: webpageContent) {
                         case .instagram where webpageContent.file != nil && webpageContent.image != nil && webpageContent.file!.isVideo:
-                            return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: NativeVideoContent(id: NativeVideoContentId.message(message.id, message.stableId, webpage.webpageId), fileReference: .message(message: MessageReference(message), media: webpageContent.file!), imageReference: webpageContent.image.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: true, enableSound: true), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), performAction: performAction, openActionOptions: openActionOptions)
-                            //return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: SystemVideoContent(url: webpageContent.embedUrl!, image: webpageContent.image!, dimensions: webpageContent.embedSize ?? CGSize(width: 640.0, height: 640.0), duration: Int32(webpageContent.duration ?? 0)), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: "")
-                        /*case .twitter where webpageContent.embedUrl != nil && webpageContent.image != nil:
-                            return UniversalVideoGalleryItem(account: account, theme: theme, strings: strings, content: SystemVideoContent(url: webpageContent.embedUrl!, image: webpageContent.image!, dimensions: webpageContent.embedSize ?? CGSize(width: 640.0, height: 640.0), duration: Int32(webpageContent.duration ?? 0)), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: "")*/
+                            return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: NativeVideoContent(id: NativeVideoContentId.message(message.id, message.stableId, webpage.webpageId), fileReference: .message(message: MessageReference(message), media: webpageContent.file!), imageReference: webpageContent.image.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: true, enableSound: true), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), performAction: performAction, openActionOptions: openActionOptions)
                         default:
                             if let embedUrl = webpageContent.embedUrl, let image = webpageContent.image, URL(string: embedUrl)?.pathExtension == "mp4" {
-                                return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: SystemVideoContent(url: embedUrl, imageReference: .webPage(webPage: WebpageReference(webpage), media: image), dimensions: webpageContent.embedSize ?? CGSize(width: 640.0, height: 640.0), duration: Int32(webpageContent.duration ?? 0)), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), performAction: performAction, openActionOptions: openActionOptions)
+                                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: SystemVideoContent(url: embedUrl, imageReference: .webPage(webPage: WebpageReference(webpage), media: image), dimensions: webpageContent.embedSize ?? CGSize(width: 640.0, height: 640.0), duration: Int32(webpageContent.duration ?? 0)), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), performAction: performAction, openActionOptions: openActionOptions)
                             } else if let content = WebEmbedVideoContent(webPage: webpage, webpageContent: webpageContent) {
-                                return UniversalVideoGalleryItem(account: account, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), performAction: performAction, openActionOptions: openActionOptions)
+                                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), performAction: performAction, openActionOptions: openActionOptions)
                             }
                     }
                 }
@@ -279,7 +276,7 @@ class GalleryController: ViewController {
         return self.displayNode as! GalleryControllerNode
     }
     
-    private let account: Account
+    private let context: AccountContext
     private var presentationData: PresentationData
     
     private let streamVideos: Bool
@@ -317,14 +314,14 @@ class GalleryController: ViewController {
     private var performAction: (GalleryControllerInteractionTapAction) -> Void
     private var openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    init(account: Account, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
-        self.account = account
+    init(context: AccountContext, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
+        self.context = context
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController
         self.actionInteraction = actionInteraction
         self.streamVideos = streamSingleVideo
         
-        self.presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var performActionImpl: ((GalleryControllerInteractionTapAction) -> Void)?
         self.performAction = { action in
@@ -346,7 +343,7 @@ class GalleryController: ViewController {
         let message: Signal<Message?, NoError>
         switch source {
             case let .peerMessagesAtId(messageId):
-                message = account.postbox.messageAtId(messageId)
+                message = context.account.postbox.messageAtId(messageId)
             case let .standaloneMessage(m):
                 message = .single(m)
         }
@@ -357,7 +354,7 @@ class GalleryController: ViewController {
             switch source {
                 case .peerMessagesAtId:
                     if let tags = tagsForMessage(message!) {
-                        let view = account.postbox.aroundMessageHistoryViewForLocation(.peer(message!.id.peerId), index: .message(MessageIndex(message!)), anchorIndex: .message(MessageIndex(message!)), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, orderStatistics: [.combinedLocation])
+                        let view = context.account.postbox.aroundMessageHistoryViewForLocation(.peer(message!.id.peerId), index: .message(MessageIndex(message!)), anchorIndex: .message(MessageIndex(message!)), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, orderStatistics: [.combinedLocation])
                         
                         return view
                         |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
@@ -425,7 +422,7 @@ class GalleryController: ViewController {
                             var items: [GalleryItem] = []
                             var centralItemIndex: Int?
                             for entry in strongSelf.entries {
-                                if let item = galleryItemForEntry(account: account, presentationData: strongSelf.presentationData, entry: entry, streamVideos: streamSingleVideo, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions) {
+                                if let item = galleryItemForEntry(context: context, presentationData: strongSelf.presentationData, entry: entry, streamVideos: streamSingleVideo, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions) {
                                     if case let .MessageEntry(message, _, _, _) = entry, message.stableId == strongSelf.centralEntryStableId {
                                         centralItemIndex = items.count
                                     }
@@ -511,15 +508,15 @@ class GalleryController: ViewController {
             }
         }))
         
-        if let mediaManager = account.telegramApplicationContext.mediaManager {
-            self.hiddenMediaManagerIndex = mediaManager.galleryHiddenMediaManager.addSource(self._hiddenMedia.get() |> map { messageIdAndMedia in
-                if let (messageId, media) = messageIdAndMedia {
-                    return .chat(messageId, media)
-                } else {
-                    return nil
-                }
-            })
-        }
+        let mediaManager = context.sharedContext.mediaManager
+        self.hiddenMediaManagerIndex = mediaManager.galleryHiddenMediaManager.addSource(self._hiddenMedia.get()
+        |> map { messageIdAndMedia in
+            if let (messageId, media) = messageIdAndMedia {
+                return .chat(context.account.id, messageId, media)
+            } else {
+                return nil
+            }
+        })
         
         performActionImpl = { [weak self] action in
             if let strongSelf = self {
@@ -545,7 +542,7 @@ class GalleryController: ViewController {
                 case let .url(url, _):
                     var cleanUrl = url
                     var canAddToReadingList = true
-                    let canOpenIn = availableOpenInOptions(applicationContext: strongSelf.account.telegramApplicationContext, item: .url(url: url)).count > 1
+                    let canOpenIn = availableOpenInOptions(context: strongSelf.context, item: .url(url: url)).count > 1
                     let mailtoString = "mailto:"
                     let telString = "tel:"
                     var openText = strongSelf.presentationData.strings.Conversation_LinkDialogOpen
@@ -697,8 +694,8 @@ class GalleryController: ViewController {
     deinit {
         self.disposable.dispose()
         self.centralItemAttributesDisposable.dispose()
-        if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex, let mediaManager = self.account.telegramApplicationContext.mediaManager {
-            mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
+        if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex {
+            self.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
         }
     }
     
@@ -803,7 +800,7 @@ class GalleryController: ViewController {
         var items: [GalleryItem] = []
         var centralItemIndex: Int?
         for entry in self.entries {
-            if let item = galleryItemForEntry(account: account, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, performAction: self.performAction, openActionOptions: self.openActionOptions) {
+            if let item = galleryItemForEntry(context: context, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, performAction: self.performAction, openActionOptions: self.openActionOptions) {
                 if case let .MessageEntry(message, _, _, _) = entry, message.stableId == self.centralEntryStableId {
                     centralItemIndex = items.count
                 }

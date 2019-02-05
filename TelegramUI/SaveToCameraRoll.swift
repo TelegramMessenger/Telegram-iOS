@@ -12,7 +12,7 @@ private enum SaveToCameraRollState {
     case data(MediaResourceData)
 }
 
-private func fetchMediaData(applicationContext: TelegramApplicationContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<(SaveToCameraRollState, Bool), NoError> {
+private func fetchMediaData(context: AccountContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<(SaveToCameraRollState, Bool), NoError> {
     var resource: MediaResource?
     var isImage = true
     var fileExtension: String?
@@ -75,8 +75,8 @@ private func fetchMediaData(applicationContext: TelegramApplicationContext, post
     }
 }
 
-func saveToCameraRoll(applicationContext: TelegramApplicationContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<Float, NoError> {
-    return fetchMediaData(applicationContext: applicationContext, postbox: postbox, mediaReference: mediaReference)
+func saveToCameraRoll(context: AccountContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<Float, NoError> {
+    return fetchMediaData(context: context, postbox: postbox, mediaReference: mediaReference)
     |> mapToSignal { state, isImage -> Signal<Float, NoError> in
         switch state {
             case let .progress(value):
@@ -84,9 +84,9 @@ func saveToCameraRoll(applicationContext: TelegramApplicationContext, postbox: P
             case let .data(data):
                 if data.complete {
                     return Signal<Float, NoError> { subscriber in
-                        DeviceAccess.authorizeAccess(to: .mediaLibrary(.save), presentationData: applicationContext.currentPresentationData.with { $0 }, present: { c, a in
-                            applicationContext.presentGlobalController(c, a)
-                        }, openSettings: applicationContext.applicationBindings.openSettings, { authorized in
+                        DeviceAccess.authorizeAccess(to: .mediaLibrary(.save), presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: { c, a in
+                            context.sharedContext.presentGlobalController(c, a)
+                        }, openSettings: context.sharedContext.applicationBindings.openSettings, { authorized in
                             if !authorized {
                                 subscriber.putCompletion()
                                 return
@@ -129,8 +129,8 @@ func saveToCameraRoll(applicationContext: TelegramApplicationContext, postbox: P
     }
 }
 
-func copyToPasteboard(applicationContext: TelegramApplicationContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<Void, NoError> {
-    return fetchMediaData(applicationContext: applicationContext, postbox: postbox, mediaReference: mediaReference)
+func copyToPasteboard(context: AccountContext, postbox: Postbox, mediaReference: AnyMediaReference) -> Signal<Void, NoError> {
+    return fetchMediaData(context: context, postbox: postbox, mediaReference: mediaReference)
     |> mapToSignal { state, isImage -> Signal<Void, NoError> in
         if case let .data(data) = state, data.complete {
             return Signal<Void, NoError> { subscriber in
