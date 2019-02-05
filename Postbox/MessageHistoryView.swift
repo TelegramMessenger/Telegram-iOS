@@ -182,8 +182,8 @@ enum MutableMessageHistoryEntry {
             case let .HoleEntry(hole, location, lowerIndex):
                 if let location = location {
                     if hole.maxIndex > index {
-                        assert(location.index > 0)
-                        assert(location.count != 0)
+                        //assert(location.index > 0)
+                        //assert(location.count != 0)
                         return .HoleEntry(hole, MessageHistoryEntryLocation(index: location.index - 1, count: location.count - 1), lowerIndex: lowerIndex)
                     } else {
                         return .HoleEntry(hole, MessageHistoryEntryLocation(index: location.index, count: max(0, location.count - 1)), lowerIndex: lowerIndex)
@@ -194,11 +194,11 @@ enum MutableMessageHistoryEntry {
             case let .IntermediateMessageEntry(message, location, monthLocation):
                 if let location = location {
                     if MessageIndex(id: message.id, timestamp: message.timestamp) > index {
-                        assert(location.index > 0)
-                        assert(location.count != 0)
+                        //assert(location.index > 0)
+                        //assert(location.count != 0)
                         return .IntermediateMessageEntry(message, MessageHistoryEntryLocation(index: location.index - 1, count: location.count - 1), monthLocation)
                     } else {
-                        assert(location.count != 0)
+                        //assert(location.count != 0)
                         return .IntermediateMessageEntry(message, MessageHistoryEntryLocation(index: location.index, count: location.count - 1), monthLocation)
                     }
                 } else {
@@ -207,11 +207,11 @@ enum MutableMessageHistoryEntry {
             case let .MessageEntry(message, location, monthLocation):
                 if let location = location {
                     if MessageIndex(id: message.id, timestamp: message.timestamp) > index {
-                        assert(location.index > 0)
-                        assert(location.count != 0)
+                        //assert(location.index > 0)
+                        //assert(location.count != 0)
                         return .MessageEntry(message, MessageHistoryEntryLocation(index: location.index - 1, count: location.count - 1), monthLocation)
                     } else {
-                        assert(location.count != 0)
+                        //assert(location.count != 0)
                         return .MessageEntry(message, MessageHistoryEntryLocation(index: location.index, count: location.count - 1), monthLocation)
                     }
                 } else {

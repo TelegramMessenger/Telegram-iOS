@@ -24,7 +24,7 @@ public struct ValueBoxKey: Equatable, Hashable, CustomStringConvertible, Compara
     }
     
     public init(_ value: String) {
-        let data = value.data(using: .utf8, allowLossyConversion: true)!
+        let data = value.data(using: .utf8, allowLossyConversion: true) ?? Data()
         self.memory = malloc(data.count)
         self.length = data.count
         self.impl = ValueBoxKeyImpl(memory: self.memory)

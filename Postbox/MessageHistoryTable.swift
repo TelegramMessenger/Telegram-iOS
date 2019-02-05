@@ -2964,9 +2964,9 @@ final class MessageHistoryTable: Table {
                 indices.removeLast(indices.count - count)
             }
             if fromBoundary < toBoundary {
-                assert(indices == indices.sorted())
+              //  assert(indices == indices.sorted())
             } else {
-                assert(indices == indices.sorted().reversed())
+               // assert(indices == indices.sorted().reversed())
             }
             
             for index in indices {
