@@ -106,9 +106,6 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.stickBackgroundNode.displayWithoutProcessing = true
         self.stickBackgroundNode.displaysAsynchronously = false
         
-        //self.testNode.backgroundColor = .black
-        //self.testNode.isLayerBacked = true
-        
         super.init(layerBacked: false, dynamicBounce: true, isRotated: true, seeThrough: false)
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
@@ -121,8 +118,6 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.backgroundNode.addSubnode(self.stickBackgroundNode)
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.labelNode)
-        
-        //self.addSubnode(self.testNode)
         
         let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         
@@ -145,21 +140,12 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             text = presentationData.strings.Date_ChatDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: presentationData.strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").0
         }
         
-        let attributedString = NSAttributedString(string: text, font: titleFont, textColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor)
+        let attributedString = NSAttributedString(string: text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
         let labelLayout = TextNode.asyncLayout(self.labelNode)
         
         let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         let _ = apply()
         self.labelNode.frame = CGRect(origin: CGPoint(), size: size.size)
-        
-        /*(self.layer as! CASeeThroughTracingLayer).updateRelativePosition = { [weak self] position in
-            if let strongSelf = self {
-                strongSelf.testNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 70.0 + position.y), size: CGSize(width: 40.0, height: 20.0))
-                print("position \(position.x), \(position.y)")
-            }
-        }*/
-        
-
     }
 
     override func didLoad() {
@@ -178,8 +164,6 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
-        //let labelLayout = TextNode.asyncLayout(self.labelNode)
-        
         let chatDateSize: CGFloat = 20.0
         let chatDateInset: CGFloat = 6.0
         
@@ -232,8 +216,6 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         }
     }
 
-
-    
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.bounds.contains(point) {
             return nil
@@ -247,15 +229,13 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         return nil
     }
     
-    
-    
     override func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
         super.touchesCancelled(touches, with: event)
     }
     
     @objc func tapGesture(_ recognizer: ListViewTapGestureRecognizer) {
         if case .ended = recognizer.state {
-            action?(self.localTimestamp)
+            self.action?(self.localTimestamp)
         }
     }
 }
