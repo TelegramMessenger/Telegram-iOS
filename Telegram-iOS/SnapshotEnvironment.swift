@@ -12,8 +12,9 @@ enum SnapshotEnvironmentTheme {
     case day
 }
 
-func snapshotEnvironment(application: UIApplication, mainWindow: UIWindow, statusBarHost: StatusBarHost, theme: SnapshotEnvironmentTheme) -> (Account, AccountManager) {
-    var randomId: Int64 = 0
+func snapshotEnvironment(application: UIApplication, mainWindow: UIWindow, statusBarHost: StatusBarHost, theme: SnapshotEnvironmentTheme) -> (AccountContext, AccountManager) {
+    preconditionFailure()
+    /*var randomId: Int64 = 0
     arc4random_buf(&randomId, 8)
     let path = NSTemporaryDirectory() + "\(randomId)"
     
@@ -106,9 +107,9 @@ func snapshotEnvironment(application: UIApplication, mainWindow: UIWindow, statu
     semaphore1.wait()
     precondition(dataAndSettings != nil)
     
-    result!.applicationContext = TelegramApplicationContext(applicationBindings: applicationBindings, accountManager: accountManagerValue!, account: result, initialPresentationDataAndSettings: dataAndSettings!, postbox: result!.postbox)
+    let context = AccountContext(sharedContext: SharedAccountContext(applicationBindings: applicationBindings, accountManager: accountManagerValue!), account: result!, initialPresentationDataAndSettings: dataAndSettings!)
     
-    return (result!, accountManagerValue!)
+    return (context, accountManagerValue!)*/
 }
 
 #endif

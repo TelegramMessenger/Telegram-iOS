@@ -82,32 +82,30 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             account = .single(accountCache)
         } else {
             initializeAccountManagement()
-            account = accountManager(basePath: rootPath + "/accounts-metadata")
-            |> take(1)
-            |> mapToSignal { accountManager -> Signal<Account, NoError> in
-                return currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods)
-                |> mapToSignal { account -> Signal<Account, NoError> in
-                    if let account = account {
-                        switch account {
-                            case .upgrading:
-                                return .complete()
-                            case let .authorized(account):
-                                return applicationSettings(accountManager: accountManager)
-                                |> deliverOnMainQueue
-                                |> map { settings -> Account in
-                                    accountCache = account
-                                    Logger.shared.logToFile = settings.logging.logToFile
-                                    Logger.shared.logToConsole = settings.logging.logToConsole
-                                    
-                                    Logger.shared.redactSensitiveData = settings.logging.redactSensitiveData
-                                    return account
-                                }
-                            case .unauthorized:
-                                return .complete()
-                        }
-                    } else {
-                        return .complete()
+            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
+            
+            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods)
+            |> mapToSignal { account -> Signal<Account, NoError> in
+                if let account = account {
+                    switch account {
+                        case .upgrading:
+                            return .complete()
+                        case let .authorized(account):
+                            return applicationSettings(accountManager: accountManager)
+                            |> deliverOnMainQueue
+                            |> map { settings -> Account in
+                                accountCache = account
+                                Logger.shared.logToFile = settings.logging.logToFile
+                                Logger.shared.logToConsole = settings.logging.logToConsole
+                                
+                                Logger.shared.redactSensitiveData = settings.logging.redactSensitiveData
+                                return account
+                            }
+                        case .unauthorized:
+                            return .complete()
                     }
+                } else {
+                    return .complete()
                 }
             }
             |> take(1)

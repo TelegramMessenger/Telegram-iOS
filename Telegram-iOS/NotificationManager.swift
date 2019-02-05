@@ -44,32 +44,6 @@ enum NotificationManagedNotificationRequestId: Hashable {
         }
         return nil
     }
-    
-    var hashValue: Int {
-        switch self {
-            case let .messageId(messageId):
-                return messageId.id.hashValue
-            case let .globallyUniqueId(id, _):
-                return id.hashValue
-        }
-    }
-    
-    static func ==(lhs: NotificationManagedNotificationRequestId, rhs: NotificationManagedNotificationRequestId) -> Bool {
-        switch lhs {
-            case let .messageId(id):
-                if case .messageId(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .globallyUniqueId(id, peerId):
-                if case .globallyUniqueId(id, peerId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 private func processedSoundName(_ name: String) -> String {
@@ -83,12 +57,12 @@ private func processedSoundName(_ name: String) -> String {
 final class NotificationManager {
     private var processedMessages = Set<MessageId>()
     
-    var account: Account? {
+    /*var context: AccountContext? {
         didSet {
             assert(Queue.mainQueue().isCurrent())
             
-            if let account = self.account {
-                self.notificationMessagesDisposable.set((account.stateManager.notificationMessages
+            if let context = self.context {
+                self.notificationMessagesDisposable.set((context.account.stateManager.notificationMessages
                 |> deliverOn(Queue.mainQueue())).start(next: { [weak self] messages in
                     guard let strongSelf = self else {
                         return
@@ -103,17 +77,19 @@ final class NotificationManager {
                 self.notificationMessagesDisposable.set(nil)
             }
         }
-    }
+    }*/
     
     private let notificationCallStateDisposable = MetaDisposable()
-    var notificationCall: PresentationCall? {
-        didSet {
-            if self.notificationCall?.internalId != oldValue?.internalId {
-                if let notificationCall = self.notificationCall {
-                    let peer = notificationCall.peer
-                    let internalId = notificationCall.internalId
-                    let isIntegratedWithCallKit = notificationCall.isIntegratedWithCallKit
-                    self.notificationCallStateDisposable.set((notificationCall.state
+    private(set) var notificationCall: PresentationCall?
+    
+    func setNotificationCall(_ call: PresentationCall?, strings: PresentationStrings) {
+        if self.notificationCall?.internalId != call?.internalId {
+            self.notificationCall = call
+            if let notificationCall = self.notificationCall {
+                let peer = notificationCall.peer
+                let internalId = notificationCall.internalId
+                let isIntegratedWithCallKit = notificationCall.isIntegratedWithCallKit
+                self.notificationCallStateDisposable.set((notificationCall.state
                     |> map { state -> (Peer?, CallSessionInternalId)? in
                         if isIntegratedWithCallKit {
                             return nil
@@ -125,12 +101,11 @@ final class NotificationManager {
                         }
                     }
                     |> distinctUntilChanged(isEqual: { $0?.1 == $1?.1 })).start(next: { [weak self] peerAndInternalId in
-                        self?.updateNotificationCall(call: peerAndInternalId)
+                        self?.updateNotificationCall(call: peerAndInternalId, strings: strings)
                     }))
-                } else {
-                    self.notificationCallStateDisposable.set(nil)
-                    self.updateNotificationCall(call: nil)
-                }
+            } else {
+                self.notificationCallStateDisposable.set(nil)
+                self.updateNotificationCall(call: nil, strings: strings)
             }
         }
     }
@@ -264,99 +239,91 @@ final class NotificationManager {
         }
     }
     
-    func commitRemoteNotification(originalRequestId: NotificationManagedNotificationRequestId?, messageIds: [MessageId]) -> Signal<Void, NoError> {
-        if let account = self.account {
-            return account.postbox.transaction { transaction -> ([(MessageId, [Message], Bool, PeerMessageSound, Bool)], Bool) in
-                var isLocked = false
-                if isAccessLocked(data: transaction.getAccessChallengeData(), at: Int32(CFAbsoluteTimeGetCurrent())) {
-                    isLocked = true
+    func commitRemoteNotification(context: AccountContext, originalRequestId: NotificationManagedNotificationRequestId?, messageIds: [MessageId]) -> Signal<Void, NoError> {
+        return context.account.postbox.transaction { transaction -> ([(MessageId, [Message], Bool, PeerMessageSound, Bool)], Bool) in
+            var isLocked = false
+            /*if isAccessLocked(data: transaction.getAccessChallengeData(), at: Int32(CFAbsoluteTimeGetCurrent())) {
+                isLocked = true
+            }*/
+            
+            var results: [(MessageId, [Message], Bool, PeerMessageSound, Bool)] = []
+            var updatedMessageIds = messageIds
+            if let originalRequestId = originalRequestId {
+                switch originalRequestId {
+                    case let .messageId(id):
+                        if !updatedMessageIds.contains(id) {
+                            updatedMessageIds.append(id)
+                        }
+                    case .globallyUniqueId:
+                        break
                 }
-                
-                var results: [(MessageId, [Message], Bool, PeerMessageSound, Bool)] = []
-                var updatedMessageIds = messageIds
-                if let originalRequestId = originalRequestId {
-                    switch originalRequestId {
-                        case let .messageId(id):
-                            if !updatedMessageIds.contains(id) {
-                                updatedMessageIds.append(id)
-                            }
-                        case .globallyUniqueId:
-                            break
-                    }
-                }
-                for id in updatedMessageIds {
-                    let (messages, notify, sound, displayContents) = messagesForNotification(transaction: transaction, id: id, alwaysReturnMessage: true)
-                    
-                    if results.contains(where: { result in
-                        return result.1.contains(where: { message in
-                            return messages.contains(where: {
-                                message.id == $0.id
-                            })
-                        })
-                    }) {
-                        continue
-                    }
-                    results.append((id, messages, notify, sound, displayContents))
-                }
-                return (results, isLocked)
             }
-            |> deliverOnMainQueue
-            |> beforeNext {
-                [weak self] results, isLocked in
-                if let strongSelf = self {
-                    let delayUntilTimestamp: Int32 = strongSelf.account?.stateManager.getDelayNotificatonsUntil() ?? 0
-                    
-                    for (id, messages, notify, sound, displayContents) in results {
-                        let requestId: NotificationManagedNotificationRequestId = .messageId(id)
-                        if let message = messages.first, message.id.peerId.namespace != Namespaces.Peer.SecretChat, !strongSelf.processedRequestIds.contains(requestId) {
-                            let notificationRequestTimeout = strongSelf.notificationRequests[requestId]
-                            if notificationRequestTimeout == nil || CFAbsoluteTimeGetCurrent() < notificationRequestTimeout! {
-                                if #available(iOS 10.0, *) {
-                                    let center = UNUserNotificationCenter.current()
-                                    center.removePendingNotificationRequests(withIdentifiers: [notificationKey(requestId)])
-                                } else {
-                                    let key = notificationKey(requestId)
-                                    if let notifications = UIApplication.shared.scheduledLocalNotifications {
-                                        for notification in notifications {
-                                            if let userInfo = notification.userInfo, let id = userInfo["id"] as? String {
-                                                if id == key {
-                                                    UIApplication.shared.cancelLocalNotification(notification)
-                                                    break
-                                                }
+            for id in updatedMessageIds {
+                let (messages, notify, sound, displayContents) = messagesForNotification(transaction: transaction, id: id, alwaysReturnMessage: true)
+                
+                if results.contains(where: { result in
+                    return result.1.contains(where: { message in
+                        return messages.contains(where: {
+                            message.id == $0.id
+                        })
+                    })
+                }) {
+                    continue
+                }
+                results.append((id, messages, notify, sound, displayContents))
+            }
+            return (results, isLocked)
+        }
+        |> deliverOnMainQueue
+        |> beforeNext {
+            [weak self] results, isLocked in
+            if let strongSelf = self {
+                let delayUntilTimestamp: Int32 = context.account.stateManager.getDelayNotificatonsUntil() ?? 0
+                
+                for (id, messages, notify, sound, displayContents) in results {
+                    let requestId: NotificationManagedNotificationRequestId = .messageId(id)
+                    if let message = messages.first, message.id.peerId.namespace != Namespaces.Peer.SecretChat, !strongSelf.processedRequestIds.contains(requestId) {
+                        let notificationRequestTimeout = strongSelf.notificationRequests[requestId]
+                        if notificationRequestTimeout == nil || CFAbsoluteTimeGetCurrent() < notificationRequestTimeout! {
+                            if #available(iOS 10.0, *) {
+                                let center = UNUserNotificationCenter.current()
+                                center.removePendingNotificationRequests(withIdentifiers: [notificationKey(requestId)])
+                            } else {
+                                let key = notificationKey(requestId)
+                                if let notifications = UIApplication.shared.scheduledLocalNotifications {
+                                    for notification in notifications {
+                                        if let userInfo = notification.userInfo, let id = userInfo["id"] as? String {
+                                            if id == key {
+                                                UIApplication.shared.cancelLocalNotification(notification)
+                                                break
                                             }
                                         }
                                     }
                                 }
+                            }
+                            
+                            if !strongSelf.processedRequestIds.contains(requestId) {
+                                strongSelf.processedRequestIds.insert(requestId)
                                 
-                                if !strongSelf.processedRequestIds.contains(requestId) {
-                                    strongSelf.processedRequestIds.insert(requestId)
-                                    
-                                    if notify {
-                                        var delayMessage = false
-                                        if message.timestamp <= delayUntilTimestamp && message.id.peerId.namespace != Namespaces.Peer.SecretChat {
-                                            delayMessage = true
-                                        }
-                                        strongSelf.processNotificationMessages([(messages, sound, displayContents, delayMessage)], isLocked: isLocked)
+                                if notify {
+                                    var delayMessage = false
+                                    if message.timestamp <= delayUntilTimestamp && message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                                        delayMessage = true
                                     }
+                                    strongSelf.processNotificationMessages(context: context, messageList: [(messages, sound, displayContents, delayMessage)], isLocked: isLocked)
                                 }
                             }
                         }
                     }
                 }
-            } |> map { _ in
-                return Void()
             }
-        } else {
-            return .complete()
+        } |> map { _ in
+            return Void()
         }
     }
     
-    private func processNotificationMessages(_ messageList: [([Message], PeerMessageSound, Bool, Bool)], isLocked: Bool) {
-        guard let account = self.account else {
-            Logger.shared.log("NotificationManager", "account missing")
-            return
-        }
-        let presentationData = (account.telegramApplicationContext.currentPresentationData.with { $0 })
+    private func processNotificationMessages(context: AccountContext, messageList: [([Message], PeerMessageSound, Bool, Bool)], isLocked: Bool) {
+        let presentationData = (context.sharedContext.currentPresentationData.with { $0 })
         let strings = presentationData.strings
         let nameDisplayOrder = presentationData.nameDisplayOrder
         
@@ -446,9 +413,9 @@ final class NotificationManager {
                                     }
                                 }
                             } else if messages[0].groupingKey != nil {
-                                var kind = messageContentKind(messages[0], strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: account.peerId).key
+                                var kind = messageContentKind(messages[0], strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: context.account.peerId).key
                                 for i in 1 ..< messages.count {
-                                    let nextKind = messageContentKind(messages[i], strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: account.peerId)
+                                    let nextKind = messageContentKind(messages[i], strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: context.account.peerId)
                                     if kind != nextKind.key {
                                         kind = .text
                                         break
@@ -548,21 +515,21 @@ final class NotificationManager {
                                 title = nil
                             }
                             let chatPeer = RenderedPeer(peerId: firstMessage.id.peerId, peers: additionalPeers)
-                            let (_, _, messageText) = chatListItemStrings(strings: strings, nameDisplayOrder: nameDisplayOrder, message: firstMessage, chatPeer: chatPeer, accountPeerId: account.peerId)
+                            let (_, _, messageText) = chatListItemStrings(strings: strings, nameDisplayOrder: nameDisplayOrder, message: firstMessage, chatPeer: chatPeer, accountPeerId: context.account.peerId)
                             body = messageText
                             
                             loop: for media in firstMessage.media {
                                 if let image = media as? TelegramMediaImage {
                                     mediaRepresentations = image.representations
-                                    if !firstMessage.containsSecretMedia, let account = self.account, let smallest = smallestImageRepresentation(image.representations), let largest = largestImageRepresentation(image.representations) {
+                                    if !firstMessage.containsSecretMedia, let smallest = smallestImageRepresentation(image.representations), let largest = largestImageRepresentation(image.representations) {
                                         var imageInfo: [String: Any] = [:]
                                         
                                         var thumbnailInfo: [String: Any] = [:]
-                                        thumbnailInfo["path"] = account.postbox.mediaBox.resourcePath(smallest.resource)
+                                        thumbnailInfo["path"] = context.account.postbox.mediaBox.resourcePath(smallest.resource)
                                         imageInfo["thumbnail"] = thumbnailInfo
                                         
                                         var fullSizeInfo: [String: Any] = [:]
-                                        fullSizeInfo["path"] = account.postbox.mediaBox.resourcePath(largest.resource)
+                                        fullSizeInfo["path"] = context.account.postbox.mediaBox.resourcePath(largest.resource)
                                         imageInfo["fullSize"] = fullSizeInfo
                                         
                                         imageInfo["width"] = Int(largest.dimensions.width)
@@ -675,7 +642,7 @@ final class NotificationManager {
                         content.threadIdentifier = "peer_\(firstMessage.id.peerId.toInt64())"
                         
                         if mediaInfo != nil, let mediaRepresentations = mediaRepresentations {
-                            if let account = self.account, let smallest = smallestImageRepresentation(mediaRepresentations) {
+                            if let smallest = smallestImageRepresentation(mediaRepresentations) {
                                 /*if let path = account.postbox.mediaBox.completedResourcePath(smallest.resource) {
                                     var randomId: Int64 = 0
                                     arc4random_buf(&randomId, 8)
@@ -752,7 +719,7 @@ final class NotificationManager {
     
     private var currentNotificationCall: (peer: Peer?, internalId: CallSessionInternalId)?
     
-    private func updateNotificationCall(call: (peer: Peer?, internalId: CallSessionInternalId)?) {
+    private func updateNotificationCall(call: (peer: Peer?, internalId: CallSessionInternalId)?, strings: PresentationStrings) {
         if let previousCall = currentNotificationCall {
             if #available(iOS 10.0, *) {
                 let center = UNUserNotificationCenter.current()
@@ -769,14 +736,24 @@ final class NotificationManager {
         }
         self.currentNotificationCall = call
         
-        guard let account = self.account else {
-            return
-        }
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
         if let notificationCall = call {
+            let rawText = strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle ?? "").0
+            let title: String?
+            let body: String
+            if let index = rawText.firstIndex(of: "|") {
+                title = String(rawText[rawText.startIndex ..< index])
+                body = String(rawText[rawText.index(after: index)...])
+            } else {
+                title = nil
+                body = rawText
+            }
+            
             if #available(iOS 10.0, *) {
                 let content = UNMutableNotificationContent()
-                content.body = presentationData.strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle ?? "").0
+                if let title = title {
+                    content.title = title
+                }
+                content.body = body
                 content.sound = UNNotificationSound(named: "0.m4a")
                 content.categoryIdentifier = "incomingCall"
                 content.userInfo = [:]
@@ -793,7 +770,16 @@ final class NotificationManager {
                 
             } else {
                 let notification = UILocalNotification()
-                notification.alertBody = presentationData.strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle ?? "").0
+                if #available(iOS 8.2, *) {
+                    notification.alertTitle = title
+                    notification.alertBody = body
+                } else {
+                    if let title = title {
+                        notification.alertBody = "\(title): \(body)"
+                    } else {
+                        notification.alertBody = body
+                    }
+                }
                 notification.category = "incomingCall"
                 notification.userInfo = ["callId": String(describing: notificationCall.internalId)]
                 notification.soundName = "0.m4a"
@@ -802,7 +788,7 @@ final class NotificationManager {
         }
     }
     
-    func presentWatchContinuityNotification(messageId: MessageId) {
+    func presentWatchContinuityNotification(context: AccountContext, messageId: MessageId) {
         if #available(iOS 10.0, *) {
             let center = UNUserNotificationCenter.current()
             center.removeDeliveredNotifications(withIdentifiers: ["watch"])
@@ -815,10 +801,7 @@ final class NotificationManager {
                 }
             }
         }
-        guard let account = self.account else {
-            return
-        }
-        let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
        
         var userInfo: [AnyHashable : Any] = [:]
         userInfo["peerId"] = messageId.peerId.toInt64()

@@ -3955,6 +3955,7 @@ Unused sets are archived when you add more.";
 "CallFeedback.Send" = "Send";
 "CallFeedback.Success" = "Thanks for\nyour feedback";
 
+"Settings.AddAccount" = "Add Account";
 "WebSearch.SearchNoResults" = "No Results";
 "WebSearch.SearchNoResultsDescription" = "There were no results for \"%@\".\nTry a new search.";
 
@@ -3969,3 +3970,4 @@ Unused sets are archived when you add more.";
 "Proxy.TooltipUnavailable" = "The proxy may be unavailable. Try selecting another one.";
 
 "SocksProxySetup.Status" = "Status";
+"Login.PhoneNumberAlreadyAuthorized" = "This account is already logged in from this app.";

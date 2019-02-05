@@ -41,15 +41,15 @@ private let messages: [SnapshotMessage] = [
 ]
 
 func snapshotSecretChat(application: UIApplication, mainWindow: UIWindow, window: Window1, statusBarHost: StatusBarHost) {
-    let (account, _) = snapshotEnvironment(application: application, mainWindow: mainWindow, statusBarHost: statusBarHost, theme: .night)
-    account.network.mockConnectionStatus = .online(proxyAddress: nil)
+    let (context, _) = snapshotEnvironment(application: application, mainWindow: mainWindow, statusBarHost: statusBarHost, theme: .night)
+    context.account.network.mockConnectionStatus = .online(proxyAddress: nil)
     
-    let accountPeer = TelegramUser(id: account.peerId, accessHash: nil, firstName: "Alena", lastName: "Shy", username: "alenashy", phone: "44321456789", photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-    let userPeer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 456), accessHash: nil, firstName: "Eileen", lastName: "Lockhard", username: nil, phone: "44321456789", photo: snapshotAvatar(account.postbox, 6), botInfo: nil, restrictionInfo: nil, flags: [])
+    let accountPeer = TelegramUser(id: context.account.peerId, accessHash: nil, firstName: "Alena", lastName: "Shy", username: "alenashy", phone: "44321456789", photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+    let userPeer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 456), accessHash: nil, firstName: "Eileen", lastName: "Lockhard", username: nil, phone: "44321456789", photo: snapshotAvatar(context.account.postbox, 6), botInfo: nil, restrictionInfo: nil, flags: [])
     let secretPeer = TelegramSecretChat(id: PeerId(namespace: Namespaces.Peer.SecretChat, id: 456), creationDate: 123, regularPeerId: userPeer.id, accessHash: 123, role: .creator, embeddedState: .active, messageAutoremoveTimeout: nil)
     
-    let _ = (account.postbox.transaction { transaction -> Void in
-        if let hole = account.postbox.seedConfiguration.initializeChatListWithHole.topLevel {
+    let _ = (context.account.postbox.transaction { transaction -> Void in
+        if let hole = context.account.postbox.seedConfiguration.initializeChatListWithHole.topLevel {
             transaction.replaceChatListHole(groupId: nil, index: hole.index, hole: nil)
         }
         
@@ -61,15 +61,15 @@ func snapshotSecretChat(application: UIApplication, mainWindow: UIWindow, window
         
         var date: Int32 = Int32(Date().timeIntervalSince1970) - 1000
         for message in messages {
-            let _ = transaction.addMessages([message.storeMessage(account.postbox, peerId: secretPeer.id, userPeerId: userPeer.id, accountPeerId: account.peerId, date)], location: .UpperHistoryBlock)
+            let _ = transaction.addMessages([message.storeMessage(context.account.postbox, peerId: secretPeer.id, userPeerId: userPeer.id, accountPeerId: context.account.peerId, date)], location: .UpperHistoryBlock)
             date += 10
         }
     }).start()
     
-    let rootController = TelegramRootController(account: account)
+    let rootController = TelegramRootController(context: context)
     rootController.addRootControllers(showCallsTab: true)
     window.viewController = rootController
-    navigateToChatController(navigationController: rootController, account: account, chatLocation: .peer(secretPeer.id), animated: false)
+    navigateToChatController(navigationController: rootController, context: context, chatLocation: .peer(secretPeer.id), animated: false)
 }
 
 #endif

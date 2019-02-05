@@ -1,212 +1,280 @@
+import Foundation
 import UserNotifications
-import Postbox
-import SwiftSignalKit
-import TelegramCore
 
-private func reportMemory() {
-    // constant
-    let MACH_TASK_BASIC_INFO_COUNT = (MemoryLayout<mach_task_basic_info_data_t>.size / MemoryLayout<natural_t>.size)
-    
-    // prepare parameters
-    let name   = mach_task_self_
-    let flavor = task_flavor_t(MACH_TASK_BASIC_INFO)
-    var size   = mach_msg_type_number_t(MACH_TASK_BASIC_INFO_COUNT)
-    
-    // allocate pointer to mach_task_basic_info
-    let infoPointer = UnsafeMutablePointer<mach_task_basic_info>.allocate(capacity: 1)
-    
-    // call task_info - note extra UnsafeMutablePointer(...) call
-    let kerr = infoPointer.withMemoryRebound(to: Int32.self, capacity: 1, { pointer in
-        return task_info(name, flavor, pointer, &size)
-    })
-    
-    // get mach_task_basic_info struct out of pointer
-    let info = infoPointer.move()
-    
-    // deallocate pointer
-    infoPointer.deallocate(capacity: 1)
-    
-    // check return value for success / failure
-    if kerr == KERN_SUCCESS {
-        NSLog("Memory in use (in MB): \(info.resident_size/1000000)")
+private func dataWithHexString(_ string: String) -> Data {
+    var hex = string
+    if hex.count % 2 != 0 {
+        return Data()
+    }
+    var data = Data()
+    while hex.count > 0 {
+        let subIndex = hex.index(hex.startIndex, offsetBy: 2)
+        let c = String(hex[..<subIndex])
+        hex = String(hex[subIndex...])
+        var ch: UInt32 = 0
+        if !Scanner(string: c).scanHexInt32(&ch) {
+            return Data()
+        }
+        var char = UInt8(ch)
+        data.append(&char, count: 1)
+    }
+    return data
+}
+
+private func parseInt64(_ value: Any?) -> Int64? {
+    if let value = value as? String {
+        return Int64(value)
+    } else if let value = value as? Int64 {
+        return value
+    } else {
+        return nil
     }
 }
 
-private struct ResolvedNotificationContent {
-    let text: String
-    let attachment: UNNotificationAttachment?
+private func parseInt32(_ value: Any?) -> Int32? {
+    if let value = value as? String {
+        return Int32(value)
+    } else if let value = value as? Int32 {
+        return value
+    } else {
+        return nil
+    }
 }
 
-@objc(NotificationService)
+private func parseImageLocation(_ dict: [AnyHashable: Any]) -> (size: (width: Int32, height: Int32)?, resource: ImageResource)? {
+    guard let datacenterId = parseInt32(dict["dc_id"]) else {
+        return nil
+    }
+    guard let volumeId = parseInt64(dict["volume_id"]) else {
+        return nil
+    }
+    guard let localId = parseInt32(dict["local_id"]) else {
+        return nil
+    }
+    guard let secret = parseInt64(dict["secret"]) else {
+        return nil
+    }
+    var fileReference: Data?
+    if let fileReferenceString = dict["file_reference"] as? String {
+        fileReference = Data(base64Encoded: fileReferenceString)
+    }
+    var size: (Int32, Int32)?
+    if let width = parseInt32(dict["w"]), let height = parseInt32(dict["h"]) {
+        size = (width, height)
+    }
+    return (size, ImageResource(datacenterId: Int(datacenterId), volumeId: volumeId, localId: localId, secret: secret, fileReference: fileReference))
+}
+
+private func hexString(_ data: Data) -> String {
+    let hexString = NSMutableString()
+    data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        for i in 0 ..< data.count {
+            hexString.appendFormat("%02x", UInt(bytes.advanced(by: i).pointee))
+        }
+    }
+    
+    return hexString as String
+}
+
+private func serializeImageLocation(_ resource: ImageResource) -> [AnyHashable: Any] {
+    var result: [AnyHashable: Any] = [:]
+    result["datacenterId"] = Int32(resource.datacenterId)
+    result["volumeId"] = resource.volumeId
+    result["localId"] = resource.localId
+    result["secret"] = resource.secret
+    if let fileReference = resource.fileReference {
+        result["fileReference"] = hexString(fileReference)
+    }
+    return result
+}
+
 class NotificationService: UNNotificationServiceExtension {
-    private let disposable = MetaDisposable()
+    private let rootPath: String?
     
-    private var bestEffortContent: UNMutableNotificationContent?
-    private var currentContentHandler: ((UNNotificationContent) -> Void)?
+    var contentHandler: ((UNNotificationContent) -> Void)?
+    var bestAttemptContent: UNMutableNotificationContent?
     
-    var timer: SwiftSignalKit.Timer?
+    var cancelFetch: (() -> Void)?
     
-    deinit {
-        self.disposable.dispose()
+    override init() {
+        let appBundleIdentifier = Bundle.main.bundleIdentifier!
+        if let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) {
+            let appGroupName = "group.\(appBundleIdentifier[..<lastDotRange.lowerBound])"
+            let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+            
+            if let appGroupUrl = maybeAppGroupUrl {
+                self.rootPath = appGroupUrl.path + "/telegram-data"
+            } else {
+                self.rootPath = nil
+            }
+        } else {
+            self.rootPath = nil
+        }
+        
+        super.init()
     }
-    
+
     override func didReceive(_ request: UNNotificationRequest, withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
-        contentHandler(request.content)
+        let accountsData = self.rootPath.flatMap({ rootPath in
+            loadAccountsData(rootPath: rootPath)
+        }) ?? [:]
         
-        /*self.timer?.invalidate()
+        self.contentHandler = contentHandler
+        self.bestAttemptContent = request.content.mutableCopy() as? UNMutableNotificationContent
         
-        reportMemory()
+        var encryptedData: Data?
+        if var encryptedPayload = request.content.userInfo["p"] as? String {
+            encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
+            encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
+            while encryptedPayload.count % 4 != 0 {
+                encryptedPayload.append("=")
+            }
+            encryptedData = Data(base64Encoded: encryptedPayload)
+        }
         
-        self.timer = SwiftSignalKit.Timer(timeout: 0.01, repeat: true, completion: {
-            reportMemory()
-        }, queue: Queue.mainQueue())
-        self.timer?.start()
-        
-        NSLog("before api")
-        reportMemory()
-        let a = TelegramCore.Api.User.userEmpty(id: 1)
-        NSLog("after api \(a)")
-        reportMemory()
-        
-        
-        
-        if let content = request.content.mutableCopy() as? UNMutableNotificationContent {
+        if let (account, dict) = encryptedData.flatMap({ decryptedNotificationPayload(accounts: accountsData, data: $0) }) {
+            var userInfo = self.bestAttemptContent?.userInfo ?? [:]
+            userInfo["accountId"] = account.id
+            
             var peerId: PeerId?
-            if let fromId = request.content.userInfo["from_id"] {
-                var idValue: Int32?
-                if let id = fromId as? NSNumber {
-                    idValue = Int32(id.intValue)
-                } else if let id = fromId as? NSString {
-                    idValue = id.intValue
+            var messageId: Int32?
+            
+            if let msgId = dict["msg_id"] as? String {
+                userInfo["msg_id"] = msgId
+                messageId = Int32(msgId)
+            }
+            if let fromId = dict["from_id"] as? String {
+                userInfo["from_id"] = fromId
+                if let id = Int32(fromId) {
+                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: id)
                 }
-                if let idValue = idValue {
-                    if idValue > 0 {
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: idValue)
-                    } else {
+            }
+            if let chatId = dict["chat_id"] as? String {
+                userInfo["chat_id"] = chatId
+                if let id = Int32(chatId) {
+                    peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: id)
+                }
+            }
+            if let channelId = dict["channel_id"] as? String {
+                userInfo["channel_id"] = channelId
+                if let id = Int32(channelId) {
+                    peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: id)
+                }
+            }
+            
+            var thumbnailImage: ImageResource?
+            var fullSizeImage: (size: (width: Int32, height: Int32)?, resource: ImageResource)?
+            if let thumbLoc = dict["media_loc"] as? [AnyHashable: Any] {
+                thumbnailImage = (thumbLoc["thumb"] as? [AnyHashable: Any]).flatMap(parseImageLocation)?.resource
+                fullSizeImage = (thumbLoc["full"] as? [AnyHashable: Any]).flatMap(parseImageLocation)
+            }
+            
+            let imagesPath = NSTemporaryDirectory() + "aps-data"
+            let _ = try? FileManager.default.createDirectory(atPath: imagesPath, withIntermediateDirectories: true, attributes: nil)
+            
+            let mediaBoxPath = account.basePath + "/postbox/media"
+            
+            let tempImagePath = thumbnailImage.flatMap({ imagesPath + "/\($0.resourceId).jpg" })
+            let mediaBoxThumbnailImagePath = thumbnailImage.flatMap({ mediaBoxPath + "/\($0.resourceId)" })
+            let mediaBoxFullSizeImagePath = fullSizeImage.flatMap({ mediaBoxPath + "/\($0.resource.resourceId)" })
+            
+            if let aps = dict["aps"] as? [AnyHashable: Any] {
+                if let alert = aps["alert"] as? String {
+                    self.bestAttemptContent?.title = ""
+                    self.bestAttemptContent?.body = alert
+                } else if let alert = aps["alert"] as? [AnyHashable: Any] {
+                    self.bestAttemptContent?.title = alert["title"] as? String ?? ""
+                    self.bestAttemptContent?.subtitle = alert["subtitle"] as? String ?? ""
+                    self.bestAttemptContent?.body = alert["body"] as? String ?? ""
+                }
+                
+                if let threadId = aps["thread-id"] as? String {
+                    self.bestAttemptContent?.threadIdentifier = threadId
+                }
+                if let sound = aps["sound"] as? String {
+                    self.bestAttemptContent?.sound = UNNotificationSound(named: UNNotificationSoundName(sound))
+                }
+                if let category = aps["category"] as? String {
+                    self.bestAttemptContent?.categoryIdentifier = category
+                    if let peerId = peerId, let messageId = messageId, let thumbnailResource = thumbnailImage, let (maybeSize, resource) = fullSizeImage, let size = maybeSize {
+                        userInfo["peerId"] = peerId.toInt64()
+                        userInfo["messageId.namespace"] = 0 as Int32
+                        userInfo["messageId.id"] = messageId
                         
-                    }
-                }
-            } else if let fromId = request.content.userInfo["chat_id"] {
-                var idValue: Int32?
-                if let id = fromId as? NSNumber {
-                    idValue = Int32(id.intValue)
-                } else if let id = fromId as? NSString {
-                    idValue = id.intValue
-                }
-                if let idValue = idValue {
-                    if idValue > 0 {
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: idValue)
-                    }
-                }
-            } else if let fromId = request.content.userInfo["channel_id"] {
-                var idValue: Int32?
-                if let id = fromId as? NSNumber {
-                    idValue = Int32(id.intValue)
-                } else if let id = fromId as? NSString {
-                    idValue = id.intValue
-                }
-                if let idValue = idValue {
-                    if idValue > 0 {
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: idValue)
+                        var imageInfo: [String: Any] = [:]
+                        imageInfo["width"] = Int(size.width)
+                        imageInfo["height"] = Int(size.height)
+                        
+                        var thumbnail: [String: Any] = [:]
+                        if let mediaBoxThumbnailImagePath = mediaBoxThumbnailImagePath {
+                            thumbnail["path"] = mediaBoxThumbnailImagePath
+                        }
+                        thumbnail["fileLocation"] = serializeImageLocation(thumbnailResource)
+                        
+                        var fullSize: [String: Any] = [:]
+                        if let mediaBoxFullSizeImagePath = mediaBoxFullSizeImagePath {
+                            fullSize["path"] = mediaBoxFullSizeImagePath
+                        }
+                        fullSize["fileLocation"] = serializeImageLocation(resource)
+                        
+                        imageInfo["thumbnail"] = thumbnail
+                        imageInfo["fullSize"] = fullSize
+                        
+                        userInfo["mediaInfo"] = ["image": imageInfo]
+                        
+                        if category == "r" {
+                            self.bestAttemptContent?.categoryIdentifier = "withReplyMedia"
+                        } else if category == "m" {
+                            self.bestAttemptContent?.categoryIdentifier = "withMuteMedia"
+                        }
                     }
                 }
             }
             
-            var messageId: MessageId?
-            if let peerId = peerId, let mid = request.content.userInfo["msg_id"] {
-                var idValue: Int32?
-                if let id = mid as? NSNumber {
-                    idValue = Int32(id.intValue)
-                } else if let id = mid as? NSString {
-                    idValue = id.intValue
-                }
-                
-                if let idValue = idValue {
-                    messageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: idValue)
-                }
-            }
+            self.bestAttemptContent?.userInfo = userInfo
             
-            content.body = "[timeout] \(messageId) \(content.body)"
-            
-            self.bestEffortContent = content
-            self.currentContentHandler = contentHandler
-            
-            var signal: Signal<Void, NoError> = .complete()
-            if let messageId = messageId {
-                let appBundleIdentifier = Bundle.main.bundleIdentifier!
-                guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
-                    return
-                }
-                
-                let appGroupName = "group.\(appBundleIdentifier.substring(to: lastDotRange.lowerBound))"
-                let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
-                
-                guard let appGroupUrl = maybeAppGroupUrl else {
-                    return
-                }
-                
-                let authorizedAccount = accountWithId(currentAccountId(appGroupPath: appGroupUrl.path), appGroupPath: appGroupUrl.path) |> mapToSignal { account -> Signal<Account, NoError> in
-                    switch account {
-                        case .left:
-                            return .complete()
-                        case let .right(authorizedAccount):
-                            return .single(authorizedAccount)
-                    }
-                }
-                
-                
-                signal = (authorizedAccount
-                    |> take(1)
-                    |> mapToSignal { account -> Signal<Message?, NoError> in
-                        setupAccount(account)
-                        return downloadMessage(account: account, message: messageId)
-                    }
-                    |> mapToSignal { message -> Signal<ResolvedNotificationContent?, NoError> in
-                        Queue.mainQueue().async {
-                            content.body = "[timeout5] \(message) \(content.body)"
-                            contentHandler(content)
+            self.cancelFetch?()
+            if let mediaBoxThumbnailImagePath = mediaBoxThumbnailImagePath, let tempImagePath = tempImagePath, let thumbnailImage = thumbnailImage {
+                self.cancelFetch = fetchImageWithAccount(account: account, resource: thumbnailImage, completion: { [weak self] data in
+                    DispatchQueue.main.async {
+                        guard let strongSelf = self else {
+                            return
                         }
-                        
-                        if let message = message {
-                            return .single(ResolvedNotificationContent(text: "R " + message.text, attachment: nil))
-                        } else {
-                            return .complete()
-                        }
-                    }
-                    |> deliverOnMainQueue
-                    |> mapToSignal { [weak self] resolvedContent -> Signal<Void, NoError> in
-                        if let strongSelf = self, let resolvedContent = resolvedContent {
-                            content.body = resolvedContent.text
-                            if let attachment = resolvedContent.attachment {
-                                content.attachments = [attachment]
-                            }
-                            contentHandler(content)
-                            strongSelf.bestEffortContent = nil
-                        }
-                        return .complete()
-                    })
-                    |> afterDisposed { [weak self] in
-                        Queue.mainQueue().async {
-                            if let strongSelf = self {
-                                if let bestEffortContent = strongSelf.bestEffortContent {
-                                    contentHandler(bestEffortContent)
+                        strongSelf.cancelFetch?()
+                        strongSelf.cancelFetch = nil
+                        if let data = data {
+                            let _ = try? data.write(to: URL(fileURLWithPath: mediaBoxThumbnailImagePath))
+                            if let _ = try? data.write(to: URL(fileURLWithPath: tempImagePath)) {
+                                if let attachment = try? UNNotificationAttachment(identifier: "image", url: URL(fileURLWithPath: tempImagePath)) {
+                                    strongSelf.bestAttemptContent?.attachments = [attachment]
                                 }
                             }
                         }
+                        if let bestAttemptContent = strongSelf.bestAttemptContent {
+                            contentHandler(bestAttemptContent)
+                        }
+                    }
+                })
+            } else {
+                if let bestAttemptContent = self.bestAttemptContent {
+                    contentHandler(bestAttemptContent)
                 }
             }
-            
-            self.disposable.set(signal.start())
         } else {
-            contentHandler(request.content)
-        }*/
+            if let bestAttemptContent = self.bestAttemptContent {
+                contentHandler(bestAttemptContent)
+            }
+        }
     }
     
     override func serviceExtensionTimeWillExpire() {
-        self.disposable.dispose()
+        self.cancelFetch?()
+        self.cancelFetch = nil
         
-        if let currentContentHandler = self.currentContentHandler, let bestEffortContent = self.bestEffortContent {
-            currentContentHandler(bestEffortContent)
+        if let contentHandler = self.contentHandler, let bestAttemptContent = self.bestAttemptContent {
+            contentHandler(bestAttemptContent)
         }
     }
 }
+
+
