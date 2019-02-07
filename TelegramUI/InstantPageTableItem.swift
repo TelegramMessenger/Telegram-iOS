@@ -140,7 +140,7 @@ final class InstantPageTableItem: InstantPageScrollableItem {
     
     func drawInTile(context: CGContext) {
         for cell in self.cells {
-            if cell.textItem == nil && cell.additionalItems.isEmpty {
+            if cell.cell.text == nil {
                 continue
             }
             context.saveGState()
