@@ -192,7 +192,7 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                             settings.chatWallpaper = .color(0x18222D)
                         default:
                             settings.theme = .builtin(.dayClassic)
-                            settings.chatWallpaper = .builtin
+                            settings.chatWallpaper = .builtin(WallpaperSettings())
                     }
                     let fontSizeMap: [Int32: PresentationFontSize] = [
                         14: .extraSmall,
@@ -231,7 +231,7 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                 }
                 
                 if let wallpaperInfo = wallpaperInfo as? TGBuiltinWallpaperInfo, wallpaperInfo.isDefault() {
-                    settings.chatWallpaper = .builtin
+                    settings.chatWallpaper = .builtin(WallpaperSettings())
                 } else if let wallpaperInfo = wallpaperInfo as? TGRemoteWallpaperInfo, let data = try? Data(contentsOf: URL(fileURLWithPath: documentsPath + "/wallpaper-data/_currentWallpaper.jpg")), let image = UIImage(data: data) {
                     let url = wallpaperInfo.fullscreenUrl()!
                     if let resource = resourceFromLegacyImageUrl(url) {
