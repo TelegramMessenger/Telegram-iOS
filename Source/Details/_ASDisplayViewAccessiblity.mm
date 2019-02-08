@@ -177,7 +177,7 @@ static void CollectAccessibilityElementsForContainer(ASDisplayNode *container, U
 
   SortAccessibilityElements(labeledNodes);
 
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_11_0
+/*#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_11_0
   if (AS_AVAILABLE_IOS_TVOS(11, 11)) {
     NSArray *attributedLabels = [labeledNodes valueForKey:@"accessibilityAttributedLabel"];
     NSMutableAttributedString *attributedLabel = [NSMutableAttributedString new];
@@ -185,14 +185,22 @@ static void CollectAccessibilityElementsForContainer(ASDisplayNode *container, U
       if (idx != 0) {
         [attributedLabel appendAttributedString:[[NSAttributedString alloc] initWithString:@", "]];
       }
-      [attributedLabel appendAttributedString:(NSAttributedString *)obj];
+      if ([obj isKindOfClass:[NSAttributedString class]]) {
+        [attributedLabel appendAttributedString:(NSAttributedString *)obj];
+      }
     }];
     accessiblityElement.accessibilityAttributedLabel = attributedLabel;
   } else
-#endif
+#endif*/
   {
-    NSArray *labels = [labeledNodes valueForKey:@"accessibilityLabel"];
-    accessiblityElement.accessibilityLabel = [labels componentsJoinedByString:@", "];
+    NSMutableString *result = [[NSMutableString alloc] init];
+    for (ASAccessibilityElement *labeledNode in labeledNodes) {
+      if ([result length] > 0) {
+        [result appendString:@", "];
+      }
+      [result appendString:[labeledNode.node accessibilityLabel]];
+    }
+    accessiblityElement.accessibilityLabel = result;
   }
 
   SortAccessibilityElements(actions);
@@ -251,6 +259,19 @@ static void CollectAccessibilityElementsForView(UIView *view, NSMutableArray *el
 
 #pragma mark - UIAccessibility
 
+- (NSString *)accessibilityLabel1 {
+  ASDisplayNode *viewNode = self.asyncdisplaykit_node;
+  if ([[viewNode class] instancesRespondToSelector:@selector(accessibilityLabel)]) {
+    return [viewNode accessibilityLabel];
+  } else {
+    return [super accessibilityLabel];
+  }
+}
+
+- (NSString *)accessibilityHint1 {
+  return [self.asyncdisplaykit_node accessibilityHint];
+}
+
 - (void)setAccessibilityElements:(NSArray *)accessibilityElements
 {
   ASDisplayNodeAssertMainThread();
@@ -265,7 +286,7 @@ static void CollectAccessibilityElementsForView(UIView *view, NSMutableArray *el
   if (viewNode == nil) {
     return @[];
   }
-  if (_accessibilityElements == nil) {
+  if (true || _accessibilityElements == nil) {
     _accessibilityElements = [viewNode accessibilityElements];
   }
   return _accessibilityElements;
