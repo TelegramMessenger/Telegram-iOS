@@ -43,6 +43,8 @@ private struct ShareGridTransaction {
     let animated: Bool
 }
 
+private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 17.0)!
+
 private func preparedGridEntryTransition(account: Account, from fromEntries: [SharePeerEntry], to toEntries: [SharePeerEntry], interfaceInteraction: ShareControllerInteraction) -> ShareGridTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
@@ -54,10 +56,12 @@ private func preparedGridEntryTransition(account: Account, from fromEntries: [Sh
 }
 
 final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
-    private let context: AccountContext
+    private let sharedContext: SharedAccountContext
+    private let account: Account
     private let theme: PresentationTheme
     private let strings: PresentationStrings
     private let controllerInteraction: ShareControllerInteraction
+    private let switchToAnotherAccount: () -> Void
     
     private let accountPeer: Peer
     private let foundPeers = Promise<[RenderedPeer]>([])
@@ -69,6 +73,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let contentGridNode: GridNode
     private let contentTitleNode: ASTextNode
     private let contentSubtitleNode: ASTextNode
+    private let contentTitleAccountNode: AvatarNode
     private let contentSeparatorNode: ASDisplayNode
     private let searchButtonNode: HighlightableButtonNode
     private let shareButtonNode: HighlightableButtonNode
@@ -82,12 +87,14 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var validLayout: (CGSize, CGFloat)?
     private var overrideGridOffsetTransition: ContainedViewLayoutTransition?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peers: [RenderedPeer], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool) {
-        self.context = context
+    init(sharedContext: SharedAccountContext, account: Account, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, peers: [RenderedPeer], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void) {
+        self.sharedContext = sharedContext
+        self.account = account
         self.theme = theme
         self.strings = strings
         self.controllerInteraction = controllerInteraction
         self.accountPeer = accountPeer
+        self.switchToAnotherAccount = switchToAnotherAccount
         
         let items: Signal<[SharePeerEntry], NoError> = combineLatest(.single(peers), foundPeers.get())
         |> map { initialPeers, foundPeers -> [SharePeerEntry] in
@@ -127,17 +134,29 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.contentSubtitleNode.truncationMode = .byTruncatingTail
         self.contentSubtitleNode.attributedText = NSAttributedString(string: strings.ShareMenu_SelectChats, font: subtitleFont, textColor: self.theme.actionSheet.secondaryTextColor)
         
+        self.contentTitleAccountNode = AvatarNode(font: avatarFont)
+        var hasOtherAccounts = false
+        if switchableAccounts.count > 1, let info = switchableAccounts.first(where: { $0.account.id == account.id }) {
+            hasOtherAccounts = true
+            self.contentTitleAccountNode.setPeer(account: account, theme: theme, peer: info.peer, emptyColor: nil, synchronousLoad: false)
+        } else {
+            self.contentTitleAccountNode.isHidden = true
+        }
+        
         self.searchButtonNode = HighlightableButtonNode()
         self.searchButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/SearchIcon"), color: self.theme.actionSheet.controlAccentColor), for: [])
         
         self.shareButtonNode = HighlightableButtonNode()
         self.shareButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/ShareIcon"), color: self.theme.actionSheet.controlAccentColor), for: [])
-        self.shareButtonNode.isHidden = !externalShare
         
         self.contentSeparatorNode = ASDisplayNode()
         self.contentSeparatorNode.isLayerBacked = true
         self.contentSeparatorNode.displaysAsynchronously = false
         self.contentSeparatorNode.backgroundColor = self.theme.actionSheet.opaqueItemSeparatorColor
+        
+        if !externalShare || hasOtherAccounts {
+            self.shareButtonNode.isHidden = true
+        }
         
         super.init()
         
@@ -145,6 +164,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         
         self.addSubnode(self.contentTitleNode)
         self.addSubnode(self.contentSubtitleNode)
+        self.addSubnode(self.contentTitleAccountNode)
         self.addSubnode(self.searchButtonNode)
         self.addSubnode(self.shareButtonNode)
         self.addSubnode(self.contentSeparatorNode)
@@ -157,7 +177,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
                 strongSelf.entries = entries
                 
                 let firstTime = previousEntries == nil
-                let transition = preparedGridEntryTransition(account: context.account, from: previousEntries ?? [], to: entries, interfaceInteraction: controllerInteraction)
+                let transition = preparedGridEntryTransition(account: account, from: previousEntries ?? [], to: entries, interfaceInteraction: controllerInteraction)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
         }))
@@ -168,6 +188,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         
         self.searchButtonNode.addTarget(self, action: #selector(self.searchPressed), forControlEvents: .touchUpInside)
         self.shareButtonNode.addTarget(self, action: #selector(self.sharePressed), forControlEvents: .touchUpInside)
+        self.contentTitleAccountNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.accountTapGesture(_:))))
     }
     
     deinit {
@@ -297,6 +318,10 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         let shareButtonFrame = CGRect(origin: CGPoint(x: size.width - titleButtonSize.width - 12.0, y: titleOffset + 12.0), size: titleButtonSize)
         transition.updateFrame(node: self.shareButtonNode, frame: shareButtonFrame)
         
+        let avatarButtonSize = CGSize(width: 36.0, height: 36.0)
+        let avatarButtonFrame = CGRect(origin: CGPoint(x: size.width - avatarButtonSize.width - 20.0, y: titleOffset + 15.0), size: avatarButtonSize)
+        transition.updateFrame(node: self.contentTitleAccountNode, frame: avatarButtonFrame)
+        
         transition.updateFrame(node: self.contentSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: titleOffset + titleAreaHeight), size: CGSize(width: size.width, height: UIScreenPixel)))
         
         if rawTitleOffset.isLess(than: -titleAreaHeight) {
@@ -356,14 +381,21 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        let nodes: [ASDisplayNode] = [self.searchButtonNode, self.shareButtonNode]
+        let nodes: [ASDisplayNode] = [self.searchButtonNode, self.shareButtonNode, self.contentTitleAccountNode]
         for node in nodes {
             let nodeFrame = node.frame
+            if node.isHidden {
+                continue
+            }
             if let result = node.hitTest(point.offsetBy(dx: -nodeFrame.minX, dy: -nodeFrame.minY), with: event) {
                 return result
             }
         }
         
         return super.hitTest(point, with: event)
+    }
+    
+    @objc private func accountTapGesture(_ recognizer: UITapGestureRecognizer) {
+        self.switchToAnotherAccount()
     }
 }

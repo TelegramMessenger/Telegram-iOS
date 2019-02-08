@@ -3,13 +3,15 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import Postbox
 
 final class AuthorizationSequencePhoneEntryController: ViewController {
     private var controllerNode: AuthorizationSequencePhoneEntryControllerNode {
         return self.displayNode as! AuthorizationSequencePhoneEntryControllerNode
     }
     
-    private let otherAccountPhoneNumbers: [String]
+    private let sharedContext: SharedAccountContext
+    private let otherAccountPhoneNumbers: ((String, AccountRecordId)?, [(String, AccountRecordId)])
     private let network: Network
     private let strings: PresentationStrings
     private let theme: AuthorizationTheme
@@ -36,7 +38,8 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(otherAccountPhoneNumbers: [String], network: Network, strings: PresentationStrings, theme: AuthorizationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContext, otherAccountPhoneNumbers: ((String, AccountRecordId)?, [(String, AccountRecordId)]), network: Network, strings: PresentationStrings, theme: AuthorizationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+        self.sharedContext = sharedContext
         self.otherAccountPhoneNumbers = otherAccountPhoneNumbers
         self.network = network
         self.strings = strings
@@ -58,7 +61,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
             back()
         }
         
-        if !otherAccountPhoneNumbers.isEmpty {
+        if !otherAccountPhoneNumbers.1.isEmpty {
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         }
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
@@ -131,8 +134,24 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     @objc func nextPressed() {
         let (_, _, number) = self.controllerNode.codeAndNumber
         if !number.isEmpty {
-            if self.otherAccountPhoneNumbers.lazy.map(formatPhoneNumber).contains(formatPhoneNumber(self.controllerNode.currentNumber)) {
-                self.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: self.theme), title: nil, text: self.strings.Login_PhoneNumberAlreadyAuthorized, actions: [TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {})]), in: .window(.root))
+            let logInNumber = formatPhoneNumber(self.controllerNode.currentNumber)
+            var existing: (String, AccountRecordId)?
+            for (number, id) in self.otherAccountPhoneNumbers.1 {
+                if formatPhoneNumber(number) == logInNumber {
+                    existing = (number, id)
+                }
+            }
+            
+            if let (_, id) = existing {
+                var actions: [TextAlertAction] = []
+                if let (current, _) = self.otherAccountPhoneNumbers.0, logInNumber != formatPhoneNumber(current) {
+                    actions.append(TextAlertAction(type: .genericAction, title: self.strings.Login_PhoneNumberAlreadyAuthorizedSwitch, action: { [weak self] in
+                        self?.sharedContext.switchToAccount(id: id)
+                        self?.back()
+                    }))
+                }
+                actions.append(TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {}))
+                self.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: self.theme), title: nil, text: self.strings.Login_PhoneNumberAlreadyAuthorized, actions: actions), in: .window(.root))
             } else {
                 self.loginWithNumber?(self.controllerNode.currentNumber)
             }

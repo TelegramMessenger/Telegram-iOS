@@ -50,6 +50,7 @@ public final class TelegramRootController: NavigationController {
     public func addRootControllers(showCallsTab: Bool) {
         let tabBarController = TabBarController(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme))
         let chatListController = ChatListController(context: self.context, groupId: nil, controlsHistoryPreload: true)
+        chatListController.tabBarItem.badgeValue = self.context.sharedContext.switchingData.chatListBadge
         let callListController = CallListController(context: self.context, mode: .tab)
         
         var controllers: [ViewController] = []
@@ -62,9 +63,9 @@ public final class TelegramRootController: NavigationController {
         }
         controllers.append(chatListController)
         
-        let restoreSettignsController = self.context.sharedContext.switchingSettingsController
+        let restoreSettignsController = self.context.sharedContext.switchingData.settingsController
         restoreSettignsController?.updateContext(context: self.context)
-        self.context.sharedContext.switchingSettingsController = nil
+        self.context.sharedContext.switchingData = (nil, nil, nil)
         
         let accountSettingsController = restoreSettignsController ?? settingsController(context: self.context, accountManager: context.sharedContext.accountManager)
         controllers.append(accountSettingsController)

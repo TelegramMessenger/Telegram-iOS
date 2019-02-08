@@ -151,7 +151,7 @@ final class CallControllerNode: ASDisplayNode {
         self.view.addGestureRecognizer(tapRecognizer)
     }
     
-    func updatePeer(peer: Peer) {
+    func updatePeer(accountPeer: Peer, peer: Peer, hasOther: Bool) {
         if !arePeersEqual(self.peer, peer) {
             self.peer = peer
             if let peerReference = PeerReference(peer), !peer.profileImageRepresentations.isEmpty {
@@ -164,6 +164,13 @@ final class CallControllerNode: ASDisplayNode {
             }
             
             self.statusNode.title = peer.displayTitle
+            if hasOther {
+                self.statusNode.subtitle = self.presentationData.strings.Call_AnsweringWithAccount(accountPeer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)).0
+                
+                if let callState = callState {
+                    self.updateCallState(callState)
+                }
+            }
             
             if let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
@@ -211,7 +218,11 @@ final class CallControllerNode: ASDisplayNode {
                     statusValue = .text(self.presentationData.strings.Call_StatusEnded)
                 }
             case .ringing:
-                statusValue = .text(self.presentationData.strings.Call_StatusIncoming)
+                var text = self.presentationData.strings.Call_StatusIncoming
+                if !self.statusNode.subtitle.isEmpty {
+                    text += "\n\(self.statusNode.subtitle)"
+                }
+                statusValue = .text(text)
             case let .active(timestamp, reception, keyVisualHash):
                 let strings = self.presentationData.strings
                 statusValue = .timer({ value in

@@ -123,21 +123,21 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                         if let largest = largestImageRepresentation(representations) {
                             if settings.blur {
                                 var image: UIImage?
-                                let _ = item.context.account.postbox.mediaBox.cachedResourceRepresentation(largest.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                                let _ = item.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(largest.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                                     if data.complete {
                                         image = UIImage(contentsOfFile: data.path)?.precomposed()
                                     }
                                 })
                                 updatedBackgroundImage = image
                             }
-                            if updatedBackgroundImage == nil, let path = item.context.account.postbox.mediaBox.completedResourcePath(largest.resource) {
+                            if updatedBackgroundImage == nil, let path = item.context.sharedContext.accountManager.mediaBox.completedResourcePath(largest.resource) {
                                 updatedBackgroundImage = UIImage(contentsOfFile: path)?.precomposed()
                             }
                         }
                     case let .file(file):
                         if file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
                             var image: UIImage?
-                            let _ = item.context.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                            let _ = item.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                                 if data.complete {
                                     image = UIImage(contentsOfFile: data.path)?.precomposed()
                                 }
@@ -145,14 +145,14 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                             updatedBackgroundImage = image
                         } else if file.settings.blur {
                             var image: UIImage?
-                            let _ = item.context.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
+                            let _ = item.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                                 if data.complete {
                                     image = UIImage(contentsOfFile: data.path)?.precomposed()
                                 }
                             })
                             updatedBackgroundImage = image
                         }
-                        if updatedBackgroundImage == nil, let path = item.context.account.postbox.mediaBox.completedResourcePath(file.file.resource) {
+                        if updatedBackgroundImage == nil, let path = item.context.sharedContext.accountManager.mediaBox.completedResourcePath(file.file.resource) {
                             updatedBackgroundImage = UIImage(contentsOfFile: path)?.precomposed()
                         }
                 }

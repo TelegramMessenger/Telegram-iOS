@@ -96,6 +96,41 @@ public class ChatMessageItemView: ListViewItemNode {
     
     var item: ChatMessageItem?
     
+    override public var accessibilityLabel: String? {
+        get {
+            guard let item = self.item else {
+                return nil
+            }
+            if let author = item.message.author {
+                if item.message.effectivelyIncoming(item.context.account.peerId) {
+                    return author.displayTitle
+                } else {
+                    return "Outgoing message"
+                }
+            } else {
+                return "Message"
+            }
+        } set(value) {
+        }
+    }
+    
+    override public var accessibilityValue: String? {
+        get {
+            guard let item = self.item else {
+                return nil
+            }
+            if let chatPeer = item.message.peers[item.message.id.peerId] {
+                let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: item.message, chatPeer: RenderedPeer(peer: chatPeer), accountPeerId: item.context.account.peerId)
+                var result = ""
+                result += "\(messageText)"
+                return result
+            } else {
+                return "Empty"
+            }
+        } set(value) {
+        }
+    }
+    
     public required convenience init() {
         self.init(layerBacked: false)
     }
@@ -103,6 +138,8 @@ public class ChatMessageItemView: ListViewItemNode {
     public init(layerBacked: Bool) {
         super.init(layerBacked: layerBacked, dynamicBounce: true, rotated: true)
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        
+        self.isAccessibilityElement = true
     }
 
     required public init?(coder aDecoder: NSCoder) {

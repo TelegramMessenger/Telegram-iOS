@@ -48,10 +48,16 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.textNode)
         
-        self.avatarNode.setPeer(account: context.account, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer)
+        if chatPeer.id == context.account.peerId {
+            self.avatarNode.setPeer(account: context.account, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer, overrideImage: .savedMessagesIcon)
+        } else {
+            self.avatarNode.setPeer(account: context.account, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: peer)
+        }
         
         let text: (String, [(Int, NSRange)])
-        if chatPeer is TelegramGroup || chatPeer is TelegramChannel {
+        if chatPeer.id == context.account.peerId {
+            text = (strings.ChatList_DeleteSavedMessagesConfirmation, [])
+        } else if chatPeer is TelegramGroup || chatPeer is TelegramChannel {
             text = strings.ChatList_LeaveGroupConfirmation(peer.displayTitle)
         } else if chatPeer is TelegramSecretChat {
             text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle)

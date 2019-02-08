@@ -14,7 +14,7 @@ private func generateArrowImage(_ theme: PresentationTheme) -> UIImage? {
     })
 }
 
-private func generateCheckIcon(color: UIColor) -> UIImage? {
+func generateItemListCheckIcon(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 12.0, height: 10.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setStrokeColor(color.cgColor)
@@ -27,10 +27,10 @@ private func generateCheckIcon(color: UIColor) -> UIImage? {
     })
 }
 
-private func generatePlusIcon(_ theme: PresentationTheme) -> UIImage? {
+func generateItemListPlusIcon(_ color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 18.0, height: 18.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(theme.list.itemAccentColor.cgColor)
+        context.setFillColor(color.cgColor)
         context.setLineCap(.round)
         let lineWidth: CGFloat = 2.0
         context.fill(CGRect(x: floorToScreenPixels((18.0 - lineWidth) / 2.0), y: 0.0, width: lineWidth, height: 18.0))
@@ -45,18 +45,20 @@ struct PresentationResourcesItemList {
     
     static func checkIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListCheckIcon.rawValue, { theme in
-            return generateCheckIcon(color: theme.list.itemAccentColor)
+            return generateItemListCheckIcon(color: theme.list.itemAccentColor)
         })
     }
     
     static func secondaryCheckIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListSecondaryCheckIcon.rawValue, { theme in
-            return generateCheckIcon(color: theme.list.itemSecondaryTextColor)
+            return generateItemListCheckIcon(color: theme.list.itemSecondaryTextColor)
         })
     }
     
     static func plusIconImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.itemListPlusIcon.rawValue, generatePlusIcon)
+        return theme.image(PresentationResourceKey.itemListPlusIcon.rawValue, { theme in
+            return generateItemListPlusIcon(theme.list.itemAccentColor)
+        })
     }
     
     static func stickerUnreadDotImage(_ theme: PresentationTheme) -> UIImage? {

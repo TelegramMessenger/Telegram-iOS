@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import AsyncDisplayKit
 import Display
 import Postbox
@@ -37,14 +38,14 @@ final class ChatListControllerNode: ASDisplayNode {
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
     var requestAddContact: ((String) -> Void)?
     
-    override var accessibilityElements: [Any]? {
+    /*override var accessibilityElements: [Any]? {
         get {
             var accessibilityElements: [Any] = []
-            addAccessibilityChildren(of: self.chatListNode, to: &accessibilityElements)
+            addAccessibilityChildren(of: self.chatListNode, container: self.chatListNode, to: &accessibilityElements)
             return accessibilityElements
         } set(value) {
         }
-    }
+    }*/
     
     init(context: AccountContext, groupId: PeerGroupId?, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListController) {
         self.context = context

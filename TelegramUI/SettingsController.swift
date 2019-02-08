@@ -6,6 +6,8 @@ import TelegramCore
 import LegacyComponents
 import MtProtoKitDynamic
 
+private let maximumNumberOfAccounts = 3
+
 private final class SettingsItemIcons {
     static let proxy = UIImage(bundleImageName: "Settings/MenuIcons/Proxy")?.precomposed()
     static let savedMessages = UIImage(bundleImageName: "Settings/MenuIcons/SavedMessages")?.precomposed()
@@ -331,7 +333,15 @@ private enum SettingsEntry: ItemListNodeEntry {
                     arguments.openUsername()
                 })
             case let .account(_, account, theme, strings, peer, badgeCount, revealed):
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: "."), nameDisplayOrder: .firstLast, account: account, peer: peer, aliasHandling: .standard, presence: nil, text: .none, label: badgeCount == 0 ? .none : .badge("\(badgeCount)"), editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, sectionId: self.section, action: {
+                var label: ItemListPeerItemLabel = .none
+                if badgeCount > 0 {
+                    if badgeCount > 1000 {
+                        label = .badge("\(badgeCount / 1000)K")
+                    } else {
+                        label = .badge("\(badgeCount)")
+                    }
+                }
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: "."), nameDisplayOrder: .firstLast, account: account, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, sectionId: self.section, action: {
                     arguments.switchToAccount(account.id)
                 }, setPeerIdWithRevealedOptions: { lhs, rhs in
                     var lhsAccountId: AccountRecordId?
@@ -430,7 +440,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
                 entries.append(.account(index, peerAccount, presentationData.theme, presentationData.strings, peer, badgeCount, state.accountIdWithRevealedOptions == peerAccount.id))
                 index += 1
             }
-            if accountsAndPeers.count < 5 {
+            if accountsAndPeers.count < maximumNumberOfAccounts + 1 {
                 entries.append(.addAccount(presentationData.theme, presentationData.strings.Settings_AddAccount))
             }
         }
@@ -480,10 +490,17 @@ public protocol SettingsController: class {
     func updateContext(context: AccountContext)
 }
 
-private final class SettingsControllerImpl: ItemListController<SettingsEntry>, SettingsController {
+private final class SettingsControllerImpl: ItemListController<SettingsEntry>, SettingsController, TabBarContainedController {
+    let sharedContext: SharedAccountContext
     let contextValue: Promise<AccountContext>
+    var accountsAndPeersValue: ((Account, Peer)?, [(Account, Peer, Int32)])?
+    var accountsAndPeersDisposable: Disposable?
     
-    init(currentContext: AccountContext, contextValue: Promise<AccountContext>, state: Signal<(ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?) {
+    var switchToAccount: ((AccountRecordId) -> Void)?
+    var addAccount: (() -> Void)?
+    
+    init(currentContext: AccountContext, contextValue: Promise<AccountContext>, state: Signal<(ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?, accountsAndPeers: Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError>) {
+        self.sharedContext = currentContext.sharedContext
         self.contextValue = contextValue
         let presentationData = currentContext.sharedContext.currentPresentationData.with { $0 }
         
@@ -496,14 +513,34 @@ private final class SettingsControllerImpl: ItemListController<SettingsEntry>, S
         }
         
         super.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: updatedPresentationData, state: state, tabBarItem: tabBarItem)
+        
+        self.accountsAndPeersDisposable = (accountsAndPeers
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            self?.accountsAndPeersValue = value
+        })
     }
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        self.accountsAndPeersDisposable?.dispose()
+    }
+    
     func updateContext(context: AccountContext) {
         self.contextValue.set(.single(context))
+    }
+    
+    func presentTabBarPreviewingController(sourceNodes: [ASDisplayNode]) {
+        guard let (maybePrimary, other) = self.accountsAndPeersValue, let primary = maybePrimary else {
+            return
+        }
+        self.sharedContext.mainWindow?.present(TabBarAccountSwitchController(sharedContext: self.sharedContext, accounts: (primary, other), canAddAccounts: other.count + 1 < maximumNumberOfAccounts, switchToAccount: { [weak self] id in
+            self?.switchToAccount?(id)
+        }, addAccount: { [weak self] in
+            self?.addAccount?()
+        }, sourceNodes: sourceNodes), on: .root)
     }
 }
 
@@ -552,8 +589,8 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     let auxiliaryMethods = context.account.auxiliaryMethods
     let rootPath = rootPathForBasePath(context.sharedContext.applicationBindings.containerPath)
     
-    let accountsAndPeersSignal: Signal<[(Account, Peer, Int32)], NoError> = context.sharedContext.activeAccounts
-    |> mapToSignal { primary, activeAccounts, _ -> Signal<[(Account, Peer, Int32)], NoError> in
+    let accountsAndPeersSignal: Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> = context.sharedContext.activeAccounts
+    |> mapToSignal { primary, activeAccounts, _ -> Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> in
         var accounts: [Signal<(Account, Peer, Int32)?, NoError>] = []
         func accountWithPeer(_ account: Account) -> Signal<(Account, Peer, Int32)?, NoError> {
             return combineLatest(account.postbox.peerView(id: account.peerId), renderedTotalUnreadCount(accountManager: context.sharedContext.accountManager, postbox: account.postbox))
@@ -572,18 +609,20 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             }
         }
         for (_, account) in activeAccounts {
-            if account.id != primary?.id {
-                accounts.append(accountWithPeer(account))
-            }
+            accounts.append(accountWithPeer(account))
         }
         
         return combineLatest(accounts)
-        |> map { accounts -> [(Account, Peer, Int32)] in
-            return accounts.compactMap({ $0 })
+        |> map { accounts -> ((Account, Peer)?, [(Account, Peer, Int32)]) in
+            var primaryRecord: (Account, Peer)?
+            if let first = accounts.filter({ $0?.0.id == primary?.id }).first, let (account, peer, _) = first {
+                primaryRecord = (account, peer)
+            }
+            return (primaryRecord, accounts.filter({ $0?.0.id != primary?.id }).compactMap({ $0 }))
         }
     }
     
-    let accountsAndPeers = Promise<[(Account, Peer, Int32)]>()
+    let accountsAndPeers = Promise<((Account, Peer)?, [(Account, Peer, Int32)])>()
     accountsAndPeers.set(accountsAndPeersSignal)
 
     let openFaq: (Promise<ResolvedUrl>) -> Void = { resolvedUrl in
@@ -787,7 +826,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 guard let peerView = view.views[peerKey] as? PeerView, let peer = peerView.peers[context.account.peerId] as? TelegramUser else {
                     return .complete()
                 }
-                return .single((peer, cachedData, accountsAndPeers.count < 5))
+                return .single((peer, cachedData, accountsAndPeers.1.count < maximumNumberOfAccounts + 1))
             }
             |> take(1))
             |> afterDisposed {
@@ -1092,7 +1131,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         }
         
         let (hasPassport, hasWatchApp) = hasPassportAndWatch
-        let listState = ItemListNodeState(entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers), style: .blocks)
+        let listState = ItemListNodeState(entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }
@@ -1107,10 +1146,65 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
     }
     
-    let controller = SettingsControllerImpl(currentContext: context, contextValue: contextValue, state: signal, tabBarItem: combineLatest(updatedPresentationData, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()) |> map { presentationData, notificationsAuthorizationStatus, notificationsWarningSuppressed in
-        let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
-        return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: icon, selectedImage: icon, badgeValue: notificationsWarning ? "!" : nil)
+    let accountTabBarAvatarBadge: Signal<Int32, NoError> = accountsAndPeers.get()
+    |> map { primary, other -> Int32 in
+        if let _ = primary, !other.isEmpty {
+            return other.reduce(into: 0, { (result, next) in
+                result += next.2
+            })
+        } else {
+            return 0
+        }
+    }
+    |> distinctUntilChanged
+    
+    let accountTabBarAvatar: Signal<UIImage?, NoError> = accountsAndPeers.get()
+    |> map { primary, other -> (Account, Peer)? in
+        if let primary = primary, !other.isEmpty {
+            return (primary.0, primary.1)
+        } else {
+            return nil
+        }
+    }
+    |> distinctUntilChanged(isEqual: { $0?.0 === $1?.0 && arePeersEqual($0?.1, $1?.1) })
+    |> mapToSignal { primary -> Signal<UIImage?, NoError> in
+        if let primary = primary {
+            if let signal = peerAvatarImage(account: primary.0, peer: primary.1, authorOfMessage: nil, representation: primary.1.profileImageRepresentations.first, displayDimensions: CGSize(width: 25.0, height: 25.0), emptyColor: nil, synchronousLoad: false) {
+                return signal
+                |> map { image -> UIImage? in
+                    return image.flatMap { image -> UIImage in
+                        return image.withRenderingMode(.alwaysOriginal)
+                    }
+                }
+            } else {
+                return .single(nil)
+            }
+        } else {
+            return .single(nil)
+        }
+    }
+    |> distinctUntilChanged(isEqual: { lhs, rhs in
+        if lhs !== rhs {
+            return false
+        }
+        return true
     })
+    
+    let tabBarItem: Signal<ItemListControllerTabBarItem, NoError> = combineLatest(queue: .mainQueue(), updatedPresentationData, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), accountTabBarAvatar, accountTabBarAvatarBadge)
+    |> map { presentationData, notificationsAuthorizationStatus, notificationsWarningSuppressed, accountTabBarAvatar, accountTabBarAvatarBadge -> ItemListControllerTabBarItem in
+        let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
+        var otherAccountsBadge: String?
+        if accountTabBarAvatarBadge > 0 {
+            if accountTabBarAvatarBadge > 1000 {
+                otherAccountsBadge = "\(accountTabBarAvatarBadge / 1000)K"
+            } else {
+                otherAccountsBadge = "\(accountTabBarAvatarBadge)"
+            }
+        }
+        return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: accountTabBarAvatar ?? icon, selectedImage: accountTabBarAvatar ?? icon, tintImages: accountTabBarAvatar == nil, badgeValue: notificationsWarning ? "!" : otherAccountsBadge)
+    }
+    
+    let controller = SettingsControllerImpl(currentContext: context, contextValue: contextValue, state: signal, tabBarItem: tabBarItem, accountsAndPeers: accountsAndPeers.get())
     pushControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)
     }
@@ -1215,7 +1309,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             let _ = (accountsAndPeers.get()
             |> take(1)
             |> deliverOnMainQueue).start(next: { accountsAndPeers in
-                for (account, _, _) in accountsAndPeers {
+                for (account, _, _) in accountsAndPeers.1 {
                     if account.id == id {
                         selectedAccount = account
                         break
@@ -1229,6 +1323,25 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             }
         }
         return nil
+    }
+    controller.commitPreview = { previewController in
+        if let chatListController = previewController as? ChatListController {
+            context.sharedContext.switchToAccount(id: chatListController.context.account.id, withChatListController: chatListController)
+        }
+    }
+    controller.switchToAccount = { id in
+        let _ = (contextValue.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { context in
+            context.sharedContext.switchToAccount(id: id)
+        })
+    }
+    controller.addAccount = {
+        let _ = (contextValue.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { context in
+            context.sharedContext.beginNewAuth(testingEnvironment: false)
+        })
     }
     return controller
 }

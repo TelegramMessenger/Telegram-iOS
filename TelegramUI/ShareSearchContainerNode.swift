@@ -161,7 +161,8 @@ private func preparedRecentEntryTransition(account: Account, from fromEntries: [
 }
 
 final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
-    private let context: AccountContext
+    private let sharedContext: SharedAccountContext
+    private let account: Account
     private let strings: PresentationStrings
     private let controllerInteraction: ShareControllerInteraction
     
@@ -191,8 +192,9 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let searchQuery = ValuePromise<String>("", ignoreRepeated: true)
     private let searchDisposable = MetaDisposable()
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction, recentPeers: [RenderedPeer]) {
-        self.context = context
+    init(sharedContext: SharedAccountContext, account: Account, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction, recentPeers recentPeerList: [RenderedPeer]) {
+        self.sharedContext = sharedContext
+        self.account = account
         self.strings = strings
         self.controllerInteraction = controllerInteraction
         
@@ -235,65 +237,65 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.cancelButtonNode.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
         
         let foundItems = searchQuery.get()
-            |> mapToSignal { query -> Signal<[ShareSearchPeerEntry]?, NoError> in
-                if !query.isEmpty {
-                    let accountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId) |> take(1)
-                    let foundLocalPeers = context.account.postbox.searchPeers(query: query.lowercased(), groupId: nil)
-                    let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], []))
-                    |> then(
-                        searchPeers(account: context.account, query: query)
-                        |> delay(0.2, queue: Queue.concurrentDefaultQueue())
-                    )
+        |> mapToSignal { query -> Signal<[ShareSearchPeerEntry]?, NoError> in
+            if !query.isEmpty {
+                let accountPeer = account.postbox.loadedPeerWithId(account.peerId) |> take(1)
+                let foundLocalPeers = account.postbox.searchPeers(query: query.lowercased(), groupId: nil)
+                let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], []))
+                |> then(
+                    searchPeers(account: account, query: query)
+                    |> delay(0.2, queue: Queue.concurrentDefaultQueue())
+                )
+                
+                return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers)
+                |> map { accountPeer, foundLocalPeers, foundRemotePeers -> [ShareSearchPeerEntry]? in
+                    var entries: [ShareSearchPeerEntry] = []
+                    var index: Int32 = 0
                     
-                    return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers)
-                    |> map { accountPeer, foundLocalPeers, foundRemotePeers -> [ShareSearchPeerEntry]? in
-                        var entries: [ShareSearchPeerEntry] = []
-                        var index: Int32 = 0
-                        
-                        var existingPeerIds = Set<PeerId>()
-                        
-                        let lowercasedQuery = query.lowercased()
-                        if strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery) {
-                            if !existingPeerIds.contains(accountPeer.id) {
-                                existingPeerIds.insert(accountPeer.id)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: accountPeer), theme: theme, strings: strings))
-                                index += 1
-                            }
+                    var existingPeerIds = Set<PeerId>()
+                    
+                    let lowercasedQuery = query.lowercased()
+                    if strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery) {
+                        if !existingPeerIds.contains(accountPeer.id) {
+                            existingPeerIds.insert(accountPeer.id)
+                            entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: accountPeer), theme: theme, strings: strings))
+                            index += 1
                         }
-                        
-                        for renderedPeer in foundLocalPeers {
-                            if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id {
-                                if !existingPeerIds.contains(renderedPeer.peerId) && canSendMessagesToPeer(peer) {
-                                    existingPeerIds.insert(renderedPeer.peerId)
-                                    entries.append(ShareSearchPeerEntry(index: index, peer: renderedPeer, theme: theme, strings: strings))
-                                    index += 1
-                                }
-                            }
-                        }
-                        
-                        for foundPeer in foundRemotePeers.0 {
-                            let peer = foundPeer.peer
-                            if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
-                                existingPeerIds.insert(peer.id)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: foundPeer.peer), theme: theme, strings: strings))
-                                index += 1
-                            }
-                        }
-                        
-                        for foundPeer in foundRemotePeers.1 {
-                            let peer = foundPeer.peer
-                            if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
-                                existingPeerIds.insert(peer.id)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: peer), theme: theme, strings: strings))
-                                index += 1
-                            }
-                        }
-                        
-                        return entries
                     }
-                } else {
-                    return .single(nil)
+                    
+                    for renderedPeer in foundLocalPeers {
+                        if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id {
+                            if !existingPeerIds.contains(renderedPeer.peerId) && canSendMessagesToPeer(peer) {
+                                existingPeerIds.insert(renderedPeer.peerId)
+                                entries.append(ShareSearchPeerEntry(index: index, peer: renderedPeer, theme: theme, strings: strings))
+                                index += 1
+                            }
+                        }
+                    }
+                    
+                    for foundPeer in foundRemotePeers.0 {
+                        let peer = foundPeer.peer
+                        if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
+                            existingPeerIds.insert(peer.id)
+                            entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: foundPeer.peer), theme: theme, strings: strings))
+                            index += 1
+                        }
+                    }
+                    
+                    for foundPeer in foundRemotePeers.1 {
+                        let peer = foundPeer.peer
+                        if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
+                            existingPeerIds.insert(peer.id)
+                            entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: peer), theme: theme, strings: strings))
+                            index += 1
+                        }
+                    }
+                    
+                    return entries
                 }
+            } else {
+                return .single(nil)
+            }
         }
         
         let previousSearchItems = Atomic<[ShareSearchPeerEntry]?>(value: nil)
@@ -304,7 +306,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 strongSelf.entries = entries ?? []
                 
                 let firstTime = previousEntries == nil
-                let transition = preparedGridEntryTransition(account: context.account, from: previousEntries ?? [], to: entries ?? [], interfaceInteraction: controllerInteraction)
+                let transition = preparedGridEntryTransition(account: account, from: previousEntries ?? [], to: entries ?? [], interfaceInteraction: controllerInteraction)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
                 
                 if (previousEntries == nil) != (entries == nil) {
@@ -325,29 +327,44 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
             self?.searchQuery.set(text)
         }
         
-        var recentItemList: [ShareSearchRecentEntry] = []
-        recentItemList.append(.topPeers(theme, strings))
-        var index = 0
-        for peer in recentPeers {
-            if let mainPeer = peer.peers[peer.peerId], canSendMessagesToPeer(mainPeer) {
-                recentItemList.append(.peer(index: index, theme: theme, peer: mainPeer, associatedPeer: mainPeer.associatedPeerId.flatMap { peer.peers[$0] }, strings))
-                index += 1
+        let hasRecentPeers = recentPeers(account: account)
+        |> map { value -> Bool in
+            switch value {
+            case let .peers(peers):
+                return !peers.isEmpty
+            case .disabled:
+                return false
             }
         }
+        |> distinctUntilChanged
         
-        let recentItems: Signal<[ShareSearchRecentEntry], NoError> = .single(recentItemList)
+        let recentItems: Signal<[ShareSearchRecentEntry], NoError> = hasRecentPeers
+        |> map { hasRecentPeers -> [ShareSearchRecentEntry] in
+            var recentItemList: [ShareSearchRecentEntry] = []
+            if hasRecentPeers {
+                recentItemList.append(.topPeers(theme, strings))
+            }
+            var index = 0
+            for peer in recentPeerList {
+                if let mainPeer = peer.peers[peer.peerId], canSendMessagesToPeer(mainPeer) {
+                    recentItemList.append(.peer(index: index, theme: theme, peer: mainPeer, associatedPeer: mainPeer.associatedPeerId.flatMap { peer.peers[$0] }, strings))
+                    index += 1
+                }
+            }
+            return recentItemList
+        }
         let previousRecentItems = Atomic<[ShareSearchRecentEntry]?>(value: nil)
         self.recentDisposable.set((recentItems
-            |> deliverOnMainQueue).start(next: { [weak self] entries in
-                if let strongSelf = self {
-                    let previousEntries = previousRecentItems.swap(entries)
-                    strongSelf.recentEntries = entries
-                    
-                    let firstTime = previousEntries == nil
-                    let transition = preparedRecentEntryTransition(account: context.account, from: previousEntries ?? [], to: entries, interfaceInteraction: controllerInteraction)
-                    strongSelf.enqueueRecentTransition(transition, firstTime: firstTime)
-                }
-            }))
+        |> deliverOnMainQueue).start(next: { [weak self] entries in
+            if let strongSelf = self {
+                let previousEntries = previousRecentItems.swap(entries)
+                strongSelf.recentEntries = entries
+                
+                let firstTime = previousEntries == nil
+                let transition = preparedRecentEntryTransition(account: account, from: previousEntries ?? [], to: entries, interfaceInteraction: controllerInteraction)
+                strongSelf.enqueueRecentTransition(transition, firstTime: firstTime)
+            }
+        }))
     }
     
     deinit {

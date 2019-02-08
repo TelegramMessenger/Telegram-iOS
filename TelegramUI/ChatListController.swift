@@ -11,7 +11,7 @@ public func useSpecialTabBarIcons() -> Bool {
 public class ChatListController: TelegramController, KeyShortcutResponder, UIViewControllerPreviewingDelegate {
     private var validLayout: ContainerViewLayout?
     
-    private let context: AccountContext
+    let context: AccountContext
     private let controlsHistoryPreload: Bool
     private let hideNetworkActivityStatus: Bool
     
@@ -656,6 +656,8 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     strongSelf.tabBarItem.selectedImage = tabImageUnread
             }
         })*/
+        
+        self.ready.set(self.chatListDisplayNode.chatListNode.ready)
         
         self.displayNodeDidLoad()
     }

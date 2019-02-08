@@ -240,7 +240,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                 case let .color(color):
                     return TGColorWallpaperInfo(color: UInt32(bitPattern: color))
                 case let .image(representations, _):
-                    if let resource = largestImageRepresentation(representations)?.resource, let path = legacyContext.account.postbox.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
+                    if let resource = largestImageRepresentation(representations)?.resource, let path = legacyContext.sharedContext.accountManager.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
                         return TGCustomImageWallpaperInfo(image: image)
                     } else {
                         return TGBuiltinWallpaperInfo()
@@ -253,7 +253,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                             return TGBuiltinWallpaperInfo()
                         }
                     }
-                    else if let path = legacyContext.account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
+                    else if let path = legacyContext.sharedContext.accountManager.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
                         return TGCustomImageWallpaperInfo(image: image)
                     } else {
                         return TGBuiltinWallpaperInfo()
@@ -280,7 +280,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                         context.fill(CGRect(origin: CGPoint(), size: size))
                     })
                 case let .image(representations, _):
-                    if let resource = largestImageRepresentation(representations)?.resource, let path = legacyContext.account.postbox.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
+                    if let resource = largestImageRepresentation(representations)?.resource, let path = legacyContext.sharedContext.accountManager.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path) {
                         return image
                     } else {
                         return nil
@@ -300,7 +300,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                             return nil
                         }
                     } else {
-                        if let path = legacyContext.account.postbox.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
+                        if let path = legacyContext.sharedContext.accountManager.mediaBox.completedResourcePath(file.file.resource), let image = UIImage(contentsOfFile: path) {
                             return image
                         } else {
                             return nil

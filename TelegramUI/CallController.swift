@@ -188,12 +188,12 @@ public final class CallController: ViewController {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
-        self.peerDisposable = (self.account.postbox.peerView(id: self.call.peerId)
-        |> deliverOnMainQueue).start(next: { [weak self] view in
+        self.peerDisposable = (combineLatest(self.account.postbox.peerView(id: self.account.peerId) |> take(1), self.account.postbox.peerView(id: self.call.peerId), self.sharedContext.activeAccountsWithInfo |> take(1))
+        |> deliverOnMainQueue).start(next: { [weak self] accountView, view, activeAccountsWithInfo in
             if let strongSelf = self {
-                if let peer = view.peers[view.peerId] {
+                if let accountPeer = accountView.peers[accountView.peerId], let peer = view.peers[view.peerId] {
                     strongSelf.peer = peer
-                    strongSelf.controllerNode.updatePeer(peer: peer)
+                    strongSelf.controllerNode.updatePeer(accountPeer: accountPeer, peer: peer, hasOther: activeAccountsWithInfo.accounts.count > 1)
                     strongSelf._ready.set(.single(true))
                 }
             }

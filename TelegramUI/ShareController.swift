@@ -189,28 +189,40 @@ public final class ShareController: ViewController {
     
     private var animatedIn = false
     
-    private let context: AccountContext
+    private let sharedContext: SharedAccountContext
+    private let currentContext: AccountContext
+    private var currentAccount: Account
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
     private let externalShare: Bool
     private let immediateExternalShare: Bool
     private let subject: ShareControllerSubject
+    private let switchableAccounts: [AccountWithInfo]
     
     private let peers = Promise<([RenderedPeer], Peer)>()
     private let peersDisposable = MetaDisposable()
+    private let readyDisposable = MetaDisposable()
+    private let acountActiveDisposable = MetaDisposable()
     
     private var defaultAction: ShareControllerAction?
     
     public var dismissed: ((Bool) -> Void)?
     
-    public init(context: AccountContext, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false) {
-        self.context = context
+    public convenience init(context: AccountContext, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = []) {
+        self.init(sharedContext: context.sharedContext, currentContext: context, subject: subject, preferredAction: preferredAction, showInChat: showInChat, externalShare: externalShare, immediateExternalShare: immediateExternalShare, switchableAccounts: switchableAccounts)
+    }
+    
+    public init(sharedContext: SharedAccountContext, currentContext: AccountContext, subject: ShareControllerSubject, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = []) {
+        self.sharedContext = sharedContext
+        self.currentContext = currentContext
+        self.currentAccount = currentContext.account
+        self.subject = subject
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare
-        self.subject = subject
+        self.switchableAccounts = switchableAccounts
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = self.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
         
@@ -275,14 +287,17 @@ public final class ShareController: ViewController {
                     else if let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, messages.count == 1 || sameGroupingKey {
                         if message.id.namespace == Namespaces.Message.Cloud, let addressName = chatPeer.addressName, !addressName.isEmpty {
                             self.defaultAction = ShareControllerAction(title: self.presentationData.strings.ShareMenu_CopyShareLink, action: { [weak self] in
-                                let _ = (exportMessageLink(account: context.account, peerId: chatPeer.id, messageId: message.id)
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                let _ = (exportMessageLink(account: strongSelf.currentAccount, peerId: chatPeer.id, messageId: message.id)
                                 |> map { result -> String in
                                     return result ?? "https://t.me/\(addressName)/\(message.id.id)"
                                 }
                                 |> deliverOnMainQueue).start(next: { link in
                                     UIPasteboard.general.string = link
                                 })
-                                self?.controllerNode.cancel?()
+                                strongSelf.controllerNode.cancel?()
                             })
                         }
                     }
@@ -298,30 +313,14 @@ public final class ShareController: ViewController {
             })
         }
         
-        self.peers.set(combineLatest(context.account.postbox.loadedPeerWithId(context.account.peerId)
-        |> take(1), context.account.viewTracker.tailChatListView(groupId: nil, count: 150)
-        |> take(1))
-        |> map { accountPeer, view -> ([RenderedPeer], Peer) in
-            var peers: [RenderedPeer] = []
-            for entry in view.0.entries.reversed() {
-                switch entry {
-                    case let .MessageEntry(_, _, _, _, _, renderedPeer, _):
-                        if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id, canSendMessagesToPeer(peer) {
-                            peers.append(renderedPeer)
-                        }
-                    default:
-                        break
-                }
-            }
-            return (peers, accountPeer)
-        })
-        
-        self.presentationDataDisposable = (self.context.sharedContext.presentationData
+        self.presentationDataDisposable = (self.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 strongSelf.controllerNode.updatePresentationData(presentationData)
             }
         })
+        
+        self.switchToAccount(account: currentAccount, animateIn: false)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -330,10 +329,12 @@ public final class ShareController: ViewController {
     
     deinit {
         self.peersDisposable.dispose()
+        self.readyDisposable.dispose()
+        self.acountActiveDisposable.dispose()
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ShareControllerNode(context: self.context, defaultAction: self.defaultAction, requestLayout: { [weak self] transition in
+        self.displayNode = ShareControllerNode(sharedContext: self.sharedContext, defaultAction: self.defaultAction, requestLayout: { [weak self] transition in
             self?.requestLayout(transition: transition)
         }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare)
         self.controllerNode.dismiss = { [weak self] shared in
@@ -342,7 +343,10 @@ public final class ShareController: ViewController {
         }
         self.controllerNode.cancel = { [weak self] in
             self?.controllerNode.view.endEditing(true)
-            self?.controllerNode.animateOut(shared: false, completion: nil)
+            self?.controllerNode.animateOut(shared: false, completion: {
+                self?.presentingViewController?.dismiss(animated: false, completion: nil)
+                self?.dismissed?(false)
+            })
         }
         self.controllerNode.share = { [weak self] text, peerIds in
             if let strongSelf = self {
@@ -354,7 +358,7 @@ public final class ShareController: ViewController {
                                 messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                             }
                             messages.append(.message(text: url, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages).start()
+                            let _ = enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
                     case let .text(string):
@@ -364,7 +368,7 @@ public final class ShareController: ViewController {
                                 messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                             }
                             messages.append(.message(text: string, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages).start()
+                            let _ = enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
                     case let .quote(string, url):
@@ -377,7 +381,7 @@ public final class ShareController: ViewController {
                             attributedText.append(NSAttributedString(string: "\n\n\(url)"))
                             let entities = generateChatInputTextEntities(attributedText)
                             messages.append(.message(text: attributedText.string, attributes: [TextEntitiesMessageAttribute(entities: entities)], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages).start()
+                            let _ = enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
                     case let .image(representations):
@@ -387,7 +391,7 @@ public final class ShareController: ViewController {
                                 messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                             }
                             messages.append(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil)), replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages).start()
+                            let _ = enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
                     case let .media(mediaReference):
@@ -397,7 +401,7 @@ public final class ShareController: ViewController {
                                 messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                             }
                             messages.append(.message(text: "", attributes: [], mediaReference: mediaReference, replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages).start()
+                            let _ = enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
                     case let .mapMedia(media):
@@ -407,7 +411,7 @@ public final class ShareController: ViewController {
                                 messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil))
                             }
                             messages.append(.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil))
-                            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages).start()
+                            let _ = enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages).start()
                         }
                         return .complete()
                     case let .messages(messages):
@@ -419,7 +423,7 @@ public final class ShareController: ViewController {
                             for message in messages {
                                 messagesToEnqueue.append(.forward(source: message.id, grouping: .auto))
                             }
-                            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messagesToEnqueue).start()
+                            let _ = enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messagesToEnqueue).start()
                         }
                         return .single(.done)
                     case let .fromExternal(f):
@@ -490,7 +494,9 @@ public final class ShareController: ViewController {
                     case .fromExternal:
                         break
                 }
-                return (collectExternalShareItems(strings: strongSelf.presentationData.strings, postbox: strongSelf.context.account.postbox, collectableItems: collectableItems) |> deliverOnMainQueue) |> map { state in
+                return (collectExternalShareItems(strings: strongSelf.presentationData.strings, postbox: strongSelf.currentAccount.postbox, collectableItems: collectableItems)
+                |> deliverOnMainQueue)
+                |> map { state in
                     switch state {
                         case .progress:
                             return .preparing
@@ -525,10 +531,34 @@ public final class ShareController: ViewController {
                 return .single(.done)
             }
         }
+        self.controllerNode.switchToAnotherAccount = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.controllerNode.animateOut(shared: false, completion: {})
+            
+            let presentationData = strongSelf.sharedContext.currentPresentationData.with { $0 }
+            let controller = ActionSheetController(presentationTheme: presentationData.theme)
+            let dismissAction: () -> Void = { [weak controller] in
+                controller?.dismissAnimated()
+            }
+            var items: [ActionSheetItem] = []
+            for info in strongSelf.switchableAccounts {
+                items.append(ActionSheetPeerItem(account: info.account, peer: info.peer, title: info.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), strings: presentationData.strings, theme: presentationData.theme, action: { [weak self] in
+                    dismissAction()
+                    self?.switchToAccount(account: info.account, animateIn: true)
+                }))
+            }
+            controller.setItemGroups([
+                ActionSheetItemGroup(items: items)
+            ])
+            strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }
         self.displayNodeDidLoad()
-        self.peersDisposable.set((self.peers.get() |> deliverOnMainQueue).start(next: { [weak self] next in
+        self.peersDisposable.set((self.peers.get()
+        |> deliverOnMainQueue).start(next: { [weak self] next in
             if let strongSelf = self {
-                strongSelf.controllerNode.updatePeers(peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
+                strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
             }
         }))
         self.ready.set(self.controllerNode.ready.get())
@@ -551,7 +581,10 @@ public final class ShareController: ViewController {
     
     override public func dismiss(completion: (() -> Void)? = nil) {
         self.controllerNode.view.endEditing(true)
-        self.controllerNode.animateOut(shared: false, completion: completion)
+        self.controllerNode.animateOut(shared: false, completion: { [weak self] in
+            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+            completion?()
+        })
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -561,10 +594,16 @@ public final class ShareController: ViewController {
     }
     
     private func saveToCameraRoll(messages: [Message]) {
-        let postbox = self.context.account.postbox
+        let postbox = self.currentAccount.postbox
         let signals: [Signal<Float, NoError>] = messages.compactMap { message -> Signal<Float, NoError>? in
             if let media = message.media.first {
-                return TelegramUI.saveToCameraRoll(context: self.context, postbox: postbox, mediaReference: .message(message: MessageReference(message), media: media))
+                let context: AccountContext
+                if self.currentContext.account.id == self.currentAccount.id {
+                    context = self.currentContext
+                } else {
+                    context = AccountContext(sharedContext: self.sharedContext, account: self.currentAccount, limitsConfiguration: .defaultValue)
+                }
+                return TelegramUI.saveToCameraRoll(context: context, postbox: postbox, mediaReference: .message(message: MessageReference(message), media: media))
             } else {
                 return nil
             }
@@ -585,10 +624,61 @@ public final class ShareController: ViewController {
     
     private func saveToCameraRoll(representations: [ImageRepresentationWithReference]) {
         let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil)
-        self.controllerNode.transitionToProgressWithValue(signal: TelegramUI.saveToCameraRoll(context: self.context, postbox: self.context.account.postbox, mediaReference: .standalone(media: media)) |> map(Optional.init))
+        let context: AccountContext
+        if self.currentContext.account.id == self.currentAccount.id {
+            context = self.currentContext
+        } else {
+            context = AccountContext(sharedContext: self.sharedContext, account: self.currentAccount, limitsConfiguration: .defaultValue)
+        }
+        self.controllerNode.transitionToProgressWithValue(signal: TelegramUI.saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: .standalone(media: media)) |> map(Optional.init))
     }
     
     private func saveToCameraRoll(mediaReference: AnyMediaReference) {
-        self.controllerNode.transitionToProgressWithValue(signal: TelegramUI.saveToCameraRoll(context: self.context, postbox: self.context.account.postbox, mediaReference: mediaReference) |> map(Optional.init))
+        let context: AccountContext
+        if self.currentContext.account.id == self.currentAccount.id {
+            context = self.currentContext
+        } else {
+            context = AccountContext(sharedContext: self.sharedContext, account: self.currentAccount, limitsConfiguration: .defaultValue)
+        }
+        self.controllerNode.transitionToProgressWithValue(signal: TelegramUI.saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: mediaReference) |> map(Optional.init))
+    }
+    
+    private func switchToAccount(account: Account, animateIn: Bool) {
+        self.currentAccount = account
+        self.acountActiveDisposable.set(self.sharedContext.setAccountUserInterfaceInUse(account.id))
+        
+        self.peers.set(combineLatest(self.currentAccount.postbox.loadedPeerWithId(self.currentAccount.peerId) |> take(1), self.currentAccount.viewTracker.tailChatListView(groupId: nil, count: 150) |> take(1))
+        |> map { accountPeer, view -> ([RenderedPeer], Peer) in
+            var peers: [RenderedPeer] = []
+            for entry in view.0.entries.reversed() {
+                switch entry {
+                case let .MessageEntry(_, _, _, _, _, renderedPeer, _):
+                    if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id, canSendMessagesToPeer(peer) {
+                        peers.append(renderedPeer)
+                    }
+                default:
+                    break
+                }
+            }
+            return (peers, accountPeer)
+        })
+        self.peersDisposable.set((self.peers.get()
+        |> deliverOnMainQueue).start(next: { [weak self] next in
+            if let strongSelf = self {
+                strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
+            }
+        }))
+        
+        if animateIn {
+            self.readyDisposable.set((self.controllerNode.ready.get()
+            |> filter({ $0 })
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.controllerNode.animateIn()
+            }))
+        }
     }
 }

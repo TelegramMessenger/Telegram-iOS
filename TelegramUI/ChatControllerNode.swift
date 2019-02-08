@@ -171,6 +171,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var openStickersDisposable: Disposable?
     
+    /*override var accessibilityElements: [Any]? {
+        get {
+            var accessibilityElements: [Any] = []
+            addAccessibilityChildren(of: self.historyNode, container: self.historyNode, to: &accessibilityElements)
+            return accessibilityElements
+        } set(value) {
+        }
+    }*/
+    
     init(context: AccountContext, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, navigationBar: NavigationBar?, controller: ChatController?) {
         self.context = context
         self.chatLocation = chatLocation
@@ -808,7 +817,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             assert(inputPanelSize != nil)
             inputPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - bottomOverflowOffset - inputPanelsHeight - inputPanelSize!.height), size: CGSize(width: layout.size.width, height: inputPanelSize!.height))
             if self.dismissedAsOverlay {
-                inputPanelFrame = inputPanelFrame!.offsetBy(dx: 0.0, dy: inputPanelsHeight + inputPanelSize!.height)
+                inputPanelFrame!.origin.y = layout.size.height
             }
             inputPanelsHeight += inputPanelSize!.height
         }
@@ -818,7 +827,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             assert(accessoryPanelSize != nil)
             accessoryPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomOverflowOffset - insets.bottom - inputPanelsHeight - accessoryPanelSize!.height), size: CGSize(width: layout.size.width, height: accessoryPanelSize!.height))
             if self.dismissedAsOverlay {
-                accessoryPanelFrame = accessoryPanelFrame!.offsetBy(dx: 0.0, dy: inputPanelsHeight + accessoryPanelSize!.height)
+                accessoryPanelFrame!.origin.y = layout.size.height
             }
             inputPanelsHeight += accessoryPanelSize!.height
         }
@@ -834,7 +843,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             inputBackgroundInset = cleanInsets.bottom
         }
         
-        let inputBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - bottomOverflowOffset - inputPanelsHeight), size: CGSize(width: layout.size.width, height: inputPanelsHeight + inputBackgroundInset))
+        var inputBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - bottomOverflowOffset - inputPanelsHeight), size: CGSize(width: layout.size.width, height: inputPanelsHeight + inputBackgroundInset))
+        if self.dismissedAsOverlay {
+            inputBackgroundFrame.origin.y = layout.size.height
+        }
         
         let additionalScrollDistance: CGFloat = 0.0
         var scrollToTop = false

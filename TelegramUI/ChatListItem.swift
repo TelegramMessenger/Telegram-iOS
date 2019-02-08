@@ -64,8 +64,8 @@ class ChatListItem: ListViewItem {
             Queue.mainQueue().async {
                 completion(node, {
                     return (nil, { _ in
-                        node.setupItem(item: self)
-                        apply(false)
+                        node.setupItem(item: self, synchronousLoads: synchronousLoads)
+                        apply(synchronousLoads, false)
                         node.updateIsHighlighted(transition: .immediate)
                     })
                 })
@@ -77,7 +77,7 @@ class ChatListItem: ListViewItem {
         Queue.mainQueue().async {
             assert(node() is ChatListItemNode)
             if let nodeValue = node() as? ChatListItemNode {
-                nodeValue.setupItem(item: self)
+                nodeValue.setupItem(item: self, synchronousLoads: false)
                 let layout = nodeValue.asyncLayout()
                 async {
                     let (first, last, firstWithHeader, nextIsPinned) = ChatListItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
@@ -89,7 +89,7 @@ class ChatListItem: ListViewItem {
                     let (nodeLayout, apply) = layout(self, params, first, last, firstWithHeader, nextIsPinned)
                     Queue.mainQueue().async {
                         completion(nodeLayout, { _ in
-                            apply(animated)
+                            apply(false, animated)
                         })
                     }
                 }
@@ -250,6 +250,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
+    override var defaultAccessibilityLabel: String? {
+        get {
+            return self.accessibilityLabel
+        } set(value) {
+        }
+    }
     override var accessibilityLabel: String? {
         get {
             guard let item = self.item else {
@@ -360,6 +366,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.isAccessibilityElement = true
+        self.isAccessibilityContainer = true
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
@@ -376,7 +383,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.mutedIconNode)
     }
     
-    func setupItem(item: ChatListItem) {
+    func setupItem(item: ChatListItem, synchronousLoads: Bool) {
         self.item = item
         
         var peer: Peer?
@@ -392,7 +399,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if peer.id == item.account.peerId {
                 overrideImage = .savedMessagesIcon
             }
-            self.avatarNode.setPeer(account: item.account, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor)
+            self.avatarNode.setPeer(account: item.account, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
         }
     }
     
@@ -400,7 +407,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         let layout = self.asyncLayout()
         let (first, last, firstWithHeader, nextIsPinned) = ChatListItem.mergeType(item: item as! ChatListItem, previousItem: previousItem, nextItem: nextItem)
         let (nodeLayout, apply) = layout(item as! ChatListItem, params, first, last, firstWithHeader, nextIsPinned)
-        apply(false)
+        apply(false, false)
         self.contentSize = nodeLayout.contentSize
         self.insets = nodeLayout.insets
     }
@@ -453,7 +460,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         item.interaction.togglePeerSelected(item.index.messageIndex.id.peerId)
     }
     
-    func asyncLayout() -> (_ item: ChatListItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+    func asyncLayout() -> (_ item: ChatListItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         let textLayout = TextNode.asyncLayout(self.textNode)
         let titleLayout = TextNode.asyncLayout(self.titleNode)
@@ -799,7 +806,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     peerLeftRevealOptions = []
             }
             
-            return (layout, { [weak self] animated in
+            return (layout, { [weak self] synchronousLoads, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned, params)
                     

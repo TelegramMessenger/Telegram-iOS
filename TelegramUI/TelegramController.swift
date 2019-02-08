@@ -55,7 +55,7 @@ public class TelegramController: ViewController {
     private var mediaStatusDisposable: Disposable?
     private var locationBroadcastDisposable: Disposable?
     
-    private(set) var playlistStateAndType: (SharedMediaPlaylistItem, MusicPlaybackSettingsOrder, MediaManagerPlayerType)?
+    private(set) var playlistStateAndType: (SharedMediaPlaylistItem, MusicPlaybackSettingsOrder, MediaManagerPlayerType, Account)?
     
     var tempVoicePlaylistEnded: (() -> Void)?
     var tempVoicePlaylistItemChanged: ((SharedMediaPlaylistItem?, SharedMediaPlaylistItem?) -> Void)?
@@ -137,7 +137,7 @@ public class TelegramController: ViewController {
                     
                     strongSelf.tempVoicePlaylistItemChanged?(previousVoiceItem, updatedVoiceItem)
                     if let playlistStateAndType = playlistStateAndType {
-                        strongSelf.playlistStateAndType = (playlistStateAndType.1.item, playlistStateAndType.1.order, playlistStateAndType.2)
+                        strongSelf.playlistStateAndType = (playlistStateAndType.1.item, playlistStateAndType.1.order, playlistStateAndType.2, playlistStateAndType.0)
                     } else {
                         var voiceEnded = false
                         if strongSelf.playlistStateAndType?.2 == .voice {
@@ -417,7 +417,7 @@ public class TelegramController: ViewController {
                 mediaAccessoryPanelHidden = size != layout.metrics.widthClass
         }
         
-        if let (item, _, type) = self.playlistStateAndType, !mediaAccessoryPanelHidden {
+        if let (item, _, type, _) = self.playlistStateAndType, !mediaAccessoryPanelHidden {
             let panelHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
             let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight.isZero ? -panelHeight : (navigationHeight + additionalHeight + UIScreenPixel)), size: CGSize(width: layout.size.width, height: panelHeight))
             if let (mediaAccessoryPanel, mediaType) = self.mediaAccessoryPanel, mediaType == type {
@@ -461,7 +461,7 @@ public class TelegramController: ViewController {
                 let mediaAccessoryPanel = MediaNavigationAccessoryPanel(context: self.context)
                 mediaAccessoryPanel.containerNode.headerNode.displayScrubber = type != .voice
                 mediaAccessoryPanel.close = { [weak self] in
-                    if let strongSelf = self, let (_, _, type) = strongSelf.playlistStateAndType {
+                    if let strongSelf = self, let (_, _, type, _) = strongSelf.playlistStateAndType {
                         strongSelf.context.sharedContext.mediaManager.setPlaylist(nil, type: type)
                     }
                 }
@@ -486,24 +486,24 @@ public class TelegramController: ViewController {
                         return nextRate
                     }
                     |> deliverOnMainQueue).start(next: { baseRate in
-                        guard let strongSelf = self, let (_, _, type) = strongSelf.playlistStateAndType else {
+                        guard let strongSelf = self, let (_, _, type, _) = strongSelf.playlistStateAndType else {
                             return
                         }
                         strongSelf.context.sharedContext.mediaManager.playlistControl(.setBaseRate(baseRate), type: type)
                     })
                 }
                 mediaAccessoryPanel.togglePlayPause = { [weak self] in
-                    if let strongSelf = self, let (_, _, type) = strongSelf.playlistStateAndType {
+                    if let strongSelf = self, let (_, _, type, _) = strongSelf.playlistStateAndType {
                         strongSelf.context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: type)
                     }
                 }
                 mediaAccessoryPanel.tapAction = { [weak self] in
-                    guard let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController, let (state, order, type) = strongSelf.playlistStateAndType else {
+                    guard let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController, let (state, order, type, account) = strongSelf.playlistStateAndType else {
                         return
                     }
                     if let id = state.id as? PeerMessagesMediaPlaylistItemId {
                         if type == .music {
-                            let historyView = chatHistoryViewForLocation(.InitialSearch(location: .id(id.messageId), count: 60), account: strongSelf.context.account, chatLocation: .peer(id.messageId.peerId), fixedCombinedReadStates: nil, tagMask: MessageTags.music, additionalData: [])
+                            let historyView = chatHistoryViewForLocation(.InitialSearch(location: .id(id.messageId), count: 60), account: account, chatLocation: .peer(id.messageId.peerId), fixedCombinedReadStates: nil, tagMask: MessageTags.music, additionalData: [])
                             let signal = historyView
                             |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
                                 switch historyView {
@@ -553,7 +553,7 @@ public class TelegramController: ViewController {
                                     return
                                 }
                                 if let _ = index.0 {
-                                    let controller = OverlayPlayerController(context: strongSelf.context, peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, parentNavigationController: strongSelf.navigationController as? NavigationController)
+                                    let controller = OverlayPlayerController(context: account.id == strongSelf.context.account.id ? strongSelf.context : AccountContext(sharedContext: strongSelf.context.sharedContext, account: account, limitsConfiguration: .defaultValue), peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, parentNavigationController: strongSelf.navigationController as? NavigationController)
                                     strongSelf.displayNode.view.window?.endEditing(true)
                                     strongSelf.present(controller, in: .window(.root))
                                 } else if index.1 {
@@ -568,7 +568,7 @@ public class TelegramController: ViewController {
                                 self?.playlistPreloadDisposable?.dispose()
                             }
                         } else {
-                            navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id.messageId.peerId), messageId: id.messageId)
+                            strongSelf.context.sharedContext.navigateToChat(accountId: strongSelf.context.account.id, peerId: id.messageId.peerId, messageId: id.messageId)
                         }
                     }
                 }

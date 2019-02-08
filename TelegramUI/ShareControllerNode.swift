@@ -21,7 +21,7 @@ func openExternalShare(state: () -> Signal<ShareExternalState, NoError>) {
 }
 
 final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let context: AccountContext
+    private let sharedContext: SharedAccountContext
     private var presentationData: PresentationData
     private let externalShare: Bool
     private let immediateExternalShare: Bool
@@ -52,6 +52,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     var cancel: (() -> Void)?
     var share: ((String, [PeerId]) -> Signal<ShareState, NoError>)?
     var shareExternal: (() -> Signal<ShareExternalState, NoError>)?
+    var switchToAnotherAccount: (() -> Void)?
     
     let ready = Promise<Bool>()
     private var didSetReady = false
@@ -67,9 +68,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private var hapticFeedback: HapticFeedback?
     
-    init(context: AccountContext, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, externalShare: Bool, immediateExternalShare: Bool) {
-        self.context = context
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    init(sharedContext: SharedAccountContext, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, externalShare: Bool, immediateExternalShare: Bool) {
+        self.sharedContext = sharedContext
+        self.presentationData = sharedContext.currentPresentationData.with { $0 }
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare
         
@@ -293,25 +294,30 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         updateActionNodesAlpha(actionNodes, alpha: hidden ? 0.0 : 1.0)
     }
     
-    func transitionToContentNode(_ contentNode: (ASDisplayNode & ShareContentContainerNode)?, fastOut: Bool = false) {
+    func transitionToContentNode(_ contentNode: (ASDisplayNode & ShareContentContainerNode)?, fastOut: Bool = false, animated: Bool = true) {
         if self.contentNode !== contentNode {
             let transition: ContainedViewLayoutTransition
             
             let previous = self.contentNode
             if let previous = previous {
                 previous.setContentOffsetUpdated(nil)
-                transition = .animated(duration: 0.4, curve: .spring)
-                
-                self.previousContentNode = previous
-                previous.alpha = 0.0
-                previous.layer.animateAlpha(from: 1.0, to: 0.0, duration: fastOut ? 0.1 : 0.2, removeOnCompletion: true, completion: { [weak self, weak previous] _ in
-                    if let strongSelf = self, let previous = previous {
-                        if strongSelf.previousContentNode === previous {
-                            strongSelf.previousContentNode = nil
+                if animated {
+                    transition = .animated(duration: 0.4, curve: .spring)
+                    self.previousContentNode = previous
+                    previous.alpha = 0.0
+                    previous.layer.animateAlpha(from: 1.0, to: 0.0, duration: fastOut ? 0.1 : 0.2, removeOnCompletion: true, completion: { [weak self, weak previous] _ in
+                        if let strongSelf = self, let previous = previous {
+                            if strongSelf.previousContentNode === previous {
+                                strongSelf.previousContentNode = nil
+                            }
+                            previous.removeFromSupernode()
                         }
-                        previous.removeFromSupernode()
-                    }
-                })
+                    })
+                } else {
+                    transition = .immediate
+                    previous.removeFromSupernode()
+                    self.previousContentNode = nil
+                }
             } else {
                 transition = .immediate
             }
@@ -328,12 +334,14 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     self.contentContainerNode.insertSubnode(contentNode, at: 0)
                     
                     contentNode.alpha = 1.0
-                    let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.35)
-                    animation.fillMode = kCAFillModeBoth
-                    if !fastOut {
-                        animation.beginTime = CACurrentMediaTime() + 0.1
+                    if animated {
+                        let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.35)
+                        animation.fillMode = kCAFillModeBoth
+                        if !fastOut {
+                            animation.beginTime = CACurrentMediaTime() + 0.1
+                        }
+                        contentNode.layer.add(animation, forKey: "opacity")
                     }
-                    contentNode.layer.add(animation, forKey: "opacity")
                     
                     self.animateContentNodeOffsetFromBackgroundOffset = self.contentBackgroundNode.frame.minY
                     self.scheduleInteractiveTransition(transition)
@@ -505,9 +513,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     let minDelay: Double = shouldDelay ? 0.9 : 0.6
                     let delay = max(minDelay, (timestamp + minDelay) - CACurrentMediaTime())
                     Queue.mainQueue().after(delay, {
-                        if let strongSelf = self {
-                            strongSelf.animateOut(shared: true)
-                        }
+                        self?.animateOut(shared: true, completion: {
+                            self?.dismiss?(true)
+                        })
                     })
                 }
                 self.shareDisposable.set((signal
@@ -543,26 +551,33 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     func animateIn() {
         if self.contentNode != nil {
+            self.isHidden = false
+            
             self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
             
             let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
             
             let dimPosition = self.dimNode.layer.position
             self.dimNode.layer.animatePosition(from: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), to: dimPosition, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-            self.layer.animateBoundsOriginYAdditive(from: -offset, to: 0.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+            self.layer.animateBoundsOriginYAdditive(from: -offset, to: 0.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+            })
         }
     }
     
-    func animateOut(shared: Bool, completion: (() -> Void)? = nil) {
+    func animateOut(shared: Bool, completion: @escaping () -> Void) {
         if self.contentNode != nil {
             var dimCompleted = false
             var offsetCompleted = false
             
             let internalCompletion: () -> Void = { [weak self] in
-                if let strongSelf = self, dimCompleted && offsetCompleted {
-                    strongSelf.dismiss?(shared)
+                if dimCompleted && offsetCompleted {
+                    if let strongSelf = self {
+                        strongSelf.isHidden = true
+                        strongSelf.dimNode.layer.removeAllAnimations()
+                        strongSelf.layer.removeAllAnimations()
+                    }
+                    completion()
                 }
-                completion?()
             }
             
             self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
@@ -578,30 +593,30 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 internalCompletion()
             })
         } else {
-            self.dismiss?(false)
-            completion?()
+            completion()
         }
     }
     
-    func updatePeers(peers: [RenderedPeer], accountPeer: Peer, defaultAction: ShareControllerAction?) {
-        let peersContentNode = SharePeersContainerNode(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare)
+    func updatePeers(account: Account, switchableAccounts: [AccountWithInfo], peers: [RenderedPeer], accountPeer: Peer, defaultAction: ShareControllerAction?) {
+        let animated = self.peersContentNode == nil
+        let peersContentNode = SharePeersContainerNode(sharedContext: self.sharedContext, account: account, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, switchToAnotherAccount: { [weak self] in
+            self?.switchToAnotherAccount?()
+        })
         self.peersContentNode = peersContentNode
         peersContentNode.openSearch = { [weak self] in
-            if let strongSelf = self {
-                let _ = (recentlySearchedPeers(postbox: strongSelf.context.account.postbox)
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { peers in
-                    if let strongSelf = self {
-                        let searchContentNode = ShareSearchContainerNode(context: strongSelf.context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction!, recentPeers: peers.filter({ $0.peer.peerId.namespace != Namespaces.Peer.SecretChat }).map({ $0.peer }))
-                        searchContentNode.cancel = {
-                            if let strongSelf = self, let peersContentNode = strongSelf.peersContentNode {
-                                strongSelf.transitionToContentNode(peersContentNode)
-                            }
+            let _ = (recentlySearchedPeers(postbox: account.postbox)
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { peers in
+                if let strongSelf = self {
+                    let searchContentNode = ShareSearchContainerNode(sharedContext: strongSelf.sharedContext, account: account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction!, recentPeers: peers.filter({ $0.peer.peerId.namespace != Namespaces.Peer.SecretChat }).map({ $0.peer }))
+                    searchContentNode.cancel = {
+                        if let strongSelf = self, let peersContentNode = strongSelf.peersContentNode {
+                            strongSelf.transitionToContentNode(peersContentNode)
                         }
-                        strongSelf.transitionToContentNode(searchContentNode)
                     }
-                })
-            }
+                    strongSelf.transitionToContentNode(searchContentNode)
+                }
+            })
         }
         let openShare: (Bool) -> Void = { [weak self] reportReady in
             guard let strongSelf = self, let shareExternal = strongSelf.shareExternal else {
@@ -633,14 +648,18 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                             let delay = max(0.0, (loadingTimestamp + minDelay) - CACurrentMediaTime())
                             Queue.mainQueue().after(delay, {
                                 if let strongSelf = self {
-                                    strongSelf.animateOut(shared: true)
+                                    strongSelf.animateOut(shared: true, completion: {
+                                        self?.dismiss?(true)
+                                    })
                                 }
                             })
                         } else {
                             if reportReady {
                                 strongSelf.ready.set(.single(true))
                             }
-                            strongSelf.animateOut(shared: true)
+                            strongSelf.animateOut(shared: true, completion: {
+                                self?.dismiss?(true)
+                            })
                         }
                 }
             }))
@@ -651,7 +670,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         if self.immediateExternalShare {
             openShare(true)
         } else {
-            self.transitionToContentNode(peersContentNode)
+            self.transitionToContentNode(peersContentNode, animated: animated)
             self.ready.set(.single(true))
         }
     }
@@ -734,7 +753,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             let delay = max(0.0, (timestamp + minDelay) - CACurrentMediaTime())
             Queue.mainQueue().after(delay, {
                 if let strongSelf = self {
-                    strongSelf.animateOut(shared: true)
+                    strongSelf.animateOut(shared: true, completion: {
+                        self?.dismiss?(true)
+                    })
                 }
             })
         }))
@@ -757,7 +778,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             let delay = max(minDelay, (timestamp + minDelay) - CACurrentMediaTime())
             Queue.mainQueue().after(delay, {
                 if let strongSelf = self {
-                    strongSelf.animateOut(shared: true)
+                    strongSelf.animateOut(shared: true, completion: {
+                        self?.dismiss?(true)
+                    })
                 }
             })
         }

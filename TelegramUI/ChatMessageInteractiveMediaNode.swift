@@ -408,7 +408,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                         if file.mimeType == "image/png" {
                                             return patternWallpaperImage(account: context.account, representations: representations, mode: .thumbnail)
                                         } else {
-                                            return wallpaperImage(account: context.account, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), representations: representations, alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true)
+                                            return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), representations: representations, alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true)
                                         }
                                     case let .color(color):
                                         return solidColor(color)

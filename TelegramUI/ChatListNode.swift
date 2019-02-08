@@ -353,7 +353,7 @@ final class ChatListNode: ListView {
         }
     }
     
-    override var accessibilityElements: [Any]? {
+    /*override var accessibilityElements: [Any]? {
         get {
             var accessibilityElements: [Any] = []
             self.forEachVisibleItemNode { itemNode in
@@ -364,7 +364,7 @@ final class ChatListNode: ListView {
             return accessibilityElements
         } set(value) {
         }
-    }
+    }*/
     
     var isEmptyUpdated: ((ChatListNodeEmtpyState) -> Void)?
     private var currentIsEmptyState: ChatListNodeEmtpyState?
@@ -1028,6 +1028,10 @@ final class ChatListNode: ListView {
             }
             
             var options = transition.options
+            if !options.contains(.AnimateInsertion) {
+                options.insert(.PreferSynchronousDrawing)
+                options.insert(.PreferSynchronousResourceLoading)
+            }
             if options.contains(.AnimateCrossfade) && !self.isDeceleratingAfterTracking {
                 options.insert(.PreferSynchronousDrawing)
             }

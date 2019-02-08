@@ -130,7 +130,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     }
     
     func animateIn() {
-        self.panelNode.layer.animatePosition(from: CGPoint(x: 0.0, y: self.panelNode.bounds.height), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionEaseOut, additive: true)
+        self.panelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
     }
     
     func animateOut(completion: @escaping () -> Void) {

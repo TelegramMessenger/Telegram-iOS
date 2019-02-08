@@ -9,10 +9,41 @@ private enum CallStatusText: Equatable {
     case inProgress(Double?)
 }
 
+private final class AccountUserInterfaceInUseContext {
+    let subscribers = Bag<(Bool) -> Void>()
+    let tokens = Bag<Void>()
+    
+    var isEmpty: Bool {
+        return self.tokens.isEmpty && self.subscribers.isEmpty
+    }
+}
+
+public final class AccountWithInfo: Equatable {
+    public let account: Account
+    public let peer: Peer
+    
+    init(account: Account, peer: Peer) {
+        self.account = account
+        self.peer = peer
+    }
+    
+    public static func ==(lhs: AccountWithInfo, rhs: AccountWithInfo) -> Bool {
+        if lhs.account !== rhs.account {
+            return false
+        }
+        if !arePeersEqual(lhs.peer, rhs.peer) {
+            return false
+        }
+        return true
+    }
+}
+
 public final class SharedAccountContext {
-    private let mainWindow: Window1?
+    let mainWindow: Window1?
     public let applicationBindings: TelegramApplicationBindings
     public let accountManager: AccountManager
+    
+    private let navigateToChatImpl: (AccountRecordId, PeerId, MessageId?) -> Void
     
     private let apsNotificationToken: Signal<Data?, NoError>
     private let voipNotificationToken: Signal<Data?, NoError>
@@ -21,6 +52,10 @@ public final class SharedAccountContext {
     private let activeAccountsPromise = Promise<(primary: Account?, accounts: [AccountRecordId: Account], currentAuth: UnauthorizedAccount?)>()
     public var activeAccounts: Signal<(primary: Account?, accounts: [AccountRecordId: Account], currentAuth: UnauthorizedAccount?), NoError> {
         return self.activeAccountsPromise.get()
+    }
+    private let activeAccountsWithInfoPromise = Promise<(primary: AccountRecordId?, accounts: [AccountRecordId: AccountWithInfo])>()
+    public var activeAccountsWithInfo: Signal<(primary: AccountRecordId?, accounts: [AccountRecordId: AccountWithInfo]), NoError> {
+        return self.activeAccountsWithInfoPromise.get()
     }
     
     private var activeUnauthorizedAccountValue: UnauthorizedAccount?
@@ -51,7 +86,9 @@ public final class SharedAccountContext {
     }
     private var hasOngoingCallDisposable: Disposable?
     
-    var switchingSettingsController: (SettingsController & ViewController)?
+    private var accountUserInterfaceInUseContexts: [AccountRecordId: AccountUserInterfaceInUseContext] = [:]
+    
+    var switchingData: (settingsController: (SettingsController & ViewController)?, chatListController: ChatListController?, chatListBadge: String?) = (nil, nil, nil)
     
     public let currentPresentationData: Atomic<PresentationData>
     private let _presentationData = Promise<PresentationData>()
@@ -83,11 +120,12 @@ public final class SharedAccountContext {
     public var presentGlobalController: (ViewController, Any?) -> Void = { _, _ in }
     public var presentCrossfadeController: () -> Void = {}
     
-    public init(mainWindow: Window1?, accountManager: AccountManager, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void) {
+    public init(mainWindow: Window1?, accountManager: AccountManager, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void) {
         assert(Queue.mainQueue().isCurrent())
         self.mainWindow = mainWindow
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
+        self.navigateToChatImpl = navigateToChat
         
         self.accountManager.mediaBox.fetchCachedResourceRepresentation = { (resource, representation) -> Signal<CachedMediaResourceRepresentationResult, NoError> in
             return fetchCachedSharedResourceRepresentation(accountManager: accountManager, resource: resource, representation: representation)
@@ -239,17 +277,17 @@ public final class SharedAccountContext {
             return true
         })
         |> deliverOnMainQueue).start(next: { primaryId, records, authRecord in
-            var addedSignals: [Signal<Account?, NoError>] = []
+            var addedSignals: [Signal<(AccountRecordId, Account?), NoError>] = []
             var addedAuthSignal: Signal<UnauthorizedAccount?, NoError> = .single(nil)
             for (id, isTestingEnvironment) in records {
                 if self.activeAccountsValue?.accounts[id] == nil {
                     addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, supplementary: false, rootPath: rootPath, beginWithTestingEnvironment: isTestingEnvironment, auxiliaryMethods: telegramAccountAuxiliaryMethods)
-                    |> map { result -> Account? in
+                    |> map { result -> (AccountRecordId, Account?) in
                         switch result {
                             case let .authorized(account):
-                                return account
+                                return (id, account)
                             default:
-                                return nil
+                                return (id, nil)
                         }
                     })
                 }
@@ -273,9 +311,15 @@ public final class SharedAccountContext {
                     hadUpdates = true
                 }
                 for account in accounts {
-                    if let account = account {
+                    if let account = account.1 {
                         self.activeAccountsValue!.accounts[account.id] = account
                         hadUpdates = true
+                    } else {
+                        let _ = accountManager.transaction({ transaction in
+                            transaction.updateRecord(account.0, { _ in
+                                return nil
+                            })
+                        }).start()
                     }
                 }
                 var removedIds: [AccountRecordId] = []
@@ -317,6 +361,30 @@ public final class SharedAccountContext {
                     self.beginNewAuth(testingEnvironment: false)
                 }
             }))
+        })
+        
+        self.activeAccountsWithInfoPromise.set(self.activeAccounts
+        |> mapToSignal { primary, accounts, _ -> Signal<(primary: AccountRecordId?, accounts: [AccountRecordId: AccountWithInfo]), NoError> in
+            return combineLatest(accounts.values.map { account -> Signal<AccountWithInfo?, NoError> in
+                let peerViewKey: PostboxViewKey = .peer(peerId: account.peerId, components: [])
+                return account.postbox.combinedView(keys: [peerViewKey])
+                |> map { view -> AccountWithInfo? in
+                    guard let peerView = view.views[peerViewKey] as? PeerView, let peer = peerView.peers[peerView.peerId] else {
+                        return nil
+                    }
+                    return AccountWithInfo(account: account, peer: peer)
+                }
+                |> distinctUntilChanged
+            })
+            |> map { accountsWithInfo -> (primary: AccountRecordId?, accounts: [AccountRecordId: AccountWithInfo]) in
+                var accountsWithInfoDict: [AccountRecordId: AccountWithInfo] = [:]
+                for info in accountsWithInfo {
+                    if let info = info {
+                        accountsWithInfoDict[info.account.id] = info
+                    }
+                }
+                return (primary?.id, accountsWithInfoDict)
+            }
         })
         
         if let mainWindow = mainWindow, applicationBindings.isMainApp {
@@ -487,9 +555,32 @@ public final class SharedAccountContext {
         }).start()
     }
     
-    public func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: (SettingsController & ViewController)? = nil) {
+    public func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: (SettingsController & ViewController)? = nil, withChatListController chatListController: ChatListController? = nil) {
+        if self.activeAccountsValue?.primary?.id == id {
+            return
+        }
+        
         assert(Queue.mainQueue().isCurrent())
-        self.switchingSettingsController = settingsController
+        var chatsBadge: String?
+        if let rootController = self.mainWindow?.viewController as? TelegramRootController {
+            if let tabsController = rootController.viewControllers.first as? TabBarController {
+                for controller in tabsController.controllers {
+                    if let controller = controller as? ChatListController {
+                        chatsBadge = controller.tabBarItem.badgeValue
+                    }
+                }
+                
+                if let chatListController = chatListController {
+                    if let index = tabsController.controllers.firstIndex(where: { $0 is ChatListController }) {
+                        var controllers = tabsController.controllers
+                        controllers[index] = chatListController
+                        tabsController.setControllers(controllers, selectedIndex: index)
+                    }
+                }
+            }
+        }
+        self.switchingData = (settingsController, chatListController, chatsBadge)
+        
         let _ = self.accountManager.transaction({ transaction -> Bool in
             if transaction.getCurrent()?.0 != id {
                 transaction.setCurrentId(id)
@@ -499,9 +590,13 @@ public final class SharedAccountContext {
             }
         }).start(next: { value in
             if !value {
-                self.switchingSettingsController = nil
+                self.switchingData = (nil, nil, nil)
             }
         })
+    }
+    
+    public func navigateToChat(accountId: AccountRecordId, peerId: PeerId, messageId: MessageId?) {
+        self.navigateToChatImpl(accountId, peerId, messageId)
     }
     
     private func updateStatusBarText() {
@@ -533,6 +628,71 @@ public final class SharedAccountContext {
             if callController.isNodeLoaded && callController.view.superview == nil {
                 mainWindow.hostView.containerView.endEditing(true)
                 mainWindow.present(callController, on: .calls)
+            }
+        }
+    }
+    
+    public func accountUserInterfaceInUse(_ id: AccountRecordId) -> Signal<Bool, NoError> {
+        return Signal { subscriber in
+            let context: AccountUserInterfaceInUseContext
+            if let current = self.accountUserInterfaceInUseContexts[id] {
+                context = current
+            } else {
+                context = AccountUserInterfaceInUseContext()
+                self.accountUserInterfaceInUseContexts[id] = context
+            }
+            
+            subscriber.putNext(!context.tokens.isEmpty)
+            let index = context.subscribers.add({ value in
+                subscriber.putNext(value)
+            })
+            
+            return ActionDisposable { [weak context] in
+                Queue.mainQueue().async {
+                    if let current = self.accountUserInterfaceInUseContexts[id], current === context {
+                        current.subscribers.remove(index)
+                        if current.isEmpty {
+                            self.accountUserInterfaceInUseContexts.removeValue(forKey: id)
+                        }
+                    }
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+    }
+    
+    public func setAccountUserInterfaceInUse(_ id: AccountRecordId) -> Disposable {
+        assert(Queue.mainQueue().isCurrent())
+        let context: AccountUserInterfaceInUseContext
+        if let current = self.accountUserInterfaceInUseContexts[id] {
+            context = current
+        } else {
+            context = AccountUserInterfaceInUseContext()
+            self.accountUserInterfaceInUseContexts[id] = context
+        }
+        
+        let wasEmpty = context.tokens.isEmpty
+        let index = context.tokens.add(Void())
+        if wasEmpty {
+            for f in context.subscribers.copyItems() {
+                f(true)
+            }
+        }
+        
+        return ActionDisposable { [weak context] in
+            Queue.mainQueue().async {
+                if let current = self.accountUserInterfaceInUseContexts[id], current === context {
+                    let wasEmpty = current.tokens.isEmpty
+                    current.tokens.remove(index)
+                    if current.tokens.isEmpty && !wasEmpty {
+                        for f in current.subscribers.copyItems() {
+                            f(false)
+                        }
+                    }
+                    if current.isEmpty {
+                        self.accountUserInterfaceInUseContexts.removeValue(forKey: id)
+                    }
+                }
             }
         }
     }

@@ -44,6 +44,11 @@ enum ItemListPeerItemNameColor {
     case secret
 }
 
+enum ItemListPeerItemNameStyle {
+    case distinctBold
+    case plain
+}
+
 enum ItemListPeerItemRevealOptionType {
     case neutral
     case warning
@@ -69,6 +74,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let peer: Peer
     let aliasHandling: ItemListPeerItemAliasHandling
     let nameColor: ItemListPeerItemNameColor
+    let nameStyle: ItemListPeerItemNameStyle
     let presence: PeerPresence?
     let text: ItemListPeerItemText
     let label: ItemListPeerItemLabel
@@ -85,7 +91,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let hasTopGroupInset: Bool
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
@@ -94,6 +100,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.peer = peer
         self.aliasHandling = aliasHandling
         self.nameColor = nameColor
+        self.nameStyle = nameStyle
         self.presence = presence
         self.text = text
         self.label = label
@@ -121,7 +128,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
             
             Queue.mainQueue().async {
                 completion(node, {
-                    return (node.avatarNode.ready, { _ in apply(false) })
+                    return (node.avatarNode.ready, { _ in apply(synchronousLoads, false) })
                 })
             }
         }
@@ -141,7 +148,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
                     let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
-                            apply(animated)
+                            apply(false, animated)
                         })
                     }
                 }
@@ -247,12 +254,12 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
         self.peerPresenceManager = PeerPresenceStatusManager(update: { [weak self] in
             if let strongSelf = self, let layoutParams = strongSelf.layoutParams {
                 let (_, apply) = strongSelf.asyncLayout()(layoutParams.0, layoutParams.1, layoutParams.2)
-                apply(true)
+                apply(false, true)
             }
         })
     }
     
-    func asyncLayout() -> (_ item: ItemListPeerItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+    func asyncLayout() -> (_ item: ItemListPeerItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
@@ -358,8 +365,16 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
                     titleColor = item.theme.chatList.secretTitleColor
             }
             
+            let currentBoldFont: UIFont
+            switch item.nameStyle {
+                case .distinctBold:
+                    currentBoldFont = titleBoldFont
+                case .plain:
+                    currentBoldFont = titleFont
+            }
+            
             if item.peer.id == item.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
-                titleAttributedString = NSAttributedString(string: item.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: titleColor)
+                titleAttributedString = NSAttributedString(string: item.strings.DialogList_SavedMessages, font: currentBoldFont, textColor: titleColor)
             } else if let user = item.peer as? TelegramUser {
                 if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                     let string = NSMutableAttributedString()
@@ -367,24 +382,24 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
                         case .firstLast:
                             string.append(NSAttributedString(string: firstName, font: titleFont, textColor: titleColor))
                             string.append(NSAttributedString(string: " ", font: titleFont, textColor: titleColor))
-                            string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: titleColor))
+                            string.append(NSAttributedString(string: lastName, font: currentBoldFont, textColor: titleColor))
                         case .lastFirst:
-                            string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: titleColor))
+                            string.append(NSAttributedString(string: lastName, font: currentBoldFont, textColor: titleColor))
                             string.append(NSAttributedString(string: " ", font: titleFont, textColor: titleColor))
                             string.append(NSAttributedString(string: firstName, font: titleFont, textColor: titleColor))
                     }
                     titleAttributedString = string
                 } else if let firstName = user.firstName, !firstName.isEmpty {
-                    titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: titleColor)
+                    titleAttributedString = NSAttributedString(string: firstName, font: currentBoldFont, textColor: titleColor)
                 } else if let lastName = user.lastName, !lastName.isEmpty {
-                    titleAttributedString = NSAttributedString(string: lastName, font: titleBoldFont, textColor: titleColor)
+                    titleAttributedString = NSAttributedString(string: lastName, font: currentBoldFont, textColor: titleColor)
                 } else {
-                    titleAttributedString = NSAttributedString(string: item.strings.User_DeletedAccount, font: titleBoldFont, textColor: titleColor)
+                    titleAttributedString = NSAttributedString(string: item.strings.User_DeletedAccount, font: currentBoldFont, textColor: titleColor)
                 }
             } else if let group = item.peer as? TelegramGroup {
-                titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: titleColor)
+                titleAttributedString = NSAttributedString(string: group.title, font: currentBoldFont, textColor: titleColor)
             } else if let channel = item.peer as? TelegramChannel {
-                titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: titleColor)
+                titleAttributedString = NSAttributedString(string: channel.title, font: currentBoldFont, textColor: titleColor)
             }
             
             switch item.text {
@@ -478,7 +493,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
                 currentDisabledOverlayNode = nil
             }
             
-            return (layout, { [weak self] animated in
+            return (layout, { [weak self] synchronousLoad, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, params, neighbors)
                     
@@ -670,9 +685,9 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
                     transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: 5.0), size: CGSize(width: 40.0, height: 40.0)))
                     
                     if item.peer.id == item.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
-                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, overrideImage: .savedMessagesIcon, emptyColor: item.theme.list.mediaPlaceholderColor)
+                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, overrideImage: .savedMessagesIcon, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
                     } else {
-                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
+                        strongSelf.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer, emptyColor: item.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 50.0 + UIScreenPixel + UIScreenPixel))

@@ -19,6 +19,8 @@ final class OverlayPlayerController: ViewController {
         return self.displayNode as! OverlayPlayerControllerNode
     }
     
+    private var accountInUseDisposable: Disposable?
+    
     init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, parentNavigationController: NavigationController?) {
         self.context = context
         self.peerId = peerId
@@ -32,10 +34,16 @@ final class OverlayPlayerController: ViewController {
         self.statusBar.statusBarStyle = .Ignore
         
         self.ready.set(.never())
+        
+        self.accountInUseDisposable = context.sharedContext.setAccountUserInterfaceInUse(context.account.id)
     }
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.accountInUseDisposable?.dispose()
     }
     
     override public func loadDisplayNode() {
@@ -48,8 +56,8 @@ final class OverlayPlayerController: ViewController {
                 } |> deliverOnMainQueue).start(next: { message in
                     if let strongSelf = self, let message = message {
                         let shareController = ShareController(context: strongSelf.context, subject: .messages([message]), showInChat: { message in
-                            if let strongSelf = self, let navigationController = strongSelf.parentNavigationController {
-                                navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(message.id.peerId), messageId: messageId, animated: true)
+                            if let strongSelf = self {
+                                strongSelf.context.sharedContext.navigateToChat(accountId: strongSelf.context.account.id, peerId: message.id.peerId, messageId: message.id)
                                 strongSelf.dismiss()
                             }
                         }, externalShare: true)

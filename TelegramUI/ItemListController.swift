@@ -93,17 +93,19 @@ final class ItemListControllerTabBarItem: Equatable {
     let title: String
     let image: UIImage?
     let selectedImage: UIImage?
+    let tintImages: Bool
     let badgeValue: String?
     
-    init(title: String, image: UIImage?, selectedImage: UIImage?, badgeValue: String? = nil) {
+    init(title: String, image: UIImage?, selectedImage: UIImage?, tintImages: Bool = true, badgeValue: String? = nil) {
         self.title = title
         self.image = image
         self.selectedImage = selectedImage
+        self.tintImages = tintImages
         self.badgeValue = badgeValue
     }
     
     static func ==(lhs: ItemListControllerTabBarItem, rhs: ItemListControllerTabBarItem) -> Bool {
-        return lhs.title == rhs.title && lhs.image === rhs.image && lhs.selectedImage === rhs.selectedImage && lhs.badgeValue == rhs.badgeValue
+        return lhs.title == rhs.title && lhs.image === rhs.image && lhs.selectedImage === rhs.selectedImage && lhs.tintImages == rhs.tintImages && lhs.badgeValue == rhs.badgeValue
     }
 }
 
@@ -198,6 +200,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     }
     
     var previewItemWithTag: ((ItemListItemTag) -> UIViewController?)?
+    var commitPreview: ((UIViewController) -> Void)?
     
     var willDisappear: ((Bool) -> Void)?
     
@@ -527,15 +530,6 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     }
     
     func previewingCommit(_ viewControllerToCommit: UIViewController) {
-        /*if let viewControllerToCommit = viewControllerToCommit as? ViewController {
-            if let chatController = viewControllerToCommit as? ChatController {
-                chatController.canReadHistory.set(true)
-                chatController.updatePresentationMode(.standard(previewing: false))
-                if let navigationController = self.navigationController as? NavigationController {
-                    navigateToChatController(navigationController: navigationController, chatController: chatController, context: self.context, chatLocation: chatController.chatLocation, animated: false)
-                    self.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
-                }
-            }
-        }*/
+        self.commitPreview?(viewControllerToCommit)
     }
 }

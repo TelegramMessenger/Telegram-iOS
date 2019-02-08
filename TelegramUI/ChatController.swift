@@ -4836,7 +4836,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             }
                         }
                         |> runOn(Queue.mainQueue())
-                        |> delay(0.15, queue: Queue.mainQueue())
+                        |> delay(0.05, queue: Queue.mainQueue())
                         let progressDisposable = MetaDisposable()
                         var progressStarted = false
                         self.messageIndexDisposable.set((signal

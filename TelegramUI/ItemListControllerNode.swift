@@ -389,6 +389,8 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
             if transition.firstTime {
                 options.insert(.Synchronous)
                 options.insert(.LowLatency)
+                options.insert(.PreferSynchronousResourceLoading)
+                options.insert(.PreferSynchronousDrawing)
             } else if transition.animated {
                 options.insert(.AnimateInsertion)
             } else if transition.animateAlpha {

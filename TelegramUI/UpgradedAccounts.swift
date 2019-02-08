@@ -104,7 +104,7 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String) -
         return (transaction.getVersion(), transaction.getCurrent()?.0)
     }
     |> mapToSignal { version, currentId -> Signal<Void, NoError> in
-        if version == 0 || true {
+        if version == 0 {
             if let currentId = currentId {
                 return accountPreferenceEntries(rootPath: rootPath, id: currentId, keys: Set(preferencesKeyMapping.keys.map({ $0.key }) + applicationSpecificPreferencesKeyMapping.keys.map({ $0.key })))
                 |> mapToSignal { path, values -> Signal<Void, NoError> in

@@ -276,10 +276,19 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 } else {
                                     fileReference = .standalone(media: file.file)
                                 }
-                                signal = wallpaperImage(account: context.account, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
+                                signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
                             }
                             fetchSignal = fetchedMediaResource(postbox: context.account.postbox, reference: convertedRepresentations[convertedRepresentations.count - 1].reference)
-                            statusSignal = context.account.postbox.mediaBox.resourceStatus(file.file.resource)
+                            let account = context.account
+                            statusSignal = context.sharedContext.accountManager.mediaBox.resourceStatus(file.file.resource)
+                            |> take(1)
+                            |> mapToSignal { status -> Signal<MediaResourceStatus, NoError> in
+                                if case .Local = status {
+                                    return .single(status)
+                                } else {
+                                    return account.postbox.mediaBox.resourceStatus(file.file.resource)
+                                }
+                            }
                             if let fileSize = file.file.size {
                                 subtitleSignal = .single(dataSizeString(fileSize))
                             } else {
@@ -292,14 +301,23 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 displaySize = largestSize.dimensions.dividedByScreenScale().integralFloor
                                 
                                 let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
-                                signal = wallpaperImage(account: context.account, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
+                                signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
                                 
                                 if let largestIndex = convertedRepresentations.index(where: { $0.representation == largestSize }) {
                                     fetchSignal = fetchedMediaResource(postbox: context.account.postbox, reference: convertedRepresentations[largestIndex].reference)
                                 } else {
                                     fetchSignal = .complete()
                                 }
-                                statusSignal = context.account.postbox.mediaBox.resourceStatus(largestSize.resource)
+                                let account = context.account
+                                statusSignal = context.sharedContext.accountManager.mediaBox.resourceStatus(largestSize.resource)
+                                |> take(1)
+                                |> mapToSignal { status -> Signal<MediaResourceStatus, NoError> in
+                                    if case .Local = status {
+                                        return .single(status)
+                                    } else {
+                                        return account.postbox.mediaBox.resourceStatus(largestSize.resource)
+                                    }
+                                }
                                 if let fileSize = largestSize.resource.size {
                                     subtitleSignal = .single(dataSizeString(fileSize))
                                 } else {
