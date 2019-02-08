@@ -17,8 +17,9 @@ public final class ActionSheetControllerTheme: Equatable {
     public let primaryTextColor: UIColor
     public let secondaryTextColor: UIColor
     public let controlAccentColor: UIColor
+    public let controlColor: UIColor
     
-    public init(dimColor: UIColor, backgroundType: ActionSheetControllerThemeBackgroundType, itemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, standardActionTextColor: UIColor, destructiveActionTextColor: UIColor, disabledActionTextColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlAccentColor: UIColor) {
+    public init(dimColor: UIColor, backgroundType: ActionSheetControllerThemeBackgroundType, itemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, standardActionTextColor: UIColor, destructiveActionTextColor: UIColor, disabledActionTextColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlAccentColor: UIColor, controlColor: UIColor) {
         self.dimColor = dimColor
         self.backgroundType = backgroundType
         self.itemBackgroundColor = itemBackgroundColor
@@ -29,6 +30,7 @@ public final class ActionSheetControllerTheme: Equatable {
         self.primaryTextColor = primaryTextColor
         self.secondaryTextColor = secondaryTextColor
         self.controlAccentColor = controlAccentColor
+        self.controlColor = controlColor
     }
     
     public static func ==(lhs: ActionSheetControllerTheme, rhs: ActionSheetControllerTheme) -> Bool {
@@ -60,6 +62,9 @@ public final class ActionSheetControllerTheme: Equatable {
             return false
         }
         if lhs.controlAccentColor != rhs.controlAccentColor {
+            return false
+        }
+        if lhs.controlColor != rhs.controlColor {
             return false
         }
         return true

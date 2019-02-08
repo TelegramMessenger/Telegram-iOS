@@ -1,16 +1,23 @@
 import Foundation
 import AsyncDisplayKit
 
+public enum ActionSheetCheckboxStyle {
+    case `default`
+    case alignRight
+}
+
 public class ActionSheetCheckboxItem: ActionSheetItem {
     public let title: String
     public let label: String
     public let value: Bool
+    public let style: ActionSheetCheckboxStyle
     public let action: (Bool) -> Void
     
-    public init(title: String, label: String, value: Bool, action: @escaping (Bool) -> Void) {
+    public init(title: String, label: String, value: Bool, style: ActionSheetCheckboxStyle = .default, action: @escaping (Bool) -> Void) {
         self.title = title
         self.label = label
         self.value = value
+        self.style = style
         self.action = action
     }
     
@@ -114,13 +121,20 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
         
         self.button.frame = CGRect(origin: CGPoint(), size: size)
         
+        var titleOrigin: CGFloat = 44.0
+        var checkOrigin: CGFloat = 22.0
+        if let item = self.item, item.style == .alignRight {
+            titleOrigin = 24.0
+            checkOrigin = size.width - 22.0
+        }
+        
         let labelSize = self.labelNode.updateLayout(CGSize(width: size.width - 44.0 - 15.0 - 8.0, height: size.height))
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - 44.0 - labelSize.width - 15.0 - 8.0, height: size.height))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: 44.0, y: floorToScreenPixels((size.height - titleSize.height) / 2.0)), size: titleSize)
+        self.titleNode.frame = CGRect(origin: CGPoint(x: titleOrigin, y: floorToScreenPixels((size.height - titleSize.height) / 2.0)), size: titleSize)
         self.labelNode.frame = CGRect(origin: CGPoint(x: size.width - 15.0 - labelSize.width, y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
         
         if let image = self.checkNode.image {
-            self.checkNode.frame = CGRect(origin: CGPoint(x: floor((44.0 - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
+            self.checkNode.frame = CGRect(origin: CGPoint(x: floor(checkOrigin - (image.size.width / 2.0)), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
         }
     }
     
