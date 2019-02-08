@@ -889,6 +889,7 @@ private final class SharedApplicationContext {
             
             Logger.shared.log("App \(self.episodeId)", "received context \(String(describing: context)) account \(String(describing: context?.context.account.id)) network \(String(describing: network))")
             
+            let firstTime = self.contextValue == nil
             if let contextValue = self.contextValue {
                 contextValue.context.isCurrent = false
                 contextValue.context.account.shouldExplicitelyKeepWorkerConnections.set(.single(false))
@@ -904,6 +905,15 @@ private final class SharedApplicationContext {
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
                     self.mainWindow.viewController = context.rootController
+                    if firstTime {
+                        let layer = context.rootController.view.layer
+                        layer.allowsGroupOpacity = true
+                        layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak layer] _ in
+                            if let layer = layer {
+                                layer.allowsGroupOpacity = false
+                            }
+                        })
+                    }
                     self.mainWindow.topLevelOverlayControllers = [context.overlayMediaController, context.notificationController]
                     /*self.maybeDequeueNotificationPayloads()
                     self.maybeDequeueNotificationRequests()
