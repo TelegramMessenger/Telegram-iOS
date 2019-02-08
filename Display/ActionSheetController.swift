@@ -17,6 +17,8 @@ open class ActionSheetController: ViewController {
     
     private var isDismissed: Bool = false
     
+    public var dismissed: ((Bool) -> Void)?
+    
     public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
@@ -30,7 +32,7 @@ open class ActionSheetController: ViewController {
     public func dismissAnimated() {
         if !self.isDismissed {
             self.isDismissed = true
-            self.actionSheetNode.animateOut()
+            self.actionSheetNode.animateOut(cancelled: false)
         }
     }
     
@@ -38,7 +40,8 @@ open class ActionSheetController: ViewController {
         self.displayNode = ActionSheetControllerNode(theme: self.theme)
         self.displayNodeDidLoad()
         
-        self.actionSheetNode.dismiss = { [weak self] in
+        self.actionSheetNode.dismiss = { [weak self] cancelled in
+            self?.dismissed?(cancelled)
             self?.presentingViewController?.dismiss(animated: false)
         }
         

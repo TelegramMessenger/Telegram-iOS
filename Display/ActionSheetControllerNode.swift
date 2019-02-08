@@ -28,7 +28,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private let scrollView: UIScrollView
     
-    var dismiss: () -> Void = { }
+    var dismiss: (Bool) -> Void = { _ in }
     
     private var validLayout: ContainerViewLayout?
     
@@ -127,7 +127,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         })
     }
     
-    func animateOut() {
+    func animateOut(cancelled: Bool) {
         let tempDimView = UIView()
         tempDimView.backgroundColor = self.theme.dimColor
         tempDimView.frame = self.bounds.offsetBy(dx: 0.0, dy: -self.bounds.size.height)
@@ -141,7 +141,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.layer.animateBounds(from: self.bounds, to: self.bounds.offsetBy(dx: 0.0, dy: -self.bounds.size.height), duration: 0.35, timingFunction: kCAMediaTimingFunctionEaseOut, removeOnCompletion: false, completion: { [weak self, weak tempDimView] _ in
             tempDimView?.removeFromSuperview()
             
-            self?.dismiss()
+            self?.dismiss(cancelled)
         })
     }
     
@@ -152,7 +152,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     @objc func dimNodeTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            self.animateOut()
+            self.animateOut(cancelled: true)
         }
     }
     
@@ -174,7 +174,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let additionalTopHeight = max(0.0, -contentOffset.y)
         
         if additionalTopHeight >= 30.0 {
-            self.animateOut()
+            self.animateOut(cancelled: true)
         }
     }
     
