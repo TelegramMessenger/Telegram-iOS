@@ -25,6 +25,38 @@ public final class TabBarControllerTheme {
     }
 }
 
+public final class TabBarItemInfo: NSObject {
+    public let previewing: Bool
+    
+    public init(previewing: Bool) {
+        self.previewing = previewing
+        
+        super.init()
+    }
+    
+    override public func isEqual(_ object: Any?) -> Bool {
+        if let object = object as? TabBarItemInfo {
+            if self.previewing != object.previewing {
+                return false
+            }
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    public static func ==(lhs: TabBarItemInfo, rhs: TabBarItemInfo) -> Bool {
+        if lhs.previewing != rhs.previewing {
+            return false
+        }
+        return true
+    }
+}
+
+public protocol TabBarContainedController {
+    func presentTabBarPreviewingController(sourceNodes: [ASDisplayNode])
+}
+
 open class TabBarController: ViewController {
     private var validLayout: ContainerViewLayout?
     
@@ -87,8 +119,13 @@ open class TabBarController: ViewController {
     private var debugTapCounter: (Double, Int) = (0.0, 0)
     
     override open func loadDisplayNode() {
-        self.displayNode = TabBarControllerNode(theme: self.theme, navigationBar: self.navigationBar, itemSelected: { [weak self] index, longTap in
+        self.displayNode = TabBarControllerNode(theme: self.theme, navigationBar: self.navigationBar, itemSelected: { [weak self] index, longTap, itemNodes in
             if let strongSelf = self {
+                if longTap, let controller = strongSelf.controllers[index] as? TabBarContainedController {
+                    controller.presentTabBarPreviewingController(sourceNodes: itemNodes)
+                    return
+                }
+                
                 if strongSelf.selectedIndex == index {
                     let timestamp = CACurrentMediaTime()
                     if strongSelf.debugTapCounter.0 < timestamp - 0.4 {

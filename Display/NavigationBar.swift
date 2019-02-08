@@ -324,13 +324,13 @@ open class NavigationBar: ASDisplayNode {
         get {
             var accessibilityElements: [Any] = []
             if self.backButtonNode.supernode != nil {
-                addAccessibilityChildren(of: self.backButtonNode, to: &accessibilityElements)
+                addAccessibilityChildren(of: self.backButtonNode, container: self, to: &accessibilityElements)
             }
             if self.leftButtonNode.supernode != nil {
-                addAccessibilityChildren(of: self.leftButtonNode, to: &accessibilityElements)
+                addAccessibilityChildren(of: self.leftButtonNode, container: self, to: &accessibilityElements)
             }
             if self.titleNode.supernode != nil {
-                addAccessibilityChildren(of: self.titleNode, to: &accessibilityElements)
+                addAccessibilityChildren(of: self.titleNode, container: self, to: &accessibilityElements)
                 accessibilityElements.append(self.titleNode)
             }
             if let titleView = self.titleView, titleView.superview != nil {
@@ -338,7 +338,7 @@ open class NavigationBar: ASDisplayNode {
                 accessibilityElements.append(titleView)
             }
             if self.rightButtonNode.supernode != nil {
-                addAccessibilityChildren(of: self.rightButtonNode, to: &accessibilityElements)
+                addAccessibilityChildren(of: self.rightButtonNode, container: self, to: &accessibilityElements)
             }
             return accessibilityElements
         } set(value) {

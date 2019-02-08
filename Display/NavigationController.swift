@@ -33,16 +33,16 @@ private final class NavigationControllerView: UITracingLayerView {
     
     var topControllerNode: ASDisplayNode?
     
-    override var accessibilityElements: [Any]? {
+    /*override var accessibilityElements: [Any]? {
         get {
             var accessibilityElements: [Any] = []
             if let topControllerNode = self.topControllerNode {
-                addAccessibilityChildren(of: topControllerNode, to: &accessibilityElements)
+                addAccessibilityChildren(of: topControllerNode, container: self, to: &accessibilityElements)
             }
             return accessibilityElements
         } set(value) {
         }
-    }
+    }*/
     
     override init(frame: CGRect) {
         self.containerView = NavigationControllerContainerView()

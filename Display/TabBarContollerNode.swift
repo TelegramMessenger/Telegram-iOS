@@ -18,21 +18,21 @@ final class TabBarControllerNode: ASDisplayNode {
         }
     }
     
-    override var accessibilityElements: [Any]? {
+    /*override var accessibilityElements: [Any]? {
         get {
             var accessibilityElements: [Any] = []
             if let navigationBar = self.navigationBar {
-                addAccessibilityChildren(of: navigationBar, to: &accessibilityElements)
+                addAccessibilityChildren(of: navigationBar, container: self, to: &accessibilityElements)
             }
             if let currentControllerNode = self.currentControllerNode {
-                addAccessibilityChildren(of: currentControllerNode, to: &accessibilityElements)
+                addAccessibilityChildren(of: currentControllerNode, container: self, to: &accessibilityElements)
             }
             return accessibilityElements
         } set(value) {
         }
-    }
+    }*/
     
-    init(theme: TabBarControllerTheme, navigationBar: NavigationBar?, itemSelected: @escaping (Int, Bool) -> Void, toolbarActionSelected: @escaping (Bool) -> Void) {
+    init(theme: TabBarControllerTheme, navigationBar: NavigationBar?, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, toolbarActionSelected: @escaping (Bool) -> Void) {
         self.theme = theme
         self.navigationBar = navigationBar
         self.tabBarNode = TabBarNode(theme: theme, itemSelected: itemSelected)

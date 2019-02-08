@@ -16,6 +16,16 @@ private func findCurrentResponder(_ view: UIView) -> UIResponder? {
     }
 }
 
+private func findWindow(_ view: UIView) -> WindowHost? {
+    if let view = view as? WindowHost {
+        return view
+    } else if let superview = view.superview {
+        return findWindow(superview)
+    } else {
+        return nil
+    }
+}
+
 public enum ViewControllerPresentationAnimation {
     case none
     case modalSheet
@@ -346,14 +356,14 @@ open class ViewControllerPresentationArguments {
     public final var window: WindowHost? {
         if let window = self.view.window as? WindowHost {
             return window
-        } else if let superwindow = self.view.window {
-            for subview in superwindow.subviews {
-                if let subview = subview as? WindowHost {
-                    return subview
-                }
+        } else if let result = findWindow(self.view) {
+            return result
+        } else {
+            if let parent = self.parent as? ViewController {
+                return parent.window
             }
+            return nil
         }
-        return nil
     }
     
     public func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {

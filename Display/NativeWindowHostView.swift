@@ -180,12 +180,12 @@ private final class NativeWindow: UIWindow, WindowHost {
     var forEachControllerImpl: (((ContainableController) -> Void) -> Void)?
     var getAccessibilityElementsImpl: (() -> [Any]?)?
     
-    override var accessibilityElements: [Any]? {
+    /*override var accessibilityElements: [Any]? {
         get {
             return self.getAccessibilityElementsImpl?()
         } set(value) {
         }
-    }
+    }*/
     
     override var frame: CGRect {
         get {

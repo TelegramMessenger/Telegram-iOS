@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import SwiftSignalKit
 
 private let separatorHeight: CGFloat = 1.0 / UIScreen.main.scale
 private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: UIColor, tintColor: UIColor, horizontal: Bool) -> (UIImage, CGFloat) {
@@ -24,14 +25,14 @@ private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: 
     let size: CGSize
     let contentWidth: CGFloat
     if horizontal {
-        size = CGSize(width: ceil(titleSize.width) + horizontalSpacing + imageSize.width, height: 34.0)
+        size = CGSize(width: max(1.0, ceil(titleSize.width) + horizontalSpacing + imageSize.width), height: 34.0)
         contentWidth = size.width
     } else {
-        size = CGSize(width: max(ceil(titleSize.width), imageSize.width), height: 45.0)
+        size = CGSize(width: max(1.0, max(ceil(titleSize.width), imageSize.width), 1.0), height: 45.0)
         contentWidth = imageSize.width
     }
     
-    UIGraphicsBeginImageContextWithOptions(size, true, 0.0)
+    UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
     if let context = UIGraphicsGetCurrentContext() {
         context.setFillColor(backgroundColor.cgColor)
         context.fill(CGRect(origin: CGPoint(), size: size))
@@ -43,9 +44,13 @@ private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: 
                 context.translateBy(x: imageRect.midX, y: imageRect.midY)
                 context.scaleBy(x: 1.0, y: -1.0)
                 context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
-                context.clip(to: imageRect, mask: image.cgImage!)
-                context.setFillColor(tintColor.cgColor)
-                context.fill(imageRect)
+                if image.renderingMode == .alwaysOriginal {
+                    context.draw(image.cgImage!, in: imageRect)
+                } else {
+                    context.clip(to: imageRect, mask: image.cgImage!)
+                    context.setFillColor(tintColor.cgColor)
+                    context.fill(imageRect)
+                }
                 context.restoreGState()
             } else {
                 let imageRect = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - imageSize.width) / 2.0), y: 1.0), size: imageSize)
@@ -53,9 +58,13 @@ private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: 
                 context.translateBy(x: imageRect.midX, y: imageRect.midY)
                 context.scaleBy(x: 1.0, y: -1.0)
                 context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
-                context.clip(to: imageRect, mask: image.cgImage!)
-                context.setFillColor(tintColor.cgColor)
-                context.fill(imageRect)
+                if image.renderingMode == .alwaysOriginal {
+                    context.draw(image.cgImage!, in: imageRect)
+                } else {
+                    context.clip(to: imageRect, mask: image.cgImage!)
+                    context.setFillColor(tintColor.cgColor)
+                    context.fill(imageRect)
+                }
                 context.restoreGState()
             }
         }
@@ -67,10 +76,10 @@ private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: 
         (title as NSString).draw(at: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: size.height - titleSize.height - 2.0), withAttributes: [NSAttributedStringKey.font: font, NSAttributedStringKey.foregroundColor: tintColor])
     }
     
-    let image = UIGraphicsGetImageFromCurrentImageContext()
+    let resultImage = UIGraphicsGetImageFromCurrentImageContext()
     UIGraphicsEndImageContext()
     
-    return (image!, contentWidth)
+    return (resultImage!, contentWidth)
 }
 
 private let badgeFont = Font.regular(13.0)
@@ -174,7 +183,7 @@ class TabBarNode: ASDisplayNode {
         }
     }
     
-    private let itemSelected: (Int, Bool) -> Void
+    private let itemSelected: (Int, Bool, [ASDisplayNode]) -> Void
     
     private var theme: TabBarControllerTheme
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
@@ -185,7 +194,7 @@ class TabBarNode: ASDisplayNode {
     let separatorNode: ASDisplayNode
     private var tabBarNodeContainers: [TabBarNodeContainer] = []
     
-    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int, Bool) -> Void) {
+    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void) {
         self.itemSelected = itemSelected
         self.theme = theme
         
@@ -259,11 +268,11 @@ class TabBarNode: ASDisplayNode {
                 self?.updateNodeImage(i, layout: true)
             })
             if let selectedIndex = self.selectedIndex, selectedIndex == i {
-                let (image, contentWidth) = tabBarItemImage(item.selectedImage, title: item.title ?? "", backgroundColor: self.theme.tabBarBackgroundColor, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal)
+                let (image, contentWidth) = tabBarItemImage(item.selectedImage, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal)
                 node.image = image
                 node.contentWidth = contentWidth
             } else {
-                let (image, contentWidth) = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: self.theme.tabBarBackgroundColor, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal)
+                let (image, contentWidth) = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal)
                 node.image = image
                 node.contentWidth = contentWidth
             }
@@ -288,11 +297,11 @@ class TabBarNode: ASDisplayNode {
             
             let previousImage = node.image
             if let selectedIndex = self.selectedIndex, selectedIndex == index {
-                let (image, contentWidth) = tabBarItemImage(item.selectedImage, title: item.title ?? "", backgroundColor: self.theme.tabBarBackgroundColor, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal)
+                let (image, contentWidth) = tabBarItemImage(item.selectedImage, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal)
                 node.image = image
                 node.contentWidth = contentWidth
             } else {
-                let (image, contentWidth) = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: self.theme.tabBarBackgroundColor, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal)
+                let (image, contentWidth) = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal)
                 node.image = image
                 node.contentWidth = contentWidth
             }
@@ -400,7 +409,8 @@ class TabBarNode: ASDisplayNode {
             }
             
             if let closestNode = closestNode {
-                self.itemSelected(closestNode.0, longTap)
+                let container = self.tabBarNodeContainers[closestNode.0]
+                self.itemSelected(closestNode.0, longTap, [container.imageNode, container.badgeContainerNode])
             }
         }
     }
