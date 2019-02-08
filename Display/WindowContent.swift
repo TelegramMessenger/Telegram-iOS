@@ -630,12 +630,10 @@ public class Window1 {
                     rootController.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation), transition: .immediate)
                 }
                 
-                if let coveringView = self.coveringView {
-                    self.hostView.containerView.insertSubview(rootController.view, belowSubview: coveringView)
-                } else {
-                    self.hostView.containerView.insertSubview(rootController.view, belowSubview: self.volumeControlStatusBarNode.view)
-                }
+                self.hostView.containerView.insertSubview(rootController.view, at: 0)
             }
+            
+            self.hostView.eventView.setNeedsLayout()
         }
     }
     

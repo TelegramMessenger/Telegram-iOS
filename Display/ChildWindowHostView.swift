@@ -1,10 +1,16 @@
 import Foundation
 import UIKit
 
-private final class ChildWindowHostView: UIView {
+private final class ChildWindowHostView: UIView, WindowHost {
     var updateSize: ((CGSize) -> Void)?
     var layoutSubviewsEvent: (() -> Void)?
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
+    var presentController: ((ContainableController, PresentationSurfaceLevel, Bool, @escaping () -> Void) -> Void)?
+    var invalidateDeferScreenEdgeGestureImpl: (() -> Void)?
+    var invalidatePreferNavigationUIHiddenImpl: (() -> Void)?
+    var cancelInteractiveKeyboardGesturesImpl: (() -> Void)?
+    var forEachControllerImpl: (((ContainableController) -> Void) -> Void)?
+    var getAccessibilityElementsImpl: (() -> [Any]?)?
     
     override var frame: CGRect {
         didSet {
@@ -22,6 +28,29 @@ private final class ChildWindowHostView: UIView {
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         return self.hitTestImpl?(point, event)
+    }
+    
+    func invalidateDeferScreenEdgeGestures() {
+        self.invalidateDeferScreenEdgeGestureImpl?()
+    }
+    
+    func invalidatePreferNavigationUIHidden() {
+        self.invalidatePreferNavigationUIHiddenImpl?()
+    }
+    
+    func cancelInteractiveKeyboardGestures() {
+        self.cancelInteractiveKeyboardGesturesImpl?()
+    }
+    
+    func forEachController(_ f: (ContainableController) -> Void) {
+        self.forEachControllerImpl?(f)
+    }
+    
+    func present(_ controller: ContainableController, on level: PresentationSurfaceLevel, blockInteraction: Bool, completion: @escaping () -> Void) {
+        self.presentController?(controller, level, blockInteraction, completion)
+    }
+    
+    func presentInGlobalOverlay(_ controller: ContainableController) {
     }
 }
 
@@ -50,13 +79,13 @@ public func childWindowHostView(parent: UIView) -> WindowHostView {
     
     window.updateToInterfaceOrientation = { [weak hostView] in
         hostView?.updateToInterfaceOrientation?()
+    }*/
+    
+    view.presentController = { [weak hostView] controller, level, block, f in
+        hostView?.present?(controller, level, block, f)
     }
     
-    window.presentController = { [weak hostView] controller, level in
-        hostView?.present?(controller, level)
-    }
-    
-    window.presentNativeImpl = { [weak hostView] controller in
+    /*view.presentNativeImpl = { [weak hostView] controller in
         hostView?.presentNative?(controller)
     }*/
     
@@ -64,14 +93,25 @@ public func childWindowHostView(parent: UIView) -> WindowHostView {
         return hostView?.hitTest?(point, event)
     }
     
-    /*rootViewController.presentController = { [weak hostView] controller, level, animated, completion in
-        if let strongSelf = hostView {
-            strongSelf.present?(LegacyPresentedController(legacyController: controller, presentation: .custom), level)
-            if let completion = completion {
-                completion()
-            }
-        }
-    }*/
+    view.invalidateDeferScreenEdgeGestureImpl = { [weak hostView] in
+        return hostView?.invalidateDeferScreenEdgeGesture?()
+    }
+    
+    view.invalidatePreferNavigationUIHiddenImpl = { [weak hostView] in
+        return hostView?.invalidatePreferNavigationUIHidden?()
+    }
+    
+    view.cancelInteractiveKeyboardGesturesImpl = { [weak hostView] in
+        hostView?.cancelInteractiveKeyboardGestures?()
+    }
+    
+    view.forEachControllerImpl = { [weak hostView] f in
+        hostView?.forEachController?(f)
+    }
+    
+    view.getAccessibilityElementsImpl = { [weak hostView] in
+        return hostView?.getAccessibilityElements?()
+    }
     
     return hostView
 }

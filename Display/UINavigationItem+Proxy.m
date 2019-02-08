@@ -16,6 +16,7 @@ static const void *setMultipleRightBarButtonItemsListenerKey = &setMultipleRight
 static const void *setBackBarButtonItemListenerBagKey = &setBackBarButtonItemListenerBagKey;
 static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
 static const void *badgeKey = &badgeKey;
+static const void *userInfoKey = &userInfoKey;
 
 @implementation UINavigationItem (Proxy)
 
@@ -399,6 +400,14 @@ NSInteger UITabBarItem_addSetBadgeListener(UITabBarItem *item, UITabBarItemSetBa
 
 - (void)removeSetSelectedImageListener:(NSInteger)key {
     [(NSBag *)[self associatedObjectForKey:setSelectedImageListenerBagKey] removeItem:key];
+}
+
+- (NSObject * _Nullable)userInfo {
+    return [self associatedObjectForKey:userInfoKey];
+}
+
+- (void)setUserInfo:(NSObject * _Nullable)userInfo {
+    [self setAssociatedObject:userInfo forKey:userInfoKey];
 }
 
 @end

@@ -247,6 +247,17 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     private var reorderFeedbackDisposable: MetaDisposable?
     
     private let waitingForNodesDisposable = MetaDisposable()
+    
+    override open var accessibilityElements: [Any]? {
+        get {
+            var accessibilityElements: [Any] = []
+            self.forEachItemNode({ itemNode in
+                addAccessibilityChildren(of: itemNode, container: self, to: &accessibilityElements)
+            })
+            return accessibilityElements
+        } set(value) {
+        }
+    }
 
     override public init() {
         class DisplayLinkProxy: NSObject {
@@ -265,6 +276,8 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         self.scroller = ListViewScroller()
         
         super.init()
+        
+        self.isAccessibilityContainer = true
         
         self.setViewBlock({ () -> UIView in
             return ListViewBackingView()
@@ -1552,7 +1565,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                                             let startTime = CACurrentMediaTime()
                                             self?.recursivelyEnsureDisplaySynchronously(true)
                                             let deltaTime = CACurrentMediaTime() - startTime
-                                            print("ListView: waited \(deltaTime * 1000.0) ms for nodes to display")
+                                            if false {
+                                                print("ListView: waited \(deltaTime * 1000.0) ms for nodes to display")
+                                            }
                                         }
                                         completion()
                                     })
@@ -1566,7 +1581,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                                 let startTime = CACurrentMediaTime()
                                 self.waitingForNodesDisposable.set(readyWithTimeout.start(completed: {
                                     let deltaTime = CACurrentMediaTime() - startTime
-                                    print("ListView: waited \(deltaTime * 1000.0) ms for nodes to load")
+                                    if false {
+                                        print("ListView: waited \(deltaTime * 1000.0) ms for nodes to load")
+                                    }
                                     beginReplay()
                                 }))
                             } else {
