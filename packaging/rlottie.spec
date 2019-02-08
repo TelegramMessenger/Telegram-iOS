@@ -1,5 +1,5 @@
-Name:       lotti-player
-Summary:    rlottie ibrary
+Name:       lottie-player
+Summary:    rlottie Library
 Version:    0.0.1
 Release:    1
 Group:      UI Framework/Services

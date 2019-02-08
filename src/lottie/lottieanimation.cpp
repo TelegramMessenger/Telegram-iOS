@@ -296,7 +296,7 @@ void initLogging()
 #if defined(__ARM_NEON__)
     set_log_level(LogLevel::OFF);
 #else
-    initialize(GuaranteedLogger(), "/tmp/", "lotti-player", 1);
+    initialize(GuaranteedLogger(), "/tmp/", "rlottie", 1);
     set_log_level(LogLevel::INFO);
 #endif
 }
