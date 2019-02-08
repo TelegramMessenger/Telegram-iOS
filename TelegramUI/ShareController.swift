@@ -539,6 +539,11 @@ public final class ShareController: ViewController {
             
             let presentationData = strongSelf.sharedContext.currentPresentationData.with { $0 }
             let controller = ActionSheetController(presentationTheme: presentationData.theme)
+            controller.dismissed = { [weak self] cancelled in
+                if cancelled {
+                    self?.controllerNode.animateIn()
+                }
+            }
             let dismissAction: () -> Void = { [weak controller] in
                 controller?.dismissAnimated()
             }
@@ -666,19 +671,19 @@ public final class ShareController: ViewController {
         |> deliverOnMainQueue).start(next: { [weak self] next in
             if let strongSelf = self {
                 strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
+                
+                if animateIn {
+                    strongSelf.readyDisposable.set((strongSelf.controllerNode.ready.get()
+                    |> filter({ $0 })
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.controllerNode.animateIn()
+                    }))
+                }
             }
         }))
-        
-        if animateIn {
-            self.readyDisposable.set((self.controllerNode.ready.get()
-            |> filter({ $0 })
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] _ in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.controllerNode.animateIn()
-            }))
-        }
     }
 }
