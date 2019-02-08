@@ -130,6 +130,8 @@ typedef struct LOTMask {
         int          elmCount;
     } mPath;
     LOTMaskMode mMode;
+
+    int mAlpha;
 }LOTMask;
 
 typedef enum

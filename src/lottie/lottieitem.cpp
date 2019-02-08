@@ -230,6 +230,7 @@ void LOTLayerItem::buildLayerNode()
             cNode.mPath.ptCount = pts.size();
             cNode.mPath.elmPtr = elmPtr;
             cNode.mPath.elmCount = elm.size();
+            cNode.mAlpha = mask.mCombinedAlpha * 255;
             switch (mask.maskMode()) {
             case LOTMaskData::Mode::Add:
                 cNode.mMode = MaskModeAdd;
