@@ -253,7 +253,8 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                 var settings: AutomaticMediaDownloadSettings = current as? AutomaticMediaDownloadSettings ?? .defaultSettings
 
                 if let preferences = autoDownloadPreferences, !preferences.isDefaultPreferences() {
-                    settings.masterEnabled = !preferences.disabled
+                    settings.cellularEnabled = !preferences.disabled
+                    settings.wifiEnabled = !preferences.disabled
                 
                     let peerPaths: [(WritableKeyPath<AutomaticMediaDownloadPeers, AutomaticMediaDownloadCategories>, TGAutoDownloadMode, TGAutoDownloadMode)] = [
                         (\AutomaticMediaDownloadPeers.contacts, TGAutoDownloadModeCellularContacts, TGAutoDownloadModeWifiContacts),
@@ -273,7 +274,7 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                     for (categoryPath, category, maxSize) in categoryPaths {
                         for (peerPath, cellular, wifi) in peerPaths {
                             let targetPath = peerPath.appending(path: categoryPath)
-                            settings.peers[keyPath: targetPath] = AutomaticMediaDownloadCategory(cellular: (category.rawValue & cellular.rawValue) != 0, wifi: (category.rawValue & wifi.rawValue) != 0, sizeLimit: maxSize)
+                            settings.peers[keyPath: targetPath] = AutomaticMediaDownloadCategory(cellular: (category.rawValue & cellular.rawValue) != 0, cellularSizeLimit: maxSize, wifi: (category.rawValue & wifi.rawValue) != 0, wifiSizeLimit: maxSize)
                         }
                     }
                 }
