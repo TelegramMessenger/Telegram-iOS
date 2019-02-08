@@ -1065,6 +1065,12 @@ private final class SharedApplicationContext {
             BITHockeyManager.shared().start()
             BITHockeyManager.shared().authenticator.authenticateInstallation()
         }
+        
+        NotificationCenter.default.addObserver(forName: NSNotification.Name.UIWindowDidBecomeHidden, object: nil, queue: nil, using: { notification in
+            if UIApplication.shared.isStatusBarHidden {
+                UIApplication.shared.setStatusBarHidden(false, with: .none)
+            }
+        })
 
         return true
     }
