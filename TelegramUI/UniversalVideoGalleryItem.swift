@@ -459,6 +459,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
             
+            videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
             self._ready.set(videoNode.ready)
         }
         
@@ -698,6 +699,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             })
             pictureInPictureNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         }
+        
+        videoNode.continuePlayingWithoutSound()
     }
     
     func animateOut(toOverlay node: ASDisplayNode, completion: @escaping () -> Void) {

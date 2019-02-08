@@ -17,9 +17,9 @@ protocol UniversalVideoContentNode: class {
     func togglePlayPause()
     func setSoundEnabled(_ value: Bool)
     func seek(_ timestamp: Double)
-    func playOnceWithSound(playAndRecord: Bool)
+    func playOnceWithSound(playAndRecord: Bool, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd)
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool)
-    func continuePlayingWithoutSound()
+    func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd)
     func setBaseRate(_ baseRate: Double)
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int
     func removePlaybackCompleted(_ index: Int)
@@ -84,7 +84,6 @@ final class UniversalVideoNode: ASDisplayNode {
     private let decoration: UniversalVideoDecoration
     private let autoplay: Bool
     private let snapshotContentWhenGone: Bool
-    
     
     private var contentNode: (UniversalVideoContentNode & ASDisplayNode)?
     private var contentNodeId: Int32?
@@ -270,10 +269,10 @@ final class UniversalVideoNode: ASDisplayNode {
         })
     }
     
-    func playOnceWithSound(playAndRecord: Bool) {
+    func playOnceWithSound(playAndRecord: Bool, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd = .loopDisablingSound) {
         self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
             if let contentNode = contentNode {
-                contentNode.playOnceWithSound(playAndRecord: playAndRecord)
+                contentNode.playOnceWithSound(playAndRecord: playAndRecord, actionAtEnd: actionAtEnd)
             }
         })
     }
@@ -294,10 +293,10 @@ final class UniversalVideoNode: ASDisplayNode {
         })
     }
     
-    func continuePlayingWithoutSound() {
+    func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd = .loopDisablingSound) {
         self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
             if let contentNode = contentNode {
-                contentNode.continuePlayingWithoutSound()
+                contentNode.continuePlayingWithoutSound(actionAtEnd: actionAtEnd)
             }
         })
     }

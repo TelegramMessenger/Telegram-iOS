@@ -288,7 +288,7 @@ public func themeSettingsController(context: AccountContext) -> ViewController {
                         case 3:
                             wallpaper = .color(0x18222d)
                         default:
-                            wallpaper = .builtin
+                            wallpaper = .builtin(WallpaperSettings())
                     }
                 }
                 

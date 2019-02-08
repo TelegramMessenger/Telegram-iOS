@@ -373,6 +373,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
             }
             
+            var isInlinePlayableVideo = false
+            for media in item.content.firstMessage.media {
+                if let file = media as? TelegramMediaFile, file.isVideo, !file.isAnimated, isMediaStreamable(message: item.content.firstMessage, media: file) {
+                    isInlinePlayableVideo = true
+                }
+            }
+            
             if hasAvatar {
                 avatarInset = layoutConstants.avatarDiameter
             } else {
@@ -436,7 +443,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     tmpWidth -= 38.0
                 }
             } else {
-                tmpWidth = layoutConstants.bubble.maximumWidthFill.widthFor(baseWidth)
+                tmpWidth = isInlinePlayableVideo ? baseWidth - 36.0 : layoutConstants.bubble.maximumWidthFill.widthFor(baseWidth)
                 if needShareButton && tmpWidth + 32.0 > baseWidth {
                     tmpWidth = baseWidth - 32.0
                 }

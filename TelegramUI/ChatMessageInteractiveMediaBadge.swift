@@ -9,14 +9,14 @@ enum ChatMessageInteractiveMediaBadgeShape: Equatable {
 
 enum ChatMessageInteractiveMediaDownloadState: Equatable {
     case remote
-    case fetching(progress: Float)
+    case fetching(progress: Float?)
     case compactRemote
     case compactFetching(progress: Float)
 }
 
 enum ChatMessageInteractiveMediaBadgeContent: Equatable {
     case text(inset: CGFloat, backgroundColor: UIColor, foregroundColor: UIColor, shape: ChatMessageInteractiveMediaBadgeShape, text: NSAttributedString)
-    case mediaDownload(backgroundColor: UIColor, foregroundColor: UIColor, duration: String, size: String)
+    case mediaDownload(backgroundColor: UIColor, foregroundColor: UIColor, duration: String, size: String?, muted: Bool, active: Bool)
     
     static func ==(lhs: ChatMessageInteractiveMediaBadgeContent, rhs: ChatMessageInteractiveMediaBadgeContent) -> Bool {
         switch lhs {
@@ -26,8 +26,8 @@ enum ChatMessageInteractiveMediaBadgeContent: Equatable {
                 } else {
                     return false
                 }
-            case let .mediaDownload(lhsBackgroundColor, lhsForegroundColor, lhsDuration, lhsSize):
-                if case let .mediaDownload(rhsBackgroundColor, rhsForegroundColor, rhsDuration, rhsSize) = rhs, lhsBackgroundColor.isEqual(rhsBackgroundColor), lhsForegroundColor.isEqual(rhsForegroundColor), lhsDuration == rhsDuration, lhsSize == rhsSize {
+            case let .mediaDownload(lhsBackgroundColor, lhsForegroundColor, lhsDuration, lhsSize, lhsMuted, lhsActive):
+                if case let .mediaDownload(rhsBackgroundColor, rhsForegroundColor, rhsDuration, rhsSize, rhsMuted, rhsActive) = rhs, lhsBackgroundColor.isEqual(rhsBackgroundColor), lhsForegroundColor.isEqual(rhsForegroundColor), lhsDuration == rhsDuration, lhsSize == rhsSize, lhsMuted == rhsMuted, lhsActive == rhsActive {
                     return true
                 } else {
                     return false
@@ -39,27 +39,28 @@ enum ChatMessageInteractiveMediaBadgeContent: Equatable {
 private let font = Font.regular(11.0)
 private let boldFont = Font.semibold(11.0)
 
-private final class ChatMessageInteractiveMediaBadgeParams: NSObject {
-    let content: ChatMessageInteractiveMediaBadgeContent?
-    
-    init(content: ChatMessageInteractiveMediaBadgeContent?) {
-        self.content = content
-    }
-}
-
 final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
+    private var content: ChatMessageInteractiveMediaBadgeContent?
     var pressed: (() -> Void)?
     
-    private var content: ChatMessageInteractiveMediaBadgeContent?
-    
-    private var mediaDownloadStatusNode: RadialStatusNode?
     private var mediaDownloadState: ChatMessageInteractiveMediaDownloadState?
+    private var backgroundNodeColor: UIColor?
+    private var foregroundColor: UIColor?
+    
+    private let backgroundNode: ASImageNode
+    private let durationNode: ASTextNode
+    private var sizeNode: ASTextNode?
+    private var iconNode: ASImageNode?
+    private var mediaDownloadStatusNode: RadialStatusNode?
     
     override init() {
+        self.backgroundNode = ASImageNode()
+        self.durationNode = ASTextNode()
+        
         super.init()
         
-        self.contentMode = .topLeft
-        self.contentsScale = UIScreenScale
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.durationNode)
     }
     
     override func didLoad() {
@@ -72,16 +73,6 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
         if case .ended = recognizer.state {
             self.pressed?()
         }
-    }
-    
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if let contents = self.contents, CFGetTypeID(contents as CFTypeRef) == CGImage.typeID {
-            let image = contents as! CGImage
-            if CGRect(origin: CGPoint(), size: CGSize(width: CGFloat(image.width) / UIScreenScale, height: CGFloat(image.height) / UIScreenScale)).contains(point) {
-                return self.view
-            }
-        }
-        return nil
     }
     
     func update(theme: PresentationTheme, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, animated: Bool) {
@@ -110,7 +101,11 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                             state = .none
                         }
                     case let .fetching(progress):
-                        state = .cloudProgress(color: .white, strokeBackgroundColor: UIColor(white: 1.0, alpha: 0.3), lineWidth: 2.0, value: CGFloat(progress))
+                        var cloudProgress: CGFloat?
+                        if let progress = progress {
+                            cloudProgress = CGFloat(progress)
+                        }
+                        state = .cloudProgress(color: .white, strokeBackgroundColor: UIColor(white: 1.0, alpha: 0.3), lineWidth: 2.0 - UIScreenPixel, value: cloudProgress)
                     case .compactRemote:
                         state = .download(.white)
                         isCompact = true
@@ -131,78 +126,97 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                 mediaDownloadStatusNode.removeFromSupernode()
             }
         }
-    }
-    
-    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return ChatMessageInteractiveMediaBadgeParams(content: self.content)
-    }
-    
-    @objc override public class func display(withParameters: Any?, isCancelled: () -> Bool) -> UIImage? {
-        if let content = (withParameters as? ChatMessageInteractiveMediaBadgeParams)?.content {
+        
+        var contentSize = CGSize()
+        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
+        
+        if let content = self.content {
             switch content {
                 case let .text(inset, backgroundColor, foregroundColor, shape, text):
+                    if self.backgroundNodeColor != backgroundColor {
+                        self.backgroundNodeColor = backgroundColor
+                        self.backgroundNode.image = generateStretchableFilledCircleImage(radius: 9.0, color: backgroundColor)
+                    }
                     let convertedText = NSMutableAttributedString(string: text.string, attributes: [.font: font, .foregroundColor: foregroundColor])
                     text.enumerateAttributes(in: NSRange(location: 0, length: text.length), options: []) { attributes, range, _ in
                         if let _ = attributes[ChatTextInputAttributes.bold] {
                             convertedText.addAttribute(.font, value: boldFont, range: range)
                         }
                     }
-                    let textRect = convertedText.boundingRect(with: CGSize(width: 200.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
-                    let imageSize = CGSize(width: inset + ceil(textRect.size.width) + 10.0, height: 18.0)
-                    return generateImage(imageSize, rotatedContext: { size, context in
-                        context.clear(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
-                        context.setBlendMode(.copy)
-                        context.setFillColor(backgroundColor.cgColor)
-                        switch shape {
-                            case .round:
-                                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.height, height: size.height)))
-                                context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - size.height, y: 0.0), size: CGSize(width: size.height, height: size.height)))
-                                context.fill(CGRect(origin: CGPoint(x: size.height / 2.0, y: 0.0), size: CGSize(width: size.width - size.height, height: size.height)))
-                            case let .corners(radius):
-                                let diameter = radius * 2.0
-                                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: diameter, height: diameter)))
-                                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: size.height - diameter), size: CGSize(width: diameter, height: diameter)))
-                                context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - diameter, y: 0.0), size: CGSize(width: diameter, height: diameter)))
-                                context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - diameter, y: size.height - diameter), size: CGSize(width: diameter, height: diameter)))
-                                context.fill(CGRect(origin: CGPoint(x: 0.0, y: radius), size: CGSize(width: diameter, height: size.height - diameter)))
-                                context.fill(CGRect(origin: CGPoint(x: radius, y: 0.0), size: CGSize(width: size.width - diameter, height: size.height)))
-                                context.fill(CGRect(origin: CGPoint(x: size.width - diameter, y: radius), size: CGSize(width: diameter, height: size.height - diameter)))
-                        }
-                        context.setBlendMode(.normal)
-                        UIGraphicsPushContext(context)
-                        convertedText.draw(at: CGPoint(x: inset + floor((size.width - inset - textRect.size.width) / 2.0) + textRect.origin.x, y: 2.0 + textRect.origin.y))
-                        UIGraphicsPopContext()
-                    })
-                case let .mediaDownload(backgroundColor, foregroundColor, duration, size):
+                    self.durationNode.attributedText = convertedText
+                    let durationSize = self.durationNode.measure(CGSize(width: 160.0, height: 160.0))
+                    self.durationNode.frame = CGRect(x: 7.0, y: 2.0, width: durationSize.width, height: durationSize.height)
+                    contentSize = CGSize(width: durationSize.width + 14.0, height: 18.0)
+                case let .mediaDownload(backgroundColor, foregroundColor, duration, size, muted, active):
+                    if self.backgroundNodeColor != backgroundColor {
+                        self.backgroundNodeColor = backgroundColor
+                        self.backgroundNode.image = generateStretchableFilledCircleImage(radius: 9.0, color: backgroundColor)
+                    }
+                    
                     let durationString = NSMutableAttributedString(string: duration, attributes: [.font: font, .foregroundColor: foregroundColor])
-                    let sizeString = NSMutableAttributedString(string: size, attributes: [.font: font, .foregroundColor: foregroundColor])
-                    let durationRect = durationString.boundingRect(with: CGSize(width: 200.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
-                    let sizeRect = sizeString.boundingRect(with: CGSize(width: 200.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
-                    let leftInset: CGFloat = 42.0
-                    let imageSize = CGSize(width: leftInset + max(ceil(durationRect.width), ceil(sizeRect.width)) + 10.0, height: 40.0)
-                    return generateImage(imageSize, rotatedContext: { size, context in
-                        context.clear(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
-                        context.setBlendMode(.copy)
-                        context.setFillColor(backgroundColor.cgColor)
+                    self.durationNode.attributedText = durationString
+                    
+                    var sizeSize: CGSize = CGSize()
+                    if let size = size {
+                        let sizeNode: ASTextNode
+                        if let current = self.sizeNode {
+                            sizeNode = current
+                        } else {
+                            sizeNode = ASTextNode()
+                            self.sizeNode = sizeNode
+                            self.addSubnode(sizeNode)
+                        }
                         
-                        let radius: CGFloat = 12.0
-                        let diameter = radius * 2.0
-                        context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: diameter, height: diameter)))
-                        context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: size.height - diameter), size: CGSize(width: diameter, height: diameter)))
-                        context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - diameter, y: 0.0), size: CGSize(width: diameter, height: diameter)))
-                        context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - diameter, y: size.height - diameter), size: CGSize(width: diameter, height: diameter)))
-                        context.fill(CGRect(origin: CGPoint(x: 0.0, y: radius), size: CGSize(width: diameter, height: size.height - diameter)))
-                        context.fill(CGRect(origin: CGPoint(x: radius, y: 0.0), size: CGSize(width: size.width - diameter, height: size.height)))
-                        context.fill(CGRect(origin: CGPoint(x: size.width - diameter, y: radius), size: CGSize(width: diameter, height: size.height - diameter)))
+                        let sizeString = NSMutableAttributedString(string: size, attributes: [.font: font, .foregroundColor: foregroundColor])
+                        sizeNode.attributedText = sizeString
+                        sizeSize = sizeNode.measure(CGSize(width: 160.0, height: 160.0))
+                        sizeNode.frame = CGRect(x: active ? 42.0 : 7.0, y: active ? 19.0 : 2.0, width: sizeSize.width, height: sizeSize.height)
+                        transition.updateAlpha(node: sizeNode, alpha: 1.0)
+                    } else if let sizeNode = self.sizeNode {
+                        transition.updateAlpha(node: sizeNode, alpha: 0.0)
+                    }
+                    
+                    let durationSize = self.durationNode.measure(CGSize(width: 160.0, height: 160.0))
+                    if let statusNode = self.mediaDownloadStatusNode {
+                        transition.updateAlpha(node: statusNode, alpha: active ? 1.0 : 0.0)
+                    }
+                    
+                    self.durationNode.frame = CGRect(x: active ? 42.0 : 7.0, y: active ? 7.0 : 2.0, width: durationSize.width, height: durationSize.height)
+                    
+                    if muted {
+                        let iconNode: ASImageNode
+                        if let current = self.iconNode {
+                            iconNode = current
+                        } else {
+                            iconNode = ASImageNode()
+                            self.iconNode = iconNode
+                            self.addSubnode(iconNode)
+                        }
                         
-                        context.setBlendMode(.normal)
-                        UIGraphicsPushContext(context)
-                        durationString.draw(at: CGPoint(x: leftInset + durationRect.origin.x, y: 7.0 + durationRect.origin.y))
-                        sizeString.draw(at: CGPoint(x: leftInset + sizeRect.origin.x, y: 21.0 + sizeRect.origin.y))
-                        UIGraphicsPopContext()
-                    })
+                        if self.foregroundColor != foregroundColor {
+                            self.foregroundColor = foregroundColor
+                            iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/InlineVideoMute"), color: foregroundColor)
+                        }
+                        transition.updateAlpha(node: iconNode, alpha: 1.0)
+                        if let icon = iconNode.image {
+                            transition.updateFrame(node: iconNode, frame: CGRect(x: (active ? 42.0 : 7.0) + floor(durationSize.width) + 3.0, y: active ? 9.0 + UIScreenPixel : 4.0 + UIScreenPixel, width: icon.size.width, height: icon.size.height))
+                        }
+                    } else if let iconNode = self.iconNode {
+                        transition.updateAlpha(node: iconNode, alpha: 0.0)
+                    }
+                    
+                    var contentWidth: CGFloat = max(sizeSize.width, durationSize.width + (muted ? 17.0 : 0.0)) + 14.0
+                    if active {
+                        contentWidth += 36.0
+                    }
+                    contentSize = CGSize(width: contentWidth, height: active ? 38.0 : 18.0)
             }
         }
-        return nil
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: contentSize.width, height: contentSize.height))
+    }
+    
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        return self.backgroundNode.frame.contains(point)
     }
 }
+

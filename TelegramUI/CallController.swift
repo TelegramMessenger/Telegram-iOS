@@ -172,7 +172,7 @@ public final class CallController: ViewController {
                 
                 Queue.mainQueue().after(0.5, {
                     let window = strongSelf.window
-                    let controller = callRatingController(sharedContext: strongSelf.sharedContext, account: strongSelf.account, callId: callId, present: { [weak self] c, a in
+                    let controller = callRatingController(sharedContext: strongSelf.sharedContext, account: strongSelf.account, callId: callId, present: { c, a in
                         if let window = window {
                             c.presentationArguments = a
                             window.present(c, on: .root, blockInteraction: false, completion: {})

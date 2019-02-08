@@ -96,6 +96,9 @@ final class WallpaperUploadManager {
                     let sharedContext = self.sharedContext
                     let account = self.account
                     disposable.set(uploadWallpaper(account: account, resource: currentResource, settings: currentWallpaper.settings ?? WallpaperSettings()).start(next: { [weak self] status in
+                        guard let strongSelf = self else {
+                            return
+                        }
                         if case let .complete(wallpaper) = status {
                             let updateWallpaper: (TelegramWallpaper) -> Void = { wallpaper in
                                 if let resource = wallpaper.mainResource {
@@ -103,7 +106,7 @@ final class WallpaperUploadManager {
                                     let _ = sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start(completed: {})
                                 }
                                 
-                                if self?.currentPresentationData?.theme.name == presentationData.theme.name {
+                                if strongSelf.currentPresentationData?.theme.name == presentationData.theme.name {
                                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: sharedContext.accountManager, { current in
                                         let updatedWallpaper: TelegramWallpaper
                                         if let currentSettings = current.chatWallpaper.settings {

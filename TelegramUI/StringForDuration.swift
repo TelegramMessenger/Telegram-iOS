@@ -1,6 +1,10 @@
 import Foundation
 
-func stringForDuration(_ duration: Int32) -> String {
+func stringForDuration(_ duration: Int32, position: Int32? = nil) -> String {
+    var duration = duration
+    if let position = position {
+        duration = duration - position
+    }
     let hours = duration / 3600
     let minutes = duration / 60 % 60
     let seconds = duration % 60
@@ -12,5 +16,6 @@ func stringForDuration(_ duration: Int32) -> String {
     }
     return durationString
 }
+
 
 
