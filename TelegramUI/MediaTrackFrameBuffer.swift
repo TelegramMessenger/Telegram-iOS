@@ -99,7 +99,7 @@ final class MediaTrackFrameBuffer {
     
     func status(at timestamp: Double) -> MediaTrackFrameBufferStatus {
         var bufferedDuration = 0.0
-        if let bufferedUntilTime = bufferedUntilTime {
+        if let bufferedUntilTime = self.bufferedUntilTime {
             if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 || self.endOfStream {
                 return .finished(at: CMTimeGetSeconds(bufferedUntilTime))
             }

@@ -9,33 +9,32 @@ private final class DataAndStorageControllerArguments {
     let openStorageUsage: () -> Void
     let openNetworkUsage: () -> Void
     let openProxy: () -> Void
-    let toggleAutomaticDownloadMaster: (Bool) -> Void
-    let openAutomaticDownloadCategory: (AutomaticDownloadCategory) -> Void
-    let resetAutomaticDownload: () -> Void
+    let openAutomaticDownloadConnectionType: (AutomaticDownloadConnectionType) -> Void
     let openVoiceUseLessData: () -> Void
     let openSaveIncomingPhotos: () -> Void
     let toggleSaveEditedPhotos: (Bool) -> Void
     let toggleAutoplayGifs: (Bool) -> Void
+    let toggleAutoplayVideos: (Bool) -> Void
     let toggleDownloadInBackground: (Bool) -> Void
     
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void, toggleAutomaticDownloadMaster: @escaping (Bool) -> Void, openAutomaticDownloadCategory: @escaping (AutomaticDownloadCategory) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void) {
+    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
         self.openProxy = openProxy
-        self.toggleAutomaticDownloadMaster = toggleAutomaticDownloadMaster
-        self.openAutomaticDownloadCategory = openAutomaticDownloadCategory
-        self.resetAutomaticDownload = resetAutomaticDownload
+        self.openAutomaticDownloadConnectionType = openAutomaticDownloadConnectionType
         self.openVoiceUseLessData = openVoiceUseLessData
         self.openSaveIncomingPhotos = openSaveIncomingPhotos
         self.toggleSaveEditedPhotos = toggleSaveEditedPhotos
         self.toggleAutoplayGifs = toggleAutoplayGifs
+        self.toggleAutoplayVideos = toggleAutoplayVideos
         self.toggleDownloadInBackground = toggleDownloadInBackground
     }
 }
 
 private enum DataAndStorageSection: Int32 {
     case usage
-    case automaticMediaDownload
+    case autoDownload
+    case autoPlay
     case voiceCalls
     case other
     case connection
@@ -44,20 +43,17 @@ private enum DataAndStorageSection: Int32 {
 private enum DataAndStorageEntry: ItemListNodeEntry {
     case storageUsage(PresentationTheme, String)
     case networkUsage(PresentationTheme, String)
-    case automaticMediaDownloadHeader(PresentationTheme, String)
-    case automaticDownloadMaster(PresentationTheme, String, Bool)
-    case automaticDownloadPhoto(PresentationTheme, String, Bool)
-    case automaticDownloadVideo(PresentationTheme, String, Bool)
-    case automaticDownloadFile(PresentationTheme, String, Bool)
-    case automaticDownloadVoiceMessage(PresentationTheme, String, Bool)
-    case automaticDownloadVideoMessage(PresentationTheme, String, Bool)
-    case automaticDownloadReset(PresentationTheme, String, Bool)
+    case automaticDownloadHeader(PresentationTheme, String)
+    case automaticDownloadCellular(PresentationTheme, String, String)
+    case automaticDownloadWifi(PresentationTheme, String, String)
+    case autoplayHeader(PresentationTheme, String)
+    case autoplayGifs(PresentationTheme, String, Bool)
+    case autoplayVideos(PresentationTheme, String, Bool)
     case voiceCallsHeader(PresentationTheme, String)
     case useLessVoiceData(PresentationTheme, String, String)
     case otherHeader(PresentationTheme, String)
     case saveIncomingPhotos(PresentationTheme, String)
     case saveEditedPhotos(PresentationTheme, String, Bool)
-    case autoplayGifs(PresentationTheme, String, Bool)
     case downloadInBackground(PresentationTheme, String, Bool)
     case downloadInBackgroundInfo(PresentationTheme, String)
     case connectionHeader(PresentationTheme, String)
@@ -67,11 +63,13 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
         switch self {
             case .storageUsage, .networkUsage:
                 return DataAndStorageSection.usage.rawValue
-            case .automaticMediaDownloadHeader, .automaticDownloadMaster, .automaticDownloadPhoto, .automaticDownloadVideo, .automaticDownloadFile, .automaticDownloadVideoMessage, .automaticDownloadVoiceMessage, .automaticDownloadReset:
-                return DataAndStorageSection.automaticMediaDownload.rawValue
+            case .automaticDownloadHeader, .automaticDownloadCellular, .automaticDownloadWifi:
+                return DataAndStorageSection.autoDownload.rawValue
+            case .autoplayHeader, .autoplayGifs, .autoplayVideos:
+                return DataAndStorageSection.autoPlay.rawValue
             case .voiceCallsHeader, .useLessVoiceData:
                 return DataAndStorageSection.voiceCalls.rawValue
-            case .otherHeader, .saveIncomingPhotos, .saveEditedPhotos, .autoplayGifs, .downloadInBackground, .downloadInBackgroundInfo:
+            case .otherHeader, .saveIncomingPhotos, .saveEditedPhotos, .downloadInBackground, .downloadInBackgroundInfo:
                 return DataAndStorageSection.other.rawValue
             case .connectionHeader, .connectionProxy:
                 return DataAndStorageSection.connection.rawValue
@@ -84,42 +82,36 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 0
             case .networkUsage:
                 return 1
-            case .automaticMediaDownloadHeader:
+            case .automaticDownloadHeader:
                 return 2
-            case .automaticDownloadMaster:
+            case .automaticDownloadCellular:
                 return 3
-            case .automaticDownloadPhoto:
+            case .automaticDownloadWifi:
                 return 4
-            case .automaticDownloadVideo:
+            case .autoplayHeader:
                 return 5
-            case .automaticDownloadFile:
-                return 6
-            case .automaticDownloadVoiceMessage:
-                return 7
-            case .automaticDownloadVideoMessage:
-                return 8
-            case .automaticDownloadReset:
-                return 9
-            case .voiceCallsHeader:
-                return 11
-            case .useLessVoiceData:
-                return 12
-            case .otherHeader:
-                return 13
-            case .saveIncomingPhotos:
-                return 14
-            case .saveEditedPhotos:
-                return 15
             case .autoplayGifs:
-                return 16
+                return 6
+            case .autoplayVideos:
+                return 7
+            case .voiceCallsHeader:
+                return 8
+            case .useLessVoiceData:
+                return 9
+            case .otherHeader:
+                return 10
+            case .saveIncomingPhotos:
+                return 11
+            case .saveEditedPhotos:
+                return 12
             case .downloadInBackground:
-                return 17
+                return 13
             case .downloadInBackgroundInfo:
-                return 18
+                return 14
             case .connectionHeader:
-                return 19
+                return 15
             case .connectionProxy:
-                return 20
+                return 16
         }
     }
     
@@ -137,50 +129,38 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .automaticMediaDownloadHeader(lhsTheme, lhsText):
-                if case let .automaticMediaDownloadHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .automaticDownloadHeader(lhsTheme, lhsText):
+                if case let .automaticDownloadHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .automaticDownloadMaster(lhsTheme, lhsText, lhsValue):
-                if case let .automaticDownloadMaster(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .automaticDownloadCellular(lhsTheme, lhsText, lhsValue):
+                if case let .automaticDownloadCellular(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .automaticDownloadPhoto(lhsTheme, lhsText, lhsEnabled):
-                if case let .automaticDownloadPhoto(rhsTheme, rhsText, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled {
+            case let .automaticDownloadWifi(lhsTheme, lhsText, lhsEnabled):
+                if case let .automaticDownloadWifi(rhsTheme, rhsText, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
                 }
-            case let .automaticDownloadVideo(lhsTheme, lhsText, lhsEnabled):
-                if case let .automaticDownloadVideo(rhsTheme, rhsText, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled {
+            case let .autoplayHeader(lhsTheme, lhsText):
+                if case let .autoplayHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .automaticDownloadFile(lhsTheme, lhsText, lhsEnabled):
-                if case let .automaticDownloadFile(rhsTheme, rhsText, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled {
+            case let .autoplayGifs(lhsTheme, lhsText, lhsValue):
+                if case let .autoplayGifs(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .automaticDownloadVoiceMessage(lhsTheme, lhsText, lhsEnabled):
-                if case let .automaticDownloadVoiceMessage(rhsTheme, rhsText, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled {
-                    return true
-                } else {
-                    return false
-                }
-            case let .automaticDownloadVideoMessage(lhsTheme, lhsText, lhsEnabled):
-                if case let .automaticDownloadVideoMessage(rhsTheme, rhsText, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled {
-                    return true
-                } else {
-                    return false
-                }
-            case let .automaticDownloadReset(lhsTheme, lhsText, lhsEnabled):
-                if case let .automaticDownloadReset(rhsTheme, rhsText, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled {
+            case let .autoplayVideos(lhsTheme, lhsText, lhsValue):
+                if case let .autoplayVideos(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -211,12 +191,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 }
             case let .saveEditedPhotos(lhsTheme, lhsText, lhsValue):
                 if case let .saveEditedPhotos(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .autoplayGifs(lhsTheme, lhsText, lhsValue):
-                if case let .autoplayGifs(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -262,47 +236,25 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openNetworkUsage()
                 })
-            case let .automaticMediaDownloadHeader(theme, text):
+            case let .automaticDownloadHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .automaticDownloadMaster(theme, text, value):
-                return ItemListSwitchItem(theme: theme, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.toggleAutomaticDownloadMaster(value)
+            case let .automaticDownloadCellular(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
+                    arguments.openAutomaticDownloadConnectionType(.cellular)
                 })
-            case let .automaticDownloadPhoto(theme, text, enabled):
-                return ItemListDisclosureItem(theme: theme, title: text, kind: enabled ? .generic : .disabled,  label: "", sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
-                    if enabled {
-                        arguments.openAutomaticDownloadCategory(.photo)
-                    }
+            case let .automaticDownloadWifi(theme, text, value):
+                return ItemListDisclosureItem(theme: theme, title: text, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
+                    arguments.openAutomaticDownloadConnectionType(.wifi)
                 })
-            case let .automaticDownloadVideo(theme, text, enabled):
-                return ItemListDisclosureItem(theme: theme, title: text, kind: enabled ? .generic : .disabled, label: "", sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
-                    if enabled {
-                        arguments.openAutomaticDownloadCategory(.video)
-                    }
+            case let .autoplayHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .autoplayGifs(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.toggleAutoplayGifs(value)
                 })
-            case let .automaticDownloadFile(theme, text, enabled):
-                return ItemListDisclosureItem(theme: theme, title: text, kind: enabled ? .generic : .disabled, label: "", sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
-                    if enabled {
-                        arguments.openAutomaticDownloadCategory(.file)
-                    }
-                })
-            case let .automaticDownloadVoiceMessage(theme, text, enabled):
-                return ItemListDisclosureItem(theme: theme, title: text, kind: enabled ? .generic : .disabled, label: "", sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
-                    if enabled {
-                        arguments.openAutomaticDownloadCategory(.voiceMessage)
-                    }
-                })
-            case let .automaticDownloadVideoMessage(theme, text, enabled):
-                return ItemListDisclosureItem(theme: theme, title: text, kind: enabled ? .generic : .disabled, label: "", sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
-                    if enabled {
-                        arguments.openAutomaticDownloadCategory(.videoMessage)
-                    }
-                })
-            case let .automaticDownloadReset(theme, text, enabled):
-                return ItemListActionItem(theme: theme, title: text, kind: enabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    if enabled {
-                        arguments.resetAutomaticDownload()
-                    }
+            case let .autoplayVideos(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.toggleAutoplayVideos(value)
                 })
             case let .voiceCallsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -319,10 +271,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
             case let .saveEditedPhotos(theme, text, value):
                 return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleSaveEditedPhotos(value)
-                })
-            case let .autoplayGifs(theme, text, value):
-                return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.toggleAutoplayGifs(value)
                 })
             case let .downloadInBackground(theme, text, value):
                 return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
@@ -375,20 +323,86 @@ private func stringForUseLessDataSetting(strings: PresentationStrings, settings:
     }
 }
 
+private func stringForAutoDownloadTypes(strings: PresentationStrings, photo: Bool, video: Bool, file: Bool, videoMessage: Bool, voiceMessage: Bool) -> String {
+    if photo && video && file && videoMessage && voiceMessage {
+        return strings.ChatSettings_AutoDownloadSettings_OnForAll
+    } else {
+        var types: [String] = []
+        if photo {
+            types.append(strings.ChatSettings_AutoDownloadSettings_TypePhoto)
+        }
+        if video {
+            types.append(strings.ChatSettings_AutoDownloadSettings_TypeVideo)
+        }
+        if file {
+            types.append(strings.ChatSettings_AutoDownloadSettings_TypeFile)
+        }
+        if videoMessage {
+            types.append(strings.ChatSettings_AutoDownloadSettings_TypeVideoMessage)
+        }
+        if voiceMessage {
+            types.append(strings.ChatSettings_AutoDownloadSettings_TypeVoiceMessage)
+        }
+        
+        if types.isEmpty {
+            return strings.ChatSettings_AutoDownloadSettings_OffForAll
+        }
+        
+        var string: String = ""
+        for i in 0 ..< types.count {
+            if !string.isEmpty {
+                if i == types.count - 1 {
+                    string.append(strings.ChatSettings_AutoDownloadSettings_LastDelimeter)
+                } else {
+                    string.append(strings.ChatSettings_AutoDownloadSettings_Delimeter)
+                }
+            }
+            string.append(types[i])
+        }
+        return strings.ChatSettings_AutoDownloadSettings_OnFor(string).0
+    }
+}
+
+private func stringForAutoDownloadSetting(strings: PresentationStrings, settings: AutomaticMediaDownloadSettings, connectionType: AutomaticDownloadConnectionType) -> String {
+    switch connectionType {
+        case .cellular:
+            if !settings.cellularEnabled {
+                return strings.ChatSettings_AutoDownloadSettings_OffForAll
+            } else {
+                let photo = settings.peers.contacts.photo.cellular || settings.peers.otherPrivate.photo.cellular || settings.peers.groups.photo.cellular || settings.peers.channels.photo.cellular
+                let video = settings.peers.contacts.video.cellular || settings.peers.otherPrivate.video.cellular || settings.peers.groups.video.cellular || settings.peers.channels.video.cellular
+                let file = settings.peers.contacts.file.cellular || settings.peers.otherPrivate.file.cellular || settings.peers.groups.file.cellular || settings.peers.channels.file.cellular
+                let videoMessage = settings.peers.contacts.videoMessage.cellular || settings.peers.otherPrivate.videoMessage.cellular || settings.peers.groups.videoMessage.cellular || settings.peers.channels.videoMessage.cellular
+                let voiceMessage = settings.peers.contacts.voiceMessage.cellular || settings.peers.otherPrivate.voiceMessage.cellular || settings.peers.groups.voiceMessage.cellular || settings.peers.channels.voiceMessage.cellular
+                return stringForAutoDownloadTypes(strings: strings, photo: photo, video: video, file: file, videoMessage: videoMessage, voiceMessage: voiceMessage)
+            }
+        case .wifi:
+            if !settings.wifiEnabled {
+                return strings.ChatSettings_AutoDownloadSettings_OffForAll
+            } else {
+                let photo = settings.peers.contacts.photo.wifi || settings.peers.otherPrivate.photo.wifi || settings.peers.groups.photo.wifi || settings.peers.channels.photo.wifi
+                let video = settings.peers.contacts.video.wifi || settings.peers.otherPrivate.video.wifi || settings.peers.groups.video.wifi || settings.peers.channels.video.wifi
+                let file = settings.peers.contacts.file.wifi || settings.peers.otherPrivate.file.wifi || settings.peers.groups.file.wifi || settings.peers.channels.file.wifi
+                let videoMessage = settings.peers.contacts.videoMessage.wifi || settings.peers.otherPrivate.videoMessage.wifi || settings.peers.groups.videoMessage.wifi || settings.peers.channels.videoMessage.wifi
+                let voiceMessage = settings.peers.contacts.voiceMessage.wifi || settings.peers.otherPrivate.voiceMessage.wifi || settings.peers.groups.voiceMessage.wifi || settings.peers.channels.voiceMessage.wifi
+                return stringForAutoDownloadTypes(strings: strings, photo: photo, video: video, file: file, videoMessage: videoMessage, voiceMessage: voiceMessage)
+            }
+    }
+}
+
 private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData) -> [DataAndStorageEntry] {
     var entries: [DataAndStorageEntry] = []
     
     entries.append(.storageUsage(presentationData.theme, presentationData.strings.ChatSettings_Cache))
     entries.append(.networkUsage(presentationData.theme, presentationData.strings.NetworkUsageSettings_Title))
     
-    entries.append(.automaticMediaDownloadHeader(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadTitle))
-    entries.append(.automaticDownloadMaster(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadEnabled, data.automaticMediaDownloadSettings.masterEnabled))
-    entries.append(.automaticDownloadPhoto(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadPhotos, data.automaticMediaDownloadSettings.masterEnabled))
-    entries.append(.automaticDownloadVideo(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadVideos, data.automaticMediaDownloadSettings.masterEnabled))
-    entries.append(.automaticDownloadFile(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadDocuments, data.automaticMediaDownloadSettings.masterEnabled))
-    entries.append(.automaticDownloadVoiceMessage(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadVoiceMessages, data.automaticMediaDownloadSettings.masterEnabled))
-    entries.append(.automaticDownloadVideoMessage(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadVideoMessages,data.automaticMediaDownloadSettings.masterEnabled))
-    entries.append(.automaticDownloadReset(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadReset, data.automaticMediaDownloadSettings.peers != AutomaticMediaDownloadSettings.defaultSettings.peers || !data.automaticMediaDownloadSettings.masterEnabled))
+    entries.append(.automaticDownloadHeader(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadTitle))
+    entries.append(.automaticDownloadCellular(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadUsingCellular, stringForAutoDownloadSetting(strings: presentationData.strings, settings: data.automaticMediaDownloadSettings, connectionType: .cellular)))
+    entries.append(.automaticDownloadWifi(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadUsingWiFi, stringForAutoDownloadSetting(strings: presentationData.strings, settings: data.automaticMediaDownloadSettings, connectionType: .wifi)))
+    
+    entries.append(.autoplayHeader(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayTitle))
+    entries.append(.autoplayGifs(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayGifs, data.automaticMediaDownloadSettings.autoplayGifs))
+    entries.append(.autoplayVideos(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayVideos, data.automaticMediaDownloadSettings.autoplayVideos))
     
     entries.append(.voiceCallsHeader(presentationData.theme, presentationData.strings.Settings_CallSettings.uppercased()))
     entries.append(.useLessVoiceData(presentationData.theme, presentationData.strings.CallSettings_UseLessData, stringForUseLessDataSetting(strings: presentationData.strings, settings: data.voiceCallSettings)))
@@ -396,7 +410,6 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.otherHeader(presentationData.theme, presentationData.strings.ChatSettings_Other))
     entries.append(.saveIncomingPhotos(presentationData.theme, presentationData.strings.Settings_SaveIncomingPhotos))
     entries.append(.saveEditedPhotos(presentationData.theme, presentationData.strings.Settings_SaveEditedPhotos, data.generatedMediaStoreSettings.storeEditedPhotos))
-    entries.append(.autoplayGifs(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayAnimations, data.automaticMediaDownloadSettings.autoplayGifs))
     entries.append(.downloadInBackground(presentationData.theme, presentationData.strings.ChatSettings_DownloadInBackground, data.automaticMediaDownloadSettings.downloadInBackground))
     entries.append(.downloadInBackgroundInfo(presentationData.theme, presentationData.strings.ChatSettings_DownloadInBackgroundInfo))
     
@@ -464,36 +477,8 @@ func dataAndStorageController(context: AccountContext) -> ViewController {
         pushControllerImpl?(networkUsageStatsController(context: context))
     }, openProxy: {
         pushControllerImpl?(proxySettingsController(context: context))
-    }, toggleAutomaticDownloadMaster: { value in
-        let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
-            var settings = settings
-            settings.masterEnabled = value
-            return settings
-        }).start()
-    }, openAutomaticDownloadCategory: { category in
-        pushControllerImpl?(autodownloadMediaCategoryController(context: context, category: category))
-    }, resetAutomaticDownload: {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
-        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-            ActionSheetTextItem(title: presentationData.strings.AutoDownloadSettings_ResetHelp),
-            ActionSheetButtonItem(title: presentationData.strings.AutoDownloadSettings_Reset, color: .destructive, action: { [weak actionSheet] in
-                actionSheet?.dismissAnimated()
-                
-                let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
-                    var settings = settings
-                    let defaultSettings = AutomaticMediaDownloadSettings.defaultSettings
-                    settings.masterEnabled = defaultSettings.masterEnabled
-                    settings.peers = defaultSettings.peers
-                    return settings
-                }).start()
-            })
-        ]), ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                actionSheet?.dismissAnimated()
-            })
-        ])])
-        presentControllerImpl?(actionSheet, nil)
+    }, openAutomaticDownloadConnectionType: { connectionType in
+        pushControllerImpl?(autodownloadMediaConnectionTypeController(context: context, connectionType: connectionType))
     }, openVoiceUseLessData: {
         pushControllerImpl?(voiceCallDataSavingController(context: context))
     }, openSaveIncomingPhotos: {
@@ -508,7 +493,13 @@ func dataAndStorageController(context: AccountContext) -> ViewController {
             settings.autoplayGifs = value
             return settings
         }).start()
-    }, toggleDownloadInBackground: { value in
+    }, toggleAutoplayVideos: { value in
+        let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
+            var settings = settings
+            settings.autoplayVideos = value
+            return settings
+        }).start()
+    },  toggleDownloadInBackground: { value in
         let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             settings.downloadInBackground = value

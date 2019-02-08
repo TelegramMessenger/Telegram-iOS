@@ -136,7 +136,7 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
             if let value = value {
                 return value
             } else {
-                return MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
+                return MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused, soundEnabled: true)
             }
         }
     }

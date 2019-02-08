@@ -109,53 +109,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
         return { item, params, neighbors in
             var updatedBackgroundImage: UIImage?
             if currentItem?.wallpaper != item.wallpaper {
-                switch item.wallpaper {
-                    case .builtin:
-                        if let filePath = frameworkBundle.path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg") {
-                            updatedBackgroundImage = UIImage(contentsOfFile: filePath)?.precomposed()
-                        }
-                    case let .color(color):
-                        updatedBackgroundImage = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
-                            context.setFillColor(UIColor(rgb: UInt32(bitPattern: color)).cgColor)
-                            context.fill(CGRect(origin: CGPoint(), size: size))
-                        })
-                    case let .image(representations, settings):
-                        if let largest = largestImageRepresentation(representations) {
-                            if settings.blur {
-                                var image: UIImage?
-                                let _ = item.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(largest.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
-                                    if data.complete {
-                                        image = UIImage(contentsOfFile: data.path)?.precomposed()
-                                    }
-                                })
-                                updatedBackgroundImage = image
-                            }
-                            if updatedBackgroundImage == nil, let path = item.context.sharedContext.accountManager.mediaBox.completedResourcePath(largest.resource) {
-                                updatedBackgroundImage = UIImage(contentsOfFile: path)?.precomposed()
-                            }
-                        }
-                    case let .file(file):
-                        if file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
-                            var image: UIImage?
-                            let _ = item.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
-                                if data.complete {
-                                    image = UIImage(contentsOfFile: data.path)?.precomposed()
-                                }
-                            })
-                            updatedBackgroundImage = image
-                        } else if file.settings.blur {
-                            var image: UIImage?
-                            let _ = item.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
-                                if data.complete {
-                                    image = UIImage(contentsOfFile: data.path)?.precomposed()
-                                }
-                            })
-                            updatedBackgroundImage = image
-                        }
-                        if updatedBackgroundImage == nil, let path = item.context.sharedContext.accountManager.mediaBox.completedResourcePath(file.file.resource) {
-                            updatedBackgroundImage = UIImage(contentsOfFile: path)?.precomposed()
-                        }
-                }
+                updatedBackgroundImage = chatControllerBackgroundImage(wallpaper: item.wallpaper, mediaBox: item.context.sharedContext.accountManager.mediaBox)
             }
             
             let insets: UIEdgeInsets

@@ -26,17 +26,6 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
             return fetchCachedScaledImageRepresentation(resource: resource, resourceData: data, representation: representation)
         }
     } else if let _ = representation as? CachedVideoFirstFrameRepresentation {
-        /*return fetchPartialVideoThumbnail(postbox: account.postbox, resource: resource)
-        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-            var randomId: Int64 = 0
-            arc4random_buf(&randomId, 8)
-            let path = NSTemporaryDirectory() + "\(randomId)"
-            if let data = data, let _ = try? data.write(to: URL(fileURLWithPath: path)) {
-                return .single(CachedMediaResourceRepresentationResult(temporaryPath: path))
-            } else {
-                return .complete()
-            }
-        }*/
         return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
             if !data.complete {
@@ -222,7 +211,7 @@ func generateVideoFirstFrame(_ path: String, maxDimensions: CGSize) -> UIImage? 
 
 private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal { subscriber in
-        if resourceData.complete {
+        //if resourceData.complete {
             let tempFilePath = NSTemporaryDirectory() + "\(arc4random()).mov"
             
             do {
@@ -233,6 +222,7 @@ private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource
                 let imageGenerator = AVAssetImageGenerator(asset: asset)
                 imageGenerator.maximumSize = CGSize(width: 800.0, height: 800.0)
                 imageGenerator.appliesPreferredTrackTransform = true
+                
                 let fullSizeImage = try imageGenerator.copyCGImage(at: CMTime(seconds: 0.0, preferredTimescale: asset.duration.timescale), actualTime: nil)
                 
                 var randomId: Int64 = 0
@@ -260,7 +250,7 @@ private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource
             } catch (let e) {
                 print("\(e)")
             }
-        }
+        //}
         return EmptyDisposable
     } |> runOn(Queue.concurrentDefaultQueue())
 }

@@ -94,7 +94,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         let mappedStatus: Signal<MediaPlayerStatus, NoError>?
         if let status = status {
             mappedStatus = combineLatest(status, self.scrubberNode.scrubbingTimestamp) |> map { status, scrubbingTimestamp -> MediaPlayerStatus in
-                return MediaPlayerStatus(generationTimestamp: status.generationTimestamp, duration: status.duration, dimensions: status.dimensions, timestamp: scrubbingTimestamp ?? status.timestamp, baseRate: status.baseRate, seekId: status.seekId, status: status.status)
+                return MediaPlayerStatus(generationTimestamp: status.generationTimestamp, duration: status.duration, dimensions: status.dimensions, timestamp: scrubbingTimestamp ?? status.timestamp, baseRate: status.baseRate, seekId: status.seekId, status: status.status, soundEnabled: status.soundEnabled)
             }
         } else {
             mappedStatus = nil

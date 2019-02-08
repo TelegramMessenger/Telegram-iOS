@@ -38,7 +38,7 @@ func messageFileMediaPlaybackStatus(context: AccountContext, file: TelegramMedia
     if let value = file.duration {
         duration = Double(value)
     }
-    let defaultStatus = MediaPlayerStatus(generationTimestamp: 0.0, duration: duration, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
+    let defaultStatus = MediaPlayerStatus(generationTimestamp: 0.0, duration: duration, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused, soundEnabled: true)
     return internalMessageFileMediaPlaybackStatus(context: context, file: file, message: message, isRecentActions: isRecentActions) |> map { status in
         return status ?? defaultStatus
     }

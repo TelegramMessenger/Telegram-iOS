@@ -187,7 +187,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.addSubnode(self.playerNode)
         self._status.set(combineLatest(self.dimensionsPromise.get(), self.player.status)
         |> map { dimensions, status in
-            return MediaPlayerStatus(generationTimestamp: status.generationTimestamp, duration: status.duration, dimensions: dimensions, timestamp: status.timestamp, baseRate: status.baseRate, seekId: status.seekId, status: status.status)
+            return MediaPlayerStatus(generationTimestamp: status.generationTimestamp, duration: status.duration, dimensions: dimensions, timestamp: status.timestamp, baseRate: status.baseRate, seekId: status.seekId, status: status.status, soundEnabled: status.soundEnabled)
         })
         
         if let size = fileReference.media.size {
@@ -257,7 +257,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.player.seek(timestamp: timestamp)
     }
     
-    func playOnceWithSound(playAndRecord: Bool, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
+    func playOnceWithSound(playAndRecord: Bool, seekToStart: Bool, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
         assert(Queue.mainQueue().isCurrent())
         let action = { [weak self] in
             Queue.mainQueue().async {
@@ -270,7 +270,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
             case .stop:
                 self.player.actionAtEnd = .action(action)
         }
-        self.player.playOnceWithSound(playAndRecord: playAndRecord)
+        self.player.playOnceWithSound(playAndRecord: playAndRecord, seekToStart: seekToStart)
     }
     
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {

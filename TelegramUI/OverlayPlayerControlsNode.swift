@@ -199,9 +199,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         let mappedStatus = combineLatest(delayedStatus, self.scrubberNode.scrubbingTimestamp) |> map { value, scrubbingTimestamp -> MediaPlayerStatus in
             if let (_, valueOrLoading) = value, case let .state(value) = valueOrLoading {
-                return MediaPlayerStatus(generationTimestamp: value.status.generationTimestamp, duration: value.status.duration, dimensions: value.status.dimensions, timestamp: scrubbingTimestamp ?? value.status.timestamp, baseRate: value.status.baseRate, seekId: value.status.seekId, status: value.status.status)
+                return MediaPlayerStatus(generationTimestamp: value.status.generationTimestamp, duration: value.status.duration, dimensions: value.status.dimensions, timestamp: scrubbingTimestamp ?? value.status.timestamp, baseRate: value.status.baseRate, seekId: value.status.seekId, status: value.status.status, soundEnabled: value.status.soundEnabled)
             } else {
-                return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
+                return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused, soundEnabled: true)
             }
         }
         self.scrubberNode.status = mappedStatus

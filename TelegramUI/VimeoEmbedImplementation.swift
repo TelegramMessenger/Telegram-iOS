@@ -95,7 +95,7 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
     init(videoId: String, timestamp: Int = 0) {
         self.videoId = videoId
         self.timestamp = timestamp
-        self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: Double(timestamp), baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true))
+        self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: Double(timestamp), baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true), soundEnabled: true)
     }
     
     func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void) {
@@ -158,7 +158,7 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
             eval("seek(\(timestamp));")
         }
         
-        self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: self.status.duration, dimensions: self.status.dimensions, timestamp: timestamp, baseRate: 1.0, seekId: self.status.seekId + 1, status: self.status.status)
+        self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: self.status.duration, dimensions: self.status.dimensions, timestamp: timestamp, baseRate: 1.0, seekId: self.status.seekId + 1, status: self.status.status, soundEnabled: self.status.soundEnabled)
         if let updateStatus = self.updateStatus {
             updateStatus(self.status)
         }
@@ -222,7 +222,7 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
                         playbackStatus = .buffering(initial: true, whilePlaying: false)
                     }
                     
-                    self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: Double(duration), dimensions: self.status.dimensions, timestamp: newTimestamp, baseRate: 1.0, seekId: self.status.seekId, status: playbackStatus)
+                    self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: Double(duration), dimensions: self.status.dimensions, timestamp: newTimestamp, baseRate: 1.0, seekId: self.status.seekId, status: playbackStatus, soundEnabled: true)
                     updateStatus(self.status)
                 }
             }

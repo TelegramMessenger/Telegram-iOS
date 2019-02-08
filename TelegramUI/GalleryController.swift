@@ -150,7 +150,7 @@ func galleryItemForEntry(context: AccountContext, presentationData: Presentation
                             content = NativeVideoContent(id: .message(message.id, message.stableId + 1, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: false, loopVideo: true, enableSound: false, tempFilePath: tempFilePath)
                         } else {
                             if true || (file.mimeType == "video/mpeg4" || file.mimeType == "video/mov" || file.mimeType == "video/mp4") {
-                                content = NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: true, loopVideo: loopVideos, tempFilePath: tempFilePath)
+                                content = NativeVideoContent(id: .message(message.id, message.stableId + 1, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: true, loopVideo: loopVideos, tempFilePath: tempFilePath)
                             } else {
                                 content = PlatformVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: streamVideos, loopVideo: loopVideos)
                             }

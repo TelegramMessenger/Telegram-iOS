@@ -174,7 +174,7 @@ func serviceColor(with color: UIColor) -> UIColor {
     return color
 }
 
-func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, postbox: Postbox) -> Signal<UIColor, NoError> {
+func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: MediaBox) -> Signal<UIColor, NoError> {
     if wallpaper == serviceBackgroundColorForWallpaper?.0, let color = serviceBackgroundColorForWallpaper?.1 {
         return .single(color)
     } else {
@@ -186,8 +186,8 @@ func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, postbox: Postbox) 
             case let .image(representations, _):
                 if let largest = largestImageRepresentation(representations) {
                     return Signal<UIColor, NoError> { subscriber in
-                        let fetch = postbox.mediaBox.fetchedResource(largest.resource, parameters: nil).start()
-                        let data = serviceColor(for: postbox.mediaBox.resourceData(largest.resource)).start(next: { next in
+                        let fetch = mediaBox.fetchedResource(largest.resource, parameters: nil).start()
+                        let data = serviceColor(for: mediaBox.resourceData(largest.resource)).start(next: { next in
                             subscriber.putNext(next)
                         }, completed: {
                             subscriber.putCompletion()
@@ -212,8 +212,8 @@ func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, postbox: Postbox) 
                     }
                 } else {
                     return Signal<UIColor, NoError> { subscriber in
-                        let fetch = postbox.mediaBox.fetchedResource(file.file.resource, parameters: nil).start()
-                        let data = serviceColor(for: postbox.mediaBox.resourceData(file.file.resource)).start(next: { next in
+                        let fetch = mediaBox.fetchedResource(file.file.resource, parameters: nil).start()
+                        let data = serviceColor(for: mediaBox.resourceData(file.file.resource)).start(next: { next in
                             subscriber.putNext(next)
                         }, completed: {
                             subscriber.putCompletion()

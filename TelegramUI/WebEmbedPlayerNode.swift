@@ -44,7 +44,7 @@ func webEmbedImplementation(for type: WebEmbedType) -> WebEmbedImplementation {
 }
 
 final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
-    private let statusValue = ValuePromise<MediaPlayerStatus>(MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused), ignoreRepeated: true)
+    private let statusValue = ValuePromise<MediaPlayerStatus>(MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused, soundEnabled: true), ignoreRepeated: true)
     
     var status: Signal<MediaPlayerStatus, NoError> {
         return self.statusValue.get()

@@ -156,11 +156,11 @@ private enum StorageUsageEntry: ItemListNodeEntry {
             case let .collecting(theme, text):
                 return CalculatingCacheSizeItem(theme: theme, title: text, sectionId: self.section, style: .blocks)
             case let .immutableSize(theme, title, value):
-                return ItemListDisclosureItem(theme: theme, icon: nil, title: title, kind: .disabled, titleColor: .primary, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: nil)
+                return ItemListDisclosureItem(theme: theme, icon: nil, title: title, enabled: false, titleColor: .primary, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: nil)
             case let .peersHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .clearAll(theme, text, value, enabled):
-                return ItemListDisclosureItem(theme: theme, icon: nil, title: text, kind: enabled ? .generic : .disabled, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(theme: theme, icon: nil, title: text, enabled: enabled, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openClearAll()
                 })
             case let .peer(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer, chatPeer, value):

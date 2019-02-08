@@ -361,8 +361,8 @@ public func updatedPresentationData(accountManager: AccountManager, applicationB
             currentWallpaper = themeSettings.chatWallpaper
         }
         
-        return .single(UIColor(rgb: 0x000000, alpha: 0.3))
-        //|> then(chatServiceBackgroundColor(wallpaper: currentWallpaper, postbox: postbox)))
+        return (.single(UIColor(rgb: 0x000000, alpha: 0.3))
+        |> then(chatServiceBackgroundColor(wallpaper: currentWallpaper, mediaBox: accountManager.mediaBox)))
         |> mapToSignal { serviceBackgroundColor in
             return applicationBindings.applicationInForeground
             |> mapToSignal { inForeground -> Signal<PresentationData, NoError> in
