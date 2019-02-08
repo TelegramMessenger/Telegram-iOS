@@ -3921,6 +3921,7 @@ Unused sets are archived when you add more.";
 "ChatList.DeleteChatConfirmation" = "Are you sure you want to delete chat\nwith %@?";
 "ChatList.DeleteSecretChatConfirmation" = "Are you sure you want to delete secret chat\nwith %@?";
 "ChatList.LeaveGroupConfirmation" = "Are you sure you want to leave %@?";
+"ChatList.DeleteSavedMessagesConfirmation" = "Are you sure you want to delete\nSaved Messages?";
 
 "Undo.Undo" = "Undo";
 "Undo.MessagesDeleted" = "Messages deleted";
@@ -3971,3 +3972,6 @@ Unused sets are archived when you add more.";
 
 "SocksProxySetup.Status" = "Status";
 "Login.PhoneNumberAlreadyAuthorized" = "This account is already logged in from this app.";
+"Login.PhoneNumberAlreadyAuthorizedSwitch" = "Switch";
+
+"Call.AnsweringWithAccount" = "Answering as %@";

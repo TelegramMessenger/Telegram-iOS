@@ -117,7 +117,7 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
             
             let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
             
-            sharedAccountContext = SharedAccountContext(mainWindow: nil, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), rootPath: rootPath, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in })
+            sharedAccountContext = SharedAccountContext(mainWindow: nil, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), rootPath: rootPath, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
         }
     }
     

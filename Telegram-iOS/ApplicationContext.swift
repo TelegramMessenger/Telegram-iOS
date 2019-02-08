@@ -63,7 +63,7 @@ final class UnauthorizedApplicationContext {
     
     let rootController: AuthorizationSequenceController
     
-    init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: [String]) {
+    init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId)?, [(String, AccountRecordId)])) {
         self.sharedContext = sharedContext
         self.account = account
         self.strings = defaultPresentationStrings
@@ -134,7 +134,7 @@ final class AuthorizedApplicationContext {
         }
     }
     
-    let isReady = ValuePromise<Bool>(false, ignoreRepeated: true)
+    let isReady = Promise<Bool>()
     
     private var presentationDataDisposable: Disposable?
     private var displayAlertsDisposable: Disposable?
@@ -156,13 +156,6 @@ final class AuthorizedApplicationContext {
         self.context = context
         self.replyFromNotificationsActive = replyFromNotificationsActive
         self.backgroundAudioActive = backgroundAudioActive
-        
-        let runningBackgroundLocationTasks: Signal<Bool, NoError>
-        if let liveLocationManager = context.liveLocationManager {
-            runningBackgroundLocationTasks = liveLocationManager.isPolling
-        } else {
-            runningBackgroundLocationTasks = .single(false)
-        }
         
         let runningWatchTasksPromise = Promise<WatchRunningTasks?>(nil)
         
@@ -488,7 +481,12 @@ final class AuthorizedApplicationContext {
                     transaction.setAccessChallengeData(data)
                 }).start()
             }*/
-            strongSelf.isReady.set(true)
+            if let tabsController = strongSelf.rootController.viewControllers.first as? TabBarController, !tabsController.controllers.isEmpty, tabsController.selectedIndex >= 0 {
+                let controller = tabsController.controllers[tabsController.selectedIndex]
+                strongSelf.isReady.set(controller.ready.get())
+            } else {
+                strongSelf.isReady.set(.single(true))
+            }
         }))
         
         let accountId = context.account.id

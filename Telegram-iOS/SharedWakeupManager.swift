@@ -12,6 +12,7 @@ private struct AccountTasks {
     let backgroundDownloads: Bool
     let backgroundAudio: Bool
     let activeCalls: Bool
+    let userInterfaceInUse: Bool
     
     var isEmpty: Bool {
         if self.stateSynchronization {
@@ -32,6 +33,9 @@ private struct AccountTasks {
         if self.activeCalls {
             return false
         }
+        if self.userInterfaceInUse {
+            return false
+        }
         return true
     }
 }
@@ -49,7 +53,7 @@ final class SharedWakeupManager {
     
     private var accountsAndTasks: [(Account, Bool, AccountTasks)] = []
     
-    init(activeAccounts: Signal<(primary: Account?, accounts: [AccountRecordId: Account]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager, mediaManager: MediaManager, callManager: PresentationCallManager?) {
+    init(activeAccounts: Signal<(primary: Account?, accounts: [AccountRecordId: Account]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager, mediaManager: MediaManager, callManager: PresentationCallManager?, accountUserInterfaceInUse: @escaping (AccountRecordId) -> Signal<Bool, NoError>) {
         assert(Queue.mainQueue().isCurrent())
         
         self.inForegroundDisposable = (inForeground
@@ -108,9 +112,11 @@ final class SharedWakeupManager {
                 }
                 |> distinctUntilChanged
                 
-                return combineLatest(queue: .mainQueue(), account.importantTasksRunning, notificationManager.isPollingState(accountId: account.id), hasActiveAudio, hasActiveCalls, hasActiveLiveLocationPolling)
-                |> map { importantTasksRunning, isPollingState, hasActiveAudio, hasActiveCalls, hasActiveLiveLocationPolling -> (Account, Bool, AccountTasks) in
-                    return (account, primary?.id == account.id, AccountTasks(stateSynchronization: isPollingState, importantTasks: importantTasksRunning, backgroundLocation: hasActiveLiveLocationPolling, backgroundDownloads: false, backgroundAudio: hasActiveAudio, activeCalls: hasActiveCalls))
+                let userInterfaceInUse = accountUserInterfaceInUse(account.id)
+                
+                return combineLatest(queue: .mainQueue(), account.importantTasksRunning, notificationManager.isPollingState(accountId: account.id), hasActiveAudio, hasActiveCalls, hasActiveLiveLocationPolling, userInterfaceInUse)
+                |> map { importantTasksRunning, isPollingState, hasActiveAudio, hasActiveCalls, hasActiveLiveLocationPolling, userInterfaceInUse -> (Account, Bool, AccountTasks) in
+                    return (account, primary?.id == account.id, AccountTasks(stateSynchronization: isPollingState, importantTasks: importantTasksRunning, backgroundLocation: hasActiveLiveLocationPolling, backgroundDownloads: false, backgroundAudio: hasActiveAudio, activeCalls: hasActiveCalls, userInterfaceInUse: userInterfaceInUse))
                 }
             }
             return combineLatest(signals)

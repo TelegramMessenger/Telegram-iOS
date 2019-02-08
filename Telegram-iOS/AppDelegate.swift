@@ -619,6 +619,8 @@ private final class SharedApplicationContext {
         var setPresentationCall: ((PresentationCall?) -> Void)?
         let sharedContext = SharedAccountContext(mainWindow: self.mainWindow, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: networkArguments, rootPath: rootPath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
             setPresentationCall?(call)
+        }, navigateToChat: { accountId, peerId, messageId in
+            self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
         })
         sharedContext.presentGlobalController = { [weak self] c, a in
             guard let strongSelf = self else {
@@ -675,7 +677,9 @@ private final class SharedApplicationContext {
                 return .single(nil)
             }
         }
-        let wakeupManager = SharedWakeupManager(activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1) }, liveLocationPolling: liveLocationPolling, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager)
+        let wakeupManager = SharedWakeupManager(activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1) }, liveLocationPolling: liveLocationPolling, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
+            return sharedContext.accountUserInterfaceInUse(id)
+        })
         let sharedApplicationContext = SharedApplicationContext(sharedContext: sharedContext, notificationManager: notificationManager, wakeupManager: wakeupManager)
         self.sharedContextPromise.set(
         accountManager.transaction { transaction -> (SharedApplicationContext, LoggingSettings) in
@@ -810,41 +814,54 @@ private final class SharedApplicationContext {
         |> deliverOnMainQueue
         |> mapToSignal { sharedApplicationContext -> Signal<UnauthorizedApplicationContext?, NoError> in
             return sharedApplicationContext.sharedContext.activeAccounts
-            |> map { _, accounts, auth -> (UnauthorizedAccount, [Account])? in
+            |> map { primary, accounts, auth -> (Account?, UnauthorizedAccount, [Account])? in
                 if let auth = auth {
-                    return (auth, Array(accounts.values))
+                    return (primary, auth, Array(accounts.values))
                 } else {
                     return nil
                 }
             }
             |> distinctUntilChanged(isEqual: { lhs, rhs in
-                if lhs?.0 !== rhs?.0 {
+                if lhs?.1 !== rhs?.1 {
                     return false
                 }
                 return true
             })
-            |> mapToSignal { authAndAccounts -> Signal<(UnauthorizedAccount, [String])?, NoError> in
-                if let (auth, accounts) = authAndAccounts {
-                    let phoneNumbers = combineLatest(accounts.map { account -> Signal<String?, NoError> in
-                        return account.postbox.transaction { transaction -> String? in
-                            return (transaction.getPeer(account.peerId) as? TelegramUser)?.phone
+            |> mapToSignal { authAndAccounts -> Signal<(UnauthorizedAccount, ((String, AccountRecordId)?, [(String, AccountRecordId)]))?, NoError> in
+                if let (primary, auth, accounts) = authAndAccounts {
+                    let phoneNumbers = combineLatest(accounts.map { account -> Signal<(AccountRecordId, String)?, NoError> in
+                        return account.postbox.transaction { transaction -> (AccountRecordId, String)? in
+                            if let phone = (transaction.getPeer(account.peerId) as? TelegramUser)?.phone {
+                                return (account.id, phone)
+                            } else {
+                                return nil
+                            }
                         }
                     })
                     return phoneNumbers
-                    |> map { phoneNumbers -> (UnauthorizedAccount, [String])? in
-                        return (auth, phoneNumbers.compactMap({ $0 }))
+                    |> map { phoneNumbers -> (UnauthorizedAccount, ((String, AccountRecordId)?, [(String, AccountRecordId)]))? in
+                        var primaryNumber: (String, AccountRecordId)?
+                        if let primary = primary {
+                            for idAndNumber in phoneNumbers {
+                                if let (id, number) = idAndNumber, id == primary.id {
+                                    primaryNumber = (number, id)
+                                    break
+                                }
+                            }
+                        }
+                        return (auth, (primaryNumber, phoneNumbers.compactMap({ $0.flatMap({ ($0.1, $0.0) }) })))
                     }
                 } else {
                     return .single(nil)
                 }
             }
-            |> mapToSignal { accountAndOtherAccountPhoneNumbers -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, [String])?, NoError> in
+            |> mapToSignal { accountAndOtherAccountPhoneNumbers -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId)?, [(String, AccountRecordId)]))?, NoError> in
                 return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings in
                     return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings ?? CallListSettings.defaultSettings
                     }
-                |> mapToSignal { callListSettings -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, [String])?, NoError> in
+                |> mapToSignal { callListSettings -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId)?, [(String, AccountRecordId)]))?, NoError> in
                     if let (account, otherAccountPhoneNumbers) = accountAndOtherAccountPhoneNumbers {
-                        return account.postbox.transaction { transaction -> (UnauthorizedAccount, LimitsConfiguration, CallListSettings, [String])? in
+                        return account.postbox.transaction { transaction -> (UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId)?, [(String, AccountRecordId)]))? in
                             let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
                             return (account, limitsConfiguration, callListSettings, otherAccountPhoneNumbers)
                         }
