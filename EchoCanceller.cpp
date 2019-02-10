@@ -16,6 +16,7 @@
 #include "VoIPServerConfig.h"
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 using namespace tgvoip;
 
@@ -144,6 +145,7 @@ void EchoCanceller::Enable(bool enabled){
 }
 
 void EchoCanceller::ProcessInput(int16_t* inOut, size_t numSamples, bool& hasVoice){
+#ifndef TGVOIP_NO_DSP
 	if(!isOn || (!enableAEC && !enableAGC && !enableNS)){
 		return;
 	}
@@ -165,6 +167,7 @@ void EchoCanceller::ProcessInput(int16_t* inOut, size_t numSamples, bool& hasVoi
     	hasVoice=hasVoice || apm->voice_detection()->stream_has_voice();
 	}
 	memcpy(inOut+480, audioFrame->data(), 480*2);
+#endif
 }
 
 void EchoCanceller::SetAECStrength(int strength){
@@ -182,7 +185,9 @@ void EchoCanceller::SetAECStrength(int strength){
 
 void EchoCanceller::SetVoiceDetectionEnabled(bool enabled){
 	enableVAD=enabled;
+#ifndef TGVOIP_NO_DSP
 	apm->voice_detection()->Enable(enabled);
+#endif
 }
 
 using namespace tgvoip::effects;
