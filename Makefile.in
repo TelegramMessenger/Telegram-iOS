@@ -392,9 +392,7 @@ host_triplet = @host@
 @ENABLE_DSP_TRUE@./webrtc_dsp/common_audio/vad/webrtc_vad.c \
 @ENABLE_DSP_TRUE@./webrtc_dsp/common_audio/vad/vad_filterbank.c \
 @ENABLE_DSP_TRUE@./webrtc_dsp/common_audio/vad/vad_core.c \
-@ENABLE_DSP_TRUE@./webrtc_dsp/common_audio/vad/vad_gmm.c \
-@ENABLE_DSP_TRUE@webrtc_dsp/common_audio/signal_processing/complex_bit_reverse.c \
-@ENABLE_DSP_TRUE@webrtc_dsp/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.c
+@ENABLE_DSP_TRUE@./webrtc_dsp/common_audio/vad/vad_gmm.c
 
 @ENABLE_DSP_TRUE@@TARGET_OS_OSX_TRUE@am__append_11 = -DWEBRTC_MAC
 @ENABLE_DSP_TRUE@@TARGET_OS_OSX_TRUE@am__append_12 = \
@@ -415,7 +413,7 @@ host_triplet = @host@
 
 @ENABLE_DSP_TRUE@@TARGET_CPU_ARM_TRUE@am__append_18 = \
 @ENABLE_DSP_TRUE@@TARGET_CPU_ARM_TRUE@webrtc_dsp/common_audio/signal_processing/complex_bit_reverse_arm.S \
-@ENABLE_DSP_TRUE@@TARGET_CPU_ARM_TRUE@webrtc_dsp/common_audio/signal_processing/spl_sqrt_floor_arm.S
+@ENABLE_DSP_TRUE@@TARGET_CPU_ARM_TRUE@webrtc_dsp/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor_arm.S
 
 @ENABLE_DSP_TRUE@@TARGET_CPU_ARMV7_TRUE@@TARGET_CPU_ARM_TRUE@am__append_19 = -mfpu=neon -mfloat-abi=hard
 @ENABLE_DSP_TRUE@@TARGET_CPU_ARMV7_TRUE@@TARGET_CPU_ARM_TRUE@am__append_20 = -mfpu=neon -mfloat-abi=hard
@@ -429,9 +427,13 @@ host_triplet = @host@
 @ENABLE_DSP_TRUE@@TARGET_CPU_ARMV7_TRUE@@TARGET_CPU_ARM_TRUE@webrtc_dsp/modules/audio_processing/utility/ooura_fft_neon.cc
 
 # webrtc_dsp/common_audio/signal_processing/filter_ar_fast_q12_armv7.S
+@ENABLE_DSP_TRUE@@TARGET_CPU_ARM_FALSE@am__append_22 = \
+@ENABLE_DSP_TRUE@@TARGET_CPU_ARM_FALSE@webrtc_dsp/common_audio/signal_processing/complex_bit_reverse.c \
+@ENABLE_DSP_TRUE@@TARGET_CPU_ARM_FALSE@webrtc_dsp/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.c
+
 
 # headers
-@ENABLE_DSP_TRUE@am__append_22 = \
+@ENABLE_DSP_TRUE@am__append_23 = \
 @ENABLE_DSP_TRUE@webrtc_dsp/system_wrappers/include/field_trial.h \
 @ENABLE_DSP_TRUE@webrtc_dsp/system_wrappers/include/cpu_features_wrapper.h \
 @ENABLE_DSP_TRUE@webrtc_dsp/system_wrappers/include/asm_defines.h \
@@ -751,7 +753,7 @@ host_triplet = @host@
 @ENABLE_DSP_TRUE@webrtc_dsp/common_audio/vad/vad_sp.h \
 @ENABLE_DSP_TRUE@webrtc_dsp/common_audio/vad/vad_filterbank.h
 
-@ENABLE_DSP_FALSE@am__append_23 = -DTGVOIP_NO_DSP
+@ENABLE_DSP_FALSE@am__append_24 = -DTGVOIP_NO_DSP
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -1076,15 +1078,13 @@ am__libtgvoip_la_SOURCES_DIST = VoIPController.cpp Buffers.cpp \
 	./webrtc_dsp/common_audio/vad/vad_filterbank.c \
 	./webrtc_dsp/common_audio/vad/vad_core.c \
 	./webrtc_dsp/common_audio/vad/vad_gmm.c \
-	webrtc_dsp/common_audio/signal_processing/complex_bit_reverse.c \
-	webrtc_dsp/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.c \
 	webrtc_dsp/rtc_base/logging_mac.mm \
 	webrtc_dsp/rtc_base/logging_mac.h \
 	webrtc_dsp/modules/audio_processing/aec/aec_core_sse2.cc \
 	webrtc_dsp/modules/audio_processing/utility/ooura_fft_sse2.cc \
 	audio/AudioIOCallback.cpp \
 	webrtc_dsp/common_audio/signal_processing/complex_bit_reverse_arm.S \
-	webrtc_dsp/common_audio/signal_processing/spl_sqrt_floor_arm.S \
+	webrtc_dsp/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor_arm.S \
 	webrtc_dsp/common_audio/signal_processing/cross_correlation_neon.c \
 	webrtc_dsp/common_audio/signal_processing/downsample_fast_neon.c \
 	webrtc_dsp/common_audio/signal_processing/min_max_operations_neon.c \
@@ -1092,6 +1092,8 @@ am__libtgvoip_la_SOURCES_DIST = VoIPController.cpp Buffers.cpp \
 	webrtc_dsp/modules/audio_processing/aecm/aecm_core_neon.cc \
 	webrtc_dsp/modules/audio_processing/ns/nsx_core_neon.c \
 	webrtc_dsp/modules/audio_processing/utility/ooura_fft_neon.cc \
+	webrtc_dsp/common_audio/signal_processing/complex_bit_reverse.c \
+	webrtc_dsp/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.c \
 	webrtc_dsp/system_wrappers/include/field_trial.h \
 	webrtc_dsp/system_wrappers/include/cpu_features_wrapper.h \
 	webrtc_dsp/system_wrappers/include/asm_defines.h \
@@ -1696,15 +1698,13 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @ENABLE_DSP_TRUE@	./webrtc_dsp/common_audio/vad/webrtc_vad.lo \
 @ENABLE_DSP_TRUE@	./webrtc_dsp/common_audio/vad/vad_filterbank.lo \
 @ENABLE_DSP_TRUE@	./webrtc_dsp/common_audio/vad/vad_core.lo \
-@ENABLE_DSP_TRUE@	./webrtc_dsp/common_audio/vad/vad_gmm.lo \
-@ENABLE_DSP_TRUE@	webrtc_dsp/common_audio/signal_processing/complex_bit_reverse.lo \
-@ENABLE_DSP_TRUE@	webrtc_dsp/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.lo
+@ENABLE_DSP_TRUE@	./webrtc_dsp/common_audio/vad/vad_gmm.lo
 @ENABLE_DSP_TRUE@@TARGET_OS_OSX_TRUE@am__objects_5 = webrtc_dsp/rtc_base/logging_mac.lo
 @ENABLE_DSP_TRUE@@TARGET_CPU_X86_TRUE@am__objects_6 = webrtc_dsp/modules/audio_processing/aec/aec_core_sse2.lo \
 @ENABLE_DSP_TRUE@@TARGET_CPU_X86_TRUE@	webrtc_dsp/modules/audio_processing/utility/ooura_fft_sse2.lo
 @ENABLE_AUDIO_CALLBACK_TRUE@@ENABLE_DSP_TRUE@am__objects_7 = audio/AudioIOCallback.lo
 @ENABLE_DSP_TRUE@@TARGET_CPU_ARM_TRUE@am__objects_8 = webrtc_dsp/common_audio/signal_processing/complex_bit_reverse_arm.lo \
-@ENABLE_DSP_TRUE@@TARGET_CPU_ARM_TRUE@	webrtc_dsp/common_audio/signal_processing/spl_sqrt_floor_arm.lo
+@ENABLE_DSP_TRUE@@TARGET_CPU_ARM_TRUE@	webrtc_dsp/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor_arm.lo
 @ENABLE_DSP_TRUE@@TARGET_CPU_ARMV7_TRUE@@TARGET_CPU_ARM_TRUE@am__objects_9 = webrtc_dsp/common_audio/signal_processing/cross_correlation_neon.lo \
 @ENABLE_DSP_TRUE@@TARGET_CPU_ARMV7_TRUE@@TARGET_CPU_ARM_TRUE@	webrtc_dsp/common_audio/signal_processing/downsample_fast_neon.lo \
 @ENABLE_DSP_TRUE@@TARGET_CPU_ARMV7_TRUE@@TARGET_CPU_ARM_TRUE@	webrtc_dsp/common_audio/signal_processing/min_max_operations_neon.lo \
@@ -1712,8 +1712,10 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @ENABLE_DSP_TRUE@@TARGET_CPU_ARMV7_TRUE@@TARGET_CPU_ARM_TRUE@	webrtc_dsp/modules/audio_processing/aecm/aecm_core_neon.lo \
 @ENABLE_DSP_TRUE@@TARGET_CPU_ARMV7_TRUE@@TARGET_CPU_ARM_TRUE@	webrtc_dsp/modules/audio_processing/ns/nsx_core_neon.lo \
 @ENABLE_DSP_TRUE@@TARGET_CPU_ARMV7_TRUE@@TARGET_CPU_ARM_TRUE@	webrtc_dsp/modules/audio_processing/utility/ooura_fft_neon.lo
-am__objects_10 =
-am__objects_11 = VoIPController.lo Buffers.lo CongestionControl.lo \
+@ENABLE_DSP_TRUE@@TARGET_CPU_ARM_FALSE@am__objects_10 = webrtc_dsp/common_audio/signal_processing/complex_bit_reverse.lo \
+@ENABLE_DSP_TRUE@@TARGET_CPU_ARM_FALSE@	webrtc_dsp/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.lo
+am__objects_11 =
+am__objects_12 = VoIPController.lo Buffers.lo CongestionControl.lo \
 	EchoCanceller.lo JitterBuffer.lo logging.lo MediaStreamItf.lo \
 	MessageThread.lo NetworkSocket.lo OpusDecoder.lo \
 	OpusEncoder.lo PacketReassembler.lo VoIPGroupController.lo \
@@ -1723,10 +1725,11 @@ am__objects_11 = VoIPController.lo Buffers.lo CongestionControl.lo \
 	video/VideoRenderer.lo json11.lo $(am__objects_1) \
 	$(am__objects_2) $(am__objects_3) $(am__objects_4) \
 	$(am__objects_5) $(am__objects_6) $(am__objects_7) \
-	$(am__objects_8) $(am__objects_9) $(am__objects_10)
-am__objects_12 = $(am__objects_10) $(am__objects_10) $(am__objects_10) \
-	$(am__objects_10)
-am_libtgvoip_la_OBJECTS = $(am__objects_11) $(am__objects_12)
+	$(am__objects_8) $(am__objects_9) $(am__objects_10) \
+	$(am__objects_11)
+am__objects_13 = $(am__objects_11) $(am__objects_11) $(am__objects_11) \
+	$(am__objects_11)
+am_libtgvoip_la_OBJECTS = $(am__objects_12) $(am__objects_13)
 libtgvoip_la_OBJECTS = $(am_libtgvoip_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -2043,8 +2046,8 @@ am__depfiles_remade = ./$(DEPDIR)/Buffers.Plo \
 	webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/cross_correlation_neon.Plo \
 	webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/downsample_fast_neon.Plo \
 	webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/min_max_operations_neon.Plo \
-	webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/spl_sqrt_floor_arm.Plo \
 	webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)/spl_sqrt_floor.Plo \
+	webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)/spl_sqrt_floor_arm.Plo \
 	webrtc_dsp/modules/audio_processing/aec/$(DEPDIR)/aec_core_neon.Plo \
 	webrtc_dsp/modules/audio_processing/aec/$(DEPDIR)/aec_core_sse2.Plo \
 	webrtc_dsp/modules/audio_processing/aecm/$(DEPDIR)/aecm_core_neon.Plo \
@@ -2198,7 +2201,7 @@ CCASFLAGS = @CCASFLAGS@ $(am__append_9) $(am__append_20)
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = -Wall -DHAVE_CONFIG_H -Wno-unknown-pragmas $(am__append_8) \
 	$(am__append_11) $(am__append_13) $(am__append_15) \
-	$(am__append_19) $(am__append_23)
+	$(am__append_19) $(am__append_24)
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
@@ -2324,7 +2327,8 @@ SRC = VoIPController.cpp Buffers.cpp CongestionControl.cpp \
 	video/VideoRenderer.cpp json11.cpp $(am__append_1) \
 	$(am__append_4) $(am__append_6) $(am__append_10) \
 	$(am__append_12) $(am__append_14) $(am__append_16) \
-	$(am__append_18) $(am__append_21) $(am__append_22)
+	$(am__append_18) $(am__append_21) $(am__append_22) \
+	$(am__append_23)
 TGVOIP_HDRS = VoIPController.h Buffers.h BlockingQueue.h \
 	PrivateDefines.h CongestionControl.h EchoCanceller.h \
 	JitterBuffer.h logging.h threading.h MediaStreamItf.h \
@@ -3434,17 +3438,6 @@ webrtc_dsp/common_audio/vad/$(DEPDIR)/$(am__dirstamp):
 ./webrtc_dsp/common_audio/vad/vad_gmm.lo:  \
 	webrtc_dsp/common_audio/vad/$(am__dirstamp) \
 	webrtc_dsp/common_audio/vad/$(DEPDIR)/$(am__dirstamp)
-webrtc_dsp/common_audio/signal_processing/complex_bit_reverse.lo:  \
-	webrtc_dsp/common_audio/signal_processing/$(am__dirstamp) \
-	webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/$(am__dirstamp)
-webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(am__dirstamp):
-	@$(MKDIR_P) webrtc_dsp/common_audio/third_party/spl_sqrt_floor
-	@: > webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(am__dirstamp)
-webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)
-	@: > webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)/$(am__dirstamp)
-webrtc_dsp/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.lo: webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(am__dirstamp) \
-	webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)/$(am__dirstamp)
 webrtc_dsp/rtc_base/logging_mac.lo:  \
 	webrtc_dsp/rtc_base/$(am__dirstamp) \
 	webrtc_dsp/rtc_base/$(DEPDIR)/$(am__dirstamp)
@@ -3459,9 +3452,14 @@ audio/AudioIOCallback.lo: audio/$(am__dirstamp) \
 webrtc_dsp/common_audio/signal_processing/complex_bit_reverse_arm.lo:  \
 	webrtc_dsp/common_audio/signal_processing/$(am__dirstamp) \
 	webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/$(am__dirstamp)
-webrtc_dsp/common_audio/signal_processing/spl_sqrt_floor_arm.lo:  \
-	webrtc_dsp/common_audio/signal_processing/$(am__dirstamp) \
-	webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/$(am__dirstamp)
+webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(am__dirstamp):
+	@$(MKDIR_P) webrtc_dsp/common_audio/third_party/spl_sqrt_floor
+	@: > webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(am__dirstamp)
+webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)
+	@: > webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)/$(am__dirstamp)
+webrtc_dsp/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor_arm.lo: webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(am__dirstamp) \
+	webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)/$(am__dirstamp)
 webrtc_dsp/common_audio/signal_processing/cross_correlation_neon.lo:  \
 	webrtc_dsp/common_audio/signal_processing/$(am__dirstamp) \
 	webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/$(am__dirstamp)
@@ -3483,6 +3481,11 @@ webrtc_dsp/modules/audio_processing/ns/nsx_core_neon.lo:  \
 webrtc_dsp/modules/audio_processing/utility/ooura_fft_neon.lo:  \
 	webrtc_dsp/modules/audio_processing/utility/$(am__dirstamp) \
 	webrtc_dsp/modules/audio_processing/utility/$(DEPDIR)/$(am__dirstamp)
+webrtc_dsp/common_audio/signal_processing/complex_bit_reverse.lo:  \
+	webrtc_dsp/common_audio/signal_processing/$(am__dirstamp) \
+	webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/$(am__dirstamp)
+webrtc_dsp/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.lo: webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(am__dirstamp) \
+	webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)/$(am__dirstamp)
 
 libtgvoip.la: $(libtgvoip_la_OBJECTS) $(libtgvoip_la_DEPENDENCIES) $(EXTRA_libtgvoip_la_DEPENDENCIES) 
 	$(AM_V_OBJCXXLD)$(OBJCXXLINK) -rpath $(libdir) $(libtgvoip_la_OBJECTS) $(libtgvoip_la_LIBADD) $(LIBS)
@@ -3885,8 +3888,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/cross_correlation_neon.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/downsample_fast_neon.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/min_max_operations_neon.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/spl_sqrt_floor_arm.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)/spl_sqrt_floor.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)/spl_sqrt_floor_arm.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@webrtc_dsp/modules/audio_processing/aec/$(DEPDIR)/aec_core_neon.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@webrtc_dsp/modules/audio_processing/aec/$(DEPDIR)/aec_core_sse2.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@webrtc_dsp/modules/audio_processing/aecm/$(DEPDIR)/aecm_core_neon.Plo@am__quote@ # am--include-marker
@@ -4748,8 +4751,8 @@ distclean: distclean-am
 	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/cross_correlation_neon.Plo
 	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/downsample_fast_neon.Plo
 	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/min_max_operations_neon.Plo
-	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/spl_sqrt_floor_arm.Plo
 	-rm -f webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)/spl_sqrt_floor.Plo
+	-rm -f webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)/spl_sqrt_floor_arm.Plo
 	-rm -f webrtc_dsp/modules/audio_processing/aec/$(DEPDIR)/aec_core_neon.Plo
 	-rm -f webrtc_dsp/modules/audio_processing/aec/$(DEPDIR)/aec_core_sse2.Plo
 	-rm -f webrtc_dsp/modules/audio_processing/aecm/$(DEPDIR)/aecm_core_neon.Plo
@@ -5106,8 +5109,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/cross_correlation_neon.Plo
 	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/downsample_fast_neon.Plo
 	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/min_max_operations_neon.Plo
-	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/spl_sqrt_floor_arm.Plo
 	-rm -f webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)/spl_sqrt_floor.Plo
+	-rm -f webrtc_dsp/common_audio/third_party/spl_sqrt_floor/$(DEPDIR)/spl_sqrt_floor_arm.Plo
 	-rm -f webrtc_dsp/modules/audio_processing/aec/$(DEPDIR)/aec_core_neon.Plo
 	-rm -f webrtc_dsp/modules/audio_processing/aec/$(DEPDIR)/aec_core_sse2.Plo
 	-rm -f webrtc_dsp/modules/audio_processing/aecm/$(DEPDIR)/aecm_core_neon.Plo

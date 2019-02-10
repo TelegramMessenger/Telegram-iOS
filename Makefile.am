@@ -365,9 +365,7 @@ SRC += \
 ./webrtc_dsp/common_audio/vad/webrtc_vad.c \
 ./webrtc_dsp/common_audio/vad/vad_filterbank.c \
 ./webrtc_dsp/common_audio/vad/vad_core.c \
-./webrtc_dsp/common_audio/vad/vad_gmm.c \
-webrtc_dsp/common_audio/signal_processing/complex_bit_reverse.c \
-webrtc_dsp/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.c
+./webrtc_dsp/common_audio/vad/vad_gmm.c
 
 if TARGET_OS_OSX
 CFLAGS += -DWEBRTC_MAC
@@ -395,7 +393,7 @@ endif
 if TARGET_CPU_ARM
 SRC += \
 webrtc_dsp/common_audio/signal_processing/complex_bit_reverse_arm.S \
-webrtc_dsp/common_audio/signal_processing/spl_sqrt_floor_arm.S
+webrtc_dsp/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor_arm.S
 if TARGET_CPU_ARMV7
 CFLAGS += -mfpu=neon -mfloat-abi=hard
 CCASFLAGS += -mfpu=neon -mfloat-abi=hard
@@ -409,6 +407,10 @@ webrtc_dsp/modules/audio_processing/ns/nsx_core_neon.c \
 webrtc_dsp/modules/audio_processing/utility/ooura_fft_neon.cc
 # webrtc_dsp/common_audio/signal_processing/filter_ar_fast_q12_armv7.S
 endif
+else
+SRC += \
+webrtc_dsp/common_audio/signal_processing/complex_bit_reverse.c \
+webrtc_dsp/common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.c
 endif
 
 # headers
