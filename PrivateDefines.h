@@ -26,7 +26,7 @@
 #define IS_MOBILE_NETWORK(x) (x==NET_TYPE_GPRS || x==NET_TYPE_EDGE || x==NET_TYPE_3G || x==NET_TYPE_HSPA || x==NET_TYPE_LTE || x==NET_TYPE_OTHER_MOBILE)
 
 #define PROTOCOL_NAME 0x50567247 // "GrVP" in little endian (reversed here)
-#define PROTOCOL_VERSION 8
+#define PROTOCOL_VERSION 9
 #define MIN_PROTOCOL_VERSION 3
 
 #define STREAM_DATA_FLAG_LEN16 0x40

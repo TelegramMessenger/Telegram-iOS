@@ -282,17 +282,17 @@ VoIPController::~VoIPController(){
 		delete echoCanceller;
 	}
 	delete conctl;
-	if(tgvoipLogFile){
-		FILE* log=tgvoipLogFile;
-		tgvoipLogFile=NULL;
-		fclose(log);
-	}
 	if(statsDump)
 		fclose(statsDump);
 	if(resolvedProxyAddress)
 		delete resolvedProxyAddress;
 	delete selectCanceller;
 	LOGD("Left VoIPController::~VoIPController");
+	if(tgvoipLogFile){
+		FILE* log=tgvoipLogFile;
+		tgvoipLogFile=NULL;
+		fclose(log);
+	}
 }
 
 void VoIPController::Stop(){
@@ -453,8 +453,8 @@ void VoIPController::SetNetworkType(int type){
 						}
 					}else if(endpoint.type==Endpoint::Type::TCP_RELAY && endpoint.socket){
 						endpoint.socket->Close();
-						delete endpoint.socket;
-						endpoint.socket=NULL;
+						//delete endpoint.socket;
+						//endpoint.socket=NULL;
 					}
 					//if(endpoint->type==Endpoint::Type::UDP_P2P_INET){
 					endpoint.averageRTT=0;
@@ -869,7 +869,8 @@ vector<uint8_t> VoIPController::GetPersistentState(){
 			{"tcp", proxySupportsTCP}
     	}});
 	}
-	const char* jstr=Json(obj).dump().c_str();
+	string _jstr=Json(obj).dump();
+	const char* jstr=_jstr.c_str();
 	return vector<uint8_t>(jstr, jstr+strlen(jstr));
 }
 
@@ -1598,6 +1599,15 @@ void VoIPController::RunRecvThread(){
 						}
 					}
 				}
+				if(!srcEndpointID && packet.protocol==PROTO_UDP){
+					try{
+						Endpoint &p2p=GetEndpointByType(Endpoint::Type::UDP_P2P_INET);
+						if(p2p.rtts[0]==0.0 && p2p.address.PrefixMatches(24, *packet.address)){
+							LOGD("Packet source matches p2p endpoint partially: %s:%u", packet.address->ToString().c_str(), packet.port);
+							srcEndpointID=p2p.id;
+						}
+					}catch(out_of_range& ex){}
+				}
 			}else{
 				IPv6Address *src6=dynamic_cast<IPv6Address *>(packet.address);
 				if(src6){
@@ -1668,16 +1678,20 @@ bool VoIPController::WasOutgoingPacketAcknowledged(uint32_t seq){
 }
 
 void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcEndpoint){
-	unsigned char* buffer=packet.data;
+	unsigned char *buffer=packet.data;
 	size_t len=packet.length;
-	BufferInputStream in(buffer, (size_t)len);
-	if(memcmp(buffer, srcEndpoint.type==Endpoint::Type::UDP_RELAY || srcEndpoint.type==Endpoint::Type::TCP_RELAY ? (void*)srcEndpoint.peerTag : (void*)callID, 16)!=0){
-		LOGW("Received packet has wrong peerTag");
-		return;
+	BufferInputStream in(buffer, (size_t) len);
+	bool hasPeerTag=false;
+	if(peerVersion<9 || srcEndpoint.type==Endpoint::Type::UDP_RELAY || srcEndpoint.type==Endpoint::Type::TCP_RELAY){
+		if(memcmp(buffer, srcEndpoint.type==Endpoint::Type::UDP_RELAY || srcEndpoint.type==Endpoint::Type::TCP_RELAY ? (void *) srcEndpoint.peerTag : (void *) callID, 16)!=0){
+			LOGW("Received packet has wrong peerTag");
+			return;
+		}
+		in.Seek(16);
+		hasPeerTag=true;
 	}
-	in.Seek(16);
 	if(in.Remaining()>=16 && (srcEndpoint.type==Endpoint::Type::UDP_RELAY || srcEndpoint.type==Endpoint::Type::TCP_RELAY)
-	   && *reinterpret_cast<uint64_t*>(buffer+16)==0xFFFFFFFFFFFFFFFFLL && *reinterpret_cast<uint32_t*>(buffer+24)==0xFFFFFFFF){
+	   && *reinterpret_cast<uint64_t *>(buffer+16)==0xFFFFFFFFFFFFFFFFLL && *reinterpret_cast<uint32_t *>(buffer+24)==0xFFFFFFFF){
 		// relay special request response
 		in.Seek(16+12);
 		uint32_t tlid=(uint32_t) in.ReadInt32();
@@ -1690,7 +1704,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcE
 				in.ReadBytes(myIP, 16);
 				int32_t myPort=in.ReadInt32();
 				//udpConnectivityState=UDP_AVAILABLE;
-				LOGV("Received UDP ping reply from %s:%d: date=%d, queryID=%ld, my IP=%s, my port=%d", srcEndpoint.address.ToString().c_str(), srcEndpoint.port, date, (long int)queryID, IPv4Address(*reinterpret_cast<uint32_t*>(myIP+12)).ToString().c_str(), myPort);
+				LOGV("Received UDP ping reply from %s:%d: date=%d, queryID=%ld, my IP=%s, my port=%d", srcEndpoint.address.ToString().c_str(), srcEndpoint.port, date, (long int) queryID, IPv4Address(*reinterpret_cast<uint32_t *>(myIP+12)).ToString().c_str(), myPort);
 				srcEndpoint.udpPongCount++;
 				if(srcEndpoint.IsIPv6Only() && !didSendIPv6Endpoint){
 					IPv6Address realAddr(myIP);
@@ -1709,15 +1723,15 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcE
 				}
 			}
 		}else if(tlid==TLID_UDP_REFLECTOR_PEER_INFO){
-			if(waitingForRelayPeerInfo && in.Remaining()>=16){
+			if(in.Remaining()>=16){
 				MutexGuard _m(endpointsMutex);
 				uint32_t myAddr=(uint32_t) in.ReadInt32();
 				uint32_t myPort=(uint32_t) in.ReadInt32();
 				uint32_t peerAddr=(uint32_t) in.ReadInt32();
 				uint32_t peerPort=(uint32_t) in.ReadInt32();
 
-				constexpr int64_t p2pID=(int64_t)(FOURCC('P','2','P','4')) << 32;
-				constexpr int64_t lanID=(int64_t)(FOURCC('L','A','N','4')) << 32;
+				constexpr int64_t p2pID=(int64_t) (FOURCC('P', '2', 'P', '4')) << 32;
+				constexpr int64_t lanID=(int64_t) (FOURCC('L', 'A', 'N', '4')) << 32;
 
 				if(currentEndpoint==p2pID || currentEndpoint==lanID)
 					currentEndpoint=preferredRelay;
@@ -1727,25 +1741,27 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcE
 				IPv4Address _peerAddr(peerAddr);
 				IPv6Address emptyV6(string("::0"));
 				unsigned char peerTag[16];
-				Endpoint p2p(p2pID, (uint16_t) peerPort, _peerAddr, emptyV6, Endpoint::Type::UDP_P2P_INET, peerTag);
-				endpoints[p2pID]=p2p;
 				LOGW("Received reflector peer info, my=%s:%u, peer=%s:%u", IPv4Address(myAddr).ToString().c_str(), myPort, IPv4Address(peerAddr).ToString().c_str(), peerPort);
-				if(myAddr==peerAddr){
-					LOGW("Detected LAN");
-					IPv4Address lanAddr(0);
-					udpSocket->GetLocalInterfaceInfo(&lanAddr, NULL);
+				if(waitingForRelayPeerInfo){
+					Endpoint p2p(p2pID, (uint16_t) peerPort, _peerAddr, emptyV6, Endpoint::Type::UDP_P2P_INET, peerTag);
+					endpoints[p2pID]=p2p;
+					if(myAddr==peerAddr){
+						LOGW("Detected LAN");
+						IPv4Address lanAddr(0);
+						udpSocket->GetLocalInterfaceInfo(&lanAddr, NULL);
 
-					BufferOutputStream pkt(8);
-					pkt.WriteInt32(lanAddr.GetAddress());
-					pkt.WriteInt32(udpSocket->GetLocalPort());
-					if(peerVersion<6){
-						SendPacketReliably(PKT_LAN_ENDPOINT, pkt.GetBuffer(), pkt.GetLength(), 0.5, 10);
-					}else{
-						Buffer buf(move(pkt));
-						SendExtra(buf, EXTRA_TYPE_LAN_ENDPOINT);
+						BufferOutputStream pkt(8);
+						pkt.WriteInt32(lanAddr.GetAddress());
+						pkt.WriteInt32(udpSocket->GetLocalPort());
+						if(peerVersion<6){
+							SendPacketReliably(PKT_LAN_ENDPOINT, pkt.GetBuffer(), pkt.GetLength(), 0.5, 10);
+						}else{
+							Buffer buf(move(pkt));
+							SendExtra(buf, EXTRA_TYPE_LAN_ENDPOINT);
+						}
 					}
+					waitingForRelayPeerInfo=false;
 				}
-				waitingForRelayPeerInfo=false;
 			}
 		}else{
 			LOGV("Received relay response with unknown tl id: 0x%08X", tlid);
@@ -1775,7 +1791,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcE
 		unsigned char sha[SHA1_LENGTH];
 		uint32_t _len=(uint32_t) _in.ReadInt32();
 		if(_len>_in.Remaining())
-			_len=(uint32_t)_in.Remaining();
+			_len=(uint32_t) _in.Remaining();
 		crypto.sha1((uint8_t *) (aesOut), (size_t) (_len+4), sha);
 		if(memcmp(msgHash, sha+(SHA1_LENGTH-16), 16)!=0){
 			LOGW("Received packet has wrong hash after decryption");
@@ -1790,7 +1806,8 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcE
 	}
 
 	if(useMTProto2 || retryWith2){
-		in.Seek(16); // peer tag
+		if(hasPeerTag)
+			in.Seek(16); // peer tag
 
 		unsigned char fingerprint[8], msgKey[16];
 		if(!shortFormat){
@@ -1833,11 +1850,11 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcE
 
 		innerLen=(uint32_t) (shortFormat ? in.ReadInt16() : in.ReadInt32());
 		if(innerLen>decryptedLen-sizeSize){
-			LOGW("Received packet has wrong inner length (%d with total of %u)", (int)innerLen, (unsigned int)decryptedLen);
+			LOGW("Received packet has wrong inner length (%d with total of %u)", (int) innerLen, (unsigned int) decryptedLen);
 			return;
 		}
 		if(decryptedLen-innerLen<(shortFormat ? 16 : 12)){
-			LOGW("Received packet has too little padding (%u)", (unsigned int)(decryptedLen-innerLen));
+			LOGW("Received packet has too little padding (%u)", (unsigned int) (decryptedLen-innerLen));
 			return;
 		}
 		memcpy(buffer, decrypted+(shortFormat ? 2 : 4), innerLen);
@@ -1853,6 +1870,17 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcE
 	if(state==STATE_RECONNECTING){
 		LOGI("Received a valid packet while reconnecting - setting state to established");
 		SetState(STATE_ESTABLISHED);
+	}
+
+	if(srcEndpoint.type==Endpoint::Type::UDP_P2P_INET && !srcEndpoint.IsIPv6Only()){
+		if(srcEndpoint.port!=packet.port || srcEndpoint.address!=*packet.address){
+			IPv4Address *v4=dynamic_cast<IPv4Address *>(packet.address);
+			if(v4){
+				LOGI("Incoming packet was decrypted successfully, changing P2P endpoint to %s:%u", packet.address->ToString().c_str(), packet.port);
+				srcEndpoint.address=*v4;
+				srcEndpoint.port=packet.port;
+			}
+		}
 	}
 
 	/*decryptedAudioBlock random_id:long random_bytes:string flags:# voice_call_id:flags.2?int128 in_seq_no:flags.4?int out_seq_no:flags.4?int
@@ -2695,7 +2723,7 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint& ep, P
 	BufferOutputStream out(len+128);
 	if(ep.type==Endpoint::Type::UDP_RELAY || ep.type==Endpoint::Type::TCP_RELAY)
 		out.WriteBytes((unsigned char*)ep.peerTag, 16);
-	else
+	else if(peerVersion<9)
 		out.WriteBytes(callID, 16);
 	if(len>0){
 		if(useMTProto2){

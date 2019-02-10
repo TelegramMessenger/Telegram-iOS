@@ -58,9 +58,10 @@ static void dump(NullStruct, string &out) {
 
 static void dump(double value, string &out) {
     if (std::isfinite(value)) {
-        char buf[32];
-        snprintf(buf, sizeof buf, "%.17g", value);
-        out += buf;
+        std::ostringstream stm;
+        stm.imbue(std::locale("C"));
+        stm << value;
+        out += stm.str();
     } else {
         out += "null";
     }

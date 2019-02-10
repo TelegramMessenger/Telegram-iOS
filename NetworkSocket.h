@@ -31,6 +31,7 @@ namespace tgvoip {
 		bool operator!=(const NetworkAddress& other) const;
 		virtual ~NetworkAddress()=default;
 		virtual bool IsEmpty() const =0;
+		virtual bool PrefixMatches(const unsigned int prefix, const NetworkAddress& other) const =0;
 	};
 
 	class IPv4Address : public NetworkAddress{
@@ -41,6 +42,11 @@ namespace tgvoip {
 		virtual std::string ToString() const override;
 		uint32_t GetAddress() const;
 		virtual bool IsEmpty() const override;
+		virtual bool PrefixMatches(const unsigned int prefix, const NetworkAddress& other) const override;
+
+		static const IPv4Address Broadcast(){
+			return IPv4Address(0xFFFFFFFF);
+		}
 	private:
 		uint32_t address;
 	};
@@ -53,6 +59,7 @@ namespace tgvoip {
 		virtual std::string ToString() const override;
 		const uint8_t* GetAddress() const;
 		virtual bool IsEmpty() const override;
+		virtual bool PrefixMatches(const unsigned int prefix, const NetworkAddress& other) const override;
 	private:
 		uint8_t address[16];
 	};

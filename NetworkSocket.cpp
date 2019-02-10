@@ -158,6 +158,15 @@ std::string IPv4Address::ToString() const{
 #endif
 }
 
+bool IPv4Address::PrefixMatches(const unsigned int prefix, const NetworkAddress &other) const{
+	const IPv4Address* v4=dynamic_cast<const IPv4Address*>(&other);
+	if(v4){
+		uint32_t mask=0xFFFFFFFF << (32-prefix);
+		return (address & mask) == (v4->address & mask);
+	}
+	return false;
+}
+
 /*sockaddr &IPv4Address::ToSockAddr(uint16_t port){
 	sockaddr_in sa;
 	sa.sin_family=AF_INET;
@@ -196,6 +205,10 @@ std::string IPv6Address::ToString() const{
 #else
 	return NetworkSocketWinsock::V6AddressToString(address);
 #endif
+}
+
+bool IPv6Address::PrefixMatches(const unsigned int prefix, const NetworkAddress &other) const{
+	return false;
 }
 
 bool IPv6Address::IsEmpty() const{

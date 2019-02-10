@@ -48,6 +48,9 @@ NetworkSocketPosix::NetworkSocketPosix(NetworkProtocol protocol) : NetworkSocket
 }
 
 NetworkSocketPosix::~NetworkSocketPosix(){
+	if(fd>=0){
+		Close();
+	}
 	if(tcpConnectedAddress)
 		delete tcpConnectedAddress;
 	if(pendingOutgoingPacket)
@@ -139,9 +142,9 @@ void NetworkSocketPosix::Send(NetworkPacket *packet){
 			addr.sin6_family=AF_INET6;
 		}
 		addr.sin6_port=htons(packet->port);
-		res=sendto(fd, packet->data, packet->length, 0, (const sockaddr *) &addr, sizeof(addr));
+		res=(int)sendto(fd, packet->data, packet->length, 0, (const sockaddr *) &addr, sizeof(addr));
 	}else{
-		res=send(fd, packet->data, packet->length, 0);
+		res=(int)send(fd, packet->data, packet->length, 0);
 	}
 	if(res<=0){
 		if(errno==EAGAIN || errno==EWOULDBLOCK){
@@ -220,7 +223,7 @@ void NetworkSocketPosix::Receive(NetworkPacket *packet){
 		packet->protocol=PROTO_UDP;
 		packet->port=ntohs(srcAddr.sin6_port);
 	}else if(protocol==PROTO_TCP){
-		int res=recv(fd, packet->data, packet->length, 0);
+		int res=(int)recv(fd, packet->data, packet->length, 0);
 		if(res<=0){
 			LOGE("Error receiving from TCP socket: %d / %s", errno, strerror(errno));
 			failed=true;
@@ -341,7 +344,7 @@ void NetworkSocketPosix::Connect(const NetworkAddress *address, uint16_t port){
 	timeout.tv_sec=60;
 	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 	fcntl(fd, F_SETFL, O_NONBLOCK);
-	int res=connect(fd, (const sockaddr*) addr, addrLen);
+	int res=(int)connect(fd, (const sockaddr*) addr, (socklen_t)addrLen);
 	if(res!=0 && errno!=EINVAL && errno!=EINPROGRESS){
 		LOGW("error connecting TCP socket to %s:%u: %d / %s; %d / %s", address->ToString().c_str(), port, res, strerror(res), errno, strerror(errno));
 		close(fd);
