@@ -1,0 +1,32 @@
+option('test',
+   type: 'boolean',
+   value: false,
+   description: 'Enable building unit tests')
+
+option('example',
+   type: 'boolean',
+   value: true,
+   description: 'Enable building examples')
+
+option('text',
+   type: 'boolean',
+   value: false,
+   description: 'Enable text module')
+
+
+option('asan',
+   type: 'boolean',
+   value: false,
+   description: 'Enable address sanitizer')
+
+
+option('msan',
+   type: 'boolean',
+   value: false,
+   description: 'Enable memory sanitizer')
+
+
+option('tsan',
+   type: 'boolean',
+   value: false,
+   description: 'Enable thread sanitizer')
