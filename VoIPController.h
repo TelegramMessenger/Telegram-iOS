@@ -751,7 +751,13 @@ namespace tgvoip{
 		std::vector<SentVideoFrame> sentVideoFrames;
 		Mutex sentVideoFramesMutex;
 		bool videoKeyframeRequested=false;
-		
+
+		/*** debug report problems ***/
+		bool wasReconnecting=false;
+		bool wasExtraEC=false;
+		bool wasEncoderLaggy=false;
+		bool wasNetworkHandover=false;
+
 		/*** persistable state values ***/
 		bool proxySupportsUDP=true;
 		bool proxySupportsTCP=true;

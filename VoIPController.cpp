@@ -26,6 +26,7 @@
 #include <exception>
 #include <stdexcept>
 #include <algorithm>
+#include <sstream>
 #include <inttypes.h>
 #include <float.h>
 
@@ -435,6 +436,7 @@ void VoIPController::SetNetworkType(int type){
 		activeNetItfName=itfName;
 		if(isFirstChange)
 			return;
+		wasNetworkHandover=true;
 		if(currentEndpoint){
 			const Endpoint& _currentEndpoint=endpoints.at(currentEndpoint);
 			const Endpoint& _preferredRelay=endpoints.at(preferredRelay);
@@ -650,10 +652,6 @@ void VoIPController::GetStats(TrafficStats *stats){
 }
 
 string VoIPController::GetDebugLog(){
-	vector<json11::Json> lpkts;
-	for(DebugLoggedPacket& lpkt:debugLoggedPackets){
-		lpkts.push_back(json11::Json::array{lpkt.timestamp, lpkt.seq, lpkt.length});
-	}
 	map<string, json11::Json> network{
 			{"type", NetworkTypeToString(networkType)}
 	};
@@ -665,6 +663,23 @@ string VoIPController::GetDebugLog(){
 			network["mcc"]=carrier.mcc;
 			network["mnc"]=carrier.mnc;
 		}
+	}else if(networkType==NET_TYPE_WIFI){
+#ifdef __ANDROID__
+		jni::DoWithJNI([&](JNIEnv* env){
+			jmethodID getWifiInfoMethod=env->GetStaticMethodID(jniUtilitiesClass, "getWifiInfo", "()[I");
+			jintArray res=static_cast<jintArray>(env->CallStaticObjectMethod(jniUtilitiesClass, getWifiInfoMethod));
+			if(res){
+				jint* wifiInfo=env->GetIntArrayElements(res, NULL);
+				network["rssi"]=wifiInfo[0];
+				network["link_speed"]=wifiInfo[1];
+				env->ReleaseIntArrayElements(res, wifiInfo, JNI_ABORT);
+			}
+		});
+#endif
+	}
+	/*vector<json11::Json> lpkts;
+	for(DebugLoggedPacket& lpkt:debugLoggedPackets){
+		lpkts.push_back(json11::Json::array{lpkt.timestamp, lpkt.seq, lpkt.length});
 	}
 	return json11::Json(json11::Json::object{
 			{"log_type", "out_packet_stats"},
@@ -677,6 +692,50 @@ string VoIPController::GetDebugLog(){
 			}},
 			{"call_duration", GetCurrentTime()-connectionInitTime},
 			{"out_packet_stats", lpkts}
+	}).dump();*/
+
+	string p2pType="none";
+	Endpoint& cur=endpoints[currentEndpoint];
+	if(cur.type==Endpoint::Type::UDP_P2P_INET)
+		p2pType=cur.IsIPv6Only() ? "inet6" : "inet";
+	else if(cur.type==Endpoint::Type::UDP_P2P_LAN)
+		p2pType="lan";
+
+	vector<string> problems;
+	if(lastError==ERROR_TIMEOUT)
+		problems.push_back("timeout");
+	if(wasReconnecting)
+		problems.push_back("reconnecting");
+	if(wasExtraEC)
+		problems.push_back("extra_ec");
+	if(wasEncoderLaggy)
+		problems.push_back("encoder_lag");
+	if(!wasEstablished)
+		problems.push_back("not_inited");
+	if(wasNetworkHandover)
+		problems.push_back("network_handover");
+
+	ostringstream prefRelay;
+	prefRelay << preferredRelay;
+
+	return json11::Json(json11::Json::object{
+			{"log_type", "call_stats"},
+			{"libtgvoip_version", LIBTGVOIP_VERSION},
+			{"network", network},
+			{"protocol_version", std::min(peerVersion, PROTOCOL_VERSION)},
+			{"udp_avail", udpConnectivityState==UDP_AVAILABLE},
+			{"tcp_used", useTCP},
+			{"relay_rtt", (int)(endpoints[preferredRelay].averageRTT*1000.0)},
+			{"p2p_type", p2pType},
+			{"rtt", (int)(endpoints[currentEndpoint].averageRTT*1000.0)},
+			{"packet_stats", json11::Json::object{
+					{"out", (int)seq},
+					{"in", (int)packetsReceived},
+					{"lost_out", (int)conctl->GetSendLossCount()},
+					{"lost_in", (int)recvLossCount}
+			}},
+			{"problems", problems},
+			{"pref_relay", prefRelay.str()}
 	}).dump();
 }
 
@@ -2584,6 +2643,7 @@ void VoIPController::ProcessExtraData(Buffer &data){
 		endpoints[lanID]=lan;
 	}else if(type==EXTRA_TYPE_NETWORK_CHANGED){
 		LOGI("Peer network changed");
+		wasNetworkHandover=true;
 		const Endpoint& _currentEndpoint=endpoints.at(currentEndpoint);
 		if(_currentEndpoint.type!=Endpoint::Type::UDP_RELAY && _currentEndpoint.type!=Endpoint::Type::TCP_RELAY)
 			currentEndpoint=preferredRelay;
@@ -3530,6 +3590,7 @@ void VoIPController::UpdateCongestion(){
 				LOGW("Enabling extra EC");
 				if(needRateFlags & NEED_RATE_FLAG_SHITTY_INTERNET_MODE)
 					needRate=true;
+				wasExtraEC=true;
 			}
 		}
 		
@@ -3569,6 +3630,8 @@ void VoIPController::UpdateCongestion(){
 				encoder->SetSecondaryEncoderEnabled(false);
 			LOGW("Disabling extra EC");
 		}
+		if(!wasEncoderLaggy && encoder->GetComplexity()<10)
+			wasEncoderLaggy=true;
 	}
 }
 
@@ -3598,6 +3661,7 @@ void VoIPController::UpdateAudioBitrate(){
 			SetState(STATE_RECONNECTING);
 			if(needRateFlags & NEED_RATE_FLAG_RECONNECTING)
 				needRate=true;
+			wasReconnecting=true;
 			ResetUdpAvailability();
 		}
 
