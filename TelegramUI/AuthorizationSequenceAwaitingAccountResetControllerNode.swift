@@ -23,7 +23,7 @@ private func timerValueString(days: Int32, hours: Int32, minutes: Int32, color: 
 
 final class AuthorizationSequenceAwaitingAccountResetControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let strings: PresentationStrings
-    private let theme: AuthorizationTheme
+    private let theme: PresentationTheme
     
     private let titleNode: ASTextNode
     private let noticeNode: ASTextNode
@@ -40,14 +40,14 @@ final class AuthorizationSequenceAwaitingAccountResetControllerNode: ASDisplayNo
     
     private var timer: SwiftSignalKit.Timer?
     
-    init(strings: PresentationStrings, theme: AuthorizationTheme) {
+    init(strings: PresentationStrings, theme: PresentationTheme) {
         self.strings = strings
         self.theme = theme
         
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: strings.Login_ResetAccountProtected_Title, font: Font.light(30.0), textColor: self.theme.primaryColor)
+        self.titleNode.attributedText = NSAttributedString(string: strings.Login_ResetAccountProtected_Title, font: Font.light(30.0), textColor: self.theme.list.itemPrimaryTextColor)
         
         self.noticeNode = ASTextNode()
         self.noticeNode.isUserInteractionEnabled = false
@@ -56,15 +56,15 @@ final class AuthorizationSequenceAwaitingAccountResetControllerNode: ASDisplayNo
         self.timerTitleNode = ASTextNode()
         self.timerTitleNode.isLayerBacked = true
         self.timerTitleNode.displaysAsynchronously = false
-        self.timerTitleNode.attributedText = NSAttributedString(string: strings.Login_ResetAccountProtected_TimerTitle, font: Font.regular(16.0), textColor: self.theme.primaryColor)
+        self.timerTitleNode.attributedText = NSAttributedString(string: strings.Login_ResetAccountProtected_TimerTitle, font: Font.regular(16.0), textColor: self.theme.list.itemPrimaryTextColor)
         
         self.timerValueNode = ASTextNode()
         self.timerValueNode.isLayerBacked = true
         self.timerValueNode.displaysAsynchronously = false
         
         self.resetNode = HighlightableButtonNode()
-        self.resetNode.setAttributedTitle(NSAttributedString(string: strings.Login_ResetAccountProtected_Reset, font: Font.regular(21.0), textColor: self.theme.accentColor), for: [])
-        self.resetNode.setAttributedTitle(NSAttributedString(string: strings.Login_ResetAccountProtected_Reset, font: Font.regular(21.0), textColor: self.theme.textPlaceholderColor), for: [.disabled])
+        self.resetNode.setAttributedTitle(NSAttributedString(string: strings.Login_ResetAccountProtected_Reset, font: Font.regular(21.0), textColor: self.theme.list.itemAccentColor), for: [])
+        self.resetNode.setAttributedTitle(NSAttributedString(string: strings.Login_ResetAccountProtected_Reset, font: Font.regular(21.0), textColor: self.theme.list.itemPlaceholderTextColor), for: [.disabled])
         self.resetNode.displaysAsynchronously = false
         self.resetNode.isEnabled = false
         
@@ -74,7 +74,7 @@ final class AuthorizationSequenceAwaitingAccountResetControllerNode: ASDisplayNo
             return UITracingLayerView()
         })
         
-        self.backgroundColor = self.theme.backgroundColor
+        self.backgroundColor = self.theme.list.plainBackgroundColor
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.noticeNode)
@@ -93,7 +93,7 @@ final class AuthorizationSequenceAwaitingAccountResetControllerNode: ASDisplayNo
         self.protectedUntil = protectedUntil
         self.updateTimerValue()
         
-        self.noticeNode.attributedText = NSAttributedString(string: strings.Login_ResetAccountProtected_Text(number).0, font: Font.regular(16.0), textColor: self.theme.primaryColor, paragraphAlignment: .center)
+        self.noticeNode.attributedText = NSAttributedString(string: strings.Login_ResetAccountProtected_Text(number).0, font: Font.regular(16.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         
         if let (layout, navigationHeight) = self.layoutArguments {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
@@ -127,7 +127,7 @@ final class AuthorizationSequenceAwaitingAccountResetControllerNode: ASDisplayNo
             minutes = 1
         }
         
-        self.timerValueNode.attributedText = timerValueString(days: days, hours: hours, minutes: minutes, color: self.theme.primaryColor, strings: self.strings)
+        self.timerValueNode.attributedText = timerValueString(days: days, hours: hours, minutes: minutes, color: self.theme.list.itemPrimaryTextColor, strings: self.strings)
         
         self.resetNode.isEnabled = timerSeconds <= 0
         
@@ -143,9 +143,9 @@ final class AuthorizationSequenceAwaitingAccountResetControllerNode: ASDisplayNo
         insets.top = navigationBarHeight
         
         if max(layout.size.width, layout.size.height) > 1023.0 {
-            self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_ResetAccountProtected_Title, font: Font.light(40.0), textColor: self.theme.primaryColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_ResetAccountProtected_Title, font: Font.light(40.0), textColor: self.theme.list.itemPrimaryTextColor)
         } else {
-            self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_ResetAccountProtected_Title, font: Font.light(30.0), textColor: self.theme.primaryColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_ResetAccountProtected_Title, font: Font.light(30.0), textColor: self.theme.list.itemPrimaryTextColor)
         }
         
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))

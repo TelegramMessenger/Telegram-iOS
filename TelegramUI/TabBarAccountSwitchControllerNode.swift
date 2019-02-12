@@ -283,9 +283,17 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
         UIView.animate(withDuration: 0.3, animations: {
             if #available(iOS 9.0, *) {
                 if self.presentationData.theme.chatList.searchBarKeyboardColor == .dark {
-                    self.effectView.effect = UIBlurEffect(style: .dark)
+                    if #available(iOSApplicationExtension 10.0, *) {
+                        self.effectView.effect = UIBlurEffect(style: .regular)
+                    } else {
+                        self.effectView.effect = UIBlurEffect(style: .dark)
+                    }
                 } else {
-                    self.effectView.effect = UIBlurEffect(style: .light)
+                    if #available(iOSApplicationExtension 10.0, *) {
+                        self.effectView.effect = UIBlurEffect(style: .regular)
+                    } else {
+                        self.effectView.effect = UIBlurEffect(style: .light)
+                    }
                 }
             } else {
                 self.effectView.alpha = 1.0
@@ -300,6 +308,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
         for sourceNode in self.sourceNodes {
             if let snapshot = sourceNode.view.snapshotContentTree() {
                 snapshot.frame = sourceNode.view.convert(sourceNode.bounds, to: self.view)
+                snapshot.isUserInteractionEnabled = false
                 self.view.addSubview(snapshot)
                 self.snapshotViews.append(snapshot)
             }

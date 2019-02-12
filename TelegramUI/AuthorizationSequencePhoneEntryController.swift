@@ -14,7 +14,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     private let otherAccountPhoneNumbers: ((String, AccountRecordId)?, [(String, AccountRecordId)])
     private let network: Network
     private let strings: PresentationStrings
-    private let theme: AuthorizationTheme
+    private let theme: PresentationTheme
     private let openUrl: (String) -> Void
     
     private let back: () -> Void
@@ -24,7 +24,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     var inProgress: Bool = false {
         didSet {
             if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.accentColor))
+                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.rootController.navigationBar.accentTextColor))
                 self.navigationItem.rightBarButtonItem = item
             } else {
                 self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
@@ -38,7 +38,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(sharedContext: SharedAccountContext, otherAccountPhoneNumbers: ((String, AccountRecordId)?, [(String, AccountRecordId)]), network: Network, strings: PresentationStrings, theme: AuthorizationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContext, otherAccountPhoneNumbers: ((String, AccountRecordId)?, [(String, AccountRecordId)]), network: Network, strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
         self.sharedContext = sharedContext
         self.otherAccountPhoneNumbers = otherAccountPhoneNumbers
         self.network = network
@@ -53,7 +53,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         
         self.hasActiveInput = true
         
-        self.statusBar.statusBarStyle = theme.statusBarStyle
+        self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
         self.attemptNavigation = { _ in
             return false
         }
@@ -94,7 +94,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         self.displayNodeDidLoad()
         self.controllerNode.selectCountryCode = { [weak self] in
             if let strongSelf = self {
-                let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.strings, theme: AuthorizationSequenceCountrySelectionTheme(authorizationTheme: strongSelf.theme))
+                let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.strings, theme: strongSelf.theme)
                 controller.completeWithCountryCode = { code, name in
                     if let strongSelf = self, let currentData = strongSelf.currentData {
                         strongSelf.updateData(countryCode: Int32(code), countryName: name, number: currentData.2)
@@ -151,7 +151,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
                     }))
                 }
                 actions.append(TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {}))
-                self.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: self.theme), title: nil, text: self.strings.Login_PhoneNumberAlreadyAuthorized, actions: actions), in: .window(.root))
+                self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.theme), title: nil, text: self.strings.Login_PhoneNumberAlreadyAuthorized, actions: actions), in: .window(.root))
             } else {
                 self.loginWithNumber?(self.controllerNode.currentNumber)
             }

@@ -8,7 +8,7 @@ final class AuthorizationSequenceAwaitingAccountResetController: ViewController 
     }
     
     private let strings: PresentationStrings
-    private let theme: AuthorizationTheme
+    private let theme: PresentationTheme
     
     var logout: (() -> Void)?
     var reset: (() -> Void)?
@@ -19,7 +19,7 @@ final class AuthorizationSequenceAwaitingAccountResetController: ViewController 
     var inProgress: Bool = false {
         didSet {
             if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.accentColor))
+                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.rootController.navigationBar.accentTextColor))
                 self.navigationItem.rightBarButtonItem = item
             } else {
                 self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.logoutPressed))
@@ -27,7 +27,7 @@ final class AuthorizationSequenceAwaitingAccountResetController: ViewController 
         }
     }
     
-    init(strings: PresentationStrings, theme: AuthorizationTheme, back: @escaping () -> Void) {
+    init(strings: PresentationStrings, theme: PresentationTheme, back: @escaping () -> Void) {
         self.strings = strings
         self.theme = theme
         
@@ -35,7 +35,7 @@ final class AuthorizationSequenceAwaitingAccountResetController: ViewController 
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
-        self.statusBar.statusBarStyle = theme.statusBarStyle
+        self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
         
         self.attemptNavigation = { _ in
             return false

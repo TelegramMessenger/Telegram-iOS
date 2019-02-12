@@ -9,7 +9,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     }
     
     private let strings: PresentationStrings
-    private let theme: AuthorizationTheme
+    private let theme: PresentationTheme
     private let openUrl: (String) -> Void
     
     var loginWithCode: ((String) -> Void)?
@@ -24,7 +24,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     var inProgress: Bool = false {
         didSet {
             if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.accentColor))
+                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.rootController.navigationBar.accentTextColor))
                 self.navigationItem.rightBarButtonItem = item
             } else {
                 self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
@@ -33,7 +33,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         }
     }
     
-    init(strings: PresentationStrings, theme: AuthorizationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+    init(strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
         self.strings = strings
         self.theme = theme
         self.openUrl = openUrl
@@ -44,7 +44,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         
         self.hasActiveInput = true
         
-        self.statusBar.statusBarStyle = theme.statusBarStyle
+        self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
         
@@ -52,7 +52,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
             return false
         }
         self.navigationBar?.backPressed = { [weak self] in
-            self?.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: theme), title: nil, text: strings.Login_CancelPhoneVerification, actions: [TextAlertAction(type: .genericAction, title: strings.Login_CancelPhoneVerificationContinue, action: {
+            self?.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: nil, text: strings.Login_CancelPhoneVerification, actions: [TextAlertAction(type: .genericAction, title: strings.Login_CancelPhoneVerificationContinue, action: {
             }), TextAlertAction(type: .defaultAction, title: strings.Login_CancelPhoneVerificationStop, action: {
                 back()
             })]), in: .window(.root))

@@ -11,6 +11,16 @@ public final class PresentationThemeColorPlaceholder {
     
 }
 
+public final class PresentationThemeAuth {
+    public let introStartButton: UIColor
+    public let introDotColor: UIColor
+    
+    public init(introStartButton: UIColor, introDotColor: UIColor) {
+        self.introStartButton = introStartButton
+        self.introDotColor = introDotColor
+    }
+}
+
 public final class PresentationThemeRootTabBar {
     public let backgroundColor: UIColor
     public let separatorColor: UIColor
@@ -880,6 +890,7 @@ public final class PresentationTheme: Equatable {
     public let name: PresentationThemeName
     public let overallDarkAppearance: Bool
     public let allowsCustomWallpapers: Bool
+    public let auth: PresentationThemeAuth
     public let rootController: PresentationThemeRootController
     public let list: PresentationThemeList
     public let chatList: PresentationThemeChatList
@@ -889,10 +900,11 @@ public final class PresentationTheme: Equatable {
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
-    public init(name: PresentationThemeName, overallDarkAppearance: Bool, allowsCustomWallpapers: Bool, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, inAppNotification: PresentationThemeInAppNotification) {
+    public init(name: PresentationThemeName, overallDarkAppearance: Bool, allowsCustomWallpapers: Bool, auth: PresentationThemeAuth, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, inAppNotification: PresentationThemeInAppNotification) {
         self.name = name
         self.overallDarkAppearance = overallDarkAppearance
         self.allowsCustomWallpapers = allowsCustomWallpapers
+        self.auth = auth
         self.rootController = rootController
         self.list = list
         self.chatList = chatList

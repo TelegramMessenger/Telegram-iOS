@@ -400,7 +400,6 @@
 		D099D74D1EEFEE1500A3128C /* GameController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099D74C1EEFEE1500A3128C /* GameController.swift */; };
 		D099D74F1EEFEE6A00A3128C /* GameControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099D74E1EEFEE6A00A3128C /* GameControllerNode.swift */; };
 		D099D7511EEFF91E00A3128C /* GameControllerTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099D7501EEFF91E00A3128C /* GameControllerTitleView.swift */; };
-		D09D886F1F86C11F00BEB4C9 /* AuthorizationTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09D886E1F86C11F00BEB4C9 /* AuthorizationTheme.swift */; };
 		D09D88711F86D36700BEB4C9 /* CountryList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09D88701F86D36700BEB4C9 /* CountryList.swift */; };
 		D09D88731F86D56B00BEB4C9 /* AuthorizationLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09D88721F86D56B00BEB4C9 /* AuthorizationLayout.swift */; };
 		D09E637C1F0E7C28003444CD /* SharedMediaPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09E637B1F0E7C28003444CD /* SharedMediaPlayer.swift */; };
@@ -1821,7 +1820,6 @@
 		D099EA2C1DE76782001AF5A8 /* PeerMessageManagedMediaId.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerMessageManagedMediaId.swift; sourceTree = "<group>"; };
 		D099EA2E1DE775BB001AF5A8 /* ChatContextResultManagedMediaId.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatContextResultManagedMediaId.swift; sourceTree = "<group>"; };
 		D09AEFD31E5BAF67005C1A8B /* ItemListTextEmptyStateItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListTextEmptyStateItem.swift; sourceTree = "<group>"; };
-		D09D886E1F86C11F00BEB4C9 /* AuthorizationTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorizationTheme.swift; sourceTree = "<group>"; };
 		D09D88701F86D36700BEB4C9 /* CountryList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountryList.swift; sourceTree = "<group>"; };
 		D09D88721F86D56B00BEB4C9 /* AuthorizationLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorizationLayout.swift; sourceTree = "<group>"; };
 		D09E637B1F0E7C28003444CD /* SharedMediaPlayer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SharedMediaPlayer.swift; sourceTree = "<group>"; };
@@ -4387,7 +4385,6 @@
 		D0F69DE71D6B8A590046BCD6 /* Authorization */ = {
 			isa = PBXGroup;
 			children = (
-				D09D886E1F86C11F00BEB4C9 /* AuthorizationTheme.swift */,
 				D09D88721F86D56B00BEB4C9 /* AuthorizationLayout.swift */,
 				D049EAF21E44DE2500A2CD3A /* AuthorizationSequenceController.swift */,
 				D04BB2B61E44E5BB00650E93 /* Splash */,
@@ -5515,7 +5512,6 @@
 				D099D7511EEFF91E00A3128C /* GameControllerTitleView.swift in Sources */,
 				D0EC6D711EB9F58800EBF1C3 /* AuthorizationSequencePasswordEntryController.swift in Sources */,
 				D0EC6D721EB9F58800EBF1C3 /* AuthorizationSequencePasswordEntryControllerNode.swift in Sources */,
-				D09D886F1F86C11F00BEB4C9 /* AuthorizationTheme.swift in Sources */,
 				D0EC6D731EB9F58800EBF1C3 /* AuthorizationSequenceSignUpController.swift in Sources */,
 				0979787C210642CB0077D77F /* WebEmbedPlayerNode.swift in Sources */,
 				D0C12EB01F9A8D1300600BB2 /* ListMessageDateHeader.swift in Sources */,

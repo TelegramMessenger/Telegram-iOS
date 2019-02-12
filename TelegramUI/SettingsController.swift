@@ -608,7 +608,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 }
             }
         }
-        for (_, account) in activeAccounts {
+        for (_, account, _) in activeAccounts {
             accounts.append(accountWithPeer(account))
         }
         
@@ -1057,15 +1057,14 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     let notificationsWarningSuppressed = Promise<Bool>(true)
     if #available(iOSApplicationExtension 10.0, *) {
-        let warningKey = PostboxViewKey.noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())
         notificationsWarningSuppressed.set(
             .single(true)
             |> then(
                 contextValue.get()
                 |> mapToSignal { context -> Signal<Bool, NoError> in
-                    return context.account.postbox.combinedView(keys: [warningKey])
-                    |> map { combined -> Bool in
-                        let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                    return context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.notificationsPermissionWarningKey())
+                    |> map { noticeView -> Bool in
+                        let timestamp = noticeView.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                         if let timestamp = timestamp, timestamp > 0 {
                             return true
                         } else {

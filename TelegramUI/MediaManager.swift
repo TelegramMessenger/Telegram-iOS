@@ -66,7 +66,7 @@ public final class MediaManager: NSObject {
     private let inForeground: Signal<Bool, NoError>
     
     public let audioSession: ManagedAudioSession
-    let overlayMediaManager = OverlayMediaManager()
+    public let overlayMediaManager = OverlayMediaManager()
     let sharedVideoContextManager = SharedVideoContextManager()
     
     private var nextPlayerIndex: Int32 = 0

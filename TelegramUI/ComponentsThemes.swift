@@ -45,10 +45,6 @@ public extension AlertControllerTheme {
         let actionSheet = presentationTheme.actionSheet
         self.init(backgroundColor: actionSheet.opaqueItemBackgroundColor, separatorColor: actionSheet.opaqueItemSeparatorColor, highlightedItemColor: actionSheet.opaqueItemHighlightedBackgroundColor, primaryColor: actionSheet.primaryTextColor, secondaryColor: actionSheet.secondaryTextColor, accentColor: actionSheet.controlAccentColor, destructiveColor: actionSheet.destructiveActionTextColor)
     }
-    
-    convenience init(authTheme: AuthorizationTheme) {
-        self.init(backgroundColor: authTheme.alertBackgroundColor, separatorColor: authTheme.separatorColor, highlightedItemColor: authTheme.itemHighlightedBackgroundColor, primaryColor: authTheme.primaryColor, secondaryColor: authTheme.textPlaceholderColor, accentColor: authTheme.accentColor, destructiveColor: authTheme.destructiveColor)
-    }
 }
 
 extension PeekControllerTheme {

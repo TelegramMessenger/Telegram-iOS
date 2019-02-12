@@ -872,7 +872,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                 }
                 return nil
             }
-            let _ = (combineLatest(ApplicationSpecificNotice.getBotPaymentLiability(postbox: self.context.account.postbox, peerId: self.messageId.peerId), botPeer, self.context.account.postbox.loadedPeerWithId(paymentForm.providerId))
+            let _ = (combineLatest(ApplicationSpecificNotice.getBotPaymentLiability(accountManager: self.context.sharedContext.accountManager, peerId: self.messageId.peerId), botPeer, self.context.account.postbox.loadedPeerWithId(paymentForm.providerId))
             |> deliverOnMainQueue).start(next: { [weak self] value, botPeer, providerPeer in
                 if let strongSelf = self, let botPeer = botPeer {
                     if value {
@@ -880,7 +880,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                     } else {
                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Checkout_LiabilityAlertTitle, text: strongSelf.presentationData.strings.Checkout_LiabilityAlert(botPeer.displayTitle, providerPeer.displayTitle).0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                             if let strongSelf = self {
-                                let _ = ApplicationSpecificNotice.setBotPaymentLiability(postbox: strongSelf.context.account.postbox, peerId: strongSelf.messageId.peerId).start()
+                                let _ = ApplicationSpecificNotice.setBotPaymentLiability(accountManager: strongSelf.context.sharedContext.accountManager, peerId: strongSelf.messageId.peerId).start()
                                 strongSelf.pay(savedCredentialsToken: savedCredentialsToken, liabilityNoticeAccepted: true)
                             }
                         })]), nil)

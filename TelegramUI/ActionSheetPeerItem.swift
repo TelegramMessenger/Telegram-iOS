@@ -9,13 +9,15 @@ public class ActionSheetPeerItem: ActionSheetItem {
     public let peer: Peer
     public let theme: PresentationTheme
     public let title: String
+    public let isSelected: Bool
     public let strings: PresentationStrings
     public let action: () -> Void
     
-    public init(account: Account, peer: Peer, title: String, strings: PresentationStrings, theme: PresentationTheme, action: @escaping () -> Void) {
+    public init(account: Account, peer: Peer, title: String, isSelected: Bool, strings: PresentationStrings, theme: PresentationTheme, action: @escaping () -> Void) {
         self.account = account
         self.peer = peer
         self.title = title
+        self.isSelected = isSelected
         self.strings = strings
         self.theme = theme
         self.action = action
@@ -49,6 +51,7 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
     private let button: HighlightTrackingButton
     private let avatarNode: AvatarNode
     private let label: ImmediateTextNode
+    private let checkNode: ASImageNode
     
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
@@ -63,11 +66,17 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
         self.label.displaysAsynchronously = false
         self.label.maximumNumberOfLines = 1
         
+        self.checkNode = ASImageNode()
+        self.checkNode.displaysAsynchronously = false
+        self.checkNode.displayWithoutProcessing = true
+        self.checkNode.image = generateItemListCheckIcon(color: theme.primaryTextColor)
+        
         super.init(theme: theme)
         
         self.view.addSubview(self.button)
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.label)
+        self.addSubnode(self.checkNode)
         
         self.button.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -92,6 +101,8 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
         
         self.avatarNode.setPeer(account: item.account, theme: item.theme, peer: item.peer)
         
+        self.checkNode.isHidden = !item.isSelected
+        
         self.setNeedsLayout()
     }
     
@@ -113,6 +124,10 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
         
         let labelSize = self.label.updateLayout(CGSize(width: max(1.0, size.width - avatarInset - 16.0 - 16.0 - 30.0), height: size.height))
         self.label.frame = CGRect(origin: CGPoint(x: 16.0 + avatarInset, y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
+        
+        if let image = self.checkNode.image {
+            self.checkNode.frame = CGRect(origin: CGPoint(x: size.width - image.size.width - 16.0, y: floor((size.height - image.size.height) / 2.0)), size: image.size)
+        }
     }
     
     @objc func buttonPressed() {

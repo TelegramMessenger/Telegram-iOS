@@ -14,8 +14,8 @@ private enum InnerState: Equatable {
 }
 
 public final class AuthorizationSequenceController: NavigationController {
-    static func navigationBarTheme(_ theme: AuthorizationTheme) -> NavigationBarTheme {
-        return NavigationBarTheme(buttonColor: theme.accentColor, disabledButtonColor: UIColor(rgb: 0xd0d0d0), primaryTextColor: .black, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
+    static func navigationBarTheme(_ theme: PresentationTheme) -> NavigationBarTheme {
+        return NavigationBarTheme(buttonColor: theme.rootController.navigationBar.buttonColor, disabledButtonColor: theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: theme.rootController.navigationBar.badgeBackgroundColor, badgeStrokeColor: theme.rootController.navigationBar.badgeStrokeColor, badgeTextColor: theme.rootController.navigationBar.badgeTextColor)
     }
     
     private let sharedContext: SharedAccountContext
@@ -24,7 +24,7 @@ public final class AuthorizationSequenceController: NavigationController {
     private let apiId: Int32
     private let apiHash: String
     private var strings: PresentationStrings
-    public let theme: AuthorizationTheme
+    public let theme: PresentationTheme
     private let openUrl: (String) -> Void
     
     private var stateDisposable: Disposable?
@@ -32,15 +32,15 @@ public final class AuthorizationSequenceController: NavigationController {
     
     private var didPlayPresentationAnimation = false
     
-    public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId)?, [(String, AccountRecordId)]), strings: PresentationStrings, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String) {
+    public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId)?, [(String, AccountRecordId)]), strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String) {
         self.sharedContext = sharedContext
         self.account = account
         self.otherAccountPhoneNumbers = otherAccountPhoneNumbers
         self.apiId = apiId
         self.apiHash = apiHash
         self.strings = strings
+        self.theme = theme
         self.openUrl = openUrl
-        self.theme = defaultLightAuthorizationTheme
         
         super.init(mode: .single, theme: NavigationControllerTheme(navigationBar: AuthorizationSequenceController.navigationBarTheme(theme), emptyAreaColor: .black, emptyDetailIcon: nil))
         
@@ -71,7 +71,7 @@ public final class AuthorizationSequenceController: NavigationController {
     
     override public func loadView() {
         super.loadView()
-        self.view.backgroundColor = self.theme.backgroundColor
+        self.view.backgroundColor = self.theme.list.plainBackgroundColor
     }
     
     private func splashController() -> AuthorizationSequenceSplashController {
@@ -215,7 +215,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                         controller.present(proxySettingsController(accountManager: strongSelf.sharedContext.accountManager, postbox: strongSelf.account.postbox, network: strongSelf.account.network, mode: .modal, theme: defaultPresentationTheme, strings: strongSelf.strings, updatedPresentationData: .single((defaultPresentationTheme, strongSelf.strings))), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                     }))
                             }
-                            controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: actions), in: .window(.root))
+                            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: actions), in: .window(.root))
                         }
                     }))
                 }
@@ -270,7 +270,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                             return
                                         }
                                         var dismissImpl: (() -> Void)?
-                                        let alertTheme = AlertControllerTheme(authTheme: strongSelf.theme)
+                                        let alertTheme = AlertControllerTheme(presentationTheme: strongSelf.theme)
                                         let attributedText = stringWithAppliedEntities(termsOfService.text, entities: termsOfService.entities, baseColor: alertTheme.primaryColor, linkColor: alertTheme.accentColor, baseFont: Font.regular(13.0), linkFont: Font.regular(13.0), boldFont: Font.semibold(13.0), italicFont: Font.italic(13.0), fixedFont: Font.regular(13.0))
                                         let contentNode = TextAlertContentNode(theme: alertTheme, title: NSAttributedString(string: strongSelf.strings.Login_TermsOfServiceHeader, font: Font.medium(17.0), textColor: alertTheme.primaryColor, paragraphAlignment: .center), text: attributedText, actions: [
                                             TextAlertAction(type: .defaultAction, title: strongSelf.strings.Login_TermsOfServiceAgree, action: {
@@ -340,7 +340,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                         }).start()
                                 }
                                 
-                                controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         }
                     }))
@@ -361,7 +361,7 @@ public final class AuthorizationSequenceController: NavigationController {
                         
                         controller?.view.window?.rootViewController?.present(composeController, animated: true, completion: nil)
                     } else {
-                        controller?.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: strongSelf.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                        controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: strongSelf.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                     }
                 } else {
                     controller?.inProgress = true
@@ -388,7 +388,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                     text = strongSelf.strings.Login_NetworkError
                             }
                             
-                            controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                         }
                     }))
                 }
@@ -447,7 +447,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                         text = strongSelf.strings.Login_UnknownError
                                 }
                                 
-                                controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                                 controller.passwordIsInvalid()
                             }
                         }
@@ -470,7 +470,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                     }
                                 }).start()
                             case .none:
-                                strongController.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: strongSelf.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: strongSelf.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                                 strongController.didForgotWithNoRecovery = true
                         }
                     }
@@ -483,7 +483,7 @@ public final class AuthorizationSequenceController: NavigationController {
         }
         controller.reset = { [weak self, weak controller] in
             if let strongSelf = self, let strongController = controller {
-                strongController.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: suggestReset ? strongSelf.strings.TwoStepAuth_RecoveryFailed : strongSelf.strings.TwoStepAuth_RecoveryUnavailable, actions: [
+                strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: suggestReset ? strongSelf.strings.TwoStepAuth_RecoveryFailed : strongSelf.strings.TwoStepAuth_RecoveryUnavailable, actions: [
                     TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_Cancel, action: {}),
                     TextAlertAction(type: .destructiveAction, title: strongSelf.strings.Login_ResetAccountProtected_Reset, action: {
                         if let strongSelf = self, let strongController = controller {
@@ -503,7 +503,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                         case .limitExceeded:
                                             text = strongSelf.strings.Login_ResetAccountProtected_LimitExceeded
                                     }
-                                    strongController.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                    strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                                 }
                             }))
                         }
@@ -555,7 +555,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                         text = strongSelf.strings.Login_CodeExpiredError
                                 }
                                 
-                                controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         }
                     }))
@@ -563,7 +563,7 @@ public final class AuthorizationSequenceController: NavigationController {
             }
             controller.noAccess = { [weak self, weak controller] in
                 if let strongSelf = self, let controller = controller {
-                    controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: strongSelf.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                    controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: strongSelf.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                     let account = strongSelf.account
                     let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
                         if let state = transaction.getState() as? UnauthorizedAccountState, case let .passwordRecovery(hint, number, code, _) = state.contents {
@@ -601,7 +601,7 @@ public final class AuthorizationSequenceController: NavigationController {
             })
             controller.reset = { [weak self, weak controller] in
                 if let strongSelf = self, let strongController = controller {
-                    strongController.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: strongSelf.strings.TwoStepAuth_ResetAccountConfirmation, actions: [
+                    strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: strongSelf.strings.TwoStepAuth_ResetAccountConfirmation, actions: [
                         TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_Cancel, action: {}),
                         TextAlertAction(type: .destructiveAction, title: strongSelf.strings.Login_ResetAccountProtected_Reset, action: {
                             if let strongSelf = self, let strongController = controller {
@@ -621,7 +621,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                                 case .limitExceeded:
                                                     text = strongSelf.strings.Login_ResetAccountProtected_LimitExceeded
                                             }
-                                            strongController.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                            strongController.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                                         }
                                     }))
                             }
@@ -687,7 +687,7 @@ public final class AuthorizationSequenceController: NavigationController {
                                         text = strongSelf.strings.Login_UnknownError
                                 }
                                 
-                                controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
+                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         }
                     }))
@@ -785,7 +785,7 @@ public final class AuthorizationSequenceController: NavigationController {
             
             controller.view.window?.rootViewController?.present(composeController, animated: true, completion: nil)
         } else {
-            controller.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: self.theme), title: nil, text: self.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {})]), in: .window(.root))
+            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.theme), title: nil, text: self.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {})]), in: .window(.root))
         }
     }
     

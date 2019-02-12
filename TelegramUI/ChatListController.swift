@@ -468,7 +468,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
                     if isAd {
-                        let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(postbox: strongSelf.context.account.postbox)
+                        let _ = (ApplicationSpecificNotice.getProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager)
                         |> deliverOnMainQueue).start(next: { value in
                             guard let strongSelf = self else {
                                 return
@@ -476,7 +476,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                             if !value {
                                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.DialogList_AdNoticeAlert, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                                     if let strongSelf = self {
-                                        let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(postbox: strongSelf.context.account.postbox).start()
+                                        let _ = ApplicationSpecificNotice.setProxyAdsAcknowledgment(accountManager: strongSelf.context.sharedContext.accountManager).start()
                                     }
                                 })]), in: .window(.root))
                             }
@@ -685,12 +685,12 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         }
         
         if let lockViewFrame = self.titleView.lockViewFrame, !self.didShowPasscodeLockTooltipController {
-            self.passcodeLockTooltipDisposable.set(combineLatest(queue: .mainQueue(), ApplicationSpecificNotice.getPasscodeLockTips(postbox: self.context.account.postbox), self.context.sharedContext.accountManager.accessChallengeData() |> take(1)).start(next: { [weak self] tooltipValue, passcodeView in
+            self.passcodeLockTooltipDisposable.set(combineLatest(queue: .mainQueue(), ApplicationSpecificNotice.getPasscodeLockTips(accountManager: self.context.sharedContext.accountManager), self.context.sharedContext.accountManager.accessChallengeData() |> take(1)).start(next: { [weak self] tooltipValue, passcodeView in
                     if let strongSelf = self {
                         if !tooltipValue {
                             let hasPasscode = passcodeView.data.isLockable
                             if hasPasscode {
-                                let _ = ApplicationSpecificNotice.setPasscodeLockTips(postbox: strongSelf.context.account.postbox).start()
+                                let _ = ApplicationSpecificNotice.setPasscodeLockTips(accountManager: strongSelf.context.sharedContext.accountManager).start()
                                 
                                 let tooltipController = TooltipController(text: strongSelf.presentationData.strings.DialogList_PasscodeLockHelp, dismissByTapOutside: true)
                                 strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: { [weak self] in

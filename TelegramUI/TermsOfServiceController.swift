@@ -34,19 +34,15 @@ public extension TermsOfServiceControllerTheme {
         self.init(statusBarStyle: presentationTheme.rootController.statusBar.style.style, navigationBackground: presentationTheme.rootController.navigationBar.backgroundColor, navigationSeparator: presentationTheme.rootController.navigationBar.separatorColor, listBackground: presentationTheme.list.blocksBackgroundColor, itemBackground: presentationTheme.list.itemBlocksBackgroundColor, itemSeparator: presentationTheme.list.itemBlocksSeparatorColor, primary: presentationTheme.list.itemPrimaryTextColor, accent: presentationTheme.list.itemAccentColor, disabled: presentationTheme.rootController.navigationBar.disabledButtonColor)
     }
     
-    convenience init(authTheme: AuthorizationTheme) {
-        self.init(statusBarStyle: authTheme.statusBarStyle, navigationBackground: authTheme.navigationBarBackgroundColor, navigationSeparator: authTheme.navigationBarSeparatorColor, listBackground: authTheme.listBackgroundColor, itemBackground: authTheme.backgroundColor, itemSeparator: authTheme.separatorColor, primary: authTheme.primaryColor, accent: authTheme.accentColor, disabled: authTheme.accentColor)
-    }
-    
     var presentationTheme: PresentationTheme {
         let theme: PresentationTheme
         switch itemBackground.argb {
-        case defaultPresentationTheme.list.itemBlocksBackgroundColor.argb:
-            theme = defaultPresentationTheme
-        case defaultDarkPresentationTheme.list.itemBlocksBackgroundColor.argb:
-            theme = defaultDarkPresentationTheme
-        case defaultDarkAccentPresentationTheme.list.itemBlocksBackgroundColor.argb:
-            theme = defaultDarkAccentPresentationTheme
+            case defaultPresentationTheme.list.itemBlocksBackgroundColor.argb:
+                theme = defaultPresentationTheme
+            case defaultDarkPresentationTheme.list.itemBlocksBackgroundColor.argb:
+                theme = defaultDarkPresentationTheme
+            case defaultDarkAccentPresentationTheme.list.itemBlocksBackgroundColor.argb:
+                theme = defaultDarkAccentPresentationTheme
         default:
             theme = defaultPresentationTheme
         }

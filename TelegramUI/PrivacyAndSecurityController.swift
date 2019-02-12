@@ -527,8 +527,8 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     
     actionsDisposable.add(managedUpdatedRecentPeers(accountPeerId: context.account.peerId, postbox: context.account.postbox, network: context.account.network).start())
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, privacySettingsPromise.get(), context.account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.secretChatLinkPreviewsKey())]), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), recentPeers(account: context.account))
-    |> map { presentationData, state, privacySettings, combined, sharedData, recentPeers -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), recentPeers(account: context.account))
+    |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
         var rightNavigationButton: ItemListNavigationButton?
         if privacySettings == nil || state.updatingAccountTimeoutValue != nil {
             rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})

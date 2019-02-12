@@ -99,14 +99,15 @@ private let applicationSpecificPreferencesKeyMapping: [LegacyApplicationSpecific
     .contactSynchronizationSettings: .contactSynchronizationSettings
 ]
 
-public func upgradedAccounts(accountManager: AccountManager, rootPath: String) -> Signal<Void, NoError> {
+public func upgradedAccounts(accountManager: AccountManager, rootPath: String) -> Signal<Never, NoError> {
     return accountManager.transaction { transaction -> (Int32, AccountRecordId?) in
         return (transaction.getVersion(), transaction.getCurrent()?.0)
     }
-    |> mapToSignal { version, currentId -> Signal<Void, NoError> in
-        if version == 0 {
+    |> mapToSignal { version, currentId -> Signal<Never, NoError> in
+        var signal: Signal<Never, NoError> = .complete()
+        if version < 1 {
             if let currentId = currentId {
-                return accountPreferenceEntries(rootPath: rootPath, id: currentId, keys: Set(preferencesKeyMapping.keys.map({ $0.key }) + applicationSpecificPreferencesKeyMapping.keys.map({ $0.key })))
+                let upgradePreferences = accountPreferenceEntries(rootPath: rootPath, id: currentId, keys: Set(preferencesKeyMapping.keys.map({ $0.key }) + applicationSpecificPreferencesKeyMapping.keys.map({ $0.key })))
                 |> mapToSignal { path, values -> Signal<Void, NoError> in
                     return accountManager.transaction { transaction -> Void in
                         for (key, value) in values {
@@ -166,13 +167,50 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String) -
                         transaction.setVersion(1)
                     }
                 }
+                |> ignoreValues
+                signal = signal |> then(upgradePreferences)
             } else {
-                return accountManager.transaction { transaction -> Void in
+                let upgradePreferences = accountManager.transaction { transaction -> Void in
                     transaction.setVersion(1)
                 }
+                |> ignoreValues
+                signal = signal |> then(upgradePreferences)
             }
-        } else {
-            return .complete()
         }
+        if version < 2 {
+            if let currentId = currentId {
+                let upgradeNotices = accountNoticeEntries(rootPath: rootPath, id: currentId)
+                |> mapToSignal { path, values -> Signal<Void, NoError> in
+                    return accountManager.transaction { transaction -> Void in
+                        for (key, value) in values {
+                            transaction.setNotice(NoticeEntryKey(namespace: ValueBoxKey(length: 0), key: key), value)
+                        }
+                        
+                        transaction.setVersion(2)
+                    }
+                }
+                |> ignoreValues
+                signal = signal |> then(upgradeNotices)
+            } else {
+                let upgradeNotices = accountManager.transaction { transaction -> Void in
+                    transaction.setVersion(2)
+                }
+                |> ignoreValues
+                signal = signal |> then(upgradeNotices)
+            }
+            
+            let upgradeSortOrder = accountManager.transaction { transaction -> Void in
+                var index: Int32 = 0
+                for record in transaction.getRecords() {
+                    transaction.updateRecord(record.id, { _ in
+                        return AccountRecord(id: record.id, attributes: record.attributes + [AccountSortOrderAttribute(order: index)], temporarySessionId: record.temporarySessionId)
+                    })
+                    index += 1
+                }
+            }
+            |> ignoreValues
+            signal = signal |> then(upgradeSortOrder)
+        }
+        return signal
     }
 }

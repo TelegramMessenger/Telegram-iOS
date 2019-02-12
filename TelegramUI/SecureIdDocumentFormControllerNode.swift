@@ -2285,7 +2285,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
             if let strongSelf = self {
                 switch field {
                     case .country:
-                        let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.strings, theme: AuthorizationSequenceCountrySelectionTheme(presentationTheme: strongSelf.theme), displayCodes: false)
+                        let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.strings, theme: strongSelf.theme, displayCodes: false)
                         controller.completeWithCountryCode = { _, id in
                             if let strongSelf = self, var innerState = strongSelf.innerState {
                                 innerState.documentState.updateCountryCode(value: id)
@@ -2311,7 +2311,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                         strongSelf.view.endEditing(true)
                         strongSelf.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     case .residenceCountry:
-                        let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.strings, theme: AuthorizationSequenceCountrySelectionTheme(presentationTheme: strongSelf.theme), displayCodes: false)
+                        let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.strings, theme: strongSelf.theme, displayCodes: false)
                         controller.completeWithCountryCode = { _, id in
                             if let strongSelf = self, var innerState = strongSelf.innerState {
                                 innerState.documentState.updateResidenceCountryCode(value: id)

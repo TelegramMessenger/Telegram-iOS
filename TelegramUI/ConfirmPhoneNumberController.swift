@@ -112,7 +112,7 @@ private struct ConfirmPhoneNumberCodeControllerState: Equatable {
     }
 }
 
-private func confirmPhoneNumberCodeControllerEntries(presentationData: PresentationData, state: ConfirmPhoneNumberCodeControllerState, phoneNumber: String, codeData: CancelAccountResetData, timeout: Int32?, strings: PresentationStrings, theme: AuthorizationTheme) -> [ConfirmPhoneNumberCodeEntry] {
+private func confirmPhoneNumberCodeControllerEntries(presentationData: PresentationData, state: ConfirmPhoneNumberCodeControllerState, phoneNumber: String, codeData: CancelAccountResetData, timeout: Int32?, strings: PresentationStrings, theme: PresentationTheme) -> [ConfirmPhoneNumberCodeEntry] {
     var entries: [ConfirmPhoneNumberCodeEntry] = []
     
     entries.append(.codeEntry(presentationData.theme, presentationData.strings.ChangePhoneNumberCode_CodePlaceholder, state.codeText))
@@ -301,7 +301,7 @@ func confirmPhoneNumberCodeController(context: AccountContext, phoneNumber: Stri
         }
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.CancelResetAccount_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: confirmPhoneNumberCodeControllerEntries(presentationData: presentationData, state: state, phoneNumber: phoneNumber, codeData: data, timeout: timeout, strings: presentationData.strings, theme: defaultLightAuthorizationTheme), style: .blocks, focusItemTag: ConfirmPhoneNumberCodeTag.input, emptyStateItem: nil, animateChanges: false)
+        let listState = ItemListNodeState(entries: confirmPhoneNumberCodeControllerEntries(presentationData: presentationData, state: state, phoneNumber: phoneNumber, codeData: data, timeout: timeout, strings: presentationData.strings, theme: presentationData.theme), style: .blocks, focusItemTag: ConfirmPhoneNumberCodeTag.input, emptyStateItem: nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

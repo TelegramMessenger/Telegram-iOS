@@ -291,6 +291,7 @@ class GalleryController: ViewController {
     
     var temporaryDoNotWaitForReady = false
     
+    private let accountInUseDisposable = MetaDisposable()
     private let disposable = MetaDisposable()
     
     private var entries: [MessageHistoryEntry] = []
@@ -692,6 +693,7 @@ class GalleryController: ViewController {
     }
     
     deinit {
+        self.accountInUseDisposable.dispose()
         self.disposable.dispose()
         self.centralItemAttributesDisposable.dispose()
         if let hiddenMediaManagerIndex = self.hiddenMediaManagerIndex {
@@ -887,6 +889,14 @@ class GalleryController: ViewController {
                 }
             }
         }
+        
+        self.accountInUseDisposable.set(self.context.sharedContext.setAccountUserInterfaceInUse(self.context.account.id))
+    }
+    
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        
+        self.accountInUseDisposable.set(nil)
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

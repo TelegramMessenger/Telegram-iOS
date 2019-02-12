@@ -368,7 +368,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
             ])
         presentControllerImpl?(controller)
     }, updateSecretChatLinkPreviews: { value in
-        let _ = ApplicationSpecificNotice.setSecretChatLinkPreviews(postbox: context.account.postbox, value: value).start()
+        let _ = ApplicationSpecificNotice.setSecretChatLinkPreviews(accountManager: context.sharedContext.accountManager, value: value).start()
     }, deleteContacts: {
         var canBegin = false
         updateState { state in
@@ -477,9 +477,9 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
     
     actionsDisposable.add(managedUpdatedRecentPeers(accountPeerId: context.account.peerId, postbox: context.account.postbox, network: context.account.network).start())
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), context.account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.secretChatLinkPreviewsKey())]), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), recentPeers(account: context.account))
-    |> map { presentationData, state, combined, sharedData, recentPeers -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
-        let secretChatLinkPreviews = (combined.views[.noticeEntry(ApplicationSpecificNotice.secretChatLinkPreviewsKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getSecretChatLinkPreviews($0) })
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), recentPeers(account: context.account))
+    |> map { presentationData, state, noticeView, sharedData, recentPeers -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
+        let secretChatLinkPreviews = noticeView.value.flatMap({ ApplicationSpecificNotice.getSecretChatLinkPreviews($0) })
         
         let synchronizeDeviceContacts: Bool = (sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)?.synchronizeDeviceContacts ?? true
         

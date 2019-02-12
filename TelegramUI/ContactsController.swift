@@ -119,16 +119,15 @@ public class ContactsController: ViewController {
         })
         
         if #available(iOSApplicationExtension 10.0, *) {
-            let warningKey = PostboxViewKey.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())
-            self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(context: context, subject: .contacts), combineLatest(context.account.postbox.combinedView(keys: [warningKey]), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]))
-            |> map { combined, sharedData -> (Bool, ContactsSortOrder) in
+            self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(context: context, subject: .contacts), combineLatest(context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.contactsPermissionWarningKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]))
+            |> map { noticeView, sharedData -> (Bool, ContactsSortOrder) in
                 let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings
                 let synchronizeDeviceContacts: Bool = settings?.synchronizeDeviceContacts ?? true
                 let sortOrder: ContactsSortOrder = settings?.sortOrder ?? .presence
                 if !synchronizeDeviceContacts {
                     return (true, sortOrder)
                 }
-                let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                let timestamp = noticeView.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                 if let timestamp = timestamp, timestamp > 0 {
                     return (true, sortOrder)
                 } else {

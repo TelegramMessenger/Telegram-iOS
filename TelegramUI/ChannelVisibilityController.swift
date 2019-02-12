@@ -969,7 +969,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         updateState { state in
                             return state.withUpdatedUpdatingAddressName(true)
                         }
-                        _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(postbox: context.account.postbox).start()
+                        _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
                         
                         updateAddressNameDisposable.set((updateAddressName(account: context.account, domain: .peer(peerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue) |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                             |> deliverOnMainQueue).start(error: { _ in
@@ -993,7 +993,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         
                     }
                     
-                    _ = (ApplicationSpecificNotice.getSetPublicChannelLink(postbox: context.account.postbox) |> deliverOnMainQueue).start(next: { showAlert in
+                    _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
                         if showAlert {
                             let confirm = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Channel_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)])
                             
@@ -1043,7 +1043,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         updateState { state in
                             return state.withUpdatedUpdatingAddressName(true)
                         }
-                        _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(postbox: context.account.postbox).start()
+                        _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
                         
                         let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
                         |> map(Optional.init)
@@ -1083,7 +1083,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         }))
                     }
                     
-                    _ = (ApplicationSpecificNotice.getSetPublicChannelLink(postbox: context.account.postbox) |> deliverOnMainQueue).start(next: { showAlert in
+                    _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
                         if showAlert {
                             let confirm = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Channel_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)])
                             

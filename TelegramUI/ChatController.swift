@@ -2672,7 +2672,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 })
                 
                 if let updatedMode = updatedMode, updatedMode == .video {
-                    let _ = ApplicationSpecificNotice.incrementChatMediaMediaRecordingTips(postbox: strongSelf.context.account.postbox, count: 3).start()
+                    let _ = ApplicationSpecificNotice.incrementChatMediaMediaRecordingTips(accountManager: strongSelf.context.sharedContext.accountManager, count: 3).start()
                 }
                 
                 strongSelf.displayMediaRecordingTip()
@@ -3292,7 +3292,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     canSendMedia = true
                 }
                 if canSendMedia {
-                    let _ = (ApplicationSpecificNotice.getChatMediaMediaRecordingTips(postbox: self.context.account.postbox)
+                    let _ = (ApplicationSpecificNotice.getChatMediaMediaRecordingTips(accountManager: self.context.sharedContext.accountManager)
                     |> deliverOnMainQueue).start(next: { [weak self] counter in
                         guard let strongSelf = self else {
                             return
@@ -3304,7 +3304,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             displayTip = true
                         }
                         if displayTip {
-                            let _ = ApplicationSpecificNotice.incrementChatMediaMediaRecordingTips(postbox: strongSelf.context.account.postbox).start()
+                            let _ = ApplicationSpecificNotice.incrementChatMediaMediaRecordingTips(accountManager: strongSelf.context.sharedContext.accountManager).start()
                             strongSelf.displayMediaRecordingTip()
                         }
                     })
@@ -3458,10 +3458,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 
                     if case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
                         if case .contextRequest = query {
-                            let _ = (ApplicationSpecificNotice.getSecretChatInlineBotUsage(postbox: self.context.account.postbox)
+                            let _ = (ApplicationSpecificNotice.getSecretChatInlineBotUsage(accountManager: self.context.sharedContext.accountManager)
                             |> deliverOnMainQueue).start(next: { [weak self] value in
                                 if let strongSelf = self, !value {
-                                    let _ = ApplicationSpecificNotice.setSecretChatInlineBotUsage(postbox: strongSelf.context.account.postbox).start()
+                                    let _ = ApplicationSpecificNotice.setSecretChatInlineBotUsage(accountManager: strongSelf.context.sharedContext.accountManager).start()
                                     strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Conversation_SecretChatContextBotAlert, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 }
                             })
@@ -3502,7 +3502,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             var inScopeResult: ((TelegramMediaWebpage?) -> TelegramMediaWebpage?)?
             let linkPreviews: Signal<Bool, NoError>
             if case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
-                linkPreviews = interactiveChatLinkPreviewsEnabled(postbox: self.context.account.postbox, displayAlert: { [weak self] f in
+                linkPreviews = interactiveChatLinkPreviewsEnabled(accountManager: self.context.sharedContext.accountManager, displayAlert: { [weak self] f in
                     if let strongSelf = self {
                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Conversation_SecretLinkPreviewAlert, actions: [
                             TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Yes, action: {
