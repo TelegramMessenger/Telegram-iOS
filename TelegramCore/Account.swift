@@ -282,6 +282,22 @@ public func accountPreferenceEntries(rootPath: String, id: AccountRecordId, keys
     }
 }
 
+public func accountNoticeEntries(rootPath: String, id: AccountRecordId) -> Signal<(String, [ValueBoxKey: NoticeEntry]), NoError> {
+    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
+    let postbox = openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: telegramPostboxSeedConfiguration)
+    return postbox
+    |> mapToSignal { value -> Signal<(String, [ValueBoxKey: NoticeEntry]), NoError> in
+        switch value {
+            case let .postbox(postbox):
+                return postbox.transaction { transaction -> (String, [ValueBoxKey: NoticeEntry]) in
+                    return (path, transaction.getAllNoticeEntries())
+                }
+            default:
+                return .complete()
+        }
+    }
+}
+
 public func accountWithId(accountManager: AccountManager, networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     
@@ -765,14 +781,32 @@ private struct AccountDatacenterKey: Codable {
     let data: Data
 }
 
+private struct AccountDatacenterAddress: Codable {
+    let host: String
+    let port: Int32
+    let isMedia: Bool
+    let secret: Data?
+}
+
 private struct AccountDatacenterInfo: Codable {
     let masterKey: AccountDatacenterKey
+    let addressList: [AccountDatacenterAddress]
+}
+
+private struct AccountProxyConnection: Codable {
+    let host: String
+    let port: Int32
+    let username: String?
+    let password: String?
+    let secret: Data?
 }
 
 private struct StoredAccountInfo: Codable {
     let primaryId: Int32
     let isTestingEnvironment: Bool
+    let peerName: String
     let datacenters: [Int32: AccountDatacenterInfo]
+    let proxy: AccountProxyConnection?
 }
 
 public func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
@@ -1178,23 +1212,38 @@ public class Account {
             }
         })
         
-        let primaryDatacenterId = Int32(network.datacenterId)
-        let context = network.context
-        context.performBatchUpdates {
-            var datacenters: [Int32: AccountDatacenterInfo] = [:]
-            for nId in context.knownDatacenterIds() {
-                if let id = nId as? Int {
-                    if let authInfo = context.authInfoForDatacenter(withId: id), let authKey = authInfo.authKey {
-                        datacenters[Int32(id)] = AccountDatacenterInfo(masterKey: AccountDatacenterKey(id: authInfo.authKeyId, data: authKey))
+        let _ = postbox.transaction({ transaction -> String in
+            return transaction.getPeer(peerId)?.displayTitle ?? ""
+        }).start(next: { peerName in
+            let primaryDatacenterId = Int32(network.datacenterId)
+            let context = network.context
+            context.performBatchUpdates {
+                var proxyConnection: AccountProxyConnection?
+                if let proxySettings = context.apiEnvironment.socksProxySettings {
+                    proxyConnection = AccountProxyConnection(host: proxySettings.ip, port: Int32(proxySettings.port), username: proxySettings.username, password: proxySettings.password, secret: proxySettings.secret)
+                }
+                
+                var datacenters: [Int32: AccountDatacenterInfo] = [:]
+                for nId in context.knownDatacenterIds() {
+                    if let id = nId as? Int {
+                        if let authInfo = context.authInfoForDatacenter(withId: id), let authKey = authInfo.authKey {
+                            let transportScheme = context.chooseTransportSchemeForConnection(toDatacenterId: id, schemes: context.transportSchemesForDatacenter(withId: id, media: true, enforceMedia: false, isProxy: proxyConnection != nil))
+                            var addressList: [AccountDatacenterAddress] = []
+                            if let transportScheme = transportScheme, let address = transportScheme.address, let host = address.host {
+                                let secret: Data? = address.secret
+                                addressList.append(AccountDatacenterAddress(host: host, port: Int32(address.port), isMedia: address.preferForMedia, secret: secret))
+                            }
+                            datacenters[Int32(id)] = AccountDatacenterInfo(masterKey: AccountDatacenterKey(id: authInfo.authKeyId, data: authKey), addressList: addressList)
+                        }
                     }
                 }
+                let storedInfo = StoredAccountInfo(primaryId: primaryDatacenterId, isTestingEnvironment: testingEnvironment, peerName: peerName, datacenters: datacenters, proxy: proxyConnection)
+                let encoder = JSONEncoder()
+                if let data = try? encoder.encode(storedInfo) {
+                    let _ = try? data.write(to: URL(fileURLWithPath: "\(basePath)/storedInfo"))
+                }
             }
-            let storedInfo = StoredAccountInfo(primaryId: primaryDatacenterId, isTestingEnvironment: testingEnvironment, datacenters: datacenters)
-            let encoder = JSONEncoder()
-            if let data = try? encoder.encode(storedInfo) {
-                let _ = try? data.write(to: URL(fileURLWithPath: "\(basePath)/storedInfo"))
-            }
-        }
+        })
     }
     
     deinit {

@@ -76,6 +76,7 @@ private var declaredEncodables: Void = {
     declareEncodable(RecentHashtagItem.self, f: { RecentHashtagItem(decoder: $0) })
     declareEncodable(LoggedOutAccountAttribute.self, f: { LoggedOutAccountAttribute(decoder: $0) })
     declareEncodable(AccountEnvironmentAttribute.self, f: { AccountEnvironmentAttribute(decoder: $0) })
+    declareEncodable(AccountSortOrderAttribute.self, f: { AccountSortOrderAttribute(decoder: $0) })
     declareEncodable(CloudChatClearHistoryOperation.self, f: { CloudChatClearHistoryOperation(decoder: $0) })
     declareEncodable(OutgoingContentInfoMessageAttribute.self, f: { OutgoingContentInfoMessageAttribute(decoder: $0) })
     declareEncodable(ConsumableContentMessageAttribute.self, f: { ConsumableContentMessageAttribute(decoder: $0) })

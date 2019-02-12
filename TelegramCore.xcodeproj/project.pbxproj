@@ -650,6 +650,8 @@
 		D0CA3F84207391560042D2B6 /* SecureIdPadding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CA3F83207391560042D2B6 /* SecureIdPadding.swift */; };
 		D0CA3F85207391560042D2B6 /* SecureIdPadding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CA3F83207391560042D2B6 /* SecureIdPadding.swift */; };
 		D0CAF2EA1D75EC600011F558 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAF2E91D75EC600011F558 /* MtProtoKitDynamic.framework */; };
+		D0D1026C2212FE52003ADA5E /* AccountSortOrderAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1026B2212FE52003ADA5E /* AccountSortOrderAttribute.swift */; };
+		D0D1026D2212FE52003ADA5E /* AccountSortOrderAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1026B2212FE52003ADA5E /* AccountSortOrderAttribute.swift */; };
 		D0D748021E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */; };
 		D0D748031E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */; };
 		D0DA1D321F7043D50034E892 /* ManagedPendingPeerNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA1D311F7043D50034E892 /* ManagedPendingPeerNotificationSettings.swift */; };
@@ -1149,6 +1151,7 @@
 		D0C50E331E93A86600F62E39 /* CallSessionManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallSessionManager.swift; sourceTree = "<group>"; };
 		D0CA3F83207391560042D2B6 /* SecureIdPadding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdPadding.swift; sourceTree = "<group>"; };
 		D0CAF2E91D75EC600011F558 /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0D1026B2212FE52003ADA5E /* AccountSortOrderAttribute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSortOrderAttribute.swift; sourceTree = "<group>"; };
 		D0D748011E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerPackInteractiveOperations.swift; sourceTree = "<group>"; };
 		D0DA1D311F7043D50034E892 /* ManagedPendingPeerNotificationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedPendingPeerNotificationSettings.swift; sourceTree = "<group>"; };
 		D0DB7F021F43030C00591D48 /* InstallInteractiveReadMessagesAction.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstallInteractiveReadMessagesAction.swift; sourceTree = "<group>"; };
@@ -1681,6 +1684,7 @@
 			children = (
 				D03E5E0B1E55E02D0029569A /* LoggedOutAccountAttribute.swift */,
 				D00580AD21E2A08900CB7CD3 /* AccountEnvironmentAttribute.swift */,
+				D0D1026B2212FE52003ADA5E /* AccountSortOrderAttribute.swift */,
 			);
 			name = Accounts;
 			sourceTree = "<group>";
@@ -2275,6 +2279,7 @@
 				D0B843C91DA7FF30005F29E1 /* NBPhoneNumberDesc.m in Sources */,
 				D08CAA801ED80ED20000FDA8 /* SuggestedLocalizationEntry.swift in Sources */,
 				D03B0CE61D6224A700955575 /* ReplyMessageAttribute.swift in Sources */,
+				D0D1026C2212FE52003ADA5E /* AccountSortOrderAttribute.swift in Sources */,
 				D0BEAF601E54ACF900BD963D /* AccountManager.swift in Sources */,
 				D0FA0ABD1E76C908005BB9B7 /* TwoStepVerification.swift in Sources */,
 				D02ABC7E1E3109F000CAE539 /* CloudChatRemoveMessagesOperation.swift in Sources */,
@@ -2748,6 +2753,7 @@
 				D0F7AB2D1DCE889D009AD9A1 /* EditedMessageAttribute.swift in Sources */,
 				D0B844121DAB91CD005F29E1 /* Log.swift in Sources */,
 				D03C53721DAD5CA9004C17B3 /* CachedUserData.swift in Sources */,
+				D0D1026D2212FE52003ADA5E /* AccountSortOrderAttribute.swift in Sources */,
 				D0AF32321FACEDEC0097362B /* CoreSettings.swift in Sources */,
 				D073CE6B1DCBCF17007511FD /* ReplyMessageAttribute.swift in Sources */,
 				D001F3E91E128A1C007A8C60 /* SecretChatState.swift in Sources */,
