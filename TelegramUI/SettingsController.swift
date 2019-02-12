@@ -440,7 +440,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
                 entries.append(.account(index, peerAccount, presentationData.theme, presentationData.strings, peer, badgeCount, state.accountIdWithRevealedOptions == peerAccount.id))
                 index += 1
             }
-            if accountsAndPeers.count < maximumNumberOfAccounts + 1 {
+            if accountsAndPeers.count + 1 < maximumNumberOfAccounts {
                 entries.append(.addAccount(presentationData.theme, presentationData.strings.Settings_AddAccount))
             }
         }
@@ -826,7 +826,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 guard let peerView = view.views[peerKey] as? PeerView, let peer = peerView.peers[context.account.peerId] as? TelegramUser else {
                     return .complete()
                 }
-                return .single((peer, cachedData, accountsAndPeers.1.count < maximumNumberOfAccounts + 1))
+                return .single((peer, cachedData, accountsAndPeers.1.count + 1 < maximumNumberOfAccounts))
             }
             |> take(1))
             |> afterDisposed {
