@@ -1,0 +1,2 @@
+Logging into multiple accounts is now supported.
+Tap "Add Account" in Settings — Edit.
