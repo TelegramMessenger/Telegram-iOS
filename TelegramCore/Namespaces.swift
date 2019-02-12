@@ -244,6 +244,7 @@ private enum SharedDataKeyValues: Int32 {
     case cacheStorageSettings = 2
     case localizationSettings = 3
     case proxySettings = 4
+    case autodownloadSettings = 5
 }
 
 public struct SharedDataKeys {
@@ -268,6 +269,12 @@ public struct SharedDataKeys {
     public static let proxySettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: SharedDataKeyValues.proxySettings.rawValue)
+        return key
+    }()
+    
+    public static let autodownloadSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: SharedDataKeyValues.autodownloadSettings.rawValue)
         return key
     }()
 }

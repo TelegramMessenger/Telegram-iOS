@@ -1867,6 +1867,52 @@ extension Api {
         }
     
     }
+    enum AutoDownloadSettings: TypeConstructorDescription {
+        case autoDownloadSettings(flags: Int32, photoSizeMax: Int32, videoSizeMax: Int32, fileSizeMax: Int32)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .autoDownloadSettings(let flags, let photoSizeMax, let videoSizeMax, let fileSizeMax):
+                    if boxed {
+                        buffer.appendInt32(-767099577)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(photoSizeMax, buffer: buffer, boxed: false)
+                    serializeInt32(videoSizeMax, buffer: buffer, boxed: false)
+                    serializeInt32(fileSizeMax, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .autoDownloadSettings(let flags, let photoSizeMax, let videoSizeMax, let fileSizeMax):
+                return ("autoDownloadSettings", [("flags", flags), ("photoSizeMax", photoSizeMax), ("videoSizeMax", videoSizeMax), ("fileSizeMax", fileSizeMax)])
+    }
+    }
+    
+        static func parse_autoDownloadSettings(_ reader: BufferReader) -> AutoDownloadSettings? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.AutoDownloadSettings.autoDownloadSettings(flags: _1!, photoSizeMax: _2!, videoSizeMax: _3!, fileSizeMax: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     enum StickerSetCovered: TypeConstructorDescription {
         case stickerSetCovered(set: Api.StickerSet, cover: Api.Document)
         case stickerSetMultiCovered(set: Api.StickerSet, covers: [Api.Document])

@@ -128,6 +128,7 @@ private var declaredEncodables: Void = {
     declareEncodable(AppConfiguration.self, f: { AppConfiguration(decoder: $0) })
     declareEncodable(JSON.self, f: { JSON(decoder: $0) })
     declareEncodable(SearchBotsConfiguration.self, f: { SearchBotsConfiguration(decoder: $0) })
+    declareEncodable(AutodownloadSettings.self, f: { AutodownloadSettings(decoder: $0 )})
     declareEncodable(TelegramMediaPoll.self, f: { TelegramMediaPoll(decoder: $0) })
     declareEncodable(TelegramMediaUnsupported.self, f: { TelegramMediaUnsupported(decoder: $0) })
     
