@@ -59,6 +59,9 @@ private final class TrendingPaneEntry: Identifiable, Comparable {
         if lhs.installed != rhs.installed {
             return false
         }
+        if lhs.unread != rhs.unread {
+            return false
+        }
         return true
     }
     

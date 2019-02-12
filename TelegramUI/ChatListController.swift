@@ -665,7 +665,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        #if DEBUG
+        #if false && DEBUG
         DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: { [weak self] in
             guard let strongSelf = self else {
                 return

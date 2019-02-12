@@ -255,8 +255,8 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                     let collectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0)
                     inputNodeInteraction.navigateToCollectionId(collectionId)
                 })
-            case let .trending(_, theme):
-                return ChatMediaInputTrendingItem(inputNodeInteraction: inputNodeInteraction, theme: theme, selected: {
+            case let .trending(elevated, theme):
+                return ChatMediaInputTrendingItem(inputNodeInteraction: inputNodeInteraction, elevated: elevated, theme: theme, selected: {
                     let collectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue, id: 0)
                     inputNodeInteraction.navigateToCollectionId(collectionId)
                 })

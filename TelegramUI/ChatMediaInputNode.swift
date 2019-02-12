@@ -150,9 +150,12 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, view: I
     return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, updateOpaqueState: opaqueState, animated: animated)
 }
 
-private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, theme: PresentationTheme) -> [ChatMediaInputPanelEntry] {
+private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, hasUnreadTrending: Bool, theme: PresentationTheme) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
     entries.append(.recentGifs(theme))
+    if hasUnreadTrending {
+        entries.append(.trending(true, theme))
+    }
     if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
         entries.append(.savedStickers(theme))
     }
@@ -195,7 +198,9 @@ private func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers
         entries.append(.peerSpecific(theme: theme, peer: peer))
     }
     
-    entries.append(.trending(false, theme))
+    if !hasUnreadTrending {
+        entries.append(.trending(false, theme))
+    }
     entries.append(.settings(theme))
     return entries
 }
@@ -658,9 +663,20 @@ final class ChatMediaInputNode: ChatInputNode {
             peerSpecificPack = .single((nil, .none))
         }
         
+        let hasUnreadTrending = context.account.viewTracker.featuredStickerPacks()
+        |> map { packs -> Bool in
+            for pack in packs {
+                if pack.unread {
+                    return true
+                }
+            }
+            return false
+        }
+        |> distinctUntilChanged
+        
         let previousView = Atomic<ItemCollectionsView?>(value: nil)
-        let transitions = combineLatest(itemCollectionsView, peerSpecificPack, self.themeAndStringsPromise.get())
-        |> map { viewAndUpdate, peerSpecificPack, themeAndStrings -> (ItemCollectionsView, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
+        let transitions = combineLatest(itemCollectionsView, peerSpecificPack, hasUnreadTrending, self.themeAndStringsPromise.get())
+        |> map { viewAndUpdate, peerSpecificPack, hasUnreadTrending, themeAndStrings -> (ItemCollectionsView, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
             let (view, viewUpdate) = viewAndUpdate
             let previous = previousView.swap(view)
             var update = viewUpdate
@@ -678,7 +694,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     savedStickers = orderedView
                 }
             }
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme)
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, hasUnreadTrending: hasUnreadTrending, theme: theme)
             let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, strings: strings, theme: theme)
             let (previousPanelEntries, previousGridEntries) = previousEntries.swap((panelEntries, gridEntries))
             return (view, preparedChatMediaInputPanelEntryTransition(account: context.account, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: inputNodeInteraction), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction), previousGridEntries.isEmpty)

@@ -99,6 +99,24 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
     
     private var item: MediaInputPaneTrendingItem?
     private let preloadDisposable = MetaDisposable()
+    private let readDisposable = MetaDisposable()
+    
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            if self.visibility != oldValue {
+                if self.visibility == .visible {
+                    if let item = self.item, item.unread {
+                        self.readDisposable.set((
+                            markFeaturedStickerPacksAsSeenInteractively(postbox: item.account.postbox, ids: [item.info.id])
+                            |> delay(1.0, queue: .mainQueue())
+                        ).start())
+                    }
+                } else {
+                    self.readDisposable.set(nil)
+                }
+            }
+        }
+    }
     
     init() {
         self.titleNode = TextNode()
@@ -160,6 +178,7 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
     
     deinit {
         self.preloadDisposable.dispose()
+        self.readDisposable.dispose()
     }
     
     override func didLoad() {
@@ -236,7 +255,7 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
                     strongSelf.titleNode.frame = titleFrame
                     strongSelf.descriptionNode.frame = CGRect(origin: CGPoint(x: params.leftInset + leftInset, y: 23.0), size: descriptionLayout.size)
                     
-                    if false && item.unread {
+                    if item.unread {
                         strongSelf.unreadNode.isHidden = false
                     } else {
                         strongSelf.unreadNode.isHidden = true
