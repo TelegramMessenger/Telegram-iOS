@@ -15,7 +15,9 @@ class VolumeChangeDetector: NSObject {
     private var ignoreAdjustmentOnce = false
     
     init(view: UIView, valueChanged: @escaping () -> Void) {
-        self.control = MPVolumeView(frame: CGRect(origin: CGPoint(x: 0.0, y: -64.0), size: CGSize(width: 100.0, height: 20.0)))
+        self.control = MPVolumeView(frame: CGRect(origin: CGPoint(x: -100.0, y: -100.0), size: CGSize(width: 100.0, height: 20.0)))
+        self.control.alpha = 0.0001
+        self.control.isUserInteractionEnabled = false
         self.currentValue = AVAudioSession.sharedInstance().outputVolume
         
         super.init()

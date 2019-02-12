@@ -53,6 +53,12 @@ enum MediaPlayerPlayOnceWithSoundActionAtEnd {
     case stop
 }
 
+enum MediaPlayerPlayOnceWithSoundSeek {
+    case none
+    case start
+    case automatic
+}
+
 private final class MediaPlayerAudioRendererContext {
     let renderer: MediaPlayerAudioRenderer
     var requestedFrames = false
@@ -442,7 +448,7 @@ private final class MediaPlayerContext {
         }
     }
     
-    fileprivate func playOnceWithSound(playAndRecord: Bool, seekToStart: Bool = true) {
+    fileprivate func playOnceWithSound(playAndRecord: Bool, seekToStart: MediaPlayerPlayOnceWithSoundSeek = .start) {
         assert(self.queue.isCurrent())
         
         if !self.enableSound {
@@ -469,7 +475,7 @@ private final class MediaPlayerContext {
             }
             
             let timestamp: Double
-            if let loadedState = loadedState, !seekToStart {
+            if let loadedState = loadedState, seekToStart == .none {
                 timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
             } else {
                 timestamp = 0.0
@@ -882,7 +888,7 @@ final class MediaPlayer {
         }
     }
     
-    func playOnceWithSound(playAndRecord: Bool, seekToStart: Bool = true) {
+    func playOnceWithSound(playAndRecord: Bool, seekToStart: MediaPlayerPlayOnceWithSoundSeek = .start) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.playOnceWithSound(playAndRecord: playAndRecord, seekToStart: seekToStart)

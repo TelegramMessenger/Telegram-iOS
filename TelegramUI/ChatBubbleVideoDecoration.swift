@@ -3,6 +3,15 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 
+private func isRoundEqualCorners(_ corners: ImageCorners) -> Bool {
+    if case .Corner = corners.topLeft, case .Corner = corners.topRight, case .Corner = corners.bottomLeft, case .Corner = corners.bottomRight {
+        if corners.topLeft.radius == corners.topRight.radius && corners.topRight.radius == corners.bottomLeft.radius && corners.bottomLeft.radius == corners.bottomRight.radius {
+            return true
+        }
+    }
+    return false
+}
+
 final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     private let nativeSize: CGSize
     private let contentMode: InteractiveMediaNodeContentMode
@@ -23,23 +32,27 @@ final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
         self.contentContainerNode.backgroundColor = backgroundColor
         self.contentContainerNode.clipsToBounds = true
         
-        let boundingSize: CGSize = CGSize(width: max(corners.topLeft.radius, corners.bottomLeft.radius) + max(corners.topRight.radius, corners.bottomRight.radius), height: max(corners.topLeft.radius, corners.topRight.radius) + max(corners.bottomLeft.radius, corners.bottomRight.radius))
-        let size: CGSize = CGSize(width: boundingSize.width + corners.extendedEdges.left + corners.extendedEdges.right, height: boundingSize.height + corners.extendedEdges.top + corners.extendedEdges.bottom)
-        let arguments = TransformImageArguments(corners: corners, imageSize: size, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
-        let context = DrawingContext(size: size, clear: true)
-        context.withContext { ctx in
-            ctx.setFillColor(UIColor.black.cgColor)
-            ctx.fill(arguments.drawingRect)
-        }
-        addCorners(context, arguments: arguments)
+        if isRoundEqualCorners(corners) {
+            self.contentContainerNode.cornerRadius = corners.topLeft.radius
+        } else {
+            let boundingSize: CGSize = CGSize(width: max(corners.topLeft.radius, corners.bottomLeft.radius) + max(corners.topRight.radius, corners.bottomRight.radius), height: max(corners.topLeft.radius, corners.topRight.radius) + max(corners.bottomLeft.radius, corners.bottomRight.radius))
+            let size: CGSize = CGSize(width: boundingSize.width + corners.extendedEdges.left + corners.extendedEdges.right, height: boundingSize.height + corners.extendedEdges.top + corners.extendedEdges.bottom)
+            let arguments = TransformImageArguments(corners: corners, imageSize: size, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
+            let context = DrawingContext(size: size, clear: true)
+            context.withContext { ctx in
+                ctx.setFillColor(UIColor.black.cgColor)
+                ctx.fill(arguments.drawingRect)
+            }
+            addCorners(context, arguments: arguments)
 
-        if let maskImage = context.generateImage() {
-            let mask = CALayer()
-            mask.contents = maskImage.cgImage
-            mask.contentsScale = maskImage.scale
-            mask.contentsCenter = CGRect(x: corners.topLeft.radius / maskImage.size.width, y: corners.topLeft.radius / maskImage.size.height, width: (maskImage.size.width - corners.topLeft.radius - corners.topLeft.radius) / maskImage.size.width, height: (maskImage.size.height - corners.topLeft.radius - corners.bottomRight.radius) / maskImage.size.height)
-            
-            self.contentContainerNode.layer.mask = mask
+            if let maskImage = context.generateImage() {
+                let mask = CALayer()
+                mask.contents = maskImage.cgImage
+                mask.contentsScale = maskImage.scale
+                mask.contentsCenter = CGRect(x: max(corners.topLeft.radius, corners.bottomLeft.radius) / maskImage.size.width, y: max(corners.topLeft.radius, corners.topRight.radius) / maskImage.size.height, width: (maskImage.size.width - max(corners.topLeft.radius, corners.bottomLeft.radius) - max(corners.topRight.radius, corners.bottomRight.radius)) / maskImage.size.width, height: (maskImage.size.height - max(corners.topLeft.radius, corners.topRight.radius) - max(corners.bottomLeft.radius, corners.bottomRight.radius)) / maskImage.size.height)
+                
+                self.contentContainerNode.layer.mask = mask
+            }
         }
     }
     
@@ -81,11 +94,6 @@ final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     }
     
     func updateContentNodeSnapshot(_ snapshot: UIView?) {
-//        mask.contentsCenter =
-//            CGRectMake(BubbleRightCapInsets.left/rightBubbleBackground.size.width,
-//                       BubbleRightCapInsets.top/rightBubbleBackground.size.height,
-//                       1.0/rightBubbleBackground.size.width,
-//                       1.0/rightBubbleBackground.size.height);
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {

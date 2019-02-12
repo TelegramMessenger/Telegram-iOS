@@ -1539,7 +1539,7 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
             }
             
             var blurredThumbnailImage: UIImage?
-            if let thumbnailImage = thumbnailImage {
+            if let thumbnailImage = thumbnailImage, max(thumbnailImage.width, thumbnailImage.height) < 300 {
                 let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
                 
                 let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 100.0, height: 100.0))

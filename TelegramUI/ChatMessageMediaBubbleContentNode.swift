@@ -64,16 +64,16 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     selectedMedia = telegramFile
                     if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, media: telegramFile) {
                         automaticDownload = .full
+                    } else if shouldPredownloadMedia(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, media: telegramFile) {
+                        automaticDownload = .prefetch
                     }
                     
                     if telegramFile.isAnimated {
                         automaticPlayback = item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs
-                    } else if item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
-                        if case .full = automaticDownload {
+                    } else {
+                        if case .full = automaticDownload, item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos  {
                             automaticPlayback = true
                             contentMode = .aspectFill
-                        } else {
-                            automaticDownload = .prefetch
                         }
                     }
                 }
@@ -106,11 +106,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             
             let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData.theme.theme, item.presentationData.strings, item.message, selectedMedia!, automaticDownload, item.associatedData.automaticDownloadPeerType, automaticPlayback, sizeCalculation, layoutConstants, contentMode)
             
-            var forceFullCorners = false
-            if let media = selectedMedia as? TelegramMediaFile, media.isAnimated {
-                forceFullCorners = true
-            }
-            
+            let forceFullCorners = false
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 7.0, hidesBackground: .emptyWallpaper, forceFullCorners: forceFullCorners, forceAlignment: .none)
             
             return (contentProperties, unboundSize, initialWidth + bubbleInsets.left + bubbleInsets.right, { constrainedSize, position in

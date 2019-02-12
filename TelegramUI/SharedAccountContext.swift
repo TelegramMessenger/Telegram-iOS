@@ -159,8 +159,12 @@ public final class SharedAccountContext {
             updatedPresentationData(accountManager: self.accountManager, applicationBindings: self.applicationBindings)
         ))
         self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings)
-        |> then(
-            updatedAutomaticMediaDownloadSettings(accountManager: self.accountManager)
+        |> then(accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
+            |> map { sharedData in
+                let autodownloadSettings: AutodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? AutodownloadSettings.defaultSettings
+                let automaticDownloadSettings: AutomaticMediaDownloadSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings ?? AutomaticMediaDownloadSettings.defaultSettings
+                return automaticDownloadSettings.updatedWithAutodownloadSettings(autodownloadSettings)
+            }
         ))
         
         self.presentationDataDisposable.set((self.presentationData

@@ -112,8 +112,10 @@
 		09DD88F521BF9730000766BC /* WebSearchRecentQueries.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88F421BF9730000766BC /* WebSearchRecentQueries.swift */; };
 		09DD88FA21BFD70B000766BC /* ThemedTextAlertController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */; };
 		09EDAD26220D30980012A50B /* AutodownloadConnectionTypeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD25220D30980012A50B /* AutodownloadConnectionTypeController.swift */; };
-		09EDAD28220D81040012A50B /* AutodownloadSliderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD27220D81040012A50B /* AutodownloadSliderItem.swift */; };
-		09EDAD2A220DA6A40012A50B /* VolumeChangeDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD29220DA6A40012A50B /* VolumeChangeDetection.swift */; };
+		09EDAD2A220DA6A40012A50B /* VolumeButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD29220DA6A40012A50B /* VolumeButtons.swift */; };
+		09EDAD2C2211552F0012A50B /* AutodownloadMediaCategoryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD2B2211552F0012A50B /* AutodownloadMediaCategoryController.swift */; };
+		09EDAD2E221164440012A50B /* AutodownloadSizeLimitItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD2D221164440012A50B /* AutodownloadSizeLimitItem.swift */; };
+		09EDAD30221164530012A50B /* AutodownloadDataUsagePickerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD2F221164530012A50B /* AutodownloadDataUsagePickerItem.swift */; };
 		09F664C021EAAFAF00AB7E26 /* ThemeColorsGridController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F664BF21EAAFAF00AB7E26 /* ThemeColorsGridController.swift */; };
 		09F664C221EAAFCB00AB7E26 /* ThemeColorsGridControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F664C121EAAFCB00AB7E26 /* ThemeColorsGridControllerNode.swift */; };
 		09F664C421EAB98300AB7E26 /* ThemeColorsGridControllerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F664C321EAB98300AB7E26 /* ThemeColorsGridControllerItem.swift */; };
@@ -1243,8 +1245,10 @@
 		09DD88F421BF9730000766BC /* WebSearchRecentQueries.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchRecentQueries.swift; sourceTree = "<group>"; };
 		09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedTextAlertController.swift; sourceTree = "<group>"; };
 		09EDAD25220D30980012A50B /* AutodownloadConnectionTypeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadConnectionTypeController.swift; sourceTree = "<group>"; };
-		09EDAD27220D81040012A50B /* AutodownloadSliderItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadSliderItem.swift; sourceTree = "<group>"; };
-		09EDAD29220DA6A40012A50B /* VolumeChangeDetection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeChangeDetection.swift; sourceTree = "<group>"; };
+		09EDAD29220DA6A40012A50B /* VolumeButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeButtons.swift; sourceTree = "<group>"; };
+		09EDAD2B2211552F0012A50B /* AutodownloadMediaCategoryController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadMediaCategoryController.swift; sourceTree = "<group>"; };
+		09EDAD2D221164440012A50B /* AutodownloadSizeLimitItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadSizeLimitItem.swift; sourceTree = "<group>"; };
+		09EDAD2F221164530012A50B /* AutodownloadDataUsagePickerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadDataUsagePickerItem.swift; sourceTree = "<group>"; };
 		09F664BF21EAAFAF00AB7E26 /* ThemeColorsGridController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColorsGridController.swift; sourceTree = "<group>"; };
 		09F664C121EAAFCB00AB7E26 /* ThemeColorsGridControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColorsGridControllerNode.swift; sourceTree = "<group>"; };
 		09F664C321EAB98300AB7E26 /* ThemeColorsGridControllerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColorsGridControllerItem.swift; sourceTree = "<group>"; };
@@ -3755,7 +3759,9 @@
 				D0A8998C217A294100759EE6 /* SaveIncomingMediaController.swift */,
 				099529A921CDB27900805E13 /* ShareProxyServerActionSheetController.swift */,
 				09EDAD25220D30980012A50B /* AutodownloadConnectionTypeController.swift */,
-				09EDAD27220D81040012A50B /* AutodownloadSliderItem.swift */,
+				09EDAD2B2211552F0012A50B /* AutodownloadMediaCategoryController.swift */,
+				09EDAD2D221164440012A50B /* AutodownloadSizeLimitItem.swift */,
+				09EDAD2F221164530012A50B /* AutodownloadDataUsagePickerItem.swift */,
 			);
 			name = "Data and Storage";
 			sourceTree = "<group>";
@@ -4738,7 +4744,7 @@
 				D000CAB921EE130D0011B15D /* MapResourceToAvatarSizes.swift */,
 				D000CABB21F158AD0011B15D /* PrepareSecretThumbnailData.swift */,
 				090B48C72200BCA8005083FA /* WallpaperUploadManager.swift */,
-				09EDAD29220DA6A40012A50B /* VolumeChangeDetection.swift */,
+				09EDAD29220DA6A40012A50B /* VolumeButtons.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -5104,7 +5110,7 @@
 				D0E412DA206A894800BEE4A2 /* SecureIdValueFormFileItem.swift in Sources */,
 				09B4EE6221AD791600847FA6 /* InstantPageStoredState.swift in Sources */,
 				D0EC6CB21EB9F58800EBF1C3 /* rngs.c in Sources */,
-				09EDAD2A220DA6A40012A50B /* VolumeChangeDetection.swift in Sources */,
+				09EDAD2A220DA6A40012A50B /* VolumeButtons.swift in Sources */,
 				D083491C209361DC008CFD52 /* AvatarGalleryItemFooterContentNode.swift in Sources */,
 				D0EC6CB31EB9F58800EBF1C3 /* shader.c in Sources */,
 				D06E4C352134AE3C00088087 /* ThemeAutoNightSettingsController.swift in Sources */,
@@ -5369,6 +5375,7 @@
 				D0EC6D281EB9F58800EBF1C3 /* MediaResources.swift in Sources */,
 				D0E9BA671F055B5500F079A4 /* BotCheckoutNativeCardEntryControllerNode.swift in Sources */,
 				D0EC6D291EB9F58800EBF1C3 /* FetchVideoMediaResource.swift in Sources */,
+				09EDAD2E221164440012A50B /* AutodownloadSizeLimitItem.swift in Sources */,
 				D0AFCC791F4C8D2C000720C6 /* InstantPageSlideshowItem.swift in Sources */,
 				099529B421D3E5D800805E13 /* CheckDiskSpace.swift in Sources */,
 				D04281EF200E3D88009DDE36 /* GroupInfoSearchItem.swift in Sources */,
@@ -5461,6 +5468,7 @@
 				D0B2F76E2052B59F00D3BFB9 /* InviteContactsController.swift in Sources */,
 				D0EC6D591EB9F58800EBF1C3 /* ChatMessageThrottledProcessingManager.swift in Sources */,
 				D0BFAE4620AB04FB00793CF2 /* ChatRestrictedInputPanelNode.swift in Sources */,
+				09EDAD30221164530012A50B /* AutodownloadDataUsagePickerItem.swift in Sources */,
 				D000CABA21EE130D0011B15D /* MapResourceToAvatarSizes.swift in Sources */,
 				D06E0F8E1F79ABFB003CF3DD /* ChatLoadingNode.swift in Sources */,
 				D0EC6D5A1EB9F58800EBF1C3 /* ListMessageItem.swift in Sources */,
@@ -5803,6 +5811,7 @@
 				D0EC6DFD1EB9F58900EBF1C3 /* GalleryControllerNode.swift in Sources */,
 				D0E9BA571F055A0B00F079A4 /* STPFormTextField.m in Sources */,
 				D0EC6DFE1EB9F58900EBF1C3 /* GalleryControllerPresentationState.swift in Sources */,
+				09EDAD2C2211552F0012A50B /* AutodownloadMediaCategoryController.swift in Sources */,
 				090B48C82200BCA8005083FA /* WallpaperUploadManager.swift in Sources */,
 				D0E8B8BB2044780600605593 /* ItemListSecretChatKeyItem.swift in Sources */,
 				D0EC6DFF1EB9F58900EBF1C3 /* GalleryItem.swift in Sources */,
@@ -5936,7 +5945,6 @@
 				0900678D21ED5EA800530762 /* WallpaperColorPanelNode.swift in Sources */,
 				D0EC6E451EB9F58900EBF1C3 /* ItemListMultilineTextItem.swift in Sources */,
 				091417F421EF4F5F00C8325A /* WallpaperGalleryItem.swift in Sources */,
-				09EDAD28220D81040012A50B /* AutodownloadSliderItem.swift in Sources */,
 				D02F4AE91FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift in Sources */,
 				D0EC6E461EB9F58900EBF1C3 /* ItemListLoadingIndicatorEmptyStateItem.swift in Sources */,
 				D067B4A5211C911C00796039 /* LegacyChannelIntroController.swift in Sources */,

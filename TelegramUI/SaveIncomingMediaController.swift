@@ -81,10 +81,10 @@ private func saveIncomingMediaControllerEntries(presentationData: PresentationDa
     var entries: [SaveIncomingMediaEntry] = []
     
     entries.append(.header(presentationData.theme, presentationData.strings.SaveIncomingPhotosSettings_From))
-    entries.append(.contacts(presentationData.theme, presentationData.strings.AutoDownloadSettings_Contacts, settings.peers.contacts.saveDownloadedPhotos))
-    entries.append(.otherPrivate(presentationData.theme, presentationData.strings.AutoDownloadSettings_PrivateChats, settings.peers.otherPrivate.saveDownloadedPhotos))
-    entries.append(.groups(presentationData.theme, presentationData.strings.AutoDownloadSettings_GroupChats, settings.peers.groups.saveDownloadedPhotos))
-    entries.append(.channels(presentationData.theme, presentationData.strings.AutoDownloadSettings_Channels, settings.peers.channels.saveDownloadedPhotos))
+    entries.append(.contacts(presentationData.theme, presentationData.strings.AutoDownloadSettings_Contacts, settings.saveDownloadedPhotos.contacts))
+    entries.append(.otherPrivate(presentationData.theme, presentationData.strings.AutoDownloadSettings_PrivateChats, settings.saveDownloadedPhotos.otherPrivate))
+    entries.append(.groups(presentationData.theme, presentationData.strings.AutoDownloadSettings_GroupChats, settings.saveDownloadedPhotos.groups))
+    entries.append(.channels(presentationData.theme, presentationData.strings.AutoDownloadSettings_Channels, settings.saveDownloadedPhotos.channels))
     
     return entries
 }
@@ -95,13 +95,13 @@ func saveIncomingMediaController(context: AccountContext) -> ViewController {
             var settings = settings
             switch type {
                 case .contact:
-                    settings.peers.contacts.saveDownloadedPhotos = !settings.peers.contacts.saveDownloadedPhotos
+                    settings.saveDownloadedPhotos.contacts = !settings.saveDownloadedPhotos.contacts
                 case .otherPrivate:
-                    settings.peers.otherPrivate.saveDownloadedPhotos = !settings.peers.otherPrivate.saveDownloadedPhotos
+                    settings.saveDownloadedPhotos.otherPrivate = !settings.saveDownloadedPhotos.otherPrivate
                 case .group:
-                    settings.peers.groups.saveDownloadedPhotos = !settings.peers.groups.saveDownloadedPhotos
+                    settings.saveDownloadedPhotos.groups = !settings.saveDownloadedPhotos.groups
                 case .channel:
-                    settings.peers.channels.saveDownloadedPhotos = !settings.peers.channels.saveDownloadedPhotos
+                    settings.saveDownloadedPhotos.channels = !settings.saveDownloadedPhotos.channels
             }
             return settings
         }).start()

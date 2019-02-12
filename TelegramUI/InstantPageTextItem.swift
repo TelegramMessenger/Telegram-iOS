@@ -219,7 +219,13 @@ final class InstantPageTextItem: InstantPageItem {
         if let (index, dict) = self.attributesAtPoint(point) {
             if let _ = dict[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
                 if let rects = self.attributeRects(name: NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), at: index) {
-                    return rects.map { $0.insetBy(dx: 2.0, dy: -3.0) }
+                    return rects.compactMap { rect in
+                        if rect.width > 5.0 {
+                            return rect.insetBy(dx: 0.0, dy: -3.0)
+                        } else {
+                            return nil
+                        }
+                    }
                 }
             }
         }
