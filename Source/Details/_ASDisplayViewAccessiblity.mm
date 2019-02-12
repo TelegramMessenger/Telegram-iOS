@@ -209,10 +209,19 @@ static void CollectAccessibilityElementsForView(UIView *view, NSMutableArray *el
   
   ASDisplayNode *node = view.asyncdisplaykit_node;
 
+  static Class telegramListViewClass = nil;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    telegramListViewClass = NSClassFromString(@"Display.ListView");
+  });
   BOOL anySubNodeIsCollection = (nil != ASDisplayNodeFindFirstNode(node,
       ^BOOL(ASDisplayNode *nodeToCheck) {
-    return ASDynamicCast(nodeToCheck, ASCollectionNode) != nil ||
-           ASDynamicCast(nodeToCheck, ASTableNode) != nil;
+        if (telegramListViewClass != nil && [nodeToCheck isKindOfClass:telegramListViewClass]) {
+          return true;
+        }
+    return false;
+    /*return ASDynamicCast(nodeToCheck, ASCollectionNode) != nil ||
+           ASDynamicCast(nodeToCheck, ASTableNode) != nil;*/
   }));
 
   if (node.isAccessibilityContainer && !anySubNodeIsCollection) {

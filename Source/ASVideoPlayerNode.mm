@@ -10,7 +10,6 @@
 #import <Foundation/Foundation.h>
 
 #ifndef MINIMAL_ASDK
-#if TARGET_OS_IOS
 
 #import <AsyncDisplayKit/ASVideoPlayerNode.h>
 
