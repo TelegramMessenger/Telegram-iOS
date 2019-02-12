@@ -244,10 +244,11 @@ private func makeSubtreeSnapshot(layer: CALayer, keepTransform: Bool = false) ->
     view.layer.masksToBounds = layer.masksToBounds
     if let mask = layer.mask {
         let maskLayer = CALayer()
-        maskLayer.bounds = mask.bounds
         maskLayer.contents = mask.contents
+        maskLayer.contentsRect = mask.contentsRect
         maskLayer.contentsScale = mask.contentsScale
         maskLayer.contentsCenter = mask.contentsCenter
+        maskLayer.contentsGravity = mask.contentsGravity
         view.layer.mask = maskLayer
     }
     view.layer.cornerRadius = layer.cornerRadius
@@ -261,6 +262,9 @@ private func makeSubtreeSnapshot(layer: CALayer, keepTransform: Bool = false) ->
                 }
                 subtree.frame = sublayer.frame
                 subtree.bounds = sublayer.bounds
+                if let maskLayer = subtree.layer.mask {
+                    maskLayer.frame = sublayer.bounds
+                }
                 view.addSubview(subtree)
             } else {
                 return nil
