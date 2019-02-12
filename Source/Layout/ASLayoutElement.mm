@@ -83,20 +83,20 @@ void ASLayoutElementPushContext(ASLayoutElementContext *context)
   // NOTE: It would be easy to support nested contexts – just use an NSMutableArray here.
   ASDisplayNodeCAssertNil(pthread_getspecific(ASLayoutElementContextKey()), @"Nested ASLayoutElementContexts aren't supported.");
   
-  let cfCtx = (__bridge_retained CFTypeRef)context;
+  const auto cfCtx = (__bridge_retained CFTypeRef)context;
   pthread_setspecific(ASLayoutElementContextKey(), cfCtx);
 }
 
 ASLayoutElementContext *ASLayoutElementGetCurrentContext()
 {
   // Don't retain here. Caller will retain if it wants to!
-  let ctxPtr = pthread_getspecific(ASLayoutElementContextKey());
+  const auto ctxPtr = pthread_getspecific(ASLayoutElementContextKey());
   return (__bridge ASLayoutElementContext *)ctxPtr;
 }
 
 void ASLayoutElementPopContext()
 {
-  let ctx = (CFTypeRef)pthread_getspecific(ASLayoutElementContextKey());
+  const auto ctx = (CFTypeRef)pthread_getspecific(ASLayoutElementContextKey());
   ASDisplayNodeCAssertNotNil(ctx, @"Attempt to pop context when there wasn't a context!");
   CFRelease(ctx);
   pthread_setspecific(ASLayoutElementContextKey(), NULL);

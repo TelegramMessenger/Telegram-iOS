@@ -8,7 +8,10 @@
 //
 
 #ifndef MINIMAL_ASDK
+#import <AsyncDisplayKit/ASAvailability.h>
 #import <AsyncDisplayKit/ASNetworkImageNode.h>
+
+#if AS_USE_VIDEO
 
 @class AVAsset, AVPlayer, AVPlayerLayer, AVPlayerItem, AVVideoComposition, AVAudioMix;
 @protocol ASVideoNodeDelegate;
@@ -148,7 +151,7 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (void)videoNodeDidRecoverFromStall:(ASVideoNode *)videoNode;
 /**
- * @abstract Delegate method invoked when an error occurs while trying trying to load an asset
+ * @abstract Delegate method invoked when an error occurs while trying to load an asset
  * @param videoNode The videoNode.
  * @param key The key of value that failed to load.
  * @param asset The asset.
@@ -165,4 +168,6 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 NS_ASSUME_NONNULL_END
+#endif
+
 #endif

@@ -7,8 +7,11 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
+
+#import <AsyncDisplayKit/ASAvailability.h>
+
+#if AS_ENABLE_TEXTNODE
 
 #import <AsyncDisplayKit/ASBaseDefines.h>
 
@@ -82,3 +85,5 @@ AS_EXTERN NSAttributedString *ASCleanseAttributedStringOfCoreTextAttributes(NSAt
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif

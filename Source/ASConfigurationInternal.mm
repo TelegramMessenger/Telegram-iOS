@@ -62,7 +62,7 @@
   }
   _frameworkInitialized = YES;
   
-  let delegate = _config.delegate;
+  const auto delegate = _config.delegate;
   if ([delegate respondsToSelector:@selector(textureDidInitialize)]) {
     [delegate textureDidInitialize];
   }

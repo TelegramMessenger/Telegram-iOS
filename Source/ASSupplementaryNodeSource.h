@@ -27,6 +27,14 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (ASCellNodeBlock)nodeBlockForSupplementaryElementOfKind:(NSString *)elementKind atIndex:(NSInteger)index;
 
+/**
+ * Asks the controller to provide a node to display for the given supplementary element.
+ *
+ * @param kind The kind of supplementary element.
+ * @param index The index of the item.
+ */
+- (ASCellNode *)nodeForSupplementaryElementOfKind:(NSString *)kind atIndex:(NSInteger)index;
+
 @optional
 
 /**

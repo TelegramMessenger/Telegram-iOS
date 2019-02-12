@@ -777,6 +777,8 @@ static UIColor *defaultTintColor = nil;
   accessibilityNavigationStyle = newAccessibilityNavigationStyle;
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-implementations"
 - (NSArray *)accessibilityHeaderElements
 {
   return accessibilityHeaderElements;
@@ -789,6 +791,7 @@ static UIColor *defaultTintColor = nil;
     accessibilityHeaderElements = [newAccessibilityHeaderElements copy];
   }
 }
+#pragma clang diagnostic pop
 
 - (CGPoint)accessibilityActivationPoint
 {

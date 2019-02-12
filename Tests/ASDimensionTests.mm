@@ -8,8 +8,9 @@
 //
 
 #import <XCTest/XCTest.h>
-#import "ASXCTExtensions.h"
 #import <AsyncDisplayKit/ASDimension.h>
+
+#import "ASXCTExtensions.h"
 
 
 @interface ASDimensionTests : XCTestCase

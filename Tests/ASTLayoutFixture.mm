@@ -33,7 +33,7 @@
 
 - (void)addSizeRange:(ASSizeRange)sizeRange forNode:(ASLayoutTestNode *)node
 {
-  var ranges = [_sizeRanges objectForKey:node];
+  auto ranges = [_sizeRanges objectForKey:node];
   if (ranges == nil) {
     ranges = [[NSMutableArray alloc] init];
     [_sizeRanges setObject:ranges forKey:node];
@@ -48,7 +48,7 @@
 
 - (ASSizeRange)firstSizeRangeForNode:(ASLayoutTestNode *)node
 {
-  let val = [_sizeRanges objectForKey:node].firstObject;
+  const auto val = [_sizeRanges objectForKey:node].firstObject;
   ASSizeRange r;
   [val getValue:&r];
   return r;
@@ -100,7 +100,7 @@
 
 - (NSSet<ASLayoutTestNode *> *)allNodes
 {
-  let allLayouts = [NSMutableArray array];
+  const auto allLayouts = [NSMutableArray array];
   [ASTLayoutFixture collectAllLayoutsFromLayout:self.layout array:allLayouts];
   return [NSSet setWithArray:[allLayouts valueForKey:@"layoutElement"]];
 }
@@ -109,7 +109,7 @@
 {
   // Update layoutSpecBlock for parent nodes, set automatic subnode management
   for (ASDisplayNode *node in _layoutSpecBlocks) {
-    let block = [_layoutSpecBlocks objectForKey:node];
+    const auto block = [_layoutSpecBlocks objectForKey:node];
     if (node.layoutSpecBlock != block) {
       node.automaticallyManagesSubnodes = YES;
       node.layoutSpecBlock = block;
@@ -124,9 +124,9 @@
 /// to the layout size if needed, then call -setNeedsLayout
 - (void)setTestSizesOfLeafNodesInLayout:(ASLayout *)layout
 {
-  let node = (ASLayoutTestNode *)layout.layoutElement;
+  const auto node = (ASLayoutTestNode *)layout.layoutElement;
   if (layout.sublayouts.count == 0) {
-    let override = [self.returnedSizes objectForKey:node];
+    const auto override = [self.returnedSizes objectForKey:node];
     node.testSize = override ? override.CGSizeValue : layout.size;
   } else {
     node.testSize = CGSizeZero;

@@ -11,6 +11,7 @@
 
 #import <AsyncDisplayKit/ASDisplayNode+Ancestry.h>
 #import <AsyncDisplayKit/ASDisplayNode+Beta.h>
+#import <AsyncDisplayKit/ASDisplayNode+LayoutSpec.h>
 #import <AsyncDisplayKit/AsyncDisplayKit+Debug.h>
 #import <AsyncDisplayKit/ASLayoutSpec+Subclasses.h>
 #import <AsyncDisplayKit/ASCellNode+Internal.h>
@@ -59,7 +60,6 @@
 #define ENABLE_NEW_EXIT_HIERARCHY_BEHAVIOR 0
 
 static ASDisplayNodeNonFatalErrorBlock _nonFatalErrorBlock = nil;
-NSInteger const ASDefaultDrawingPriority = ASDefaultTransactionPriority;
 
 // Forward declare CALayerDelegate protocol as the iOS 10 SDK moves CALayerDelegate from an informal delegate to a protocol.
 // We have to forward declare the protocol as this place otherwise it will not compile compiling with an Base SDK < iOS 10
@@ -289,7 +289,7 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
   
 
   _contentsScaleForDisplay = ASScreenScale();
-  _drawingPriority = ASDefaultDrawingPriority;
+  _drawingPriority = ASDefaultTransactionPriority;
   
   _primitiveTraitCollection = ASPrimitiveTraitCollectionMakeDefault();
   
@@ -562,7 +562,7 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__);
   [self didLoad];
   
   __instanceLock__.lock();
-  let onDidLoadBlocks = ASTransferStrong(_onDidLoadBlocks);
+  const auto onDidLoadBlocks = ASTransferStrong(_onDidLoadBlocks);
   __instanceLock__.unlock();
   
   for (ASDisplayNodeDidLoadBlock block in onDidLoadBlocks) {
@@ -988,15 +988,6 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__);
 
 #pragma mark - Layout
 
-// At most a layoutSpecBlock or one of the three layout methods is overridden
-#define __ASDisplayNodeCheckForLayoutMethodOverrides \
-    ASDisplayNodeAssert(_layoutSpecBlock != NULL || \
-    ((ASDisplayNodeSubclassOverridesSelector(self.class, @selector(calculateSizeThatFits:)) ? 1 : 0) \
-    + (ASDisplayNodeSubclassOverridesSelector(self.class, @selector(layoutSpecThatFits:)) ? 1 : 0) \
-    + (ASDisplayNodeSubclassOverridesSelector(self.class, @selector(calculateLayoutThatFits:)) ? 1 : 0)) <= 1, \
-    @"Subclass %@ must at least provide a layoutSpecBlock or override at most one of the three layout methods: calculateLayoutThatFits:, layoutSpecThatFits:, or calculateSizeThatFits:", NSStringFromClass(self.class))
-
-
 #pragma mark <ASLayoutElementTransition>
 
 - (BOOL)canLayoutAsynchronous
@@ -1118,115 +1109,23 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__);
 {
   __ASDisplayNodeCheckForLayoutMethodOverrides;
 
-  ASDN::UniqueLock l(__instanceLock__);
-
+  switch (self.layoutEngineType) {
+    case ASLayoutEngineTypeLayoutSpec:
+      return [self calculateLayoutLayoutSpec:constrainedSize];
 #if YOGA
-  // There are several cases where Yoga could arrive here:
-  // - This node is not in a Yoga tree: it has neither a yogaParent nor yogaChildren.
-  // - This node is a Yoga tree root: it has no yogaParent, but has yogaChildren.
-  // - This node is a Yoga tree node: it has both a yogaParent and yogaChildren.
-  // - This node is a Yoga tree leaf: it has a yogaParent, but no yogaChidlren.
-  YGNodeRef yogaNode = _style.yogaNode;
-  BOOL hasYogaParent = (_yogaParent != nil);
-  BOOL hasYogaChildren = (_yogaChildren.count > 0);
-  BOOL usesYoga = (yogaNode != NULL && (hasYogaParent || hasYogaChildren));
-  if (usesYoga) {
-    // This node has some connection to a Yoga tree.
-    if ([self shouldHaveYogaMeasureFunc] == NO) {
-      // If we're a yoga root, tree node, or leaf with no measure func (e.g. spacer), then
-      // initiate a new Yoga calculation pass from root.
-      
-      as_activity_create_for_scope("Yoga layout calculation");
-      if (self.yogaLayoutInProgress == NO) {
-        ASYogaLog("Calculating yoga layout from root %@, %@", self, NSStringFromASSizeRange(constrainedSize));
-        l.unlock();
-        [self calculateLayoutFromYogaRoot:constrainedSize];
-        l.lock();
-      } else {
-        ASYogaLog("Reusing existing yoga layout %@", _yogaCalculatedLayout);
-      }
-      ASDisplayNodeAssert(_yogaCalculatedLayout, @"Yoga node should have a non-nil layout at this stage: %@", self);
-      return _yogaCalculatedLayout;
-    } else {
-      // If we're a yoga leaf node with custom measurement function, proceed with normal layout so layoutSpecs can run (e.g. ASButtonNode).
-      ASYogaLog("PROCEEDING past Yoga check to calculate ASLayout for: %@", self);
-    }
-  }
-#endif /* YOGA */
-  
-  // Manual size calculation via calculateSizeThatFits:
-  if (_layoutSpecBlock == NULL && (_methodOverrides & ASDisplayNodeMethodOverrideLayoutSpecThatFits) == 0) {
-    CGSize size = [self calculateSizeThatFits:constrainedSize.max];
-    ASDisplayNodeLogEvent(self, @"calculatedSize: %@", NSStringFromCGSize(size));
-    return [ASLayout layoutWithLayoutElement:self size:ASSizeRangeClamp(constrainedSize, size) sublayouts:nil];
-  }
-  
-  // Size calcualtion with layout elements
-  BOOL measureLayoutSpec = _measurementOptions & ASDisplayNodePerformanceMeasurementOptionLayoutSpec;
-  if (measureLayoutSpec) {
-    _layoutSpecNumberOfPasses++;
-  }
-
-  // Get layout element from the node
-  id<ASLayoutElement> layoutElement = [self _locked_layoutElementThatFits:constrainedSize];
-#if ASEnableVerboseLogging
-  for (NSString *asciiLine in [[layoutElement asciiArtString] componentsSeparatedByString:@"\n"]) {
-    as_log_verbose(ASLayoutLog(), "%@", asciiLine);
-  }
+    case ASLayoutEngineTypeYoga:
+      return [self calculateLayoutYoga:constrainedSize];
 #endif
-
-
-  // Certain properties are necessary to set on an element of type ASLayoutSpec
-  if (layoutElement.layoutElementType == ASLayoutElementTypeLayoutSpec) {
-    ASLayoutSpec *layoutSpec = (ASLayoutSpec *)layoutElement;
-  
-#if AS_DEDUPE_LAYOUT_SPEC_TREE
-    NSHashTable *duplicateElements = [layoutSpec findDuplicatedElementsInSubtree];
-    if (duplicateElements.count > 0) {
-      ASDisplayNodeFailAssert(@"Node %@ returned a layout spec that contains the same elements in multiple positions. Elements: %@", self, duplicateElements);
-      // Use an empty layout spec to avoid crashes
-      layoutSpec = [[ASLayoutSpec alloc] init];
-    }
-#endif
-
-    ASDisplayNodeAssert(layoutSpec.isMutable, @"Node %@ returned layout spec %@ that has already been used. Layout specs should always be regenerated.", self, layoutSpec);
-    
-    layoutSpec.isMutable = NO;
-  }
-  
-  // Manually propagate the trait collection here so that any layoutSpec children of layoutSpec will get a traitCollection
-  {
-    ASDN::SumScopeTimer t(_layoutSpecTotalTime, measureLayoutSpec);
-    ASTraitCollectionPropagateDown(layoutElement, self.primitiveTraitCollection);
-  }
-  
-  BOOL measureLayoutComputation = _measurementOptions & ASDisplayNodePerformanceMeasurementOptionLayoutComputation;
-  if (measureLayoutComputation) {
-    _layoutComputationNumberOfPasses++;
+      // If YOGA is not defined but for some reason the layout type engine is Yoga
+      // we explicitly fallthrough here
+    default:
+      break;
   }
 
-  // Layout element layout creation
-  ASLayout *layout = ({
-    ASDN::SumScopeTimer t(_layoutComputationTotalTime, measureLayoutComputation);
-    [layoutElement layoutThatFits:constrainedSize];
-  });
-  ASDisplayNodeAssertNotNil(layout, @"[ASLayoutElement layoutThatFits:] should never return nil! %@, %@", self, layout);
-    
-  // Make sure layoutElementObject of the root layout is `self`, so that the flattened layout will be structurally correct.
-  BOOL isFinalLayoutElement = (layout.layoutElement != self);
-  if (isFinalLayoutElement) {
-    layout.position = CGPointZero;
-    layout = [ASLayout layoutWithLayoutElement:self size:layout.size sublayouts:@[layout]];
-  }
-  ASDisplayNodeLogEvent(self, @"computedLayout: %@", layout);
-
-  // PR #1157: Reduces accuracy of _unflattenedLayout for debugging/Weaver
-  if ([ASDisplayNode shouldStoreUnflattenedLayouts]) {
-      _unflattenedLayout = layout;
-  }
-  layout = [layout filteredNodeLayoutTree];
-  
-  return layout;
+  // If this case is reached a layout type engine was defined for a node that is currently
+  // not supported.
+  ASDisplayNodeAssert(NO, @"No layout type determined");
+  return nil;
 }
 
 - (CGSize)calculateSizeThatFits:(CGSize)constrainedSize
@@ -1236,35 +1135,6 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__);
   ASDisplayNodeLogEvent(self, @"calculateSizeThatFits: with constrainedSize: %@", NSStringFromCGSize(constrainedSize));
 
   return ASIsCGSizeValidForSize(constrainedSize) ? constrainedSize : CGSizeZero;
-}
-
-- (id<ASLayoutElement>)_locked_layoutElementThatFits:(ASSizeRange)constrainedSize
-{
-  ASAssertLocked(__instanceLock__);
-  __ASDisplayNodeCheckForLayoutMethodOverrides;
-  
-  BOOL measureLayoutSpec = _measurementOptions & ASDisplayNodePerformanceMeasurementOptionLayoutSpec;
-  
-  if (_layoutSpecBlock != NULL) {
-    return ({
-      ASDN::MutexLocker l(__instanceLock__);
-      ASDN::SumScopeTimer t(_layoutSpecTotalTime, measureLayoutSpec);
-      _layoutSpecBlock(self, constrainedSize);
-    });
-  } else {
-    return ({
-      ASDN::SumScopeTimer t(_layoutSpecTotalTime, measureLayoutSpec);
-      [self layoutSpecThatFits:constrainedSize];
-    });
-  }
-}
-
-- (ASLayoutSpec *)layoutSpecThatFits:(ASSizeRange)constrainedSize
-{
-  __ASDisplayNodeCheckForLayoutMethodOverrides;
-  
-  ASDisplayNodeAssert(NO, @"-[ASDisplayNode layoutSpecThatFits:] should never return an empty value. One way this is caused is by calling -[super layoutSpecThatFits:] which is not currently supported.");
-  return [[ASLayoutSpec alloc] init];
 }
 
 - (void)layout
@@ -1867,7 +1737,10 @@ static void _recursivelySetDisplaySuspended(ASDisplayNode *node, CALayer *layer,
   [self displayDidFinish];
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-implementations"
 - (void)displayWillStart {}
+#pragma clang diagnostic pop
 - (void)displayWillStartAsynchronously:(BOOL)asynchronously
 {
   ASDisplayNodeAssertMainThread();
@@ -2139,6 +2012,18 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
       stateToEnterOrExit |= ASHierarchyStateRasterized;
     }
     if (newSupernode) {
+      
+      // Now that we have a supernode, propagate its traits to self.
+      // This should be done before possibly forcing self to load so we have traits in -didLoad
+      ASTraitCollectionPropagateDown(self, newSupernode.primitiveTraitCollection);
+      
+      if (!parentWasOrIsRasterized && newSupernode.nodeLoaded) {
+        // Trigger the subnode to load its layer, which will create its view if it needs one.
+        // By doing this prior to the downward propagation of newSupernode's interface state,
+        // we can guarantee that -didEnterVisibleState is only called with .isNodeLoaded = YES.
+        [self layer];
+      }
+      
       [self enterHierarchyState:stateToEnterOrExit];
       
       // If a node was added to a supernode, the supernode could be in a layout pending state. All of the hierarchy state
@@ -2158,10 +2043,6 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
           }
         }
       }
-      
-      // Now that we have a supernode, propagate its traits to self.
-      ASTraitCollectionPropagateDown(self, newSupernode.primitiveTraitCollection);
-      
     } else {
       // If a node will be removed from the supernode it should go out from the layout pending state to remove all
       // layout pending state related properties on the node
@@ -2259,13 +2140,6 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
     [_subnodes insertObject:subnode atIndex:subnodeIndex];
     _cachedSubnodes = nil;
   __instanceLock__.unlock();
-
-  if (!isRasterized && self.nodeLoaded) {
-    // Trigger the subnode to load its layer, which will create its view if it needs one.
-    // By doing this prior to downward propagation of .interfaceState in _setSupernode:,
-    // we can guarantee that -didEnterVisibleState is only called with .isNodeLoaded = YES.
-    [subnode layer];
-  }
 
   // This call will apply our .hierarchyState to the new subnode.
   // If we are a managed hierarchy, as in ASCellNode trees, it will also apply our .interfaceState.
@@ -3782,7 +3656,7 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
 - (NSString *)debugDescription
 {
   ASPushMainThreadAssertionsDisabled();
-  let result = ASObjectDescriptionMake(self, [self propertiesForDebugDescription]);
+  const auto result = ASObjectDescriptionMake(self, [self propertiesForDebugDescription]);
   ASPopMainThreadAssertionsDisabled();
   return result;
 }
@@ -3841,10 +3715,13 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
   suppressesInvalidCollectionUpdateExceptions.store(suppresses);
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-implementations"
 + (BOOL)suppressesInvalidCollectionUpdateExceptions
 {
   return suppressesInvalidCollectionUpdateExceptions.load();
 }
+#pragma clang diagnostic pop
 
 - (NSString *)displayNodeRecursiveDescription
 {
@@ -3864,7 +3741,7 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
 {
   ASPushMainThreadAssertionsDisabled();
   ASDN::MutexLocker l(__instanceLock__);
-  let props = [[NSMutableArray<NSDictionary *> alloc] init];
+  const auto props = [[NSMutableArray<NSDictionary *> alloc] init];
 
   [props addObject:@{ @"layoutVersion": @(_layoutVersion.load()) }];
   [props addObject:@{ @"bounds": [NSValue valueWithCGRect:self.bounds] }];

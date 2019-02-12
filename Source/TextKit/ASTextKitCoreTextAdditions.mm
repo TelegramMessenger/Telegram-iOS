@@ -9,6 +9,8 @@
 
 #import <AsyncDisplayKit/ASTextKitCoreTextAdditions.h>
 
+#if AS_ENABLE_TEXTNODE
+
 #import <CoreText/CTFont.h>
 #import <CoreText/CTStringAttributes.h>
 
@@ -333,3 +335,5 @@ NSAttributedString *ASCleanseAttributedStringOfCoreTextAttributes(NSAttributedSt
 }
 
 @end
+
+#endif

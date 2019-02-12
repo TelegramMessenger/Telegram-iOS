@@ -13,6 +13,9 @@
 #import <FBSnapshotTestCase/FBSnapshotTestController.h>
 
 #import <AsyncDisplayKit/ASTextKitAttributes.h>
+
+#if AS_ENABLE_TEXTNODE
+
 #import <AsyncDisplayKit/ASTextKitComponents.h>
 #import <AsyncDisplayKit/ASTextKitEntityAttribute.h>
 #import <AsyncDisplayKit/ASTextKitRenderer.h>
@@ -221,3 +224,5 @@ static BOOL checkAttributes(const ASTextKitAttributes &attributes, const CGSize 
 }
 
 @end
+
+#endif

@@ -10,6 +10,11 @@
 #pragma once
 
 #import <UIKit/UIKit.h>
+
+#import <AsyncDisplayKit/ASAvailability.h>
+
+#if AS_ENABLE_TEXTNODE
+
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
 
 AS_EXTERN NSString *const ASTextKitTruncationAttributeName;
@@ -119,3 +124,5 @@ struct ASTextKitAttributes {
 
   size_t hash() const;
 };
+
+#endif

@@ -49,7 +49,9 @@ void ASDisplayNodePerformBlockOnEveryYogaChild(ASDisplayNode *node, void(^block)
     return;
   }
   block(node);
-  for (ASDisplayNode *child in [node yogaChildren]) {
+  // We use the accessor here despite the copy, because the block may modify the yoga tree e.g.
+  // replacing a node.
+  for (ASDisplayNode *child in node.yogaChildren) {
     ASDisplayNodePerformBlockOnEveryYogaChild(child, block);
   }
 }
@@ -104,6 +106,11 @@ float yogaFloatForCGFloat(CGFloat value)
   } else {
     return YGUndefined;
   }
+}
+
+float cgFloatForYogaFloat(float yogaFloat)
+{
+  return (yogaFloat == YGUndefined) ? CGFLOAT_MAX : yogaFloat;
 }
 
 float yogaDimensionToPoints(ASDimension dimension)
@@ -196,6 +203,9 @@ YGSize ASLayoutElementYogaMeasureFunc(YGNodeRef yogaNode, float width, YGMeasure
 {
   id <ASLayoutElement> layoutElement = (__bridge id <ASLayoutElement>)YGNodeGetContext(yogaNode);
   ASDisplayNodeCAssert([layoutElement conformsToProtocol:@protocol(ASLayoutElement)], @"Yoga context must be <ASLayoutElement>");
+
+  width = cgFloatForYogaFloat(width);
+  height = cgFloatForYogaFloat(height);
 
   ASSizeRange sizeRange;
   sizeRange.min = CGSizeZero;

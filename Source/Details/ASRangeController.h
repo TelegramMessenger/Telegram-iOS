@@ -162,6 +162,8 @@ AS_SUBCLASSING_RESTRICTED
  */
 - (void)rangeController:(ASRangeController *)rangeController updateWithChangeSet:(_ASHierarchyChangeSet *)changeSet updates:(dispatch_block_t)updates;
 
+- (BOOL)rangeControllerShouldUpdateRanges:(ASRangeController *)rangeController;
+
 @end
 
 @interface ASRangeController (ASRangeControllerUpdateRangeProtocol) <ASRangeControllerUpdateRangeProtocol>

@@ -156,10 +156,10 @@ ASLayoutElementStyleExtensibilityForwarding
 
 - (NSMutableArray<NSDictionary *> *)propertiesForDescription
 {
-  let result = [NSMutableArray<NSDictionary *> array];
+  const auto result = [NSMutableArray<NSDictionary *> array];
   if (NSArray *children = self.children) {
     // Use tiny descriptions because these trees can get nested very deep.
-    let tinyDescriptions = ASArrayByFlatMapping(children, id object, ASObjectDescriptionMakeTiny(object));
+    const auto tinyDescriptions = ASArrayByFlatMapping(children, id object, ASObjectDescriptionMakeTiny(object));
     [result addObject:@{ @"children": tinyDescriptions }];
   }
   return result;
@@ -289,7 +289,7 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__)
 - (ASLayout *)calculateLayoutThatFits:(ASSizeRange)constrainedSize
 {
   NSArray *children = self.children;
-  let count = children.count;
+  const auto count = children.count;
   ASLayout *rawSublayouts[count];
   int i = 0;
   
@@ -303,7 +303,7 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__)
     
     rawSublayouts[i++] = sublayout;
   }
-  let sublayouts = [NSArray<ASLayout *> arrayByTransferring:rawSublayouts count:i];
+  const auto sublayouts = [NSArray<ASLayout *> arrayByTransferring:rawSublayouts count:i];
   return [ASLayout layoutWithLayoutElement:self size:size sublayouts:sublayouts];
 }
 

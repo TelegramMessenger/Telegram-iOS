@@ -53,7 +53,7 @@ AS_EXTERN NSString * const ASCollectionInvalidUpdateException;
 /**
  Fetch the ASCellNode block for specific index path. This block should return the ASCellNode for the specified index path.
  */
-- (ASCellNodeBlock)dataController:(ASDataController *)dataController nodeBlockAtIndexPath:(NSIndexPath *)indexPath;
+- (ASCellNodeBlock)dataController:(ASDataController *)dataController nodeBlockAtIndexPath:(NSIndexPath *)indexPath shouldAsyncLayout:(BOOL *)shouldAsyncLayout;
 
 /**
  Fetch the number of rows in specific section.
@@ -72,6 +72,18 @@ AS_EXTERN NSString * const ASCollectionInvalidUpdateException;
 - (BOOL)dataController:(ASDataController *)dataController presentedSizeForElement:(ASCollectionElement *)element matchesSize:(CGSize)size;
 
 - (nullable id)dataController:(ASDataController *)dataController nodeModelForItemAtIndexPath:(NSIndexPath *)indexPath;
+
+/**
+ * Called just after dispatching ASCellNode allocation and layout to the concurrent background queue.
+ * In some cases, for example on the first content load for a screen, it may be desirable to call
+ * -waitUntilAllUpdatesAreProcessed at this point.
+ *
+ * Returning YES will cause the ASDataController to wait on the background queue, and this ensures
+ * that any new / changed cells are in the hierarchy by the very next CATransaction / frame draw.
+ */
+- (BOOL)dataController:(ASDataController *)dataController shouldSynchronouslyProcessChangeSet:(_ASHierarchyChangeSet *)changeSet;
+- (BOOL)dataController:(ASDataController *)dataController shouldEagerlyLayoutNode:(ASCellNode *)node;
+- (BOOL)dataControllerShouldSerializeNodeCreation:(ASDataController *)dataController;
 
 @optional
 
@@ -222,11 +234,6 @@ AS_EXTERN NSString * const ASCollectionInvalidUpdateException;
  */
 @property (nonatomic, readonly) ASEventLog *eventLog;
 #endif
-
-/**
- * @see ASCollectionNode+Beta.h for full documentation.
- */
-@property (nonatomic) BOOL usesSynchronousDataLoading;
 
 /** @name Data Updating */
 

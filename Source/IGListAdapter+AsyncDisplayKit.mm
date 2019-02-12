@@ -31,7 +31,7 @@
   }
 
   // Make a data source and retain it.
-  dataSource = [[ASIGListAdapterBasedDataSource alloc] initWithListAdapter:self];
+  dataSource = [[ASIGListAdapterBasedDataSource alloc] initWithListAdapter:self collectionDelegate:collectionNode.delegate];
   objc_setAssociatedObject(self, _cmd, dataSource, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 
   // Attach the data source to the collection node.

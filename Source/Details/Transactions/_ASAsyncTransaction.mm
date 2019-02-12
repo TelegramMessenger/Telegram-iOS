@@ -7,8 +7,6 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
-// We need this import for UITrackingRunLoopMode
-#import <UIKit/UIApplication.h>
 
 #import <AsyncDisplayKit/_ASAsyncTransaction.h>
 #import <AsyncDisplayKit/_ASAsyncTransactionGroup.h>
@@ -21,6 +19,8 @@
 #ifndef __STRICT_ANSI__
   #warning "Texture must be compiled with std=c++11 to prevent layout issues. gnu++ is not supported. This is hopefully temporary."
 #endif
+
+AS_EXTERN NSRunLoopMode const UITrackingRunLoopMode;
 
 NSInteger const ASDefaultTransactionPriority = 0;
 

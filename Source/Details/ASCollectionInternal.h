@@ -33,7 +33,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * @see ASCollectionNode+Beta.h for full documentation.
  */
-@property (nonatomic) BOOL usesSynchronousDataLoading;
+@property (nonatomic) ASCellLayoutMode cellLayoutMode;
 
 /**
  * Attempt to get the view-layer index path for the item with the given index path.

@@ -81,7 +81,7 @@ static NSUInteger const kOverlayChildIndex = 1;
     rawSublayouts[i++] = overlayLayout;
   }
   
-  let sublayouts = [NSArray<ASLayout *> arrayByTransferring:rawSublayouts count:i];
+  const auto sublayouts = [NSArray<ASLayout *> arrayByTransferring:rawSublayouts count:i];
   return [ASLayout layoutWithLayoutElement:self size:contentsLayout.size sublayouts:sublayouts];
 }
 

@@ -81,7 +81,7 @@
     sublayout.position = layoutPosition;
     rawSublayouts[i++] = sublayout;
   }
-  let sublayouts = [NSArray<ASLayout *> arrayByTransferring:rawSublayouts count:i];
+  const auto sublayouts = [NSArray<ASLayout *> arrayByTransferring:rawSublayouts count:i];
 
   if (_sizing == ASAbsoluteLayoutSpecSizingSizeToFit || isnan(size.width)) {
     size.width = constrainedSize.min.width;

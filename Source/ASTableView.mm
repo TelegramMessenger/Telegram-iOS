@@ -515,14 +515,8 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 {
   ASDisplayNodeAssertMainThread();
  
-  if (_asyncDataSource == nil && _asyncDelegate == nil) {
-    if (ASActivateExperimentalFeature(ASExperimentalClearDataDuringDeallocation)) {
-      if (_isDeallocating) {
-        [_dataController clearData];          
-      }
-    } else {
-      [_dataController clearData];
-    }
+  if (_asyncDataSource == nil && _asyncDelegate == nil && !ASActivateExperimentalFeature(ASExperimentalSkipClearData)) {
+    [_dataController clearData];
   }
 }
 
@@ -686,7 +680,7 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 
 - (NSArray<ASCellNode *> *)visibleNodes
 {
-  let elements = [self visibleElementsForRangeController:_rangeController];
+  const auto elements = [self visibleElementsForRangeController:_rangeController];
   return ASArrayByFlatMapping(elements, ASCollectionElement *e, e.node);
 }
 
@@ -772,7 +766,7 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
       NSArray<ASCellNode *> *nodes = [_cellsForLayoutUpdates allObjects];
       [_cellsForLayoutUpdates removeAllObjects];
 
-      let nodesSizeChanged = [[NSMutableArray<ASCellNode *> alloc] init];
+      const auto nodesSizeChanged = [[NSMutableArray<ASCellNode *> alloc] init];
       [_dataController relayoutNodes:nodes nodesSizeChanged:nodesSizeChanged];
       if (nodesSizeChanged.count > 0) {
         [self requeryNodeHeights];
@@ -1520,6 +1514,11 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 
 #pragma mark - ASRangeControllerDelegate
 
+- (BOOL)rangeControllerShouldUpdateRanges:(ASRangeController *)rangeController
+{
+  return YES;
+}
+
 - (void)rangeController:(ASRangeController *)rangeController updateWithChangeSet:(_ASHierarchyChangeSet *)changeSet updates:(dispatch_block_t)updates
 {
   ASDisplayNodeAssertMainThread();
@@ -1667,13 +1666,49 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 
 #pragma mark - ASDataControllerSource
 
+- (BOOL)dataController:(ASDataController *)dataController shouldEagerlyLayoutNode:(ASCellNode *)node
+{
+  return YES;
+}
+
+- (BOOL)dataControllerShouldSerializeNodeCreation:(ASDataController *)dataController
+{
+  return NO;
+}
+
+- (BOOL)dataController:(ASDataController *)dataController shouldSynchronouslyProcessChangeSet:(_ASHierarchyChangeSet *)changeSet
+{
+  if (ASActivateExperimentalFeature(ASExperimentalNewDefaultCellLayoutMode)) {
+    // Reload data is expensive, don't block main while doing so.
+    if (changeSet.includesReloadData) {
+      return NO;
+    }
+    // For more details on this method, see the comment in the ASCollectionView implementation.
+    if (changeSet.countForAsyncLayout < 2) {
+      return YES;
+    }
+    CGSize contentSize = self.contentSize;
+    CGSize boundsSize = self.bounds.size;
+    if (contentSize.height <= boundsSize.height && contentSize.width <= boundsSize.width) {
+      return YES;
+    }
+  }
+  return NO;
+}
+
+- (void)dataControllerDidFinishWaiting:(ASDataController *)dataController
+{
+  // ASCellLayoutMode is not currently supported on ASTableView (see ASCollectionView for details).
+}
+
 - (id)dataController:(ASDataController *)dataController nodeModelForItemAtIndexPath:(NSIndexPath *)indexPath
 {
   // Not currently supported for tables. Will be added when the collection API stabilizes.
   return nil;
 }
 
-- (ASCellNodeBlock)dataController:(ASDataController *)dataController nodeBlockAtIndexPath:(NSIndexPath *)indexPath {
+- (ASCellNodeBlock)dataController:(ASDataController *)dataController nodeBlockAtIndexPath:(NSIndexPath *)indexPath shouldAsyncLayout:(BOOL *)shouldAsyncLayout
+{
   ASCellNodeBlock block = nil;
 
   if (_asyncDataSourceFlags.tableNodeNodeBlockForRow) {
@@ -1721,6 +1756,8 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
   return ^{
     __typeof__(self) strongSelf = weakSelf;
     ASCellNode *node = (block != nil ? block() : [[ASCellNode alloc] init]);
+    ASDisplayNodeAssert([node isKindOfClass:[ASCellNode class]], @"ASTableNode provided a non-ASCellNode! %@, %@", node, strongSelf);
+
     [node enterHierarchyState:ASHierarchyStateRangeManaged];
     if (node.interactionDelegate == nil) {
       node.interactionDelegate = strongSelf;
@@ -1968,6 +2005,16 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
   if (self.superview == nil) {
     _keepalive_node = nil;
   }
+}
+
+#pragma mark - Accessibility overrides
+
+- (NSArray *)accessibilityElements
+{
+  if (!ASActivateExperimentalFeature(ASExperimentalSkipAccessibilityWait)) {
+    [self waitUntilAllUpdatesAreCommitted];
+  }
+  return [super accessibilityElements];
 }
 
 @end

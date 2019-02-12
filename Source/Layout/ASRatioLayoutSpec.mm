@@ -75,7 +75,7 @@
   }
 
   // Choose the size closest to the desired ratio.
-  let &bestSize = std::max_element(sizeOptions.begin(), sizeOptions.end(), [&](const CGSize &a, const CGSize &b){
+  const auto &bestSize = std::max_element(sizeOptions.begin(), sizeOptions.end(), [&](const CGSize &a, const CGSize &b){
     return std::fabs((a.height / a.width) - _ratio) > std::fabs((b.height / b.width) - _ratio);
   });
 

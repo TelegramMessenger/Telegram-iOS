@@ -17,7 +17,6 @@
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
-#import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 #import <AsyncDisplayKit/ASGraphicsContext.h>
 #import <AsyncDisplayKit/ASLayout.h>
 #import <AsyncDisplayKit/ASTextNode.h>
@@ -222,7 +221,7 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
 
 - (CGSize)calculateSizeThatFits:(CGSize)constrainedSize
 {
-  let image = ASLockedSelf(_image);
+  const auto image = ASLockedSelf(_image);
 
   if (image == nil) {
     return [super calculateSizeThatFits:constrainedSize];
@@ -441,11 +440,15 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
 }
 
 static ASWeakMap<ASImageNodeContentsKey *, UIImage *> *cache = nil;
-// Allocate cacheLock on the heap to prevent destruction at app exit (https://github.com/TextureGroup/Texture/issues/136)
-static auto *cacheLock = new ASDN::Mutex;
 
 + (ASWeakMapEntry *)contentsForkey:(ASImageNodeContentsKey *)key drawParameters:(id)drawParameters isCancelled:(asdisplaynode_iscancelled_block_t)isCancelled
 {
+  static dispatch_once_t onceToken;
+  static ASDN::Mutex *cacheLock = nil;
+  dispatch_once(&onceToken, ^{
+    cacheLock = new ASDN::Mutex();
+  });
+  
   {
     ASDN::MutexLocker l(*cacheLock);
     if (!cache) {

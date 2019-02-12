@@ -9,6 +9,10 @@
 
 #ifndef MINIMAL_ASDK
 
+#import <AsyncDisplayKit/ASAvailability.h>
+
+#if AS_USE_VIDEO
+
 #if TARGET_OS_IOS
 #import <CoreMedia/CoreMedia.h>
 #import <AsyncDisplayKit/ASThread.h>
@@ -219,5 +223,8 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 NS_ASSUME_NONNULL_END
 #endif
+
+#endif
+#endif  // TARGET_OS_IOS
 
 #endif

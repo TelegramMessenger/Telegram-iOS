@@ -13,6 +13,8 @@
 
 #import <AsyncDisplayKit/ASTextKitCoreTextAdditions.h>
 
+#if AS_ENABLE_TEXTNODE
+
 BOOL floatsCloseEnough(CGFloat float1, CGFloat float2) {
   CGFloat epsilon = 0.00001;
   return (fabs(float1 - float2) < epsilon);
@@ -68,3 +70,5 @@ BOOL floatsCloseEnough(CGFloat float1, CGFloat float2) {
 }
 
 @end
+
+#endif

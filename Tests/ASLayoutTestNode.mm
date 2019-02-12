@@ -35,7 +35,7 @@
 
 - (ASLayout *)_currentLayoutBasedOnFramesForRootNode:(BOOL)isRootNode
 {
-  let sublayouts = [[NSMutableArray<ASLayout *> alloc] init];
+  const auto sublayouts = [[NSMutableArray<ASLayout *> alloc] init];
   for (ASLayoutTestNode *subnode in self.subnodes) {
     [sublayouts addObject:[subnode _currentLayoutBasedOnFramesForRootNode:NO]];
   }
@@ -60,7 +60,7 @@
     return [super calculateLayoutThatFits:constrainedSize];
   } else {
     // Interestingly, the infra will auto-clamp sizes from calculateSizeThatFits, but not from calculateLayoutThatFits.
-    let size = ASSizeRangeClamp(constrainedSize, self.testSize);
+    const auto size = ASSizeRangeClamp(constrainedSize, self.testSize);
     return [ASLayout layoutWithLayoutElement:self size:size];
   }
 }

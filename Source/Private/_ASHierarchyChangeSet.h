@@ -115,6 +115,9 @@ NSString *NSStringFromASHierarchyChangeType(_ASHierarchyChangeType changeType);
 /// Indicates whether the change set is empty, that is it includes neither reload data nor per item or section changes.
 @property (nonatomic, readonly) BOOL isEmpty;
 
+/// The count of new ASCellNodes that can undergo async layout calculation. May be zero if all UIKit passthrough cells.
+@property (nonatomic, assign) NSUInteger countForAsyncLayout;
+
 /// The top-level activity for this update.
 @property (nonatomic, OS_ACTIVITY_NULLABLE) os_activity_t rootActivity;
 

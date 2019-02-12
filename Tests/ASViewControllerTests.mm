@@ -8,8 +8,11 @@
 //
 
 #import <XCTest/XCTest.h>
-#import <AsyncDisplayKit/AsyncDisplayKit.h>
+
 #import <OCMock/OCMock.h>
+
+#import <AsyncDisplayKit/AsyncDisplayKit.h>
+
 #import "NSInvocation+ASTestHelpers.h"
 
 @interface ASViewControllerTests : XCTestCase

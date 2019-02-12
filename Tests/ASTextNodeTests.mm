@@ -9,15 +9,17 @@
 
 #import <CoreText/CoreText.h>
 
-#import "ASTestCase.h"
-
+#import <XCTest/XCTest.h>
 #import <OCMock/OCMock.h>
 
+#import <AsyncDisplayKit/ASAvailability.h>
 #import <AsyncDisplayKit/ASLayout.h>
 #import <AsyncDisplayKit/ASTextNode.h>
-
-#import <XCTest/XCTest.h>
+#import <AsyncDisplayKit/ASTextNode+Beta.h>
 #import <AsyncDisplayKit/CoreGraphics+ASConvenience.h>
+
+#import "ASTestCase.h"
+
 
 
 @interface ASTextNodeTestDelegate : NSObject <ASTextNodeDelegate>
@@ -100,6 +102,14 @@
 }
 
 #pragma mark - ASTextNode
+
+- (void)testTruncation
+{
+  XCTAssertTrue([_textNode shouldTruncateForConstrainedSize:ASSizeRangeMake(CGSizeMake(100, 100))], @"");
+
+  _textNode.frame = CGRectMake(0, 0, 100, 100);
+  XCTAssertTrue(_textNode.isTruncated, @"Text Node should be truncated");
+}
 
 - (void)testSettingTruncationMessage
 {
@@ -235,6 +245,7 @@
   XCTAssertGreaterThan(sizeWithExclusionPaths.height, sizeWithoutExclusionPaths.height, @"Setting exclusions paths should invalidate the calculated size and return a greater size");
 }
 
+#if AS_ENABLE_TEXTNODE
 - (void)testThatTheExperimentWorksCorrectly
 {
   ASConfiguration *config = [ASConfiguration new];
@@ -303,6 +314,7 @@
   exp = nil;
   [textNodeBucket removeAllObjects];
 }
+#endif
 
 @end
 

@@ -8,6 +8,8 @@
 
 #import <Foundation/Foundation.h>
 
+#import <AsyncDisplayKit/ASAvailability.h>
+
 @class ASTextNode;
 
 #define AS_TEXT_ALERT_UNIMPLEMENTED_FEATURE() { \

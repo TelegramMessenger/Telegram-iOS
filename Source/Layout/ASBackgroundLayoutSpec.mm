@@ -61,7 +61,7 @@ static NSUInteger const kBackgroundChildIndex = 1;
   contentsLayout.position = CGPointZero;
   rawSublayouts[i++] = contentsLayout;
 
-  let sublayouts = [NSArray<ASLayout *> arrayByTransferring:rawSublayouts count:i];
+  const auto sublayouts = [NSArray<ASLayout *> arrayByTransferring:rawSublayouts count:i];
   return [ASLayout layoutWithLayoutElement:self size:contentsLayout.size sublayouts:sublayouts];
 }
 

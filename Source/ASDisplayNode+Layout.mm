@@ -7,6 +7,7 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
+#import <AsyncDisplayKit/ASAvailability.h>
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h>
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
@@ -147,19 +148,19 @@ ASLayoutElementStyleExtensibilityForwarding
 
 @implementation ASDisplayNode (ASLayout)
 
-- (void)setLayoutSpecBlock:(ASLayoutSpecBlock)layoutSpecBlock
+- (ASLayoutEngineType)layoutEngineType
 {
-  // For now there should never be an override of layoutSpecThatFits: and a layoutSpecBlock together.
-  ASDisplayNodeAssert(!(_methodOverrides & ASDisplayNodeMethodOverrideLayoutSpecThatFits),
-                      @"Nodes with a .layoutSpecBlock must not also implement -layoutSpecThatFits:");
+#if YOGA
   ASDN::MutexLocker l(__instanceLock__);
-  _layoutSpecBlock = layoutSpecBlock;
-}
+  YGNodeRef yogaNode = _style.yogaNode;
+  BOOL hasYogaParent = (_yogaParent != nil);
+  BOOL hasYogaChildren = (_yogaChildren.count > 0);
+  if (yogaNode != NULL && (hasYogaParent || hasYogaChildren)) {
+    return ASLayoutEngineTypeYoga;
+  }
+#endif
 
-- (ASLayoutSpecBlock)layoutSpecBlock
-{
-  ASDN::MutexLocker l(__instanceLock__);
-  return _layoutSpecBlock;
+  return ASLayoutEngineTypeLayoutSpec;
 }
 
 - (ASLayout *)calculatedLayout
@@ -658,8 +659,8 @@ ASLayoutElementStyleExtensibilityForwarding
         ASDN::MutexLocker l(__instanceLock__);
         
         // Update calculated layout
-        let previousLayout = _calculatedDisplayNodeLayout;
-        let pendingLayout = ASDisplayNodeLayout(newLayout,
+        const auto previousLayout = _calculatedDisplayNodeLayout;
+        const auto pendingLayout = ASDisplayNodeLayout(newLayout,
                                                 constrainedSize,
                                                 constrainedSize.max,
                                                 newLayoutVersion);
@@ -779,10 +780,10 @@ ASLayoutElementStyleExtensibilityForwarding
   
   NSArray<ASDisplayNode *> *removedSubnodes = [context removedSubnodes];
   NSMutableArray<ASDisplayNode *> *insertedSubnodes = [[context insertedSubnodes] mutableCopy];
-  let movedSubnodes = [[NSMutableArray<ASDisplayNode *> alloc] init];
+  const auto movedSubnodes = [[NSMutableArray<ASDisplayNode *> alloc] init];
   
-  let insertedSubnodeContexts = [[NSMutableArray<_ASAnimatedTransitionContext *> alloc] init];
-  let removedSubnodeContexts = [[NSMutableArray<_ASAnimatedTransitionContext *> alloc] init];
+  const auto insertedSubnodeContexts = [[NSMutableArray<_ASAnimatedTransitionContext *> alloc] init];
+  const auto removedSubnodeContexts = [[NSMutableArray<_ASAnimatedTransitionContext *> alloc] init];
   
   for (ASDisplayNode *subnode in [context subnodesForKey:ASTransitionContextToLayoutKey]) {
     if ([insertedSubnodes containsObject:subnode] == NO) {
@@ -920,9 +921,9 @@ ASLayoutElementStyleExtensibilityForwarding
   NSArray *subnodes = [self subnodes];
   NSArray *sublayouts = _calculatedDisplayNodeLayout.layout.sublayouts;
 
-  let currentSubnodes = [[NSHashTable alloc] initWithOptions:NSHashTableObjectPointerPersonality
+  const auto currentSubnodes = [[NSHashTable alloc] initWithOptions:NSHashTableObjectPointerPersonality
                                                      capacity:subnodes.count];
-  let layoutSubnodes  = [[NSHashTable alloc] initWithOptions:NSHashTableObjectPointerPersonality
+  const auto layoutSubnodes  = [[NSHashTable alloc] initWithOptions:NSHashTableObjectPointerPersonality
                                                      capacity:sublayouts.count];;
   for (ASDisplayNode *subnode in subnodes) {
     [currentSubnodes addObject:subnode];

@@ -38,6 +38,7 @@ typedef struct {
 @property (nonatomic, weak, readonly) IGListAdapter *listAdapter;
 @property (nonatomic, readonly) id<UICollectionViewDelegateFlowLayout> delegate;
 @property (nonatomic, readonly) id<UICollectionViewDataSource> dataSource;
+@property (nonatomic, weak, readonly) id<ASCollectionDelegate> collectionDelegate;
 
 /**
  * The section controller that we will forward beginBatchFetchWithContext: to.
@@ -52,7 +53,7 @@ typedef struct {
 
 @implementation ASIGListAdapterBasedDataSource
 
-- (instancetype)initWithListAdapter:(IGListAdapter *)listAdapter
+- (instancetype)initWithListAdapter:(IGListAdapter *)listAdapter collectionDelegate:(nullable id<ASCollectionDelegate>)collectionDelegate
 {
   if (self = [super init]) {
 #if IG_LIST_COLLECTION_VIEW
@@ -63,6 +64,7 @@ typedef struct {
     ASDisplayNodeAssert([listAdapter conformsToProtocol:@protocol(UICollectionViewDataSource)], @"Expected IGListAdapter to conform to UICollectionViewDataSource.");
     ASDisplayNodeAssert([listAdapter conformsToProtocol:@protocol(UICollectionViewDelegateFlowLayout)], @"Expected IGListAdapter to conform to UICollectionViewDelegateFlowLayout.");
     _listAdapter = listAdapter;
+    _collectionDelegate = collectionDelegate;
   }
   return self;
 }
@@ -114,6 +116,10 @@ typedef struct {
 
 - (BOOL)shouldBatchFetchForCollectionNode:(ASCollectionNode *)collectionNode
 {
+  if ([_collectionDelegate respondsToSelector:@selector(shouldBatchFetchForCollectionNode:)]) {
+    return [_collectionDelegate shouldBatchFetchForCollectionNode:collectionNode];
+  }
+
   NSInteger sectionCount = [self numberOfSectionsInCollectionNode:collectionNode];
   if (sectionCount == 0) {
     return NO;
@@ -131,6 +137,11 @@ typedef struct {
 
 - (void)collectionNode:(ASCollectionNode *)collectionNode willBeginBatchFetchWithContext:(ASBatchContext *)context
 {
+  if ([_collectionDelegate respondsToSelector:@selector(collectionNode:willBeginBatchFetchWithContext:)]) {
+    [_collectionDelegate collectionNode:collectionNode willBeginBatchFetchWithContext:context];
+    return;
+  }
+  
   ASIGSectionController *ctrl = self.sectionControllerForBatchFetching;
   self.sectionControllerForBatchFetching = nil;
   [ctrl beginBatchFetchWithContext:context];
@@ -207,6 +218,11 @@ typedef struct {
   return [[self sectionControllerForSection:indexPath.section] nodeBlockForItemAtIndex:indexPath.item];
 }
 
+- (ASCellNode *)collectionNode:(ASCollectionNode *)collectionNode nodeForItemAtIndexPath:(NSIndexPath *)indexPath
+{
+  return [[self sectionControllerForSection:indexPath.section] nodeForItemAtIndex:indexPath.item];
+}
+
 - (ASSizeRange)collectionNode:(ASCollectionNode *)collectionNode constrainedSizeForItemAtIndexPath:(NSIndexPath *)indexPath
 {
   ASIGSectionController *ctrl = [self sectionControllerForSection:indexPath.section];
@@ -220,6 +236,11 @@ typedef struct {
 - (ASCellNodeBlock)collectionNode:(ASCollectionNode *)collectionNode nodeBlockForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath
 {
   return [[self supplementaryElementSourceForSection:indexPath.section] nodeBlockForSupplementaryElementOfKind:kind atIndex:indexPath.item];
+}
+
+- (ASCellNode *)collectionNode:(ASCollectionNode *)collectionNode nodeForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath
+{
+  return [[self supplementaryElementSourceForSection:indexPath.section] nodeForSupplementaryElementOfKind:kind atIndex:indexPath.item];
 }
 
 - (NSArray<NSString *> *)collectionNode:(ASCollectionNode *)collectionNode supplementaryElementKindsInSection:(NSInteger)section

@@ -10,18 +10,21 @@
 #import <AsyncDisplayKit/ASDisplayNode.h>
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h> // for ASInterfaceState protocol
 
+NS_ASSUME_NONNULL_BEGIN
+
 /* ASNodeController is currently beta and open to change in the future */
 @interface ASNodeController<__covariant DisplayNodeType : ASDisplayNode *>
-    : NSObject <ASInterfaceStateDelegate, NSLocking>
+    : NSObject <ASInterfaceStateDelegate, ASLocking>
 
-@property (nonatomic, strong /* may be weak! */) DisplayNodeType node;
+@property (strong, readonly /* may be weak! */) DisplayNodeType node;
 
 // Until an ASNodeController can be provided in place of an ASCellNode, some apps may prefer to have
 // nodes keep their controllers alive (and a weak reference from controller to node)
 
 @property (nonatomic) BOOL shouldInvertStrongReference;
 
-- (void)loadNode;
+// called on an arbitrary thread by the framework. You do not call this. Return a new node instance.
+- (DisplayNodeType)createNode;
 
 // for descriptions see <ASInterfaceState> definition
 - (void)nodeDidLoad ASDISPLAYNODE_REQUIRES_SUPER;
@@ -48,6 +51,8 @@
 
 @interface ASDisplayNode (ASNodeController)
 
-@property(nonatomic, readonly) ASNodeController *nodeController;
+@property(nullable, readonly) ASNodeController *nodeController;
 
 @end
+
+NS_ASSUME_NONNULL_END

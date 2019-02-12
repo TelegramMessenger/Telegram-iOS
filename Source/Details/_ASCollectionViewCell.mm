@@ -9,6 +9,7 @@
 
 #ifndef MINIMAL_ASDK
 #import <AsyncDisplayKit/_ASCollectionViewCell.h>
+#import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 
 #import <AsyncDisplayKit/ASCellNode+Internal.h>
 #import <AsyncDisplayKit/ASCollectionElement.h>
@@ -93,6 +94,29 @@
 {
   [super layoutSubviews];
   self.node.frame = self.contentView.bounds;
+}
+
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
+{
+  /**
+   * The documentation for hitTest:withEvent: on an UIView explicitly states the fact that:
+   * it ignores view objects that are hidden, that have disabled user interactions, or have an
+   * alpha level less than 0.01.
+   * To be able to determine if the collection view cell should skip going further down the tree
+   * based on the states above we use a valid point within the cells bounds and check the
+   * superclass hitTest:withEvent: implementation. If this returns a valid value we can go on with
+   * checking the node as it's expected to not be in one of these states.
+   */
+  if (![super hitTest:self.bounds.origin withEvent:event]) {
+    return nil;
+  }
+
+  return [self.node hitTest:point withEvent:event];
+}
+
+- (BOOL)pointInside:(CGPoint)point withEvent:(nullable UIEvent *)event
+{
+  return [self.node pointInside:point withEvent:event];
 }
 
 @end

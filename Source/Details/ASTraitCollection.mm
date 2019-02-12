@@ -26,7 +26,10 @@ void ASTraitCollectionPropagateDown(id<ASLayoutElement> element, ASPrimitiveTrai
 }
 
 ASPrimitiveTraitCollection ASPrimitiveTraitCollectionMakeDefault() {
-  ASPrimitiveTraitCollection tc;
+  ASPrimitiveTraitCollection tc = {};
+  tc.userInterfaceIdiom = UIUserInterfaceIdiomUnspecified;
+  tc.forceTouchCapability = UIForceTouchCapabilityUnknown;
+  tc.displayScale = 0.0;
   tc.horizontalSizeClass = UIUserInterfaceSizeClassUnspecified;
   tc.verticalSizeClass = UIUserInterfaceSizeClassUnspecified;
   tc.containerSize = CGSizeZero;
@@ -212,6 +215,10 @@ NSString *NSStringFromASPrimitiveTraitCollection(ASPrimitiveTraitCollection trai
 - (UITraitEnvironmentLayoutDirection)layoutDirection
 {
   return _prim.layoutDirection;
+}
+- (CGSize)containerSize
+{
+  return _prim.containerSize;
 }
 #if AS_BUILD_UIUSERINTERFACESTYLE
 - (UIUserInterfaceStyle)userInterfaceStyle

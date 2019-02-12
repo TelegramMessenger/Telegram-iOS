@@ -9,6 +9,8 @@
 #import <AsyncDisplayKit/ASTextKitFontSizeAdjuster.h>
 #import <XCTest/XCTest.h>
 
+#if AS_ENABLE_TEXTNODE
+
 @interface ASFontSizeAdjusterTests : XCTestCase
 
 @end
@@ -45,3 +47,5 @@
 }
 
 @end
+
+#endif

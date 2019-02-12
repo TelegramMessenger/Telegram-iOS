@@ -136,9 +136,6 @@ AS_EXTERN NSString * const ASRenderingEngineDidDisplayNodesScheduledBeforeTimest
   // Set this to nil whenever you modify _subnodes
   NSArray<ASDisplayNode *> *_cachedSubnodes;
 
-  ASLayoutElementStyle *_style;
-  std::atomic<ASPrimitiveTraitCollection> _primitiveTraitCollection;
-
   std::atomic_uint _displaySentinel;
 
   // This is the desired contentsScale, not the scale at which the layer's contents should be displayed
@@ -150,18 +147,35 @@ AS_EXTERN NSString * const ASRenderingEngineDidDisplayNodesScheduledBeforeTimest
 #if ASEVENTLOG_ENABLE
   ASEventLog *_eventLog;
 #endif
-  
-  // Main thread only
-  BOOL _automaticallyManagesSubnodes;
+
+
+  // Layout support
+  ASLayoutElementStyle *_style;
+  std::atomic<ASPrimitiveTraitCollection> _primitiveTraitCollection;
+
+  // Layout Spec
+  ASLayoutSpecBlock _layoutSpecBlock;
+  NSString *_debugName;
+
+#if YOGA
+  // Only ASDisplayNodes are supported in _yogaChildren currently. This means that it is necessary to
+  // create ASDisplayNodes to make a stack layout when using Yoga.
+  // However, the implementation is mostly ready for id <ASLayoutElement>, with a few areas requiring updates.
+  NSMutableArray<ASDisplayNode *> *_yogaChildren;
+  __weak ASDisplayNode *_yogaParent;
+  ASLayout *_yogaCalculatedLayout;
+#endif
+
+  // Automatically manages subnodes
+  BOOL _automaticallyManagesSubnodes; // Main thread only
+
+  // Layout Transition
   _ASTransitionContext *_pendingLayoutTransitionContext;
   NSTimeInterval _defaultLayoutTransitionDuration;
   NSTimeInterval _defaultLayoutTransitionDelay;
   UIViewAnimationOptions _defaultLayoutTransitionOptions;
-  
-  ASLayoutSpecBlock _layoutSpecBlock;
 
   std::atomic<int32_t> _transitionID;
-  
   std::atomic<int32_t> _pendingTransitionID;
   ASLayoutTransition *_pendingLayoutTransition;
   ASDisplayNodeLayout _calculatedDisplayNodeLayout;
@@ -170,26 +184,41 @@ AS_EXTERN NSString * const ASRenderingEngineDidDisplayNodesScheduledBeforeTimest
   /// Sentinel for layout data. Incremented when we get -setNeedsLayout / -invalidateCalculatedLayout.
   /// Starts at 1.
   std::atomic<NSUInteger> _layoutVersion;
-  
+
+
+  // Layout Spec performance measurement
+  ASDisplayNodePerformanceMeasurementOptions _measurementOptions;
+  NSTimeInterval _layoutSpecTotalTime;
+  NSInteger _layoutSpecNumberOfPasses;
+  NSTimeInterval _layoutComputationTotalTime;
+  NSInteger _layoutComputationNumberOfPasses;
+
+
+  // View Loading
   ASDisplayNodeViewBlock _viewBlock;
   ASDisplayNodeLayerBlock _layerBlock;
   NSMutableArray<ASDisplayNodeDidLoadBlock> *_onDidLoadBlocks;
   Class _viewClass; // nil -> _ASDisplayView
   Class _layerClass; // nil -> _ASDisplayLayer
-  
+
+
+  // Placeholder support
   UIImage *_placeholderImage;
   BOOL _placeholderEnabled;
   CALayer *_placeholderLayer;
 
   // keeps track of nodes/subnodes that have not finished display, used with placeholders
   ASWeakSet *_pendingDisplayNodes;
-  
+
+
+  // Corner Radius support
   CGFloat _cornerRadius;
   ASCornerRoundingType _cornerRoundingType;
   CALayer *_clipCornerLayers[NUM_CLIP_CORNER_LAYERS];
 
   ASDisplayNodeContextModifier _willDisplayNodeContentWithRenderingContext;
   ASDisplayNodeContextModifier _didDisplayNodeContentWithRenderingContext;
+
 
   // Accessibility support
   BOOL _isAccessibilityElement;
@@ -212,6 +241,8 @@ AS_EXTERN NSString * const ASRenderingEngineDidDisplayNodesScheduledBeforeTimest
   UIBezierPath *_accessibilityPath;
   BOOL _isAccessibilityContainer;
 
+
+  // Safe Area support
   // These properties are used on iOS 10 and lower, where safe area is not supported by UIKit.
   UIEdgeInsets _fallbackSafeAreaInsets;
   BOOL _fallbackInsetsLayoutMarginsFromSafeArea;
@@ -221,23 +252,6 @@ AS_EXTERN NSString * const ASRenderingEngineDidDisplayNodesScheduledBeforeTimest
 
   BOOL _isViewControllerRoot;
 
-  // performance measurement
-  ASDisplayNodePerformanceMeasurementOptions _measurementOptions;
-  NSTimeInterval _layoutSpecTotalTime;
-  NSInteger _layoutSpecNumberOfPasses;
-  NSTimeInterval _layoutComputationTotalTime;
-  NSInteger _layoutComputationNumberOfPasses;
-
-#if YOGA
-  // Only ASDisplayNodes are supported in _yogaChildren currently. This means that it is necessary to
-  // create ASDisplayNodes to make a stack layout when using Yoga.
-  // However, the implementation is mostly ready for id <ASLayoutElement>, with a few areas requiring updates.
-  NSMutableArray<ASDisplayNode *> *_yogaChildren;
-  __weak ASDisplayNode *_yogaParent;
-  ASLayout *_yogaCalculatedLayout;
-#endif
-  
-  NSString *_debugName;
 
 #pragma mark - ASDisplayNode (Debugging)
   ASLayout *_unflattenedLayout;
@@ -392,6 +406,11 @@ AS_EXTERN NSString * const ASRenderingEngineDidDisplayNodesScheduledBeforeTimest
  * Returns the internal style object or creates a new if no exists. Need to be called with lock held.
  */
 - (ASLayoutElementStyle *)_locked_style;
+
+/**
+ * Returns the current layout element. Need to be called with lock held.
+ */
+- (id<ASLayoutElement>)_locked_layoutElementThatFits:(ASSizeRange)constrainedSize;
 
 @end
 

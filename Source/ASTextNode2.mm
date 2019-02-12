@@ -54,11 +54,11 @@
  * NOTE: Be careful to copy `text` if needed.
  */
 static NS_RETURNS_RETAINED ASTextLayout *ASTextNodeCompatibleLayoutWithContainerAndText(ASTextContainer *container, NSAttributedString *text)  {
-  // Allocate layoutCacheLock on the heap to prevent destruction at app exit (https://github.com/TextureGroup/Texture/issues/136)
-  static auto *layoutCacheLock = new ASDN::Mutex;
-  static NSCache<NSAttributedString *, ASTextCacheValue *> *textLayoutCache;
   static dispatch_once_t onceToken;
+  static ASDN::Mutex *layoutCacheLock;
+  static NSCache<NSAttributedString *, ASTextCacheValue *> *textLayoutCache;
   dispatch_once(&onceToken, ^{
+    layoutCacheLock = new ASDN::Mutex();
     textLayoutCache = [[NSCache alloc] init];
   });
 
@@ -76,7 +76,7 @@ static NS_RETURNS_RETAINED ASTextLayout *ASTextNodeCompatibleLayoutWithContainer
 
   CGRect containerBounds = (CGRect){ .size = container.size };
   {
-    for (let &t : cacheValue->_layouts) {
+    for (const auto &t : cacheValue->_layouts) {
       CGSize constrainedSize = std::get<0>(t);
       ASTextLayout *layout = std::get<1>(t);
 
@@ -141,11 +141,19 @@ static const CGFloat ASTextNodeHighlightLightOpacity = 0.11;
 static const CGFloat ASTextNodeHighlightDarkOpacity = 0.22;
 static NSString *ASTextNodeTruncationTokenAttributeName = @"ASTextNodeTruncationAttribute";
 
+#if AS_ENABLE_TEXTNODE
 @interface ASTextNode2 () <UIGestureRecognizerDelegate>
+#else
+@interface ASTextNode () <UIGestureRecognizerDelegate>
+#endif
 
 @end
 
+#if AS_ENABLE_TEXTNODE
 @implementation ASTextNode2 {
+#else
+@implementation ASTextNode {
+#endif
   ASTextContainer *_textContainer;
   
   CGSize _shadowOffset;
@@ -171,7 +179,14 @@ static NSString *ASTextNodeTruncationTokenAttributeName = @"ASTextNodeTruncation
 }
 @dynamic placeholderEnabled;
 
-static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
+static NSArray *DefaultLinkAttributeNames() {
+  static NSArray *names;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    names = @[ NSLinkAttributeName ];
+  });
+  return names;
+}
 
 - (instancetype)init
 {
@@ -192,9 +207,9 @@ static NSArray *DefaultLinkAttributeNames = @[ NSLinkAttributeName ];
     // The common case is for a text node to be non-opaque and blended over some background.
     self.opaque = NO;
     self.backgroundColor = [UIColor clearColor];
-    
-    self.linkAttributeNames = DefaultLinkAttributeNames;
-    
+
+    self.linkAttributeNames = DefaultLinkAttributeNames();
+
     // Accessibility
     self.isAccessibilityElement = YES;
     self.accessibilityTraits = self.defaultAccessibilityTraits;
@@ -1137,7 +1152,7 @@ static NSAttributedString *DefaultTruncationAttributedString()
 
 - (BOOL)isTruncated
 {
-  return ASLockedSelf([self locked_textLayoutForSize:[self _locked_threadSafeBounds].size].truncatedLine == nil);
+  return ASLockedSelf([self locked_textLayoutForSize:[self _locked_threadSafeBounds].size].truncatedLine != nil);
 }
 
 - (BOOL)shouldTruncateForConstrainedSize:(ASSizeRange)constrainedSize

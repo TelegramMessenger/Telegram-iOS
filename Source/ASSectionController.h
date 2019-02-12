@@ -36,6 +36,19 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (ASCellNodeBlock)nodeBlockForItemAtIndex:(NSInteger)index;
 
+/**
+ * Similar to -collectionView:cellForItemAtIndexPath:.
+ *
+ * Note: only called if nodeBlockForItemAtIndex: returns nil.
+ *
+ * @param index The index of the item.
+ *
+ * @return A node to display for the given item. This will be called on the main thread and should
+ *   not implement reuse (it will be called once per item).  Unlike UICollectionView's version,
+ *   this method is not called when the item is about to display.
+ */
+- (ASCellNode *)nodeForItemAtIndex:(NSInteger)index;
+
 @optional
 
 /**

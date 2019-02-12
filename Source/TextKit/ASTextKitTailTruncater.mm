@@ -7,8 +7,11 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#import <AsyncDisplayKit/ASTextKitContext.h>
 #import <AsyncDisplayKit/ASTextKitTailTruncater.h>
+
+#if AS_ENABLE_TEXTNODE
+
+#import <AsyncDisplayKit/ASTextKitContext.h>
 
 @implementation ASTextKitTailTruncater
 {
@@ -189,3 +192,5 @@
 }
 
 @end
+
+#endif

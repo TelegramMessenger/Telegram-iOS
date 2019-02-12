@@ -9,6 +9,8 @@
 
 #import <AsyncDisplayKit/ASTextKitShadower.h>
 
+#if AS_ENABLE_TEXTNODE
+
 #import <tgmath.h>
 
 static inline CGSize _insetSize(CGSize size, UIEdgeInsets insets)
@@ -171,3 +173,5 @@ static inline UIEdgeInsets _invertInsets(UIEdgeInsets insets)
 }
 
 @end
+
+#endif

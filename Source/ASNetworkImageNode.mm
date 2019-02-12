@@ -50,10 +50,14 @@
   BOOL _shouldRenderProgressImages;
 
   struct {
+    unsigned int delegateWillStartDisplayAsynchronously:1;
+    unsigned int delegateWillLoadImageFromCache:1;
+    unsigned int delegateWillLoadImageFromNetwork:1;
     unsigned int delegateDidStartFetchingData:1;
     unsigned int delegateDidFailWithError:1;
     unsigned int delegateDidFinishDecoding:1;
     unsigned int delegateDidLoadImage:1;
+    unsigned int delegateDidLoadImageFromCache:1;
     unsigned int delegateDidLoadImageWithInfo:1;
   } _delegateFlags;
 
@@ -298,10 +302,14 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
   ASLockScopeSelf();
   _delegate = delegate;
   
+  _delegateFlags.delegateWillStartDisplayAsynchronously = [delegate respondsToSelector:@selector(imageNodeWillStartDisplayAsynchronously:)];
+  _delegateFlags.delegateWillLoadImageFromCache = [delegate respondsToSelector:@selector(imageNodeWillLoadImageFromCache:)];
+  _delegateFlags.delegateWillLoadImageFromNetwork = [delegate respondsToSelector:@selector(imageNodeWillLoadImageFromNetwork:)];
   _delegateFlags.delegateDidStartFetchingData = [delegate respondsToSelector:@selector(imageNodeDidStartFetchingData:)];
   _delegateFlags.delegateDidFailWithError = [delegate respondsToSelector:@selector(imageNode:didFailWithError:)];
   _delegateFlags.delegateDidFinishDecoding = [delegate respondsToSelector:@selector(imageNodeDidFinishDecoding:)];
   _delegateFlags.delegateDidLoadImage = [delegate respondsToSelector:@selector(imageNode:didLoadImage:)];
+  _delegateFlags.delegateDidLoadImageFromCache = [delegate respondsToSelector:@selector(imageNodeDidLoadImageFromCache:)];
   _delegateFlags.delegateDidLoadImageWithInfo = [delegate respondsToSelector:@selector(imageNode:didLoadImage:info:)];
 }
 
@@ -336,6 +344,17 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
 {
   [super displayWillStartAsynchronously:asynchronously];
   
+  id<ASNetworkImageNodeDelegate> delegate;
+  BOOL notifyDelegate;
+  {
+    ASLockScopeSelf();
+    notifyDelegate = _delegateFlags.delegateWillStartDisplayAsynchronously;
+    delegate = _delegate;
+  }
+  if (notifyDelegate) {
+    [delegate imageNodeWillStartDisplayAsynchronously:self];
+  }
+  
   if (asynchronously == NO && _cacheFlags.cacheSupportsSynchronousFetch) {
     ASLockScopeSelf();
 
@@ -350,11 +369,11 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
         // Call out to the delegate.
         if (_delegateFlags.delegateDidLoadImageWithInfo) {
           ASUnlockScope(self);
-          let info = [[ASNetworkImageLoadInfo alloc] initWithURL:url sourceType:ASNetworkImageSourceSynchronousCache downloadIdentifier:nil userInfo:nil];
-          [_delegate imageNode:self didLoadImage:result info:info];
+          const auto info = [[ASNetworkImageLoadInfo alloc] initWithURL:url sourceType:ASNetworkImageSourceSynchronousCache downloadIdentifier:nil userInfo:nil];
+          [delegate imageNode:self didLoadImage:result info:info];
         } else if (_delegateFlags.delegateDidLoadImage) {
           ASUnlockScope(self);
-          [_delegate imageNode:self didLoadImage:result];
+          [delegate imageNode:self didLoadImage:result];
         }
       }
     }
@@ -617,6 +636,9 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
   [self lock];
     __weak id<ASNetworkImageNodeDelegate> delegate = _delegate;
     BOOL delegateDidStartFetchingData = _delegateFlags.delegateDidStartFetchingData;
+    BOOL delegateWillLoadImageFromCache = _delegateFlags.delegateWillLoadImageFromCache;
+    BOOL delegateWillLoadImageFromNetwork = _delegateFlags.delegateWillLoadImageFromNetwork;
+    BOOL delegateDidLoadImageFromCache = _delegateFlags.delegateDidLoadImageFromCache;
     BOOL isImageLoaded = _imageLoaded;
     NSURL *URL = _URL;
     id currentDownloadIdentifier = _downloadIdentifier;
@@ -641,7 +663,7 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
         } else {
           // First try to load the path directly, for efficiency assuming a developer who
           // doesn't want caching is trying to be as minimal as possible.
-          var nonAnimatedImage = [[UIImage alloc] initWithContentsOfFile:URL.path];
+          auto nonAnimatedImage = [[UIImage alloc] initWithContentsOfFile:URL.path];
           if (nonAnimatedImage == nil) {
             // If we couldn't find it, execute an -imageNamed:-like search so we can find resources even if the
             // extension is not provided in the path.  This allows the same path to work regardless of shouldCacheImage.
@@ -654,7 +676,7 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
           // If the file may be an animated gif and then created an animated image.
           id<ASAnimatedImageProtocol> animatedImage = nil;
           if (self->_downloaderFlags.downloaderImplementsAnimatedImage) {
-            let data = [[NSData alloc] initWithContentsOfURL:URL];
+            const auto data = [[NSData alloc] initWithContentsOfURL:URL];
             if (data != nil) {
               animatedImage = [self->_downloader animatedImageWithData:data];
 
@@ -677,7 +699,7 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
 
         if (self->_delegateFlags.delegateDidLoadImageWithInfo) {
           ASUnlockScope(self);
-          let info = [[ASNetworkImageLoadInfo alloc] initWithURL:URL sourceType:ASNetworkImageSourceFileURL downloadIdentifier:nil userInfo:nil];
+          const auto info = [[ASNetworkImageLoadInfo alloc] initWithURL:URL sourceType:ASNetworkImageSourceFileURL downloadIdentifier:nil userInfo:nil];
           [delegate imageNode:self didLoadImage:self.image info:info];
         } else if (self->_delegateFlags.delegateDidLoadImage) {
           ASUnlockScope(self);
@@ -686,7 +708,7 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
       });
     } else {
       __weak __typeof__(self) weakSelf = self;
-      let finished = ^(id <ASImageContainerProtocol>imageContainer, NSError *error, id downloadIdentifier, ASNetworkImageSourceType imageSource, id userInfo) {
+      const auto finished = ^(id <ASImageContainerProtocol>imageContainer, NSError *error, id downloadIdentifier, ASNetworkImageSourceType imageSource, id userInfo) {
         ASPerformBlockOnBackgroundThread(^{
           __typeof__(self) strongSelf = weakSelf;
           if (strongSelf == nil) {
@@ -732,7 +754,7 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
           if (newImage) {
             if (strongSelf->_delegateFlags.delegateDidLoadImageWithInfo) {
               calloutBlock = ^(ASNetworkImageNode *strongSelf) {
-                let info = [[ASNetworkImageLoadInfo alloc] initWithURL:URL sourceType:imageSource downloadIdentifier:downloadIdentifier userInfo:userInfo];
+                const auto info = [[ASNetworkImageLoadInfo alloc] initWithURL:URL sourceType:imageSource downloadIdentifier:downloadIdentifier userInfo:userInfo];
                 [delegate imageNode:strongSelf didLoadImage:newImage info:info];
               };
             } else if (strongSelf->_delegateFlags.delegateDidLoadImage) {
@@ -774,18 +796,31 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
           }
           
           if ([imageContainer asdk_image] == nil && self->_downloader != nil) {
+            if (delegateWillLoadImageFromNetwork) {
+              [delegate imageNodeWillLoadImageFromNetwork:self];
+            }
             [self _downloadImageWithCompletion:^(id<ASImageContainerProtocol> imageContainer, NSError *error, id downloadIdentifier, id userInfo) {
               finished(imageContainer, error, downloadIdentifier, ASNetworkImageSourceDownload, userInfo);
             }];
           } else {
+            if (delegateDidLoadImageFromCache) {
+              [delegate imageNodeDidLoadImageFromCache:self];
+            }
             as_log_verbose(ASImageLoadingLog(), "Decached image for %@ img: %@ url: %@", self, [imageContainer asdk_image], URL);
             finished(imageContainer, nil, nil, ASNetworkImageSourceAsynchronousCache, nil);
           }
         };
+        
+        if (delegateWillLoadImageFromCache) {
+          [delegate imageNodeWillLoadImageFromCache:self];
+        }
         [_cache cachedImageWithURL:URL
                      callbackQueue:[self callbackQueue]
                         completion:completion];
       } else {
+        if (delegateWillLoadImageFromNetwork) {
+          [delegate imageNodeWillLoadImageFromNetwork:self];
+        }
         [self _downloadImageWithCompletion:^(id<ASImageContainerProtocol> imageContainer, NSError *error, id downloadIdentifier, id userInfo) {
           finished(imageContainer, error, downloadIdentifier, ASNetworkImageSourceDownload, userInfo);
         }];

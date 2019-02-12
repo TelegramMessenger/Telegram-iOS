@@ -1,9 +1,8 @@
 #!/bin/bash
 
-PLATFORM="platform=iOS Simulator,OS=10.2,name=iPhone 7"
-SDK="iphonesimulator11.0"
+PLATFORM="${TEXTURE_BUILD_PLATFORM:-platform=iOS Simulator,OS=10.2,name=iPhone 7}"
+SDK="${TEXTURE_BUILD_SDK:-iphonesimulator11.0}"
 DERIVED_DATA_PATH="~/ASDKDerivedData"
-
 
 # It is pitch black.
 set -e

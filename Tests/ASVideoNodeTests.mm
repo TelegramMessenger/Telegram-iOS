@@ -7,14 +7,17 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#import <OCMock/OCMock.h>
-
 #import <UIKit/UIKit.h>
+
+#import <OCMock/OCMock.h>
 #import <XCTest/XCTest.h>
 #import <AVFoundation/AVFoundation.h>
+
 #import <AsyncDisplayKit/AsyncDisplayKit.h>
+
 #import "ASDisplayNodeTestsHelper.h"
 
+#if AS_USE_VIDEO
 @interface ASVideoNodeTests : XCTestCase <ASVideoNodeDelegate>
 {
   ASVideoNode *_videoNode;
@@ -421,3 +424,5 @@
 }
 
 @end
+
+#endif

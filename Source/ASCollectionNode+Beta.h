@@ -34,21 +34,23 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nullable, nonatomic, weak) id<ASBatchFetchingDelegate> batchFetchingDelegate;
 
 /**
- * When this mode is enabled, ASCollectionView matches the timing of UICollectionView as closely as possible, 
- * ensuring that all reload and edit operations are performed on the main thread as blocking calls. 
+ * When this mode is enabled, ASCollectionView matches the timing of UICollectionView as closely as
+ * possible, ensuring that all reload and edit operations are performed on the main thread as
+ * blocking calls.
  *
- * This mode is useful for applications that are debugging issues with their collection view implementation. 
- * In particular, some applications do not properly conform to the API requirement of UICollectionView, and these 
- * applications may experience difficulties with ASCollectionView. Providing this mode allows for developers to 
- * work towards resolving technical debt in their collection view data source, while ramping up asynchronous 
- * collection layout.
+ * This mode is useful for applications that are debugging issues with their collection view
+ * implementation. In particular, some applications do not properly conform to the API requirement
+ * of UICollectionView, and these applications may experience difficulties with ASCollectionView.
+ * Providing this mode allows for developers to work towards resolving technical debt in their
+ * collection view data source, while ramping up asynchronous collection layout.
  *
- * NOTE: Because this mode results in expensive operations like cell layout being performed on the main thread, 
- * it should be used as a tool to resolve data source conformance issues with Apple collection view API.
+ * NOTE: Because this mode results in expensive operations like cell layout being performed on the
+ * main thread, it should be used as a tool to resolve data source conformance issues with Apple
+ * collection view API.
  *
- * @default defaults to NO.
+ * @default defaults to ASCellLayoutModeNone.
  */
-@property (nonatomic) BOOL usesSynchronousDataLoading;
+@property (nonatomic) ASCellLayoutMode cellLayoutMode;
 
 /**
  *  Returns YES if the ASCollectionNode contents are completely synchronized with the underlying collection-view layout.
@@ -72,8 +74,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)endUpdatesAnimated:(BOOL)animated ASDISPLAYNODE_DEPRECATED_MSG("Use -performBatchUpdates:completion: instead.");
 
 - (void)endUpdatesAnimated:(BOOL)animated completion:(nullable void (^)(BOOL))completion ASDISPLAYNODE_DEPRECATED_MSG("Use -performBatchUpdates:completion: instead.");
-
-- (void)invalidateFlowLayoutDelegateMetrics;
 
 @end
 

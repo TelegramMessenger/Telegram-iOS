@@ -43,14 +43,14 @@ BOOL ASMainThreadAssertionsAreDisabled() {
 }
 
 void ASPushMainThreadAssertionsDisabled() {
-  let key = ASMainThreadAssertionsDisabledKey();
-  let oldVal = (intptr_t)pthread_getspecific(key);
+  const auto key = ASMainThreadAssertionsDisabledKey();
+  const auto oldVal = (intptr_t)pthread_getspecific(key);
   pthread_setspecific(key, (void *)(oldVal + 1));
 }
 
 void ASPopMainThreadAssertionsDisabled() {
-  let key = ASMainThreadAssertionsDisabledKey();
-  let oldVal = (intptr_t)pthread_getspecific(key);
+  const auto key = ASMainThreadAssertionsDisabledKey();
+  const auto oldVal = (intptr_t)pthread_getspecific(key);
   pthread_setspecific(key, (void *)(oldVal - 1));
   ASDisplayNodeCAssert(oldVal > 0, @"Attempt to pop thread assertion-disabling without corresponding push.");
 }

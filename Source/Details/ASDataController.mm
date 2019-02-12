@@ -158,10 +158,14 @@ typedef void (^ASDataControllerSynchronizationBlock)();
   {
     as_activity_create_for_scope("Data controller batch");
 
-    // TODO: Should we use USER_INITIATED here since the user is probably waiting?
-    dispatch_queue_t queue = dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0);
-    ASDispatchApply(nodeCount, queue, 0, ^(size_t i) {
-      if (!weakDataSource) {
+    dispatch_queue_t queue = dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0);
+    NSUInteger threadCount = 0;
+    if ([_dataSource dataControllerShouldSerializeNodeCreation:self]) {
+      threadCount = 1;
+    }
+    ASDispatchApply(nodeCount, queue, threadCount, ^(size_t i) {
+      __strong id<ASDataControllerSource> strongDataSource = weakDataSource;
+      if (strongDataSource == nil) {
         return;
       }
 
@@ -183,6 +187,10 @@ typedef void (^ASDataControllerSynchronizationBlock)();
  */
 - (void)_layoutNode:(ASCellNode *)node withConstrainedSize:(ASSizeRange)constrainedSize
 {
+  if (![_dataSource dataController:self shouldEagerlyLayoutNode:node]) {
+    return;
+  }
+  
   ASDisplayNodeAssert(ASSizeRangeHasSignificantArea(constrainedSize), @"Attempt to layout cell node with invalid size range %@", NSStringFromASSizeRange(constrainedSize));
 
   CGRect frame = CGRectZero;
@@ -200,7 +208,7 @@ typedef void (^ASDataControllerSynchronizationBlock)();
     return @[];
   }
   
-  let indexPaths = [[NSMutableArray<NSIndexPath *> alloc] init];
+  const auto indexPaths = [[NSMutableArray<NSIndexPath *> alloc] init];
   if ([kind isEqualToString:ASDataControllerRowNodeKind]) {
     std::vector<NSInteger> counts = [self itemCountsFromDataSource];
     [sections enumerateRangesUsingBlock:^(NSRange range, BOOL * _Nonnull stop) {
@@ -370,6 +378,7 @@ typedef void (^ASDataControllerSynchronizationBlock)();
   LOG(@"Populating elements of kind: %@, for index paths: %@", kind, indexPaths);
   id<ASDataControllerSource> dataSource = self.dataSource;
   id<ASRangeManagingNode> node = self.node;
+  BOOL shouldAsyncLayout = YES;
   for (NSIndexPath *indexPath in indexPaths) {
     ASCellNodeBlock nodeBlock;
     id nodeModel;
@@ -391,13 +400,12 @@ typedef void (^ASDataControllerSynchronizationBlock)();
         }
       }
       if (nodeBlock == nil) {
-        nodeBlock = [dataSource dataController:self nodeBlockAtIndexPath:indexPath];
+        nodeBlock = [dataSource dataController:self nodeBlockAtIndexPath:indexPath shouldAsyncLayout:&shouldAsyncLayout];
       }
     } else {
-      BOOL shouldAsyncLayout = YES;
       nodeBlock = [dataSource dataController:self supplementaryNodeBlockOfKind:kind atIndexPath:indexPath shouldAsyncLayout:&shouldAsyncLayout];
     }
-    
+
     ASSizeRange constrainedSize = ASSizeRangeUnconstrained;
     if (shouldFetchSizeRanges) {
       constrainedSize = [self constrainedSizeForNodeOfKind:kind atIndexPath:indexPath];
@@ -410,6 +418,7 @@ typedef void (^ASDataControllerSynchronizationBlock)();
                                                                        owningNode:node
                                                                   traitCollection:traitCollection];
     [map insertElement:element atIndexPath:indexPath];
+    changeSet.countForAsyncLayout += (shouldAsyncLayout ? 1 : 0);
   }
 }
 
@@ -638,7 +647,7 @@ typedef void (^ASDataControllerSynchronizationBlock)();
     if (canDelegate) {
       [layoutDelegateClass calculateLayoutWithContext:layoutContext];
     } else {
-      let elementsToProcess = [[NSMutableArray<ASCollectionElement *> alloc] init];
+      const auto elementsToProcess = [[NSMutableArray<ASCollectionElement *> alloc] init];
       for (ASCollectionElement *element in newMap) {
         ASCellNode *nodeIfAllocated = element.nodeIfAllocated;
         if (nodeIfAllocated.shouldUseUIKitCell) {
@@ -668,8 +677,15 @@ typedef void (^ASDataControllerSynchronizationBlock)();
     }];
     --_editingTransactionGroupCount;
   });
-  
-  if (_usesSynchronousDataLoading) {
+
+  // We've now dispatched node allocation and layout to a concurrent background queue.
+  // In some cases, it's advantageous to prevent the main thread from returning, to ensure the next
+  // frame displayed to the user has the view updates in place. Doing this does slightly reduce
+  // total latency, by donating the main thread's priority to the background threads. As such, the
+  // two cases where it makes sense to block:
+  // 1. There is very little work to be performed in the background (UIKit passthrough)
+  // 2. There is a higher priority on display latency than smoothness, e.g. app startup.
+  if ([_dataSource dataController:self shouldSynchronouslyProcessChangeSet:changeSet]) {
     [self waitUntilAllUpdatesAreProcessed];
   }
 }
@@ -810,10 +826,10 @@ typedef void (^ASDataControllerSynchronizationBlock)();
   }
   
   id<ASDataControllerSource> dataSource = self.dataSource;
-  let visibleMap = self.visibleMap;
-  let pendingMap = self.pendingMap;
+  const auto visibleMap = self.visibleMap;
+  const auto pendingMap = self.pendingMap;
   for (ASCellNode *node in nodes) {
-    let element = node.collectionElement;
+    const auto element = node.collectionElement;
     NSIndexPath *indexPathInPendingMap = [pendingMap indexPathForElement:element];
     // Ensure the element is present in both maps or skip it. If it's not in the visible map,
     // then we can't check the presented size. If it's not in the pending map, we can't get the constrained size.
@@ -871,7 +887,12 @@ typedef void (^ASDataControllerSynchronizationBlock)();
   _visibleMap = _pendingMap;
 
   for (ASCollectionElement *element in _visibleMap) {
+    // Ignore this element if it is no longer in the latest data. It is still recognized in the UIKit world but will be deleted soon.
     NSIndexPath *indexPathInPendingMap = [_pendingMap indexPathForElement:element];
+    if (indexPathInPendingMap == nil) {
+      continue;
+    }
+
     NSString *kind = element.supplementaryElementKind ?: ASDataControllerRowNodeKind;
     ASSizeRange newConstrainedSize = [self constrainedSizeForNodeOfKind:kind atIndexPath:indexPathInPendingMap];
 

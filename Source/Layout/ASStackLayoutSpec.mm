@@ -159,7 +159,7 @@
     rawSublayouts[i++] = item.layout;
   }
 
-  let sublayouts = [NSArray<ASLayout *> arrayByTransferring:rawSublayouts count:i];
+  const auto sublayouts = [NSArray<ASLayout *> arrayByTransferring:rawSublayouts count:i];
   return [ASLayout layoutWithLayoutElement:self size:positionedLayout.size sublayouts:sublayouts];
 }
 

@@ -60,7 +60,7 @@
   }
 
   ASDN::MutexLocker l(__instanceLock__);
-  var innerMap = [_map objectForKey:elements];
+  auto innerMap = [_map objectForKey:elements];
   if (innerMap == nil) {
     innerMap = [NSMapTable strongToStrongObjectsMapTable];
     [_map setObject:innerMap forKey:elements];

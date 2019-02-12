@@ -7,11 +7,15 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 #ifndef MINIMAL_ASDK
+
+#import <AsyncDisplayKit/ASVideoNode.h>
+
+#if AS_USE_VIDEO
+
 #import <AVFoundation/AVFoundation.h>
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h>
-#import <AsyncDisplayKit/ASVideoNode.h>
 #import <AsyncDisplayKit/ASEqualityHelpers.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
@@ -856,4 +860,5 @@ static NSString * const kRate = @"rate";
 }
 
 @end
+#endif
 #endif

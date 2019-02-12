@@ -38,12 +38,20 @@ NSString * const kASBasicImageDownloaderContextCompletionBlock = @"kASBasicImage
 @implementation ASBasicImageDownloaderContext
 
 static NSMutableDictionary *currentRequests = nil;
-// Allocate currentRequestsLock on the heap to prevent destruction at app exit (https://github.com/TextureGroup/Texture/issues/136)
-static auto *currentRequestsLock = new ASDN::Mutex;
+
++ (ASDN::Mutex *)currentRequestLock
+{
+  static dispatch_once_t onceToken;
+  static ASDN::Mutex *currentRequestsLock;
+  dispatch_once(&onceToken, ^{
+    currentRequestsLock = new ASDN::Mutex();
+  });
+  return currentRequestsLock;
+}
 
 + (ASBasicImageDownloaderContext *)contextForURL:(NSURL *)URL
 {
-  ASDN::MutexLocker l(*currentRequestsLock);
+  ASDN::MutexLocker l(*self.currentRequestLock);
   if (!currentRequests) {
     currentRequests = [[NSMutableDictionary alloc] init];
   }
@@ -57,7 +65,7 @@ static auto *currentRequestsLock = new ASDN::Mutex;
 
 + (void)cancelContextWithURL:(NSURL *)URL
 {
-  ASDN::MutexLocker l(*currentRequestsLock);
+  ASDN::MutexLocker l(*self.currentRequestLock);
   if (currentRequests) {
     [currentRequests removeObjectForKey:URL];
   }
@@ -175,14 +183,18 @@ static auto *currentRequestsLock = new ASDN::Mutex;
 @end
 
 @implementation NSURLRequest (ASBasicImageDownloader)
-static const char *kContextKey = NSStringFromClass(ASBasicImageDownloaderContext.class).UTF8String;
+
+static const void *ContextKey() {
+  return @selector(asyncdisplaykit_context);
+}
+
 - (void)setAsyncdisplaykit_context:(ASBasicImageDownloaderContext *)asyncdisplaykit_context
 {
-  objc_setAssociatedObject(self, kContextKey, asyncdisplaykit_context, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+  objc_setAssociatedObject(self, ContextKey(), asyncdisplaykit_context, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 - (ASBasicImageDownloader *)asyncdisplaykit_context
 {
-  return objc_getAssociatedObject(self, kContextKey);
+  return objc_getAssociatedObject(self, ContextKey());
 }
 @end
 
@@ -237,7 +249,7 @@ static const char *kContextKey = NSStringFromClass(ASBasicImageDownloaderContext
   // cause significant performance issues.
   dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
     // associate metadata with it
-    let callbackData = [[NSMutableDictionary alloc] init];
+    const auto callbackData = [[NSMutableDictionary alloc] init];
     callbackData[kASBasicImageDownloaderContextCallbackQueue] = callbackQueue ? : dispatch_get_main_queue();
 
     if (downloadProgress) {

@@ -12,14 +12,10 @@
 #import <AsyncDisplayKit/AsyncDisplayKit.h>
 #import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 
-#import "Utilities.h"
+#import "Availability.h"
 #import "PINImageView+PINRemoteImage.h"
 #import "PINButton+PINRemoteImage.h"
-
-// There are many ways to format ASLayoutSpec code.  In this example, we offer two different formats:
-// A flatter, more ordinary Objective-C style; or a more structured, "visually" declarative style.
-#define YOGA_LAYOUT 0
-#define FLAT_LAYOUT 0
+#import "Utilities.h"
 
 #define DEBUG_PHOTOCELL_LAYOUT  0
 
@@ -288,7 +284,6 @@
   [_userAvatarImageNode.style yogaNodeCreateIfNeeded];
   [_userNameLabel.style yogaNodeCreateIfNeeded];
   [_photoImageNode.style yogaNodeCreateIfNeeded];
-  [_photoCommentsNode.style yogaNodeCreateIfNeeded];
   [_photoLikesLabel.style yogaNodeCreateIfNeeded];
   [_photoDescriptionLabel.style yogaNodeCreateIfNeeded];
   [_photoLocationLabel.style yogaNodeCreateIfNeeded];
@@ -329,7 +324,7 @@
   ASDisplayNode *footerStack = [ASDisplayNode yogaVerticalStack];
   footerStack.style.margin = ASEdgeInsetsMake(InsetForFooter);
   footerStack.style.padding = ASEdgeInsetsMake(UIEdgeInsetsMake(0.0, 0.0, VERTICAL_BUFFER, 0.0));
-  footerStack.yogaChildren = @[_photoLikesLabel, _photoDescriptionLabel, _photoCommentsNode];
+  footerStack.yogaChildren = @[_photoLikesLabel, _photoDescriptionLabel];
 
   // Main Vertical Stack: contains header, large main photo with fixed aspect ratio, and footer.
   _photoImageNode.style.aspectRatio = 1.0;

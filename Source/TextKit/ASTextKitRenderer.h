@@ -7,11 +7,15 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#import <vector>
-
 #import <UIKit/UIKit.h>
 
+#import <AsyncDisplayKit/ASAvailability.h>
+
+#if AS_ENABLE_TEXTNODE
+
 #import <AsyncDisplayKit/ASTextKitAttributes.h>
+
+#import <vector>
 
 @class ASTextKitContext;
 @class ASTextKitShadower;
@@ -100,3 +104,5 @@
 @property (nonatomic, readonly) NSRange firstVisibleRange;
 
 @end
+
+#endif

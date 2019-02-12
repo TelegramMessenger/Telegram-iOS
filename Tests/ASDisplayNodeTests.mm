@@ -8,8 +8,6 @@
 //
 
 #import <QuartzCore/QuartzCore.h>
-
-#import "ASXCTExtensions.h"
 #import <XCTest/XCTest.h>
 
 #import <AsyncDisplayKit/_ASDisplayLayer.h>
@@ -19,7 +17,6 @@
 #import <AsyncDisplayKit/ASDisplayNode+FrameworkPrivate.h>
 #import <AsyncDisplayKit/ASDisplayNodeInternal.h>
 #import <AsyncDisplayKit/ASDisplayNodeCornerLayerDelegate.h>
-#import "ASDisplayNodeTestsHelper.h"
 #import <AsyncDisplayKit/UIView+ASConvenience.h>
 #import <AsyncDisplayKit/ASCellNode.h>
 #import <AsyncDisplayKit/ASEditableTextNode.h>
@@ -31,8 +28,10 @@
 #import <AsyncDisplayKit/ASBackgroundLayoutSpec.h>
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <AsyncDisplayKit/ASDisplayNodeExtras.h>
-#import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 #import <AsyncDisplayKit/ASViewController.h>
+
+#import "ASXCTExtensions.h"
+#import "ASDisplayNodeTestsHelper.h"
 
 // Conveniences for making nodes named a certain way
 #define DeclareNodeNamed(n) ASDisplayNode *n = [[ASDisplayNode alloc] init]; n.debugName = @#n

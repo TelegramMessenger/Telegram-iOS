@@ -14,6 +14,9 @@
 
 #import <AsyncDisplayKit/ASVideoPlayerNode.h>
 
+#if AS_USE_VIDEO
+#if TARGET_OS_IOS
+
 #import <AVFoundation/AVFoundation.h>
 
 #import <AsyncDisplayKit/AsyncDisplayKit.h>
@@ -288,7 +291,7 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
       
       {
         ASUnlockScope(self);
-        for (var subnode : subnodes) {
+        for (ASDisplayNode *subnode : subnodes) {
           [self addSubnode:subnode];
         }
       }
@@ -663,7 +666,7 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
     }];
     _spinnerNode.style.preferredSize = CGSizeMake(44.0, 44.0);
     
-    let spinnerNode = _spinnerNode;
+    const auto spinnerNode = _spinnerNode;
     {
       ASUnlockScope(self);
       [self addSubnode:spinnerNode];
@@ -1017,4 +1020,6 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
 @end
 
 #endif // TARGET_OS_IOS
+#endif
+
 #endif

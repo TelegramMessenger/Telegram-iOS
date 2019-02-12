@@ -84,7 +84,7 @@ Clip corners applies to two main types of corner rounding situations:
 
 There are a few, quite rare cases in which it is appropriate to use `.cornerRadius.` These include when there is dynamic content moving _both_ through the inside and underneath the corner.  For certain animations, this is impossible to avoid.  However, in many cases, it is easy to adjust your design to eliminate one of the sources of movement.  One such case was discussed in the section on corner movement.
 
-It is much less bad, and okay as a shortcut, to use `.cornerRadius.` for screens in which nothing moves.  However, *any* motion on the screen, even movement that doesn't involve the corners, will cause the `.cornerRadius.` perfromance tax.  For example, having a rounded element in the navigation bar with a scrolling view beneath it will cause the impact even if they don't overlap.  Animating anything onscreen, even if the user doesn't interact, will as well.'  Additionally, any type of screen refresh will incur the cost of corner rounding. 
+It is much less bad, and okay as a shortcut, to use `.cornerRadius.` for screens in which nothing moves.  However, *any* motion on the screen, even movement that doesn't involve the corners, will cause the `.cornerRadius.` performance tax.  For example, having a rounded element in the navigation bar with a scrolling view beneath it will cause the impact even if they don't overlap.  Animating anything onscreen, even if the user doesn't interact, will as well.'  Additionally, any type of screen refresh will incur the cost of corner rounding. 
 
 ### Rasterization and Layerbacking
 

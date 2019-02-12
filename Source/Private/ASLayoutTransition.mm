@@ -9,7 +9,6 @@
 
 #import <AsyncDisplayKit/ASLayoutTransition.h>
 
-#import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 #import <AsyncDisplayKit/NSArray+Diffing.h>
 
 #import <AsyncDisplayKit/ASLayout.h>

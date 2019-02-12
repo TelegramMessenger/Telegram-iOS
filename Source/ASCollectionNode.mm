@@ -43,7 +43,7 @@
 @property (nonatomic) BOOL allowsSelection; // default is YES
 @property (nonatomic) BOOL allowsMultipleSelection; // default is NO
 @property (nonatomic) BOOL inverted; //default is NO
-@property (nonatomic) BOOL usesSynchronousDataLoading;
+@property (nonatomic) ASCellLayoutMode cellLayoutMode;
 @property (nonatomic) CGFloat leadingScreensForBatching;
 @property (nonatomic, weak) id <ASCollectionViewLayoutInspecting> layoutInspector;
 @property (nonatomic) BOOL alwaysBounceVertical;
@@ -194,7 +194,7 @@
     view.inverted                       = pendingState.inverted;
     view.allowsSelection                = pendingState.allowsSelection;
     view.allowsMultipleSelection        = pendingState.allowsMultipleSelection;
-    view.usesSynchronousDataLoading     = pendingState.usesSynchronousDataLoading;
+    view.cellLayoutMode                 = pendingState.cellLayoutMode;
     view.layoutInspector                = pendingState.layoutInspector;
     view.showsVerticalScrollIndicator   = pendingState.showsVerticalScrollIndicator;
     view.showsHorizontalScrollIndicator = pendingState.showsHorizontalScrollIndicator;
@@ -217,11 +217,11 @@
       [view setContentOffset:contentOffset animated:pendingState.animatesContentOffset];
     }
     
-    let tuningParametersVector = pendingState->_tuningParameters;
-    let tuningParametersVectorSize = tuningParametersVector.size();
+    const auto tuningParametersVector = pendingState->_tuningParameters;
+    const auto tuningParametersVectorSize = tuningParametersVector.size();
     for (NSInteger rangeMode = 0; rangeMode < tuningParametersVectorSize; rangeMode++) {
-      let tuningparametersRangeModeVector = tuningParametersVector[rangeMode];
-      let tuningParametersVectorRangeModeSize = tuningparametersRangeModeVector.size();
+      const auto tuningparametersRangeModeVector = tuningParametersVector[rangeMode];
+      const auto tuningParametersVectorRangeModeSize = tuningparametersRangeModeVector.size();
       for (NSInteger rangeType = 0; rangeType < tuningParametersVectorRangeModeSize; rangeType++) {
         ASRangeTuningParameters tuningParameters = tuningparametersRangeModeVector[rangeType];
         [_rangeController setTuningParameters:tuningParameters
@@ -629,21 +629,21 @@
   return _batchFetchingDelegate;
 }
 
-- (BOOL)usesSynchronousDataLoading
+- (ASCellLayoutMode)cellLayoutMode
 {
   if ([self pendingState]) {
-    return _pendingState.usesSynchronousDataLoading; 
+    return _pendingState.cellLayoutMode;
   } else {
-    return self.view.usesSynchronousDataLoading;
+    return self.view.cellLayoutMode;
   }
 }
 
-- (void)setUsesSynchronousDataLoading:(BOOL)usesSynchronousDataLoading
+- (void)setCellLayoutMode:(ASCellLayoutMode)cellLayoutMode
 {
   if ([self pendingState]) {
-    _pendingState.usesSynchronousDataLoading = usesSynchronousDataLoading; 
+    _pendingState.cellLayoutMode = cellLayoutMode;
   } else {
-    self.view.usesSynchronousDataLoading = usesSynchronousDataLoading;
+    self.view.cellLayoutMode = cellLayoutMode;
   }
 }
 
@@ -884,10 +884,13 @@
   }
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-implementations"
 - (void)waitUntilAllUpdatesAreCommitted
 {
   [self waitUntilAllUpdatesAreProcessed];
 }
+#pragma clang diagnostic pop
 
 - (void)reloadDataWithCompletion:(void (^)())completion
 {
@@ -918,6 +921,8 @@
   }
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-implementations"
 - (void)beginUpdates
 {
   ASDisplayNodeAssertMainThread();
@@ -938,6 +943,7 @@
     [self.view endUpdatesAnimated:animated completion:completion];
   }
 }
+#pragma clang diagnostic pop
 
 - (void)invalidateFlowLayoutDelegateMetrics {
   ASDisplayNodeAssertMainThread();

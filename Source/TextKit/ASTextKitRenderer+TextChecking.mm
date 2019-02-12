@@ -9,6 +9,8 @@
 
 #import <AsyncDisplayKit/ASTextKitRenderer+TextChecking.h>
 
+#if AS_ENABLE_TEXTNODE
+
 #import <AsyncDisplayKit/ASTextKitEntityAttribute.h>
 #import <AsyncDisplayKit/ASTextKitRenderer+Positioning.h>
 #import <AsyncDisplayKit/ASTextKitTailTruncater.h>
@@ -98,3 +100,5 @@
 }
 
 @end
+
+#endif

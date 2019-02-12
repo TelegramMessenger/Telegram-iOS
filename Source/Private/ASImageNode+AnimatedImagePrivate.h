@@ -9,7 +9,7 @@
 
 #import <AsyncDisplayKit/ASThread.h>
 
-AS_EXTERN NSString *const ASAnimatedImageDefaultRunLoopMode;
+#define ASAnimatedImageDefaultRunLoopMode NSRunLoopCommonModes
 
 @interface ASImageNode ()
 {

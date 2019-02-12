@@ -20,7 +20,7 @@ NS_ASSUME_NONNULL_BEGIN
 AS_SUBCLASSING_RESTRICTED
 @interface ASIGListAdapterBasedDataSource : NSObject <ASCollectionDataSourceInterop, ASCollectionDelegateInterop, ASCollectionDelegateFlowLayout>
 
-- (instancetype)initWithListAdapter:(IGListAdapter *)listAdapter;
+- (instancetype)initWithListAdapter:(IGListAdapter *)listAdapter collectionDelegate:(nullable id<ASCollectionDelegate>)collectionDelegate;
 
 @end
 

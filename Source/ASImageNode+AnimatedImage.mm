@@ -33,7 +33,6 @@
 @end
 #endif
 
-NSString *const ASAnimatedImageDefaultRunLoopMode = NSRunLoopCommonModes;
 
 @implementation ASImageNode (AnimatedImage)
 

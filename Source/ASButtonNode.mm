@@ -16,6 +16,7 @@
 #import <AsyncDisplayKit/ASAbsoluteLayoutSpec.h>
 #import <AsyncDisplayKit/ASTextNode.h>
 #import <AsyncDisplayKit/ASImageNode.h>
+#import <AsyncDisplayKit/ASInternalHelpers.h>
 
 @interface ASButtonNode ()
 {
@@ -543,7 +544,7 @@
 - (NSString *)defaultAccessibilityLabel
 {
   ASLockScopeSelf();
-  return _titleNode.accessibilityLabel;
+  return _titleNode.defaultAccessibilityLabel;
 }
 
 - (UIAccessibilityTraits)defaultAccessibilityTraits

@@ -26,6 +26,9 @@ NSOrderedSet *ASSnapshotTestCaseDefaultSuffixes(void);
 #define ASSnapshotVerifyView(view__, identifier__) \
 	FBSnapshotVerifyViewWithOptions(view__, identifier__, ASSnapshotTestCaseDefaultSuffixes(), 0);
 
+#define ASSnapshotVerifyViewWithTolerance(view__, identifier__, tolerance__) \
+    FBSnapshotVerifyLayerWithOptions(view__, identifier__, ASSnapshotTestCaseDefaultSuffixes(), tolerance__);
+
 @interface ASSnapshotTestCase : FBSnapshotTestCase
 
 /**

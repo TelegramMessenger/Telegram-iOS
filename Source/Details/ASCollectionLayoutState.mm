@@ -157,7 +157,7 @@ elementToLayoutAttributesTable:[NSMapTable elementToLayoutAttributesTable]];
   }
 
   // Use a set here because some items may span multiple pages
-  let result = [[NSMutableSet<UICollectionViewLayoutAttributes *> alloc] init];
+  const auto result = [[NSMutableSet<UICollectionViewLayoutAttributes *> alloc] init];
   for (id pagePtr in pages) {
     ASPageCoordinate page = (ASPageCoordinate)pagePtr;
     NSArray<UICollectionViewLayoutAttributes *> *allAttrs = [_pageToLayoutAttributesTable objectForPage:page];

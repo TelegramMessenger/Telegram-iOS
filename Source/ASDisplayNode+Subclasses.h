@@ -9,6 +9,7 @@
 
 #import <AsyncDisplayKit/ASBlockTypes.h>
 #import <AsyncDisplayKit/ASDisplayNode.h>
+#import <AsyncDisplayKit/ASDisplayNode+LayoutSpec.h>
 
 @class ASLayoutSpec, _ASDisplayLayer;
 
@@ -145,24 +146,6 @@ NS_ASSUME_NONNULL_BEGIN
  * @note This method should not be called directly outside of ASDisplayNode; use -layoutThatFits: or layoutThatFits:parentSize: instead.
  */
 - (CGSize)calculateSizeThatFits:(CGSize)constrainedSize;
-
-/**
- * @abstract Return a layout spec that describes the layout of the receiver and its children.
- *
- * @param constrainedSize The minimum and maximum sizes the receiver should fit in.
- *
- * @discussion Subclasses that override should expect this method to be called on a non-main thread. The returned layout spec
- * is used to calculate an ASLayout and cached by ASDisplayNode for quick access during -layout. Other expensive work that needs to
- * be done before display can be performed here, and using ivars to cache any valuable intermediate results is
- * encouraged.
- *
- * @note This method should not be called directly outside of ASDisplayNode; use -layoutThatFits: instead.
- *
- * @warning Subclasses that implement -layoutSpecThatFits: must not use .layoutSpecBlock. Doing so will trigger an
- * exception. A future version of the framework may support using both, calling them serially, with the .layoutSpecBlock
- * superseding any values set by the method override.
- */
-- (ASLayoutSpec *)layoutSpecThatFits:(ASSizeRange)constrainedSize;
 
 /**
  * @abstract Invalidate previously measured and cached layout.
@@ -467,6 +450,15 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSString *)descriptionForRecursiveDescription;
 
 @end
+
+
+// Check that at most a layoutSpecBlock or one of the three layout methods is overridden
+#define __ASDisplayNodeCheckForLayoutMethodOverrides \
+    ASDisplayNodeAssert(_layoutSpecBlock != NULL || \
+    ((ASDisplayNodeSubclassOverridesSelector(self.class, @selector(calculateSizeThatFits:)) ? 1 : 0) \
+    + (ASDisplayNodeSubclassOverridesSelector(self.class, @selector(layoutSpecThatFits:)) ? 1 : 0) \
+    + (ASDisplayNodeSubclassOverridesSelector(self.class, @selector(calculateLayoutThatFits:)) ? 1 : 0)) <= 1, \
+    @"Subclass %@ must at least provide a layoutSpecBlock or override at most one of the three layout methods: calculateLayoutThatFits:, layoutSpecThatFits:, or calculateSizeThatFits:", NSStringFromClass(self.class))
 
 #define ASDisplayNodeAssertThreadAffinity(viewNode)   ASDisplayNodeAssert(!viewNode || ASMainThreadAssertionsAreDisabled() || ASDisplayNodeThreadIsMain() || !(viewNode).nodeLoaded, @"Incorrect display node thread affinity - this method should not be called off the main thread after the ASDisplayNode's view or layer have been created")
 #define ASDisplayNodeCAssertThreadAffinity(viewNode) ASDisplayNodeCAssert(!viewNode || ASMainThreadAssertionsAreDisabled() || ASDisplayNodeThreadIsMain() || !(viewNode).nodeLoaded, @"Incorrect display node thread affinity - this method should not be called off the main thread after the ASDisplayNode's view or layer have been created")

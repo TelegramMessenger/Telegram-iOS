@@ -72,6 +72,7 @@
 		7688437E1CAA37EF00D8629E /* Utilities.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = Utilities.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		7688437F1CAA37EF00D8629E /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		97A9B1BAF4265967672F9EA3 /* Pods-Sample.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Sample.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Sample/Pods-Sample.debug.xcconfig"; sourceTree = "<group>"; };
+		9DD0C21A21E8AA2B00CB0F51 /* Availability.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Availability.h; sourceTree = "<group>"; };
 		AD5DDA0A29B0F32AA5CC47BA /* libPods-Sample.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Sample.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC00D1551E15912F004E5502 /* PhotoFeedListKitViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PhotoFeedListKitViewController.h; sourceTree = "<group>"; };
 		CC00D1561E15912F004E5502 /* PhotoFeedListKitViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PhotoFeedListKitViewController.m; sourceTree = "<group>"; };
@@ -126,6 +127,7 @@
 		05E2128319D4DB510098F589 /* Sample */ = {
 			isa = PBXGroup;
 			children = (
+				9DD0C21A21E8AA2B00CB0F51 /* Availability.h */,
 				768843511CAA37EF00D8629E /* AppDelegate.h */,
 				768843681CAA37EF00D8629E /* AppDelegate.m */,
 				CCEDDDD6200C4C0E00FFCD0A /* TextureConfigDelegate.m */,

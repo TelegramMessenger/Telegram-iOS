@@ -9,6 +9,8 @@
 
 #import <AsyncDisplayKit/ASTextKitEntityAttribute.h>
 
+#if AS_ENABLE_TEXTNODE
+
 @implementation ASTextKitEntityAttribute
 
 - (instancetype)initWithEntity:(id<NSObject>)entity
@@ -37,3 +39,5 @@
 }
 
 @end
+
+#endif

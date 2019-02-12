@@ -8,6 +8,11 @@
 //
 
 #import <UIKit/UIKit.h>
+
+#import <AsyncDisplayKit/ASAvailability.h>
+
+#if AS_ENABLE_TEXTNODE
+
 #import <AsyncDisplayKit/ASBaseDefines.h>
 
 /**
@@ -69,3 +74,5 @@ AS_SUBCLASSING_RESTRICTED
 - (void)setShadowInContext:(CGContextRef)context;
 
 @end
+
+#endif

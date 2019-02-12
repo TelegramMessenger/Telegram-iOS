@@ -7,8 +7,8 @@
 //
 
 #import <XCTest/XCTest.h>
-#import "ASTabBarController.h"
-#import "ASViewController.h"
+#import <AsyncDisplayKit/ASTabBarController.h>
+#import <AsyncDisplayKit/ASViewController.h>
 
 @interface ASTabBarControllerTests: XCTestCase
 

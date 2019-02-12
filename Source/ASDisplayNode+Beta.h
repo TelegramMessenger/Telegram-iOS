@@ -15,6 +15,7 @@
 #if YOGA
   #import YOGA_HEADER_PATH
   #import <AsyncDisplayKit/ASYogaUtilities.h>
+  #import <AsyncDisplayKit/ASDisplayNode+Yoga.h>
 #endif
 
 NS_ASSUME_NONNULL_BEGIN
@@ -179,58 +180,5 @@ typedef struct {
 - (void)enableSubtreeRasterization;
 
 @end
-
-#pragma mark - Yoga Layout Support
-
-#if YOGA
-
-AS_EXTERN void ASDisplayNodePerformBlockOnEveryYogaChild(ASDisplayNode * _Nullable node, void(^block)(ASDisplayNode *node));
-
-@interface ASDisplayNode (Yoga)
-
-// TODO: Make this and yogaCalculatedLayout atomic (lock).
-@property (nullable, nonatomic) NSArray *yogaChildren;
-
-- (void)addYogaChild:(ASDisplayNode *)child;
-- (void)removeYogaChild:(ASDisplayNode *)child;
-- (void)insertYogaChild:(ASDisplayNode *)child atIndex:(NSUInteger)index;
-
-- (void)semanticContentAttributeDidChange:(UISemanticContentAttribute)attribute;
-
-@property BOOL yogaLayoutInProgress;
-@property (nullable, nonatomic) ASLayout *yogaCalculatedLayout;
-
-// Will walk up the Yoga tree and returns the root node
-- (ASDisplayNode *)yogaRoot;
-
-// These methods are intended to be used internally to Texture, and should not be called directly.
-- (BOOL)shouldHaveYogaMeasureFunc;
-- (void)invalidateCalculatedYogaLayout;
-- (void)calculateLayoutFromYogaRoot:(ASSizeRange)rootConstrainedSize;
-
-@end
-
-@interface ASLayoutElementStyle (Yoga)
-
-- (YGNodeRef)yogaNodeCreateIfNeeded;
-- (void)destroyYogaNode;
-
-@property (readonly) YGNodeRef yogaNode;
-
-@property ASStackLayoutDirection flexDirection;
-@property YGDirection direction;
-@property ASStackLayoutJustifyContent justifyContent;
-@property ASStackLayoutAlignItems alignItems;
-@property YGPositionType positionType;
-@property ASEdgeInsets position;
-@property ASEdgeInsets margin;
-@property ASEdgeInsets padding;
-@property ASEdgeInsets border;
-@property CGFloat aspectRatio;
-@property YGWrap flexWrap;
-
-@end
-
-#endif
 
 NS_ASSUME_NONNULL_END
