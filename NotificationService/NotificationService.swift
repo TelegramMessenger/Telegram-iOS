@@ -188,6 +188,12 @@ class NotificationService: UNNotificationServiceExtension {
                     self.bestAttemptContent?.body = alert["body"] as? String ?? ""
                 }
                 
+                if accountsData.count > 1 {
+                    if let title = self.bestAttemptContent?.title, !account.peerName.isEmpty {
+                        self.bestAttemptContent?.title = "[\(account.peerName)] \(title)"
+                    }
+                }
+                
                 if let threadId = aps["thread-id"] as? String {
                     self.bestAttemptContent?.threadIdentifier = threadId
                 }

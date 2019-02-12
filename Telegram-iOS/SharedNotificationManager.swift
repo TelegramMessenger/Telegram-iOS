@@ -21,8 +21,9 @@ private final class PollStateContext {
 
 final class SharedNotificationManager {
     private let episodeId: UInt32
+    private let application: UIApplication
     
-    private let clearNotificationsManager: ClearNotificationsManager
+    private let clearNotificationsManager: ClearNotificationsManager?
     private let pollLiveLocationOnce: (AccountRecordId) -> Void
     
     private var inForeground: Bool = false
@@ -35,10 +36,11 @@ final class SharedNotificationManager {
     
     private var pollStateContexts: [AccountRecordId: PollStateContext] = [:]
     
-    init(episodeId: UInt32, clearNotificationsManager: ClearNotificationsManager, inForeground: Signal<Bool, NoError>, accounts: Signal<[(Account, Bool)], NoError>, pollLiveLocationOnce: @escaping (AccountRecordId) -> Void) {
+    init(episodeId: UInt32, application: UIApplication, clearNotificationsManager: ClearNotificationsManager?, inForeground: Signal<Bool, NoError>, accounts: Signal<[(Account, Bool)], NoError>, pollLiveLocationOnce: @escaping (AccountRecordId) -> Void) {
         assert(Queue.mainQueue().isCurrent())
         
         self.episodeId = episodeId
+        self.application = application
         self.clearNotificationsManager = clearNotificationsManager
         self.pollLiveLocationOnce = pollLiveLocationOnce
         
@@ -356,8 +358,8 @@ final class SharedNotificationManager {
             }
             
             if let readMessageId = readMessageId {
-                self.clearNotificationsManager.append(readMessageId)
-                self.clearNotificationsManager.commitNow()
+                self.clearNotificationsManager?.append(readMessageId)
+                self.clearNotificationsManager?.commitNow()
                 
                 let _ = account.postbox.transaction(ignoreDisabled: true, { transaction -> Void in
                     transaction.applyIncomingReadMaxId(readMessageId)
@@ -377,10 +379,10 @@ final class SharedNotificationManager {
                 let center = UNUserNotificationCenter.current()
                 center.removeDeliveredNotifications(withIdentifiers: ["call_\(previousCall.internalId)"])
             } else {
-                if let notifications = UIApplication.shared.scheduledLocalNotifications {
+                if let notifications = self.application.scheduledLocalNotifications {
                     for notification in notifications {
                         if let userInfo = notification.userInfo, let callId = userInfo["callId"] as? String, callId == String(describing: previousCall.internalId) {
-                            UIApplication.shared.cancelLocalNotification(notification)
+                            self.application.cancelLocalNotification(notification)
                         }
                     }
                 }
@@ -435,7 +437,7 @@ final class SharedNotificationManager {
                 notification.category = "incomingCall"
                 notification.userInfo = ["callId": String(describing: notificationCall.internalId)]
                 notification.soundName = "0.m4a"
-                UIApplication.shared.presentLocalNotificationNow(notification)
+                self.application.presentLocalNotificationNow(notification)
             }
         }
     }

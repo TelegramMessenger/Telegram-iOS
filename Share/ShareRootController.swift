@@ -5,7 +5,21 @@ import TelegramUI
 import SwiftSignalKit
 import Postbox
 
-private var sharedContextCache: SharedAccountContext?
+private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
+
+private final class SharedExtensionContext {
+    let sharedContext: SharedAccountContext
+    let wakeupManager: SharedWakeupManager
+    
+    init(sharedContext: SharedAccountContext) {
+        self.sharedContext = sharedContext
+        self.wakeupManager = SharedWakeupManager(beginBackgroundTask: { _, _ in nil }, endBackgroundTask: { _ in }, backgroundTimeRemaining: { 0.0 }, activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1.map { ($0.0, $0.1) }) }, liveLocationPolling: .single(nil), inForeground: inForeground.get(), hasActiveAudioSession: .single(false), notificationManager: nil, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
+            return sharedContext.accountUserInterfaceInUse(id)
+        })
+    }
+}
+
+private var globalSharedExtensionContext: SharedExtensionContext?
 
 private var installedSharedLogger = false
 
@@ -51,33 +65,26 @@ class ShareRootController: UIViewController {
         self.view.isOpaque = false
         
         if #available(iOSApplicationExtension 8.2, *) {
-            self.observer1 = NotificationCenter.default.addObserver(forName: NSNotification.Name.NSExtensionHostDidBecomeActive, object: nil, queue: nil, using: { [weak self] _ in
-                if let strongSelf = self {
-                    strongSelf.shouldBeMaster.set(.single(true))
-                }
+            self.observer1 = NotificationCenter.default.addObserver(forName: NSNotification.Name.NSExtensionHostDidBecomeActive, object: nil, queue: nil, using: { _ in
+                inForeground.set(false)
             })
             
-            self.observer2 = NotificationCenter.default.addObserver(forName: NSNotification.Name.NSExtensionHostWillResignActive, object: nil, queue: nil, using: { [weak self] _ in
-                if let strongSelf = self {
-                    strongSelf.shouldBeMaster.set(.single(false))
-                }
+            self.observer2 = NotificationCenter.default.addObserver(forName: NSNotification.Name.NSExtensionHostWillResignActive, object: nil, queue: nil, using: { _ in
+                inForeground.set(false)
             })
         }
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        
-        
-        
-        self.shouldBeMaster.set(.single(true))
+        inForeground.set(true)
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
         self.disposable.dispose()
-        self.shouldBeMaster.set(.single(false))
+        inForeground.set(false)
     }
     
     override func viewDidLayoutSubviews() {
@@ -136,10 +143,10 @@ class ShareRootController: UIViewController {
             }, dismissNativeController: {
             })
             
-            let sharedContext: SharedAccountContext
+            let sharedExtensionContext: SharedExtensionContext
             
-            if let sharedContextCache = sharedContextCache {
-                sharedContext = sharedContextCache
+            if let globalSharedExtensionContext = globalSharedExtensionContext {
+                sharedExtensionContext = globalSharedExtensionContext
             } else {
                 let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
                 
@@ -153,12 +160,13 @@ class ShareRootController: UIViewController {
                 })
                 semaphore.wait()
                 
-                sharedContext = SharedAccountContext(mainWindow: nil, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), rootPath: rootPath, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
-                sharedContextCache = sharedContext
+                let sharedContext = SharedAccountContext(mainWindow: nil, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), rootPath: rootPath, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
+                sharedExtensionContext = SharedExtensionContext(sharedContext: sharedContext)
+                globalSharedExtensionContext = sharedExtensionContext
             }
             
-            let account: Signal<(SharedAccountContext, Account, [AccountWithInfo]), ShareAuthorizationError> = sharedContext.accountManager.transaction { transaction -> (SharedAccountContext, LoggingSettings) in
-                return (sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
+            let account: Signal<(SharedAccountContext, Account, [AccountWithInfo]), ShareAuthorizationError> = sharedExtensionContext.sharedContext.accountManager.transaction { transaction -> (SharedAccountContext, LoggingSettings) in
+                return (sharedExtensionContext.sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
             }
             |> introduceError(ShareAuthorizationError.self)
             |> mapToSignal { sharedContext, loggingSettings -> Signal<(SharedAccountContext, Account, [AccountWithInfo]), ShareAuthorizationError> in
@@ -174,15 +182,14 @@ class ShareRootController: UIViewController {
                     guard let primary = primary else {
                         return .fail(.unauthorized)
                     }
-                    guard let info = accounts[primary] else {
+                    guard let info = accounts.first(where: { $0.account.id == primary }) else {
                         return .fail(.unauthorized)
                     }
-                    return .single((sharedContext, info.account, Array(accounts.values)))
+                    return .single((sharedContext, info.account, Array(accounts)))
                 }
             }
             |> take(1)
             
-            let shouldBeMaster = self.shouldBeMaster
             let applicationInterface = account
             |> mapToSignal { sharedContext, account, otherAccounts -> Signal<(AccountContext, PostboxAccessChallengeData, [AccountWithInfo]), ShareAuthorizationError> in
                 let limitsConfiguration = account.postbox.transaction { transaction -> LimitsConfiguration in
@@ -294,8 +301,6 @@ class ShareRootController: UIViewController {
                     }
                     
                     context.account.resetStateManagement()
-                    context.account.network.shouldKeepConnection.set(shouldBeMaster.get()
-                    |> map({ $0 }))
                 }
                 
                 let _ = passcodeEntryController(context: context, animateIn: true, completion: { value in
@@ -391,7 +396,7 @@ class ShareRootController: UIViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                let presentationData = sharedContext.currentPresentationData.with { $0 }
+                let presentationData = sharedExtensionContext.sharedContext.currentPresentationData.with { $0 }
                 let controller = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Share_AuthTitle, text: presentationData.strings.Share_AuthDescription, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                     self?.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
                 })])

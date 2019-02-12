@@ -14,38 +14,6 @@ private func notificationKey(_ requestId: NotificationManagedNotificationRequest
     }
 }
 
-private let messageNotificationKeyExpr = try? NSRegularExpression(pattern: "m([-\\d]+):([-\\d]+):([-\\d]+)_?", options: [])
-
-enum NotificationManagedNotificationRequestId: Hashable {
-    case messageId(MessageId)
-    case globallyUniqueId(Int64, PeerId?)
-    
-    init?(string: String) {
-        if string.hasPrefix("m") {
-            let matches = messageNotificationKeyExpr!.matches(in: string, options: [], range: NSRange(location: 0, length: string.count))
-            if let match = matches.first {
-                let nsString = string as NSString
-                let peerIdString = nsString.substring(with: match.range(at: 1))
-                let namespaceString = nsString.substring(with: match.range(at: 2))
-                let idString = nsString.substring(with: match.range(at: 3))
-                
-                guard let peerId = Int64(peerIdString) else {
-                    return nil
-                }
-                guard let namespace = Int32(namespaceString) else {
-                    return nil
-                }
-                guard let id = Int32(idString) else {
-                    return nil
-                }
-                self = .messageId(MessageId(peerId: PeerId(peerId), namespace: namespace, id: id))
-                return
-            }
-        }
-        return nil
-    }
-}
-
 private func processedSoundName(_ name: String) -> String {
     if name.hasSuffix("m4a") {
         return name

@@ -161,7 +161,7 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
                 
                 self.applyDisposable.set((sharedAccountContext.activeAccounts
                 |> map { _, accounts, _ -> Account? in
-                    return accounts[AccountRecordId(rawValue: accountIdValue)]
+                    return accounts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1
                 }
                 |> filter { account in
                     return account != nil

@@ -124,11 +124,13 @@ private final class SharedApplicationContext {
     let sharedContext: SharedAccountContext
     let notificationManager: SharedNotificationManager
     let wakeupManager: SharedWakeupManager
+    let overlayMediaController: OverlayMediaController
     
     init(sharedContext: SharedAccountContext, notificationManager: SharedNotificationManager, wakeupManager: SharedWakeupManager) {
         self.sharedContext = sharedContext
         self.notificationManager = notificationManager
         self.wakeupManager = wakeupManager
+        self.overlayMediaController = OverlayMediaController()
     }
 }
 
@@ -645,7 +647,7 @@ private final class SharedApplicationContext {
             }
         }
         
-        let notificationManager = SharedNotificationManager(episodeId: self.episodeId, clearNotificationsManager: clearNotificationsManager, inForeground: applicationBindings.applicationInForeground, accounts: sharedContext.activeAccounts |> map { primary, accounts, _ in Array(accounts.values.map({ ($0, $0.id == primary?.id) })) }, pollLiveLocationOnce: { accountId in
+        let notificationManager = SharedNotificationManager(episodeId: self.episodeId, application: application, clearNotificationsManager: clearNotificationsManager, inForeground: applicationBindings.applicationInForeground, accounts: sharedContext.activeAccounts |> map { primary, accounts, _ in accounts.map({ ($0.1, $0.1.id == primary?.id) }) }, pollLiveLocationOnce: { accountId in
             let _ = (self.context.get()
             |> filter {
                 return $0 != nil
@@ -677,10 +679,11 @@ private final class SharedApplicationContext {
                 return .single(nil)
             }
         }
-        let wakeupManager = SharedWakeupManager(activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1) }, liveLocationPolling: liveLocationPolling, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
+        let wakeupManager = SharedWakeupManager(beginBackgroundTask: { name, expiration in application.beginBackgroundTask(withName: name, expirationHandler: expiration) }, endBackgroundTask: { id in application.endBackgroundTask(id) }, backgroundTimeRemaining: { application.backgroundTimeRemaining }, activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1.map { ($0.0, $0.1) }) }, liveLocationPolling: liveLocationPolling, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
             return sharedContext.accountUserInterfaceInUse(id)
         })
         let sharedApplicationContext = SharedApplicationContext(sharedContext: sharedContext, notificationManager: notificationManager, wakeupManager: wakeupManager)
+        sharedApplicationContext.sharedContext.mediaManager.overlayMediaManager.attachOverlayMediaController(sharedApplicationContext.overlayMediaController)
         self.sharedContextPromise.set(
         accountManager.transaction { transaction -> (SharedApplicationContext, LoggingSettings) in
             return (sharedApplicationContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
@@ -816,7 +819,7 @@ private final class SharedApplicationContext {
             return sharedApplicationContext.sharedContext.activeAccounts
             |> map { primary, accounts, auth -> (Account?, UnauthorizedAccount, [Account])? in
                 if let auth = auth {
-                    return (primary, auth, Array(accounts.values))
+                    return (primary, auth, Array(accounts.map({ $0.1 })))
                 } else {
                     return nil
                 }
@@ -914,10 +917,7 @@ private final class SharedApplicationContext {
                             }
                         })
                     }
-                    self.mainWindow.topLevelOverlayControllers = [context.overlayMediaController, context.notificationController]
-                    /*self.maybeDequeueNotificationPayloads()
-                    self.maybeDequeueNotificationRequests()
-                    self.maybeDequeueWakeups()*/
+                    self.mainWindow.topLevelOverlayControllers = [sharedApplicationContext.overlayMediaController, context.notificationController]
                     var authorizeNotifications = true
                     if #available(iOS 10.0, *) {
                         authorizeNotifications = false
@@ -1701,6 +1701,7 @@ private final class SharedApplicationContext {
                                     let replyLegacyMessageCategory: UNNotificationCategory
                                     let replyLegacyMediaMessageCategory: UNNotificationCategory
                                     let replyMediaMessageCategory: UNNotificationCategory
+                                    let legacyChannelMessageCategory: UNNotificationCategory
                                     let muteMessageCategory: UNNotificationCategory
                                     let muteMediaMessageCategory: UNNotificationCategory
                                     if #available(iOS 11.0, *) {
@@ -1713,6 +1714,7 @@ private final class SharedApplicationContext {
                                         replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         replyLegacyMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         replyLegacyMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                        legacyChannelMessageCategory = UNNotificationCategory(identifier: "c", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         replyMediaMessageCategory = UNNotificationCategory(identifier: "withReplyMedia", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         muteMessageCategory = UNNotificationCategory(identifier: "withMute", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         muteMediaMessageCategory = UNNotificationCategory(identifier: "withMuteMedia", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
@@ -1721,12 +1723,13 @@ private final class SharedApplicationContext {
                                         replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [], options: [])
                                         replyLegacyMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [], options: [])
                                         replyLegacyMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], options: [])
+                                        legacyChannelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], options: [])
                                         replyMediaMessageCategory = UNNotificationCategory(identifier: "withReplyMedia", actions: [reply], intentIdentifiers: [], options: [])
                                         muteMessageCategory = UNNotificationCategory(identifier: "withMute", actions: [], intentIdentifiers: [], options: [])
                                         muteMediaMessageCategory = UNNotificationCategory(identifier: "withMuteMedia", actions: [], intentIdentifiers: [], options: [])
                                     }
                                     
-                                    UNUserNotificationCenter.current().setNotificationCategories([unknownMessageCategory, replyMessageCategory, replyLegacyMessageCategory, replyLegacyMediaMessageCategory, replyMediaMessageCategory, muteMessageCategory, muteMediaMessageCategory])
+                                    UNUserNotificationCenter.current().setNotificationCategories([unknownMessageCategory, replyMessageCategory, replyLegacyMessageCategory, replyLegacyMediaMessageCategory, replyMediaMessageCategory, legacyChannelMessageCategory, muteMessageCategory, muteMediaMessageCategory])
                                     
                                     UIApplication.shared.registerForRemoteNotifications()
                                 }

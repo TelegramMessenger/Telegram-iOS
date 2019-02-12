@@ -4,8 +4,6 @@ import SwiftSignalKit
 import Postbox
 import NotificationCenter
 
-private var accountCache: Account?
-
 private var installedSharedLogger = false
 
 private func setupSharedLogger(_ path: String) {
@@ -77,27 +75,22 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         setupSharedLogger(logsPath)
         
         let account: Signal<Account, NoError>
-        if let accountCache = accountCache {
-            account = .single(accountCache)
-        } else {
-            let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
-            initializeAccountManagement()
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
-            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: auxiliaryMethods)
-            |> mapToSignal { account -> Signal<Account, NoError> in
-                if let account = account {
-                    switch account {
-                        case .upgrading:
-                            return .complete()
-                        case let .authorized(account):
-                            accountCache = account
-                            return .single(account)
-                        case .unauthorized:
-                            return .complete()
-                    }
-                } else {
-                    return .complete()
+        let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
+        initializeAccountManagement()
+        let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
+        account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: auxiliaryMethods)
+        |> mapToSignal { account -> Signal<Account, NoError> in
+            if let account = account {
+                switch account {
+                    case .upgrading:
+                        return .complete()
+                    case let .authorized(account):
+                        return .single(account)
+                    case .unauthorized:
+                        return .complete()
                 }
+            } else {
+                return .complete()
             }
         }
         
@@ -117,7 +110,6 @@ class TodayViewController: UIViewController, NCWidgetProviding {
                     }
                 }
             })
-            //account.network.shouldKeepConnection.set(shouldBeMaster.get() |> map({ $0 }))
         }
         
         self.disposable.set(applicationInterface.start())

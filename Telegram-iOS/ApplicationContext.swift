@@ -15,60 +15,18 @@ func isAccessLocked(data: PostboxAccessChallengeData, at timestamp: Int32) -> Bo
     }
 }
 
-enum ApplicationContext {
-    case unauthorized(UnauthorizedApplicationContext)
-    case authorized(AuthorizedApplicationContext)
-    
-    var account: Account? {
-        switch self {
-            case .unauthorized:
-                return nil
-            case let .authorized(context):
-                return context.context.account
-        }
-    }
-    
-    var accountId: AccountRecordId? {
-        switch self {
-            case let .unauthorized(unauthorized):
-                return unauthorized.account.id
-            case let .authorized(authorized):
-                return authorized.context.account.id
-        }
-    }
-    
-    var rootController: NavigationController {
-        switch self {
-            case let .unauthorized(context):
-                return context.rootController
-            case let .authorized(context):
-                return context.rootController
-        }
-    }
-    
-    var overlayControllers: [ViewController] {
-        switch self {
-            case .unauthorized:
-                return []
-            case let .authorized(context):
-                return [context.overlayMediaController, context.notificationController]
-        }
-    }
-}
-
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContext
     let account: UnauthorizedAccount
-    var strings: PresentationStrings
     
     let rootController: AuthorizationSequenceController
     
     init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId)?, [(String, AccountRecordId)])) {
         self.sharedContext = sharedContext
         self.account = account
-        self.strings = defaultPresentationStrings
+        let presentationData = sharedContext.currentPresentationData.with { $0 }
         
-        self.rootController = AuthorizationSequenceController(sharedContext: sharedContext, account: account, otherAccountPhoneNumbers: otherAccountPhoneNumbers, strings: self.strings, openUrl: sharedContext.applicationBindings.openUrl, apiId: BuildConfig.shared().apiId, apiHash: BuildConfig.shared().apiHash)
+        self.rootController = AuthorizationSequenceController(sharedContext: sharedContext, account: account, otherAccountPhoneNumbers: otherAccountPhoneNumbers, strings: presentationData.strings, theme: presentationData.theme, openUrl: sharedContext.applicationBindings.openUrl, apiId: BuildConfig.shared().apiId, apiHash: BuildConfig.shared().apiHash)
         
         account.shouldBeServiceTaskMaster.set(sharedContext.applicationBindings.applicationInForeground |> map { value -> AccountServiceTaskMasterMode in
             if value {
@@ -96,7 +54,6 @@ final class AuthorizedApplicationContext {
     let backgroundAudioActive: Signal<Bool, NoError>
     
     let rootController: TelegramRootController
-    let overlayMediaController: OverlayMediaController
     let notificationController: NotificationContainerController
     
     private var scheduledOperChatWithPeerId: PeerId?
@@ -175,10 +132,6 @@ final class AuthorizedApplicationContext {
         
         //self.notificationManager = NotificationManager()
         //self.notificationManager.isApplicationInForeground = false
-        
-        self.overlayMediaController = OverlayMediaController()
-        
-        context.attachOverlayMediaController(self.overlayMediaController)
         
         /*let shouldBeServiceTaskMaster = combineLatest(context.sharedContext.applicationBindings.applicationInForeground, self.wakeupManager.isWokenUp, replyFromNotificationsActive, backgroundAudioActive, callManager.hasActiveCalls)
         |> map { foreground, wokenUp, replyFromNotificationsActive, backgroundAudioActive, hasActiveCalls -> AccountServiceTaskMasterMode in
@@ -390,13 +343,13 @@ final class AuthorizedApplicationContext {
                                 legacyController.presentationCompleted = {
                                     if let strongSelf = self {
                                         strongSelf.rootController.view.isHidden = true
-                                        strongSelf.overlayMediaController.view.isHidden = true
+                                        strongSelf.context.sharedContext.mediaManager.overlayMediaManager.controller?.view.isHidden = true
                                         strongSelf.notificationController.view.isHidden = true
                                     }
                                 }
                             } else {
                                 strongSelf.rootController.view.isHidden = true
-                                strongSelf.overlayMediaController.view.isHidden = true
+                                strongSelf.context.sharedContext.mediaManager.overlayMediaManager.controller?.view.isHidden = true
                                 strongSelf.notificationController.view.isHidden = true
                             }
                             
@@ -417,7 +370,7 @@ final class AuthorizedApplicationContext {
                         strongSelf.updateCoveringViewSnaphot(true)
                         strongSelf.mainWindow.coveringView = strongSelf.lockedCoveringView
                         strongSelf.rootController.view.isHidden = true
-                        strongSelf.overlayMediaController.view.isHidden = true
+                        strongSelf.context.sharedContext.mediaManager.overlayMediaManager.controller?.view.isHidden = true
                         strongSelf.notificationController.view.isHidden = true
                     }
                 } else {
@@ -425,13 +378,13 @@ final class AuthorizedApplicationContext {
                         strongSelf.updateCoveringViewSnaphot(true)
                         strongSelf.mainWindow.coveringView = strongSelf.lockedCoveringView
                         strongSelf.rootController.view.isHidden = true
-                        strongSelf.overlayMediaController.view.isHidden = true
+                        strongSelf.context.sharedContext.mediaManager.overlayMediaManager.controller?.view.isHidden = true
                         strongSelf.notificationController.view.isHidden = true
                     } else {
                         strongSelf.updateCoveringViewSnaphot(false)
                         strongSelf.mainWindow.coveringView = nil
                         strongSelf.rootController.view.isHidden = false
-                        strongSelf.overlayMediaController.view.isHidden = false
+                        strongSelf.context.sharedContext.mediaManager.overlayMediaManager.controller?.view.isHidden = false
                         strongSelf.notificationController.view.isHidden = false
                         if strongSelf.rootController.rootTabController == nil {
                             strongSelf.rootController.addRootControllers(showCallsTab: strongSelf.showCallsTab)
@@ -671,19 +624,19 @@ final class AuthorizedApplicationContext {
         
         if #available(iOS 10.0, *) {
             let permissionsPosition = ValuePromise(0, ignoreRepeated: true)
-            self.permissionsDisposable.set((combineLatest(requiredPermissions(context: context), permissionUISplitTest(postbox: context.account.postbox), permissionsPosition.get(), context.account.postbox.combinedView(keys: [.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey()), .noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())]))
-            |> deliverOnMainQueue).start(next: { [weak self] required, splitTest, position, combined in
+            self.permissionsDisposable.set((combineLatest(queue: .mainQueue(), requiredPermissions(context: context), permissionUISplitTest(postbox: context.account.postbox), permissionsPosition.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.contactsPermissionWarningKey()), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.notificationsPermissionWarningKey()))
+            |> deliverOnMainQueue).start(next: { [weak self] required, splitTest, position, contactsPermissionWarningNotice, notificationsPermissionWarningNotice in
                 guard let strongSelf = self else {
                     return
                 }
                 
-                let contactsTimestamp = (combined.views[.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
-                let notificationsTimestamp = (combined.views[.noticeEntry(ApplicationSpecificNotice.notificationsPermissionWarningKey())] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                let contactsTimestamp = contactsPermissionWarningNotice.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                let notificationsTimestamp = notificationsPermissionWarningNotice.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                 if contactsTimestamp == nil, case .requestable = required.0.status {
-                    ApplicationSpecificNotice.setContactsPermissionWarning(postbox: context.account.postbox, value: 1)
+                    ApplicationSpecificNotice.setContactsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 1)
                 }
                 if notificationsTimestamp == nil, case .requestable = required.1.status {
-                    ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: context.account.postbox, value: 1)
+                    ApplicationSpecificNotice.setNotificationsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 1)
                 }
                 
                 let config = splitTest.configuration
@@ -741,9 +694,9 @@ final class AuthorizedApplicationContext {
                             permissionsPosition.set(position + 1)
                             switch state {
                                 case .contacts:
-                                    ApplicationSpecificNotice.setContactsPermissionWarning(postbox: context.account.postbox, value: 0)
+                                    ApplicationSpecificNotice.setContactsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 0)
                                 case .notifications:
-                                    ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: context.account.postbox, value: 0)
+                                    ApplicationSpecificNotice.setNotificationsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 0)
                                 default:
                                     break
                             }
@@ -765,7 +718,7 @@ final class AuthorizedApplicationContext {
                                         splitTest.addEvent(.ContactsDenied)
                                     }
                                     permissionsPosition.set(position + 1)
-                                    ApplicationSpecificNotice.setContactsPermissionWarning(postbox: context.account.postbox, value: 0)
+                                    ApplicationSpecificNotice.setContactsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 0)
                                 }
                             case .notifications:
                                 splitTest.addEvent(.NotificationsRequest)
@@ -776,7 +729,7 @@ final class AuthorizedApplicationContext {
                                         splitTest.addEvent(.NotificationsDenied)
                                     }
                                     permissionsPosition.set(position + 1)
-                                    ApplicationSpecificNotice.setNotificationsPermissionWarning(postbox: context.account.postbox, value: 0)
+                                    ApplicationSpecificNotice.setNotificationsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 0)
                                 }
                             case .siri:
                                 DeviceAccess.authorizeAccess(to: .siri, context: context) { result in

@@ -407,6 +407,9 @@
 		D0CE6F6B213EDA4400BCD44B /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D0CE6F51213EDA4400BCD44B /* InfoPlist.strings */; };
 		D0CE6F6C213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = D0CE6F53213EDA4400BCD44B /* AppIntentVocabulary.plist */; };
 		D0CFBB931FD88C2900B65C0D /* begin_record.caf in Resources */ = {isa = PBXBuildFile; fileRef = D0CFBB921FD88C2900B65C0D /* begin_record.caf */; };
+		D0D102682212E9E6003ADA5E /* SharedWakeupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B21B0C2203A9A1003F741D /* SharedWakeupManager.swift */; };
+		D0D102692212F719003ADA5E /* SharedNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B21B0E220438E9003F741D /* SharedNotificationManager.swift */; };
+		D0D1026A2212F804003ADA5E /* ClearNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EB243A201B77C400F6CC13 /* ClearNotificationsManager.swift */; };
 		D0D17E8A1CAAD66600C4750B /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D17E891CAAD66600C4750B /* Accelerate.framework */; };
 		D0D2276F212739120028F943 /* LegacyDataImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D2276E212739120028F943 /* LegacyDataImport.swift */; };
 		D0D268791D79A70A00C422DA /* IntentHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D268781D79A70A00C422DA /* IntentHandler.swift */; };
@@ -3286,12 +3289,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0D1026A2212F804003ADA5E /* ClearNotificationsManager.swift in Sources */,
 				D08410451FABDC5D008FFE92 /* TGItemProviderSignals.m in Sources */,
 				D084104F1FABDCFD008FFE92 /* TGMimeTypeMap.m in Sources */,
 				D03B0E7B1D63484500955575 /* ShareRootController.swift in Sources */,
+				D0D102682212E9E6003ADA5E /* SharedWakeupManager.swift in Sources */,
 				D0EA97941FE84F2D00792DD6 /* BuildConfig.m in Sources */,
 				D084104E1FABDCFD008FFE92 /* TGContactModel.m in Sources */,
 				D08410541FABE428008FFE92 /* ShareItems.swift in Sources */,
+				D0D102692212F719003ADA5E /* SharedNotificationManager.swift in Sources */,
 				D0AF322F1FACBA280097362B /* TGShareLocationSignals.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

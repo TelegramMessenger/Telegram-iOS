@@ -485,14 +485,15 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                 return settings
             })
             
+            if let secretInlineBotsInitialized = secretInlineBotsInitialized, secretInlineBotsInitialized {
+                ApplicationSpecificNotice.setSecretChatInlineBotUsage(transaction: transaction)
+            }
+            
+            if let allowSecretWebpagesInitialized = allowSecretWebpagesInitialized, allowSecretWebpagesInitialized, let allowSecretWebpages = allowSecretWebpages {
+                ApplicationSpecificNotice.setSecretChatLinkPreviews(transaction: transaction, value: allowSecretWebpages)
+            }
+            
             return account.postbox.transaction { transaction -> Void in
-                if let secretInlineBotsInitialized = secretInlineBotsInitialized, secretInlineBotsInitialized {
-                    ApplicationSpecificNotice.setSecretChatInlineBotUsage(transaction: transaction)
-                }
-                
-                if let allowSecretWebpagesInitialized = allowSecretWebpagesInitialized, allowSecretWebpagesInitialized, let allowSecretWebpages = allowSecretWebpages {
-                    ApplicationSpecificNotice.setSecretChatLinkPreviews(transaction: transaction, value: allowSecretWebpages)
-                }
             }
         }
         |> switchToLatest

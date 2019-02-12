@@ -11,14 +11,32 @@ struct AccountDatacenterKey: Codable {
     let data: Data
 }
 
+struct AccountDatacenterAddress: Codable {
+    let host: String
+    let port: Int32
+    let isMedia: Bool
+    let secret: Data?
+}
+
 struct AccountDatacenterInfo: Codable {
     let masterKey: AccountDatacenterKey
+    let addressList: [AccountDatacenterAddress]
+}
+
+struct AccountProxyConnection: Codable {
+    let host: String
+    let port: Int32
+    let username: String?
+    let password: String?
+    let secret: Data?
 }
 
 struct StoredAccountInfo: Codable {
     let primaryId: Int32
     let isTestingEnvironment: Bool
+    let peerName: String
     let datacenters: [Int32: AccountDatacenterInfo]
+    let proxy: AccountProxyConnection?
 }
 
 struct AccountData {
@@ -28,6 +46,8 @@ struct AccountData {
     let datacenterId: Int32
     let datacenters: [Int32: AccountDatacenterInfo]
     let notificationKey: MasterNotificationKey?
+    let peerName: String
+    let proxy: AccountProxyConnection?
 }
 
 func loadAccountsData(rootPath: String) -> [Int64: AccountData] {
@@ -45,7 +65,7 @@ func loadAccountsData(rootPath: String) -> [Int64: AccountData] {
                     storedInfo = value
                 }
                 if let storedInfo = storedInfo {
-                    result[Int64(bitPattern: id)] = AccountData(id: Int64(bitPattern: id), isTestingEnvironment: storedInfo.isTestingEnvironment, basePath: url.path, datacenterId: storedInfo.primaryId, datacenters: storedInfo.datacenters, notificationKey: notificationKey)
+                    result[Int64(bitPattern: id)] = AccountData(id: Int64(bitPattern: id), isTestingEnvironment: storedInfo.isTestingEnvironment, basePath: url.path, datacenterId: storedInfo.primaryId, datacenters: storedInfo.datacenters, notificationKey: notificationKey, peerName: storedInfo.peerName, proxy: storedInfo.proxy)
                 }
             }
         }

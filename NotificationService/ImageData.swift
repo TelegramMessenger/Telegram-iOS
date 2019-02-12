@@ -321,6 +321,10 @@ func fetchImageWithAccount(account: AccountData, resource: ImageResource, comple
     apiEnvironment.disableUpdates = true
     apiEnvironment = apiEnvironment.withUpdatedLangPackCode("en")
     
+    if let proxy = account.proxy {
+        apiEnvironment = apiEnvironment.withUpdatedSocksProxySettings(MTSocksProxySettings(ip: proxy.host, port: UInt16(clamping: proxy.port), username: proxy.username, password: proxy.password, secret: proxy.secret))
+    }
+    
     let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment, isTestingEnvironment: account.isTestingEnvironment, useTempAuthKeys: false)!
     
     let seedAddressList: [Int: [String]]
@@ -346,6 +350,18 @@ func fetchImageWithAccount(account: AccountData, resource: ImageResource, comple
     
     let keychain = Keychain()
     context.keychain = keychain
+    
+    context.performBatchUpdates({
+        for (id, info) in account.datacenters {
+            if !info.addressList.isEmpty {
+                var addressList: [MTDatacenterAddress] = []
+                for address in info.addressList {
+                    addressList.append(MTDatacenterAddress(ip: address.host, port: UInt16(clamping: address.port), preferForMedia: address.isMedia, restrictToTcp: false, cdn: false, preferForProxy: false, secret: address.secret))
+                }
+                context.updateAddressSetForDatacenter(withId: Int(id), addressSet: MTDatacenterAddressSet(addressList: addressList), forceUpdateSchemes: true)
+            }
+        }
+    })
     
     for (id, info) in account.datacenters {
         context.updateAuthInfoForDatacenter(withId: Int(id), authInfo: MTDatacenterAuthInfo(authKey: info.masterKey.data, authKeyId: info.masterKey.id, saltSet: [], authKeyAttributes: [:], mainTempAuthKey: nil, mediaTempAuthKey: nil))
