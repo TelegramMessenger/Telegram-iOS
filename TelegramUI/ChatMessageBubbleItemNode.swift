@@ -1838,6 +1838,16 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
     }
     
+    
+    override func playMediaWithSound() -> (() -> Void)? {
+        for contentNode in self.contentNodes {
+            if let playMediaWithSound = contentNode.playMediaWithSound() {
+                return playMediaWithSound
+            }
+        }
+        return nil
+    }
+    
     override func updateSelectionState(animated: Bool) {
         guard let item = self.item else {
             return

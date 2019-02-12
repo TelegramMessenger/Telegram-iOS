@@ -252,11 +252,11 @@ private final class MediaPlayerContext {
                 duration = max(duration, CMTimeGetSeconds(audioTrackFrameBuffer.duration))
             }
             loadedDuration = duration
-            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play))
+            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play), soundEnabled: self.enableSound)
             self.playerStatus.set(.single(status))
         } else {
             let duration = seekState?.duration ?? 0.0
-            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play))
+            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play), soundEnabled: self.enableSound)
             self.playerStatus.set(.single(status))
         }
         
@@ -442,14 +442,39 @@ private final class MediaPlayerContext {
         }
     }
     
-    fileprivate func playOnceWithSound(playAndRecord: Bool) {
+    fileprivate func playOnceWithSound(playAndRecord: Bool, seekToStart: Bool = true) {
         assert(self.queue.isCurrent())
         
         if !self.enableSound {
             self.lastStatusUpdateTimestamp = nil
             self.enableSound = true
             self.playAndRecord = playAndRecord
-            self.seek(timestamp: 0.0, action: .play)
+            
+            
+            var loadedState: MediaPlayerLoadedState?
+            switch self.state {
+            case .empty:
+                break
+            case let .playing(currentLoadedState):
+                loadedState = currentLoadedState
+            case let .paused(currentLoadedState):
+                loadedState = currentLoadedState
+            case let .seeking(_, timestamp, _, disposable, action, _):
+                if self.enableSound {
+                    self.state = .empty
+                    disposable.dispose()
+                    self.enableSound = false
+                    self.seek(timestamp: timestamp, action: action)
+                }
+            }
+            
+            let timestamp: Double
+            if let loadedState = loadedState, !seekToStart {
+                timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
+            } else {
+                timestamp = 0.0
+            }
+            self.seek(timestamp: timestamp, action: .play)
         }
     }
     
@@ -745,7 +770,7 @@ private final class MediaPlayerContext {
             if case .seeking(_, timestamp, _, _, _, _) = self.state {
                 reportTimestamp = timestamp
             }
-            let status = MediaPlayerStatus(generationTimestamp: statusTimestamp, duration: duration, dimensions: CGSize(), timestamp: min(max(reportTimestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: playbackStatus)
+            let status = MediaPlayerStatus(generationTimestamp: statusTimestamp, duration: duration, dimensions: CGSize(), timestamp: min(max(reportTimestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: playbackStatus, soundEnabled: self.enableSound)
             self.playerStatus.set(.single(status))
         }
         
@@ -811,6 +836,7 @@ struct MediaPlayerStatus: Equatable {
     let baseRate: Double
     let seekId: Int
     let status: MediaPlayerPlaybackStatus
+    let soundEnabled: Bool
 }
 
 final class MediaPlayer {
@@ -856,10 +882,10 @@ final class MediaPlayer {
         }
     }
     
-    func playOnceWithSound(playAndRecord: Bool) {
+    func playOnceWithSound(playAndRecord: Bool, seekToStart: Bool = true) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
-                context.playOnceWithSound(playAndRecord: playAndRecord)
+                context.playOnceWithSound(playAndRecord: playAndRecord, seekToStart: seekToStart)
             }
         }
     }

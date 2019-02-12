@@ -443,7 +443,7 @@ public class TelegramController: ViewController {
                     if let stateOrLoading = state?.1, case let .state(state) = stateOrLoading {
                         return state.status
                     } else {
-                        return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
+                        return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused, soundEnabled: true)
                     }
                 }
             } else {
@@ -588,7 +588,7 @@ public class TelegramController: ViewController {
                     if let stateOrLoading = state?.1, case let .state(state) = stateOrLoading {
                         return state.status
                     } else {
-                        return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
+                        return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused, soundEnabled: true)
                     }
                 }
                 mediaAccessoryPanel.animateIn(transition: transition)

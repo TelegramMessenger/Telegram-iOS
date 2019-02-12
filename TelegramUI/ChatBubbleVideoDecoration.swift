@@ -15,14 +15,32 @@ final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     
     private var validLayoutSize: CGSize?
     
-    init(cornerRadius: CGFloat, nativeSize: CGSize, contentMode: InteractiveMediaNodeContentMode, backgroundColor: UIColor) {
+    init(corners: ImageCorners, nativeSize: CGSize, contentMode: InteractiveMediaNodeContentMode, backgroundColor: UIColor) {
         self.nativeSize = nativeSize
         self.contentMode = contentMode
         
         self.contentContainerNode = ASDisplayNode()
         self.contentContainerNode.backgroundColor = backgroundColor
         self.contentContainerNode.clipsToBounds = true
-        self.contentContainerNode.cornerRadius = cornerRadius
+        
+        let boundingSize: CGSize = CGSize(width: max(corners.topLeft.radius, corners.bottomLeft.radius) + max(corners.topRight.radius, corners.bottomRight.radius), height: max(corners.topLeft.radius, corners.topRight.radius) + max(corners.bottomLeft.radius, corners.bottomRight.radius))
+        let size: CGSize = CGSize(width: boundingSize.width + corners.extendedEdges.left + corners.extendedEdges.right, height: boundingSize.height + corners.extendedEdges.top + corners.extendedEdges.bottom)
+        let arguments = TransformImageArguments(corners: corners, imageSize: size, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
+        let context = DrawingContext(size: size, clear: true)
+        context.withContext { ctx in
+            ctx.setFillColor(UIColor.black.cgColor)
+            ctx.fill(arguments.drawingRect)
+        }
+        addCorners(context, arguments: arguments)
+
+        if let maskImage = context.generateImage() {
+            let mask = CALayer()
+            mask.contents = maskImage.cgImage
+            mask.contentsScale = maskImage.scale
+            mask.contentsCenter = CGRect(x: corners.topLeft.radius / maskImage.size.width, y: corners.topLeft.radius / maskImage.size.height, width: (maskImage.size.width - corners.topLeft.radius - corners.topLeft.radius) / maskImage.size.width, height: (maskImage.size.height - corners.topLeft.radius - corners.bottomRight.radius) / maskImage.size.height)
+            
+            self.contentContainerNode.layer.mask = mask
+        }
     }
     
     func updateContentNode(_ contentNode: (UniversalVideoContentNode & ASDisplayNode)?) {
@@ -63,18 +81,27 @@ final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     }
     
     func updateContentNodeSnapshot(_ snapshot: UIView?) {
+//        mask.contentsCenter =
+//            CGRectMake(BubbleRightCapInsets.left/rightBubbleBackground.size.width,
+//                       BubbleRightCapInsets.top/rightBubbleBackground.size.height,
+//                       1.0/rightBubbleBackground.size.width,
+//                       1.0/rightBubbleBackground.size.height);
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayoutSize = size
         
+        let bounds = CGRect(origin: CGPoint(), size: size)
         if let backgroundNode = self.backgroundNode {
-            transition.updateFrame(node: backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+            transition.updateFrame(node: backgroundNode, frame: bounds)
         }
         if let foregroundNode = self.foregroundNode {
-            transition.updateFrame(node: foregroundNode, frame: CGRect(origin: CGPoint(), size: size))
+            transition.updateFrame(node: foregroundNode, frame: bounds)
         }
-        transition.updateFrame(node: self.contentContainerNode, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(node: self.contentContainerNode, frame: bounds)
+        if let maskLayer = self.contentContainerNode.layer.mask {
+            transition.updateFrame(layer: maskLayer, frame: bounds)
+        }
         if let contentNode = self.contentNode {
             var scaledSize: CGSize
             switch self.contentMode {

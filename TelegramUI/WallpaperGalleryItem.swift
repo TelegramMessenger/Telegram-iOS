@@ -208,7 +208,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             fetchSignal = .complete()
                             statusSignal = .single(.Local)
                             subtitleSignal = .single(nil)
-                            colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, postbox: self.context.account.postbox)
+                            colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                             isBlurrable = false
                         case let .color(color):
                             displaySize = CGSize(width: 1.0, height: 1.0)
@@ -218,7 +218,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             statusSignal = .single(.Local)
                             subtitleSignal = .single(nil)
                             actionSignal = .single(defaultAction)
-                            colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, postbox: self.context.account.postbox)
+                            colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox)
                             isBlurrable = false
                             //self.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
                         case let .file(file):
@@ -266,7 +266,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 self.colorPreview = self.arguments.colorPreview
                                 
                                 signal = patternWallpaperImage(account: context.account, representations: convertedRepresentations, mode: self.arguments.colorPreview ? .fastScreen : .screen, autoFetchFullSize: true)
-                                colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, postbox: context.account.postbox)
+                                colorSignal = chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: context.account.postbox.mediaBox)
                                 
                                 isBlurrable = false
                             } else {

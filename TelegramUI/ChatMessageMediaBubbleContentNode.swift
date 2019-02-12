@@ -68,7 +68,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     if telegramFile.isAnimated {
                         automaticPlayback = item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs
-                    } else {
+                    } else if item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
                         if case .full = automaticDownload {
                             automaticPlayback = true
                             contentMode = .aspectFill
@@ -107,7 +107,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData.theme.theme, item.presentationData.strings, item.message, selectedMedia!, automaticDownload, item.associatedData.automaticDownloadPeerType, automaticPlayback, sizeCalculation, layoutConstants, contentMode)
             
             var forceFullCorners = false
-            if let media = selectedMedia as? TelegramMediaFile, media.isVideo || media.isAnimated {
+            if let media = selectedMedia as? TelegramMediaFile, media.isAnimated {
                 forceFullCorners = true
             }
             
@@ -283,6 +283,10 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         self.interactiveImageNode.isHidden = mediaHidden
         self.interactiveImageNode.updateIsHidden(mediaHidden)
         return mediaHidden
+    }
+    
+    override func playMediaWithSound() -> (() -> Void)? {
+        return self.interactiveImageNode.playMediaWithSound()
     }
     
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {

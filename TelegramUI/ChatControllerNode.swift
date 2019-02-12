@@ -347,6 +347,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.textInputPanelNode?.updateActivity = { [weak self] in
             self?.updateTypingActivity(true)
         }
+        
+
     }
     
     deinit {
@@ -1466,6 +1468,16 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 itemNode.updateAutomaticMediaDownloadSettings()
             }
         }
+    }
+    
+    func playFirstMediaWithSound() {
+        var action: (() -> Void)?
+        self.historyNode.forEachVisibleItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView, let playMediaWithSound = itemNode.playMediaWithSound() {
+                action = playMediaWithSound
+            }
+        }
+        action?()
     }
     
     var isInputViewFocused: Bool {

@@ -228,6 +228,10 @@ public class ChatMessageItemView: ListViewItemNode {
     func updateAutomaticMediaDownloadSettings() {
     }
     
+    func playMediaWithSound() -> (() -> Void)? {
+        return nil
+    }
+    
     override public func header() -> ListViewItemHeader? {
         if let item = self.item {
             return item.header

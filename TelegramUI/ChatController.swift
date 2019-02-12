@@ -213,6 +213,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     private var screenCaptureEventsDisposable: Disposable?
     private let chatAdditionalDataDisposable = MetaDisposable()
     
+    private var volumeChangeDetector: VolumeChangeDetector?
+    
     private var beginMediaRecordingRequestId: Int = 0
     private var lockMediaRecordingRequestId: Int?
     
@@ -3154,6 +3156,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 })
             }
         }
+        
+        self.volumeChangeDetector = VolumeChangeDetector(view: self.chatDisplayNode.view, valueChanged: { [weak self] in
+            guard let strongSelf = self, strongSelf.traceVisibility() && isTopmostChatController(strongSelf) else {
+                return
+            }
+            strongSelf.chatDisplayNode.playFirstMediaWithSound()
+        })
         
         self.displayNodeDidLoad()
     }

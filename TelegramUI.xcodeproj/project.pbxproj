@@ -111,6 +111,9 @@
 		09DD88F321BF907C000766BC /* WebSearchRecentQueryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88F221BF907C000766BC /* WebSearchRecentQueryItem.swift */; };
 		09DD88F521BF9730000766BC /* WebSearchRecentQueries.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88F421BF9730000766BC /* WebSearchRecentQueries.swift */; };
 		09DD88FA21BFD70B000766BC /* ThemedTextAlertController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */; };
+		09EDAD26220D30980012A50B /* AutodownloadConnectionTypeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD25220D30980012A50B /* AutodownloadConnectionTypeController.swift */; };
+		09EDAD28220D81040012A50B /* AutodownloadSliderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD27220D81040012A50B /* AutodownloadSliderItem.swift */; };
+		09EDAD2A220DA6A40012A50B /* VolumeChangeDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD29220DA6A40012A50B /* VolumeChangeDetection.swift */; };
 		09F664C021EAAFAF00AB7E26 /* ThemeColorsGridController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F664BF21EAAFAF00AB7E26 /* ThemeColorsGridController.swift */; };
 		09F664C221EAAFCB00AB7E26 /* ThemeColorsGridControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F664C121EAAFCB00AB7E26 /* ThemeColorsGridControllerNode.swift */; };
 		09F664C421EAB98300AB7E26 /* ThemeColorsGridControllerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F664C321EAB98300AB7E26 /* ThemeColorsGridControllerItem.swift */; };
@@ -325,8 +328,6 @@
 		D06BEC8C1F65E30A0035A545 /* WebEmbedVideoContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06BEC8B1F65E30A0035A545 /* WebEmbedVideoContent.swift */; };
 		D06CF82720D0080200AC4CFF /* SecureIdAuthListContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06CF82620D0080200AC4CFF /* SecureIdAuthListContentNode.swift */; };
 		D06CF82920D0119500AC4CFF /* SecureIdAuthListFieldNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06CF82820D0119500AC4CFF /* SecureIdAuthListFieldNode.swift */; };
-		D06D37A92077DDF3009219B6 /* AutodownloadMediaCategoryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06D37A82077DDF3009219B6 /* AutodownloadMediaCategoryController.swift */; };
-		D06D37B22077E77F009219B6 /* AutodownloadSizeLimitItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06D37B12077E77F009219B6 /* AutodownloadSizeLimitItem.swift */; };
 		D06E0F8E1F79ABFB003CF3DD /* ChatLoadingNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06E0F8D1F79ABFB003CF3DD /* ChatLoadingNode.swift */; };
 		D06E4C312134910400088087 /* ChatListEmptyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06E4C302134910400088087 /* ChatListEmptyNode.swift */; };
 		D06E4C332134A59700088087 /* ThemeAccentColorActionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06E4C322134A59700088087 /* ThemeAccentColorActionSheet.swift */; };
@@ -1242,6 +1243,9 @@
 		09DD88F221BF907C000766BC /* WebSearchRecentQueryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchRecentQueryItem.swift; sourceTree = "<group>"; };
 		09DD88F421BF9730000766BC /* WebSearchRecentQueries.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchRecentQueries.swift; sourceTree = "<group>"; };
 		09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedTextAlertController.swift; sourceTree = "<group>"; };
+		09EDAD25220D30980012A50B /* AutodownloadConnectionTypeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadConnectionTypeController.swift; sourceTree = "<group>"; };
+		09EDAD27220D81040012A50B /* AutodownloadSliderItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadSliderItem.swift; sourceTree = "<group>"; };
+		09EDAD29220DA6A40012A50B /* VolumeChangeDetection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeChangeDetection.swift; sourceTree = "<group>"; };
 		09F664BF21EAAFAF00AB7E26 /* ThemeColorsGridController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColorsGridController.swift; sourceTree = "<group>"; };
 		09F664C121EAAFCB00AB7E26 /* ThemeColorsGridControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColorsGridControllerNode.swift; sourceTree = "<group>"; };
 		09F664C321EAB98300AB7E26 /* ThemeColorsGridControllerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColorsGridControllerItem.swift; sourceTree = "<group>"; };
@@ -1689,8 +1693,6 @@
 		D06BEC8B1F65E30A0035A545 /* WebEmbedVideoContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebEmbedVideoContent.swift; sourceTree = "<group>"; };
 		D06CF82620D0080200AC4CFF /* SecureIdAuthListContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdAuthListContentNode.swift; sourceTree = "<group>"; };
 		D06CF82820D0119500AC4CFF /* SecureIdAuthListFieldNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdAuthListFieldNode.swift; sourceTree = "<group>"; };
-		D06D37A82077DDF3009219B6 /* AutodownloadMediaCategoryController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadMediaCategoryController.swift; sourceTree = "<group>"; };
-		D06D37B12077E77F009219B6 /* AutodownloadSizeLimitItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadSizeLimitItem.swift; sourceTree = "<group>"; };
 		D06E0F8D1F79ABFB003CF3DD /* ChatLoadingNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatLoadingNode.swift; sourceTree = "<group>"; };
 		D06E4AC31E84806300627D1D /* FetchPhotoLibraryImageResource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FetchPhotoLibraryImageResource.swift; sourceTree = "<group>"; };
 		D06E4C302134910400088087 /* ChatListEmptyNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListEmptyNode.swift; sourceTree = "<group>"; };
@@ -3747,8 +3749,6 @@
 				D0223A9D1EA5732300211D94 /* NetworkUsageStatsController.swift */,
 				D0FA35001EA6127000E56FFA /* StorageUsageController.swift */,
 				D0DFD5E11FCE2BA50039B3B1 /* CalculatingCacheSizeItem.swift */,
-				D06D37A82077DDF3009219B6 /* AutodownloadMediaCategoryController.swift */,
-				D06D37B12077E77F009219B6 /* AutodownloadSizeLimitItem.swift */,
 				D0185E872089ED5F005E1A6C /* ProxyListSettingsController.swift */,
 				D0D4345B1F97CEAA00CC1806 /* ProxyServerSettingsController.swift */,
 				D0185E89208A01AF005E1A6C /* ProxySettingsActionItem.swift */,
@@ -3756,6 +3756,8 @@
 				D07E413C208A494D00FCA8F0 /* ProxyServerActionSheetController.swift */,
 				D0A8998C217A294100759EE6 /* SaveIncomingMediaController.swift */,
 				099529A921CDB27900805E13 /* ShareProxyServerActionSheetController.swift */,
+				09EDAD25220D30980012A50B /* AutodownloadConnectionTypeController.swift */,
+				09EDAD27220D81040012A50B /* AutodownloadSliderItem.swift */,
 			);
 			name = "Data and Storage";
 			sourceTree = "<group>";
@@ -4739,6 +4741,7 @@
 				D000CAB921EE130D0011B15D /* MapResourceToAvatarSizes.swift */,
 				D000CABB21F158AD0011B15D /* PrepareSecretThumbnailData.swift */,
 				090B48C72200BCA8005083FA /* WallpaperUploadManager.swift */,
+				09EDAD29220DA6A40012A50B /* VolumeChangeDetection.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -5104,6 +5107,7 @@
 				D0E412DA206A894800BEE4A2 /* SecureIdValueFormFileItem.swift in Sources */,
 				09B4EE6221AD791600847FA6 /* InstantPageStoredState.swift in Sources */,
 				D0EC6CB21EB9F58800EBF1C3 /* rngs.c in Sources */,
+				09EDAD2A220DA6A40012A50B /* VolumeChangeDetection.swift in Sources */,
 				D083491C209361DC008CFD52 /* AvatarGalleryItemFooterContentNode.swift in Sources */,
 				D0EC6CB31EB9F58800EBF1C3 /* shader.c in Sources */,
 				D06E4C352134AE3C00088087 /* ThemeAutoNightSettingsController.swift in Sources */,
@@ -5343,6 +5347,7 @@
 				D056CD781FF2A6EE00880D28 /* ChatMessageSwipeToReplyNode.swift in Sources */,
 				D0CE67941F7DB45100FFB557 /* ChatMessageContactBubbleContentNode.swift in Sources */,
 				09749BCD21F23139008FDDE9 /* WallpaperGalleryDecorationNode.swift in Sources */,
+				09EDAD26220D30980012A50B /* AutodownloadConnectionTypeController.swift in Sources */,
 				D0B3AC802142E2E900CD1374 /* ResetPasswordController.swift in Sources */,
 				D05D8B3A2192FC460064586F /* LocalizationListController.swift in Sources */,
 				D0943AFE1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift in Sources */,
@@ -5777,7 +5782,6 @@
 				D0EC6DEA1EB9F58900EBF1C3 /* ChatReportPeerTitlePanelNode.swift in Sources */,
 				D0EC6DEB1EB9F58900EBF1C3 /* ChatRequestInProgressTitlePanelNode.swift in Sources */,
 				D0EC6DEC1EB9F58900EBF1C3 /* ChatToastAlertPanelNode.swift in Sources */,
-				D06D37B22077E77F009219B6 /* AutodownloadSizeLimitItem.swift in Sources */,
 				D0EC6DED1EB9F58900EBF1C3 /* ChatHistoryNavigationButtonNode.swift in Sources */,
 				D0F4B01A211073C500912B92 /* DeviceContactInfoController.swift in Sources */,
 				D0FB87B21F7C4C19004DE005 /* FetchMediaUtils.swift in Sources */,
@@ -5936,6 +5940,7 @@
 				0900678D21ED5EA800530762 /* WallpaperColorPanelNode.swift in Sources */,
 				D0EC6E451EB9F58900EBF1C3 /* ItemListMultilineTextItem.swift in Sources */,
 				091417F421EF4F5F00C8325A /* WallpaperGalleryItem.swift in Sources */,
+				09EDAD28220D81040012A50B /* AutodownloadSliderItem.swift in Sources */,
 				D02F4AE91FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift in Sources */,
 				D0EC6E461EB9F58900EBF1C3 /* ItemListLoadingIndicatorEmptyStateItem.swift in Sources */,
 				D067B4A5211C911C00796039 /* LegacyChannelIntroController.swift in Sources */,
@@ -6027,7 +6032,6 @@
 				D0EC6E751EB9F58900EBF1C3 /* ThemeGridControllerNode.swift in Sources */,
 				D0EC6E761EB9F58900EBF1C3 /* SettingsController.swift in Sources */,
 				D0EC6E771EB9F58900EBF1C3 /* NotificationsAndSounds.swift in Sources */,
-				D06D37A92077DDF3009219B6 /* AutodownloadMediaCategoryController.swift in Sources */,
 				D0EC6E781EB9F58900EBF1C3 /* NotificationSoundSelection.swift in Sources */,
 				D056CD741FF2996B00880D28 /* ExternalMusicAlbumArtResources.swift in Sources */,
 				D0F0AAE41EC21AAA005EE2A5 /* CallControllerButtonsNode.swift in Sources */,

@@ -143,6 +143,10 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     
     func updateAutomaticMediaDownloadSettings(_ settings: AutomaticMediaDownloadSettings) {
     }
+        
+    func playMediaWithSound() -> (() -> Void)? {
+        return nil
+    }
     
     func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         return .none

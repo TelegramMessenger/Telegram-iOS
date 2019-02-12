@@ -279,17 +279,6 @@ func instantPageThemeTypeForSettingsAndTime(presentationTheme: PresentationTheme
         switch settings.themeType {
             case .light, .sepia, .gray:
                 var useDarkTheme = false
-                /*switch presentationTheme.name {
-                    case let .builtin(name):
-                        switch name {
-                            case .nightAccent, .nightGrayscale:
-                                useDarkTheme = true
-                            default:
-                                break
-                        }
-                    default:
-                        break
-                }*/
                 if let time = time {
                     let calendar = Calendar.current
                     let hour = calendar.component(.hour, from: time)
@@ -323,7 +312,7 @@ func instantPageThemeForType(_ type: InstantPageThemeType, settings: InstantPage
 
 extension ActionSheetControllerTheme {
     convenience init(instantPageTheme: InstantPageTheme) {
-        self.init(dimColor: UIColor(white: 0.0, alpha: 0.4), backgroundType: instantPageTheme.type != .dark ? .light : .dark, itemBackgroundColor: instantPageTheme.overlayPanelColor, itemHighlightedBackgroundColor: instantPageTheme.panelHighlightedBackgroundColor, standardActionTextColor: instantPageTheme.panelAccentColor, destructiveActionTextColor: instantPageTheme.panelAccentColor, disabledActionTextColor: instantPageTheme.panelAccentColor, primaryTextColor: instantPageTheme.textCategories.paragraph.color, secondaryTextColor: instantPageTheme.textCategories.caption.color, controlAccentColor: instantPageTheme.panelAccentColor)
+        self.init(dimColor: UIColor(white: 0.0, alpha: 0.4), backgroundType: instantPageTheme.type != .dark ? .light : .dark, itemBackgroundColor: instantPageTheme.overlayPanelColor, itemHighlightedBackgroundColor: instantPageTheme.panelHighlightedBackgroundColor, standardActionTextColor: instantPageTheme.panelAccentColor, destructiveActionTextColor: instantPageTheme.panelAccentColor, disabledActionTextColor: instantPageTheme.panelAccentColor, primaryTextColor: instantPageTheme.textCategories.paragraph.color, secondaryTextColor: instantPageTheme.textCategories.caption.color, controlAccentColor: instantPageTheme.panelAccentColor, controlColor: instantPageTheme.tableBorderColor)
     }
 }
 

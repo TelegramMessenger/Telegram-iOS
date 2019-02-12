@@ -309,7 +309,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if let value = value, !value.duration.isZero {
                     return value
                 } else {
-                    return MediaPlayerStatus(generationTimestamp: 0.0, duration: max(Double(item.content.duration), 0.01), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused)
+                    return MediaPlayerStatus(generationTimestamp: 0.0, duration: max(Double(item.content.duration), 0.01), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused, soundEnabled: true)
                 }
             })
             
@@ -459,7 +459,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
             
-            videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+            //videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
             self._ready.set(videoNode.ready)
         }
         
