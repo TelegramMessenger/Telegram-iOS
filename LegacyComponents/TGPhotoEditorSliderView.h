@@ -16,12 +16,16 @@
 
 @property (nonatomic, assign) CGFloat markValue;
 
+@property (nonatomic, assign) bool displayEdges;
+@property (nonatomic, assign) bool useLinesForPositions;
+
 @property (nonatomic, readonly) bool knobStartedDragging;
 
 @property (nonatomic, assign) CGFloat knobPadding;
 @property (nonatomic, assign) CGFloat lineSize;
 @property (nonatomic, strong) UIColor *backColor;
 @property (nonatomic, strong) UIColor *trackColor;
+@property (nonatomic, strong) UIColor *startColor;
 @property (nonatomic, assign) CGFloat trackCornerRadius;
 @property (nonatomic, assign) bool bordered;
 
