@@ -708,6 +708,7 @@
 				D05D8B30218F1D3D0064586F /* AccountSharedData.swift */,
 				D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */,
 				D000CAD922006C6C0011B15D /* SharedAccountMediaManager.swift */,
+				D06ECFC420B796DC00C576C2 /* NoticeEntryView.swift */,
 			);
 			name = "Account Manager";
 			sourceTree = "<group>";
@@ -895,7 +896,6 @@
 				D0FC19542020CB7700FEDBB2 /* PeerGroupStateView.swift */,
 				D0BE3033206026C800FBE6D8 /* MessagesView.swift */,
 				D048B4AE20A5EEAE00C79D31 /* AdditionalChatListItemsView.swift */,
-				D06ECFC420B796DC00C576C2 /* NoticeEntryView.swift */,
 				D037178A20D923CA004773C8 /* CachedItemView.swift */,
 				D029AA512167BC22006D4947 /* OrderedContactsView.swift */,
 				D039FB1A21714D9800BD1BAD /* PeerPresencesView.swift */,

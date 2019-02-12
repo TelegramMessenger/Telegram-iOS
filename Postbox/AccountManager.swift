@@ -20,6 +20,8 @@ public struct AccountManagerModifier {
     public let setAccessChallengeData: (PostboxAccessChallengeData) -> Void
     public let getVersion: () -> Int32
     public let setVersion: (Int32) -> Void
+    public let getNotice: (NoticeEntryKey) -> NoticeEntry?
+    public let setNotice: (NoticeEntryKey, NoticeEntry?) -> Void
 }
 
 final class AccountManagerImpl {
@@ -33,15 +35,18 @@ final class AccountManagerImpl {
     private let metadataTable: AccountManagerMetadataTable
     private let recordTable: AccountManagerRecordTable
     let sharedDataTable: AccountManagerSharedDataTable
+    let noticeTable: NoticeTable
     
     private var currentRecordOperations: [AccountManagerRecordOperation] = []
     private var currentMetadataOperations: [AccountManagerMetadataOperation] = []
     
     private var currentUpdatedSharedDataKeys = Set<ValueBoxKey>()
+    private var currentUpdatedNoticeEntryKeys = Set<NoticeEntryKey>()
     private var currentUpdatedAccessChallengeData: PostboxAccessChallengeData?
     
     private var recordsViews = Bag<(MutableAccountRecordsView, ValuePipe<AccountRecordsView>)>()
     private var sharedDataViews = Bag<(MutableAccountSharedDataView, ValuePipe<AccountSharedDataView>)>()
+    private var noticeEntryViews = Bag<(MutableNoticeEntryView, ValuePipe<NoticeEntryView>)>()
     private var accessChallengeDataViews = Bag<(MutableAccessChallengeDataView, ValuePipe<AccessChallengeDataView>)>()
     
     fileprivate init(queue: Queue, basePath: String, temporarySessionId: Int64) {
@@ -54,12 +59,14 @@ final class AccountManagerImpl {
         self.metadataTable = AccountManagerMetadataTable(valueBox: self.valueBox, table: AccountManagerMetadataTable.tableSpec(0))
         self.recordTable = AccountManagerRecordTable(valueBox: self.valueBox, table: AccountManagerRecordTable.tableSpec(1))
         self.sharedDataTable = AccountManagerSharedDataTable(valueBox: self.valueBox, table: AccountManagerSharedDataTable.tableSpec(2))
+        self.noticeTable = NoticeTable(valueBox: self.valueBox, table: NoticeTable.tableSpec(3))
         
         postboxLog("AccountManager: currentAccountId = \(String(describing: self.metadataTable.getCurrentAccountId()))")
         
         self.tables.append(self.metadataTable)
         self.tables.append(self.recordTable)
         self.tables.append(self.sharedDataTable)
+        self.tables.append(self.noticeTable)
     }
     
     deinit {
@@ -119,6 +126,11 @@ final class AccountManagerImpl {
                     return self.metadataTable.getVersion()
                 }, setVersion: { version in
                     self.metadataTable.setVersion(version)
+                }, getNotice: { key in
+                    self.noticeTable.get(key: key)
+                }, setNotice: { key, value in
+                    self.noticeTable.set(key: key, value: value)
+                    self.currentUpdatedNoticeEntryKeys.insert(key)
                 })
                 
                 let result = f(transaction)
@@ -151,6 +163,14 @@ final class AccountManagerImpl {
             }
         }
         
+        if !self.currentUpdatedNoticeEntryKeys.isEmpty {
+            for (view, pipe) in self.noticeEntryViews.copyItems() {
+                if view.replay(accountManagerImpl: self, updatedKeys: self.currentUpdatedNoticeEntryKeys) {
+                    pipe.putNext(NoticeEntryView(view))
+                }
+            }
+        }
+        
         if let data = self.currentUpdatedAccessChallengeData {
             for (view, pipe) in self.accessChallengeDataViews.copyItems() {
                 if view.replay(updatedData: data) {
@@ -162,6 +182,7 @@ final class AccountManagerImpl {
         self.currentRecordOperations.removeAll()
         self.currentMetadataOperations.removeAll()
         self.currentUpdatedSharedDataKeys.removeAll()
+        self.currentUpdatedNoticeEntryKeys.removeAll()
         self.currentUpdatedAccessChallengeData = nil
         
         for table in self.tables {
@@ -179,6 +200,13 @@ final class AccountManagerImpl {
     fileprivate func sharedData(keys: Set<ValueBoxKey>) -> Signal<AccountSharedDataView, NoError> {
         return self.transaction(ignoreDisabled: false, { transaction -> Signal<AccountSharedDataView, NoError> in
             return self.sharedDataInternal(transaction: transaction, keys: keys)
+        })
+        |> switchToLatest
+    }
+    
+    fileprivate func noticeEntry(key: NoticeEntryKey) -> Signal<NoticeEntryView, NoError> {
+        return self.transaction(ignoreDisabled: false, { transaction -> Signal<NoticeEntryView, NoError> in
+            return self.noticeEntryInternal(transaction: transaction, key: key)
         })
         |> switchToLatest
     }
@@ -227,6 +255,26 @@ final class AccountManagerImpl {
             queue.async {
                 if let strongSelf = self {
                     strongSelf.sharedDataViews.remove(index)
+                }
+            }
+        }
+    }
+    
+    private func noticeEntryInternal(transaction: AccountManagerModifier, key: NoticeEntryKey) -> Signal<NoticeEntryView, NoError> {
+        let mutableView = MutableNoticeEntryView(accountManagerImpl: self, key: key)
+        let pipe = ValuePipe<NoticeEntryView>()
+        let index = self.noticeEntryViews.add((mutableView, pipe))
+        
+        let queue = self.queue
+        return (.single(NoticeEntryView(mutableView))
+        |> then(pipe.signal()))
+        |> `catch` { _ -> Signal<NoticeEntryView, NoError> in
+            return .complete()
+        }
+        |> afterDisposed { [weak self] in
+            queue.async {
+                if let strongSelf = self {
+                    strongSelf.noticeEntryViews.remove(index)
                 }
             }
         }
@@ -373,6 +421,20 @@ public final class AccountManager {
             let disposable = MetaDisposable()
             self.impl.with { impl in
                 disposable.set(impl.sharedData(keys: keys).start(next: { next in
+                    subscriber.putNext(next)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func noticeEntry(key: NoticeEntryKey) -> Signal<NoticeEntryView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.noticeEntry(key: key).start(next: { next in
                     subscriber.putNext(next)
                 }, completed: {
                     subscriber.putCompletion()

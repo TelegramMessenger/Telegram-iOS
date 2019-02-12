@@ -816,6 +816,15 @@ public final class Transaction {
         }
     }
     
+    public func getAllNoticeEntries() -> [ValueBoxKey: NoticeEntry] {
+        assert(!self.disposed)
+        if let postbox = self.postbox {
+            return postbox.noticeTable.getAll()
+        } else {
+            return [:]
+        }
+    }
+    
     public func getNoticeEntry(key: NoticeEntryKey) -> PostboxCoding? {
         assert(!self.disposed)
         if let postbox = self.postbox {

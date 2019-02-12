@@ -41,6 +41,17 @@ final class NoticeTable: Table {
         return ValueBoxTable(id: id, keyType: .binary)
     }
     
+    func getAll() -> [ValueBoxKey: NoticeEntry] {
+        var result: [ValueBoxKey: NoticeEntry] = [:]
+        self.valueBox.scan(self.table, values: { key, value in
+            if let object = PostboxDecoder(buffer: value).decodeRootObject() as? NoticeEntry {
+                result[key] = object
+            }
+            return true
+        })
+        return result
+    }
+    
     func get(key: NoticeEntryKey) -> NoticeEntry? {
         if let cached = self.cachedEntries[key] {
             return cached.entry
