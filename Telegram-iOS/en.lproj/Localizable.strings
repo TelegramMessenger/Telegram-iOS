@@ -3984,24 +3984,36 @@ Unused sets are archived when you add more.";
 "AutoDownloadSettings.Photos" = "Photos";
 "AutoDownloadSettings.Videos" = "Videos";
 "AutoDownloadSettings.Files" = "Files";
-"AutoDownloadSettings.VideoMessages" = "Video Messages";
-"AutoDownloadSettings.VoiceMessages" = "Voice Messages";
-"AutoDownloadSettings.MediaTypesInfo" = "You can customize each of the media types and set individual size limits.";
-"AutoDownloadSettings.Save" = "Save";
+"AutoDownloadSettings.VoiceMessagesInfo" = "Voice messages are tiny and always downloaded automatically.";
 "AutoDownloadSettings.ResetSettings" = "Reset Auto-Download Settings";
-"AutoDownloadSettings.Limit" = "Limit by Size";
 
-"AutoDownloadSettings.OnForAll" = "ON for all chats";
-"AutoDownloadSettings.OnFor" = "ON for %@";
+"AutoDownloadSettings.AutodownloadPhotos" = "AUTO-DOWNLOAD PHOTOS";
+"AutoDownloadSettings.AutodownloadVideos" = "AUTO-DOWNLOAD VIDEOS AND GIFS";
+"AutoDownloadSettings.AutodownloadFiles" = "AUTO-DOWNLOAD FILES AND MUSIC";
+
+"AutoDownloadSettings.MaxVideoSize" = "MAXIMUM VIDEO SIZE";
+"AutoDownloadSettings.MaxFileSize" = "MAXIMUM FILE SIZE";
+
+"AutoDownloadSettings.DataUsage" = "DATA USAGE";
+"AutoDownloadSettings.DataUsageLow" = "Low";
+"AutoDownloadSettings.DataUsageMedium" = "Medium";
+"AutoDownloadSettings.DataUsageHigh" = "High";
+"AutoDownloadSettings.DataUsageCustom" = "Custom";
+
+"AutoDownloadSettings.OnForAll" = "On for all chats";
+"AutoDownloadSettings.OnFor" = "On for %@";
 "AutoDownloadSettings.TypeContacts" = "Contacts";
-"AutoDownloadSettings.TypePrivateChats" = "Private chats";
-"AutoDownloadSettings.TypeGroupChats" = "Group chats";
+"AutoDownloadSettings.TypePrivateChats" = "PM";
+"AutoDownloadSettings.TypeGroupChats" = "Groups";
 "AutoDownloadSettings.TypeChannels" = "Channels";
-"AutoDownloadSettings.UpToForAll" = "Up to %@ in all chats";
-"AutoDownloadSettings.UpToFor" = "Up to %@ in %@";
-"AutoDownloadSettings.OffForAll" = "OFF for all chats";
+"AutoDownloadSettings.UpToForAll" = "Up to %@ for all chats";
+"AutoDownloadSettings.UpToFor" = "Up to %@ for %@";
+"AutoDownloadSettings.OffForAll" = "Off for all chats";
 "AutoDownloadSettings.Delimeter" = ", ";
 "AutoDownloadSettings.LastDelimeter" = " and ";
+
+"AutoDownloadSettings.PreloadVideo" = "Preload Larger Videos";
+"AutoDownloadSettings.PreloadVideoInfo" = "Preload first seconds of videos larger than %@ for instant playback.";
 
 "ChatSettings.AutoDownloadUsingCellular" = "Using Cellular";
 "ChatSettings.AutoDownloadUsingWiFi" = "Using Wi-Fi";
@@ -4009,13 +4021,8 @@ Unused sets are archived when you add more.";
 "ChatSettings.AutoPlayGifs" = "GIFs";
 "ChatSettings.AutoPlayVideos" = "Videos";
 
-"ChatSettings.AutoDownloadSettings.OnForAll" = "ON for all media";
-"ChatSettings.AutoDownloadSettings.OnFor" = "ON for %@";
-"ChatSettings.AutoDownloadSettings.TypePhoto" = "photos";
-"ChatSettings.AutoDownloadSettings.TypeVideo" = "videos";
-"ChatSettings.AutoDownloadSettings.TypeFile" = "files";
-"ChatSettings.AutoDownloadSettings.TypeVideoMessage" = "video messages";
-"ChatSettings.AutoDownloadSettings.TypeVoiceMessage" = "voice messages";
-"ChatSettings.AutoDownloadSettings.OffForAll" = "OFF for all media";
+"ChatSettings.AutoDownloadSettings.TypePhoto" = "Photos";
+"ChatSettings.AutoDownloadSettings.TypeVideo" = "Videos (%@)";
+"ChatSettings.AutoDownloadSettings.TypeFile" = "Files (%@)";
+"ChatSettings.AutoDownloadSettings.OffForAll" = "Disabled";
 "ChatSettings.AutoDownloadSettings.Delimeter" = ", ";
-"ChatSettings.AutoDownloadSettings.LastDelimeter" = " and ";
