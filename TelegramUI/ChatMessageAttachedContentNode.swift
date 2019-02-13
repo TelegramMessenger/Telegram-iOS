@@ -291,7 +291,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 preferMediaAspectFilled = flags.contains(.preferMediaAspectFilled)
             }
             
-            let contentMode: InteractiveMediaNodeContentMode = preferMediaAspectFilled ? .aspectFill : .aspectFit
+            var contentMode: InteractiveMediaNodeContentMode = preferMediaAspectFilled ? .aspectFill : .aspectFit
             
             var edited = false
             var sentViaBot = false
@@ -385,8 +385,23 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         initialWidth = videoLayout.contentSize.width + videoLayout.overflowLeft + videoLayout.overflowRight
                         contentInstantVideoSizeAndApply = (videoLayout, apply)
                     } else if file.isVideo {
-                        let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, media: file)
-                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, message, file, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, automaticDownloadSettings.autoplayGifs, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                        var automaticDownload: InteractiveMediaNodeAutodownloadMode = .none
+                        var automaticPlayback = false
+                        
+                        if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, media: file) {
+                            automaticDownload = .full
+                        } else if shouldPredownloadMedia(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, media: file) {
+                            automaticDownload = .prefetch
+                        }
+                        if file.isAnimated {
+                            automaticPlayback = automaticDownloadSettings.autoplayGifs
+                        } else {
+                            if case .full = automaticDownload, automaticDownloadSettings.autoplayVideos  {
+                                automaticPlayback = true
+                                contentMode = .aspectFill
+                            }
+                        }
+                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, message, file, automaticDownload, associatedData.automaticDownloadPeerType, automaticPlayback, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
                     } else if file.isSticker, let _ = file.dimensions {

@@ -68,6 +68,8 @@ private final class ItemListRevealAnimationNode : ASDisplayNode {
         self.setViewBlock({
             if let url = frameworkBundle.url(forResource: animation, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
                 let view = LOTAnimationView(model: composition, in: frameworkBundle)
+                view.backgroundColor = .clear
+                view.isOpaque = false
                 
                 if let keysToColor = keysToColor {
                     for key in keysToColor {

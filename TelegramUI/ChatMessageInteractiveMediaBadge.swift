@@ -155,6 +155,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         contentSize = CGSize(width: durationSize.width + 14.0 + inset, height: 18.0)
                     
                         if let iconNode = self.iconNode {
+                            transition.updateTransformScale(node: iconNode, scale: 0.001)
                             transition.updateAlpha(node: iconNode, alpha: 0.0)
                         }
                     case let .mediaDownload(backgroundColor, foregroundColor, duration, size, muted, active):
@@ -208,6 +209,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                                 iconNode = current
                             } else {
                                 iconNode = ASImageNode()
+                                iconNode.frame = CGRect(x: 0.0, y: 0.0, width: 14.0, height: 9.0)
                                 self.iconNode = iconNode
                                 self.backgroundNode.addSubnode(iconNode)
                             }
@@ -217,11 +219,11 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                                 iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/InlineVideoMute"), color: foregroundColor)
                             }
                             transition.updateAlpha(node: iconNode, alpha: 1.0)
-                            if let icon = iconNode.image {
-                                transition.updateFrame(node: iconNode, frame: CGRect(x: (active ? 42.0 : 7.0) + floor(durationSize.width) + 4.0, y: active ? 9.0 + UIScreenPixel : 4.0 + UIScreenPixel, width: icon.size.width, height: icon.size.height))
-                            }
+                            transition.updatePosition(node: iconNode, position: CGPoint(x: (active ? 42.0 : 7.0) + floor(durationSize.width) + 4.0 + 7.0, y: (active ? 9.0 : 4.0) + 5.0))
+                            transition.updateTransformScale(node: iconNode, scale: 1.0)
                         } else if let iconNode = self.iconNode {
                             transition.updateAlpha(node: iconNode, alpha: 0.0)
+                            transition.updateTransformScale(node: iconNode, scale: 0.001)
                         }
                         
                         var contentWidth: CGFloat = max(sizeSize.width, durationSize.width + (muted ? 17.0 : 0.0)) + 14.0

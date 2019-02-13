@@ -443,7 +443,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     tmpWidth -= 38.0
                 }
             } else {
-                tmpWidth = isInlinePlayableVideo ? baseWidth - 36.0 : layoutConstants.bubble.maximumWidthFill.widthFor(baseWidth)
+                tmpWidth = isInlinePlayableVideo ? min(570.0, baseWidth - 36.0) : layoutConstants.bubble.maximumWidthFill.widthFor(baseWidth)
                 if needShareButton && tmpWidth + 32.0 > baseWidth {
                     tmpWidth = baseWidth - 32.0
                 }
@@ -1661,12 +1661,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             if let item = self.item, self.backgroundNode.frame.contains(location) {
                                 var foundTapAction = false
                                 var tapMessage: Message? = item.content.firstMessage
-                                var selectAll = false
+                                var selectAll = true
                                 loop: for contentNode in self.contentNodes {
                                     if !contentNode.frame.contains(location) {
                                         continue loop
-                                    } else if contentNode is ChatMessageTextBubbleContentNode {
-                                        selectAll = true
+                                    } else if contentNode is ChatMessageMediaBubbleContentNode {
+                                        selectAll = false
                                     }
                                     tapMessage = contentNode.item?.message
                                     let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture)

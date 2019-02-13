@@ -68,23 +68,27 @@ public struct AutomaticMediaDownloadConnection: PostboxCoding, Equatable {
 }
 
 public struct AutomaticMediaDownloadCategories: PostboxCoding, Equatable, Comparable {
+    public var basePreset: AutomaticMediaDownloadPreset
     public var photo: AutomaticMediaDownloadCategory
     public var video: AutomaticMediaDownloadCategory
     public var file: AutomaticMediaDownloadCategory
     
-    public init(photo: AutomaticMediaDownloadCategory, video: AutomaticMediaDownloadCategory, file: AutomaticMediaDownloadCategory) {
+    public init(basePreset: AutomaticMediaDownloadPreset, photo: AutomaticMediaDownloadCategory, video: AutomaticMediaDownloadCategory, file: AutomaticMediaDownloadCategory) {
+        self.basePreset = basePreset
         self.photo = photo
         self.video = video
         self.file = file
     }
     
     public init(decoder: PostboxDecoder) {
+        self.basePreset = AutomaticMediaDownloadPreset(rawValue: decoder.decodeInt32ForKey("preset", orElse: 0)) ?? .medium
         self.photo = decoder.decodeObjectForKey("photo", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
         self.video = decoder.decodeObjectForKey("video", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
         self.file = decoder.decodeObjectForKey("file", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
     }
     
     public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.basePreset.rawValue, forKey: "preset")
         encoder.encodeObject(self.photo, forKey: "photo")
         encoder.encodeObject(self.video, forKey: "video")
         encoder.encodeObject(self.file, forKey: "file")
@@ -145,13 +149,13 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
     
     public static var defaultSettings: AutomaticMediaDownloadSettings {
         let mb: Int32 = 1024 * 1024
-        let presets = AutomaticMediaDownloadPresets(low: AutomaticMediaDownloadCategories(photo: AutomaticMediaDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
+        let presets = AutomaticMediaDownloadPresets(low: AutomaticMediaDownloadCategories(basePreset: .low, photo: AutomaticMediaDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
                                                                                           video: AutomaticMediaDownloadCategory(contacts: false, otherPrivate: false, groups: false, channels: false, sizeLimit: 1 * mb, predownload: false),
                                                                                           file: AutomaticMediaDownloadCategory(contacts: false, otherPrivate: false, groups: false, channels: false, sizeLimit: 1 * mb, predownload: false)),
-                                                    medium: AutomaticMediaDownloadCategories(photo: AutomaticMediaDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
+                                                    medium: AutomaticMediaDownloadCategories(basePreset: .medium, photo: AutomaticMediaDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
                                                                                              video: AutomaticMediaDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: Int32(2.5 * CGFloat(mb)), predownload: false),
                                                                                              file: AutomaticMediaDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false)),
-                                                    high: AutomaticMediaDownloadCategories(photo: AutomaticMediaDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
+                                                    high: AutomaticMediaDownloadCategories(basePreset: .high, photo: AutomaticMediaDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
                                                                                      video: AutomaticMediaDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 10 * mb, predownload: true),
                                                                                      file: AutomaticMediaDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 3 * mb, predownload: false)))
         let saveDownloadedPhotos = AutomaticMediaDownloadCategory(contacts: false, otherPrivate: false, groups: false, channels: false, sizeLimit: 0, predownload: false)
@@ -214,17 +218,17 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
     }
 }
 
-private func categoriesWithAutodownloadPreset(_ autodownloadPreset: AutodownloadPresetSettings) -> AutomaticMediaDownloadCategories {
+private func categoriesWithAutodownloadPreset(_ autodownloadPreset: AutodownloadPresetSettings, preset: AutomaticMediaDownloadPreset) -> AutomaticMediaDownloadCategories {
     let videoEnabled = autodownloadPreset.videoSizeMax > 0
     let videoSizeMax = autodownloadPreset.videoSizeMax > 0 ? autodownloadPreset.videoSizeMax : 1 * 1024 * 1024
     let fileEnabled = autodownloadPreset.fileSizeMax > 0
     let fileSizeMax = autodownloadPreset.fileSizeMax > 0 ? autodownloadPreset.fileSizeMax : 1 * 1024 * 1024
     
-    return AutomaticMediaDownloadCategories(photo: AutomaticMediaDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: autodownloadPreset.photoSizeMax, predownload: false), video: AutomaticMediaDownloadCategory(contacts: videoEnabled, otherPrivate: videoEnabled, groups: videoEnabled, channels: videoEnabled, sizeLimit: videoSizeMax, predownload: autodownloadPreset.preloadLargeVideo), file: AutomaticMediaDownloadCategory(contacts: fileEnabled, otherPrivate: fileEnabled, groups: fileEnabled, channels: fileEnabled, sizeLimit: fileSizeMax, predownload: false))
+    return AutomaticMediaDownloadCategories(basePreset: preset, photo: AutomaticMediaDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: autodownloadPreset.photoSizeMax, predownload: false), video: AutomaticMediaDownloadCategory(contacts: videoEnabled, otherPrivate: videoEnabled, groups: videoEnabled, channels: videoEnabled, sizeLimit: videoSizeMax, predownload: autodownloadPreset.preloadLargeVideo), file: AutomaticMediaDownloadCategory(contacts: fileEnabled, otherPrivate: fileEnabled, groups: fileEnabled, channels: fileEnabled, sizeLimit: fileSizeMax, predownload: false))
 }
 
 private func presetsWithAutodownloadSettings(_ autodownloadSettings: AutodownloadSettings) -> AutomaticMediaDownloadPresets {
-    return AutomaticMediaDownloadPresets(low: categoriesWithAutodownloadPreset(autodownloadSettings.lowPreset), medium: categoriesWithAutodownloadPreset(autodownloadSettings.mediumPreset), high: categoriesWithAutodownloadPreset(autodownloadSettings.highPreset))
+    return AutomaticMediaDownloadPresets(low: categoriesWithAutodownloadPreset(autodownloadSettings.lowPreset, preset: .low), medium: categoriesWithAutodownloadPreset(autodownloadSettings.mediumPreset, preset: .medium), high: categoriesWithAutodownloadPreset(autodownloadSettings.highPreset, preset: .high))
 }
 
 //public struct AutomaticMediaDownloadCategory: PostboxCoding, Equatable {

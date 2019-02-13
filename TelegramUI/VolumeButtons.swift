@@ -2,22 +2,19 @@ import Foundation
 import UIKit
 import MediaPlayer
 
-private struct Observation {
-    static let VolumeKey = "outputVolume"
-    static var Context = 0
-    
-}
+private let minVolume = 0.00001
+private let maxVolume = 0.99999
 
 class VolumeChangeDetector: NSObject {
     private let control: MPVolumeView
     private var observer: Any?
     private var currentValue: Float
-    private var ignoreAdjustmentOnce = false
     
     init(view: UIView, valueChanged: @escaping () -> Void) {
         self.control = MPVolumeView(frame: CGRect(origin: CGPoint(x: -100.0, y: -100.0), size: CGSize(width: 100.0, height: 20.0)))
         self.control.alpha = 0.0001
         self.control.isUserInteractionEnabled = false
+        self.control.showsRouteButton = false
         self.currentValue = AVAudioSession.sharedInstance().outputVolume
         
         super.init()
@@ -28,17 +25,24 @@ class VolumeChangeDetector: NSObject {
                     let previous = strongSelf.currentValue
                     if !previous.isEqual(to: volume) {
                         strongSelf.currentValue = volume
-                        if strongSelf.ignoreAdjustmentOnce {
-                            strongSelf.ignoreAdjustmentOnce = false
-                        } else {
+
+                        var ignore = false
+                        if let reason = userInfo["AVSystemController_AudioVolumeChangeReasonNotificationParameter"], reason as? String != "ExplicitVolumeChange" {
+                            ignore = true
+                        }
+                        
+                        if !ignore {
                             valueChanged()
                         }
                     }
+                    strongSelf.fixVolume()
                 }
             }
         })
         
         view.addSubview(self.control)
+        
+        self.fixVolume()
     }
     
     deinit {
@@ -46,5 +50,14 @@ class VolumeChangeDetector: NSObject {
             NotificationCenter.default.removeObserver(observer)
         }
         self.control.removeFromSuperview()
+    }
+    
+    private func fixVolume() {
+        for view in self.control.subviews {
+            if let slider = view as? UISlider {
+                if slider.value == 0.0 { slider.value = Float(minVolume) }
+                if slider.value == 1.0 { slider.value = Float(maxVolume) }
+            }
+        }
     }
 }
