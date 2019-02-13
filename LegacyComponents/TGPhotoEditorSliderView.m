@@ -361,7 +361,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         vertical = true;
     }
     
-    CGFloat knobPosition = _knobPadding + (_knobView.highlighted ? _knobDragCenter : [self centerPositionForValue:_value totalLength:totalLength knobSize:_knobView.image.size.width vertical:vertical]);
+    CGFloat knobPosition = _knobPadding + (_knobView.highlighted && self.positionsCount < 2 ? _knobDragCenter : [self centerPositionForValue:_value totalLength:totalLength knobSize:_knobView.image.size.width vertical:vertical]);
     knobPosition = MAX(_knobPadding, MIN(knobPosition, _knobPadding + totalLength));
     
     CGRect knobViewFrame = CGRectMake(knobPosition - _knobView.image.size.width / 2, (sideLength - _knobView.image.size.height) / 2, _knobView.image.size.width, _knobView.image.size.height);

@@ -643,8 +643,10 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
         __strong TGPhotoQualityController *strongSelf = weakSelf;
         if (strongSelf != nil)
         {
-            bool hasAudio = [next tracksWithMediaType:AVMediaTypeAudio].count > 0;
-            [strongSelf _updateVideoDuration:CMTimeGetSeconds(next.duration) hasAudio:hasAudio];
+            TGDispatchOnMainThread(^{
+                bool hasAudio = [next tracksWithMediaType:AVMediaTypeAudio].count > 0;
+                [strongSelf _updateVideoDuration:CMTimeGetSeconds(next.duration) hasAudio:hasAudio];
+            });
         }
     }] mapToSignal:^SSignal *(AVAsset *avAsset)
     {
