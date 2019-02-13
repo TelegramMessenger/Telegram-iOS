@@ -18,7 +18,8 @@ final class VolumeControlStatusBar: UIView {
     private var ignoreAdjustmentOnce = false
     
     init(frame: CGRect, shouldBeVisible: Signal<Bool, NoError>) {
-        self.control = MPVolumeView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 100.0, height: 20.0)))
+        self.control = MPVolumeView(frame: CGRect(origin: CGPoint(x: -100.0, y: -100.0), size: CGSize(width: 100.0, height: 20.0)))
+        self.control.alpha = 0.0001
         self.currentValue = AVAudioSession.sharedInstance().outputVolume
         
         super.init(frame: frame)
