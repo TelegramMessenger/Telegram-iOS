@@ -657,7 +657,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
             guard let strongSelf = self else {
                 return
             }
-            let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.strings, theme: AuthorizationSequenceCountrySelectionTheme(presentationTheme: strongSelf.theme), displayCodes: true)
+            let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.strings, theme: strongSelf.theme, displayCodes: true)
             controller.completeWithCountryCode = { code, _ in
                 if let strongSelf = self, var innerState = strongSelf.innerState {
                     innerState.data.updateTextField(type: .countryCode, value: "+\(code)")

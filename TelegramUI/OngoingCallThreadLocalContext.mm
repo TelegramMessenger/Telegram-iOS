@@ -264,7 +264,7 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
     assert([_queue isCurrent]);
     removeContext(_contextId);
     if (_controller != NULL) {
-        [self stop];
+        [self stop:nil];
     }
 }
 
@@ -305,7 +305,7 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
     }
 }
 
-- (void)stop {
+- (void)stop:(void (^)(NSString *, int64_t, int64_t, int64_t, int64_t))completion {
     if (_controller != nil) {
         _controller->Stop();
         
@@ -319,8 +319,8 @@ static int callControllerDataSavingForType(OngoingCallDataSaving type) {
         delete _controller;
         _controller = NULL;
         
-        if (_callEnded) {
-            _callEnded(debugLog, stats.bytesSentWifi, stats.bytesRecvdWifi, stats.bytesSentMobile, stats.bytesRecvdMobile);
+        if (completion) {
+            completion(debugLog, stats.bytesSentWifi, stats.bytesRecvdWifi, stats.bytesSentMobile, stats.bytesRecvdMobile);
         }
     }
 }

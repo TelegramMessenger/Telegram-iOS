@@ -30,14 +30,14 @@ private final class PhoneAndCountryNode: ASDisplayNode {
     var selectCountryCode: (() -> Void)?
     var checkPhone: (() -> Void)?
     
-    init(strings: PresentationStrings, theme: AuthorizationTheme) {
+    init(strings: PresentationStrings, theme: PresentationTheme) {
         self.strings = strings
         
         let countryButtonBackground = generateImage(CGSize(width: 61.0, height: 67.0), rotatedContext: { size, context in
             let arrowSize: CGFloat = 10.0
             let lineWidth = UIScreenPixel
             context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setStrokeColor(theme.separatorColor.cgColor)
+            context.setStrokeColor(theme.list.itemPlainSeparatorColor.cgColor)
             context.setLineWidth(lineWidth)
             context.move(to: CGPoint(x: 15.0, y: lineWidth / 2.0))
             context.addLine(to: CGPoint(x: size.width, y: lineWidth / 2.0))
@@ -54,7 +54,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         let countryButtonHighlightedBackground = generateImage(CGSize(width: 60.0, height: 67.0), rotatedContext: { size, context in
             let arrowSize: CGFloat = 10.0
             context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(theme.itemHighlightedBackgroundColor.cgColor)
+            context.setFillColor(theme.list.itemHighlightedBackgroundColor.cgColor)
             context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height - arrowSize)))
             context.move(to: CGPoint(x: size.width, y: size.height - arrowSize))
             context.addLine(to: CGPoint(x: size.width - 1.0, y: size.height - arrowSize))
@@ -67,7 +67,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         let phoneInputBackground = generateImage(CGSize(width: 85.0, height: 57.0), rotatedContext: { size, context in
             let lineWidth = UIScreenPixel
             context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setStrokeColor(theme.separatorColor.cgColor)
+            context.setStrokeColor(theme.list.itemPlainSeparatorColor.cgColor)
             context.setLineWidth(lineWidth)
             context.move(to: CGPoint(x: 15.0, y: size.height - lineWidth / 2.0))
             context.addLine(to: CGPoint(x: size.width, y: size.height - lineWidth / 2.0))
@@ -98,13 +98,13 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.addSubnode(self.countryButton)
         self.addSubnode(self.phoneInputNode)
         
-        self.phoneInputNode.countryCodeField.textField.keyboardAppearance = theme.keyboard.keyboardAppearance
-        self.phoneInputNode.numberField.textField.keyboardAppearance = theme.keyboard.keyboardAppearance
-        self.phoneInputNode.countryCodeField.textField.textColor = theme.primaryColor
-        self.phoneInputNode.numberField.textField.textColor = theme.primaryColor
+        self.phoneInputNode.countryCodeField.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.phoneInputNode.numberField.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.phoneInputNode.countryCodeField.textField.textColor = theme.list.itemPrimaryTextColor
+        self.phoneInputNode.numberField.textField.textColor = theme.list.itemPrimaryTextColor
         
-        self.phoneInputNode.countryCodeField.textField.tintColor = theme.accentColor
-        self.phoneInputNode.numberField.textField.tintColor = theme.accentColor
+        self.phoneInputNode.countryCodeField.textField.tintColor = theme.list.itemAccentColor
+        self.phoneInputNode.numberField.textField.tintColor = theme.list.itemAccentColor
         
         self.phoneInputNode.countryCodeField.textField.disableAutomaticKeyboardHandling = [.forward]
         self.phoneInputNode.numberField.textField.disableAutomaticKeyboardHandling = [.forward]
@@ -113,7 +113,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.countryButton.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 15.0, bottom: 10.0, right: 0.0)
         self.countryButton.contentHorizontalAlignment = .left
         
-        self.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.textPlaceholderColor)
+        self.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
         
         self.countryButton.addTarget(self, action: #selector(self.countryPressed), forControlEvents: .touchUpInside)
         
@@ -122,13 +122,13 @@ private final class PhoneAndCountryNode: ASDisplayNode {
                 if let code = Int(code), let name = name, let countryName = countryCodeAndIdToName[CountryCodeAndId(code: code, id: name)] {
                     let flagString = emojiFlagForISOCountryCode(name as NSString)
                     let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(name, strings: strongSelf.strings) ?? countryName
-                    strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.primaryColor, for: [])
+                    strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemPrimaryTextColor, for: [])
                 } else if let code = Int(code), let (countryId, countryName) = countryCodeToIdAndName[code] {
                     let flagString = emojiFlagForISOCountryCode(countryId as NSString)
                     let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(countryId, strings: strongSelf.strings) ?? countryName
-                    strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.primaryColor, for: [])
+                    strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemPrimaryTextColor, for: [])
                 } else {
-                    strongSelf.countryButton.setTitle(strings.Login_SelectCountry_Title, with: Font.regular(20.0), with: theme.textPlaceholderColor, for: [])
+                    strongSelf.countryButton.setTitle(strings.Login_SelectCountry_Title, with: Font.regular(20.0), with: theme.list.itemPlaceholderTextColor, for: [])
                 }
             }
         }
@@ -164,7 +164,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
 
 final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     private let strings: PresentationStrings
-    private let theme: AuthorizationTheme
+    private let theme: PresentationTheme
     
     private let titleNode: ASTextNode
     private let noticeNode: ASTextNode
@@ -194,27 +194,27 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         }
     }
     
-    init(strings: PresentationStrings, theme: AuthorizationTheme) {
+    init(strings: PresentationStrings, theme: PresentationTheme) {
         self.strings = strings
         self.theme = theme
         
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: strings.Login_PhoneTitle, font: Font.light(30.0), textColor: theme.primaryColor)
+        self.titleNode.attributedText = NSAttributedString(string: strings.Login_PhoneTitle, font: Font.light(30.0), textColor: theme.list.itemPrimaryTextColor)
         
         self.noticeNode = ASTextNode()
         self.noticeNode.isUserInteractionEnabled = false
         self.noticeNode.displaysAsynchronously = false
-        self.noticeNode.attributedText = NSAttributedString(string: strings.Login_PhoneAndCountryHelp, font: Font.regular(16.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.noticeNode.attributedText = NSAttributedString(string: strings.Login_PhoneAndCountryHelp, font: Font.regular(16.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         
         self.termsOfServiceNode = ImmediateTextNode()
         self.termsOfServiceNode.maximumNumberOfLines = 0
         self.termsOfServiceNode.textAlignment = .center
         self.termsOfServiceNode.displaysAsynchronously = false
         
-        let termsOfServiceAttributes = MarkdownAttributeSet(font: Font.regular(16.0), textColor: self.theme.primaryColor)
-        let termsOfServiceLinkAttributes = MarkdownAttributeSet(font: Font.regular(16.0), textColor: self.theme.accentColor, additionalAttributes: [NSAttributedStringKey.underlineStyle.rawValue: NSUnderlineStyle.styleSingle.rawValue as NSNumber, TelegramTextAttributes.URL: ""])
+        let termsOfServiceAttributes = MarkdownAttributeSet(font: Font.regular(16.0), textColor: self.theme.list.itemPrimaryTextColor)
+        let termsOfServiceLinkAttributes = MarkdownAttributeSet(font: Font.regular(16.0), textColor: self.theme.list.itemAccentColor, additionalAttributes: [NSAttributedStringKey.underlineStyle.rawValue: NSUnderlineStyle.styleSingle.rawValue as NSNumber, TelegramTextAttributes.URL: ""])
         
         let termsString = parseMarkdownIntoAttributedString(self.strings.Login_TermsOfServiceLabel.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: termsOfServiceAttributes, bold: termsOfServiceAttributes, link: termsOfServiceLinkAttributes, linkAttribute: { _ in
             return nil
@@ -229,7 +229,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
             return UITracingLayerView()
         })
         
-        self.backgroundColor = theme.backgroundColor
+        self.backgroundColor = theme.list.plainBackgroundColor
         
         self.addSubnode(self.titleNode)
         //self.addSubnode(self.termsOfServiceNode)
@@ -254,7 +254,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
             if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
             }
         }
-        self.termsOfServiceNode.linkHighlightColor = theme.accentColor.withAlphaComponent(0.5)
+        self.termsOfServiceNode.linkHighlightColor = theme.list.itemAccentColor.withAlphaComponent(0.5)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -270,9 +270,9 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         }
         
         if max(layout.size.width, layout.size.height) > 1023.0 {
-            self.titleNode.attributedText = NSAttributedString(string: strings.Login_PhoneTitle, font: Font.light(40.0), textColor: self.theme.primaryColor)
+            self.titleNode.attributedText = NSAttributedString(string: strings.Login_PhoneTitle, font: Font.light(40.0), textColor: self.theme.list.itemPrimaryTextColor)
         } else {
-            self.titleNode.attributedText = NSAttributedString(string: strings.Login_PhoneTitle, font: Font.light(30.0), textColor: self.theme.primaryColor)
+            self.titleNode.attributedText = NSAttributedString(string: strings.Login_PhoneTitle, font: Font.light(30.0), textColor: self.theme.list.itemPrimaryTextColor)
         }
         
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))

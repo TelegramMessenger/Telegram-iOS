@@ -55,12 +55,13 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
     
     override init() {
         self.backgroundNode = ASImageNode()
+        self.backgroundNode.clipsToBounds = true
         self.durationNode = ASTextNode()
         
         super.init()
         
         self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.durationNode)
+        self.backgroundNode.addSubnode(self.durationNode)
     }
     
     override func didLoad() {
@@ -76,6 +77,8 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
     }
     
     func update(theme: PresentationTheme, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, animated: Bool) {
+        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
+        
         if self.mediaDownloadState != mediaDownloadState {
             self.mediaDownloadState = mediaDownloadState
             if let mediaDownloadState = self.mediaDownloadState {
@@ -118,13 +121,11 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                 mediaDownloadStatusNode.frame = mediaStatusFrame
                 mediaDownloadStatusNode.transitionToState(state, animated: true, completion: {})
             } else if let mediaDownloadStatusNode = self.mediaDownloadStatusNode {
-                self.mediaDownloadStatusNode = nil
-                mediaDownloadStatusNode.removeFromSupernode()
+                mediaDownloadStatusNode.transitionToState(.none, animated: true, completion: {})
             }
         }
         
         var contentSize = CGSize()
-        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
         
         if self.content != content {
             let previousContent = self.content
@@ -150,8 +151,8 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         }
                         self.durationNode.attributedText = convertedText
                         let durationSize = self.durationNode.measure(CGSize(width: 160.0, height: 160.0))
-                        self.durationNode.frame = CGRect(x: 7.0, y: 2.0, width: durationSize.width, height: durationSize.height)
-                        contentSize = CGSize(width: durationSize.width + 14.0, height: 18.0)
+                        self.durationNode.frame = CGRect(x: 7.0 + inset, y: 2.0, width: durationSize.width, height: durationSize.height)
+                        contentSize = CGSize(width: durationSize.width + 14.0 + inset, height: 18.0)
                     
                         if let iconNode = self.iconNode {
                             transition.updateAlpha(node: iconNode, alpha: 0.0)
@@ -178,7 +179,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                             } else {
                                 sizeNode = ASTextNode()
                                 self.sizeNode = sizeNode
-                                self.addSubnode(sizeNode)
+                                self.backgroundNode.addSubnode(sizeNode)
                             }
                             
                             let sizeString = NSMutableAttributedString(string: size, attributes: [.font: font, .foregroundColor: foregroundColor])
@@ -188,10 +189,13 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                             textTransition.updateFrame(node: sizeNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 20.0 : 2.0, width: sizeSize.width, height: sizeSize.height))
                             transition.updateAlpha(node: sizeNode, alpha: 1.0)
                         } else if let sizeNode = self.sizeNode {
+                            let sizeSize = sizeNode.frame.size
+                            textTransition.updateFrame(node: sizeNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 20.0 : 2.0, width: sizeSize.width, height: sizeSize.height))
                             transition.updateAlpha(node: sizeNode, alpha: 0.0)
                         }
                         
-                        let durationSize = self.durationNode.measure(CGSize(width: 160.0, height: 160.0))
+                        var durationSize = self.durationNode.measure(CGSize(width: 160.0, height: 160.0))
+                        durationSize.width = max(25.0, durationSize.width)
                         if let statusNode = self.mediaDownloadStatusNode {
                             transition.updateAlpha(node: statusNode, alpha: active ? 1.0 : 0.0)
                         }
@@ -205,7 +209,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                             } else {
                                 iconNode = ASImageNode()
                                 self.iconNode = iconNode
-                                self.addSubnode(iconNode)
+                                self.backgroundNode.addSubnode(iconNode)
                             }
                             
                             if self.foregroundColor != foregroundColor {

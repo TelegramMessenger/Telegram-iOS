@@ -10,8 +10,8 @@ final class InteractiveChatLinkPreviewsResult {
     }
 }
 
-func interactiveChatLinkPreviewsEnabled(postbox: Postbox, displayAlert: @escaping (InteractiveChatLinkPreviewsResult) -> Void) -> Signal<Bool, NoError> {
-    return ApplicationSpecificNotice.getSecretChatLinkPreviews(postbox: postbox)
+func interactiveChatLinkPreviewsEnabled(accountManager: AccountManager, displayAlert: @escaping (InteractiveChatLinkPreviewsResult) -> Void) -> Signal<Bool, NoError> {
+    return ApplicationSpecificNotice.getSecretChatLinkPreviews(accountManager: accountManager)
     |> mapToSignal { value -> Signal<Bool, NoError> in
         if let value = value {
             return .single(value)
@@ -19,7 +19,7 @@ func interactiveChatLinkPreviewsEnabled(postbox: Postbox, displayAlert: @escapin
             return Signal { subscriber in
                 Queue.mainQueue().async {
                     displayAlert(InteractiveChatLinkPreviewsResult({ result in
-                        let _ = ApplicationSpecificNotice.setSecretChatLinkPreviews(postbox: postbox, value: result).start()
+                        let _ = ApplicationSpecificNotice.setSecretChatLinkPreviews(accountManager: accountManager, value: result).start()
                         subscriber.putNext(result)
                         subscriber.putCompletion()
                     }))

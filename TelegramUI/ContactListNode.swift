@@ -816,15 +816,14 @@ final class ContactListNode: ASDisplayNode {
         contactsAuthorization.set(.single(.allowed)
         |> then(DeviceAccess.authorizationStatus(context: context, subject: .contacts)))
         
-        let warningKey = PostboxViewKey.noticeEntry(ApplicationSpecificNotice.contactsPermissionWarningKey())
         let contactsWarningSuppressed = Promise<(Bool, Bool)>()
         contactsWarningSuppressed.set(.single((false, false))
         |> then(
-            combineLatest(context.account.postbox.combinedView(keys: [warningKey]), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]))
-            |> map { combined, sharedData -> (Bool, Bool) in
+            combineLatest(context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.contactsPermissionWarningKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]))
+            |> map { noticeView, sharedData -> (Bool, Bool) in
                 let synchronizeDeviceContacts: Bool = (sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)?.synchronizeDeviceContacts ?? true
                 let suppressed: Bool
-                let timestamp = (combined.views[warningKey] as? NoticeEntryView)?.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
+                let timestamp = noticeView.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
                 if let timestamp = timestamp, timestamp > 0 {
                     suppressed = true
                 } else {

@@ -47,6 +47,11 @@ private let activeNavigationSearchBar = PresentationThemeActiveNavigationSearchB
     separatorColor: UIColor(rgb: 0x000000)
 )
 
+private let auth = PresentationThemeAuth(
+    introStartButton: accentColor,
+    introDotColor: UIColor(rgb: 0x5e5e5e)
+)
+
 private let rootController = PresentationThemeRootController(
     statusBar: rootStatusBar,
     tabBar: rootTabBar,
@@ -314,6 +319,7 @@ let defaultDarkPresentationTheme = PresentationTheme(
     name: .builtin(.nightGrayscale),
     overallDarkAppearance: true,
     allowsCustomWallpapers: false,
+    auth: auth,
     rootController: rootController,
     list: list,
     chatList: chatList,

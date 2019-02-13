@@ -4,7 +4,7 @@ import Display
 
 final class AuthorizationSequencePasswordRecoveryControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let strings: PresentationStrings
-    private let theme: AuthorizationTheme
+    private let theme: PresentationTheme
     
     private let titleNode: ASTextNode
     private let noticeNode: ASTextNode
@@ -28,36 +28,36 @@ final class AuthorizationSequencePasswordRecoveryControllerNode: ASDisplayNode, 
         }
     }
     
-    init(strings: PresentationStrings, theme: AuthorizationTheme) {
+    init(strings: PresentationStrings, theme: PresentationTheme) {
         self.strings = strings
         self.theme = theme
         
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: strings.TwoStepAuth_RecoveryTitle, font: Font.light(30.0), textColor: self.theme.primaryColor)
+        self.titleNode.attributedText = NSAttributedString(string: strings.TwoStepAuth_RecoveryTitle, font: Font.light(30.0), textColor: self.theme.list.itemPrimaryTextColor)
         
         self.noticeNode = ASTextNode()
         self.noticeNode.isUserInteractionEnabled = false
         self.noticeNode.displaysAsynchronously = false
-        self.noticeNode.attributedText = NSAttributedString(string: strings.TwoStepAuth_RecoveryCodeHelp, font: Font.regular(16.0), textColor: self.theme.primaryColor, paragraphAlignment: .center)
+        self.noticeNode.attributedText = NSAttributedString(string: strings.TwoStepAuth_RecoveryCodeHelp, font: Font.regular(16.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         
         self.noAccessNode = HighlightableButtonNode()
         self.noAccessNode.displaysAsynchronously = false
         
         self.codeSeparatorNode = ASDisplayNode()
         self.codeSeparatorNode.isLayerBacked = true
-        self.codeSeparatorNode.backgroundColor = self.theme.separatorColor
+        self.codeSeparatorNode.backgroundColor = self.theme.list.itemPlainSeparatorColor
         
         self.codeField = TextFieldNode()
         self.codeField.textField.font = Font.regular(20.0)
-        self.codeField.textField.textColor = self.theme.primaryColor
+        self.codeField.textField.textColor = self.theme.list.itemPrimaryTextColor
         self.codeField.textField.textAlignment = .center
-        self.codeField.textField.attributedPlaceholder = NSAttributedString(string: self.strings.TwoStepAuth_RecoveryCode, font: Font.regular(20.0), textColor: self.theme.textPlaceholderColor)
+        self.codeField.textField.attributedPlaceholder = NSAttributedString(string: self.strings.TwoStepAuth_RecoveryCode, font: Font.regular(20.0), textColor: self.theme.list.itemPlaceholderTextColor)
         self.codeField.textField.returnKeyType = .done
-        self.codeField.textField.keyboardAppearance = self.theme.keyboard.keyboardAppearance
+        self.codeField.textField.keyboardAppearance = self.theme.chatList.searchBarKeyboardColor.keyboardAppearance
         self.codeField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
-        self.codeField.textField.tintColor = self.theme.accentColor
+        self.codeField.textField.tintColor = self.theme.list.itemAccentColor
         
         super.init()
         
@@ -65,7 +65,7 @@ final class AuthorizationSequencePasswordRecoveryControllerNode: ASDisplayNode, 
             return UITracingLayerView()
         })
         
-        self.backgroundColor = self.theme.backgroundColor
+        self.backgroundColor = self.theme.list.plainBackgroundColor
         
         self.codeField.textField.delegate = self
         
@@ -79,7 +79,7 @@ final class AuthorizationSequencePasswordRecoveryControllerNode: ASDisplayNode, 
     }
     
     func updateData(emailPattern: String) {
-        self.noAccessNode.setAttributedTitle(NSAttributedString(string: self.strings.TwoStepAuth_RecoveryEmailUnavailable(emailPattern).0, font: Font.regular(16.0), textColor: self.theme.accentColor, paragraphAlignment: .center), for: [])
+        self.noAccessNode.setAttributedTitle(NSAttributedString(string: self.strings.TwoStepAuth_RecoveryEmailUnavailable(emailPattern).0, font: Font.regular(16.0), textColor: self.theme.list.itemAccentColor, paragraphAlignment: .center), for: [])
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -89,9 +89,9 @@ final class AuthorizationSequencePasswordRecoveryControllerNode: ASDisplayNode, 
         insets.top = navigationBarHeight
         
         if max(layout.size.width, layout.size.height) > 1023.0 {
-            self.titleNode.attributedText = NSAttributedString(string: self.strings.TwoStepAuth_RecoveryTitle, font: Font.light(40.0), textColor: self.theme.primaryColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.strings.TwoStepAuth_RecoveryTitle, font: Font.light(40.0), textColor: self.theme.list.itemPrimaryTextColor)
         } else {
-            self.titleNode.attributedText = NSAttributedString(string: self.strings.TwoStepAuth_RecoveryTitle, font: Font.light(30.0), textColor: self.theme.primaryColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.strings.TwoStepAuth_RecoveryTitle, font: Font.light(30.0), textColor: self.theme.list.itemPrimaryTextColor)
         }
         
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))

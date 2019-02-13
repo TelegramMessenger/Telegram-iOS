@@ -12,7 +12,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
     }
     
     private let strings: PresentationStrings
-    private let theme: AuthorizationTheme
+    private let theme: PresentationTheme
     
     var initialName: (String, String) = ("", "")
     private var termsOfService: UnauthorizedAccountTermsOfService?
@@ -24,7 +24,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
     var inProgress: Bool = false {
         didSet {
             if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.accentColor))
+                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.rootController.navigationBar.accentTextColor))
                 self.navigationItem.rightBarButtonItem = item
             } else {
                 self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
@@ -33,7 +33,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
         }
     }
     
-    init(strings: PresentationStrings, theme: AuthorizationTheme, back: @escaping () -> Void) {
+    init(strings: PresentationStrings, theme: PresentationTheme, back: @escaping () -> Void) {
         self.strings = strings
         self.theme = theme
         
@@ -41,7 +41,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
-        self.statusBar.statusBarStyle = self.theme.statusBarStyle
+        self.statusBar.statusBarStyle = self.theme.rootController.statusBar.style.style
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
         
@@ -52,7 +52,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(authTheme: theme), title: nil, text: strings.Login_CancelSignUpConfirmation, actions: [TextAlertAction(type: .genericAction, title: strings.Login_CancelPhoneVerificationContinue, action: {
+            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: nil, text: strings.Login_CancelSignUpConfirmation, actions: [TextAlertAction(type: .genericAction, title: strings.Login_CancelPhoneVerificationContinue, action: {
             }), TextAlertAction(type: .defaultAction, title: strings.Login_CancelPhoneVerificationStop, action: {
                 back()
             })]), in: .window(.root))

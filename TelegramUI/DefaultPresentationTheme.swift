@@ -47,6 +47,11 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
     )
     
+    let auth = PresentationThemeAuth(
+        introStartButton: UIColor(rgb: 0x2ca5e0),
+        introDotColor: UIColor(rgb: 0xd9d9d9)
+    )
+    
     let rootController = PresentationThemeRootController(
         statusBar: rootStatusBar,
         tabBar: rootTabBar,
@@ -418,6 +423,7 @@ private func makeDefaultPresentationTheme(accentColor: UIColor, serviceBackgroun
         name: .builtin(day ? .day : .dayClassic),
         overallDarkAppearance: false,
         allowsCustomWallpapers: true,
+        auth: auth,
         rootController: rootController,
         list: list,
         chatList: day ? chatListDay : chatList,

@@ -66,7 +66,7 @@ final class ChangePhoneNumberController: ViewController {
         self.displayNodeDidLoad()
         self.controllerNode.selectCountryCode = { [weak self] in
             if let strongSelf = self {
-                let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.presentationData.strings, theme: AuthorizationSequenceCountrySelectionTheme(presentationTheme: strongSelf.presentationData.theme))
+                let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.presentationData.strings, theme: strongSelf.presentationData.theme)
                 controller.completeWithCountryCode = { code, name in
                     if let strongSelf = self {
                         strongSelf.updateData(countryCode: Int32(code), countryName: name, number: strongSelf.controllerNode.codeAndNumber.2)

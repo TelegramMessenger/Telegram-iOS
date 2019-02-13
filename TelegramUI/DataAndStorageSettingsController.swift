@@ -10,6 +10,7 @@ private final class DataAndStorageControllerArguments {
     let openNetworkUsage: () -> Void
     let openProxy: () -> Void
     let openAutomaticDownloadConnectionType: (AutomaticDownloadConnectionType) -> Void
+    let resetAutomaticDownload: () -> Void
     let openVoiceUseLessData: () -> Void
     let openSaveIncomingPhotos: () -> Void
     let toggleSaveEditedPhotos: (Bool) -> Void
@@ -17,11 +18,12 @@ private final class DataAndStorageControllerArguments {
     let toggleAutoplayVideos: (Bool) -> Void
     let toggleDownloadInBackground: (Bool) -> Void
     
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void) {
+    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
         self.openProxy = openProxy
         self.openAutomaticDownloadConnectionType = openAutomaticDownloadConnectionType
+        self.resetAutomaticDownload = resetAutomaticDownload
         self.openVoiceUseLessData = openVoiceUseLessData
         self.openSaveIncomingPhotos = openSaveIncomingPhotos
         self.toggleSaveEditedPhotos = toggleSaveEditedPhotos
@@ -46,6 +48,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case automaticDownloadHeader(PresentationTheme, String)
     case automaticDownloadCellular(PresentationTheme, String, String)
     case automaticDownloadWifi(PresentationTheme, String, String)
+    case automaticDownloadReset(PresentationTheme, String, Bool)
     case autoplayHeader(PresentationTheme, String)
     case autoplayGifs(PresentationTheme, String, Bool)
     case autoplayVideos(PresentationTheme, String, Bool)
@@ -63,7 +66,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
         switch self {
             case .storageUsage, .networkUsage:
                 return DataAndStorageSection.usage.rawValue
-            case .automaticDownloadHeader, .automaticDownloadCellular, .automaticDownloadWifi:
+            case .automaticDownloadHeader, .automaticDownloadCellular, .automaticDownloadWifi, .automaticDownloadReset:
                 return DataAndStorageSection.autoDownload.rawValue
             case .autoplayHeader, .autoplayGifs, .autoplayVideos:
                 return DataAndStorageSection.autoPlay.rawValue
@@ -88,30 +91,32 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 3
             case .automaticDownloadWifi:
                 return 4
-            case .autoplayHeader:
+            case .automaticDownloadReset:
                 return 5
-            case .autoplayGifs:
+            case .autoplayHeader:
                 return 6
-            case .autoplayVideos:
+            case .autoplayGifs:
                 return 7
-            case .voiceCallsHeader:
+            case .autoplayVideos:
                 return 8
-            case .useLessVoiceData:
+            case .voiceCallsHeader:
                 return 9
-            case .otherHeader:
+            case .useLessVoiceData:
                 return 10
-            case .saveIncomingPhotos:
+            case .otherHeader:
                 return 11
-            case .saveEditedPhotos:
+            case .saveIncomingPhotos:
                 return 12
-            case .downloadInBackground:
+            case .saveEditedPhotos:
                 return 13
-            case .downloadInBackgroundInfo:
+            case .downloadInBackground:
                 return 14
-            case .connectionHeader:
+            case .downloadInBackgroundInfo:
                 return 15
-            case .connectionProxy:
+            case .connectionHeader:
                 return 16
+            case .connectionProxy:
+                return 17
         }
     }
     
@@ -143,6 +148,12 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 }
             case let .automaticDownloadWifi(lhsTheme, lhsText, lhsEnabled):
                 if case let .automaticDownloadWifi(rhsTheme, rhsText, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled {
+                    return true
+                } else {
+                    return false
+                }
+            case let .automaticDownloadReset(lhsTheme, lhsText, lhsEnabled):
+                if case let .automaticDownloadReset(rhsTheme, rhsText, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
@@ -246,6 +257,12 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.openAutomaticDownloadConnectionType(.wifi)
                 })
+            case let .automaticDownloadReset(theme, text, enabled):
+                return ItemListActionItem(theme: theme, title: text, kind: enabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    if enabled {
+                        arguments.resetAutomaticDownload()
+                    }
+                })
             case let .autoplayHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .autoplayGifs(theme, text, value):
@@ -323,70 +340,50 @@ private func stringForUseLessDataSetting(strings: PresentationStrings, settings:
     }
 }
 
-private func stringForAutoDownloadTypes(strings: PresentationStrings, photo: Bool, video: Bool, file: Bool, videoMessage: Bool, voiceMessage: Bool) -> String {
-    if photo && video && file && videoMessage && voiceMessage {
-        return strings.ChatSettings_AutoDownloadSettings_OnForAll
-    } else {
-        var types: [String] = []
-        if photo {
-            types.append(strings.ChatSettings_AutoDownloadSettings_TypePhoto)
-        }
-        if video {
-            types.append(strings.ChatSettings_AutoDownloadSettings_TypeVideo)
-        }
-        if file {
-            types.append(strings.ChatSettings_AutoDownloadSettings_TypeFile)
-        }
-        if videoMessage {
-            types.append(strings.ChatSettings_AutoDownloadSettings_TypeVideoMessage)
-        }
-        if voiceMessage {
-            types.append(strings.ChatSettings_AutoDownloadSettings_TypeVoiceMessage)
-        }
-        
-        if types.isEmpty {
-            return strings.ChatSettings_AutoDownloadSettings_OffForAll
-        }
-        
-        var string: String = ""
-        for i in 0 ..< types.count {
-            if !string.isEmpty {
-                if i == types.count - 1 {
-                    string.append(strings.ChatSettings_AutoDownloadSettings_LastDelimeter)
-                } else {
-                    string.append(strings.ChatSettings_AutoDownloadSettings_Delimeter)
-                }
-            }
-            string.append(types[i])
-        }
-        return strings.ChatSettings_AutoDownloadSettings_OnFor(string).0
+private func stringForAutoDownloadTypes(strings: PresentationStrings, photo: Bool, videoSize: Int32?, fileSize: Int32?) -> String {
+    var types: [String] = []
+    if photo {
+        types.append(strings.ChatSettings_AutoDownloadSettings_TypePhoto)
     }
+    if let videoSize = videoSize {
+        types.append(strings.ChatSettings_AutoDownloadSettings_TypeVideo(autodownloadDataSizeString(Int64(videoSize))).0)
+    }
+    if let fileSize = fileSize {
+        types.append(strings.ChatSettings_AutoDownloadSettings_TypeFile(autodownloadDataSizeString(Int64(fileSize))).0)
+    }
+
+    if types.isEmpty {
+        return strings.ChatSettings_AutoDownloadSettings_OffForAll
+    }
+    
+    var string: String = ""
+    for i in 0 ..< types.count {
+        if !string.isEmpty {
+            string.append(strings.ChatSettings_AutoDownloadSettings_Delimeter)
+        }
+        string.append(types[i])
+    }
+    return string
 }
 
 private func stringForAutoDownloadSetting(strings: PresentationStrings, settings: AutomaticMediaDownloadSettings, connectionType: AutomaticDownloadConnectionType) -> String {
+    let connection: AutomaticMediaDownloadConnection
     switch connectionType {
         case .cellular:
-            if !settings.cellularEnabled {
-                return strings.ChatSettings_AutoDownloadSettings_OffForAll
-            } else {
-                let photo = settings.peers.contacts.photo.cellular || settings.peers.otherPrivate.photo.cellular || settings.peers.groups.photo.cellular || settings.peers.channels.photo.cellular
-                let video = settings.peers.contacts.video.cellular || settings.peers.otherPrivate.video.cellular || settings.peers.groups.video.cellular || settings.peers.channels.video.cellular
-                let file = settings.peers.contacts.file.cellular || settings.peers.otherPrivate.file.cellular || settings.peers.groups.file.cellular || settings.peers.channels.file.cellular
-                let videoMessage = settings.peers.contacts.videoMessage.cellular || settings.peers.otherPrivate.videoMessage.cellular || settings.peers.groups.videoMessage.cellular || settings.peers.channels.videoMessage.cellular
-                let voiceMessage = settings.peers.contacts.voiceMessage.cellular || settings.peers.otherPrivate.voiceMessage.cellular || settings.peers.groups.voiceMessage.cellular || settings.peers.channels.voiceMessage.cellular
-                return stringForAutoDownloadTypes(strings: strings, photo: photo, video: video, file: file, videoMessage: videoMessage, voiceMessage: voiceMessage)
-            }
+            connection = settings.cellular
         case .wifi:
-            if !settings.wifiEnabled {
-                return strings.ChatSettings_AutoDownloadSettings_OffForAll
-            } else {
-                let photo = settings.peers.contacts.photo.wifi || settings.peers.otherPrivate.photo.wifi || settings.peers.groups.photo.wifi || settings.peers.channels.photo.wifi
-                let video = settings.peers.contacts.video.wifi || settings.peers.otherPrivate.video.wifi || settings.peers.groups.video.wifi || settings.peers.channels.video.wifi
-                let file = settings.peers.contacts.file.wifi || settings.peers.otherPrivate.file.wifi || settings.peers.groups.file.wifi || settings.peers.channels.file.wifi
-                let videoMessage = settings.peers.contacts.videoMessage.wifi || settings.peers.otherPrivate.videoMessage.wifi || settings.peers.groups.videoMessage.wifi || settings.peers.channels.videoMessage.wifi
-                let voiceMessage = settings.peers.contacts.voiceMessage.wifi || settings.peers.otherPrivate.voiceMessage.wifi || settings.peers.groups.voiceMessage.wifi || settings.peers.channels.voiceMessage.wifi
-                return stringForAutoDownloadTypes(strings: strings, photo: photo, video: video, file: file, videoMessage: videoMessage, voiceMessage: voiceMessage)
-            }
+            connection = settings.wifi
+    }
+    if !connection.enabled {
+        return strings.ChatSettings_AutoDownloadSettings_OffForAll
+    } else {
+        let categories = effectiveAutodownloadCategories(settings: settings, networkType: connectionType.automaticDownloadNetworkType)
+        
+        let photo = isAutodownloadEnabledForAnyPeerType(category: categories.photo)
+        let video = isAutodownloadEnabledForAnyPeerType(category: categories.video)
+        let file = isAutodownloadEnabledForAnyPeerType(category: categories.file)
+    
+        return stringForAutoDownloadTypes(strings: strings, photo: photo, videoSize: video ? categories.video.sizeLimit : nil, fileSize: file ? categories.file.sizeLimit : nil)
     }
 }
 
@@ -399,6 +396,7 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.automaticDownloadHeader(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadTitle))
     entries.append(.automaticDownloadCellular(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadUsingCellular, stringForAutoDownloadSetting(strings: presentationData.strings, settings: data.automaticMediaDownloadSettings, connectionType: .cellular)))
     entries.append(.automaticDownloadWifi(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadUsingWiFi, stringForAutoDownloadSetting(strings: presentationData.strings, settings: data.automaticMediaDownloadSettings, connectionType: .wifi)))
+    entries.append(.automaticDownloadReset(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadReset, data.automaticMediaDownloadSettings.cellular != AutomaticMediaDownloadSettings.defaultSettings.cellular || data.automaticMediaDownloadSettings.wifi != AutomaticMediaDownloadSettings.defaultSettings.wifi))
     
     entries.append(.autoplayHeader(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayTitle))
     entries.append(.autoplayGifs(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayGifs, data.automaticMediaDownloadSettings.autoplayGifs))
@@ -440,13 +438,17 @@ func dataAndStorageController(context: AccountContext) -> ViewController {
     let actionsDisposable = DisposableSet()
     
     let dataAndStorageDataPromise = Promise<DataAndStorageData>()
-    dataAndStorageDataPromise.set(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings, ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.proxySettings])
+    dataAndStorageDataPromise.set(context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings, ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.proxySettings])
     |> map { sharedData -> DataAndStorageData in
-        let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
+        var automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
         if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
             automaticMediaDownloadSettings = value
         } else {
             automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
+        }
+        
+        if let value = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings {
+            automaticMediaDownloadSettings = automaticMediaDownloadSettings.updatedWithAutodownloadSettings(value)
         }
         
         let generatedMediaStoreSettings: GeneratedMediaStoreSettings
@@ -479,6 +481,28 @@ func dataAndStorageController(context: AccountContext) -> ViewController {
         pushControllerImpl?(proxySettingsController(context: context))
     }, openAutomaticDownloadConnectionType: { connectionType in
         pushControllerImpl?(autodownloadMediaConnectionTypeController(context: context, connectionType: connectionType))
+    }, resetAutomaticDownload: {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+            ActionSheetTextItem(title: presentationData.strings.AutoDownloadSettings_ResetHelp),
+            ActionSheetButtonItem(title: presentationData.strings.AutoDownloadSettings_Reset, color: .destructive, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                
+                let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
+                    var settings = settings
+                    let defaultSettings = AutomaticMediaDownloadSettings.defaultSettings
+                    settings.cellular = defaultSettings.cellular
+                    settings.wifi = defaultSettings.wifi
+                    return settings
+                }).start()
+            })
+            ]), ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+                ])])
+        presentControllerImpl?(actionSheet, nil)
     }, openVoiceUseLessData: {
         pushControllerImpl?(voiceCallDataSavingController(context: context))
     }, openSaveIncomingPhotos: {

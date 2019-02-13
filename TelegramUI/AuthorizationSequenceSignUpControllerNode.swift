@@ -16,7 +16,7 @@ private func roundCorners(diameter: CGFloat) -> UIImage {
 }
 
 final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFieldDelegate {
-    private let theme: AuthorizationTheme
+    private let theme: PresentationTheme
     private let strings: PresentationStrings
     private let addPhoto: () -> Void
     
@@ -63,7 +63,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         }
     }
     
-    init(theme: AuthorizationTheme, strings: PresentationStrings, addPhoto: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, addPhoto: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
         self.addPhoto = addPhoto
@@ -71,35 +71,35 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.light(30.0), textColor: theme.primaryColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.light(30.0), textColor: theme.list.itemPrimaryTextColor)
         
         self.currentOptionNode = ASTextNode()
         self.currentOptionNode.isUserInteractionEnabled = false
         self.currentOptionNode.displaysAsynchronously = false
-        self.currentOptionNode.attributedText = NSAttributedString(string: self.strings.Login_InfoHelp, font: Font.regular(16.0), textColor: theme.textPlaceholderColor, paragraphAlignment: .center)
+        self.currentOptionNode.attributedText = NSAttributedString(string: self.strings.Login_InfoHelp, font: Font.regular(16.0), textColor: theme.list.itemPlaceholderTextColor, paragraphAlignment: .center)
         
         self.termsNode = ImmediateTextNode()
         self.termsNode.textAlignment = .center
         self.termsNode.maximumNumberOfLines = 0
         self.termsNode.displaysAsynchronously = false
-        let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.primaryColor)
-        let link = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.accentColor, additionalAttributes: [TelegramTextAttributes.URL: ""])
+        let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.list.itemPrimaryTextColor)
+        let link = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.list.itemAccentColor, additionalAttributes: [TelegramTextAttributes.URL: ""])
         self.termsNode.attributedText = parseMarkdownIntoAttributedString(strings.Login_TermsOfServiceLabel.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
         
         self.firstSeparatorNode = ASDisplayNode()
         self.firstSeparatorNode.isLayerBacked = true
-        self.firstSeparatorNode.backgroundColor = self.theme.separatorColor
+        self.firstSeparatorNode.backgroundColor = self.theme.list.itemPlainSeparatorColor
         
         self.lastSeparatorNode = ASDisplayNode()
         self.lastSeparatorNode.isLayerBacked = true
-        self.lastSeparatorNode.backgroundColor = self.theme.separatorColor
+        self.lastSeparatorNode.backgroundColor = self.theme.list.itemPlainSeparatorColor
         
         self.firstNameField = TextFieldNode()
         self.firstNameField.textField.font = Font.regular(20.0)
-        self.firstNameField.textField.textColor = self.theme.primaryColor
+        self.firstNameField.textField.textColor = self.theme.list.itemPrimaryTextColor
         self.firstNameField.textField.textAlignment = .natural
         self.firstNameField.textField.returnKeyType = .next
-        self.firstNameField.textField.attributedPlaceholder = NSAttributedString(string: self.strings.UserInfo_FirstNamePlaceholder, font: self.firstNameField.textField.font, textColor: self.theme.textPlaceholderColor)
+        self.firstNameField.textField.attributedPlaceholder = NSAttributedString(string: self.strings.UserInfo_FirstNamePlaceholder, font: self.firstNameField.textField.font, textColor: self.theme.list.itemPlaceholderTextColor)
         self.firstNameField.textField.autocapitalizationType = .words
         self.firstNameField.textField.autocorrectionType = .no
         if #available(iOSApplicationExtension 10.0, *) {
@@ -108,10 +108,10 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         
         self.lastNameField = TextFieldNode()
         self.lastNameField.textField.font = Font.regular(20.0)
-        self.lastNameField.textField.textColor = self.theme.primaryColor
+        self.lastNameField.textField.textColor = self.theme.list.itemPrimaryTextColor
         self.lastNameField.textField.textAlignment = .natural
         self.lastNameField.textField.returnKeyType = .done
-        self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: strings.UserInfo_LastNamePlaceholder, font: self.lastNameField.textField.font, textColor: self.theme.textPlaceholderColor)
+        self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: strings.UserInfo_LastNamePlaceholder, font: self.lastNameField.textField.font, textColor: self.theme.list.itemPlaceholderTextColor)
         self.lastNameField.textField.autocapitalizationType = .words
         self.lastNameField.textField.autocorrectionType = .no
         if #available(iOSApplicationExtension 10.0, *) {
@@ -124,8 +124,8 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.currentPhotoNode.displayWithoutProcessing = true
         
         self.addPhotoButton = HighlightableButtonNode()
-        self.addPhotoButton.setAttributedTitle(NSAttributedString(string: "\(self.strings.Login_InfoAvatarAdd)\n\(self.strings.Login_InfoAvatarPhoto)", font: Font.regular(16.0), textColor: self.theme.textPlaceholderColor, paragraphAlignment: .center), for: .normal)
-        self.addPhotoButton.setBackgroundImage(generateCircleImage(diameter: 110.0, lineWidth: 1.0, color: self.theme.textPlaceholderColor), for: .normal)
+        self.addPhotoButton.setAttributedTitle(NSAttributedString(string: "\(self.strings.Login_InfoAvatarAdd)\n\(self.strings.Login_InfoAvatarPhoto)", font: Font.regular(16.0), textColor: self.theme.list.itemPlaceholderTextColor, paragraphAlignment: .center), for: .normal)
+        self.addPhotoButton.setBackgroundImage(generateCircleImage(diameter: 110.0, lineWidth: 1.0, color: self.theme.list.itemPlaceholderTextColor), for: .normal)
         
         self.addPhotoButton.addSubnode(self.currentPhotoNode)
         self.addPhotoButton.allowsGroupOpacity = true
@@ -136,7 +136,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
             return UITracingLayerView()
         })
         
-        self.backgroundColor = self.theme.backgroundColor
+        self.backgroundColor = self.theme.list.plainBackgroundColor
         
         self.firstNameField.textField.delegate = self
         self.lastNameField.textField.delegate = self
@@ -151,25 +151,9 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.termsNode.isHidden = true
         self.addSubnode(self.addPhotoButton)
         
-        /*self.addPhotoButton.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.addPhotoButton.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.addPhotoButton.alpha = 0.4
-                    strongSelf.currentPhotoNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.currentPhotoNode.alpha = 0.4
-                } else {
-                    strongSelf.addPhotoButton.alpha = 1.0
-                    strongSelf.addPhotoButton.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    strongSelf.currentPhotoNode.alpha = 1.0
-                    strongSelf.currentPhotoNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                }
-            }
-        }*/
-        
         self.addPhotoButton.addTarget(self, action: #selector(self.addPhotoPressed), forControlEvents: .touchUpInside)
         
-        self.termsNode.linkHighlightColor = self.theme.accentColor.withAlphaComponent(0.5)
+        self.termsNode.linkHighlightColor = self.theme.list.itemAccentColor.withAlphaComponent(0.5)
         self.termsNode.highlightAttributeAction = { attributes in
             if let _ = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] {
                 return NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)
@@ -186,8 +170,8 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     
     func updateData(firstName: String, lastName: String, hasTermsOfService: Bool) {
         self.termsNode.isHidden = !hasTermsOfService
-        self.firstNameField.textField.attributedPlaceholder = NSAttributedString(string: firstName, font: Font.regular(20.0), textColor: self.theme.textPlaceholderColor)
-        self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: lastName, font: Font.regular(20.0), textColor: self.theme.textPlaceholderColor)
+        self.firstNameField.textField.attributedPlaceholder = NSAttributedString(string: firstName, font: Font.regular(20.0), textColor: self.theme.list.itemPlaceholderTextColor)
+        self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: lastName, font: Font.regular(20.0), textColor: self.theme.list.itemPlaceholderTextColor)
         
         if let (layout, navigationHeight) = self.layoutArguments {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
@@ -209,9 +193,9 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         let availableHeight = max(1.0, layout.size.height - insets.top - insets.bottom)
         
         if max(layout.size.width, layout.size.height) > 1023.0 {
-            self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.light(40.0), textColor: self.theme.primaryColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.light(40.0), textColor: self.theme.list.itemPrimaryTextColor)
         } else {
-            self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.light(30.0), textColor: self.theme.primaryColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.light(30.0), textColor: self.theme.list.itemPrimaryTextColor)
         }
         
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))

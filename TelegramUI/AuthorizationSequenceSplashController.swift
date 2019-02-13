@@ -16,7 +16,7 @@ final class AuthorizationSequenceSplashController: ViewController {
     private let accountManager: AccountManager
     private let postbox: Postbox
     private let network: Network
-    private let theme: AuthorizationTheme
+    private let theme: PresentationTheme
     
     private let controller: RMIntroViewController
     
@@ -25,7 +25,7 @@ final class AuthorizationSequenceSplashController: ViewController {
     private let suggestedLocalization = Promise<SuggestedLocalizationInfo?>()
     private let activateLocalizationDisposable = MetaDisposable()
     
-    init(accountManager: AccountManager, postbox: Postbox, network: Network, theme: AuthorizationTheme) {
+    init(accountManager: AccountManager, postbox: Postbox, network: Network, theme: PresentationTheme) {
         self.accountManager = accountManager
         self.postbox = postbox
         self.network = network
@@ -66,13 +66,13 @@ final class AuthorizationSequenceSplashController: ViewController {
             })
         })
         
-        self.controller = RMIntroViewController(backroundColor: theme.backgroundColor, primaryColor: theme.primaryColor, buttonColor: theme.startButtonColor, accentColor: theme.accentColor, regularDotColor: theme.dotColor, highlightedDotColor: theme.primaryColor, suggestedLocalizationSignal: localizationSignal)
+        self.controller = RMIntroViewController(backroundColor: theme.list.plainBackgroundColor, primaryColor: theme.list.itemPrimaryTextColor, buttonColor: theme.auth.introStartButton, accentColor: theme.list.itemAccentColor, regularDotColor: theme.auth.introDotColor, highlightedDotColor: theme.list.itemPrimaryTextColor, suggestedLocalizationSignal: localizationSignal)
         
         super.init(navigationBarPresentationData: nil)
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
-        self.statusBar.statusBarStyle = theme.statusBarStyle
+        self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
         
         self.controller.startMessaging = { [weak self] in
             self?.activateLocalization("en")

@@ -1,9 +1,9 @@
 import Foundation
 
-final class OverlayMediaManager {
-    var controller: OverlayMediaController?
+public final class OverlayMediaManager {
+    public var controller: OverlayMediaController?
     
-    func attachOverlayMediaController(_ controller: OverlayMediaController) {
+    public func attachOverlayMediaController(_ controller: OverlayMediaController) {
         self.controller = controller
     }
 }

@@ -257,7 +257,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.player.seek(timestamp: timestamp)
     }
     
-    func playOnceWithSound(playAndRecord: Bool, seekToStart: Bool, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
+    func playOnceWithSound(playAndRecord: Bool, seekToStart: MediaPlayerPlayOnceWithSoundSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
         assert(Queue.mainQueue().isCurrent())
         let action = { [weak self] in
             Queue.mainQueue().async {

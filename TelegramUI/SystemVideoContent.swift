@@ -227,7 +227,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
         //self.playerView.seek(toPosition: timestamp)
     }
     
-    func playOnceWithSound(playAndRecord: Bool, seekToStart: Bool, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
+    func playOnceWithSound(playAndRecord: Bool, seekToStart: MediaPlayerPlayOnceWithSoundSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
     }
     
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {

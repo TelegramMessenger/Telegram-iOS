@@ -179,9 +179,9 @@ private struct ApplicationSpecificNoticeKeys {
 }
 
 public struct ApplicationSpecificNotice {
-    static func getBotPaymentLiability(postbox: Postbox, peerId: PeerId) -> Signal<Bool, NoError> {
-        return postbox.transaction { transaction -> Bool in
-            if let _ = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.botPaymentLiabilityNotice(peerId: peerId)) as? ApplicationSpecificBoolNotice {
+    static func getBotPaymentLiability(accountManager: AccountManager, peerId: PeerId) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction -> Bool in
+            if let _ = transaction.getNotice(ApplicationSpecificNoticeKeys.botPaymentLiabilityNotice(peerId: peerId)) as? ApplicationSpecificBoolNotice {
                 return true
             } else {
                 return false
@@ -189,15 +189,15 @@ public struct ApplicationSpecificNotice {
         }
     }
     
-    static func setBotPaymentLiability(postbox: Postbox, peerId: PeerId) -> Signal<Void, NoError> {
-        return postbox.transaction { transaction -> Void in
-            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.botPaymentLiabilityNotice(peerId: peerId), value: ApplicationSpecificBoolNotice())
+    static func setBotPaymentLiability(accountManager: AccountManager, peerId: PeerId) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.botPaymentLiabilityNotice(peerId: peerId), ApplicationSpecificBoolNotice())
         }
     }
     
-    static func getSecretChatInlineBotUsage(postbox: Postbox) -> Signal<Bool, NoError> {
-        return postbox.transaction { transaction -> Bool in
-            if let _ = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.secretChatInlineBotUsage()) as? ApplicationSpecificBoolNotice {
+    static func getSecretChatInlineBotUsage(accountManager: AccountManager) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction -> Bool in
+            if let _ = transaction.getNotice(ApplicationSpecificNoticeKeys.secretChatInlineBotUsage()) as? ApplicationSpecificBoolNotice {
                 return true
             } else {
                 return false
@@ -205,19 +205,19 @@ public struct ApplicationSpecificNotice {
         }
     }
     
-    static func setSecretChatInlineBotUsage(postbox: Postbox) -> Signal<Void, NoError> {
-        return postbox.transaction { transaction -> Void in
-            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.secretChatInlineBotUsage(), value: ApplicationSpecificBoolNotice())
+    static func setSecretChatInlineBotUsage(accountManager: AccountManager) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.secretChatInlineBotUsage(), ApplicationSpecificBoolNotice())
         }
     }
     
-    public static func setSecretChatInlineBotUsage(transaction: Transaction) {
-        transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.secretChatInlineBotUsage(), value: ApplicationSpecificBoolNotice())
+    public static func setSecretChatInlineBotUsage(transaction: AccountManagerModifier) {
+        transaction.setNotice(ApplicationSpecificNoticeKeys.secretChatInlineBotUsage(), ApplicationSpecificBoolNotice())
     }
     
-    static func getSecretChatLinkPreviews(postbox: Postbox) -> Signal<Bool?, NoError> {
-        return postbox.transaction { transaction -> Bool? in
-            if let value = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.secretChatLinkPreviews()) as? ApplicationSpecificVariantNotice {
+    static func getSecretChatLinkPreviews(accountManager: AccountManager) -> Signal<Bool?, NoError> {
+        return accountManager.transaction { transaction -> Bool? in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.secretChatLinkPreviews()) as? ApplicationSpecificVariantNotice {
                 return value.value
             } else {
                 return nil
@@ -233,23 +233,23 @@ public struct ApplicationSpecificNotice {
         }
     }
     
-    static func setSecretChatLinkPreviews(postbox: Postbox, value: Bool) -> Signal<Void, NoError> {
-        return postbox.transaction { transaction -> Void in
-            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.secretChatLinkPreviews(), value: ApplicationSpecificVariantNotice(value: value))
+    static func setSecretChatLinkPreviews(accountManager: AccountManager, value: Bool) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.secretChatLinkPreviews(), ApplicationSpecificVariantNotice(value: value))
         }
     }
     
-    public static func setSecretChatLinkPreviews(transaction: Transaction, value: Bool) {
-        transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.secretChatLinkPreviews(), value: ApplicationSpecificVariantNotice(value: value))
+    public static func setSecretChatLinkPreviews(transaction: AccountManagerModifier, value: Bool) {
+        transaction.setNotice(ApplicationSpecificNoticeKeys.secretChatLinkPreviews(), ApplicationSpecificVariantNotice(value: value))
     }
     
     static func secretChatLinkPreviewsKey() -> NoticeEntryKey {
         return ApplicationSpecificNoticeKeys.secretChatLinkPreviews()
     }
     
-    static func getChatMediaMediaRecordingTips(postbox: Postbox) -> Signal<Int32, NoError> {
-        return postbox.transaction { transaction -> Int32 in
-            if let value = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.chatMediaMediaRecordingTips()) as? ApplicationSpecificCounterNotice {
+    static func getChatMediaMediaRecordingTips(accountManager: AccountManager) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatMediaMediaRecordingTips()) as? ApplicationSpecificCounterNotice {
                 return value.value
             } else {
                 return 0
@@ -257,21 +257,21 @@ public struct ApplicationSpecificNotice {
         }
     }
     
-    static func incrementChatMediaMediaRecordingTips(postbox: Postbox, count: Int32 = 1) -> Signal<Void, NoError> {
-        return postbox.transaction { transaction -> Void in
+    static func incrementChatMediaMediaRecordingTips(accountManager: AccountManager, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
             var currentValue: Int32 = 0
-            if let value = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.chatMediaMediaRecordingTips()) as? ApplicationSpecificCounterNotice {
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatMediaMediaRecordingTips()) as? ApplicationSpecificCounterNotice {
                 currentValue = value.value
             }
             currentValue += count
             
-            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.chatMediaMediaRecordingTips(), value: ApplicationSpecificCounterNotice(value: currentValue))
+            transaction.setNotice(ApplicationSpecificNoticeKeys.chatMediaMediaRecordingTips(), ApplicationSpecificCounterNotice(value: currentValue))
         }
     }
     
-    static func getProfileCallTips(postbox: Postbox) -> Signal<Int32, NoError> {
-        return postbox.transaction { transaction -> Int32 in
-            if let value = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.profileCallTips()) as? ApplicationSpecificCounterNotice {
+    static func getProfileCallTips(accountManager: AccountManager) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.profileCallTips()) as? ApplicationSpecificCounterNotice {
                 return value.value
             } else {
                 return 0
@@ -279,21 +279,21 @@ public struct ApplicationSpecificNotice {
         }
     }
     
-    static func incrementProfileCallTips(postbox: Postbox, count: Int32 = 1) -> Signal<Void, NoError> {
-        return postbox.transaction { transaction -> Void in
+    static func incrementProfileCallTips(accountManager: AccountManager, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
             var currentValue: Int32 = 0
-            if let value = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.profileCallTips()) as? ApplicationSpecificCounterNotice {
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.profileCallTips()) as? ApplicationSpecificCounterNotice {
                 currentValue = value.value
             }
             currentValue += count
             
-            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.profileCallTips(), value: ApplicationSpecificCounterNotice(value: currentValue))
+            transaction.setNotice(ApplicationSpecificNoticeKeys.profileCallTips(), ApplicationSpecificCounterNotice(value: currentValue))
         }
     }
     
-    static func getSetPublicChannelLink(postbox: Postbox) -> Signal<Bool, NoError> {
-        return postbox.transaction { transaction -> Bool in
-            if let value = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.profileCallTips()) as? ApplicationSpecificCounterNotice {
+    static func getSetPublicChannelLink(accountManager: AccountManager) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction -> Bool in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.profileCallTips()) as? ApplicationSpecificCounterNotice {
                 return value.value < 1
             } else {
                 return true
@@ -301,15 +301,15 @@ public struct ApplicationSpecificNotice {
         }
     }
     
-    static func markAsSeenSetPublicChannelLink(postbox: Postbox) -> Signal<Void, NoError> {
-        return postbox.transaction { transaction -> Void in
-            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.profileCallTips(), value: ApplicationSpecificCounterNotice(value: 1))
+    static func markAsSeenSetPublicChannelLink(accountManager: AccountManager) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.profileCallTips(), ApplicationSpecificCounterNotice(value: 1))
         }
     }
     
-    static func getProxyAdsAcknowledgment(postbox: Postbox) -> Signal<Bool, NoError> {
-        return postbox.transaction { transaction -> Bool in
-            if let _ = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.proxyAdsAcknowledgment()) as? ApplicationSpecificBoolNotice {
+    static func getProxyAdsAcknowledgment(accountManager: AccountManager) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction -> Bool in
+            if let _ = transaction.getNotice(ApplicationSpecificNoticeKeys.proxyAdsAcknowledgment()) as? ApplicationSpecificBoolNotice {
                 return true
             } else {
                 return false
@@ -317,15 +317,15 @@ public struct ApplicationSpecificNotice {
         }
     }
     
-    static func setProxyAdsAcknowledgment(postbox: Postbox) -> Signal<Void, NoError> {
-        return postbox.transaction { transaction -> Void in
-            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.proxyAdsAcknowledgment(), value: ApplicationSpecificBoolNotice())
+    static func setProxyAdsAcknowledgment(accountManager: AccountManager) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.proxyAdsAcknowledgment(), ApplicationSpecificBoolNotice())
         }
     }
     
-    static func getPasscodeLockTips(postbox: Postbox) -> Signal<Bool, NoError> {
-        return postbox.transaction { transaction -> Bool in
-            if let _ = transaction.getNoticeEntry(key: ApplicationSpecificNoticeKeys.passcodeLockTips()) as? ApplicationSpecificBoolNotice {
+    static func getPasscodeLockTips(accountManager: AccountManager) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction -> Bool in
+            if let _ = transaction.getNotice(ApplicationSpecificNoticeKeys.passcodeLockTips()) as? ApplicationSpecificBoolNotice {
                 return true
             } else {
                 return false
@@ -333,9 +333,9 @@ public struct ApplicationSpecificNotice {
         }
     }
     
-    static func setPasscodeLockTips(postbox: Postbox) -> Signal<Void, NoError> {
-        return postbox.transaction { transaction -> Void in
-            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.passcodeLockTips(), value: ApplicationSpecificBoolNotice())
+    static func setPasscodeLockTips(accountManager: AccountManager) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.passcodeLockTips(), ApplicationSpecificBoolNotice())
         }
     }
     
@@ -343,9 +343,9 @@ public struct ApplicationSpecificNotice {
         return ApplicationSpecificNoticeKeys.contactsPermissionWarning()
     }
     
-    public static func setContactsPermissionWarning(postbox: Postbox, value: Int32) {
-        let _ =  postbox.transaction { transaction -> Void in
-            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.contactsPermissionWarning(), value: ApplicationSpecificTimestampNotice(value: value))
+    public static func setContactsPermissionWarning(accountManager: AccountManager, value: Int32) {
+        let _ =  accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.contactsPermissionWarning(), ApplicationSpecificTimestampNotice(value: value))
         }.start()
     }
     
@@ -361,15 +361,14 @@ public struct ApplicationSpecificNotice {
         }
     }
     
-    public static func setNotificationsPermissionWarning(postbox: Postbox, value: Int32) {
-        let _ = postbox.transaction { transaction -> Void in
-            transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.notificationsPermissionWarning(), value: ApplicationSpecificTimestampNotice(value: value))
+    public static func setNotificationsPermissionWarning(accountManager: AccountManager, value: Int32) {
+        let _ = accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.notificationsPermissionWarning(), ApplicationSpecificTimestampNotice(value: value))
         }.start()
     }
 
-    static func reset(postbox: Postbox) -> Signal<Void, NoError> {
-        return postbox.transaction { transaction -> Void in
-            
+    static func reset(accountManager: AccountManager) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
         }
     }
 }

@@ -116,10 +116,6 @@ public final class AccountContext {
     deinit {
     }
     
-    public func attachOverlayMediaController(_ controller: OverlayMediaController) {
-        self.sharedContext.mediaManager.overlayMediaManager.attachOverlayMediaController(controller)
-    }
-    
     public func storeSecureIdPassword(password: String) {
         self.storedPassword?.2.invalidate()
         let timer = SwiftSignalKit.Timer(timeout: 1.0 * 60.0 * 60.0, repeat: false, completion: { [weak self] in

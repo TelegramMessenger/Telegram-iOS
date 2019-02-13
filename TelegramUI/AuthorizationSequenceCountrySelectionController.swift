@@ -51,36 +51,8 @@ private func loadCountryCodes() -> [(String, Int)] {
 
 private let countryCodes: [(String, Int)] = loadCountryCodes()
 
-final class AuthorizationSequenceCountrySelectionTheme {
-    let statusBar: PresentationThemeStatusBarStyle
-    let searchBar: SearchBarNodeTheme
-    let listBackground: UIColor
-    let listSeparator: UIColor
-    let listAccent: UIColor
-    let listPrimary: UIColor
-    let listItemHighlight: UIColor
-    
-    init(statusBar: PresentationThemeStatusBarStyle, searchBar: SearchBarNodeTheme, listBackground: UIColor, listSeparator: UIColor, listAccent: UIColor, listPrimary: UIColor, listItemHighlight: UIColor) {
-        self.statusBar = statusBar
-        self.searchBar = searchBar
-        self.listBackground = listBackground
-        self.listSeparator = listSeparator
-        self.listAccent = listAccent
-        self.listPrimary = listPrimary
-        self.listItemHighlight = listItemHighlight
-    }
-    
-    convenience init(presentationTheme: PresentationTheme) {
-        self.init(statusBar: presentationTheme.rootController.statusBar.style, searchBar: SearchBarNodeTheme(theme: presentationTheme), listBackground: presentationTheme.list.plainBackgroundColor, listSeparator: presentationTheme.list.itemPlainSeparatorColor, listAccent: presentationTheme.list.itemAccentColor, listPrimary: presentationTheme.list.itemPrimaryTextColor, listItemHighlight: presentationTheme.list.itemHighlightedBackgroundColor)
-    }
-    
-    convenience init(authorizationTheme: AuthorizationTheme) {
-        self.init(statusBar: PresentationThemeStatusBarStyle(authorizationTheme.statusBarStyle), searchBar: SearchBarNodeTheme(background: authorizationTheme.navigationBarBackgroundColor, separator: authorizationTheme.navigationBarSeparatorColor, inputFill: authorizationTheme.searchBarFillColor, primaryText: authorizationTheme.searchBarTextColor, placeholder: authorizationTheme.searchBarPlaceholderColor, inputIcon: authorizationTheme.searchBarPlaceholderColor, inputClear: authorizationTheme.searchBarPlaceholderColor, accent: authorizationTheme.accentColor, keyboard: authorizationTheme.keyboard), listBackground: authorizationTheme.backgroundColor, listSeparator: authorizationTheme.separatorColor, listAccent: authorizationTheme.accentColor, listPrimary: authorizationTheme.primaryColor, listItemHighlight: authorizationTheme.itemHighlightedBackgroundColor)
-    }
-}
-
 private final class AuthorizationSequenceCountrySelectionNavigationContentNode: NavigationBarContentNode {
-    private let theme: AuthorizationSequenceCountrySelectionTheme
+    private let theme: PresentationTheme
     private let strings: PresentationStrings
     
     private let cancel: () -> Void
@@ -89,17 +61,17 @@ private final class AuthorizationSequenceCountrySelectionNavigationContentNode: 
     
     private var queryUpdated: ((String) -> Void)?
     
-    init(theme: AuthorizationSequenceCountrySelectionTheme, strings: PresentationStrings, cancel: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, cancel: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
         
         self.cancel = cancel
         
-        self.searchBar = SearchBarNode(theme: theme.searchBar, strings: strings, fieldStyle: .modern)
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme), strings: strings, fieldStyle: .modern)
         let placeholderText = strings.Common_Search
         let searchBarFont = Font.regular(17.0)
         
-        self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.searchBar.placeholder)
+        self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor)
         
         super.init()
         
@@ -161,7 +133,7 @@ final class AuthorizationSequenceCountrySelectionController: ViewController {
         return nil
     }
     
-    private let theme: AuthorizationSequenceCountrySelectionTheme
+    private let theme: PresentationTheme
     private let strings: PresentationStrings
     private let displayCodes: Bool
     
@@ -174,14 +146,14 @@ final class AuthorizationSequenceCountrySelectionController: ViewController {
     var completeWithCountryCode: ((Int, String) -> Void)?
     var dismissed: (() -> Void)?
     
-    init(strings: PresentationStrings, theme: AuthorizationSequenceCountrySelectionTheme, displayCodes: Bool = true) {
+    init(strings: PresentationStrings, theme: PresentationTheme, displayCodes: Bool = true) {
         self.theme = theme
         self.strings = strings
         self.displayCodes = displayCodes
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: theme.searchBar.accent, disabledButtonColor: UIColor(rgb: 0xd0d0d0), primaryTextColor: theme.searchBar.primaryText, backgroundColor: theme.searchBar.background, separatorColor: theme.searchBar.separator, badgeBackgroundColor: theme.searchBar.accent, badgeStrokeColor: .clear, badgeTextColor: theme.searchBar.background), strings: NavigationBarStrings(presentationStrings: strings)))
+        super.init(navigationBarPresentationData:  NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
-        self.statusBar.statusBarStyle = theme.statusBar.style
+        self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
         
         let navigationContentNode = AuthorizationSequenceCountrySelectionNavigationContentNode(theme: theme, strings: strings, cancel: { [weak self] in
             self?.dismissed?()

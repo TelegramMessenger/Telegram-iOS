@@ -63,25 +63,7 @@ private final class DownloadedMediaStoreContext {
         if let resource = resource {
             self.disposable = (storeSettings
             |> map { storeSettings -> Bool in
-                switch peerType {
-                    case .contact:
-                        if !storeSettings.peers.contacts.saveDownloadedPhotos {
-                            return false
-                        }
-                    case .otherPrivate:
-                        if !storeSettings.peers.otherPrivate.saveDownloadedPhotos {
-                            return false
-                        }
-                    case .group:
-                        if !storeSettings.peers.groups.saveDownloadedPhotos {
-                            return false
-                        }
-                    case .channel:
-                        if !storeSettings.peers.channels.saveDownloadedPhotos {
-                            return false
-                        }
-                }
-                return true
+                return isAutodownloadEnabledForPeerType(peerType, category: storeSettings.saveDownloadedPhotos)
             }
             |> take(1)
             |> mapToSignal { store -> Signal<(PHAssetCollection, MediaResourceData), NoError> in

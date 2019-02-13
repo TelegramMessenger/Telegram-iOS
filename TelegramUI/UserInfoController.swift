@@ -1384,7 +1384,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
             return false
         })
         if let resultItemNode = resultItemNode, let callButtonFrame = resultItemNode.callButtonFrame {
-            let _ = (ApplicationSpecificNotice.getProfileCallTips(postbox: context.account.postbox)
+            let _ = (ApplicationSpecificNotice.getProfileCallTips(accountManager: context.sharedContext.accountManager)
             |> deliverOnMainQueue).start(next: { [weak controller] counter in
                 guard let controller = controller else {
                     return
@@ -1399,7 +1399,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                 if !displayTip {
                     return
                 }
-                let _ = ApplicationSpecificNotice.incrementProfileCallTips(postbox: context.account.postbox).start()
+                let _ = ApplicationSpecificNotice.incrementProfileCallTips(accountManager: context.sharedContext.accountManager).start()
             
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let text: String = presentationData.strings.UserInfo_TapToCall

@@ -458,8 +458,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 }
             }
-            
-            //videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+
             self._ready.set(videoNode.ready)
         }
         
@@ -518,7 +517,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func activateAsInitial() {
         if self.isCentral {
-            self.videoNode?.play()
+            self.videoNode?.playOnceWithSound(playAndRecord: false, seekToStart: .automatic, actionAtEnd: .stop)
+            //self.videoNode?.play()
         }
     }
     

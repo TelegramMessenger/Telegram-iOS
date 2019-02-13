@@ -126,7 +126,7 @@ private struct ChangePhoneNumberCodeControllerState: Equatable {
     }
 }
 
-private func changePhoneNumberCodeControllerEntries(presentationData: PresentationData, state: ChangePhoneNumberCodeControllerState, codeData: ChangeAccountPhoneNumberData, timeout: Int32?, strings: PresentationStrings, theme: AuthorizationTheme) -> [ChangePhoneNumberCodeEntry] {
+private func changePhoneNumberCodeControllerEntries(presentationData: PresentationData, state: ChangePhoneNumberCodeControllerState, codeData: ChangeAccountPhoneNumberData, timeout: Int32?, strings: PresentationStrings) -> [ChangePhoneNumberCodeEntry] {
     var entries: [ChangePhoneNumberCodeEntry] = []
     
     entries.append(.codeEntry(presentationData.theme, presentationData.strings.ChangePhoneNumberCode_CodePlaceholder, state.codeText))
@@ -302,7 +302,7 @@ func changePhoneNumberCodeController(context: AccountContext, phoneNumber: Strin
             }
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(formatPhoneNumber(phoneNumber)), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: changePhoneNumberCodeControllerEntries(presentationData: presentationData, state: state, codeData: data, timeout: timeout, strings: presentationData.strings, theme: defaultLightAuthorizationTheme), style: .blocks, focusItemTag: ChangePhoneNumberCodeTag.input, emptyStateItem: nil, animateChanges: false)
+            let listState = ItemListNodeState(entries: changePhoneNumberCodeControllerEntries(presentationData: presentationData, state: state, codeData: data, timeout: timeout, strings: presentationData.strings), style: .blocks, focusItemTag: ChangePhoneNumberCodeTag.input, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

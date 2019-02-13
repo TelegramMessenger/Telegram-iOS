@@ -38,6 +38,11 @@ public final class AccountWithInfo: Equatable {
     }
 }
 
+private struct AccountAttributes: Equatable {
+    let sortIndex: Int32
+    let isTestingEnvironment: Bool
+}
+
 public final class SharedAccountContext {
     let mainWindow: Window1?
     public let applicationBindings: TelegramApplicationBindings
@@ -48,13 +53,13 @@ public final class SharedAccountContext {
     private let apsNotificationToken: Signal<Data?, NoError>
     private let voipNotificationToken: Signal<Data?, NoError>
     
-    private var activeAccountsValue: (primary: Account?, accounts: [AccountRecordId: Account], currentAuth: UnauthorizedAccount?)?
-    private let activeAccountsPromise = Promise<(primary: Account?, accounts: [AccountRecordId: Account], currentAuth: UnauthorizedAccount?)>()
-    public var activeAccounts: Signal<(primary: Account?, accounts: [AccountRecordId: Account], currentAuth: UnauthorizedAccount?), NoError> {
+    private var activeAccountsValue: (primary: Account?, accounts: [(AccountRecordId, Account, Int32)], currentAuth: UnauthorizedAccount?)?
+    private let activeAccountsPromise = Promise<(primary: Account?, accounts: [(AccountRecordId, Account, Int32)], currentAuth: UnauthorizedAccount?)>()
+    public var activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account, Int32)], currentAuth: UnauthorizedAccount?), NoError> {
         return self.activeAccountsPromise.get()
     }
-    private let activeAccountsWithInfoPromise = Promise<(primary: AccountRecordId?, accounts: [AccountRecordId: AccountWithInfo])>()
-    public var activeAccountsWithInfo: Signal<(primary: AccountRecordId?, accounts: [AccountRecordId: AccountWithInfo]), NoError> {
+    private let activeAccountsWithInfoPromise = Promise<(primary: AccountRecordId?, accounts: [AccountWithInfo])>()
+    public var activeAccountsWithInfo: Signal<(primary: AccountRecordId?, accounts: [AccountWithInfo]), NoError> {
         return self.activeAccountsWithInfoPromise.get()
     }
     
@@ -154,8 +159,12 @@ public final class SharedAccountContext {
             updatedPresentationData(accountManager: self.accountManager, applicationBindings: self.applicationBindings)
         ))
         self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings)
-        |> then(
-            updatedAutomaticMediaDownloadSettings(accountManager: self.accountManager)
+        |> then(accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
+            |> map { sharedData in
+                let autodownloadSettings: AutodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? AutodownloadSettings.defaultSettings
+                let automaticDownloadSettings: AutomaticMediaDownloadSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings ?? AutomaticMediaDownloadSettings.defaultSettings
+                return automaticDownloadSettings.updatedWithAutodownloadSettings(autodownloadSettings)
+            }
         ))
         
         self.presentationDataDisposable.set((self.presentationData
@@ -231,8 +240,8 @@ public final class SharedAccountContext {
         
         let differenceDisposable = MetaDisposable()
         let _ = (accountManager.accountRecords()
-        |> map { view -> (AccountRecordId?, [AccountRecordId: Bool], (AccountRecordId, Bool)?) in
-            var result: [AccountRecordId: Bool] = [:]
+        |> map { view -> (AccountRecordId?, [AccountRecordId: AccountAttributes], (AccountRecordId, Bool)?) in
+            var result: [AccountRecordId: AccountAttributes] = [:]
             for record in view.records {
                 let isLoggedOut = record.attributes.contains(where: { attribute in
                     return attribute is LoggedOutAccountAttribute
@@ -247,7 +256,13 @@ public final class SharedAccountContext {
                         return false
                     }
                 })
-                result[record.id] = isTestingEnvironment
+                var sortIndex: Int32 = 0
+                for attribute in record.attributes {
+                    if let attribute = attribute as? AccountSortOrderAttribute {
+                        sortIndex = attribute.order
+                    }
+                }
+                result[record.id] = AccountAttributes(sortIndex: sortIndex, isTestingEnvironment: isTestingEnvironment)
             }
             let authRecord: (AccountRecordId, Bool)? = view.currentAuthAccount.flatMap({ authAccount in
                 let isTestingEnvironment = authAccount.attributes.contains(where: { attribute in
@@ -277,17 +292,17 @@ public final class SharedAccountContext {
             return true
         })
         |> deliverOnMainQueue).start(next: { primaryId, records, authRecord in
-            var addedSignals: [Signal<(AccountRecordId, Account?), NoError>] = []
+            var addedSignals: [Signal<(AccountRecordId, Account?, Int32), NoError>] = []
             var addedAuthSignal: Signal<UnauthorizedAccount?, NoError> = .single(nil)
-            for (id, isTestingEnvironment) in records {
-                if self.activeAccountsValue?.accounts[id] == nil {
-                    addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, supplementary: false, rootPath: rootPath, beginWithTestingEnvironment: isTestingEnvironment, auxiliaryMethods: telegramAccountAuxiliaryMethods)
-                    |> map { result -> (AccountRecordId, Account?) in
+            for (id, attributes) in records {
+                if self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == id}) == nil {
+                    addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, supplementary: false, rootPath: rootPath, beginWithTestingEnvironment: attributes.isTestingEnvironment, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+                    |> map { result -> (AccountRecordId, Account?, Int32) in
                         switch result {
                             case let .authorized(account):
-                                return (id, account)
+                                return (id, account, attributes.sortIndex)
                             default:
-                                return (id, nil)
+                                return (id, nil, attributes.sortIndex)
                         }
                     })
                 }
@@ -307,37 +322,45 @@ public final class SharedAccountContext {
             |> deliverOnMainQueue).start(next: { accounts, authAccount in
                 var hadUpdates = false
                 if self.activeAccountsValue == nil {
-                    self.activeAccountsValue = (nil, [:], nil)
+                    self.activeAccountsValue = (nil, [], nil)
                     hadUpdates = true
                 }
-                for account in accounts {
-                    if let account = account.1 {
-                        self.activeAccountsValue!.accounts[account.id] = account
+                for accountRecord in accounts {
+                    if let account = accountRecord.1 {
+                        if let index = self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == account.id }) {
+                            self.activeAccountsValue?.accounts.remove(at: index)
+                            assertionFailure()
+                        }
+                        self.activeAccountsValue!.accounts.append((account.id, account, accountRecord.2))
                         hadUpdates = true
                     } else {
                         let _ = accountManager.transaction({ transaction in
-                            transaction.updateRecord(account.0, { _ in
+                            transaction.updateRecord(accountRecord.0, { _ in
                                 return nil
                             })
                         }).start()
                     }
                 }
                 var removedIds: [AccountRecordId] = []
-                for id in self.activeAccountsValue!.accounts.keys {
+                for id in self.activeAccountsValue!.accounts.map({ $0.0 }) {
                     if records[id] == nil {
                         removedIds.append(id)
                     }
                 }
                 for id in removedIds {
                     hadUpdates = true
-                    self.activeAccountsValue!.accounts.removeValue(forKey: id)
+                    if let index = self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == id }) {
+                        self.activeAccountsValue?.accounts.remove(at: index)
+                    }
                 }
                 var primary: Account?
                 if let primaryId = primaryId {
-                    primary = self.activeAccountsValue!.accounts[primaryId]
+                    if let index = self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == primaryId }) {
+                        primary = self.activeAccountsValue?.accounts[index].1
+                    }
                 }
                 if primary == nil && !self.activeAccountsValue!.accounts.isEmpty {
-                    primary = self.activeAccountsValue!.accounts.sorted(by: { lhs, rhs in lhs.key < rhs.key }).first?.1
+                    primary = self.activeAccountsValue!.accounts.first?.1
                 }
                 if primary !== self.activeAccountsValue!.primary {
                     hadUpdates = true
@@ -354,6 +377,7 @@ public final class SharedAccountContext {
                     self.activeAccountsValue!.currentAuth = authAccount
                 }
                 if hadUpdates {
+                    self.activeAccountsValue!.accounts.sort(by: { $0.2 < $1.2 })
                     self.activeAccountsPromise.set(.single(self.activeAccountsValue!))
                 }
                 
@@ -364,8 +388,8 @@ public final class SharedAccountContext {
         })
         
         self.activeAccountsWithInfoPromise.set(self.activeAccounts
-        |> mapToSignal { primary, accounts, _ -> Signal<(primary: AccountRecordId?, accounts: [AccountRecordId: AccountWithInfo]), NoError> in
-            return combineLatest(accounts.values.map { account -> Signal<AccountWithInfo?, NoError> in
+        |> mapToSignal { primary, accounts, _ -> Signal<(primary: AccountRecordId?, accounts: [AccountWithInfo]), NoError> in
+            return combineLatest(accounts.map { _, account, _ -> Signal<AccountWithInfo?, NoError> in
                 let peerViewKey: PostboxViewKey = .peer(peerId: account.peerId, components: [])
                 return account.postbox.combinedView(keys: [peerViewKey])
                 |> map { view -> AccountWithInfo? in
@@ -376,14 +400,14 @@ public final class SharedAccountContext {
                 }
                 |> distinctUntilChanged
             })
-            |> map { accountsWithInfo -> (primary: AccountRecordId?, accounts: [AccountRecordId: AccountWithInfo]) in
-                var accountsWithInfoDict: [AccountRecordId: AccountWithInfo] = [:]
+            |> map { accountsWithInfo -> (primary: AccountRecordId?, accounts: [AccountWithInfo]) in
+                var accountsWithInfoResult: [AccountWithInfo] = []
                 for info in accountsWithInfo {
                     if let info = info {
-                        accountsWithInfoDict[info.account.id] = info
+                        accountsWithInfoResult.append(info)
                     }
                 }
-                return (primary?.id, accountsWithInfoDict)
+                return (primary?.id, accountsWithInfoResult)
             }
         })
         
@@ -395,7 +419,7 @@ public final class SharedAccountContext {
                         applicationBindings.openSettings()
                 })
             }, audioSession: self.mediaManager.audioSession, activeAccounts: self.activeAccounts |> map { _, accounts, _ in
-                return Array(accounts.values)
+                return Array(accounts.map({ $0.1 }))
             })
             self.callManager = callManager
             
@@ -515,9 +539,9 @@ public final class SharedAccountContext {
         self.registeredNotificationTokensDisposable.set((self.activeAccounts
         |> mapToSignal { _, activeAccounts, _ -> Signal<Never, NoError> in
             var applied: [Signal<Never, NoError>] = []
-            let activeProductionUserIds = activeAccounts.values.filter({ !$0.testingEnvironment }).map({ $0.peerId.id })
-            let activeTestingUserIds = activeAccounts.values.filter({ $0.testingEnvironment }).map({ $0.peerId.id })
-            for (_, account) in activeAccounts {
+            let activeProductionUserIds = activeAccounts.map({ $0.1 }).filter({ !$0.testingEnvironment }).map({ $0.peerId.id })
+            let activeTestingUserIds = activeAccounts.map({ $0.1 }).filter({ $0.testingEnvironment }).map({ $0.peerId.id })
+            for (_, account, _) in activeAccounts {
                 let appliedAps = self.apsNotificationToken
                 |> distinctUntilChanged(isEqual: { $0 == $1 })
                 |> mapToSignal { token -> Signal<Never, NoError> in
