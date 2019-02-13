@@ -119,3 +119,14 @@ extension AutodownloadSettings {
     }
 }
 
+func apiAutodownloadPresetSettings(_ autodownloadPresetSettings: AutodownloadPresetSettings) -> Api.AutoDownloadSettings {
+    var flags: Int32 = 0
+    if autodownloadPresetSettings.disabled {
+        flags |= (1 << 0)
+    }
+    if autodownloadPresetSettings.preloadLargeVideo {
+        flags |= (1 << 1)
+    }
+    return .autoDownloadSettings(flags: 0, photoSizeMax: autodownloadPresetSettings.photoSizeMax, videoSizeMax: autodownloadPresetSettings.videoSizeMax, fileSizeMax: autodownloadPresetSettings.fileSizeMax)
+}
+

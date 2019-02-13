@@ -23,3 +23,28 @@ func managedAutodownloadSettingsUpdates(accountManager: AccountManager, network:
     }
     return (poll |> then(.complete() |> suspendAwareDelay(24.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
+
+public enum SavedAutodownloadPreset {
+    case low
+    case medium
+    case high
+}
+
+public func saveAutodownloadSettings(account: Account, preset: SavedAutodownloadPreset, settings: AutodownloadPresetSettings) -> Signal<Void, NoError> {
+    var flags: Int32 = 0
+    switch preset {
+        case .low:
+            flags |= (1 << 0)
+        case .high:
+            flags |= (1 << 2)
+        default:
+            break
+    }
+    return account.network.request(Api.functions.account.saveAutoDownloadSettings(flags: flags, settings: apiAutodownloadPresetSettings(settings)))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .complete()
+        }
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            return .complete()
+    }
+}
