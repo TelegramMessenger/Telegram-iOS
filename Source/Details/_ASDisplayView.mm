@@ -278,6 +278,14 @@ static _ASDisplayViewMethodOverrides GetASDisplayViewMethodOverrides(Class c)
   }
 }
 
+- (void)insertSubview:(UIView *)view atIndex:(NSInteger)index {
+  [super insertSubview:view atIndex:index];
+
+#ifndef ASDK_ACCESSIBILITY_DISABLE
+  self.accessibilityElements = nil;
+#endif
+}
+
 - (void)addSubview:(UIView *)view
 {
   [super addSubview:view];
