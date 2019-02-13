@@ -216,7 +216,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if let strongSelf = self, let videoNode = strongSelf.videoNode {
                 let _ = (videoNode.status |> take(1)).start(next: { [weak videoNode] status in
                     if let strongVideoNode = videoNode, let timestamp = status?.timestamp, let duration = status?.duration {
-                        strongVideoNode.seek(min(duration, timestamp + 15.0))
+                        let nextTimestamp = timestamp + 15.0
+                        if nextTimestamp > duration {
+                            strongVideoNode.seek(0.0)
+                            strongVideoNode.pause()
+                        } else {
+                            strongVideoNode.seek(min(duration, timestamp + 15.0))
+                        }
                     }
                 })
             }
@@ -517,8 +523,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func activateAsInitial() {
         if self.isCentral {
-            self.videoNode?.playOnceWithSound(playAndRecord: false, seekToStart: .automatic, actionAtEnd: .stop)
-            //self.videoNode?.play()
+            var isAnimated = false
+            if let item = self.item, let content = item.content as? NativeVideoContent {
+                isAnimated = content.fileReference.media.isAnimated
+            }
+            if isAnimated {
+                self.videoNode?.play()
+            } else {
+                self.videoNode?.playOnceWithSound(playAndRecord: false, seekToStart: .automatic, actionAtEnd: .stop)
+            }
         }
     }
     
@@ -859,6 +872,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             context.sharedContext.mediaManager.setOverlayVideoNode(overlayNode)
             if overlayNode.supernode != nil {
                 self.beginCustomDismiss()
+                self.statusNode.isHidden = true
                 self.animateOut(toOverlay: overlayNode, completion: { [weak self] in
                     self?.completeCustomDismiss()
                 })

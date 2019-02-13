@@ -71,7 +71,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     if telegramFile.isAnimated {
                         automaticPlayback = item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs
                     } else {
-                        if case .full = automaticDownload, item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos  {
+                        if case .full = automaticDownload, item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
                             automaticPlayback = true
                             contentMode = .aspectFill
                         }

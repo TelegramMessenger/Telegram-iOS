@@ -50,6 +50,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private let statusDisposable = MetaDisposable()
     private let fetchControls = Atomic<FetchControls?>(value: nil)
     private var fetchStatus: MediaResourceStatus?
+    private var actualFetchStatus: MediaResourceStatus?
     private let fetchDisposable = MetaDisposable()
     
     private let playerStatusDisposable = MetaDisposable()
@@ -61,7 +62,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     var visibility: ListViewItemNodeVisibility = .none {
         didSet {
             if let videoNode = self.videoNode {
-                switch visibility {
+                switch self.visibility {
                     case .visible:
                         if !videoNode.canAttachContent {
                             videoNode.canAttachContent = true
@@ -242,7 +243,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
             
             switch sizeCalculation {
                 case let .constrained(constrainedSize):
-                    nativeSize = unboundSize.aspectFitted(constrainedSize) //fitted(constrainedSize)
+                    if unboundSize.width > unboundSize.height {
+                        nativeSize = unboundSize.aspectFitted(constrainedSize)
+                    } else {
+                        nativeSize = unboundSize.aspectFitted(CGSize(width: constrainedSize.height, height: constrainedSize.width))
+                    }
                 case .unconstrained:
                     nativeSize = unboundSize
             }
@@ -300,7 +305,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     }
                     
                     var updateImageSignal: ((Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError>)?
-                    var updatedStatusSignal: Signal<MediaResourceStatus, NoError>?
+                    var updatedStatusSignal: Signal<(MediaResourceStatus, MediaResourceStatus?), NoError>?
                     var updatedFetchControls: FetchControls?
                     
                     var mediaUpdated = false
@@ -308,6 +313,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         mediaUpdated = !media.isSemanticallyEqual(to: currentMedia)
                     } else {
                         mediaUpdated = true
+                    }
+                    
+                    var isSendingUpdated = false
+                    if let currentMessage = currentMessage {
+                        isSendingUpdated = message.flags.isSending != currentMessage.flags.isSending
+                    } else {
+                        isSendingUpdated = true
                     }
                     
                     var statusUpdated = mediaUpdated
@@ -323,7 +335,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         emptyColor = patternColor ?? UIColor(rgb: 0xd6e2ee, alpha: 0.5)
                     }
                     
-                    if mediaUpdated {
+                    if mediaUpdated || isSendingUpdated {
                         if let image = media as? TelegramMediaImage {
                             if hasCurrentVideoNode {
                                 replaceVideoNode = true
@@ -447,41 +459,39 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         if let image = media as? TelegramMediaImage {
                             if message.flags.isSending {
                                 updatedStatusSignal = combineLatest(chatMessagePhotoStatus(context: context, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image)), context.account.pendingMessageManager.pendingMessageStatus(message.id))
-                                |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
+                                |> map { resourceStatus, pendingStatus -> (MediaResourceStatus, MediaResourceStatus?) in
                                     if let pendingStatus = pendingStatus {
                                         let adjustedProgress = max(pendingStatus.progress, 0.027)
-                                        return .Fetching(isActive: pendingStatus.isRunning, progress: adjustedProgress)
+                                        return (.Fetching(isActive: pendingStatus.isRunning, progress: adjustedProgress), resourceStatus)
                                     } else {
-                                        return resourceStatus
+                                        return (resourceStatus, nil)
                                     }
                                 }
                             } else {
                                 updatedStatusSignal = chatMessagePhotoStatus(context: context, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image))
+                                |> map { resourceStatus -> (MediaResourceStatus, MediaResourceStatus?) in
+                                    return (resourceStatus, nil)
+                                }
                             }
                         } else if let file = media as? TelegramMediaFile {
                             updatedStatusSignal = combineLatest(messageMediaFileStatus(context: context, messageId: message.id, file: file), context.account.pendingMessageManager.pendingMessageStatus(message.id))
-                                |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
+                                |> map { resourceStatus, pendingStatus -> (MediaResourceStatus, MediaResourceStatus?) in
                                     if let pendingStatus = pendingStatus {
                                         let adjustedProgress = max(pendingStatus.progress, 0.027)
-                                        return .Fetching(isActive: pendingStatus.isRunning, progress: adjustedProgress)
+                                        return (.Fetching(isActive: pendingStatus.isRunning, progress: adjustedProgress), resourceStatus)
                                     } else {
-                                        return resourceStatus
+                                        return (resourceStatus, nil)
                                     }
                             }
                         } else if let wallpaper = media as? WallpaperPreviewMedia {
                             switch wallpaper.content {
                                 case let .file(file, _):
-                                    updatedStatusSignal = combineLatest(messageMediaFileStatus(context: context, messageId: message.id, file: file), context.account.pendingMessageManager.pendingMessageStatus(message.id))
-                                        |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
-                                            if let pendingStatus = pendingStatus {
-                                                let adjustedProgress = max(pendingStatus.progress, 0.027)
-                                                return .Fetching(isActive: pendingStatus.isRunning, progress: adjustedProgress)
-                                            } else {
-                                                return resourceStatus
-                                            }
+                                    updatedStatusSignal = messageMediaFileStatus(context: context, messageId: message.id, file: file)
+                                    |> map { resourceStatus -> (MediaResourceStatus, MediaResourceStatus?) in
+                                        return (resourceStatus, nil)
                                     }
                                 case .color:
-                                    updatedStatusSignal = .single(.Local)
+                                    updatedStatusSignal = .single((.Local, nil))
                             }
                         }
                     }
@@ -563,16 +573,17 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 if updatedStatusSignal == nil, let fetchStatus = strongSelf.fetchStatus, case .Local = fetchStatus {
                                     if let statusNode = strongSelf.statusNode, case .secretTimeout = statusNode.state {   
                                     } else {
-                                        updatedStatusSignal = .single(fetchStatus)
+                                        updatedStatusSignal = .single((fetchStatus, nil))
                                     }
                                 }
                             }
                             
                             if let updatedStatusSignal = updatedStatusSignal {
-                                strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
+                                strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status, actualFetchStatus in
                                     displayLinkDispatcher.dispatch {
                                         if let strongSelf = strongSelf {
                                             strongSelf.fetchStatus = status
+                                            strongSelf.actualFetchStatus = actualFetchStatus
                                             strongSelf.updateFetchStatus()
                                         }
                                     }
@@ -772,9 +783,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
             }
             badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: string)
         }
-        if let fetchStatus = self.fetchStatus {
+        if var fetchStatus = self.fetchStatus {
             var playerPosition: Int32?
-            var playerDuration: Int32?
+            var playerDuration: Int32 = 0
             var active = false
             var muted = automaticPlayback
             if let playerStatus = self.playerStatus {
@@ -787,7 +798,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     muted = false
                 }
             } else if case .Fetching = fetchStatus, !message.flags.contains(.Unsent) {
-                active = true
+                active = automaticPlayback
+            }
+            
+            if let actualFetchStatus = self.actualFetchStatus, automaticPlayback {
+                fetchStatus = actualFetchStatus
             }
 
             switch fetchStatus {
@@ -803,14 +818,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
                     }
                     
-                    
                     if let file = media as? TelegramMediaFile, (!file.isAnimated || message.flags.contains(.Unsent)) {
                         if case .constrained = sizeCalculation {
                             if let size = file.size {
                                 if let duration = file.duration, !message.flags.contains(.Unsent) {
+                                    let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
+                                    let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true)) / \(dataSizeString(size, forceDecimal: true))"
                                     if isMediaStreamable(message: message, media: file) {
-                                        let durationString = stringForDuration(playerDuration ?? duration, position: playerPosition)
-                                        let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true)) / \(dataSizeString(size, forceDecimal: true))"
                                         badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: active ? sizeString : nil, muted: muted, active: active)
                                         mediaDownloadState = .fetching(progress: automaticPlayback ? nil : progress)
                                         if self.playerStatus?.status == .playing {
@@ -818,10 +832,16 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                         }
                                         state = automaticPlayback ? .none : .play(bubbleTheme.mediaOverlayControlForegroundColor)
                                     } else {
-                                        badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true)) / \(dataSizeString(size, forceDecimal: true))", size: nil, muted: false, active: active)
+                                        if automaticPlayback {
+                                            mediaDownloadState = .fetching(progress: nil)
+                                            badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: active ? sizeString : nil, muted: muted, active: active)
+                                        } else {
+                                            badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: sizeString, size: nil, muted: false, active: false)
+                                        }
+                                        state = automaticPlayback ? .none : state
                                     }
                                 } else {
-                                    badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true)) / \(dataSizeString(size, forceDecimal: true))", size: nil, muted: false, active: active)
+                                    badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true)) / \(dataSizeString(size, forceDecimal: true))", size: nil, muted: false, active: false)
                                 }
                             } else if let _ = file.duration {
                                 badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: strings.Conversation_Processing, size: nil, muted: false, active: active)
@@ -829,17 +849,24 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         } else {
                             if isMediaStreamable(message: message, media: file), let _ = file.size {
                                 if !message.flags.contains(.Unsent) {
-                                    let progressString = String(format: "%d%%", Int(progress * 100.0))
-                                    badgeContent = .text(inset: 12.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: progressString))
-                                    mediaDownloadState = .compactFetching(progress: progress)
+                                    if automaticPlayback, let duration = file.duration {
+                                        let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
+                                        badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
+                                    } else {
+                                        let progressString = String(format: "%d%%", Int(progress * 100.0))
+                                        badgeContent = .text(inset: 12.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: progressString))
+                                    }
+                                    mediaDownloadState = automaticPlayback ? .none : .compactFetching(progress: progress)
                                     
                                     state = automaticPlayback ? .none : .play(bubbleTheme.mediaOverlayControlForegroundColor)
                                 }
                             } else {
                                 if let duration = file.duration, !file.isAnimated {
-                                    let durationString = stringForDuration(playerDuration ?? duration, position: playerPosition)
+                                    let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
                                     badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                                 }
+                                
+                                state = automaticPlayback ? .none : state
                             }
                         }
                     } else if let webpage = webpage, let automaticDownload = self.automaticDownload, case .full = automaticDownload, case let .Loaded(content) = webpage.content, content.type != "telegram_background" {
@@ -872,7 +899,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         }
                     }
                     if let file = media as? TelegramMediaFile, let duration = file.duration, !file.isAnimated {
-                        let durationString = stringForDuration(playerDuration ?? duration, position: playerPosition)
+                        let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
                         if case .constrained = sizeCalculation {
                             badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: nil, muted: muted, active: false)
                         } else {
@@ -882,7 +909,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 case .Remote:
                     state = .download(bubbleTheme.mediaOverlayControlForegroundColor)
                     if let file = self.media as? TelegramMediaFile, !file.isAnimated {
-                        let durationString = stringForDuration(playerDuration ?? (file.duration ?? 0), position: playerPosition)
+                        let durationString = stringForDuration(playerDuration > 0 ? playerDuration : (file.duration ?? 0), position: playerPosition)
                         if case .constrained = sizeCalculation {
                             if isMediaStreamable(message: message, media: file) {
                                 state = automaticPlayback ? .none : .play(bubbleTheme.mediaOverlayControlForegroundColor)
@@ -1047,12 +1074,6 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 statusNode.isHidden = true
             }
             
-//            if let strongSelf = self, strongSelf.isHidden {
-//                if strongSelf.automaticPlayback ?? false {
-//                    strongSelf.videoNode?.seek(0.0)
-//                }
-//            }
-            
             let view = self?.view.snapshotContentTree(unhide: true)
             
             if let badgeNode = self?.badgeNode, let badgeNodeHidden = badgeNodeHidden {
@@ -1066,9 +1087,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     }
     
     func playMediaWithSound() -> (() -> Void)? {
-        if case .visible = self.visibility {
+        if case .visible = self.visibility, let videoNode = self.videoNode {
             return {
-                self.videoNode?.playOnceWithSound(playAndRecord: false, seekToStart: .none)
+                videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none)
             }
         } else {
             return nil

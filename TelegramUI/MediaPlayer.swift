@@ -459,19 +459,19 @@ private final class MediaPlayerContext {
             
             var loadedState: MediaPlayerLoadedState?
             switch self.state {
-            case .empty:
-                break
-            case let .playing(currentLoadedState):
-                loadedState = currentLoadedState
-            case let .paused(currentLoadedState):
-                loadedState = currentLoadedState
-            case let .seeking(_, timestamp, _, disposable, action, _):
-                if self.enableSound {
-                    self.state = .empty
-                    disposable.dispose()
-                    self.enableSound = false
-                    self.seek(timestamp: timestamp, action: action)
-                }
+                case .empty:
+                    break
+                case let .playing(currentLoadedState):
+                    loadedState = currentLoadedState
+                case let .paused(currentLoadedState):
+                    loadedState = currentLoadedState
+                case let .seeking(_, timestamp, _, disposable, action, _):
+                    if self.enableSound {
+                        self.state = .empty
+                        disposable.dispose()
+                        self.enableSound = false
+                        self.seek(timestamp: timestamp, action: action)
+                    }
             }
             
             let timestamp: Double
@@ -481,6 +481,11 @@ private final class MediaPlayerContext {
                 timestamp = 0.0
             }
             self.seek(timestamp: timestamp, action: .play)
+        } else {
+            if case .playing = self.state {
+            } else {
+                self.play()
+            }
         }
     }
     

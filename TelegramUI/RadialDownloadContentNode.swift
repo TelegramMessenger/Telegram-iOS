@@ -161,16 +161,23 @@ final class RadialDownloadContentNode: RadialStatusContentNode {
     }
     
     override func animateOut(to: RadialStatusNodeState, completion: @escaping () -> Void) {
-        self.isAnimatingTransition = true
-        self.arrowBody.animateStrokeStart(from: 0.65, to: 0.0, duration: 0.5, removeOnCompletion: false, completion: { [weak self] _ in
-            completion()
-            if let strongSelf = self, strongSelf.isAnimatingTransition, let f = strongSelf.enqueuedReadyForTransition {
-                strongSelf.isAnimatingTransition = false
-                f()
-            }
-        })
-        self.arrowBody.animateStrokeEnd(from: 1.0, to: 0.0, duration: 0.5, removeOnCompletion: false, completion: nil)
-        self.arrowBody.animateAlpha(from: 1.0, to: 0.0, duration: 0.01, delay: 0.4, removeOnCompletion: false)
+        if self.bounds.width < 21.0 {
+            self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false, completion: { _ in
+                completion()
+            })
+            self.layer.animateScale(from: 1.0, to: 0.2, duration: duration, removeOnCompletion: false)
+        } else {
+            self.isAnimatingTransition = true
+            self.arrowBody.animateStrokeStart(from: 0.65, to: 0.0, duration: 0.5, removeOnCompletion: false, completion: { [weak self] _ in
+                completion()
+                if let strongSelf = self, strongSelf.isAnimatingTransition, let f = strongSelf.enqueuedReadyForTransition {
+                    strongSelf.isAnimatingTransition = false
+                    f()
+                }
+            })
+            self.arrowBody.animateStrokeEnd(from: 1.0, to: 0.0, duration: 0.5, removeOnCompletion: false, completion: nil)
+            self.arrowBody.animateAlpha(from: 1.0, to: 0.0, duration: 0.01, delay: 0.4, removeOnCompletion: false)
+        }
     }
     
     override func prepareAnimateIn(from: RadialStatusNodeState?) {

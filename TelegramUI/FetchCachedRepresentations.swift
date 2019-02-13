@@ -19,7 +19,7 @@ private func resourceData(account: Account, resource: MediaResource, chunkSize: 
                     if chunkSize > size {
                         return .complete()
                     } else {
-                        return resourceData(account: account, resource: resource, chunkSize: chunkSize + 64 * 1024)
+                        return resourceData(account: account, resource: resource, chunkSize: chunkSize + chunkSize)
                     }
                 }
             }
@@ -59,23 +59,6 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
             } else {
                 return .complete()
             }
-//            if !data.complete {
-//                return .complete()
-//            }
-//            if let size = resource.size {
-//
-//
-//
-//                return account.postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, 256 * 1024))
-//                |> mapToSignal { _ -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-//                    return account.postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: false), attemptSynchronously: true)
-//                    |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-//                        return fetchCachedVideoFirstFrameRepresentation(account: account, resource: resource, resourceData: data)
-//                    }
-//                }
-//            } else {
-//                return .complete()
-//            }
         }
     } else if let representation = representation as? CachedScaledVideoFirstFrameRepresentation {
         return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
@@ -293,7 +276,8 @@ private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource
                 
                 subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
                 subscriber.putCompletion()
-            } catch (let e) {
+            } catch (let _) {
+                let _ = try? FileManager.default.removeItem(atPath: tempFilePath)
                 subscriber.putError(.generic)
                 subscriber.putCompletion()
             }

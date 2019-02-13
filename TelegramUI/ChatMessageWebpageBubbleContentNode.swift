@@ -218,17 +218,32 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 var mainMedia: Media?
+
+                var automaticPlayback = false
+                if let file = webpage.file, !file.isAnimated, item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
+                    if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, media: file) {
+                        automaticPlayback = true
+                    }
+                }
                 
                 switch type {
                     case .instagram, .twitter:
-                        mainMedia = webpage.image ?? webpage.file
+                        if automaticPlayback {
+                            mainMedia = webpage.file ?? webpage.image
+                        } else {
+                            mainMedia = webpage.image ?? webpage.file
+                        }
                     default:
                         mainMedia = webpage.file ?? webpage.image
                 }
                 
                 if let file = mainMedia as? TelegramMediaFile {
                     if let embedUrl = webpage.embedUrl, !embedUrl.isEmpty {
-                        mediaAndFlags = (webpage.image ?? file, [.preferMediaBeforeText])
+                        if automaticPlayback {
+                            mediaAndFlags = (file, [.preferMediaBeforeText])
+                        } else {
+                            mediaAndFlags = (webpage.image ?? file, [.preferMediaBeforeText])
+                        }
                     } else if webpage.type == "telegram_background" {
                         var patternColor: UIColor?
                         if let wallpaper = parseWallpaperUrl(webpage.url), case let .slug(_, _, color, intensity) = wallpaper {

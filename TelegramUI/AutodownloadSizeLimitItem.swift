@@ -167,6 +167,7 @@ class AutodownloadSizeLimitItemNode: ListViewItemNode {
             sliderView.knobImage = generateKnobImage()
             
             sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: 37.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 15.0 * 2.0, height: 44.0))
+            sliderView.hitTestEdgeInsets = UIEdgeInsetsMake(-sliderView.frame.minX, 0.0, 0.0, -sliderView.frame.minX)
         }
         self.view.addSubview(sliderView)
         sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
@@ -257,6 +258,7 @@ class AutodownloadSizeLimitItemNode: ListViewItemNode {
                         }
                         
                         sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: 37.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 15.0 * 2.0, height: 44.0))
+                        sliderView.hitTestEdgeInsets = UIEdgeInsetsMake(-sliderView.frame.minX, 0.0, 0.0, -sliderView.frame.minX)
                     }
                 }
             })
