@@ -36,6 +36,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private var currentImageArguments: TransformImageArguments?
     private var videoNode: UniversalVideoNode?
     private var statusNode: RadialStatusNode?
+    var videoNodeDecoration: ChatBubbleVideoDecoration?
     private var badgeNode: ChatMessageInteractiveMediaBadge?
     private var tapRecognizer: UITapGestureRecognizer?
     
@@ -45,7 +46,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private var themeAndStrings: (PresentationTheme, PresentationStrings)?
     private var sizeCalculation: InteractiveMediaNodeSizeCalculation?
     private var automaticDownload: InteractiveMediaNodeAutodownloadMode?
-    private var automaticPlayback: Bool?
+    var automaticPlayback: Bool?
     
     private let statusDisposable = MetaDisposable()
     private let fetchControls = Atomic<FetchControls?>(value: nil)
@@ -409,7 +410,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 }
                             }
                             
-                            if file.isVideo && !isSecretMedia && automaticPlayback && !message.flags.isSending {
+                            var uploading = false
+                            if file.resource is VideoLibraryMediaResource {
+                                uploading = true
+                            }
+                            if file.isVideo && !isSecretMedia && automaticPlayback && !uploading {
                                 updateVideoFile = file
                                 if hasCurrentVideoNode {
                                     if let currentFile = currentMedia as? TelegramMediaFile, currentFile.resource is EmptyMediaResource {
@@ -553,8 +558,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 }
                                 
                                 if replaceVideoNode, let updatedVideoFile = updateVideoFile {
+                                    let decoration = ChatBubbleVideoDecoration(corners: arguments.corners, nativeSize: nativeSize, contentMode: contentMode, backgroundColor: arguments.emptyColor ?? .black)
+                                    strongSelf.videoNodeDecoration = decoration
                                     let mediaManager = context.sharedContext.mediaManager
-                                    let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(corners: arguments.corners, nativeSize: nativeSize, contentMode: contentMode, backgroundColor: arguments.emptyColor ?? .black), content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: !updatedVideoFile.isAnimated, enableSound: false, fetchAutomatically: false), priority: .embedded)
+                                    let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: !updatedVideoFile.isAnimated, enableSound: false, fetchAutomatically: false), priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     
                                     strongSelf.videoNode = videoNode

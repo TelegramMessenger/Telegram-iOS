@@ -185,7 +185,7 @@ func galleryItemForEntry(context: AccountContext, presentationData: Presentation
                 } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(webpageContent) = webpage.content {
                     switch websiteType(of: webpageContent) {
                         case .instagram where webpageContent.file != nil && webpageContent.image != nil && webpageContent.file!.isVideo:
-                            return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: NativeVideoContent(id: NativeVideoContentId.message(message.id, message.stableId, webpage.webpageId), fileReference: .message(message: MessageReference(message), media: webpageContent.file!), imageReference: webpageContent.image.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: true, enableSound: true), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), performAction: performAction, openActionOptions: openActionOptions)
+                            return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: NativeVideoContent(id: .message(message.id, message.stableId, webpageContent.file?.id ?? webpage.webpageId), fileReference: .message(message: MessageReference(message), media: webpageContent.file!), imageReference: webpageContent.image.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: true, enableSound: true), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), performAction: performAction, openActionOptions: openActionOptions)
                         default:
                             if let embedUrl = webpageContent.embedUrl, let image = webpageContent.image, URL(string: embedUrl)?.pathExtension == "mp4" {
                                 return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: SystemVideoContent(url: embedUrl, imageReference: .webPage(webPage: WebpageReference(webpage), media: image), dimensions: webpageContent.embedSize ?? CGSize(width: 640.0, height: 640.0), duration: Int32(webpageContent.duration ?? 0)), originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), performAction: performAction, openActionOptions: openActionOptions)
@@ -289,7 +289,7 @@ class GalleryController: ViewController {
     
     private var adjustedForInitialPreviewingLayout = false
     
-    var temporaryDoNotWaitForReady = false
+    var temporaryDoNotWaitForReady = true
     
     private let accountInUseDisposable = MetaDisposable()
     private let disposable = MetaDisposable()

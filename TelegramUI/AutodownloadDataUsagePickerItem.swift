@@ -31,14 +31,16 @@ class AutodownloadDataUsagePickerItem: ListViewItem, ItemListItem {
     let strings: PresentationStrings
     let value: AutomaticDownloadDataUsage
     let customPosition: Int?
+    let enabled: Bool
     let sectionId: ItemListSectionId
     let updated: (AutomaticDownloadDataUsage) -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, value: AutomaticDownloadDataUsage, customPosition: Int?, sectionId: ItemListSectionId, updated: @escaping (AutomaticDownloadDataUsage) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, value: AutomaticDownloadDataUsage, customPosition: Int?, enabled: Bool, sectionId: ItemListSectionId, updated: @escaping (AutomaticDownloadDataUsage) -> Void) {
         self.theme = theme
         self.strings = strings
         self.value = value
         self.customPosition = customPosition
+        self.enabled = enabled
         self.sectionId = sectionId
         self.updated = updated
     }
@@ -296,6 +298,10 @@ class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
                             sliderView.trackColor = item.theme.list.itemAccentColor
                             sliderView.knobImage = generateKnobImage()
                         }
+                        
+                        sliderView.isUserInteractionEnabled = item.enabled
+                        sliderView.alpha = item.enabled ? 1.0 : 0.4
+                        sliderView.layer.allowsGroupOpacity = !item.enabled
                         
                         sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: 37.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 15.0 * 2.0, height: 44.0))
                         sliderView.hitTestEdgeInsets = UIEdgeInsetsMake(-sliderView.frame.minX, 0.0, 0.0, -sliderView.frame.minX)

@@ -3,19 +3,11 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 
-private func isRoundEqualCorners(_ corners: ImageCorners) -> Bool {
-    if case .Corner = corners.topLeft, case .Corner = corners.topRight, case .Corner = corners.bottomLeft, case .Corner = corners.bottomRight {
-        if corners.topLeft.radius == corners.topRight.radius && corners.topRight.radius == corners.bottomLeft.radius && corners.bottomLeft.radius == corners.bottomRight.radius {
-            return true
-        }
-    }
-    return false
-}
-
 final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     private let nativeSize: CGSize
     private let contentMode: InteractiveMediaNodeContentMode
     
+    let corners: ImageCorners
     let backgroundNode: ASDisplayNode? = nil
     let contentContainerNode: ASDisplayNode
     let foregroundNode: ASDisplayNode? = nil
@@ -25,6 +17,7 @@ final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     private var validLayoutSize: CGSize?
     
     init(corners: ImageCorners, nativeSize: CGSize, contentMode: InteractiveMediaNodeContentMode, backgroundColor: UIColor) {
+        self.corners = corners
         self.nativeSize = nativeSize
         self.contentMode = contentMode
         
@@ -50,7 +43,7 @@ final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
                 mask.contents = maskImage.cgImage
                 mask.contentsScale = maskImage.scale
                 mask.contentsCenter = CGRect(x: max(corners.topLeft.radius, corners.bottomLeft.radius) / maskImage.size.width, y: max(corners.topLeft.radius, corners.topRight.radius) / maskImage.size.height, width: (maskImage.size.width - max(corners.topLeft.radius, corners.bottomLeft.radius) - max(corners.topRight.radius, corners.bottomRight.radius)) / maskImage.size.width, height: (maskImage.size.height - max(corners.topLeft.radius, corners.topRight.radius) - max(corners.bottomLeft.radius, corners.bottomRight.radius)) / maskImage.size.height)
-                
+
                 self.contentContainerNode.layer.mask = mask
             }
         }

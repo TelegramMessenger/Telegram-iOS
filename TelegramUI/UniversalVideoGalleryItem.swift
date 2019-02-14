@@ -309,8 +309,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             self.videoNode = videoNode
             videoNode.isUserInteractionEnabled = disablePlayerControls
             videoNode.backgroundColor = videoNode.ownsContentNode ? UIColor.black : UIColor(rgb: 0x333335)
-            videoNode.canAttachContent = true
-            self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
+            videoNode.canAttachContent = false
+            //self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
             
             self.scrubberView.setStatusSignal(videoNode.status |> map { value -> MediaPlayerStatus in
                 if let value = value, !value.duration.isZero {
@@ -609,7 +609,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             
             videoNode.allowsGroupOpacity = true
-            videoNode.layer.animateAlpha(from: 1.0, to: 1.0, duration: 0.1, completion: { [weak videoNode] _ in
+            videoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, completion: { [weak videoNode] _ in
                 videoNode?.allowsGroupOpacity = false
             })
             videoNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: videoNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
@@ -617,7 +617,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             transformedFrame.origin = CGPoint()
             
             let transform = CATransform3DScale(videoNode.layer.transform, transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height, 1.0)
+            
             videoNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: videoNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
+            
+            Queue.mainQueue().after(0.0001) {
+                videoNode.canAttachContent = true
+            }
             
             if let pictureInPictureNode = self.pictureInPictureNode {
                 let transformedPlaceholderFrame = node.0.view.convert(node.0.view.bounds, to: pictureInPictureNode.view)
@@ -693,17 +698,29 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             intermediateCompletion()
         })
         
-        videoNode.allowsGroupOpacity = true
-        videoNode.layer.animateAlpha(from: 1.0, to: 1.0, duration: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
-            videoNode?.allowsGroupOpacity = false
-        })
-        
         self.statusButtonNode.layer.animatePosition(from: self.statusButtonNode.layer.position, to: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             //positionCompleted = true
             //intermediateCompletion()
         })
         self.statusButtonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
         self.statusButtonNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.25, removeOnCompletion: false)
+        
+        var animatedVideoNode = false
+        if let interactiveMediaNode = node.0 as? ChatMessageInteractiveMediaNode, interactiveMediaNode.automaticPlayback ?? false {
+            let scale = videoNode.layer.bounds.size.width / node.0.view.bounds.width
+            videoNode.backgroundColor = .clear
+            if let bubbleDecoration = interactiveMediaNode.videoNodeDecoration, let decoration = videoNode.decoration as? GalleryVideoDecoration  {
+                decoration.updateCorners(bubbleDecoration.corners.scaledBy(scale * 0.6666))
+            }
+            animatedVideoNode = true
+        }
+        
+        if !animatedVideoNode {
+            videoNode.allowsGroupOpacity = true
+            videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
+                videoNode?.allowsGroupOpacity = false
+            })
+        }
         
         transformedFrame.origin = CGPoint()
         

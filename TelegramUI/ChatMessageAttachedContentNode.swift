@@ -1003,4 +1003,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             }
         }
     }
+    
+    func playMediaWithSound() -> (() -> Void)? {
+        return self.contentImageNode?.playMediaWithSound()
+    }
 }
