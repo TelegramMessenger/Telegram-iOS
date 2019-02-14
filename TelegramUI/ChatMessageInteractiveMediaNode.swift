@@ -54,7 +54,20 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private let fetchDisposable = MetaDisposable()
     
     private let playerStatusDisposable = MetaDisposable()
-    private var playerStatus: MediaPlayerStatus?
+    
+    private var updateTimer: SwiftSignalKit.Timer?
+    private var playerStatus: MediaPlayerStatus? {
+        didSet {
+            if self.playerStatus != oldValue {
+                if let playerStatus = playerStatus, case .playing = playerStatus.status {
+                    self.ensureHasTimer()
+                } else {
+                    self.stopTimer()
+                }
+                self.updateFetchStatus()
+            }
+        }
+    }
     
     private var secretTimer: SwiftSignalKit.Timer?
     
@@ -541,7 +554,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 
                                 if replaceVideoNode, let updatedVideoFile = updateVideoFile {
                                     let mediaManager = context.sharedContext.mediaManager
-                                    let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(corners: arguments.corners, nativeSize: nativeSize, contentMode: contentMode, backgroundColor: arguments.emptyColor ?? .black), content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: true, enableSound: false, fetchAutomatically: false), priority: .embedded)
+                                    let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(corners: arguments.corners, nativeSize: nativeSize, contentMode: contentMode, backgroundColor: arguments.emptyColor ?? .black), content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: !updatedVideoFile.isAnimated, enableSound: false, fetchAutomatically: false), priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     
                                     strongSelf.videoNode = videoNode
@@ -595,7 +608,6 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     displayLinkDispatcher.dispatch {
                                         if let strongSelf = strongSelf {
                                             strongSelf.playerStatus = status
-                                            strongSelf.updateFetchStatus()
                                         }
                                     }
                                 }))
@@ -672,6 +684,21 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 })
             })
         }
+    }
+    
+    private func ensureHasTimer() {
+        if self.updateTimer == nil {
+            let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
+                self?.updateFetchStatus()
+                }, queue: Queue.mainQueue())
+            self.updateTimer = timer
+            timer.start()
+        }
+    }
+    
+    private func stopTimer() {
+        self.updateTimer?.invalidate()
+        self.updateTimer = nil
     }
     
     private func updateFetchStatus() {
@@ -789,7 +816,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
             var active = false
             var muted = automaticPlayback
             if let playerStatus = self.playerStatus {
-                playerPosition = Int32(playerStatus.timestamp)
+                if !playerStatus.generationTimestamp.isZero, case .playing = playerStatus.status {
+                    playerPosition = Int32(playerStatus.timestamp + (CACurrentMediaTime() - playerStatus.generationTimestamp))
+                } else {
+                    playerPosition = Int32(playerStatus.timestamp)
+                }
                 playerDuration = Int32(playerStatus.duration)
                 if case .buffering = playerStatus.status {
                     active = true
@@ -798,7 +829,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     muted = false
                 }
             } else if case .Fetching = fetchStatus, !message.flags.contains(.Unsent) {
-                active = automaticPlayback
+                active = true
             }
             
             if let actualFetchStatus = self.actualFetchStatus, automaticPlayback {

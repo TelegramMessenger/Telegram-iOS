@@ -151,6 +151,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusNode: RadialStatusNode
     
     private var isCentral = false
+    private var initiallyActivated = false
     private var validLayout: (ContainerViewLayout, CGFloat)?
     private var didPause = false
     private var isPaused = true
@@ -513,6 +514,16 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             if let videoNode = self.videoNode {
                 if isCentral {
+                    if let fetchStatus = self.fetchStatus, let item = self.item, let content = item.content as? NativeVideoContent, let contentInfo = item.contentInfo, case let .message(message) = contentInfo, !self.initiallyActivated {
+                        self.initiallyActivated = true
+                        var isLocal = false
+                        if case .Local = fetchStatus {
+                            isLocal = true
+                        }
+                        if isLocal || isMediaStreamable(message: message, media: content.fileReference.media) {
+                            videoNode.play()
+                        }
+                    }
                     //videoNode.canAttachContent = true
                 } else if videoNode.ownsContentNode {
                     videoNode.pause()
@@ -522,15 +533,17 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func activateAsInitial() {
-        if self.isCentral {
+        if let videoNode = self.videoNode, self.isCentral {
+            self.initiallyActivated = true
+            
             var isAnimated = false
             if let item = self.item, let content = item.content as? NativeVideoContent {
                 isAnimated = content.fileReference.media.isAnimated
             }
             if isAnimated {
-                self.videoNode?.play()
+                videoNode.play()
             } else {
-                self.videoNode?.playOnceWithSound(playAndRecord: false, seekToStart: .automatic, actionAtEnd: .stop)
+                videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .automatic, actionAtEnd: .stop)
             }
         }
     }
@@ -596,7 +609,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             
             videoNode.allowsGroupOpacity = true
-            videoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, completion: { [weak videoNode] _ in
+            videoNode.layer.animateAlpha(from: 1.0, to: 1.0, duration: 0.1, completion: { [weak videoNode] _ in
                 videoNode?.allowsGroupOpacity = false
             })
             videoNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: videoNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
@@ -681,7 +694,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         })
         
         videoNode.allowsGroupOpacity = true
-        videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
+        videoNode.layer.animateAlpha(from: 1.0, to: 1.0, duration: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
             videoNode?.allowsGroupOpacity = false
         })
         

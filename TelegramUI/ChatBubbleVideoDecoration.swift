@@ -21,7 +21,6 @@ final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     let foregroundNode: ASDisplayNode? = nil
     
     private var contentNode: (ASDisplayNode & UniversalVideoContentNode)?
-    private var contentNodeSnapshot: UIView?
     
     private var validLayoutSize: CGSize?
     
@@ -95,33 +94,6 @@ final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     }
     
     func updateContentNodeSnapshot(_ snapshot: UIView?) {
-        if self.contentNodeSnapshot !== snapshot {
-            self.contentNodeSnapshot?.removeFromSuperview()
-            self.contentNodeSnapshot = snapshot
-            
-            if let snapshot = snapshot {
-                self.contentContainerNode.view.addSubview(snapshot)
-                if let size = self.validLayoutSize {
-                    var scaledSize: CGSize
-                    switch self.contentMode {
-                        case .aspectFit:
-                            scaledSize = snapshot.frame.size.aspectFitted(size)
-                        case .aspectFill:
-                            scaledSize = snapshot.frame.size.aspectFilled(size)
-                    }
-                    if abs(scaledSize.width - size.width) < 2.0 {
-                        scaledSize.width = size.width
-                    }
-                    if abs(scaledSize.height - size.height) < 2.0 {
-                        scaledSize.height = size.height
-                    }
-                    
-                    let scale = scaledSize.width / snapshot.frame.width
-                    snapshot.transform = CGAffineTransform(scaleX: scale, y: scale)
-                    snapshot.center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
-                }
-            }
-        }
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
