@@ -762,7 +762,7 @@ public final class MediaBox {
                     let paths = self.storePathsForId(id)
                     if let size = fileSize(paths.complete) {
                         result[wrappedId] = Int64(size)
-                    } else if let size = fileSize(paths.partial) {
+                    } else if let size = fileSize(paths.partial, useTotalFileAllocatedSize: true) {
                         result[wrappedId] = Int64(size)
                     }
                 }
