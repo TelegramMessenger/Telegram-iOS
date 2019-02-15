@@ -1441,7 +1441,7 @@
 "Target.InviteToGroupConfirmation" = "Add the bot to \"%@\"?";
 "Target.InviteToGroupErrorAlreadyInvited" = "The bot is already a member of the group.";
 "Bot.GenericBotStatus" = "bot";
-"Bot.GenericSupportStatus" = "bot";
+"Bot.GenericSupportStatus" = "support";
 "Bot.DescriptionTitle" = "What can this bot do?";
 "Bot.GroupStatusReadsHistory" = "has access to messages";
 "Bot.GroupStatusDoesNotReadHistory" = "has no access to messages";
