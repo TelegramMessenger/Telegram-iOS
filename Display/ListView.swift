@@ -2972,7 +2972,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             let itemFrame = itemNode.apparentFrame
             var visibility: ListViewItemNodeVisibility = .none
             if visibilityRect.intersects(itemFrame) {
-                visibility = .visible
+                let itemContentFrame = itemNode.apparentContentFrame
+                let full = itemContentFrame.minY >= visibilityRect.minY && itemContentFrame.maxY <= visibilityRect.maxY
+                visibility = .visible(full)
             }
             if !onlyPositive || visibility == .visible {
                 if visibility != itemNode.visibility {

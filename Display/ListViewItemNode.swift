@@ -50,10 +50,26 @@ public struct ListViewItemNodeLayout {
     }
 }
 
-public enum ListViewItemNodeVisibility {
+public enum ListViewItemNodeVisibility: Equatable {
     case none
-    case nearlyVisible
-    case visible
+    case visible(Bool)
+    
+    public static func ==(lhs: ListViewItemNodeVisibility, rhs: ListViewItemNodeVisibility) -> Bool {
+        switch lhs {
+            case .none:
+                if case .none = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .visible(full):
+                if case .visible(full) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 public struct ListViewItemLayoutParams {
