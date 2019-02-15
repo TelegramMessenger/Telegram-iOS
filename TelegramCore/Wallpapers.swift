@@ -141,15 +141,7 @@ public func uploadWallpaper(account: Account, resource: MediaResource, mimeType:
                 }
         }
     }
-    |> map { result, resource -> UploadWallpaperStatus in
-        switch result {
-            case let .complete(wallpaper):
-                if case let .file(_, _, _, _, _, _, _, file, _) = wallpaper, let resource = resource {
-                    account.postbox.mediaBox.moveResourceData(from: resource.id, to: file.resource.id)
-                }
-            default:
-                break
-        }
+    |> map { result, _ -> UploadWallpaperStatus in
         return result
     }
 }
