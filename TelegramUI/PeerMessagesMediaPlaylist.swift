@@ -147,7 +147,7 @@ private func aroundMessagesFromView(view: MessageHistoryView, centralIndex: Mess
     var result: [Message] = []
     if index != 0 {
         for i in (0 ..< index).reversed() {
-            if case let .MessageEntry(message, _, _, _) = view.entries[i] {
+            if case let .MessageEntry(message, _, _, _, _) = view.entries[i] {
                 result.append(message)
                 break
             }
@@ -155,7 +155,7 @@ private func aroundMessagesFromView(view: MessageHistoryView, centralIndex: Mess
     }
     if index != view.entries.count - 1 {
         for i in index + 1 ..< view.entries.count {
-            if case let .MessageEntry(message, _, _, _) = view.entries[i] {
+            if case let .MessageEntry(message, _, _, _, _) = view.entries[i] {
                 result.append(message)
                 break
             }
@@ -171,7 +171,7 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
             switch position {
                 case .exact:
                     switch entry {
-                        case let .MessageEntry(message, _, _, _):
+                        case let .MessageEntry(message, _, _, _, _):
                             return (message, aroundMessagesFromView(view: view, centralIndex: entry.index), true)
                         default:
                             return nil
@@ -179,7 +179,7 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
                 case .later:
                     if index + 1 < view.entries.count {
                         switch view.entries[index + 1] {
-                            case let .MessageEntry(message, _, _, _):
+                            case let .MessageEntry(message, _, _, _, _):
                                 return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index + 1].index), true)
                             default:
                                 return nil
@@ -190,7 +190,7 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
                 case .earlier:
                     if index != 0 {
                         switch view.entries[index - 1] {
-                            case let .MessageEntry(message, _, _, _):
+                            case let .MessageEntry(message, _, _, _, _):
                                 return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index - 1].index), true)
                             default:
                                 return nil
@@ -206,14 +206,14 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
         switch position {
             case .later, .exact:
                 switch view.entries[view.entries.count - 1] {
-                    case let .MessageEntry(message, _, _, _):
+                    case let .MessageEntry(message, _, _, _, _):
                         return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[view.entries.count - 1].index), false)
                     default:
                         return nil
                 }
             case .earlier:
                 switch view.entries[0] {
-                    case let .MessageEntry(message, _, _, _):
+                    case let .MessageEntry(message, _, _, _, _):
                         return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[0].index), false)
                     default:
                         return nil

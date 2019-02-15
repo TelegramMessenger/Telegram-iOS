@@ -486,11 +486,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             var authorNameString: String?
             let authorIsAdmin: Bool
             switch content {
-                case let .message(message, _, _, isAdmin):
+                case let .message(message, _, _, attributes):
                     if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
                         authorIsAdmin = false
                     } else {
-                        authorIsAdmin = isAdmin
+                        authorIsAdmin = attributes.isAdmin
                     }
                 case .group:
                     authorIsAdmin = false

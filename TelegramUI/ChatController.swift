@@ -4819,7 +4819,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                     return .single((nil, true))
                                 case let .HistoryView(view, _, _, _, _):
                                     for entry in view.entries {
-                                        if case let .MessageEntry(message, _, _, _) = entry {
+                                        if case let .MessageEntry(message, _, _, _, _) = entry {
                                             if message.id == messageLocation.messageId {
                                                 return .single((MessageIndex(message), false))
                                             }
@@ -4906,7 +4906,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                     return .complete()
                                 case let .HistoryView(view, _, _, _, _):
                                     for entry in view.entries {
-                                        if case let .MessageEntry(message, _, _, _) = entry {
+                                        if case let .MessageEntry(message, _, _, _, _) = entry {
                                             if message.id == messageLocation.messageId {
                                                 return .single(MessageIndex(message))
                                             }

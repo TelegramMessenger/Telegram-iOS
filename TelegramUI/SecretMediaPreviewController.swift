@@ -421,7 +421,7 @@ public final class SecretMediaPreviewController: ViewController {
                     }
                 }
                 
-                guard let item = galleryItemForEntry(context: self.context, presentationData: self.presentationData, entry: .MessageEntry(message, false, nil, nil), streamVideos: false, hideControls: true, tempFilePath: tempFilePath, playbackCompleted: { [weak self] in
+                guard let item = galleryItemForEntry(context: self.context, presentationData: self.presentationData, entry: .MessageEntry(message, false, nil, nil, MutableMessageHistoryEntryAttributes(authorIsContact: false)), streamVideos: false, hideControls: true, tempFilePath: tempFilePath, playbackCompleted: { [weak self] in
                     self?.dismiss(forceAway: false)
                     }) else {
                     self._ready.set(.single(true))
