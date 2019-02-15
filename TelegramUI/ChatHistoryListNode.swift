@@ -264,6 +264,7 @@ private final class ChatHistoryTransactionOpaqueState {
 
 private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: AutomaticDownloadNetworkType) -> ChatMessageItemAssociatedData {
     var automaticMediaDownloadPeerType: AutomaticMediaDownloadPeerType = .channel
+    var contactsPeerIds: Set<PeerId> = Set()
     if case let .peer(peerId) = chatLocation {
         if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
             var isContact = false
@@ -276,6 +277,12 @@ private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHist
             automaticMediaDownloadPeerType = isContact ? .contact : .otherPrivate
         } else if peerId.namespace == Namespaces.Peer.CloudGroup {
             automaticMediaDownloadPeerType = .group
+            
+            for case let .MessageEntry(message, _, _, _, attributes) in view.entries {
+                if attributes.authorIsContact, let peerId = message.author?.id {
+                    contactsPeerIds.insert(peerId)
+                }
+            }
         } else if peerId.namespace == Namespaces.Peer.CloudChannel {
             for entry in view.additionalData {
                 if case let .peer(_, value) = entry {
@@ -285,9 +292,16 @@ private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHist
                     break
                 }
             }
+            if automaticMediaDownloadPeerType == .group {
+                for case let .MessageEntry(message, _, _, _, attributes) in view.entries {
+                    if attributes.authorIsContact, let peerId = message.author?.id {
+                        contactsPeerIds.insert(peerId)
+                    }
+                }
+            }
         }
     }
-    let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false)
+    let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, contactsPeerIds: contactsPeerIds)
     return associatedData
 }
 

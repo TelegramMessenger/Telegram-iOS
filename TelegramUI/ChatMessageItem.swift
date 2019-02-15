@@ -191,11 +191,13 @@ public final class ChatMessageItemAssociatedData: Equatable {
     let automaticDownloadPeerType: AutomaticMediaDownloadPeerType
     let automaticDownloadNetworkType: AutomaticDownloadNetworkType
     let isRecentActions: Bool
+    let contactsPeerIds: Set<PeerId>
     
-    init(automaticDownloadPeerType: AutomaticMediaDownloadPeerType, automaticDownloadNetworkType: AutomaticDownloadNetworkType, isRecentActions: Bool) {
+    init(automaticDownloadPeerType: AutomaticMediaDownloadPeerType, automaticDownloadNetworkType: AutomaticDownloadNetworkType, isRecentActions: Bool, contactsPeerIds: Set<PeerId> = Set()) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
+        self.contactsPeerIds = contactsPeerIds
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -206,6 +208,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.isRecentActions != rhs.isRecentActions {
+            return false
+        }
+        if lhs.contactsPeerIds != rhs.contactsPeerIds {
             return false
         }
         return true

@@ -3,6 +3,7 @@ import UIKit
 
 public enum TransformImageResizeMode {
     case fill(UIColor)
+    case aspectFill
     case blurBackground
 }
 

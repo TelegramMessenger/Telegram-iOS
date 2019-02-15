@@ -1502,14 +1502,19 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
             let drawingRect = arguments.drawingRect
-            var fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
-            if fittedSize.width < drawingRect.size.width && fittedSize.width >= drawingRect.size.width - 2.0 {
-                fittedSize.width = drawingRect.size.width
+            var drawingSize: CGSize
+            if case .aspectFill = arguments.resizeMode {
+                drawingSize = arguments.imageSize.aspectFilled(arguments.boundingSize)
+            } else {
+                drawingSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
             }
-            if fittedSize.height < drawingRect.size.height && fittedSize.height >= drawingRect.size.height - 2.0 {
-                fittedSize.height = drawingRect.size.height
+            if drawingSize.width < drawingRect.size.width && drawingSize.width >= drawingRect.size.width - 2.0 {
+                drawingSize.width = drawingRect.size.width
             }
-            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+            if drawingSize.height < drawingRect.size.height && drawingSize.height >= drawingRect.size.height - 2.0 {
+                drawingSize.height = drawingRect.size.height
+            }
+            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - drawingSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - drawingSize.height) / 2.0), size: drawingSize)
             
             var fullSizeImage: CGImage?
             var imageOrientation: UIImageOrientation = .up
@@ -1544,7 +1549,7 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
                     blurredThumbnailImage = UIImage(cgImage: thumbnailImage)
                 } else {
                     let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
-                    let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 100.0, height: 100.0))
+                    let initialThumbnailContextFittingSize = drawingSize.fitted(CGSize(width: 100.0, height: 100.0))
                     
                     let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
                     let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
@@ -1587,7 +1592,7 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
                                 var sideBlurredImage: UIImage?
                                 let thumbnailSize = CGSize(width: fullSizeImage.width, height: fullSizeImage.height)
                                 if true {
-                                    let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 100.0, height: 100.0))
+                                    let initialThumbnailContextFittingSize = drawingSize.fitted(CGSize(width: 100.0, height: 100.0))
                                     
                                     let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
                                     let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
@@ -1643,6 +1648,8 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
                         case let .fill(color):
                             c.setFillColor((arguments.emptyColor ?? color).cgColor)
                             c.fill(arguments.drawingRect)
+                        case .aspectFill:
+                            break
                     }
                 }
                 

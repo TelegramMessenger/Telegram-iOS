@@ -471,13 +471,19 @@ func isAutodownloadEnabledForAnyPeerType(category: AutomaticMediaDownloadCategor
     return category.contacts || category.otherPrivate || category.groups || category.channels
 }
 
-public func shouldDownloadMediaAutomatically(settings: AutomaticMediaDownloadSettings, peerType: AutomaticMediaDownloadPeerType, networkType: AutomaticDownloadNetworkType, media: Media) -> Bool {
+public func shouldDownloadMediaAutomatically(settings: AutomaticMediaDownloadSettings, peerType: AutomaticMediaDownloadPeerType, networkType: AutomaticDownloadNetworkType, authorPeerId: PeerId?, contactsPeerIds: Set<PeerId>, media: Media) -> Bool {
     if (networkType == .cellular && !settings.cellular.enabled) || (networkType == .wifi && !settings.wifi.enabled) {
         return false
     }
     if let file = media as? TelegramMediaFile, file.isSticker {
         return true
     }
+    
+    var peerType = peerType
+    if case .group = peerType, let authorPeerId = authorPeerId, contactsPeerIds.contains(authorPeerId) {
+        peerType = .contact
+    }
+    
     if let (category, size) = categoryAndSizeForMedia(media, categories: effectiveAutodownloadCategories(settings: settings, networkType: networkType)) {
         guard isAutodownloadEnabledForPeerType(peerType, category: category) else {
             return false
