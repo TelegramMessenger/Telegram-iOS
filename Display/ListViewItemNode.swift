@@ -525,4 +525,8 @@ open class ListViewItemNode: ASDisplayNode {
     open func updateTrailingItemSpace(_ height: CGFloat, transition: ContainedViewLayoutTransition) {
         
     }
+    
+    override open func accessibilityElementDidBecomeFocused() {
+        (self.supernode as? ListView)?.ensureItemNodeVisible(self, animated: false, overflow: 22.0)
+    }
 }

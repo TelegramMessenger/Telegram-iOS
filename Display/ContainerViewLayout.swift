@@ -43,8 +43,9 @@ public struct ContainerViewLayout: Equatable {
     public var inputHeight: CGFloat?
     public let standardInputHeight: CGFloat
     public let inputHeightIsInteractivellyChanging: Bool
+    public let inVoiceOver: Bool
     
-    public init(size: CGSize, metrics: LayoutMetrics, intrinsicInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, statusBarHeight: CGFloat?, inputHeight: CGFloat?, standardInputHeight: CGFloat, inputHeightIsInteractivellyChanging: Bool) {
+    public init(size: CGSize, metrics: LayoutMetrics, intrinsicInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, statusBarHeight: CGFloat?, inputHeight: CGFloat?, standardInputHeight: CGFloat, inputHeightIsInteractivellyChanging: Bool, inVoiceOver: Bool) {
         self.size = size
         self.metrics = metrics
         self.intrinsicInsets = intrinsicInsets
@@ -53,6 +54,7 @@ public struct ContainerViewLayout: Equatable {
         self.inputHeight = inputHeight
         self.standardInputHeight = standardInputHeight
         self.inputHeightIsInteractivellyChanging = inputHeightIsInteractivellyChanging
+        self.inVoiceOver = inVoiceOver
     }
     
     public func insets(options: ContainerViewLayoutInsetOptions) -> UIEdgeInsets {
@@ -67,14 +69,14 @@ public struct ContainerViewLayout: Equatable {
     }
     
     public func addedInsets(insets: UIEdgeInsets) -> ContainerViewLayout {
-        return ContainerViewLayout(size: self.size, metrics: self.metrics, intrinsicInsets: UIEdgeInsets(top: self.intrinsicInsets.top + insets.top, left: self.intrinsicInsets.left + insets.left, bottom: self.intrinsicInsets.bottom + insets.bottom, right: self.intrinsicInsets.right + insets.right), safeInsets: self.safeInsets, statusBarHeight: self.statusBarHeight, inputHeight: self.inputHeight, standardInputHeight: self.standardInputHeight, inputHeightIsInteractivellyChanging: self.inputHeightIsInteractivellyChanging)
+        return ContainerViewLayout(size: self.size, metrics: self.metrics, intrinsicInsets: UIEdgeInsets(top: self.intrinsicInsets.top + insets.top, left: self.intrinsicInsets.left + insets.left, bottom: self.intrinsicInsets.bottom + insets.bottom, right: self.intrinsicInsets.right + insets.right), safeInsets: self.safeInsets, statusBarHeight: self.statusBarHeight, inputHeight: self.inputHeight, standardInputHeight: self.standardInputHeight, inputHeightIsInteractivellyChanging: self.inputHeightIsInteractivellyChanging, inVoiceOver: self.inVoiceOver)
     }
     
     public func withUpdatedInputHeight(_ inputHeight: CGFloat?) -> ContainerViewLayout {
-        return ContainerViewLayout(size: self.size, metrics: self.metrics, intrinsicInsets: self.intrinsicInsets, safeInsets: self.safeInsets, statusBarHeight: self.statusBarHeight, inputHeight: inputHeight, standardInputHeight: self.standardInputHeight, inputHeightIsInteractivellyChanging: self.inputHeightIsInteractivellyChanging)
+        return ContainerViewLayout(size: self.size, metrics: self.metrics, intrinsicInsets: self.intrinsicInsets, safeInsets: self.safeInsets, statusBarHeight: self.statusBarHeight, inputHeight: inputHeight, standardInputHeight: self.standardInputHeight, inputHeightIsInteractivellyChanging: self.inputHeightIsInteractivellyChanging, inVoiceOver: self.inVoiceOver)
     }
     
     public func withUpdatedMetrics(_ metrics: LayoutMetrics) -> ContainerViewLayout {
-        return ContainerViewLayout(size: self.size, metrics: metrics, intrinsicInsets: self.intrinsicInsets, safeInsets: self.safeInsets, statusBarHeight: self.statusBarHeight, inputHeight: self.inputHeight, standardInputHeight: self.standardInputHeight, inputHeightIsInteractivellyChanging: self.inputHeightIsInteractivellyChanging)
+        return ContainerViewLayout(size: self.size, metrics: metrics, intrinsicInsets: self.intrinsicInsets, safeInsets: self.safeInsets, statusBarHeight: self.statusBarHeight, inputHeight: self.inputHeight, standardInputHeight: self.standardInputHeight, inputHeightIsInteractivellyChanging: self.inputHeightIsInteractivellyChanging, inVoiceOver: self.inVoiceOver)
     }
 }

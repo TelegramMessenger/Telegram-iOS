@@ -119,16 +119,19 @@ private final class TabBarNodeContainer {
         
         self.badgeContainerNode = ASDisplayNode()
         self.badgeContainerNode.isUserInteractionEnabled = false
+        self.badgeContainerNode.isAccessibilityElement = false
         
         self.badgeBackgroundNode = ASImageNode()
         self.badgeBackgroundNode.isUserInteractionEnabled = false
         self.badgeBackgroundNode.displayWithoutProcessing = true
         self.badgeBackgroundNode.displaysAsynchronously = false
+        self.badgeBackgroundNode.isAccessibilityElement = false
         
         self.badgeTextNode = ASTextNode()
         self.badgeTextNode.maximumNumberOfLines = 1
         self.badgeTextNode.isUserInteractionEnabled = false
         self.badgeTextNode.displaysAsynchronously = false
+        self.badgeTextNode.isAccessibilityElement = false
         
         self.badgeContainerNode.addSubnode(self.badgeBackgroundNode)
         self.badgeContainerNode.addSubnode(self.badgeTextNode)
@@ -206,6 +209,8 @@ class TabBarNode: ASDisplayNode {
         self.badgeImage = generateStretchableFilledCircleImage(diameter: 18.0, color: theme.tabBarBadgeBackgroundColor, strokeColor: theme.tabBarBadgeStrokeColor, strokeWidth: 1.0, backgroundColor: nil)!
         
         super.init()
+        
+        self.isAccessibilityContainer = true
         
         self.isOpaque = true
         self.backgroundColor = theme.tabBarBackgroundColor

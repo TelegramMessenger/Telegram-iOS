@@ -46,6 +46,7 @@ private final class NavigationButtonItemNode: ASTextNode {
             _text = value
             
             self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
+            self.item?.accessibilityLabel = value
         }
     }
     
@@ -128,18 +129,15 @@ private final class NavigationButtonItemNode: ASTextNode {
         get {
             return true
         } set(value) {
+            super.isAccessibilityElement = true
         }
     }
     
-    override public var accessibilityLabel: String? {
-        get {
-            return self.item?.accessibilityLabel
-        } set(value) {
-        }
-    }
     
     override public init() {
         super.init()
+        
+        self.isAccessibilityElement = true
         
         self.isUserInteractionEnabled = true
         self.isExclusiveTouch = true
@@ -283,7 +281,7 @@ final class NavigationButtonNode: ASDisplayNode {
         return self.nodes.first?.text ?? ""
     }
     
-    func updateManualText(_ text: String) {
+    func updateManualText(_ text: String, isBack: Bool = true) {
         let node: NavigationButtonItemNode
         if self.nodes.count > 0 {
             node = self.nodes[0]
@@ -309,6 +307,15 @@ final class NavigationButtonNode: ASDisplayNode {
         }
         node.item = nil
         node.text = text
+        
+        /*if isBack {
+            node.accessibilityHint = "Back button"
+            node.accessibilityTraits = 0
+        } else {
+            node.accessibilityHint = nil
+            node.accessibilityTraits = UIAccessibilityTraitButton
+        }*/
+        
         node.image = nil
         node.bold = false
         node.isEnabled = true

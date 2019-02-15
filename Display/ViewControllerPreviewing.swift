@@ -63,14 +63,14 @@ private final class ViewControllerPeekContentNode: ASDisplayNode, PeekController
         if !self.hasValidLayout {
             self.hasValidLayout = true
             self.controller.view.frame = CGRect(origin: CGPoint(), size: size)
-            self.controller.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+            self.controller.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
             self.controller.setIgnoreAppearanceMethodInvocations(true)
             self.view.addSubview(self.controller.view)
             self.controller.setIgnoreAppearanceMethodInvocations(false)
             self.controller.viewWillAppear(false)
             self.controller.viewDidAppear(false)
         } else {
-            self.controller.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: transition)
+            self.controller.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
         }
         
         return size
