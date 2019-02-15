@@ -104,7 +104,7 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             if self.visibility != oldValue {
-                if self.visibility == .visible {
+                if case .visible = self.visibility {
                     if let item = self.item, item.unread {
                         self.readDisposable.set((
                             markFeaturedStickerPacksAsSeenInteractively(postbox: item.account.postbox, ids: [item.info.id])

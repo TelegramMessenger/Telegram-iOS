@@ -83,7 +83,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             videoNode.canAttachContent = true
                             videoNode.play()
                         }
-                    case .nearlyVisible, .none:
+                    case .none:
                         videoNode.canAttachContent = false
                 }
             }
@@ -588,7 +588,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 videoNode.updateLayout(size: arguments.drawingSize, transition: .immediate)
                                 videoNode.frame = imageFrame
                                 
-                                if strongSelf.visibility == .visible {
+                                if case .visible = strongSelf.visibility {
                                     if !videoNode.canAttachContent {
                                         videoNode.canAttachContent = true
                                         videoNode.play()
@@ -647,7 +647,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                                 let visibilityAwareFetchSignal = strongSelf.visibilityPromise.get()
                                                     |> mapToSignal { visibility -> Signal<Void, NoError> in
                                                         switch visibility {
-                                                            case .visible, .nearlyVisible:
+                                                            case .visible:
                                                                 return fetchSignal
                                                                 |> mapToSignal { _ -> Signal<Void, NoError> in
                                                                     return .complete()
@@ -682,7 +682,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                         let visibilityAwareFetchSignal = strongSelf.visibilityPromise.get()
                                         |> mapToSignal { visibility -> Signal<Void, NoError> in
                                             switch visibility {
-                                                case .visible, .nearlyVisible:
+                                                case .visible:
                                                     return combineLatest(fetchHeadSignal, fetchTailSignal)
                                                     |> mapToSignal { _ -> Signal<Void, NoError> in
                                                         return .complete()
@@ -981,6 +981,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 badgeContent = .text(inset: 12.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                                 mediaDownloadState = .compactRemote
                             } else {
+                                state = automaticPlayback ? .none : state
                                 badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                             }
                         }
@@ -1144,7 +1145,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     }
     
     func playMediaWithSound() -> (() -> Void)? {
-        if case .visible = self.visibility, let videoNode = self.videoNode {
+        if case .visible(true) = self.visibility, let videoNode = self.videoNode {
             return {
                 videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none)
             }

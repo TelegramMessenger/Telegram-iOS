@@ -618,6 +618,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         var messageIdsWithViewCount: [MessageId] = []
                         var messageIdsWithUnsupportedMedia: [MessageId] = []
                         var messageIdsWithUnseenPersonalMention: [MessageId] = []
+                        var messageIdsWithPlayableVideos: [MessageId] = []
                         for i in (indexRange.0 ... indexRange.1) {
                             switch historyView.filteredEntries[i] {
                                 case let .MessageEntry(message, _, _, _, _, _):
@@ -642,6 +643,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                     for media in message.media {
                                         if let _ = media as? TelegramMediaUnsupported {
                                             messageIdsWithUnsupportedMedia.append(message.id)
+                                        } else if let file = media as? TelegramMediaFile, file.isVideo {
+                                            messageIdsWithPlayableVideos.append(message.id)
                                         }
                                     }
                                     if hasUnconsumedMention && !hasUnconsumedContent {
