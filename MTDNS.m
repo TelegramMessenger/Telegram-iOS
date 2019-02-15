@@ -365,4 +365,8 @@
     }];
 }
 
++ (MTSignal *)resolveHostnameUniversal:(NSString *)hostname port:(int32_t)port {
+    return [[self resolveHostname:hostname] timeout:10.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[self resolveHostnameNative:hostname port:port]];
+}
+
 @end
