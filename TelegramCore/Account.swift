@@ -1214,7 +1214,13 @@ public class Account {
         })
         
         let _ = postbox.transaction({ transaction -> String in
-            return transaction.getPeer(peerId)?.displayTitle ?? ""
+            guard let peer = transaction.getPeer(peerId) else {
+                return ""
+            }
+            if let addressName = peer.addressName {
+                return "@\(addressName)"
+            }
+            return peer.displayTitle
         }).start(next: { peerName in
             let primaryDatacenterId = Int32(network.datacenterId)
             let context = network.context
