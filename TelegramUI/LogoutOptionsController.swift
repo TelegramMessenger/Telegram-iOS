@@ -105,11 +105,13 @@ private enum LogoutOptionsEntry: ItemListNodeEntry, Equatable {
     }
 }
 
-private func logoutOptionsEntries(presentationData: PresentationData, canAddAccounts: Bool) -> [LogoutOptionsEntry] {
+private func logoutOptionsEntries(presentationData: PresentationData, canAddAccounts: Bool, hasPasscode: Bool) -> [LogoutOptionsEntry] {
     var entries: [LogoutOptionsEntry] = []
     entries.append(.alternativeHeader(presentationData.theme, presentationData.strings.LogoutOptions_AlternativeOptionsSection))
     entries.append(.addAccount(presentationData.theme, presentationData.strings.LogoutOptions_AddAccountTitle, presentationData.strings.LogoutOptions_AddAccountText))
-    entries.append(.setPasscode(presentationData.theme, presentationData.strings.LogoutOptions_SetPasscodeTitle, presentationData.strings.LogoutOptions_SetPasscodeText))
+    if !hasPasscode {
+        entries.append(.setPasscode(presentationData.theme, presentationData.strings.LogoutOptions_SetPasscodeTitle, presentationData.strings.LogoutOptions_SetPasscodeText))
+    }
     entries.append(.clearCache(presentationData.theme, presentationData.strings.LogoutOptions_ClearCacheTitle, presentationData.strings.LogoutOptions_ClearCacheText))
     entries.append(.changePhoneNumber(presentationData.theme, presentationData.strings.LogoutOptions_ChangePhoneNumberTitle, presentationData.strings.LogoutOptions_ChangePhoneNumberText))
     entries.append(.contactSupport(presentationData.theme, presentationData.strings.LogoutOptions_ContactSupportTitle, presentationData.strings.LogoutOptions_ContactSupportText))
@@ -198,14 +200,22 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
         presentControllerImpl?(alertController, nil)
     })
     
-    let signal = context.sharedContext.presentationData
-    |> map { presentationData -> (ItemListControllerState, (ItemListNodeState<LogoutOptionsEntry>, LogoutOptionsEntry.ItemGenerationArguments)) in
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.accessChallengeData())
+    |> map { presentationData, accessChallengeData -> (ItemListControllerState, (ItemListNodeState<LogoutOptionsEntry>, LogoutOptionsEntry.ItemGenerationArguments)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })
         
+        var hasPasscode = false
+        switch accessChallengeData.data {
+            case .numericalPassword, .plaintextPassword:
+                hasPasscode = true
+            default:
+                break
+        }
+        
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.LogoutOptions_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: logoutOptionsEntries(presentationData: presentationData, canAddAccounts: canAddAccounts), style: .blocks)
+        let listState = ItemListNodeState(entries: logoutOptionsEntries(presentationData: presentationData, canAddAccounts: canAddAccounts, hasPasscode: hasPasscode), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }

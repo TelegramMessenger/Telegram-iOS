@@ -499,6 +499,8 @@ private final class SettingsControllerImpl: ItemListController<SettingsEntry>, S
     var switchToAccount: ((AccountRecordId) -> Void)?
     var addAccount: (() -> Void)?
     
+    weak var switchController: TabBarAccountSwitchController?
+    
     init(currentContext: AccountContext, contextValue: Promise<AccountContext>, state: Signal<(ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?, accountsAndPeers: Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError>) {
         self.sharedContext = currentContext.sharedContext
         self.contextValue = contextValue
@@ -536,11 +538,27 @@ private final class SettingsControllerImpl: ItemListController<SettingsEntry>, S
         guard let (maybePrimary, other) = self.accountsAndPeersValue, let primary = maybePrimary else {
             return
         }
-        self.sharedContext.mainWindow?.present(TabBarAccountSwitchController(sharedContext: self.sharedContext, accounts: (primary, other), canAddAccounts: other.count + 1 < maximumNumberOfAccounts, switchToAccount: { [weak self] id in
+        let controller = TabBarAccountSwitchController(sharedContext: self.sharedContext, accounts: (primary, other), canAddAccounts: other.count + 1 < maximumNumberOfAccounts, switchToAccount: { [weak self] id in
             self?.switchToAccount?(id)
         }, addAccount: { [weak self] in
             self?.addAccount?()
-        }, sourceNodes: sourceNodes), on: .root)
+        }, sourceNodes: sourceNodes)
+        self.switchController = controller
+        self.sharedContext.mainWindow?.present(controller, on: .root)
+    }
+    
+    func updateTabBarPreviewingControllerPresentation(_ update: TabBarContainedControllerPresentationUpdate) {
+        guard let switchController = switchController else {
+            return
+        }
+        /*switch update {
+            case .dismiss:
+                switchController.dismiss()
+            case .present:
+                switchController.finishPresentation()
+            case let .update(progress):
+                switchController.update(progress)
+        }*/
     }
 }
 

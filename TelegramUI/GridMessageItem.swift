@@ -170,7 +170,7 @@ final class GridMessageItem: GridItem {
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = GridMessageItemNode()
         if let media = mediaForMessage(self.message) {
-            node.setup(context: self.context, item: self, media: media, messageId: self.message.id, controllerInteraction: self.controllerInteraction)
+            node.setup(context: self.context, item: self, media: media, messageId: self.message.id, controllerInteraction: self.controllerInteraction, synchronousLoad: synchronousLoad)
         }
         return node
     }
@@ -181,7 +181,7 @@ final class GridMessageItem: GridItem {
             return
         }
         if let media = mediaForMessage(self.message) {
-            node.setup(context: self.context, item: self, media: media, messageId: self.message.id, controllerInteraction: self.controllerInteraction)
+            node.setup(context: self.context, item: self, media: media, messageId: self.message.id, controllerInteraction: self.controllerInteraction, synchronousLoad: false)
         }
     }
 }
@@ -229,13 +229,13 @@ final class GridMessageItemNode: GridItemNode {
         self.imageNode.view.addGestureRecognizer(recognizer)
     }
     
-    func setup(context: AccountContext, item: GridMessageItem, media: Media, messageId: MessageId, controllerInteraction: ChatControllerInteraction) {
+    func setup(context: AccountContext, item: GridMessageItem, media: Media, messageId: MessageId, controllerInteraction: ChatControllerInteraction, synchronousLoad: Bool) {
         if self.currentState == nil || self.currentState!.0 !== context || !self.currentState!.1.isEqual(to: media) {
             var mediaDimensions: CGSize?
             if let image = media as? TelegramMediaImage, let largestSize = largestImageRepresentation(image.representations)?.dimensions {
                 mediaDimensions = largestSize
                
-                self.imageNode.setSignal(mediaGridMessagePhoto(account: context.account, photoReference: .message(message: MessageReference(item.message), media: image)), dispatchOnDisplayLink: true)
+                self.imageNode.setSignal(mediaGridMessagePhoto(account: context.account, photoReference: .message(message: MessageReference(item.message), media: image), synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad, dispatchOnDisplayLink: true)
                 
                 self.fetchStatusDisposable.set(nil)
                 self.statusNode.transitionToState(.none, completion: { [weak self] in
@@ -245,7 +245,7 @@ final class GridMessageItemNode: GridItemNode {
                 self.resourceStatus = nil
             } else if let file = media as? TelegramMediaFile, file.isVideo {
                 mediaDimensions = file.dimensions
-                self.imageNode.setSignal(mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(item.message), media: file)))
+                self.imageNode.setSignal(mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(item.message), media: file), synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad)
                 
                 if let duration = file.duration {
                     self.videoAccessoryNode.setup(stringForDuration(duration))
