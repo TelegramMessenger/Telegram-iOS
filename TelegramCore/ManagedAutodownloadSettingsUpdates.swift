@@ -14,11 +14,9 @@ func managedAutodownloadSettingsUpdates(accountManager: AccountManager, network:
         return (network.request(Api.functions.account.getAutoDownloadSettings())
         |> retryRequest
         |> mapToSignal { result -> Signal<Void, NoError> in
-            return accountManager.transaction { transaction -> Void in
-                return updateAutodownloadSettingsInteractively(accountManager: accountManager, { _ -> AutodownloadSettings in
-                    return AutodownloadSettings(apiAutodownloadSettings: result)
-                })
-            }
+            return updateAutodownloadSettingsInteractively(accountManager: accountManager, { _ -> AutodownloadSettings in
+                return AutodownloadSettings(apiAutodownloadSettings: result)
+            })
         }).start()
     }
     return (poll |> then(.complete() |> suspendAwareDelay(24.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
@@ -27,7 +25,7 @@ func managedAutodownloadSettingsUpdates(accountManager: AccountManager, network:
 public enum SavedAutodownloadPreset {
     case low
     case medium
-    case high
+    case high 
 }
 
 public func saveAutodownloadSettings(account: Account, preset: SavedAutodownloadPreset, settings: AutodownloadPresetSettings) -> Signal<Void, NoError> {
@@ -36,7 +34,7 @@ public func saveAutodownloadSettings(account: Account, preset: SavedAutodownload
         case .low:
             flags |= (1 << 0)
         case .high:
-            flags |= (1 << 2)
+            flags |= (1 << 1)
         default:
             break
     }
