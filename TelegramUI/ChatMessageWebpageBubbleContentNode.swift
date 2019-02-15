@@ -353,6 +353,10 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
     }
     
+    override func playMediaWithSound() -> (() -> Void)? {
+        return self.contentNode.playMediaWithSound()
+    }
+    
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         if self.bounds.contains(point) {
             let contentNodeFrame = self.contentNode.frame

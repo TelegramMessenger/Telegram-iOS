@@ -73,6 +73,10 @@ final class WallpaperUploadManager {
         }))
     }
     
+    deinit {
+        self.presentationDataDisposable.dispose()
+    }
+    
     func stateSignal() -> Signal<WallpaperUploadManagerStatus, NoError> {
         return self.statePromise.get()
     }
@@ -95,7 +99,22 @@ final class WallpaperUploadManager {
                     
                     let sharedContext = self.sharedContext
                     let account = self.account
-                    disposable.set(uploadWallpaper(account: account, resource: currentResource, settings: currentWallpaper.settings ?? WallpaperSettings()).start(next: { [weak self] status in
+                    
+                    let uploadSignal = uploadWallpaper(account: account, resource: currentResource, settings: currentWallpaper.settings ?? WallpaperSettings())
+                    |> map { result -> UploadWallpaperStatus in
+                        switch result {
+                            case let .complete(wallpaper):
+                                if case let .file(_, _, _, _, _, _, _, file, _) = wallpaper {
+                                    sharedContext.accountManager.mediaBox.moveResourceData(from: currentResource.id, to: file.resource.id)
+                                    account.postbox.mediaBox.moveResourceData(from: currentResource.id, to: file.resource.id)
+                                }
+                            default:
+                                break
+                        }
+                        return result
+                    }
+                    
+                    disposable.set(uploadSignal.start(next: { [weak self] status in
                         guard let strongSelf = self else {
                             return
                         }

@@ -271,7 +271,7 @@ private func autodownloadMediaCategoryControllerEntries(presentationData: Presen
             let text = presentationData.strings.AutoDownloadSettings_UpTo(sizeText).0
             entries.append(.sizeItem(presentationData.theme, text, size))
             if category == .video {
-                entries.append(.sizePreload(presentationData.theme, presentationData.strings.AutoDownloadSettings_PreloadVideo, predownload, size > 3 * 1024 * 1024))
+                entries.append(.sizePreload(presentationData.theme, presentationData.strings.AutoDownloadSettings_PreloadVideo, predownload, size > 2 * 1024 * 1024))
                 entries.append(.sizePreloadInfo(presentationData.theme, presentationData.strings.AutoDownloadSettings_PreloadVideoInfo(sizeText).0))
             }
         default:

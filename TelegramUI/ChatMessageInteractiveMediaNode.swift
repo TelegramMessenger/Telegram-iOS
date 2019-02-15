@@ -23,6 +23,7 @@ enum InteractiveMediaNodeContentMode {
 enum InteractiveMediaNodeActivateContent {
     case `default`
     case stream
+    case automaticPlayback
 }
 
 enum InteractiveMediaNodeAutodownloadMode {
@@ -36,6 +37,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private var currentImageArguments: TransformImageArguments?
     private var videoNode: UniversalVideoNode?
     private var statusNode: RadialStatusNode?
+    var videoNodeDecoration: ChatBubbleVideoDecoration?
     private var badgeNode: ChatMessageInteractiveMediaBadge?
     private var tapRecognizer: UITapGestureRecognizer?
     
@@ -45,7 +47,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private var themeAndStrings: (PresentationTheme, PresentationStrings)?
     private var sizeCalculation: InteractiveMediaNodeSizeCalculation?
     private var automaticDownload: InteractiveMediaNodeAutodownloadMode?
-    private var automaticPlayback: Bool?
+    var automaticPlayback: Bool?
     
     private let statusDisposable = MetaDisposable()
     private let fetchControls = Atomic<FetchControls?>(value: nil)
@@ -54,7 +56,20 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private let fetchDisposable = MetaDisposable()
     
     private let playerStatusDisposable = MetaDisposable()
-    private var playerStatus: MediaPlayerStatus?
+    
+    private var updateTimer: SwiftSignalKit.Timer?
+    private var playerStatus: MediaPlayerStatus? {
+        didSet {
+            if self.playerStatus != oldValue {
+                if let playerStatus = playerStatus, case .playing = playerStatus.status {
+                    self.ensureHasTimer()
+                } else {
+                    self.stopTimer()
+                }
+                self.updateFetchStatus()
+            }
+        }
+    }
     
     private var secretTimer: SwiftSignalKit.Timer?
     
@@ -105,10 +120,15 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     
     private func progressPressed(canActivate: Bool) {
         if let fetchStatus = self.fetchStatus {
+            var isAnimated = false
+            if let file = self.media as? TelegramMediaFile, file.isAnimated {
+                isAnimated = true
+            }
+            
             var activateContent = false
             if let state = self.statusNode?.state, case .play = state {
                 activateContent = true
-            } else if let message = self.message, !message.flags.isSending && (self.automaticPlayback ?? false) {
+            } else if let message = self.message, !message.flags.isSending && (self.automaticPlayback ?? false) && !isAnimated {
                 activateContent = true
             }
             if canActivate, activateContent {
@@ -151,7 +171,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         if case .ended = recognizer.state {
             let point = recognizer.location(in: self.imageNode.view)
             if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
-                self.activateLocalContent(.default)
+                self.activateLocalContent((self.automaticPlayback ?? false) ? .automaticPlayback : .default)
             } else {
                 if let message = self.message, message.flags.isSending {
                     if let statusNode = self.statusNode, statusNode.frame.contains(point) {
@@ -213,7 +233,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 unboundSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5))
                 if file.isAnimated {
                     unboundSize = unboundSize.aspectFilled(CGSize(width: 480.0, height: 480.0))
-                } else if file.isVideo && automaticPlayback && !file.isAnimated, case let .constrained(constrainedSize) = sizeCalculation {
+                } else if file.isVideo && !file.isAnimated, case let .constrained(constrainedSize) = sizeCalculation {
                     maxDimensions = constrainedSize
                 } else if file.isSticker {
                     unboundSize = unboundSize.aspectFilled(CGSize(width: 162.0, height: 162.0))
@@ -396,7 +416,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 }
                             }
                             
-                            if file.isVideo && !isSecretMedia && automaticPlayback && !message.flags.isSending {
+                            var uploading = false
+                            if file.resource is VideoLibraryMediaResource {
+                                uploading = true
+                            }
+                            
+                            if file.isVideo && !isSecretMedia && automaticPlayback && !uploading {
                                 updateVideoFile = file
                                 if hasCurrentVideoNode {
                                     if let currentFile = currentMedia as? TelegramMediaFile, currentFile.resource is EmptyMediaResource {
@@ -540,8 +565,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 }
                                 
                                 if replaceVideoNode, let updatedVideoFile = updateVideoFile {
+                                    let decoration = ChatBubbleVideoDecoration(corners: arguments.corners, nativeSize: nativeSize, contentMode: contentMode, backgroundColor: arguments.emptyColor ?? .black)
+                                    strongSelf.videoNodeDecoration = decoration
                                     let mediaManager = context.sharedContext.mediaManager
-                                    let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: ChatBubbleVideoDecoration(corners: arguments.corners, nativeSize: nativeSize, contentMode: contentMode, backgroundColor: arguments.emptyColor ?? .black), content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: true, enableSound: false, fetchAutomatically: false), priority: .embedded)
+                                    
+                                    let streamVideo = !updatedVideoFile.isAnimated && message.id.namespace != Namespaces.Message.SecretIncoming
+                                    let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo, enableSound: false, fetchAutomatically: false), priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     
                                     strongSelf.videoNode = videoNode
@@ -552,6 +581,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             }
                             
                             if let videoNode = strongSelf.videoNode {
+                                if replaceVideoNode == nil, let decoration = videoNode.decoration as? ChatBubbleVideoDecoration, decoration.corners != corners {
+                                    decoration.updateCorners(corners)
+                                }
+                                
                                 videoNode.updateLayout(size: arguments.drawingSize, transition: .immediate)
                                 videoNode.frame = imageFrame
                                 
@@ -595,7 +628,6 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     displayLinkDispatcher.dispatch {
                                         if let strongSelf = strongSelf {
                                             strongSelf.playerStatus = status
-                                            strongSelf.updateFetchStatus()
                                         }
                                     }
                                 }))
@@ -630,7 +662,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                             }
                                         }
                                     }
-                                } else if case .prefetch = automaticDownload {
+                                } else if case .prefetch = automaticDownload, message.id.namespace != Namespaces.Message.SecretIncoming {
                                     if let file = media as? TelegramMediaFile, let fileSize = file.size {
                                         let fetchHeadRange: Range<Int> = 0 ..< 2 * 1024 * 1024
                                         let fetchTailRange: Range<Int> = fileSize - 64 * 1024 ..< Int(Int32.max)
@@ -674,8 +706,23 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
     }
     
+    private func ensureHasTimer() {
+        if self.updateTimer == nil {
+            let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
+                self?.updateFetchStatus()
+                }, queue: Queue.mainQueue())
+            self.updateTimer = timer
+            timer.start()
+        }
+    }
+    
+    private func stopTimer() {
+        self.updateTimer?.invalidate()
+        self.updateTimer = nil
+    }
+    
     private func updateFetchStatus() {
-        guard let (theme, strings) = self.themeAndStrings, let sizeCalculation = self.sizeCalculation, let message = self.message, let automaticPlayback = self.automaticPlayback else {
+        guard let (theme, strings) = self.themeAndStrings, let sizeCalculation = self.sizeCalculation, let message = self.message, var automaticPlayback = self.automaticPlayback else {
             return
         }
         
@@ -692,6 +739,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     break
                 }
             }
+            automaticPlayback = false
         }
         
         var webpage: TelegramMediaWebpage?
@@ -789,7 +837,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
             var active = false
             var muted = automaticPlayback
             if let playerStatus = self.playerStatus {
-                playerPosition = Int32(playerStatus.timestamp)
+                if !playerStatus.generationTimestamp.isZero, case .playing = playerStatus.status {
+                    playerPosition = Int32(playerStatus.timestamp + (CACurrentMediaTime() - playerStatus.generationTimestamp))
+                } else {
+                    playerPosition = Int32(playerStatus.timestamp)
+                }
                 playerDuration = Int32(playerStatus.duration)
                 if case .buffering = playerStatus.status {
                     active = true
@@ -798,7 +850,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     muted = false
                 }
             } else if case .Fetching = fetchStatus, !message.flags.contains(.Unsent) {
-                active = automaticPlayback
+                active = true
+            }
+            
+            if message.flags.contains(.Unsent) {
+                automaticPlayback = false
             }
             
             if let actualFetchStatus = self.actualFetchStatus, automaticPlayback {
@@ -818,7 +874,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
                     }
                     
-                    if let file = media as? TelegramMediaFile, (!file.isAnimated || message.flags.contains(.Unsent)) {
+                    if let file = self.media as? TelegramMediaFile, (!file.isAnimated || message.flags.contains(.Unsent)) {
                         if case .constrained = sizeCalculation {
                             if let size = file.size {
                                 if let duration = file.duration, !message.flags.contains(.Unsent) {
@@ -916,7 +972,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: dataSizeString(file.size ?? 0), muted: muted, active: true)
                                 mediaDownloadState = .remote
                             } else {
-                                badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: nil, muted: false, active: false)
+                                state = automaticPlayback ? .none : state
+                                badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: nil, muted: muted, active: false)
                             }
                         } else {
                             if isMediaStreamable(message: message, media: file) {

@@ -36,6 +36,15 @@ public enum ImageCorner: Equatable {
                 return radius
         }
     }
+    
+    public func scaledBy(_ scale: CGFloat) -> ImageCorner {
+        switch self {
+            case let .Corner(radius):
+                return .Corner(radius * scale)
+            case let .Tail(radius, enabled):
+                return .Tail(radius * scale, enabled)
+        }
+    }
 }
 
 public func ==(lhs: ImageCorner, rhs: ImageCorner) -> Bool {
@@ -54,6 +63,15 @@ public func ==(lhs: ImageCorner, rhs: ImageCorner) -> Bool {
                 return false
             }
     }
+}
+
+func isRoundEqualCorners(_ corners: ImageCorners) -> Bool {
+    if case .Corner = corners.topLeft, case .Corner = corners.topRight, case .Corner = corners.bottomLeft, case .Corner = corners.bottomRight {
+        if corners.topLeft.radius == corners.topRight.radius && corners.topRight.radius == corners.bottomLeft.radius && corners.bottomLeft.radius == corners.bottomRight.radius {
+            return true
+        }
+    }
+    return false
 }
 
 public struct ImageCorners: Equatable {
@@ -105,6 +123,10 @@ public struct ImageCorners: Equatable {
     
     public func withRemovedTails() -> ImageCorners {
         return ImageCorners(topLeft: self.topLeft.withoutTail, topRight: self.topRight.withoutTail, bottomLeft: self.bottomLeft.withoutTail, bottomRight: self.bottomRight.withoutTail)
+    }
+    
+    public func scaledBy(_ scale: CGFloat) -> ImageCorners {
+        return ImageCorners(topLeft: self.topLeft.scaledBy(scale), topRight: self.topRight.scaledBy(scale), bottomLeft: self.bottomLeft.scaledBy(scale), bottomRight: self.bottomRight.scaledBy(scale))
     }
 }
 

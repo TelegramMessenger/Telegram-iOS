@@ -589,11 +589,12 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     let auxiliaryMethods = context.account.auxiliaryMethods
     let rootPath = rootPathForBasePath(context.sharedContext.applicationBindings.containerPath)
     
+    let sharedContext = context.sharedContext
     let accountsAndPeersSignal: Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> = context.sharedContext.activeAccounts
     |> mapToSignal { primary, activeAccounts, _ -> Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> in
         var accounts: [Signal<(Account, Peer, Int32)?, NoError>] = []
         func accountWithPeer(_ account: Account) -> Signal<(Account, Peer, Int32)?, NoError> {
-            return combineLatest(account.postbox.peerView(id: account.peerId), renderedTotalUnreadCount(accountManager: context.sharedContext.accountManager, postbox: account.postbox))
+            return combineLatest(account.postbox.peerView(id: account.peerId), renderedTotalUnreadCount(accountManager: sharedContext.accountManager, postbox: account.postbox))
             |> map { view, totalUnreadCount -> (Peer?, Int32) in
                 return (view.peers[view.peerId], totalUnreadCount.0)
             }
@@ -701,7 +702,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     }, openProxy: {
         let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
+        |> take(1)).start(next: { context in
             pushControllerImpl?(proxySettingsController(context: context))
         })
     }, openSavedMessages: {
@@ -709,7 +710,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     }, openRecentCalls: {
         let _ = (contextValue.get()
         |> deliverOnMainQueue
-        |> take(1)).start(next: { account in
+        |> take(1)).start(next: { context in
             pushControllerImpl?(CallListController(context: context, mode: .navigation))
         })
     }, openPrivacyAndSecurity: {
@@ -1296,7 +1297,11 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         })
     }
     switchToAccountImpl = { [weak controller] id in
-        context.sharedContext.switchToAccount(id: id, fromSettingsController: controller)
+        let _ = (contextValue.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { context in
+            context.sharedContext.switchToAccount(id: id, fromSettingsController: controller)
+        })
     }
     controller.didAppear = { _ in
         updatePassport()
@@ -1315,17 +1320,28 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                     }
                 }
             })
-            if let selectedAccount = selectedAccount {
-                let accountContext = AccountContext(sharedContext: context.sharedContext, account: selectedAccount, limitsConfiguration: LimitsConfiguration.defaultValue)
+            var sharedContext: SharedAccountContext?
+            let _ = (contextValue.get()
+            |> deliverOnMainQueue
+            |> take(1)).start(next: { context in
+                sharedContext = context.sharedContext
+            })
+            if let selectedAccount = selectedAccount, let sharedContext = sharedContext {
+                let accountContext = AccountContext(sharedContext: sharedContext, account: selectedAccount, limitsConfiguration: LimitsConfiguration.defaultValue)
                 let chatListController = ChatListController(context: accountContext, groupId: nil, controlsHistoryPreload: false, hideNetworkActivityStatus: true)
                 return chatListController
+                    
             }
         }
         return nil
     }
     controller.commitPreview = { previewController in
         if let chatListController = previewController as? ChatListController {
-            context.sharedContext.switchToAccount(id: chatListController.context.account.id, withChatListController: chatListController)
+            let _ = (contextValue.get()
+            |> deliverOnMainQueue
+            |> take(1)).start(next: { context in
+                context.sharedContext.switchToAccount(id: chatListController.context.account.id, withChatListController: chatListController)
+            })
         }
     }
     controller.switchToAccount = { id in

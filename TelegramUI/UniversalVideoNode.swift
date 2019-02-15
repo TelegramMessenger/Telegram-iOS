@@ -81,7 +81,7 @@ final class UniversalVideoNode: ASDisplayNode {
     private let manager: UniversalVideoContentManager
     private let content: UniversalVideoContent
     private let priority: UniversalVideoPriority
-    private let decoration: UniversalVideoDecoration
+    let decoration: UniversalVideoDecoration
     private let autoplay: Bool
     private let snapshotContentWhenGone: Bool
     
@@ -203,6 +203,7 @@ final class UniversalVideoNode: ASDisplayNode {
                 }
             }
             if let (contentNode, initiatedCreation) = contentNode {
+                contentNode.layer.removeAllAnimations()
                 self._ready.set(contentNode.ready)
                 if initiatedCreation && self.autoplay {
                     self.play()

@@ -204,7 +204,7 @@ private func callFeedbackControllerEntries(theme: PresentationTheme, strings: Pr
     return entries
 }
 
-public func callFeedbackController(sharedContext: SharedAccountContext, account: Account, callId: CallId, rating: Int) -> ViewController {
+public func callFeedbackController(sharedContext: SharedAccountContext, account: Account, callId: CallId, rating: Int, userInitiated: Bool) -> ViewController {
     let initialState = CallFeedbackState()
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -255,7 +255,7 @@ public func callFeedbackController(sharedContext: SharedAccountContext, account:
                 }
                 comment.append(hashtags)
                 
-                let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: comment, includeLogs: state.includeLogs).start()
+                let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: comment, userInitiated: userInitiated, includeLogs: state.includeLogs).start()
                 dismissImpl?()
                 
                 presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .starSuccess(presentationData.strings.CallFeedback_Success)))

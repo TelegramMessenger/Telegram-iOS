@@ -323,7 +323,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }
             }
             
-            return openChatMessage(context: context, message: message, standalone: false, reverseMessageGalleryOrder: false, stream: mode == .stream, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
+            return openChatMessage(context: context, message: message, standalone: false, reverseMessageGalleryOrder: false, stream: mode == .stream, fromPlayingVideo: mode == .automaticPlayback, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
             }, present: { c, a in
                 self?.present(c, in: .window(.root), with: a, blockInteraction: true)

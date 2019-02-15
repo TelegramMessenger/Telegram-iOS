@@ -305,10 +305,10 @@ private final class CallRatingAlertContentNode: AlertContentNode {
     }
 }
 
-func rateCallAndSendLogs(account: Account, callId: CallId, starsCount: Int, comment: String, includeLogs: Bool) -> Signal<Void, NoError> {
+func rateCallAndSendLogs(account: Account, callId: CallId, starsCount: Int, comment: String, userInitiated: Bool, includeLogs: Bool) -> Signal<Void, NoError> {
     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 4244000)
 
-    let rate = rateCall(account: account, callId: callId, starsCount: Int32(starsCount), comment: comment)
+    let rate = rateCall(account: account, callId: callId, starsCount: Int32(starsCount), comment: comment, userInitiated: userInitiated)
     if includeLogs {
         let id = arc4random64()
         let name = "\(callId.id)_\(callId.accessHash).log"
@@ -347,10 +347,10 @@ func callRatingController(sharedContext: SharedAccountContext, account: Account,
     }, apply: { rating in
         dismissImpl?(true)
         if rating < 4 {
-            let controller = callFeedbackController(sharedContext: sharedContext, account: account, callId: callId, rating: rating)
+            let controller = callFeedbackController(sharedContext: sharedContext, account: account, callId: callId, rating: rating, userInitiated: userInitiated)
             present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         } else {
-            let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: "", includeLogs: false).start()
+            let _ = rateCallAndSendLogs(account: account, callId: callId, starsCount: rating, comment: "", userInitiated: userInitiated, includeLogs: false).start()
         }
     })
     

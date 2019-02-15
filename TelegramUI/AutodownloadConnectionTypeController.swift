@@ -39,7 +39,7 @@ private enum AutodownloadMediaCategorySection: Int32 {
 private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
     case master(PresentationTheme, String, Bool)
     case dataUsageHeader(PresentationTheme, String)
-    case dataUsageItem(PresentationTheme, PresentationStrings, AutomaticDownloadDataUsage, Int?)
+    case dataUsageItem(PresentationTheme, PresentationStrings, AutomaticDownloadDataUsage, Int?, Bool)
     case typesHeader(PresentationTheme, String)
     case photos(PresentationTheme, String, String, Bool)
     case videos(PresentationTheme, String, String, Bool)
@@ -92,8 +92,8 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .dataUsageItem(lhsTheme, lhsStrings, lhsValue, lhsCustomPosition):
-                if case let .dataUsageItem(rhsTheme, rhsStrings, rhsValue, rhsCustomPosition) = rhs, lhsTheme === rhsTheme, lhsStrings == rhsStrings, lhsValue == rhsValue, lhsCustomPosition == rhsCustomPosition {
+            case let .dataUsageItem(lhsTheme, lhsStrings, lhsValue, lhsCustomPosition, lhsEnabled):
+                if case let .dataUsageItem(rhsTheme, rhsStrings, rhsValue, rhsCustomPosition, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsStrings == rhsStrings, lhsValue == rhsValue, lhsCustomPosition == rhsCustomPosition, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
@@ -143,8 +143,8 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
                 })
             case let .dataUsageHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .dataUsageItem(theme, strings, value, customPosition):
-                return AutodownloadDataUsagePickerItem(theme: theme, strings: strings, value: value, customPosition: customPosition, sectionId: self.section, updated: { preset in
+            case let .dataUsageItem(theme, strings, value, customPosition, enabled):
+                return AutodownloadDataUsagePickerItem(theme: theme, strings: strings, value: value, customPosition: customPosition, enabled: enabled, sectionId: self.section, updated: { preset in
                     arguments.changePreset(preset)
                 })
             case let .typesHeader(theme, text):
@@ -258,7 +258,7 @@ private func autodownloadMediaConnectionTypeControllerEntries(presentationData: 
         customPosition = sortedPresets.firstIndex(of: custom) ?? 0
     }
     
-    entries.append(.dataUsageItem(presentationData.theme, presentationData.strings, AutomaticDownloadDataUsage(preset: connection.preset), customPosition))
+    entries.append(.dataUsageItem(presentationData.theme, presentationData.strings, AutomaticDownloadDataUsage(preset: connection.preset), customPosition, master))
     
     entries.append(.typesHeader(presentationData.theme, presentationData.strings.AutoDownloadSettings_MediaTypes))
     entries.append(.photos(presentationData.theme, presentationData.strings.AutoDownloadSettings_Photos, stringForAutomaticDownloadPeers(strings: presentationData.strings, peers: photo, category: .photo), master))
