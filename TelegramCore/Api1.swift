@@ -3802,9 +3802,9 @@ extension Api {
         case updateDialogUnreadMark(flags: Int32, peer: Api.DialogPeer)
         case updateLangPackTooLong(langCode: String)
         case updateUserPinnedMessage(userId: Int32, id: Int32)
-        case updateChatPinnedMessage(chatId: Int32, id: Int32)
         case updateMessagePoll(flags: Int32, pollId: Int64, poll: Api.Poll?, results: Api.PollResults)
         case updateChatDefaultBannedRights(peer: Api.Peer, defaultBannedRights: Api.ChatBannedRights, version: Int32)
+        case updateChatPinnedMessage(chatId: Int32, id: Int32, version: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4351,13 +4351,6 @@ extension Api {
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     break
-                case .updateChatPinnedMessage(let chatId, let id):
-                    if boxed {
-                        buffer.appendInt32(579418918)
-                    }
-                    serializeInt32(chatId, buffer: buffer, boxed: false)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    break
                 case .updateMessagePoll(let flags, let pollId, let poll, let results):
                     if boxed {
                         buffer.appendInt32(-1398708869)
@@ -4373,6 +4366,14 @@ extension Api {
                     }
                     peer.serialize(buffer, true)
                     defaultBannedRights.serialize(buffer, true)
+                    serializeInt32(version, buffer: buffer, boxed: false)
+                    break
+                case .updateChatPinnedMessage(let chatId, let id, let version):
+                    if boxed {
+                        buffer.appendInt32(-519195831)
+                    }
+                    serializeInt32(chatId, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
                     serializeInt32(version, buffer: buffer, boxed: false)
                     break
     }
@@ -4512,12 +4513,12 @@ extension Api {
                 return ("updateLangPackTooLong", [("langCode", langCode)])
                 case .updateUserPinnedMessage(let userId, let id):
                 return ("updateUserPinnedMessage", [("userId", userId), ("id", id)])
-                case .updateChatPinnedMessage(let chatId, let id):
-                return ("updateChatPinnedMessage", [("chatId", chatId), ("id", id)])
                 case .updateMessagePoll(let flags, let pollId, let poll, let results):
                 return ("updateMessagePoll", [("flags", flags), ("pollId", pollId), ("poll", poll), ("results", results)])
                 case .updateChatDefaultBannedRights(let peer, let defaultBannedRights, let version):
                 return ("updateChatDefaultBannedRights", [("peer", peer), ("defaultBannedRights", defaultBannedRights), ("version", version)])
+                case .updateChatPinnedMessage(let chatId, let id, let version):
+                return ("updateChatPinnedMessage", [("chatId", chatId), ("id", id), ("version", version)])
     }
     }
     
@@ -5614,20 +5615,6 @@ extension Api {
                 return nil
             }
         }
-        static func parse_updateChatPinnedMessage(_ reader: BufferReader) -> Update? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.Update.updateChatPinnedMessage(chatId: _1!, id: _2!)
-            }
-            else {
-                return nil
-            }
-        }
         static func parse_updateMessagePoll(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -5668,6 +5655,23 @@ extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.Update.updateChatDefaultBannedRights(peer: _1!, defaultBannedRights: _2!, version: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_updateChatPinnedMessage(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateChatPinnedMessage(chatId: _1!, id: _2!, version: _3!)
             }
             else {
                 return nil

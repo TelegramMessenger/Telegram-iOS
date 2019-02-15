@@ -17,6 +17,7 @@ public struct UserInfoFlags: OptionSet {
     }
     
     public static let isVerified = UserInfoFlags(rawValue: (1 << 0))
+    public static let isSupport = UserInfoFlags(rawValue: (1 << 1))
 }
 
 public struct BotUserInfoFlags: OptionSet {
@@ -272,6 +273,9 @@ extension TelegramUser {
             if (flags & (1 << 17)) != 0 {
                 userFlags.insert(.isVerified)
             }
+            if (flags & (1 << 23)) != 0 {
+                userFlags.insert(.isSupport)
+            }
             
             var botInfo: BotUserInfo?
             if (flags & (1 << 14)) != 0 {
@@ -307,6 +311,9 @@ extension TelegramUser {
                         var userFlags: UserInfoFlags = []
                         if (flags & (1 << 17)) != 0 {
                             userFlags.insert(.isVerified)
+                        }
+                        if (flags & (1 << 23)) != 0 {
+                            userFlags.insert(.isSupport)
                         }
                         
                         var botInfo: BotUserInfo?

@@ -1066,7 +1066,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     }
                     return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: userPeerId, namespace: Namespaces.Message.Cloud, id: id))
                 })
-            case let .updateChatPinnedMessage(groupId, id):
+            case let .updateChatPinnedMessage(groupId, id, version):
                 let groupPeerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: groupId)
                 updatedState.updateCachedPeerData(groupPeerId, { current in
                     let previous: CachedGroupData
