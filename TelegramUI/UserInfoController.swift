@@ -693,7 +693,10 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
             if cachedData.isBlocked {
                 entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .unblock, peer: user), .unblock))
             } else {
-                entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .block, peer: user), .block))
+                if let peer = peer as? TelegramUser, let phone = peer.phone, phone.hasPrefix("424") {
+                } else {
+                    entries.append(UserInfoEntry.block(presentationData.theme, stringForBlockAction(strings: presentationData.strings, action: .block, peer: user), .block))
+                }
             }
         }
     }

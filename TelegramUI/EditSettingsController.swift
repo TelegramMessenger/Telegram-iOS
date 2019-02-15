@@ -314,6 +314,8 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
     let avatarAndNameInfoContext = ItemListAvatarAndNameInfoItemContext()
     var updateHiddenAvatarImpl: (() -> Void)?
     var changeProfilePhotoImpl: (() -> Void)?
+    
+    var getNavigationController: (() -> NavigationController?)?
         
     let arguments = EditSettingsItemArguments(context: context, accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
         var updating = false
@@ -373,15 +375,14 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
         let isTestingEnvironment = context.account.testingEnvironment
         context.sharedContext.beginNewAuth(testingEnvironment: isTestingEnvironment)
     }, logout: {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Settings_LogoutConfirmationTitle, text: presentationData.strings.Settings_LogoutConfirmationText, actions: [
-            TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-            }),
-            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-                let _ = logoutFromAccount(id: context.account.id, accountManager: accountManager).start()
-            })
-        ])
-        presentControllerImpl?(alertController, nil)
+        let _ = (context.account.postbox.transaction { transaction -> String in
+            return (transaction.getPeer(context.account.peerId) as? TelegramUser)?.phone ?? ""
+        }
+        |> deliverOnMainQueue).start(next: { phoneNumber in
+            if let navigationController = getNavigationController?() {
+                presentControllerImpl?(logoutOptionsController(context: context, navigationController: navigationController, canAddAccounts: canAddAccounts, phoneNumber: phoneNumber), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }
+        })
     })
     
     let peerView = context.account.viewTracker.peerView(context.account.peerId)
@@ -555,6 +556,10 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                 }
             }
         })
+    }
+    
+    getNavigationController = { [weak controller] in
+        return controller?.navigationController as? NavigationController
     }
     
     return controller

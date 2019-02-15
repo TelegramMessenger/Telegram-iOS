@@ -263,6 +263,8 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
     func animateOut(animateContent: Bool, completion: @escaping () -> Void) {
         self.isDismissed = true
         
+        self.pager.isScrollEnabled = false
+        
         var contentAnimationCompleted = true
         var interfaceAnimationCompleted = false
         

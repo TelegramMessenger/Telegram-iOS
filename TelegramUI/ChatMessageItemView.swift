@@ -91,45 +91,42 @@ enum ChatMessagePeekPreviewContent {
     case url(ASDisplayNode, CGRect, String)
 }
 
+final class ChatMessageAccessibilityData {
+    let label: String?
+    let value: String?
+    
+    init(item: ChatMessageItem) {
+        let label: String
+        let value: String
+        
+        if let author = item.message.author {
+            if item.message.effectivelyIncoming(item.context.account.peerId) {
+                label = author.displayTitle
+            } else {
+                label = "Outgoing message"
+            }
+        } else {
+            label = "Post"
+        }
+        
+        if let chatPeer = item.message.peers[item.message.id.peerId] {
+            let (_, _, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: item.message, chatPeer: RenderedPeer(peer: chatPeer), accountPeerId: item.context.account.peerId)
+            var result = ""
+            result += "\(messageText)"
+            value = result
+        } else {
+            value = "Empty"
+        }
+        
+        self.label = label
+        self.value = value
+    }
+}
+
 public class ChatMessageItemView: ListViewItemNode {
     let layoutConstants = defaultChatMessageItemLayoutConstants
     
     var item: ChatMessageItem?
-    
-    override public var accessibilityLabel: String? {
-        get {
-            guard let item = self.item else {
-                return nil
-            }
-            if let author = item.message.author {
-                if item.message.effectivelyIncoming(item.context.account.peerId) {
-                    return author.displayTitle
-                } else {
-                    return "Outgoing message"
-                }
-            } else {
-                return "Message"
-            }
-        } set(value) {
-        }
-    }
-    
-    override public var accessibilityValue: String? {
-        get {
-            guard let item = self.item else {
-                return nil
-            }
-            if let chatPeer = item.message.peers[item.message.id.peerId] {
-                let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: item.message, chatPeer: RenderedPeer(peer: chatPeer), accountPeerId: item.context.account.peerId)
-                var result = ""
-                result += "\(messageText)"
-                return result
-            } else {
-                return "Empty"
-            }
-        } set(value) {
-        }
-    }
     
     public required convenience init() {
         self.init(layerBacked: false)

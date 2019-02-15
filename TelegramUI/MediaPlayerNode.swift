@@ -157,6 +157,11 @@ final class MediaPlayerNode: ASDisplayNode {
                     var finised = false
                     loop: while true {
                         let isReady = layer.isReadyForMoreMediaData
+                        #if DEBUG
+                        if let error = layer.error {
+                            print("MediaPlayerNode error: \(error)")
+                        }
+                        #endif
                         
                         if isReady {
                             switch takeFrame() {

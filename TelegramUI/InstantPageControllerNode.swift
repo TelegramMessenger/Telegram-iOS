@@ -1227,7 +1227,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         } else {
             var medias: [InstantPageMedia] = mediasFromItems(items)
             medias = medias.filter {
-                $0.media is TelegramMediaImage
+                return $0.media is TelegramMediaImage || $0.media is TelegramMediaFile
             }
             
             for media in medias {

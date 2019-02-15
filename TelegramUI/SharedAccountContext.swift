@@ -38,6 +38,26 @@ public final class AccountWithInfo: Equatable {
     }
 }
 
+private func pathFromLegacyFile(basePath: String, fileId: Int64, isLocal: Bool, fileName: String) -> String {
+    let documentsPath = basePath + "/Documents"
+    let filePath = documentsPath + "/files/" + (isLocal ? "local" : "") + "\(String(fileId, radix: 16))/\(fileName)"
+    return filePath
+}
+
+private func preFetchedLegacyResourcePath(basePath: String, resource: MediaResource, cache: LegacyCache) -> String? {
+    if let resource = resource as? CloudDocumentMediaResource {
+        let videoPath = "\(basePath)/Documents/video/remote\(String(resource.fileId, radix: 16)).mov"
+        if FileManager.default.fileExists(atPath: videoPath) {
+            return videoPath
+        }
+        let fileName = resource.fileName?.replacingOccurrences(of: "/", with: "_") ?? "file"
+        return pathFromLegacyFile(basePath: basePath, fileId: resource.fileId, isLocal: false, fileName: fileName)
+    } else if let resource = resource as? CloudFileMediaResource {
+        return cache.path(forCachedData: "\(resource.datacenterId)_\(resource.volumeId)_\(resource.localId)_\(resource.secret)")
+    }
+    return nil
+}
+
 private struct AccountAttributes: Equatable {
     let sortIndex: Int32
     let isTestingEnvironment: Bool
@@ -125,7 +145,7 @@ public final class SharedAccountContext {
     public var presentGlobalController: (ViewController, Any?) -> Void = { _, _ in }
     public var presentCrossfadeController: () -> Void = {}
     
-    public init(mainWindow: Window1?, accountManager: AccountManager, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void) {
+    public init(mainWindow: Window1?, accountManager: AccountManager, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void) {
         assert(Queue.mainQueue().isCurrent())
         self.mainWindow = mainWindow
         self.applicationBindings = applicationBindings
@@ -300,6 +320,13 @@ public final class SharedAccountContext {
                     |> map { result -> (AccountRecordId, Account?, Int32) in
                         switch result {
                             case let .authorized(account):
+                                setupAccount(account, fetchCachedResourceRepresentation: fetchCachedResourceRepresentation, transformOutgoingMessageMedia: transformOutgoingMessageMedia, preFetchedResourcePath: { resource in
+                                    if let legacyBasePath = legacyBasePath, let legacyCache = legacyCache {
+                                        return preFetchedLegacyResourcePath(basePath: legacyBasePath, resource: resource, cache: legacyCache)
+                                    } else {
+                                        return nil
+                                    }
+                                })
                                 return (id, account, attributes.sortIndex)
                             default:
                                 return (id, nil, attributes.sortIndex)

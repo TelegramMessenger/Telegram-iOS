@@ -316,6 +316,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         let currentItem = self.appliedItem
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
+            let accessibilityData = ChatMessageAccessibilityData(item: item)
+            
             let baseWidth = params.width - params.leftInset - params.rightInset
             
             let content = item.content
@@ -1153,6 +1155,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             return (layout, { [weak self] animation, synchronousLoads in
                 if let strongSelf = self {
                     strongSelf.appliedItem = item
+                    strongSelf.accessibilityLabel = accessibilityData.label
+                    strongSelf.accessibilityValue = accessibilityData.value
                     
                     var transition: ContainedViewLayoutTransition = .immediate
                     if case let .System(duration) = animation {

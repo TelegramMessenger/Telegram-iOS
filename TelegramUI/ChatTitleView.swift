@@ -337,7 +337,13 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                     shouldUpdateLayout = true
                                 }
                             } else if let _ = user.botInfo {
-                                let string = NSAttributedString(string: self.strings.Bot_GenericBotStatus, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                let statusText: String
+                                if let phoneNumber = user.phone, phoneNumber.hasPrefix("424") {
+                                    statusText = self.strings.Bot_GenericSupportStatus
+                                } else {
+                                    statusText = self.strings.Bot_GenericBotStatus
+                                }
+                                let string = NSAttributedString(string: statusText, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                                 if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
                                     self.infoNode.attributedText = string
                                     shouldUpdateLayout = true
@@ -455,9 +461,14 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     break
             }
             
+            self.accessibilityLabel = self.titleNode.attributedText?.string
+            self.accessibilityValue = self.infoNode.attributedText?.string
+            
             if shouldUpdateLayout {
                 self.setNeedsLayout()
             }
+        } else {
+            self.accessibilityLabel = nil
         }
     }
     
@@ -498,6 +509,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         self.button = HighlightTrackingButtonNode()
         
         super.init(frame: CGRect())
+        
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = UIAccessibilityTraitHeader
         
         self.addSubnode(self.contentContainer)
         self.contentContainer.addSubnode(self.titleNode)

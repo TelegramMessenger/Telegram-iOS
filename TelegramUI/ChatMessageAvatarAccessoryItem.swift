@@ -13,6 +13,8 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
     private let messageTimestamp: Int32
     private let emptyColor: UIColor
     
+    private let day: Int32
+    
     init(context: AccountContext, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, messageTimestamp: Int32, emptyColor: UIColor) {
         self.context = context
         self.peerId = peerId
@@ -20,11 +22,17 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
         self.messageReference = messageReference
         self.messageTimestamp = messageTimestamp
         self.emptyColor = emptyColor
+        
+        var t: time_t = time_t(messageTimestamp)
+        var timeinfo: tm = tm()
+        gmtime_r(&t, &timeinfo)
+        
+        self.day = timeinfo.tm_mday
     }
     
     func isEqualToItem(_ other: ListViewAccessoryItem) -> Bool {
         if case let other as ChatMessageAvatarAccessoryItem = other {
-            return other.peerId == self.peerId && abs(other.messageTimestamp - self.messageTimestamp) < 10 * 60
+            return other.peerId == self.peerId && self.day == other.day && abs(other.messageTimestamp - self.messageTimestamp) < 10 * 60
         }
         
         return false

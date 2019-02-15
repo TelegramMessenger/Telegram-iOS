@@ -145,7 +145,11 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 let status: ContactsPeerItemStatus
                 if let user = primaryPeer as? TelegramUser {
                     if let _ = user.botInfo {
-                        status = .custom(strings.Bot_GenericBotStatus)
+                        if let phoneNumber = user.phone, phoneNumber.hasPrefix("424") {
+                            status = .custom(strings.Bot_GenericSupportStatus)
+                        } else {
+                            status = .custom(strings.Bot_GenericBotStatus)
+                        }
                     } else if user.id != context.account.peerId {
                         let presence = peer.presence ?? TelegramUserPresence(status: .none, lastActivity: 0)
                         status = .presence(presence, timeFormat)
