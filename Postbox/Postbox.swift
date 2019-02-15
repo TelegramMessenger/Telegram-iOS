@@ -2673,7 +2673,7 @@ public final class Postbox {
                 return 0
             }
         })
-        mutableView.render(self.renderIntermediateMessage)
+        mutableView.render(self.renderIntermediateMessage, postbox: self)
         
         let initialUpdateType: ViewUpdateType
         if let unreadIndex = unreadIndex {
