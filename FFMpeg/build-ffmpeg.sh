@@ -31,6 +31,7 @@ LIB_NAMES="libavcodec libavformat libavutil libswresample"
 set -e
 
 CONFIGURE_FLAGS="--enable-cross-compile --disable-programs \
+				 --disable-armv5te --disable-armv6 --disable-armv6t2 \
                  --disable-doc --enable-pic --disable-all --disable-everything \
                  --disable-videotoolbox \
                  --enable-avcodec  \
