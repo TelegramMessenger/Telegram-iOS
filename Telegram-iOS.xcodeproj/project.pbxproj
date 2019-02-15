@@ -236,7 +236,6 @@
 		D02CF61B215DA24900E0F56A /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02CF61A215DA24900E0F56A /* TelegramCore.framework */; };
 		D02CF61C215E51D500E0F56A /* BuildConfig.m in Sources */ = {isa = PBXBuildFile; fileRef = D09250011FE52D2A003F693F /* BuildConfig.m */; };
 		D02E31231BD803E800CD3F01 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = D02E31221BD803E800CD3F01 /* main.m */; };
-		D039FB172170F06A00BD1BAD /* PreFetchedLegacyResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D039FB162170F06A00BD1BAD /* PreFetchedLegacyResource.swift */; };
 		D03B0E7B1D63484500955575 /* ShareRootController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0E7A1D63484500955575 /* ShareRootController.swift */; };
 		D03B0E821D63484500955575 /* Share.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D03B0E781D63484500955575 /* Share.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D03B0E8A1D634B1100955575 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03B0E871D634B1100955575 /* Display.framework */; };
@@ -948,7 +947,6 @@
 		D0369C8B1D3E2C9500D91AFC /* libiconv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.tbd; path = usr/lib/libiconv.tbd; sourceTree = SDKROOT; };
 		D0369C8D1D3E2E4800D91AFC /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
 		D0369C8F1D3E2E5000D91AFC /* libbz2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libbz2.tbd; path = usr/lib/libbz2.tbd; sourceTree = SDKROOT; };
-		D039FB162170F06A00BD1BAD /* PreFetchedLegacyResource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreFetchedLegacyResource.swift; sourceTree = "<group>"; };
 		D03B0E781D63484500955575 /* Share.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Share.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03B0E7A1D63484500955575 /* ShareRootController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareRootController.swift; sourceTree = "<group>"; };
 		D03B0E7F1D63484500955575 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -2348,7 +2346,6 @@
 				D0ADF962212C9AA900310BBC /* TGProxyItem.h */,
 				D0ADF963212C9AA900310BBC /* TGProxyItem.m */,
 				D051DB5C21602D6E00F30F92 /* LegacyDataImportSplash.swift */,
-				D039FB162170F06A00BD1BAD /* PreFetchedLegacyResource.swift */,
 			);
 			name = "Legacy Data Import";
 			sourceTree = "<group>";
@@ -3218,7 +3215,6 @@
 				09C50E912173B247009E676F /* TGBridgeSubscriptions.m in Sources */,
 				09D304262174341A00C00567 /* TGBridgeLocationVenue.m in Sources */,
 				09D304312174344900C00567 /* TGBridgeImageMediaAttachment.m in Sources */,
-				D039FB172170F06A00BD1BAD /* PreFetchedLegacyResource.swift in Sources */,
 				09D304292174343300C00567 /* TGBridgeBotInfo.m in Sources */,
 				09D304272174341E00C00567 /* TGBridgeChatMessages.m in Sources */,
 				D0B21B0F220438E9003F741D /* SharedNotificationManager.swift in Sources */,

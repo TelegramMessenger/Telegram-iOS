@@ -171,32 +171,6 @@ private final class SharedApplicationContext {
     
     private var replyFromNotificationsDisposables = DisposableSet()
     
-    private var replyFromNotificationsTokensValue = Set<Int32>() {
-        didSet {
-            assert(Queue.mainQueue().isCurrent())
-            self.replyFromNotificationsTokensPromise.set(.single(self.replyFromNotificationsTokensValue))
-        }
-    }
-    private let replyFromNotificationsTokensPromise = Promise<Set<Int32>>(Set())
-    private var nextToken: Int32 = 0
-    private func takeNextToken() -> Int32 {
-        let value = self.nextToken
-        self.nextToken = value + 1
-        return value
-    }
-    private func addReplyFromNotificationsToken() -> Int32 {
-        let token = self.takeNextToken()
-        var value = self.replyFromNotificationsTokensValue
-        value.insert(token)
-        self.replyFromNotificationsTokensValue = value
-        return token
-    }
-    private func removeReplyFromNotificationsToken(_ token: Int32) {
-        var value = self.replyFromNotificationsTokensValue
-        value.remove(token)
-        self.replyFromNotificationsTokensValue = value
-    }
-    
     private var _notificationTokenPromise: Promise<Data>?
     private let voipTokenPromise = Promise<Data>()
     
@@ -211,11 +185,6 @@ private final class SharedApplicationContext {
         }
     }
     
-    //private var queuedNotifications: [[AnyHashable: Any]] = []
-    //private var queuedNotificationRequests: [(String, String, String?, NotificationManagedNotificationRequestId)] = []
-    private var queuedMutePolling = false
-    private var queuedAnnouncements: [String] = []
-    private var queuedWakeups = Set<QueuedWakeup>()
     private var clearNotificationsManager: ClearNotificationsManager?
     
     private let idleTimerExtensionSubscribers = Bag<Void>()
@@ -618,8 +587,11 @@ private final class SharedApplicationContext {
         })
         semaphore.wait()
         
+        let legacyBasePath = appGroupUrl.path
+        let legacyCache = LegacyCache(path: legacyBasePath + "/Caches")
+        
         var setPresentationCall: ((PresentationCall?) -> Void)?
-        let sharedContext = SharedAccountContext(mainWindow: self.mainWindow, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: networkArguments, rootPath: rootPath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
+        let sharedContext = SharedAccountContext(mainWindow: self.mainWindow, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
             setPresentationCall?(call)
         }, navigateToChat: { accountId, peerId, messageId in
             self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
@@ -758,15 +730,6 @@ private final class SharedApplicationContext {
         })
         
         let watchManagerArgumentsPromise = Promise<WatchManagerArguments?>()
-        
-        let replyFromNotificationsActive = self.replyFromNotificationsTokensPromise.get()
-        |> map {
-            !$0.isEmpty
-        }
-        |> distinctUntilChanged
-        
-        let backgroundAudioActive = self.hasActiveAudioSession.get()
-        |> distinctUntilChanged
             
         self.context.set(self.sharedContextPromise.get()
         |> deliverOnMainQueue
@@ -800,7 +763,7 @@ private final class SharedApplicationContext {
             |> map { accountAndSettings -> AuthorizedApplicationContext? in
                 return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings in
                     let context = AccountContext(sharedContext: sharedApplicationContext.sharedContext, account: account, limitsConfiguration: limitsConfiguration)
-                    return AuthorizedApplicationContext(mainWindow: self.mainWindow, replyFromNotificationsActive: replyFromNotificationsActive, backgroundAudioActive: backgroundAudioActive, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedApplicationContext.sharedContext.accountManager, legacyBasePath: appGroupUrl.path, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
+                    return AuthorizedApplicationContext(mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
                         let _ = (self.context.get()
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { context in
@@ -1607,8 +1570,6 @@ private final class SharedApplicationContext {
         } else if response.actionIdentifier == "reply", let peerId = peerIdFromNotification(response.notification) {
             if let response = response as? UNTextInputNotificationResponse, !response.userText.isEmpty {
                 let text = response.userText
-                let token = addReplyFromNotificationsToken()
-                
                 let signal = self.authorizedContext()
                 |> take(1)
                 |> mapToSignal { context -> Signal<Void, NoError> in
@@ -1659,7 +1620,6 @@ private final class SharedApplicationContext {
                         if let disposable = disposable {
                             self.replyFromNotificationsDisposables.remove(disposable)
                         }
-                        self.removeReplyFromNotificationsToken(token)
                         completionHandler()
                     }
                 }).start())

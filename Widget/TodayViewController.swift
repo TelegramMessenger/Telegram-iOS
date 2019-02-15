@@ -94,11 +94,9 @@ class TodayViewController: UIViewController, NCWidgetProviding {
             }
         }
         
-        let applicationInterface = account |> afterNext { account in
-            setupAccount(account)
-        } |> deliverOnMainQueue |> afterNext { [weak self] account in
-            account.resetStateManagement()
-            
+        let applicationInterface = account
+        |> deliverOnMainQueue
+        |> afterNext { [weak self] account in
             let _ = (recentPeers(account: account)
             |> deliverOnMainQueue).start(next: { peers in
                 if let strongSelf = self {
@@ -106,7 +104,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
                         case let .peers(peers):
                             strongSelf.setPeers(account: account, peers: peers.filter { !$0.isDeleted })
                         case .disabled:
-                            break
+                            strongSelf.setPeers(account: account, peers: [])
                     }
                 }
             })
@@ -210,9 +208,6 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         if let path = self.getSnapshotPath() {
             DispatchQueue.main.async {
                 UIGraphicsBeginImageContextWithOptions(self.view.bounds.size, false, 0.0)
-                /*let context = UIGraphicsGetCurrentContext()
-                context?.setFillColor(UIColor.blue.cgColor)
-                context?.fill(CGRect(origin: CGPoint(), size: self.view.bounds.size))*/
                 self.view.drawHierarchy(in: self.view.bounds, afterScreenUpdates: false)
                 let image = UIGraphicsGetImageFromCurrentImageContext()
                 UIGraphicsEndImageContext()

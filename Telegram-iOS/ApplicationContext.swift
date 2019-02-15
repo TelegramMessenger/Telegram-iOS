@@ -50,16 +50,12 @@ final class AuthorizedApplicationContext {
     let lockedCoveringView: LockedWindowCoveringView
     
     let context: AccountContext
-    let replyFromNotificationsActive: Signal<Bool, NoError>
-    let backgroundAudioActive: Signal<Bool, NoError>
     
     let rootController: TelegramRootController
     let notificationController: NotificationContainerController
     
     private var scheduledOperChatWithPeerId: PeerId?
     private var scheduledOpenExternalUrl: URL?
-    
-    //let notificationManager: NotificationManager
         
     private let passcodeStatusDisposable = MetaDisposable()
     private let passcodeLockDisposable = MetaDisposable()
@@ -103,7 +99,7 @@ final class AuthorizedApplicationContext {
     private var showCallsTabDisposable: Disposable?
     private var enablePostboxTransactionsDiposable: Disposable?
     
-    init(mainWindow: Window1, replyFromNotificationsActive: Signal<Bool, NoError>, backgroundAudioActive: Signal<Bool, NoError>, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, context: AccountContext, accountManager: AccountManager, legacyBasePath: String, showCallsTab: Bool, reinitializedNotificationSettings: @escaping () -> Void) {
+    init(mainWindow: Window1, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, context: AccountContext, accountManager: AccountManager, showCallsTab: Bool, reinitializedNotificationSettings: @escaping () -> Void) {
         setupLegacyComponents(context: context)
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -111,8 +107,6 @@ final class AuthorizedApplicationContext {
         self.lockedCoveringView = LockedWindowCoveringView(theme: presentationData.theme)
         
         self.context = context
-        self.replyFromNotificationsActive = replyFromNotificationsActive
-        self.backgroundAudioActive = backgroundAudioActive
         
         let runningWatchTasksPromise = Promise<WatchRunningTasks?>(nil)
         
@@ -126,48 +120,7 @@ final class AuthorizedApplicationContext {
         }
         |> distinctUntilChanged
         
-        //self.wakeupManager = WakeupManager(accountManager: context.sharedContext.accountManager, inForeground: context.sharedContext.applicationBindings.applicationInForeground, runningServiceTasks: context.account.importantTasksRunning, runningBackgroundLocationTasks: runningBackgroundLocationTasks, runningWatchTasks: runningWatchTasksPromise.get(), runningDownloadTasks: runningDownloadTasks)
-        
         self.showCallsTab = showCallsTab
-        
-        //self.notificationManager = NotificationManager()
-        //self.notificationManager.isApplicationInForeground = false
-        
-        /*let shouldBeServiceTaskMaster = combineLatest(context.sharedContext.applicationBindings.applicationInForeground, self.wakeupManager.isWokenUp, replyFromNotificationsActive, backgroundAudioActive, callManager.hasActiveCalls)
-        |> map { foreground, wokenUp, replyFromNotificationsActive, backgroundAudioActive, hasActiveCalls -> AccountServiceTaskMasterMode in
-            if foreground || wokenUp || replyFromNotificationsActive || hasActiveCalls {
-                return .always
-            } else {
-                return .never
-            }
-        }
-        context.account.shouldBeServiceTaskMaster.set(shouldBeServiceTaskMaster)
-        self.enablePostboxTransactionsDiposable = (combineLatest(shouldBeServiceTaskMaster, backgroundAudioActive)
-        |> map { shouldBeServiceTaskMaster, backgroundAudioActive -> Bool in
-            switch shouldBeServiceTaskMaster {
-                case .never:
-                    break
-                default:
-                    return true
-            }
-            if backgroundAudioActive {
-                return true
-            }
-            return false
-        }
-        |> deliverOnMainQueue).start(next: { [weak context] next in
-            if let context = context {
-                Logger.shared.log("ApplicationContext", "setting canBeginTransactions to \(next)")
-                context.account.postbox.setCanBeginTransactions(next)
-            }
-        })*/
-        //context.account.shouldExplicitelyKeepWorkerConnections.set(backgroundAudioActive)
-        
-        let cache = TGCache(cachesPath: legacyBasePath + "/Caches")!
-        
-        setupAccount(context.account, fetchCachedResourceRepresentation: fetchCachedResourceRepresentation, transformOutgoingMessageMedia: transformOutgoingMessageMedia, preFetchedResourcePath: { resource in
-            preFetchedLegacyResourcePath(basePath: legacyBasePath, resource: resource, cache: cache)
-        })
         
         self.notificationController = NotificationContainerController(context: context)
         
