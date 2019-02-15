@@ -465,7 +465,7 @@ func makeBridgePeers(_ message: Message) -> [Int64 : Any] {
 }
 
 func makeBridgeMessage(_ entry: MessageHistoryEntry, strings: PresentationStrings) -> (TGBridgeMessage, [Int64 : TGBridgeUser])? {
-    if case let .MessageEntry(message, read, _, _) = entry, let bridgeMessage = makeBridgeMessage(message, strings: strings) {
+    if case let .MessageEntry(message, read, _, _, _) = entry, let bridgeMessage = makeBridgeMessage(message, strings: strings) {
         if message.id.namespace == Namespaces.Message.Local && !message.flags.contains(.Failed) {
             return nil
         }
