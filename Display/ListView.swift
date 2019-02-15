@@ -2976,7 +2976,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 let full = itemContentFrame.minY >= visibilityRect.minY && itemContentFrame.maxY <= visibilityRect.maxY
                 visibility = .visible(full)
             }
-            if !onlyPositive, case .visible = visibility {
+            var updateVisibility = false
+            if !onlyPositive {
+                updateVisibility = true
+            }
+            if case .visible = visibility {
+                updateVisibility = true
+            }
+            if updateVisibility {
                 if visibility != itemNode.visibility {
                     itemNode.visibility = visibility
                 }
