@@ -34,7 +34,16 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         self.interactiveImageNode.activateLocalContent = { [weak self] mode in
             if let strongSelf = self {
                 if let item = strongSelf.item {
-                    let _ = item.controllerInteraction.openMessage(item.message, mode == .stream ? .stream : .default)
+                    let openChatMessageMode: ChatControllerInteractionOpenMessageMode
+                    switch mode {
+                        case .default:
+                            openChatMessageMode = .default
+                        case .stream:
+                            openChatMessageMode = .stream
+                        case .automaticPlayback:
+                            openChatMessageMode = .automaticPlayback
+                    }
+                    let _ = item.controllerInteraction.openMessage(item.message, openChatMessageMode)
                 }
             }
         }
@@ -70,10 +79,19 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     if telegramFile.isAnimated {
                         automaticPlayback = item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs
+                        contentMode = .aspectFill
                     } else {
-                        if case .full = automaticDownload, item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
-                            automaticPlayback = true
-                            contentMode = .aspectFill
+                        if item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
+                            var willDownloadOrLocal = false
+                            if case .full = automaticDownload {
+                                willDownloadOrLocal = true
+                            } else {
+                                willDownloadOrLocal = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
+                            }
+                            if willDownloadOrLocal {
+                                automaticPlayback = true
+                                contentMode = .aspectFill
+                            }
                         }
                     }
                 }

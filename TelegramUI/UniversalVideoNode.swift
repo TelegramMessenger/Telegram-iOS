@@ -203,6 +203,7 @@ final class UniversalVideoNode: ASDisplayNode {
                 }
             }
             if let (contentNode, initiatedCreation) = contentNode {
+                contentNode.layer.removeAllAnimations()
                 self._ready.set(contentNode.ready)
                 if initiatedCreation && self.autoplay {
                     self.play()

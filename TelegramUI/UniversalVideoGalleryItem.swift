@@ -21,11 +21,12 @@ class UniversalVideoGalleryItem: GalleryItem {
     let caption: NSAttributedString
     let credit: NSAttributedString?
     let hideControls: Bool
+    let fromPlayingVideo: Bool
     let playbackCompleted: () -> Void
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.content = content
@@ -35,6 +36,7 @@ class UniversalVideoGalleryItem: GalleryItem {
         self.caption = caption
         self.credit = credit
         self.hideControls = hideControls
+        self.fromPlayingVideo = fromPlayingVideo
         self.playbackCompleted = playbackCompleted
         self.performAction = performAction
         self.openActionOptions = openActionOptions
@@ -309,8 +311,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             self.videoNode = videoNode
             videoNode.isUserInteractionEnabled = disablePlayerControls
             videoNode.backgroundColor = videoNode.ownsContentNode ? UIColor.black : UIColor(rgb: 0x333335)
-            videoNode.canAttachContent = false
-            //self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
+            if item.fromPlayingVideo {
+                videoNode.canAttachContent = false
+            } else {
+                videoNode.canAttachContent = true
+                self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
+            }
             
             self.scrubberView.setStatusSignal(videoNode.status |> map { value -> MediaPlayerStatus in
                 if let value = value, !value.duration.isZero {
@@ -620,7 +626,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             videoNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: videoNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
             
-            Queue.mainQueue().after(0.0001) {
+            Queue.mainQueue().after(0.001) {
                 videoNode.canAttachContent = true
             }
             
@@ -645,13 +651,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             return
         }
         
-        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view)
-        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view.superview)
+        let transformedFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view)
+        var transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
         let transformedCopyViewInitialFrame = videoNode.view.convert(videoNode.view.bounds, to: self.view)
         
         var positionCompleted = false
-        var boundsCompleted = false
+        var transformCompleted = false
+        var boundsCompleted = true
         var copyCompleted = false
         
         let copyView = node.1()!
@@ -670,9 +677,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         copyView.frame = transformedSelfFrame
         
         let intermediateCompletion = { [weak copyView, weak surfaceCopyView] in
-            if positionCompleted && boundsCompleted && copyCompleted {
+            if positionCompleted && transformCompleted && boundsCompleted && copyCompleted {
                 copyView?.removeFromSuperview()
                 surfaceCopyView?.removeFromSuperview()
+                videoNode.canAttachContent = false
+                videoNode.removeFromSupernode()
                 completion()
             }
         }
@@ -693,11 +702,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             surfaceCopyView.layer.animate(from: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), to: NSValue(caTransform3D: CATransform3DIdentity), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)
         }
         
-        videoNode.layer.animatePosition(from: videoNode.layer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
-            positionCompleted = true
-            intermediateCompletion()
-        })
-        
         self.statusButtonNode.layer.animatePosition(from: self.statusButtonNode.layer.position, to: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             //positionCompleted = true
             //intermediateCompletion()
@@ -705,28 +709,52 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.statusButtonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
         self.statusButtonNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.25, removeOnCompletion: false)
         
-        var animatedVideoNode = false
+        let initialScale = videoNode.layer.bounds.size.width / node.0.view.bounds.width
+        
+        let fromTransform: CATransform3D
+        let toTransform: CATransform3D
+        
         if let interactiveMediaNode = node.0 as? ChatMessageInteractiveMediaNode, interactiveMediaNode.automaticPlayback ?? false {
-            let scale = videoNode.layer.bounds.size.width / node.0.view.bounds.width
+            let targetScale = max(transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height)
+            
             videoNode.backgroundColor = .clear
             if let bubbleDecoration = interactiveMediaNode.videoNodeDecoration, let decoration = videoNode.decoration as? GalleryVideoDecoration  {
-                decoration.updateCorners(bubbleDecoration.corners.scaledBy(scale * 0.6666))
+                transformedSuperFrame = transformedSuperFrame.offsetBy(dx: bubbleDecoration.corners.extendedEdges.right / 2.0 - bubbleDecoration.corners.extendedEdges.left / 2.0, dy: 0.0)
+                if let item = self.item {
+                    let newSize = item.content.dimensions.aspectFilled(bubbleDecoration.contentContainerNode.frame.size)
+                    videoNode.updateLayout(size: newSize, transition: .immediate)
+                    videoNode.bounds = CGRect(origin: CGPoint(), size: newSize)
+                
+                    boundsCompleted = false
+                    decoration.updateCorners(bubbleDecoration.corners)
+                    decoration.updateClippingFrame(bubbleDecoration.contentContainerNode.bounds, completion: {
+                        boundsCompleted = true
+                        intermediateCompletion()
+                    })
+                }
             }
-            animatedVideoNode = true
-        }
         
-        if !animatedVideoNode {
+            let transformScale: CGFloat = initialScale * targetScale
+            fromTransform = CATransform3DScale(videoNode.layer.transform, initialScale, initialScale, 1.0)
+            toTransform = CATransform3DScale(videoNode.layer.transform, transformScale, transformScale, 1.0)
+            
+        } else {
             videoNode.allowsGroupOpacity = true
             videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
                 videoNode?.allowsGroupOpacity = false
             })
+            
+            fromTransform = videoNode.layer.transform
+            toTransform = CATransform3DScale(videoNode.layer.transform, transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height, 1.0)
         }
         
-        transformedFrame.origin = CGPoint()
+        videoNode.layer.animatePosition(from: videoNode.layer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+            positionCompleted = true
+            intermediateCompletion()
+        })
         
-        let transform = CATransform3DScale(videoNode.layer.transform, transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height, 1.0)
-        videoNode.layer.animate(from: NSValue(caTransform3D: videoNode.layer.transform), to: NSValue(caTransform3D: transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
-            boundsCompleted = true
+        videoNode.layer.animate(from: NSValue(caTransform3D: fromTransform), to: NSValue(caTransform3D: toTransform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            transformCompleted = true
             intermediateCompletion()
         })
         

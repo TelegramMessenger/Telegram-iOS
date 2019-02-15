@@ -443,7 +443,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     tmpWidth -= 38.0
                 }
             } else {
-                tmpWidth = isInlinePlayableVideo ? min(570.0, baseWidth - 36.0) : layoutConstants.bubble.maximumWidthFill.widthFor(baseWidth)
+                tmpWidth = layoutConstants.bubble.maximumWidthFill.widthFor(baseWidth)
                 if needShareButton && tmpWidth + 32.0 > baseWidth {
                     tmpWidth = baseWidth - 32.0
                 }

@@ -41,6 +41,7 @@ public enum ChatControllerInteractionOpenMessageMode {
     case `default`
     case stream
     case shared
+    case automaticPlayback
 }
 
 struct ChatInterfacePollActionState: Equatable {

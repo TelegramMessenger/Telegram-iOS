@@ -57,12 +57,31 @@ final class GalleryVideoDecoration: UniversalVideoDecoration {
             if let maskImage = context.generateImage() {
                 let mask = CALayer()
                 mask.contents = maskImage.cgImage
-                mask.contentsScale = 2.0// maskImage.scale
+                mask.contentsScale = maskImage.scale
                 mask.contentsCenter = CGRect(x: max(corners.topLeft.radius, corners.bottomLeft.radius) / maskImage.size.width, y: max(corners.topLeft.radius, corners.topRight.radius) / maskImage.size.height, width: (maskImage.size.width - max(corners.topLeft.radius, corners.bottomLeft.radius) - max(corners.topRight.radius, corners.bottomRight.radius)) / maskImage.size.width, height: (maskImage.size.height - max(corners.topLeft.radius, corners.topRight.radius) - max(corners.bottomLeft.radius, corners.bottomRight.radius)) / maskImage.size.height)
                 
                 self.contentContainerNode.layer.mask = mask
                 self.contentContainerNode.layer.mask?.frame = self.contentContainerNode.bounds
             }
+        }
+    }
+    
+    func updateClippingFrame(_ frame: CGRect, completion: (() -> Void)?) {
+        self.contentContainerNode.layer.animate(from: NSValue(cgRect: self.contentContainerNode.bounds), to: NSValue(cgRect: frame), keyPath: "bounds", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+        })
+
+        if let maskLayer = self.contentContainerNode.layer.mask {
+            maskLayer.animate(from: NSValue(cgRect: self.contentContainerNode.bounds), to: NSValue(cgRect: frame), keyPath: "bounds", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            })
+            
+            maskLayer.animate(from: NSValue(cgPoint: maskLayer.position), to: NSValue(cgPoint: frame.center), keyPath: "position", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            })
+        }
+        
+        if let contentNode = self.contentNode {
+            contentNode.layer.animate(from: NSValue(cgPoint: contentNode.layer.position), to: NSValue(cgPoint: frame.center), keyPath: "position", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                completion?()
+            })
         }
     }
     

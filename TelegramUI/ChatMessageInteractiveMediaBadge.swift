@@ -203,23 +203,25 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         
                         textTransition.updateFrame(node: self.durationNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 7.0 : 2.0, width: durationSize.width, height: durationSize.height))
                         
+                        let iconNode: ASImageNode
+                        if let current = self.iconNode {
+                            iconNode = current
+                        } else {
+                            iconNode = ASImageNode()
+                            iconNode.frame = CGRect(x: 0.0, y: 0.0, width: 14.0, height: 9.0)
+                            self.iconNode = iconNode
+                            self.backgroundNode.addSubnode(iconNode)
+                        }
+                        
+                        if self.foregroundColor != foregroundColor {
+                            self.foregroundColor = foregroundColor
+                            iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/InlineVideoMute"), color: foregroundColor)
+                        }
+                        
+                        transition.updatePosition(node: iconNode, position: CGPoint(x: (active ? 42.0 : 7.0) + floor(durationSize.width) + 4.0 + 7.0, y: (active ? 9.0 : 4.0) + 5.0))
+                        
                         if muted {
-                            let iconNode: ASImageNode
-                            if let current = self.iconNode {
-                                iconNode = current
-                            } else {
-                                iconNode = ASImageNode()
-                                iconNode.frame = CGRect(x: 0.0, y: 0.0, width: 14.0, height: 9.0)
-                                self.iconNode = iconNode
-                                self.backgroundNode.addSubnode(iconNode)
-                            }
-                            
-                            if self.foregroundColor != foregroundColor {
-                                self.foregroundColor = foregroundColor
-                                iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/InlineVideoMute"), color: foregroundColor)
-                            }
                             transition.updateAlpha(node: iconNode, alpha: 1.0)
-                            transition.updatePosition(node: iconNode, position: CGPoint(x: (active ? 42.0 : 7.0) + floor(durationSize.width) + 4.0 + 7.0, y: (active ? 9.0 : 4.0) + 5.0))
                             transition.updateTransformScale(node: iconNode, scale: 1.0)
                         } else if let iconNode = self.iconNode {
                             transition.updateAlpha(node: iconNode, alpha: 0.0)
