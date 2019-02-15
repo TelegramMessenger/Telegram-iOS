@@ -547,7 +547,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 isAnimated = content.fileReference.media.isAnimated
             }
             if isAnimated {
-                videoNode.play()
+                videoNode.seek(0.0)
             } else {
                 videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .automatic, actionAtEnd: .stop)
             }
@@ -703,27 +703,24 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         self.statusButtonNode.layer.animatePosition(from: self.statusButtonNode.layer.position, to: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
-            //positionCompleted = true
-            //intermediateCompletion()
         })
         self.statusButtonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
         self.statusButtonNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.25, removeOnCompletion: false)
-        
-        let initialScale = videoNode.layer.bounds.size.width / node.0.view.bounds.width
         
         let fromTransform: CATransform3D
         let toTransform: CATransform3D
         
         if let interactiveMediaNode = node.0 as? ChatMessageInteractiveMediaNode, interactiveMediaNode.automaticPlayback ?? false {
+            let initialScale = min(videoNode.layer.bounds.width / node.0.view.bounds.width, videoNode.layer.bounds.height / node.0.view.bounds.height)
             let targetScale = max(transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height)
             
             videoNode.backgroundColor = .clear
             if let bubbleDecoration = interactiveMediaNode.videoNodeDecoration, let decoration = videoNode.decoration as? GalleryVideoDecoration  {
                 transformedSuperFrame = transformedSuperFrame.offsetBy(dx: bubbleDecoration.corners.extendedEdges.right / 2.0 - bubbleDecoration.corners.extendedEdges.left / 2.0, dy: 0.0)
                 if let item = self.item {
-                    let newSize = item.content.dimensions.aspectFilled(bubbleDecoration.contentContainerNode.frame.size)
-                    videoNode.updateLayout(size: newSize, transition: .immediate)
-                    videoNode.bounds = CGRect(origin: CGPoint(), size: newSize)
+                    let size = item.content.dimensions.aspectFilled(bubbleDecoration.contentContainerNode.frame.size)
+                    videoNode.updateLayout(size: size, transition: .immediate)
+                    videoNode.bounds = CGRect(origin: CGPoint(), size: size)
                 
                     boundsCompleted = false
                     decoration.updateCorners(bubbleDecoration.corners)

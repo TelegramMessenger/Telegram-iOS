@@ -138,16 +138,10 @@ func galleryItemForEntry(context: AccountContext, presentationData: Presentation
                 if let _ = media as? TelegramMediaImage {
                     return ChatImageGalleryItem(context: context, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions)
                 } else if let file = media as? TelegramMediaFile {
-                    var isVideo = file.isVideo
-                    #if DEBUG
-                    if let fileName = file.fileName, fileName.hasSuffix("mkv") {
-                        isVideo = true
-                    }
-                    #endif
-                    if isVideo {
+                    if file.isVideo {
                         let content: UniversalVideoContent
                         if file.isAnimated {
-                            content = NativeVideoContent(id: .message(message.id, message.stableId + 1, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: false, loopVideo: true, enableSound: false, tempFilePath: tempFilePath)
+                            content = NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: false, loopVideo: true, enableSound: false, tempFilePath: tempFilePath)
                         } else {
                             if true || (file.mimeType == "video/mpeg4" || file.mimeType == "video/mov" || file.mimeType == "video/mp4") {
                                 content = NativeVideoContent(id: .message(message.id, message.stableId + (isCentral ? 0 : 1), file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: true, loopVideo: loopVideos, tempFilePath: tempFilePath)

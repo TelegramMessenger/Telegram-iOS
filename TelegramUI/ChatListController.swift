@@ -387,7 +387,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         canClear = false
                     }
                 } else if let user = chatPeer as? TelegramUser, user.botInfo != nil {
-                    canStop = true
+                    canStop = !user.flags.contains(.isSupport)
                     deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
                 } else if let _ = chatPeer as? TelegramSecretChat {
                     deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat

@@ -336,13 +336,17 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                     self.infoNode.attributedText = string
                                     shouldUpdateLayout = true
                                 }
-                            } else if let _ = user.botInfo {
-                                let statusText: String
-                                if let phoneNumber = user.phone, phoneNumber.hasPrefix("424") {
-                                    statusText = self.strings.Bot_GenericSupportStatus
-                                } else {
-                                    statusText = self.strings.Bot_GenericBotStatus
+                            } else if user.flags.contains(.isSupport) {
+                                let statusText = self.strings.Bot_GenericSupportStatus
+                                
+                                let string = NSAttributedString(string: statusText, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
+                                    self.infoNode.attributedText = string
+                                    shouldUpdateLayout = true
                                 }
+                            } else if let _ = user.botInfo {
+                                let statusText = self.strings.Bot_GenericBotStatus
+                                
                                 let string = NSAttributedString(string: statusText, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                                 if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
                                     self.infoNode.attributedText = string
