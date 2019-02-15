@@ -265,6 +265,13 @@ static void CollectAccessibilityElementsForView(UIView *view, NSMutableArray *el
 
 @implementation _ASDisplayView (UIAccessibilityContainer)
 
+- (void)accessibilityElementDidBecomeFocused {
+  ASDisplayNode *viewNode = self.asyncdisplaykit_node;
+  if ([viewNode respondsToSelector:@selector(accessibilityElementDidBecomeFocused)]) {
+    [viewNode accessibilityElementDidBecomeFocused];
+  }
+}
+
 #pragma mark - UIAccessibility
 
 - (void)setAccessibilityElements:(NSArray *)accessibilityElements
