@@ -13,7 +13,7 @@ struct BotCheckoutPaymentWebToken: Equatable {
 enum BotCheckoutPaymentMethod: Equatable {
     case savedCredentials(BotPaymentSavedCredentials)
     case webToken(BotCheckoutPaymentWebToken)
-    case applePayStripe
+    case applePay
     
     var title: String {
         switch self {
@@ -24,7 +24,7 @@ enum BotCheckoutPaymentMethod: Equatable {
                 }
             case let .webToken(token):
                 return token.title
-            case .applePayStripe:
+            case .applePay:
                 return "Apple Pay"
         }
     }
@@ -63,7 +63,7 @@ final class BotCheckoutPaymentMethodSheetController: ActionSheetController {
                 case let .webToken(token):
                     title = token.title
                     icon = nil
-                case .applePayStripe:
+                case .applePay:
                     title = "Apple Pay"
                     icon = UIImage(bundleImageName: "Bot Payments/ApplePayLogo")?.precomposed()
             }

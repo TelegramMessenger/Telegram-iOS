@@ -16,6 +16,7 @@ enum ItemListDisclosureStyle {
 enum ItemListDisclosureLabelStyle {
     case text
     case detailText
+    case multilineDetailText
     case badge(UIColor)
     case color(UIColor)
 }
@@ -221,27 +222,6 @@ class ItemListDisclosureItemNode: ListViewItemNode {
             let itemSeparatorColor: UIColor
             
             var leftInset = 16.0 + params.leftInset
-            let height: CGFloat
-            switch item.labelStyle {
-                case .detailText:
-                    height = 64.0
-                default:
-                    height = 44.0
-            }
-            
-            switch item.style {
-                case .plain:
-                    itemBackgroundColor = item.theme.list.plainBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
-                    contentSize = CGSize(width: params.width, height: height)
-                    insets = itemListNeighborsPlainInsets(neighbors)
-                case .blocks:
-                    itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
-                    itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
-                    contentSize = CGSize(width: params.width, height: height)
-                    insets = itemListNeighborsGroupedInsets(neighbors)
-            }
-            
             if let _ = item.icon {
                 leftInset += 43.0
             }
@@ -262,7 +242,7 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                 case .badge:
                     labelBadgeColor = item.theme.rootController.tabBar.badgeTextColor
                     labelFont = badgeFont
-                case .detailText:
+                case .detailText, .multilineDetailText:
                     labelBadgeColor = item.theme.list.itemSecondaryTextColor
                     labelFont = detailFont
                     labelConstrain = params.width - params.rightInset - 40.0 - leftInset
@@ -270,8 +250,35 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                     labelBadgeColor = item.theme.list.itemSecondaryTextColor
                     labelFont = titleFont
             }
+            var multilineLabel = false
+            if case .multilineDetailText = item.labelStyle {
+                multilineLabel = true
+            }
             
-            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: labelFont, textColor:labelBadgeColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: labelConstrain, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: labelFont, textColor:labelBadgeColor), backgroundColor: nil, maximumNumberOfLines: multilineLabel ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: labelConstrain, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let height: CGFloat
+            switch item.labelStyle {
+                    case .detailText:
+                        height = 64.0
+                    case .multilineDetailText:
+                        height = 44.0 + labelLayout.size.height
+                    default:
+                        height = 44.0
+            }
+            
+            switch item.style {
+                case .plain:
+                    itemBackgroundColor = item.theme.list.plainBackgroundColor
+                    itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
+                    contentSize = CGSize(width: params.width, height: height)
+                    insets = itemListNeighborsPlainInsets(neighbors)
+                case .blocks:
+                    itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
+                    itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
+                    contentSize = CGSize(width: params.width, height: height)
+                    insets = itemListNeighborsGroupedInsets(neighbors)
+            }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             
@@ -286,7 +293,13 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                         if updateIcon {
                             strongSelf.iconNode.image = icon
                         }
-                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - icon.size.width) / 2.0), y: floor((layout.contentSize.height - icon.size.height) / 2.0)), size: icon.size)
+                        let iconY: CGFloat
+                        if case .multilineDetailText = item.labelStyle {
+                            iconY = 14.0
+                        } else {
+                            iconY = floor((layout.contentSize.height - icon.size.height) / 2.0)
+                        }
+                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - icon.size.width) / 2.0), y: iconY), size: icon.size)
                     } else if strongSelf.iconNode.supernode != nil {
                         strongSelf.iconNode.image = nil
                         strongSelf.iconNode.removeFromSupernode()
@@ -368,7 +381,7 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                     switch item.labelStyle {
                         case .badge:
                             labelFrame = CGRect(origin: CGPoint(x: params.width - rightInset - badgeWidth + (badgeWidth - labelLayout.size.width) / 2.0, y: 13.0), size: labelLayout.size)
-                        case .detailText:
+                        case .detailText, .multilineDetailText:
                             labelFrame = CGRect(origin: CGPoint(x: leftInset, y: 36.0), size: labelLayout.size)
                         default:
                             labelFrame = CGRect(origin: CGPoint(x: params.width - rightInset - labelLayout.size.width, y: 11.0), size: labelLayout.size)

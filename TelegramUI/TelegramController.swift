@@ -511,7 +511,7 @@ public class TelegramController: ViewController {
                                         return .single((nil, true))
                                     case let .HistoryView(view, _, _, _, _):
                                         for entry in view.entries {
-                                            if case let .MessageEntry(message, _, _, _) = entry {
+                                            if case let .MessageEntry(message, _, _, _, _) = entry {
                                                 if message.id == id.messageId {
                                                     return .single((MessageIndex(message), false))
                                                 }

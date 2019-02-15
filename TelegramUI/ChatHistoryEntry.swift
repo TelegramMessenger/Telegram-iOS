@@ -23,10 +23,15 @@ public enum ChatHistoryMessageSelection: Equatable {
     }
 }
 
+public struct ChatMessageEntryAttributes: Equatable {
+    let isAdmin: Bool
+    let isContact: Bool
+}
+
 enum ChatHistoryEntry: Identifiable, Comparable {
     case HoleEntry(MessageHistoryHole, ChatPresentationData)
-    case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryMonthLocation?, ChatHistoryMessageSelection, Bool)
-    case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, Bool)], ChatPresentationData)
+    case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryMonthLocation?, ChatHistoryMessageSelection, ChatMessageEntryAttributes)
+    case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)], ChatPresentationData)
     case UnreadEntry(MessageIndex, ChatPresentationData)
     case ChatInfoEntry(String, ChatPresentationData)
     case SearchEntry(PresentationTheme, PresentationStrings)
@@ -73,9 +78,9 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                 } else {
                     return false
                 }
-            case let .MessageEntry(lhsMessage, lhsPresentationData, lhsRead, _, lhsSelection, lhsIsAdmin):
+            case let .MessageEntry(lhsMessage, lhsPresentationData, lhsRead, _, lhsSelection, lhsAttributes):
                 switch rhs {
-                    case let .MessageEntry(rhsMessage, rhsPresentationData, rhsRead, _, rhsSelection, rhsIsAdmin) where MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags && lhsRead == rhsRead:
+                    case let .MessageEntry(rhsMessage, rhsPresentationData, rhsRead, _, rhsSelection, rhsAttributes) where MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags && lhsRead == rhsRead:
                         if lhsPresentationData !== rhsPresentationData {
                             return false
                         }
@@ -105,7 +110,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                         if lhsSelection != rhsSelection {
                             return false
                         }
-                        if lhsIsAdmin != rhsIsAdmin {
+                        if lhsAttributes != rhsAttributes {
                             return false
                         }
                         return true
@@ -115,8 +120,8 @@ enum ChatHistoryEntry: Identifiable, Comparable {
             case let .MessageGroupEntry(lhsGroupInfo, lhsMessages, lhsPresentationData):
                 if case let .MessageGroupEntry(rhsGroupInfo, rhsMessages, rhsPresentationData) = rhs, lhsGroupInfo == rhsGroupInfo, lhsPresentationData === rhsPresentationData, lhsMessages.count == rhsMessages.count {
                     for i in 0 ..< lhsMessages.count {
-                        let (lhsMessage, lhsRead, lhsSelection, lhsIsAdmin) = lhsMessages[i]
-                        let (rhsMessage, rhsRead, rhsSelection, rhsIsAdmin) = rhsMessages[i]
+                        let (lhsMessage, lhsRead, lhsSelection, lhsAttributes) = lhsMessages[i]
+                        let (rhsMessage, rhsRead, rhsSelection, rhsAttributes) = rhsMessages[i]
                         
                         if lhsMessage.id != rhsMessage.id {
                             return false
@@ -159,7 +164,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                                 }
                             }
                         }
-                        if lhsIsAdmin != rhsIsAdmin {
+                        if lhsAttributes != rhsAttributes {
                             return false
                         }
                     }

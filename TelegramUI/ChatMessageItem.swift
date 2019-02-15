@@ -7,8 +7,8 @@ import SwiftSignalKit
 import TelegramCore
 
 public enum ChatMessageItemContent: Sequence {
-    case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection, isAdmin: Bool)
-    case group(messages: [(Message, Bool, ChatHistoryMessageSelection, Bool)])
+    case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection, attributes: ChatMessageEntryAttributes)
+    case group(messages: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)])
     
     func effectivelyIncoming(_ accountPeerId: PeerId) -> Bool {
         switch self {

@@ -436,6 +436,8 @@
 		D0B21B13220D6E8C003F741D /* ActionSheetPeerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B21B12220D6E8C003F741D /* ActionSheetPeerItem.swift */; };
 		D0B21B15220D85DD003F741D /* TabBarAccountSwitchController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B21B14220D85DD003F741D /* TabBarAccountSwitchController.swift */; };
 		D0B21B17220D85E7003F741D /* TabBarAccountSwitchControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B21B16220D85E7003F741D /* TabBarAccountSwitchControllerNode.swift */; };
+		D0B21B1F22156D92003F741D /* LegacyCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B21B1E22156D92003F741D /* LegacyCache.swift */; };
+		D0B21B212215B539003F741D /* LogoutOptionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B21B202215B539003F741D /* LogoutOptionsController.swift */; };
 		D0B2F76220506E2A00D3BFB9 /* MediaInputSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F76120506E2A00D3BFB9 /* MediaInputSettings.swift */; };
 		D0B2F76820528E3D00D3BFB9 /* UserInfoEditingPhoneActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F76720528E3D00D3BFB9 /* UserInfoEditingPhoneActionItem.swift */; };
 		D0B2F76A2052920D00D3BFB9 /* UserInfoEditingPhoneItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F7692052920D00D3BFB9 /* UserInfoEditingPhoneItem.swift */; };
@@ -1868,6 +1870,8 @@
 		D0B21B12220D6E8C003F741D /* ActionSheetPeerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionSheetPeerItem.swift; sourceTree = "<group>"; };
 		D0B21B14220D85DD003F741D /* TabBarAccountSwitchController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarAccountSwitchController.swift; sourceTree = "<group>"; };
 		D0B21B16220D85E7003F741D /* TabBarAccountSwitchControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarAccountSwitchControllerNode.swift; sourceTree = "<group>"; };
+		D0B21B1E22156D92003F741D /* LegacyCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyCache.swift; sourceTree = "<group>"; };
+		D0B21B202215B539003F741D /* LogoutOptionsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogoutOptionsController.swift; sourceTree = "<group>"; };
 		D0B2F76120506E2A00D3BFB9 /* MediaInputSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaInputSettings.swift; sourceTree = "<group>"; };
 		D0B2F76720528E3D00D3BFB9 /* UserInfoEditingPhoneActionItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserInfoEditingPhoneActionItem.swift; sourceTree = "<group>"; };
 		D0B2F7692052920D00D3BFB9 /* UserInfoEditingPhoneItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserInfoEditingPhoneItem.swift; sourceTree = "<group>"; };
@@ -3302,6 +3306,7 @@
 				D097C26B20DD1EA5007BB4B8 /* OverlayStatusController.swift */,
 				09F799F921C3542D00820234 /* LegacyWebSearchGallery.swift */,
 				09F79A0C21C88E8900820234 /* LegacyWebSearchEditor.swift */,
+				D0B21B1E22156D92003F741D /* LegacyCache.swift */,
 			);
 			name = "Legacy Components";
 			sourceTree = "<group>";
@@ -4652,6 +4657,7 @@
 				D0F53BEB1E784DA900117362 /* ChangePhoneNumberCodeController.swift */,
 				D0B21B14220D85DD003F741D /* TabBarAccountSwitchController.swift */,
 				D0B21B16220D85E7003F741D /* TabBarAccountSwitchControllerNode.swift */,
+				D0B21B202215B539003F741D /* LogoutOptionsController.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -5638,6 +5644,7 @@
 				D0EC6DA31EB9F58900EBF1C3 /* ChatMessageDateHeader.swift in Sources */,
 				D0EC6DA41EB9F58900EBF1C3 /* ChatMessageActionButtonsNode.swift in Sources */,
 				D0EC6DA51EB9F58900EBF1C3 /* ChatBotInfoItem.swift in Sources */,
+				D0B21B212215B539003F741D /* LogoutOptionsController.swift in Sources */,
 				D0E9BAE41F0574D800F079A4 /* STPBankAccountParams.m in Sources */,
 				D0E412D3206A7DC100BEE4A2 /* DateSelectionActionSheetController.swift in Sources */,
 				D06887F01F72DEE6000AB936 /* ShareInputFieldNode.swift in Sources */,
@@ -5784,6 +5791,7 @@
 				D0EC6DE81EB9F58900EBF1C3 /* ChatPinnedMessageTitlePanelNode.swift in Sources */,
 				D0EC6DE91EB9F58900EBF1C3 /* ChatInfoTitlePanelNode.swift in Sources */,
 				D0EC6DEA1EB9F58900EBF1C3 /* ChatReportPeerTitlePanelNode.swift in Sources */,
+				D0B21B1F22156D92003F741D /* LegacyCache.swift in Sources */,
 				D0EC6DEB1EB9F58900EBF1C3 /* ChatRequestInProgressTitlePanelNode.swift in Sources */,
 				D0EC6DEC1EB9F58900EBF1C3 /* ChatToastAlertPanelNode.swift in Sources */,
 				D0EC6DED1EB9F58900EBF1C3 /* ChatHistoryNavigationButtonNode.swift in Sources */,

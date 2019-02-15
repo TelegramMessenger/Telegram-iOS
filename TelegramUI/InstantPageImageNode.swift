@@ -81,6 +81,10 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             } else {
                 self.imageNode.setSignal(chatMessageVideo(postbox: context.account.postbox, videoReference: fileReference))
             }
+            if file.isVideo {
+                self.statusNode.transitionToState(.play(.white), animated: false, completion: {})
+                self.addSubnode(self.statusNode)
+            }
         } else if let map = media.media as? TelegramMediaMap {
             self.addSubnode(self.pinNode)
             

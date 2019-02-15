@@ -50,7 +50,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
                                         switch entry {
                                             case .HoleEntry:
                                                 break inner
-                                            case let .MessageEntry(message, _, _, _):
+                                            case let .MessageEntry(message, _, _, _, _):
                                                 if message.flags.contains(.Incoming) {
                                                     incomingCount += 1
                                                 }

@@ -133,7 +133,7 @@ private func galleryMessageCaptionText(_ message: Message) -> String {
 
 func galleryItemForEntry(context: AccountContext, presentationData: PresentationData, entry: MessageHistoryEntry, isCentral: Bool = false, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, tempFilePath: String? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }) -> GalleryItem? {
     switch entry {
-        case let .MessageEntry(message, _, location, _):
+        case let .MessageEntry(message, _, location, _, _):
             if let (media, mediaImage) = mediaForMessage(message: message) {
                 if let _ = media as? TelegramMediaImage {
                     return ChatImageGalleryItem(context: context, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions)
@@ -359,10 +359,10 @@ class GalleryController: ViewController {
                             return .single(mapped)
                         }
                     } else {
-                        return .single(GalleryMessageHistoryView.single(MessageHistoryEntry.MessageEntry(message!, false, nil, nil)))
+                        return .single(GalleryMessageHistoryView.single(MessageHistoryEntry.MessageEntry(message!, false, nil, nil, MutableMessageHistoryEntryAttributes(authorIsContact: false))))
                     }
                 case .standaloneMessage:
-                    return .single(GalleryMessageHistoryView.single(MessageHistoryEntry.MessageEntry(message!, false, nil, nil)))
+                    return .single(GalleryMessageHistoryView.single(MessageHistoryEntry.MessageEntry(message!, false, nil, nil, MutableMessageHistoryEntryAttributes(authorIsContact: false))))
             }
         }
         |> take(1)
@@ -389,7 +389,7 @@ class GalleryController: ViewController {
                         var centralEntryStableId: UInt32?
                         loop: for i in 0 ..< entries.count {
                             switch entries[i] {
-                                case let .MessageEntry(message, _, _, _):
+                                case let .MessageEntry(message, _, _, _, _):
                                     switch source {
                                         case let .peerMessagesAtId(messageId):
                                             if message.id == messageId {
@@ -420,7 +420,7 @@ class GalleryController: ViewController {
                             var centralItemIndex: Int?
                             for entry in strongSelf.entries {
                                 var isCentral = false
-                                if case let .MessageEntry(message, _, _, _) = entry, message.stableId == strongSelf.centralEntryStableId {
+                                if case let .MessageEntry(message, _, _, _, _) = entry, message.stableId == strongSelf.centralEntryStableId {
                                     isCentral = true
                                 }
                                 if let item = galleryItemForEntry(context: context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: streamSingleVideo, fromPlayingVideo: isCentral && fromPlayingVideo, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions) {
@@ -717,7 +717,7 @@ class GalleryController: ViewController {
         }
         
         if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
-            if case let .MessageEntry(message, _, _, _) = self.entries[centralItemNode.index] {
+            if case let .MessageEntry(message, _, _, _, _) = self.entries[centralItemNode.index] {
                 if let (media, _) = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media), !forceAway {
                     animatedOutNode = false
                     centralItemNode.animateOut(to: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {
@@ -755,7 +755,7 @@ class GalleryController: ViewController {
         self.galleryNode.transitionDataForCentralItem = { [weak self] in
             if let strongSelf = self {
                 if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode(), let presentationArguments = strongSelf.presentationArguments as? GalleryControllerPresentationArguments {
-                    if case let .MessageEntry(message, _, _, _) = strongSelf.entries[centralItemNode.index] {
+                    if case let .MessageEntry(message, _, _, _, _) = strongSelf.entries[centralItemNode.index] {
                         if let (media, _) = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
                             return (transitionArguments.transitionNode, transitionArguments.addToTransitionSurface)
                         }
@@ -803,7 +803,7 @@ class GalleryController: ViewController {
         var centralItemIndex: Int?
         for entry in self.entries {
             if let item = galleryItemForEntry(context: context, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, fromPlayingVideo: self.fromPlayingVideo, performAction: self.performAction, openActionOptions: self.openActionOptions) {
-                if case let .MessageEntry(message, _, _, _) = entry, message.stableId == self.centralEntryStableId {
+                if case let .MessageEntry(message, _, _, _, _) = entry, message.stableId == self.centralEntryStableId {
                     centralItemIndex = items.count
                 }
                 items.append(item)
@@ -816,7 +816,7 @@ class GalleryController: ViewController {
             if let strongSelf = self {
                 var hiddenItem: (MessageId, Media)?
                 if let index = index {
-                    if case let .MessageEntry(message, _, _, _) = strongSelf.entries[index], let (media, _) = mediaForMessage(message: message) {
+                    if case let .MessageEntry(message, _, _, _, _) = strongSelf.entries[index], let (media, _) = mediaForMessage(message: message) {
                         hiddenItem = (message.id, media)
                     }
                     
@@ -857,7 +857,7 @@ class GalleryController: ViewController {
         var nodeAnimatesItself = false
         
         if let centralItemNode = self.galleryNode.pager.centralItemNode() {
-            if case let .MessageEntry(message, _, _, _) = self.entries[centralItemNode.index] {
+            if case let .MessageEntry(message, _, _, _, _) = self.entries[centralItemNode.index] {
                 self.centralItemTitle.set(centralItemNode.title())
                 self.centralItemTitleView.set(centralItemNode.titleView())
                 self.centralItemRightBarButtonItem.set(centralItemNode.rightBarButtonItem())
@@ -910,7 +910,7 @@ class GalleryController: ViewController {
             self.galleryNode.setControlsHidden(true, animated: false)
             if let centralItemNode = self.galleryNode.pager.centralItemNode(), let itemSize = centralItemNode.contentSize() {
                 self.preferredContentSize = itemSize.aspectFitted(self.view.bounds.size)
-                self.containerLayoutUpdated(ContainerViewLayout(size: self.preferredContentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+                self.containerLayoutUpdated(ContainerViewLayout(size: self.preferredContentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
             }
         }
     }

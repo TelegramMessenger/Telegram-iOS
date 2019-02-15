@@ -16,6 +16,9 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         
         super.init()
         
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = UIAccessibilityTraitButton | UIAccessibilityTraitNotEnabled
+        
         self.view.addSubview(self.micButton)
         self.view.addSubview(self.sendButton)
         self.addSubnode(self.expandMediaInputButton)
@@ -36,5 +39,15 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
             expanded = true
         }
         transition.updateSublayerTransformScale(node: self.expandMediaInputButton, scale: CGPoint(x: 1.0, y: expanded ? 1.0 : -1.0))
+    }
+    
+    func updateAccessibility() {
+        if self.sendButton.alpha.isZero {
+            self.accessibilityTraits = UIAccessibilityTraitButton | UIAccessibilityTraitNotEnabled
+            self.accessibilityLabel = "Send"
+        } else {
+            self.accessibilityTraits = UIAccessibilityTraitButton
+            self.accessibilityLabel = "Send"
+        }
     }
 }

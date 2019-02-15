@@ -2454,12 +2454,16 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             self?.enqueueChatContextResult(results, result)
         }, sendBotCommand: { [weak self] botPeer, command in
             if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
-                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer, let addressName = botPeer.addressName {
+                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                     let messageText: String
-                    if peer is TelegramUser {
-                        messageText = command
+                    if let addressName = botPeer.addressName {
+                        if peer is TelegramUser {
+                            messageText = command
+                        } else {
+                            messageText = command + "@" + addressName
+                        }
                     } else {
-                        messageText = command + "@" + addressName
+                        messageText = command
                     }
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                     strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
@@ -4815,7 +4819,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                     return .single((nil, true))
                                 case let .HistoryView(view, _, _, _, _):
                                     for entry in view.entries {
-                                        if case let .MessageEntry(message, _, _, _) = entry {
+                                        if case let .MessageEntry(message, _, _, _, _) = entry {
                                             if message.id == messageLocation.messageId {
                                                 return .single((MessageIndex(message), false))
                                             }
@@ -4902,7 +4906,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                     return .complete()
                                 case let .HistoryView(view, _, _, _, _):
                                     for entry in view.entries {
-                                        if case let .MessageEntry(message, _, _, _) = entry {
+                                        if case let .MessageEntry(message, _, _, _, _) = entry {
                                             if message.id == messageLocation.messageId {
                                                 return .single(MessageIndex(message))
                                             }
@@ -5441,7 +5445,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             let galleryController = AvatarGalleryController(context: self.context, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
             }, synchronousLoad: true)
             galleryController.setHintWillBePresentedInPreviewingContext(true)
-            galleryController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+            galleryController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
             return (galleryController, buttonView.convert(buttonView.bounds, to: sourceView))
         }
         return nil
@@ -5478,7 +5482,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                     gallery.setHintWillBePresentedInPreviewingContext(true)
                                     let rect = selectedTransitionNode.0.view.convert(selectedTransitionNode.0.bounds, to: sourceView)
                                     let sourceRect = rect.insetBy(dx: -2.0, dy: -2.0)
-                                    gallery.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false), transition: .immediate)
+                                    gallery.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                                     return (gallery, sourceRect)
                                 case let .instantPage(gallery, centralIndex, galleryMedia):
                                     break

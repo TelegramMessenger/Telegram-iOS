@@ -391,6 +391,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         self.actionButtons.sendButton.addTarget(self, action: #selector(self.sendButtonPressed), for: .touchUpInside)
         self.actionButtons.sendButton.alpha = 0.0
+        self.actionButtons.updateAccessibility()
         
         self.actionButtons.expandMediaInputButton.addTarget(self, action: #selector(self.expandButtonPressed), forControlEvents: .touchUpInside)
         self.actionButtons.expandMediaInputButton.alpha = 0.0
@@ -420,6 +421,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
 
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    func loadTextInputNodeIfNeeded() {
+        if self.textInputNode == nil {
+            self.loadTextInputNode()
+        }
     }
     
     private func loadTextInputNode() {
@@ -1109,6 +1116,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             if !self.actionButtons.sendButton.alpha.isZero {
                 self.actionButtons.sendButton.alpha = 0.0
+                self.actionButtons.updateAccessibility()
                 if animated {
                     self.actionButtons.animatingSendButton = true
                     self.actionButtons.sendButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
@@ -1142,6 +1150,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 hideMicButton = true
                 if self.actionButtons.sendButton.alpha.isZero {
                     self.actionButtons.sendButton.alpha = 1.0
+                    self.actionButtons.updateAccessibility()
                     if animated {
                         self.actionButtons.sendButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
                         if animateWithBounce {
@@ -1154,6 +1163,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             } else {
                 if !self.actionButtons.sendButton.alpha.isZero {
                     self.actionButtons.sendButton.alpha = 0.0
+                    self.actionButtons.updateAccessibility()
                     if animated {
                         self.actionButtons.animatingSendButton = true
                         self.actionButtons.sendButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in

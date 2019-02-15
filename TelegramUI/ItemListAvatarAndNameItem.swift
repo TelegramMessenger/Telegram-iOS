@@ -421,7 +421,11 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                             statusText = label
                             statusColor = item.theme.list.itemSecondaryTextColor
                         } else if let _ = peer.botInfo {
-                            statusText = item.strings.Bot_GenericBotStatus
+                            if let phoneNumber = peer.phone, phoneNumber.hasPrefix("424") {
+                                statusText = item.strings.Bot_GenericSupportStatus
+                            } else {
+                                statusText = item.strings.Bot_GenericBotStatus
+                            }
                             statusColor = item.theme.list.itemSecondaryTextColor
                         } else if case .generic = item.mode, !(peer.id.namespace == Namespaces.Peer.CloudUser && (peer.id.id == 777000 || peer.id.id == 333000)) {
                             let presence = (item.presence as? TelegramUserPresence) ?? TelegramUserPresence(status: .none, lastActivity: 0)

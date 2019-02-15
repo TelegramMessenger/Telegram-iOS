@@ -316,6 +316,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         let currentItem = self.appliedItem
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
+            let accessibilityData = ChatMessageAccessibilityData(item: item)
+            
             let baseWidth = params.width - params.leftInset - params.rightInset
             
             let content = item.content
@@ -484,11 +486,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             var authorNameString: String?
             let authorIsAdmin: Bool
             switch content {
-                case let .message(message, _, _, isAdmin):
+                case let .message(message, _, _, attributes):
                     if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
                         authorIsAdmin = false
                     } else {
-                        authorIsAdmin = isAdmin
+                        authorIsAdmin = attributes.isAdmin
                     }
                 case .group:
                     authorIsAdmin = false
@@ -1153,6 +1155,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             return (layout, { [weak self] animation, synchronousLoads in
                 if let strongSelf = self {
                     strongSelf.appliedItem = item
+                    strongSelf.accessibilityLabel = accessibilityData.label
+                    strongSelf.accessibilityValue = accessibilityData.value
                     
                     var transition: ContainedViewLayoutTransition = .immediate
                     if case let .System(duration) = animation {

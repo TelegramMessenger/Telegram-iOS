@@ -313,6 +313,9 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
 private let hasApplePaySupport: Bool = PKPaymentAuthorizationViewController.canMakePayments(usingNetworks: [.visa, .masterCard, .amex])
 
 private func formSupportApplePay(_ paymentForm: BotPaymentForm) -> Bool {
+    if !hasApplePaySupport {
+        return false
+    }
     guard let nativeProvider = paymentForm.nativeProvider else {
         return false
     }
@@ -342,10 +345,10 @@ private func formSupportApplePay(_ paymentForm: BotPaymentForm) -> Bool {
     return merchantId != nil
 }
 
-private func availablePaymentMethods(current: BotCheckoutPaymentMethod?, supportsApplePay: Bool) -> [BotCheckoutPaymentMethod] {
+private func availablePaymentMethods(form: BotPaymentForm, current: BotCheckoutPaymentMethod?) -> [BotCheckoutPaymentMethod] {
     var methods: [BotCheckoutPaymentMethod] = []
-    if hasApplePaySupport {
-        methods.append(.applePayStripe)
+    if formSupportApplePay(form) && hasApplePaySupport {
+        methods.append(.applePay)
     }
     if let current = current {
         if !methods.contains(current) {
@@ -595,13 +598,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
         
         openPaymentMethodImpl = { [weak self] in
             if let strongSelf = self, let paymentForm = strongSelf.paymentFormValue {
-                let supportsApplePay: Bool
-                if formSupportApplePay(paymentForm) {
-                    supportsApplePay = true
-                } else {
-                    supportsApplePay = false
-                }
-                let methods = availablePaymentMethods(current: strongSelf.currentPaymentMethod, supportsApplePay: supportsApplePay)
+                let methods = availablePaymentMethods(form: paymentForm, current: strongSelf.currentPaymentMethod)
                 if methods.isEmpty {
                     openNewCard()
                 } else {
@@ -699,7 +696,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         var updatedInsets = layout.intrinsicInsets
         updatedInsets.bottom += BotCheckoutActionButton.diameter + 20.0
-        super.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: updatedInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging), navigationBarHeight: navigationBarHeight, transition: transition)
+        super.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: updatedInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition)
         
         let actionButtonFrame = CGRect(origin: CGPoint(x: 10.0, y: layout.size.height - 10.0 - BotCheckoutActionButton.diameter - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width - 20.0, height: BotCheckoutActionButton.diameter))
         transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
@@ -789,11 +786,10 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                     }
                 case let .webToken(token):
                     credentials = .generic(data: token.data, saveOnServer: token.saveOnServer)
-                case .applePayStripe:
+                case .applePay:
                     guard let paymentForm = self.paymentFormValue, let nativeProvider = paymentForm.nativeProvider else {
                         return
                     }
-                    //NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:[strongSelf->_paymentForm.nativeParams dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
                     guard let nativeParamsData = nativeProvider.params.data(using: .utf8) else {
                         return
                     }

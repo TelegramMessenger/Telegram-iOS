@@ -690,7 +690,7 @@ public func chatMessagePhotoInternal(photoData: Signal<(Data?, Data?, Bool), NoE
             if let thumbnailImage = thumbnailImage {
                 let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
                 
-                if thumbnailSize.width > arguments.drawingSize.width * 0.7 && thumbnailSize.height > arguments.drawingSize.height * 0.7 {
+                if thumbnailSize.width > 200.0 && thumbnailSize.height > 200.0 {
                     blurredThumbnailImage = UIImage(cgImage: thumbnailImage)
                 } else {
                     let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 90.0, height: 90.0))

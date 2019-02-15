@@ -1361,10 +1361,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             
             var restrictionText: String?
-            if chatPresentationInterfaceState.isNotAccessible {
+            if let peer = chatPresentationInterfaceState.renderedPeer?.peer, let restrictionTextValue = peer.restrictionText, !restrictionTextValue.isEmpty {
+                restrictionText = restrictionTextValue
+            } else if chatPresentationInterfaceState.isNotAccessible {
                 restrictionText = chatPresentationInterfaceState.strings.Channel_ErrorAccessDenied
-            } else if let peer = chatPresentationInterfaceState.renderedPeer?.peer {
-                restrictionText = peer.restrictionText
             }
             
             if let restrictionText = restrictionText {
@@ -1557,6 +1557,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let (validLayout, _) = self.validLayout {
                 let _ = inputNode.updateLayout(width: validLayout.size.width, leftInset: validLayout.safeInsets.left, rightInset: validLayout.safeInsets.right, bottomInset: validLayout.intrinsicInsets.bottom, standardInputHeight: validLayout.standardInputHeight, inputHeight: validLayout.inputHeight ?? 0.0, maximumHeight: validLayout.standardInputHeight, inputPanelHeight: 44.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState, isVisible: false)
             }
+            
+            self.textInputPanelNode?.loadTextInputNodeIfNeeded()
         }
     }
     

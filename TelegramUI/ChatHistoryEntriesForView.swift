@@ -19,7 +19,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
         }
     }
     
-    var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, Bool)] = []
+    var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)] = []
     loop: for entry in view.entries {
         switch entry {
             case let .HoleEntry(hole, _):
@@ -30,7 +30,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                 if view.tagMask == nil {
                     entries.append(.HoleEntry(hole, presentationData))
                 }
-            case let .MessageEntry(message, read, _, monthLocation):
+            case let .MessageEntry(message, read, _, monthLocation, attributes):
                 if message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
                     for media in message.media {
                         if let action = media as? TelegramMediaAction {
@@ -61,7 +61,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                         } else {
                             selection = .none
                         }
-                        groupBucket.append((message, read, selection, isAdmin))
+                        groupBucket.append((message, read, selection, ChatMessageEntryAttributes(isAdmin: isAdmin, isContact: attributes.authorIsContact)))
                     } else {
                         let selection: ChatHistoryMessageSelection
                         if let selectedMessages = selectedMessages {
@@ -69,7 +69,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                         } else {
                             selection = .none
                         }
-                        entries.append(.MessageEntry(message, presentationData, read, monthLocation, selection, isAdmin))
+                        entries.append(.MessageEntry(message, presentationData, read, monthLocation, selection, ChatMessageEntryAttributes(isAdmin: isAdmin, isContact: attributes.authorIsContact)))
                     }
                 } else {
                     let selection: ChatHistoryMessageSelection
@@ -78,7 +78,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                     } else {
                         selection = .none
                     }
-                    entries.append(.MessageEntry(message, presentationData, read, monthLocation, selection, isAdmin))
+                    entries.append(.MessageEntry(message, presentationData, read, monthLocation, selection, ChatMessageEntryAttributes(isAdmin: isAdmin, isContact: attributes.authorIsContact)))
                 }
         }
     }

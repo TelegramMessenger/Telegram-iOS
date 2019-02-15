@@ -256,6 +256,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         } set(value) {
         }
     }
+    override var accessibilityAttributedLabel: NSAttributedString? {
+        get {
+            return self.accessibilityLabel.flatMap(NSAttributedString.init(string:))
+        } set(value) {
+        }
+    }
+    override var accessibilityAttributedValue: NSAttributedString? {
+        get {
+            return self.accessibilityValue.flatMap(NSAttributedString.init(string:))
+        } set(value) {
+        }
+    }
+    
     override var accessibilityLabel: String? {
         get {
             guard let item = self.item else {
@@ -366,7 +379,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.isAccessibilityElement = true
-        self.isAccessibilityContainer = true
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
@@ -1112,6 +1124,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.setRevealOptions((left: peerLeftRevealOptions, right: peerRevealOptions))
                     }
                     strongSelf.setRevealOptionsOpened(item.hasActiveRevealControls, animated: true)
+                    
+                    strongSelf.view.accessibilityLabel = strongSelf.accessibilityLabel
+                    strongSelf.view.accessibilityValue = strongSelf.accessibilityValue
                 }
             })
         }
