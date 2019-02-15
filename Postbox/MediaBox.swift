@@ -524,12 +524,15 @@ public final class MediaBox {
                     return
                 }
                 
-                let dataDisposable = fileContext.data(range: Int32(range.lowerBound) ..< Int32(range.upperBound), waitUntilAfterInitialFetch: false, next: { result in
-                    if let data = try? Data(contentsOf: URL(fileURLWithPath: result.path), options: .mappedRead) {
+                let range = Int32(range.lowerBound) ..< Int32(range.upperBound)
+                
+                let dataDisposable = fileContext.data(range: range, waitUntilAfterInitialFetch: false, next: { result in
+                    if let file = ManagedFile(queue: self.dataQueue, path: result.path, mode: .read), let fileSize = file.getSize() {
                         if result.complete {
-                            if result.offset + result.size <= data.count {
-                                if data.count >= result.offset + result.size {
-                                    let resultData = data.subdata(in: result.offset ..< (result.offset + result.size))
+                            if result.offset + result.size <= fileSize {
+                                if fileSize >= result.offset + result.size {
+                                    file.seek(position: Int64(result.offset))
+                                    let resultData = file.readData(count: result.size)
                                     subscriber.putNext(resultData)
                                     subscriber.putCompletion()
                                 } else {
