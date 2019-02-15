@@ -53,8 +53,15 @@ public final class TabBarItemInfo: NSObject {
     }
 }
 
+public enum TabBarContainedControllerPresentationUpdate {
+    case dismiss
+    case present
+    case progress(CGFloat)
+}
+
 public protocol TabBarContainedController {
     func presentTabBarPreviewingController(sourceNodes: [ASDisplayNode])
+    func updateTabBarPreviewingControllerPresentation(_ update: TabBarContainedControllerPresentationUpdate)
 }
 
 open class TabBarController: ViewController {

@@ -662,6 +662,10 @@ open class NavigationController: UINavigationController, ContainableController, 
                     bottomController.viewWillAppear(true)
                     let bottomView = bottomController.view!
                     
+                    if let bottomController = bottomController as? ViewController {
+                        bottomController.displayNode.recursivelyEnsureDisplaySynchronously(true)
+                    }
+                    
                     let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.controllerView.containerView, topView: topView, topNavigationBar: (topController as? ViewController)?.navigationBar, bottomView: bottomView, bottomNavigationBar: (bottomController as? ViewController)?.navigationBar)
                     self.navigationTransitionCoordinator = navigationTransitionCoordinator
                 }
