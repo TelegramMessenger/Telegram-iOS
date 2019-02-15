@@ -66,7 +66,7 @@ class ShareRootController: UIViewController {
         
         if #available(iOSApplicationExtension 8.2, *) {
             self.observer1 = NotificationCenter.default.addObserver(forName: NSNotification.Name.NSExtensionHostDidBecomeActive, object: nil, queue: nil, using: { _ in
-                inForeground.set(false)
+                inForeground.set(true)
             })
             
             self.observer2 = NotificationCenter.default.addObserver(forName: NSNotification.Name.NSExtensionHostWillResignActive, object: nil, queue: nil, using: { _ in
