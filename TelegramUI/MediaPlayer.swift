@@ -56,7 +56,6 @@ enum MediaPlayerPlayOnceWithSoundActionAtEnd {
 enum MediaPlayerPlayOnceWithSoundSeek {
     case none
     case start
-    case automatic
 }
 
 private final class MediaPlayerAudioRendererContext {
@@ -83,6 +82,7 @@ private final class MediaPlayerContext {
     private let fetchAutomatically: Bool
     private var playAndRecord: Bool
     private var keepAudioSessionWhilePaused: Bool
+    private var continuePlayingWithoutSoundOnLostAudioSession: Bool
     
     private var seekId: Int = 0
     
@@ -100,7 +100,7 @@ private final class MediaPlayerContext {
     
     private var stoppedAtEnd = false
     
-    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: Promise<MediaPlayerStatus>, postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, playAndRecord: Bool, keepAudioSessionWhilePaused: Bool) {
+    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: Promise<MediaPlayerStatus>, postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, playAndRecord: Bool, keepAudioSessionWhilePaused: Bool, continuePlayingWithoutSoundOnLostAudioSession: Bool) {
         assert(queue.isCurrent())
         
         self.queue = queue
@@ -117,13 +117,14 @@ private final class MediaPlayerContext {
         self.fetchAutomatically = fetchAutomatically
         self.playAndRecord = playAndRecord
         self.keepAudioSessionWhilePaused = keepAudioSessionWhilePaused
+        self.continuePlayingWithoutSoundOnLostAudioSession = continuePlayingWithoutSoundOnLostAudioSession
         
         self.videoRenderer = VideoPlayerProxy(queue: queue)
         
         self.videoRenderer.visibilityUpdated = { [weak self] value in
             assert(queue.isCurrent())
             
-            if let strongSelf = self, !strongSelf.enableSound {
+            if let strongSelf = self, !strongSelf.enableSound || strongSelf.continuePlayingWithoutSoundOnLostAudioSession {
                 switch strongSelf.state {
                     case .empty:
                         if value && playAutomatically {
@@ -131,7 +132,11 @@ private final class MediaPlayerContext {
                         }
                     case .paused:
                         if value {
-                            strongSelf.play()
+                            if strongSelf.enableSound {
+                                strongSelf.continuePlayingWithoutSound()
+                            } else {
+                                strongSelf.play()
+                            }
                         }
                     case .playing:
                         if !value {
@@ -141,7 +146,11 @@ private final class MediaPlayerContext {
                         switch action {
                             case .pause:
                                 if value {
-                                    strongSelf.play()
+                                    if strongSelf.enableSound {
+                                        strongSelf.continuePlayingWithoutSound()
+                                    } else {
+                                        strongSelf.play()
+                                    }
                                 }
                             case .play:
                                 if !value {
@@ -342,7 +351,11 @@ private final class MediaPlayerContext {
                     queue.async {
                         if let strongSelf = self {
                             if strongSelf.enableSound {
-                                strongSelf.pause(lostAudioSession: true)
+                                if strongSelf.continuePlayingWithoutSoundOnLostAudioSession {
+                                    strongSelf.continuePlayingWithoutSound()
+                                } else {
+                                    strongSelf.pause(lostAudioSession: true)
+                                }
                             } else {
                                 strongSelf.seek(timestamp: 0.0, action: .play)
                             }
@@ -416,7 +429,11 @@ private final class MediaPlayerContext {
                         queue.async {
                             if let strongSelf = self {
                                 if strongSelf.enableSound {
-                                    strongSelf.pause(lostAudioSession: true)
+                                    if strongSelf.continuePlayingWithoutSoundOnLostAudioSession {
+                                        strongSelf.continuePlayingWithoutSound()
+                                    } else {
+                                        strongSelf.pause(lostAudioSession: true)
+                                    }
                                 } else {
                                     strongSelf.seek(timestamp: 0.0, action: .play)
                                 }
@@ -519,6 +536,12 @@ private final class MediaPlayerContext {
         }
     }
     
+    fileprivate func setContinuePlayingWithoutSoundOnLostAudioSession(_ value: Bool) {
+        if self.continuePlayingWithoutSoundOnLostAudioSession != value {
+            self.continuePlayingWithoutSoundOnLostAudioSession = value
+        }
+    }
+    
     fileprivate func setBaseRate(_ baseRate: Double) {
         self.baseRate = baseRate
         self.lastStatusUpdateTimestamp = nil
@@ -597,7 +620,11 @@ private final class MediaPlayerContext {
                         self.play()
                 }
             case .paused:
-                self.play()
+                if !self.enableSound {
+                    self.playOnceWithSound(playAndRecord: false, seekToStart: .none)
+                } else {
+                    self.play()
+                }
             case .playing:
                 self.pause(lostAudioSession: false)
         }
@@ -871,9 +898,9 @@ final class MediaPlayer {
         }
     }
     
-    init(audioSessionManager: ManagedAudioSession, postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String? = nil, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool = false, enableSound: Bool, baseRate: Double = 1.0, fetchAutomatically: Bool, playAndRecord: Bool = false, keepAudioSessionWhilePaused: Bool = true) {
+    init(audioSessionManager: ManagedAudioSession, postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String? = nil, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool = false, enableSound: Bool, baseRate: Double = 1.0, fetchAutomatically: Bool, playAndRecord: Bool = false, keepAudioSessionWhilePaused: Bool = true, continuePlayingWithoutSoundOnLostAudioSession: Bool = false) {
         self.queue.async {
-            let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, playerStatus: self.statusValue, postbox: postbox, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, playAutomatically: playAutomatically, enableSound: enableSound, baseRate: baseRate, fetchAutomatically: fetchAutomatically, playAndRecord: playAndRecord, keepAudioSessionWhilePaused: keepAudioSessionWhilePaused)
+            let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, playerStatus: self.statusValue, postbox: postbox, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, playAutomatically: playAutomatically, enableSound: enableSound, baseRate: baseRate, fetchAutomatically: fetchAutomatically, playAndRecord: playAndRecord, keepAudioSessionWhilePaused: keepAudioSessionWhilePaused, continuePlayingWithoutSoundOnLostAudioSession: continuePlayingWithoutSoundOnLostAudioSession)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }
@@ -905,6 +932,14 @@ final class MediaPlayer {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.continuePlayingWithoutSound()
+            }
+        }
+    }
+    
+    func setContinuePlayingWithoutSoundOnLostAudioSession(_ value: Bool) {
+        self.queue.async {
+            if let context = self.contextRef?.takeUnretainedValue() {
+                context.setContinuePlayingWithoutSoundOnLostAudioSession(value)
             }
         }
     }

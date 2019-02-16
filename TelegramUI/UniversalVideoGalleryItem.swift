@@ -153,6 +153,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusNode: RadialStatusNode
     
     private var isCentral = false
+    private var _isVisible = false
     private var initiallyActivated = false
     private var validLayout: (ContainerViewLayout, CGFloat)?
     private var didPause = false
@@ -203,6 +204,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if !strongSelf.isPaused {
                     strongSelf.didPause = true
                 }
+                
                 strongSelf.videoNode?.togglePlayPause()
             }
         }
@@ -314,7 +316,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if item.fromPlayingVideo {
                 videoNode.canAttachContent = false
             } else {
-                videoNode.canAttachContent = true
+                //videoNode.canAttachContent = true
                 self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
             }
             
@@ -527,13 +529,32 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             isLocal = true
                         }
                         if isLocal || isMediaStreamable(message: message, media: content.fileReference.media) {
-                            videoNode.play()
+                            videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: .stop)
                         }
                     }
                     //videoNode.canAttachContent = true
                 } else if videoNode.ownsContentNode {
                     videoNode.pause()
                 }
+            }
+        }
+    }
+    
+    override func visibilityUpdated(isVisible: Bool) {
+        super.visibilityUpdated(isVisible: isVisible)
+        
+        if self._isVisible != isVisible {
+            self._isVisible = isVisible
+            
+            if let item = self.item, let videoNode = self.videoNode, self.initiallyActivated || !item.fromPlayingVideo {
+                videoNode.canAttachContent = isVisible
+                if isVisible {
+                    videoNode.pause()
+                    videoNode.seek(0.0)
+                } else {
+                    videoNode.continuePlayingWithoutSound()
+                }
+                self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
             }
         }
     }
@@ -549,7 +570,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if isAnimated {
                 videoNode.seek(0.0)
             } else {
-                videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .automatic, actionAtEnd: .stop)
+                videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
             }
         }
     }
@@ -711,6 +732,19 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         let toTransform: CATransform3D
         
         if let interactiveMediaNode = node.0 as? ChatMessageInteractiveMediaNode, interactiveMediaNode.automaticPlayback ?? false {
+            copyView.removeFromSuperview()
+            surfaceCopyView.removeFromSuperview()
+            
+            let previousFrame = videoNode.frame
+            let previousSuperview = videoNode.view.superview
+            addToTransitionSurface(videoNode.view)
+            videoNode.view.superview?.bringSubview(toFront: videoNode.view)
+            
+            if let previousSuperview = previousSuperview {
+                videoNode.frame = previousSuperview.convert(previousFrame, to: videoNode.view.superview)
+                transformedSuperFrame = transformedSuperFrame.offsetBy(dx: videoNode.position.x - previousFrame.center.x, dy: videoNode.position.y - previousFrame.center.y)
+            }
+            
             let initialScale = min(videoNode.layer.bounds.width / node.0.view.bounds.width, videoNode.layer.bounds.height / node.0.view.bounds.height)
             let targetScale = max(transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height)
             
@@ -768,7 +802,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             pictureInPictureNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         }
         
-        videoNode.continuePlayingWithoutSound()
+        if videoNode.hasAttachedContext {
+            videoNode.continuePlayingWithoutSound()
+        }
     }
     
     func animateOut(toOverlay node: ASDisplayNode, completion: @escaping () -> Void) {
@@ -864,18 +900,18 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if let fetchStatus = self.fetchStatus {
                 switch fetchStatus {
                     case .Local:
-                        videoNode.togglePlayPause()
+                        videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: .stop)
                     case .Remote:
                         if self.requiresDownload {
                             self.fetchControls?.fetch()
                         } else {
-                            videoNode.togglePlayPause()
+                            videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: .stop)
                         }
                     case .Fetching:
                         self.fetchControls?.cancel()
                 }
             } else {
-                videoNode.togglePlayPause()
+                videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: .stop)
             }
         }
     }

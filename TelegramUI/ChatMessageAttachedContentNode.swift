@@ -226,7 +226,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var media: Media?
     private var theme: ChatPresentationThemeData?
     
-    var openMedia: ((Bool) -> Void)?
+    var openMedia: ((InteractiveMediaNodeActivateContent) -> Void)?
     var activateAction: (() -> Void)?
     
     var visibility: ListViewItemNodeVisibility = .none {
@@ -431,7 +431,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 } else if let image = media as? TelegramMediaImage {
                     if !flags.contains(.preferMediaInline) {
                         let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: image)
-                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, message, image, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, automaticDownloadSettings.autoplayGifs, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, message, image, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, false, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
                     } else if let dimensions = largestImageRepresentation(image.representations)?.dimensions {
@@ -443,7 +443,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     }
                 } else if let image = media as? TelegramMediaWebFile {
                     let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: image)
-                    let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, message, image, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, automaticDownloadSettings.autoplayGifs, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                    let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, message, image, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, false, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                     initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                     refineContentImageLayout = refineLayout
                 } else if let wallpaper = media as? WallpaperPreviewMedia {
@@ -766,7 +766,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     strongSelf.addSubnode(contentImageNode)
                                     contentImageNode.activateLocalContent = { [weak strongSelf] mode in
                                         if let strongSelf = strongSelf {
-                                            strongSelf.openMedia?(mode == .stream)
+                                            strongSelf.openMedia?(mode)
                                         }
                                     }
                                     contentImageNode.visibility = strongSelf.visibility
@@ -818,7 +818,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     strongSelf.addSubnode(contentFileNode)
                                     contentFileNode.activateLocalContent = { [weak strongSelf] in
                                         if let strongSelf = strongSelf {
-                                            strongSelf.openMedia?(false)
+                                            strongSelf.openMedia?(.default)
                                         }
                                     }
                                 }
