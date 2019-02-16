@@ -607,7 +607,7 @@ struct ctr_state {
     if (MTLogEnabled()) {
         MTLog(@"[MTTcpConnection#%x response timeout]", (int)self);
     }
-    [self stop];
+    [self closeAndNotifyWithError:true];
 }
 
 - (void)socket:(GCDAsyncSocket *)__unused socket didReadPartialDataOfLength:(NSUInteger)partialLength tag:(long)__unused tag
