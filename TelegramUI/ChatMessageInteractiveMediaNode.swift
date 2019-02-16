@@ -581,7 +581,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             }
                             
                             if let videoNode = strongSelf.videoNode {
-                                if replaceVideoNode == nil, let decoration = videoNode.decoration as? ChatBubbleVideoDecoration, decoration.corners != corners {
+                                if !(replaceVideoNode ?? false), let decoration = videoNode.decoration as? ChatBubbleVideoDecoration, decoration.corners != corners {
                                     decoration.updateCorners(corners)
                                 }
                                 
@@ -904,16 +904,16 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             }
                         } else {
                             if isMediaStreamable(message: message, media: file), let _ = file.size {
+                                if automaticPlayback && !message.flags.contains(.Unsent), let duration = file.duration {
+                                    let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
+                                    badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
+                                } else {
+                                    let progressString = String(format: "%d%%", Int(progress * 100.0))
+                                    badgeContent = .text(inset: message.flags.contains(.Unsent) ? 0.0 : 12.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: progressString))
+                                }
+                                
                                 if !message.flags.contains(.Unsent) {
-                                    if automaticPlayback, let duration = file.duration {
-                                        let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
-                                        badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
-                                    } else {
-                                        let progressString = String(format: "%d%%", Int(progress * 100.0))
-                                        badgeContent = .text(inset: 12.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: progressString))
-                                    }
                                     mediaDownloadState = automaticPlayback ? .none : .compactFetching(progress: progress)
-                                    
                                     state = automaticPlayback ? .none : .play(bubbleTheme.mediaOverlayControlForegroundColor)
                                 }
                             } else {
