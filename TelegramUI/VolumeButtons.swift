@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import SwiftSignalKit
 import MediaPlayer
 
 private let minVolume = 0.00001
@@ -42,7 +43,9 @@ class VolumeChangeDetector: NSObject {
         
         view.addSubview(self.control)
         
-        self.fixVolume()
+        Queue.mainQueue().after(0.3) {
+            self.fixVolume()
+        }
     }
     
     deinit {

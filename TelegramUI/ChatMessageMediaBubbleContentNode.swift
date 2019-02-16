@@ -16,6 +16,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     private var highlightedState: Bool = false
     
     private var media: Media?
+    private var automaticPlayback: Bool?
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -80,18 +81,16 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     if telegramFile.isAnimated {
                         automaticPlayback = item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs
                         contentMode = .aspectFill
-                    } else {
-                        if item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
-                            var willDownloadOrLocal = false
-                            if case .full = automaticDownload {
-                                willDownloadOrLocal = true
-                            } else {
-                                willDownloadOrLocal = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
-                            }
-                            if willDownloadOrLocal {
-                                automaticPlayback = true
-                                contentMode = .aspectFill
-                            }
+                    } else if telegramFile.isVideo && item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos, case .linear = preparePosition {
+                        var willDownloadOrLocal = false
+                        if case .full = automaticDownload {
+                            willDownloadOrLocal = true
+                        } else {
+                            willDownloadOrLocal = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
+                        }
+                        if willDownloadOrLocal {
+                            automaticPlayback = true
+                            contentMode = .aspectFill
                         }
                     }
                 }
@@ -205,6 +204,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         if let strongSelf = self {
                             strongSelf.item = item
                             strongSelf.media = selectedMedia
+                            strongSelf.automaticPlayback = automaticPlayback
                             
                             let imageFrame = CGRect(origin: CGPoint(x: bubbleInsets.left, y: bubbleInsets.top), size: imageSize)
                             var transition: ContainedViewLayoutTransition = .immediate
@@ -296,6 +296,20 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         
         self.interactiveImageNode.isHidden = mediaHidden
         self.interactiveImageNode.updateIsHidden(mediaHidden)
+        
+        if let automaticPlayback = self.automaticPlayback {
+            if !automaticPlayback {
+                self.dateAndStatusNode.isHidden = false
+            } else if self.dateAndStatusNode.isHidden != mediaHidden {
+                if mediaHidden {
+                    self.dateAndStatusNode.isHidden = true
+                } else {
+                    self.dateAndStatusNode.isHidden = false
+                    self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+        
         return mediaHidden
     }
     

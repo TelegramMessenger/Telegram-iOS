@@ -57,10 +57,11 @@ final class NativeVideoContent: UniversalVideoContent {
     let enableSound: Bool
     let baseRate: Double
     let fetchAutomatically: Bool
+    let continuePlayingWithoutSoundOnLostAudioSession: Bool
     let placeholderColor: UIColor
     let tempFilePath: String?
     
-    init(id: NativeVideoContentId, fileReference: FileMediaReference, imageReference: ImageMediaReference? = nil, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true, placeholderColor: UIColor = .white, tempFilePath: String? = nil) {
+    init(id: NativeVideoContentId, fileReference: FileMediaReference, imageReference: ImageMediaReference? = nil, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true, continuePlayingWithoutSoundOnLostAudioSession: Bool = false, placeholderColor: UIColor = .white, tempFilePath: String? = nil) {
         self.id = id
         self.nativeId = id
         self.fileReference = fileReference
@@ -84,12 +85,13 @@ final class NativeVideoContent: UniversalVideoContent {
         self.enableSound = enableSound
         self.baseRate = baseRate
         self.fetchAutomatically = fetchAutomatically
+        self.continuePlayingWithoutSoundOnLostAudioSession = continuePlayingWithoutSoundOnLostAudioSession
         self.placeholderColor = placeholderColor
         self.tempFilePath = tempFilePath
     }
     
     func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, fileReference: self.fileReference, imageReference: self.imageReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically, placeholderColor: self.placeholderColor, tempFilePath: self.tempFilePath)
+        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, fileReference: self.fileReference, imageReference: self.imageReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically, continuePlayingWithoutSoundOnLostAudioSession: self.continuePlayingWithoutSoundOnLostAudioSession, placeholderColor: self.placeholderColor, tempFilePath: self.tempFilePath)
     }
     
     func isEqual(to other: UniversalVideoContent) -> Bool {
@@ -139,14 +141,14 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     private var validLayout: CGSize?
     
-    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, fileReference: FileMediaReference, imageReference: ImageMediaReference?, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, placeholderColor: UIColor, tempFilePath: String?) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, fileReference: FileMediaReference, imageReference: ImageMediaReference?, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, continuePlayingWithoutSoundOnLostAudioSession: Bool = false, placeholderColor: UIColor, tempFilePath: String?) {
         self.postbox = postbox
         self.fileReference = fileReference
         self.placeholderColor = placeholderColor
         
         self.imageNode = TransformImageNode()
         
-        self.player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resourceReference: fileReference.resourceReference(fileReference.media.resource), tempFilePath: tempFilePath, streamable: streamVideo, video: true, preferSoftwareDecoding: false, playAutomatically: false, enableSound: enableSound, baseRate: baseRate, fetchAutomatically: fetchAutomatically)
+        self.player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, resourceReference: fileReference.resourceReference(fileReference.media.resource), tempFilePath: tempFilePath, streamable: streamVideo, video: true, preferSoftwareDecoding: false, playAutomatically: false, enableSound: enableSound, baseRate: baseRate, fetchAutomatically: fetchAutomatically, continuePlayingWithoutSoundOnLostAudioSession: continuePlayingWithoutSoundOnLostAudioSession)
         var actionAtEndImpl: (() -> Void)?
         if enableSound && !loopVideo {
             self.player.actionAtEnd = .action({

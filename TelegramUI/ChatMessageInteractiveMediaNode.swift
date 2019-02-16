@@ -81,7 +81,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     case .visible:
                         if !videoNode.canAttachContent {
                             videoNode.canAttachContent = true
-                            videoNode.play()
+                            if videoNode.hasAttachedContext {
+                                videoNode.play()
+                            }
                         }
                     case .none:
                         videoNode.canAttachContent = false
@@ -234,7 +236,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 if file.isAnimated {
                     unboundSize = unboundSize.aspectFilled(CGSize(width: 480.0, height: 480.0))
                 } else if file.isVideo && !file.isAnimated, case let .constrained(constrainedSize) = sizeCalculation {
-                    maxDimensions = constrainedSize
+                    if unboundSize.width > unboundSize.height {
+                        maxDimensions = CGSize(width: constrainedSize.width, height: layoutConstants.video.maxHorizontalHeight)
+                    } else {
+                        maxDimensions = CGSize(width: constrainedSize.width, height: layoutConstants.video.maxVerticalHeight)
+                    }
                 } else if file.isSticker {
                     unboundSize = unboundSize.aspectFilled(CGSize(width: 162.0, height: 162.0))
                 }
@@ -570,18 +576,25 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     let mediaManager = context.sharedContext.mediaManager
                                     
                                     let streamVideo = !updatedVideoFile.isAnimated && message.id.namespace != Namespaces.Message.SecretIncoming
-                                    let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo, enableSound: false, fetchAutomatically: false), priority: .embedded)
+                                    let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo, enableSound: false, fetchAutomatically: false, continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo), priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     
                                     strongSelf.videoNode = videoNode
                                     strongSelf.insertSubnode(videoNode, aboveSubnode: strongSelf.imageNode)
                                     
                                     updatedPlayerStatusSignal = videoNode.status
+                                    |> mapToSignal { status -> Signal<MediaPlayerStatus?, NoError> in
+                                        if let status = status, case .buffering = status.status {
+                                            return .complete() |> delay(0.3, queue: Queue.mainQueue())
+                                        } else {
+                                            return .single(status)
+                                        }
+                                    }
                                 }
                             }
                             
                             if let videoNode = strongSelf.videoNode {
-                                if replaceVideoNode == nil, let decoration = videoNode.decoration as? ChatBubbleVideoDecoration, decoration.corners != corners {
+                                if !(replaceVideoNode ?? false), let decoration = videoNode.decoration as? ChatBubbleVideoDecoration, decoration.corners != corners {
                                     decoration.updateCorners(corners)
                                 }
                                 
@@ -591,7 +604,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 if case .visible = strongSelf.visibility {
                                     if !videoNode.canAttachContent {
                                         videoNode.canAttachContent = true
-                                        videoNode.play()
+                                        if videoNode.hasAttachedContext {
+                                            videoNode.play()
+                                        }
                                     }
                                 } else {
                                     videoNode.canAttachContent = false
@@ -831,6 +846,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
             }
             badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: string)
         }
+        
+        var animated = true
         if var fetchStatus = self.fetchStatus {
             var playerPosition: Int32?
             var playerDuration: Int32 = 0
@@ -904,17 +921,17 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             }
                         } else {
                             if isMediaStreamable(message: message, media: file), let _ = file.size {
+                                if automaticPlayback && !message.flags.contains(.Unsent), let duration = file.duration {
+                                    let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
+                                    badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
+                                } else {
+                                    let progressString = String(format: "%d%%", Int(progress * 100.0))
+                                    badgeContent = .text(inset: message.flags.contains(.Unsent) ? 0.0 : 12.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: progressString))
+                                }
+                                
                                 if !message.flags.contains(.Unsent) {
-                                    if automaticPlayback, let duration = file.duration {
-                                        let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
-                                        badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
-                                    } else {
-                                        let progressString = String(format: "%d%%", Int(progress * 100.0))
-                                        badgeContent = .text(inset: 12.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: progressString))
-                                    }
                                     mediaDownloadState = automaticPlayback ? .none : .compactFetching(progress: progress)
-                                    
-                                    state = automaticPlayback ? .none : .play(bubbleTheme.mediaOverlayControlForegroundColor)
+                                    state = .none
                                 }
                             } else {
                                 if let duration = file.duration, !file.isAnimated {
@@ -943,7 +960,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     } else if let file = media as? TelegramMediaFile {
                         let isInlinePlayableVideo = file.isVideo && !isSecretMedia && automaticPlayback
                         if !isInlinePlayableVideo && file.isVideo {
-                            state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
+                            if case .constrained = sizeCalculation {
+                                state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
+                            } else {
+                                state = .none
+                            }
                         } else {
                             state = .none
                         }
@@ -977,7 +998,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             }
                         } else {
                             if isMediaStreamable(message: message, media: file) {
-                                state = automaticPlayback ? .none : .play(bubbleTheme.mediaOverlayControlForegroundColor)
+                                state = .none
                                 badgeContent = .text(inset: 12.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                                 mediaDownloadState = .compactRemote
                             } else {
@@ -1014,7 +1035,6 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
             })
         }
         if let badgeContent = badgeContent {
-            var animated = true
             if self.badgeNode == nil {
                 let badgeNode = ChatMessageInteractiveMediaBadge()
                 badgeNode.frame = CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: radialStatusSize, height: radialStatusSize))

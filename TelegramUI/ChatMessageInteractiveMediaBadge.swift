@@ -77,7 +77,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
     }
     
     func update(theme: PresentationTheme, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, animated: Bool) {
-        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
+        var transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
         
         if self.mediaDownloadState != mediaDownloadState {
             self.mediaDownloadState = mediaDownloadState
@@ -139,6 +139,8 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                 
                 switch content {
                     case let .text(inset, backgroundColor, foregroundColor, shape, text):
+                        transition = .immediate
+                        
                         if self.backgroundNodeColor != backgroundColor {
                             self.backgroundNodeColor = backgroundColor
                             self.backgroundNode.image = generateStretchableFilledCircleImage(radius: 9.0, color: backgroundColor)
@@ -167,7 +169,8 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         if previousActive == nil {
                             previousActive = active
                         }
-                        let textTransition: ContainedViewLayoutTransition = previousActive != active ? transition : .immediate
+                        
+                        transition = previousActive != active ? transition : .immediate
                         
                         let durationString = NSMutableAttributedString(string: duration, attributes: [.font: font, .foregroundColor: foregroundColor])
                         self.durationNode.attributedText = durationString
@@ -187,11 +190,11 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                             sizeNode.attributedText = sizeString
                             sizeSize = sizeNode.measure(CGSize(width: 160.0, height: 160.0))
                             
-                            textTransition.updateFrame(node: sizeNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 20.0 : 2.0, width: sizeSize.width, height: sizeSize.height))
+                            transition.updateFrame(node: sizeNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 20.0 : 2.0, width: sizeSize.width, height: sizeSize.height))
                             transition.updateAlpha(node: sizeNode, alpha: 1.0)
                         } else if let sizeNode = self.sizeNode {
                             let sizeSize = sizeNode.frame.size
-                            textTransition.updateFrame(node: sizeNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 20.0 : 2.0, width: sizeSize.width, height: sizeSize.height))
+                            transition.updateFrame(node: sizeNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 20.0 : 2.0, width: sizeSize.width, height: sizeSize.height))
                             transition.updateAlpha(node: sizeNode, alpha: 0.0)
                         }
                         
@@ -201,7 +204,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                             transition.updateAlpha(node: statusNode, alpha: active ? 1.0 : 0.0)
                         }
                         
-                        textTransition.updateFrame(node: self.durationNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 7.0 : 2.0, width: durationSize.width, height: durationSize.height))
+                        transition.updateFrame(node: self.durationNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 7.0 : 2.0, width: durationSize.width, height: durationSize.height))
                         
                         let iconNode: ASImageNode
                         if let current = self.iconNode {

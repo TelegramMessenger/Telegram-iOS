@@ -375,13 +375,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
             }
             
-            var isInlinePlayableVideo = false
-            for media in item.content.firstMessage.media {
-                if let file = media as? TelegramMediaFile, file.isVideo, !file.isAnimated, isMediaStreamable(message: item.content.firstMessage, media: file) {
-                    isInlinePlayableVideo = true
-                }
-            }
-            
             if hasAvatar {
                 avatarInset = layoutConstants.avatarDiameter
             } else {

@@ -62,6 +62,7 @@ func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(C
     }
     
     let minWidth: CGFloat = 68.0
+    let minHeight: CGFloat = 81.0
     let maxAspectRatio = maxSize.width / maxSize.height
     if !itemInfos.isEmpty {
         averageAspectRatio = averageAspectRatio / CGFloat(itemInfos.count)
@@ -140,7 +141,7 @@ func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(C
                 let w0 = max(minWidth, min((maxSize.width - 2 * spacing) * 0.4, h * itemInfos[1].aspectRatio))
                 let w2 = max(max(minWidth, (maxSize.width - 2 * spacing) * 0.33), h * itemInfos[3].aspectRatio)
                 let w1 = w - w0 - w2 - 2 * spacing
-                h = min(maxSize.height - h0 - spacing, h)
+                h = max(minHeight, min(maxSize.height - h0 - spacing, h))
                 itemInfos[1].layoutFrame = CGRect(x: 0.0, y: h0 + spacing, width: w0, height: h)
                 itemInfos[1].position = [.left, .bottom]
                 
