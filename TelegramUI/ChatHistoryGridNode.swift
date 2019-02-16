@@ -261,7 +261,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         let historyViewUpdate = self.chatHistoryLocation
         |> distinctUntilChanged
         |> mapToSignal { location in
-            return chatHistoryViewForLocation(location, account: context.account, chatLocation: .peer(peerId), fixedCombinedReadStates: nil, tagMask: tagMask, additionalData: [], orderStatistics: [.locationWithinMonth])
+            return chatHistoryViewForLocation(ChatHistoryLocationInput(content: location, id: 0), account: context.account, chatLocation: .peer(peerId), fixedCombinedReadStates: nil, tagMask: tagMask, additionalData: [], orderStatistics: [.locationWithinMonth])
         }
         
         let previousView = Atomic<ChatHistoryView?>(value: nil)
@@ -285,7 +285,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                         }
                     }
                     return .complete()
-                case let .HistoryView(view, type, scrollPosition, _, _):
+                case let .HistoryView(view, type, scrollPosition, _, _, id):
                     let reason: ChatHistoryViewTransitionReason
                     var prepareOnMainQueue = false
                     switch type {
@@ -305,7 +305,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                             }
                     }
                     
-                    let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(location: .peer(peerId), view: view, includeUnreadEntry: false, includeEmptyEntry: false, includeChatInfoEntry: false, includeSearchEntry: false, reverse: false, groupMessages: false, selectedMessages: nil, presentationData: chatPresentationData, historyAppearsCleared: false), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: false))
+                    let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(location: .peer(peerId), view: view, includeUnreadEntry: false, includeEmptyEntry: false, includeChatInfoEntry: false, includeSearchEntry: false, reverse: false, groupMessages: false, selectedMessages: nil, presentationData: chatPresentationData, historyAppearsCleared: false), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: false), id: id)
                     let previous = previousView.swap(processedView)
                     
                     return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: false, chatLocation: .peer(peerId), controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: nil, keyboardButtonsMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil) |> map({ mappedChatHistoryViewListTransition(context: context, peerId: peerId, controllerInteraction: controllerInteraction, transition: $0, from: previous, presentationData: chatPresentationData) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)

@@ -4811,13 +4811,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             case .upperBound:
                                 searchLocation = .index(MessageIndex.upperBound(peerId: peerId))
                         }
-                        let historyView = chatHistoryViewForLocation(.InitialSearch(location: searchLocation, count: 50), account: self.context.account, chatLocation: self.chatLocation, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
+                        let historyView = chatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: searchLocation, count: 50), id: 0), account: self.context.account, chatLocation: self.chatLocation, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
                         let signal = historyView
                         |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
                             switch historyView {
                                 case .Loading:
                                     return .single((nil, true))
-                                case let .HistoryView(view, _, _, _, _):
+                                case let .HistoryView(view, _, _, _, _, _):
                                     for entry in view.entries {
                                         if case let .MessageEntry(message, _, _, _, _) = entry {
                                             if message.id == messageLocation.messageId {
@@ -4898,13 +4898,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         self.historyNavigationStack.add(fromIndex)
                     }
                     self.loadingMessage.set(true)
-                    let historyView = chatHistoryViewForLocation(.InitialSearch(location: searchLocation, count: 50), account: self.context.account, chatLocation: self.chatLocation, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
+                    let historyView = chatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: searchLocation, count: 50), id: 0), account: self.context.account, chatLocation: self.chatLocation, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
                     let signal = historyView
                         |> mapToSignal { historyView -> Signal<MessageIndex?, NoError> in
                             switch historyView {
                                 case .Loading:
                                     return .complete()
-                                case let .HistoryView(view, _, _, _, _):
+                                case let .HistoryView(view, _, _, _, _, _):
                                     for entry in view.entries {
                                         if case let .MessageEntry(message, _, _, _, _) = entry {
                                             if message.id == messageLocation.messageId {

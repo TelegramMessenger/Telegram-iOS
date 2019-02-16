@@ -503,13 +503,13 @@ public class TelegramController: ViewController {
                     }
                     if let id = state.id as? PeerMessagesMediaPlaylistItemId {
                         if type == .music {
-                            let historyView = chatHistoryViewForLocation(.InitialSearch(location: .id(id.messageId), count: 60), account: account, chatLocation: .peer(id.messageId.peerId), fixedCombinedReadStates: nil, tagMask: MessageTags.music, additionalData: [])
+                            let historyView = chatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: .id(id.messageId), count: 60), id: 0), account: account, chatLocation: .peer(id.messageId.peerId), fixedCombinedReadStates: nil, tagMask: MessageTags.music, additionalData: [])
                             let signal = historyView
                             |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
                                 switch historyView {
                                     case .Loading:
                                         return .single((nil, true))
-                                    case let .HistoryView(view, _, _, _, _):
+                                    case let .HistoryView(view, _, _, _, _, _):
                                         for entry in view.entries {
                                             if case let .MessageEntry(message, _, _, _, _) = entry {
                                                 if message.id == id.messageId {
