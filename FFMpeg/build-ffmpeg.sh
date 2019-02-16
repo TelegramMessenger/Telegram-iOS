@@ -59,8 +59,6 @@ else
 	exit 1
 fi
 
-#CONFIGURE_FLAGS="$CONFIGURE_FLAGS --pkg-config=$PKG_CONFIG"
-
 COMPILE="y"
 
 DEPLOYMENT_TARGET="8.0"
@@ -84,22 +82,18 @@ then
 	if [ ! `which yasm` ]
 	then
 		echo 'Yasm not found'
-		if [ ! `which brew` ]
-		then
-			echo 'Homebrew not found. Trying to install...'
-                        ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" \
-				|| exit 1
-		fi
-		echo 'Trying to install Yasm...'
-		brew install yasm || exit 1
+		exit 1
+	fi
+	if [ ! `which pkg-config` ]
+	then
+		echo 'pkg-config not found'
+		exit 1
 	fi
 	if [ ! `which gas-preprocessor.pl` ]
 	then
-		echo 'gas-preprocessor.pl not found. Trying to install...'
-		(curl -L https://github.com/libav/gas-preprocessor/raw/master/gas-preprocessor.pl \
-			-o /usr/local/bin/gas-preprocessor.pl \
-			&& chmod +x /usr/local/bin/gas-preprocessor.pl) \
-			|| exit 1
+		echo 'gas-preprocessor.pl not found.'
+		exit 1
+		#curl -L https://github.com/libav/gas-preprocessor/raw/master/gas-preprocessor.pl -o /usr/local/bin/gas-preprocessor.pl && chmod +x /usr/local/bin/gas-preprocessor.pl
 	fi
 
 	if [ ! -r $SOURCE ]
