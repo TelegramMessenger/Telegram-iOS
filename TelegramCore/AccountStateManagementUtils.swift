@@ -2168,12 +2168,13 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             case let .ResetMessageTagSummary(peerId, namespace, count, range):
                 transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: namespace, count: count, maxId: range.maxId)
                 if count == 0 {
+                    /*
                     let ids = transaction.getMessageIndicesWithTag(peerId: peerId, tag: .unseenPersonalMessage).map({ $0.id })
                     for id in ids {
                         if id.namespace == namespace {
                             markUnseenPersonalMessage(transaction: transaction, id: id, addSynchronizeAction: false)
                         }
-                    }
+                    }*/
                 }
             case let .UpdateState(state):
                 let currentState = transaction.getState() as! AuthorizedAccountState
