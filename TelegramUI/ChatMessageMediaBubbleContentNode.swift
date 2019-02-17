@@ -78,21 +78,18 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         automaticDownload = .prefetch
                     }
                     
-                    if telegramFile.isAnimated {
-                        automaticPlayback = item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs
-                        contentMode = .aspectFill
-                    } else if telegramFile.isVideo && item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
-                        var willDownloadOrLocal = false
-                        if case .full = automaticDownload {
-                            willDownloadOrLocal = true
-                        } else {
-                            willDownloadOrLocal = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
-                        }
-                        if willDownloadOrLocal {
-                            automaticPlayback = true
-                            contentMode = .aspectFill
+                    if !item.message.containsSecretMedia {
+                        if telegramFile.isAnimated {
+                            automaticPlayback = item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs
+                        } else if telegramFile.isVideo && item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
+                            if case .full = automaticDownload {
+                                automaticPlayback = true
+                            } else {
+                                automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
+                            }
                         }
                     }
+                    contentMode = .aspectFill
                 }
             }
             

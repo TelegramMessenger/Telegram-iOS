@@ -154,6 +154,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             let themeUpdated = theme != currentTheme || type != currentType
             
             let graphics = PresentationResourcesChat.principalGraphics(theme.theme, wallpaper: theme.wallpaper)
+            let offset: CGFloat = -UIScreenPixel
             
             switch type {
                 case .BubbleIncoming:
@@ -294,7 +295,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             clockMinNode?.displayWithoutProcessing = true
                             clockMinNode?.frame = CGRect(origin: CGPoint(), size: clockMinImage?.size ?? CGSize())
                         }
-                        clockPosition = CGPoint(x: leftInset + date.size.width + 8.5, y: 7.5)
+                        clockPosition = CGPoint(x: leftInset + date.size.width + 8.5, y: 7.5 + offset)
                     case let .Sent(read):
                         let hideStatus: Bool
                         switch type {
@@ -334,9 +335,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             let checkSize = loadedCheckFullImage!.size
                             
                             if read {
-                                checkReadFrame = CGRect(origin: CGPoint(x: leftInset + impressionWidth + date.size.width + 5.0 + statusWidth - checkSize.width, y: 3.0), size: checkSize)
+                                checkReadFrame = CGRect(origin: CGPoint(x: leftInset + impressionWidth + date.size.width + 5.0 + statusWidth - checkSize.width, y: 3.0 + offset), size: checkSize)
                             }
-                            checkSentFrame = CGRect(origin: CGPoint(x: leftInset + impressionWidth + date.size.width + 5.0 + statusWidth - checkSize.width - 6.0, y: 3.0), size: checkSize)
+                            checkSentFrame = CGRect(origin: CGPoint(x: leftInset + impressionWidth + date.size.width + 5.0 + statusWidth - checkSize.width - 6.0, y: 3.0 + offset), size: checkSize)
                         }
                     case .Failed:
                         statusWidth = 0.0
@@ -403,13 +404,13 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             strongSelf.impressionIcon = currentImpressionIcon
                             strongSelf.addSubnode(currentImpressionIcon)
                         }
-                        currentImpressionIcon.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left, y: backgroundInsets.top + 3.0), size: impressionSize)
+                        currentImpressionIcon.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left, y: backgroundInsets.top + 3.0 + offset), size: impressionSize)
                     } else if let impressionIcon = strongSelf.impressionIcon {
                         impressionIcon.removeFromSupernode()
                         strongSelf.impressionIcon = nil
                     }
                     
-                    strongSelf.dateNode.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left + impressionWidth, y: backgroundInsets.top + 1.0), size: date.size)
+                    strongSelf.dateNode.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left + impressionWidth, y: backgroundInsets.top + 1.0 + offset), size: date.size)
                     
                     if let clockFrameNode = clockFrameNode {
                         if strongSelf.clockFrameNode == nil {

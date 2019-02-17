@@ -369,6 +369,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     var scrolledToIndex: ((MessageHistoryAnchorIndex) -> Void)?
     
+    private let hasVisiblePlayableItemsPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    var hasVisiblePlayableItems: Signal<Bool, NoError> {
+        return self.hasVisiblePlayableItemsPromise.get()
+    }
+    
     private var currentPresentationData: PresentationData
     private var chatPresentationDataPromise: Promise<ChatPresentationData>
     private var presentationDataDisposable: Disposable?
@@ -627,6 +632,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 if let historyView = (opaqueTransactionState as? ChatHistoryTransactionOpaqueState)?.historyView {
                     if let visible = displayedRange.visibleRange {
                         let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
+                        
+                        var containsPlayableWithSound = false
+                        strongSelf.forEachVisibleItemNode { itemNode in
+                            if let chatItemView = itemNode as? ChatMessageItemView, chatItemView.playMediaWithSound() != nil {
+                                containsPlayableWithSound = true
+                            }
+                        }
+                        strongSelf.hasVisiblePlayableItemsPromise.set(containsPlayableWithSound)
                         
                         var readIndexRange = (0, historyView.filteredEntries.count - 1 - visible.firstIndex)
                         /*if !visible.firstIndexFullyVisible {

@@ -473,7 +473,6 @@ private final class MediaPlayerContext {
             self.enableSound = true
             self.playAndRecord = playAndRecord
             
-            
             var loadedState: MediaPlayerLoadedState?
             switch self.state {
                 case .empty:
@@ -483,12 +482,9 @@ private final class MediaPlayerContext {
                 case let .paused(currentLoadedState):
                     loadedState = currentLoadedState
                 case let .seeking(_, timestamp, _, disposable, action, _):
-                    if self.enableSound {
-                        self.state = .empty
-                        disposable.dispose()
-                        self.enableSound = false
-                        self.seek(timestamp: timestamp, action: action)
-                    }
+                    self.state = .empty
+                    disposable.dispose()
+                    self.seek(timestamp: timestamp, action: action)
             }
             
             let timestamp: Double

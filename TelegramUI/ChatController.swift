@@ -3161,7 +3161,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }
         
-        self.volumeChangeDetector = VolumeChangeDetector(view: self.chatDisplayNode.view, valueChanged: { [weak self] in
+        self.volumeChangeDetector = VolumeChangeDetector(view: self.chatDisplayNode.view, shouldBeActive: self.chatDisplayNode.historyNode.hasVisiblePlayableItems, valueChanged: { [weak self] in
             guard let strongSelf = self, strongSelf.traceVisibility() && isTopmostChatController(strongSelf) else {
                 return
             }
@@ -5629,7 +5629,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     private func debugStreamSingleVideo(_ id: MessageId) {
-        let gallery = GalleryController(context: self.context, source: .peerMessagesAtId(id), streamSingleVideo: true, replaceRootController: { [weak self] controller, ready in
+        let gallery = GalleryController(context: self.context, source: .peerMessagesAtId(id, false), streamSingleVideo: true, replaceRootController: { [weak self] controller, ready in
             if let strongSelf = self {
                 (strongSelf.navigationController as? NavigationController)?.replaceTopController(controller, animated: false, ready: ready)
             }

@@ -173,6 +173,20 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
         self.downloadInBackground = downloadInBackground
     }
     
+    public static func upgradeLegacySettings(_ settings: LegacyAutomaticMediaDownloadSettings) -> AutomaticMediaDownloadSettings {
+        if settings == LegacyAutomaticMediaDownloadSettings.defaultSettings {
+            return AutomaticMediaDownloadSettings.defaultSettings
+        }
+        
+        let defaultSettings = AutomaticMediaDownloadSettings.defaultSettings
+        let saveDownloadedPhotos = AutomaticMediaDownloadCategory(contacts: settings.peers.contacts.saveDownloadedPhotos, otherPrivate: settings.peers.otherPrivate.saveDownloadedPhotos, groups: settings.peers.groups.saveDownloadedPhotos, channels: settings.peers.channels.saveDownloadedPhotos, sizeLimit: 0, predownload: false)
+        
+        let cellular = AutomaticMediaDownloadConnection(enabled: settings.masterEnabled, preset: .medium, custom: nil)
+        let wifi = AutomaticMediaDownloadConnection(enabled: settings.masterEnabled, preset: .high, custom: nil)
+        
+        return AutomaticMediaDownloadSettings(presets: defaultSettings.presets, cellular: cellular, wifi: wifi, saveDownloadedPhotos: saveDownloadedPhotos, autoplayGifs: settings.autoplayGifs, autoplayVideos: true, downloadInBackground: settings.downloadInBackground)
+    }
+    
     public init(decoder: PostboxDecoder) {
         let defaultSettings = AutomaticMediaDownloadSettings.defaultSettings
         
@@ -230,169 +244,6 @@ private func categoriesWithAutodownloadPreset(_ autodownloadPreset: Autodownload
 private func presetsWithAutodownloadSettings(_ autodownloadSettings: AutodownloadSettings) -> AutomaticMediaDownloadPresets {
     return AutomaticMediaDownloadPresets(low: categoriesWithAutodownloadPreset(autodownloadSettings.lowPreset, preset: .low), medium: categoriesWithAutodownloadPreset(autodownloadSettings.mediumPreset, preset: .medium), high: categoriesWithAutodownloadPreset(autodownloadSettings.highPreset, preset: .high))
 }
-
-//public struct AutomaticMediaDownloadCategory: PostboxCoding, Equatable {
-//    public var cellular: Bool
-//    public var cellularSizeLimit: Int32
-//    public var cellularPredownload: Bool
-//    public var wifi: Bool
-//    public var wifiSizeLimit: Int32
-//    public var wifiPredownload: Bool
-//
-//    public init(cellular: Bool, cellularSizeLimit: Int32, cellularPredownload: Bool, wifi: Bool, wifiSizeLimit: Int32, wifiPredownload: Bool) {
-//        self.cellular = cellular
-//        self.cellularSizeLimit = cellularSizeLimit
-//        self.cellularPredownload = cellularPredownload
-//        self.wifi = wifi
-//        self.wifiSizeLimit = wifiSizeLimit
-//        self.wifiPredownload = wifiPredownload
-//    }
-//
-//    public init(decoder: PostboxDecoder) {
-//        self.cellular = decoder.decodeInt32ForKey("cellular", orElse: 0) != 0
-//        self.cellularPredownload = decoder.decodeInt32ForKey("cellularPredownload", orElse: 0) != 0
-//        self.wifi = decoder.decodeInt32ForKey("wifi", orElse: 0) != 0
-//        self.wifiPredownload = decoder.decodeInt32ForKey("wifiPredownload", orElse: 0) != 0
-//        if let cellularSizeLimit = decoder.decodeOptionalInt32ForKey("cellularSizeLimit"), let wifiSizeLimit = decoder.decodeOptionalInt32ForKey("wifiSizeLimit")  {
-//            self.cellularSizeLimit = cellularSizeLimit
-//            self.wifiSizeLimit = wifiSizeLimit
-//        } else {
-//            let sizeLimit = decoder.decodeInt32ForKey("sizeLimit", orElse: 0)
-//            self.cellularSizeLimit = sizeLimit
-//            self.wifiSizeLimit = sizeLimit
-//        }
-//    }
-//
-//    public func encode(_ encoder: PostboxEncoder) {
-//        encoder.encodeInt32(self.cellular ? 1 : 0, forKey: "cellular")
-//        encoder.encodeInt32(self.cellularSizeLimit, forKey: "cellularSizeLimit")
-//        encoder.encodeInt32(self.cellularPredownload ? 1 : 0, forKey: "cellularPredownload")
-//        encoder.encodeInt32(self.wifi ? 1 : 0, forKey: "wifi")
-//        encoder.encodeInt32(self.wifiSizeLimit, forKey: "wifiSizeLimit")
-//        encoder.encodeInt32(self.wifiPredownload ? 1 : 0, forKey: "wifiPredownload")
-//    }
-//}
-//
-//public struct AutomaticMediaDownloadCategories: Equatable, PostboxCoding {
-//    public var photo: AutomaticMediaDownloadCategory
-//    public var video: AutomaticMediaDownloadCategory
-//    public var file: AutomaticMediaDownloadCategory
-//    public var saveDownloadedPhotos: Bool
-//
-//    public init(photo: AutomaticMediaDownloadCategory, video: AutomaticMediaDownloadCategory, file: AutomaticMediaDownloadCategory, saveDownloadedPhotos: Bool) {
-//        self.photo = photo
-//        self.video = video
-//        self.file = file
-//        self.saveDownloadedPhotos = saveDownloadedPhotos
-//    }
-//
-//    public init(decoder: PostboxDecoder) {
-//        self.photo = decoder.decodeObjectForKey("photo", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
-//        self.video = decoder.decodeObjectForKey("video", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
-//        self.file = decoder.decodeObjectForKey("file", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
-//        self.saveDownloadedPhotos = decoder.decodeInt32ForKey("saveDownloadedPhotos", orElse: 0) != 0
-//    }
-//
-//    public func encode(_ encoder: PostboxEncoder) {
-//        encoder.encodeObject(self.photo, forKey: "photo")
-//        encoder.encodeObject(self.video, forKey: "video")
-//        encoder.encodeObject(self.file, forKey: "file")
-//        encoder.encodeInt32(self.saveDownloadedPhotos ? 1 : 0, forKey: "saveDownloadedPhotos")
-//    }
-//}
-//
-//public struct AutomaticMediaDownloadPeers: Equatable, PostboxCoding {
-//    public var contacts: AutomaticMediaDownloadCategories
-//    public var otherPrivate: AutomaticMediaDownloadCategories
-//    public var groups: AutomaticMediaDownloadCategories
-//    public var channels: AutomaticMediaDownloadCategories
-//
-//    public init(contacts: AutomaticMediaDownloadCategories, otherPrivate: AutomaticMediaDownloadCategories, groups: AutomaticMediaDownloadCategories, channels: AutomaticMediaDownloadCategories) {
-//        self.contacts = contacts
-//        self.otherPrivate = otherPrivate
-//        self.groups = groups
-//        self.channels = channels
-//    }
-//
-//    public init(decoder: PostboxDecoder) {
-//        self.contacts = decoder.decodeObjectForKey("contacts", decoder: AutomaticMediaDownloadCategories.init(decoder:)) as! AutomaticMediaDownloadCategories
-//        self.otherPrivate = decoder.decodeObjectForKey("otherPrivate", decoder: AutomaticMediaDownloadCategories.init(decoder:)) as! AutomaticMediaDownloadCategories
-//        self.groups = decoder.decodeObjectForKey("groups", decoder: AutomaticMediaDownloadCategories.init(decoder:)) as! AutomaticMediaDownloadCategories
-//        self.channels = decoder.decodeObjectForKey("channels", decoder: AutomaticMediaDownloadCategories.init(decoder:)) as! AutomaticMediaDownloadCategories
-//    }
-//
-//    public func encode(_ encoder: PostboxEncoder) {
-//        encoder.encodeObject(self.contacts, forKey: "contacts")
-//        encoder.encodeObject(self.otherPrivate, forKey: "otherPrivate")
-//        encoder.encodeObject(self.groups, forKey: "groups")
-//        encoder.encodeObject(self.channels, forKey: "channels")
-//    }
-//}
-//
-//public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
-//    public var cellularEnabled: Bool
-//    public var wifiEnabled: Bool
-//    public var peers: AutomaticMediaDownloadPeers
-//    public var autoplayGifs: Bool
-//    public var autoplayVideos: Bool
-//    public var downloadInBackground: Bool
-//
-//    public static var defaultSettings: AutomaticMediaDownloadSettings {
-//        let defaultCategory = AutomaticMediaDownloadCategories(
-//            photo: AutomaticMediaDownloadCategory(cellular: true, cellularSizeLimit: Int32.max, cellularPredownload: false, wifi: true, wifiSizeLimit: Int32.max, wifiPredownload: false),
-//            video: AutomaticMediaDownloadCategory(cellular: true, cellularSizeLimit: 5 * 1024 * 1024, cellularPredownload: true, wifi: true, wifiSizeLimit: 10 * 1024 * 1024, wifiPredownload: true),
-//            file: AutomaticMediaDownloadCategory(cellular: false, cellularSizeLimit: 1 * 1024 * 1024, cellularPredownload: false, wifi: false, wifiSizeLimit: 3 * 1024 * 1024, wifiPredownload: false),
-//            saveDownloadedPhotos: false
-//        )
-//        return AutomaticMediaDownloadSettings(cellularEnabled: true, wifiEnabled: true, peers: AutomaticMediaDownloadPeers(
-//            contacts: defaultCategory,
-//            otherPrivate: defaultCategory,
-//            groups: defaultCategory,
-//            channels: defaultCategory
-//        ), autoplayGifs: true, autoplayVideos: true, downloadInBackground: true)
-//    }
-//
-//    init(cellularEnabled: Bool, wifiEnabled: Bool, peers: AutomaticMediaDownloadPeers, autoplayGifs: Bool, autoplayVideos: Bool, downloadInBackground: Bool) {
-//        self.cellularEnabled = cellularEnabled
-//        self.wifiEnabled = wifiEnabled
-//        self.peers = peers
-//        self.autoplayGifs = autoplayGifs
-//        self.autoplayVideos = autoplayVideos
-//        self.downloadInBackground = downloadInBackground
-//    }
-//
-//    public init(decoder: PostboxDecoder) {
-//        if let cellularEnabled = decoder.decodeOptionalInt32ForKey("cellularEnabled"), let wifiEnabled = decoder.decodeOptionalInt32ForKey("wifiEnabled")  {
-//            self.cellularEnabled = cellularEnabled != 0
-//            self.wifiEnabled = wifiEnabled != 0
-//        } else {
-//            let masterEnabled = decoder.decodeInt32ForKey("masterEnabled", orElse: 1) != 0
-//            self.cellularEnabled = masterEnabled
-//            self.wifiEnabled = masterEnabled
-//        }
-//        self.peers = (decoder.decodeObjectForKey("peers", decoder: AutomaticMediaDownloadPeers.init(decoder:)) as? AutomaticMediaDownloadPeers) ?? AutomaticMediaDownloadSettings.defaultSettings.peers
-//        self.autoplayGifs = decoder.decodeInt32ForKey("autoplayGifs", orElse: 1) != 0
-//        self.autoplayVideos = decoder.decodeInt32ForKey("autoplayVideos", orElse: 1) != 0
-//        self.downloadInBackground = decoder.decodeInt32ForKey("downloadInBackground", orElse: 1) != 0
-//    }
-//
-//    public func encode(_ encoder: PostboxEncoder) {
-//        encoder.encodeInt32(self.cellularEnabled ? 1 : 0, forKey: "cellularEnabled")
-//        encoder.encodeInt32(self.wifiEnabled ? 1 : 0, forKey: "wifiEnabled")
-//        encoder.encodeObject(self.peers, forKey: "peers")
-//        encoder.encodeInt32(self.autoplayGifs ? 1 : 0, forKey: "autoplayGifs")
-//        encoder.encodeInt32(self.autoplayVideos ? 1 : 0, forKey: "autoplayVideos")
-//        encoder.encodeInt32(self.downloadInBackground ? 1 : 0, forKey: "downloadInBackground")
-//    }
-//
-//    public func isEqual(to: PreferencesEntry) -> Bool {
-//        if let to = to as? AutomaticMediaDownloadSettings {
-//            return self == to
-//        } else {
-//            return false
-//        }
-//    }
-//}
 
 func updateMediaDownloadSettingsInteractively(accountManager: AccountManager, _ f: @escaping (AutomaticMediaDownloadSettings) -> AutomaticMediaDownloadSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
@@ -509,7 +360,7 @@ public func shouldPredownloadMedia(settings: AutomaticMediaDownloadSettings, pee
         guard isAutodownloadEnabledForPeerType(peerType, category: category) else {
             return false
         }
-        return category.sizeLimit > 3 * 1024 * 1024 && category.predownload
+        return category.sizeLimit > 2 * 1024 * 1024 && category.predownload
     } else {
         return false
     }

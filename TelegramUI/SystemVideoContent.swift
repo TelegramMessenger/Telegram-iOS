@@ -236,6 +236,9 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
     func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
     }
     
+    func setContinuePlayingWithoutSoundOnLostAudioSession(_ value: Bool) {   
+    }
+    
     func setBaseRate(_ baseRate: Double) {
     }
     
