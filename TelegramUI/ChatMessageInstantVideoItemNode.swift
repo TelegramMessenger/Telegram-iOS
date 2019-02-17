@@ -694,4 +694,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
+    
+    override func playMediaWithSound() -> (() -> Void)? {
+        return self.interactiveVideoNode.playMediaWithSound()
+    }
 }

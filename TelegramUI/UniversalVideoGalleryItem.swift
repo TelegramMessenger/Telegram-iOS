@@ -158,6 +158,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var _isVisible = false
     private var initiallyActivated = false
     private var initiallyAppeared = false
+    private var ignoreNextVisibility = false
+    private var hideStatusNodeUntilCentrality = false
     private var validLayout: (ContainerViewLayout, CGFloat)?
     private var didPause = false
     private var isPaused = true
@@ -445,7 +447,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     strongSelf.fetchStatus = fetchStatus
                     
                     if !item.hideControls {
-                        strongSelf.statusButtonNode.isHidden = !initialBuffering && (strongSelf.didPause || !isPaused) && !fetching
+                        strongSelf.statusButtonNode.isHidden = strongSelf.hideStatusNodeUntilCentrality || (!initialBuffering && (strongSelf.didPause || !isPaused) && !fetching)
                     }
                     
                     if isAnimated || disablePlayerControls {
@@ -540,6 +542,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             if let videoNode = self.videoNode {
                 if isCentral {
+                    self.hideStatusNodeUntilCentrality = false
                     if self.shouldAutoplayOnCentrality() {
                         self.initiallyActivated = true
                         videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: .stop)
@@ -557,7 +560,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         if self._isVisible != isVisible {
             self._isVisible = isVisible
             
-            if let item = self.item, let videoNode = self.videoNode, self.initiallyAppeared || !item.fromPlayingVideo {
+            if let item = self.item, let videoNode = self.videoNode, !self.ignoreNextVisibility && (self.initiallyAppeared || !item.fromPlayingVideo) {
                 videoNode.canAttachContent = isVisible
                 if !item.returningFromOverlay {
                     if isVisible {
@@ -569,8 +572,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
                 self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
                 if self.shouldAutoplayOnCentrality() {
+                    self.hideStatusNodeUntilCentrality = true
                     self.statusButtonNode.isHidden = true
                 }
+            }
+            
+            if !isVisible {
+                self.ignoreNextVisibility = false
             }
         } else if !isVisible {
             self.initiallyAppeared = true
@@ -590,6 +598,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             } else {
                 videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
             }
+            self.ignoreNextVisibility = true
         }
     }
     

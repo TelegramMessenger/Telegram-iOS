@@ -681,5 +681,17 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             })
         }
     }
+    
+    func playMediaWithSound() -> (() -> Void)? {
+        if case .visible(true) = self.visibility, let item = self.item {
+            return {
+                if !self.infoBackgroundNode.alpha.isZero {
+                    let _ = item.controllerInteraction.openMessage(item.message, .default)
+                }
+            }
+        } else {
+            return nil
+        }
+    }
 }
 
