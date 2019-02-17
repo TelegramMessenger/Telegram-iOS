@@ -21,7 +21,7 @@ final class UnauthorizedApplicationContext {
     
     let rootController: AuthorizationSequenceController
     
-    init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId)?, [(String, AccountRecordId)])) {
+    init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)])) {
         self.sharedContext = sharedContext
         self.account = account
         let presentationData = sharedContext.currentPresentationData.with { $0 }
@@ -70,7 +70,7 @@ final class AuthorizedApplicationContext {
     private var inAppNotificationSettings: InAppNotificationSettings?
     
     private var isLocked: Bool = true
-    private var passcodeController: ViewController?
+    var passcodeController: ViewController?
     
     private var currentTermsOfServiceUpdate: TermsOfServiceUpdate?
     private var currentPermissionsController: PermissionController?

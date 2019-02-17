@@ -304,7 +304,7 @@ private final class ParsedFile: NSObject {
     }
 }
 
-func fetchImageWithAccount(account: AccountData, resource: ImageResource, completion: @escaping (Data?) -> Void) -> () -> Void {
+func fetchImageWithAccount(proxyConnection: AccountProxyConnection?, account: StoredAccountInfo, resource: ImageResource, completion: @escaping (Data?) -> Void) -> () -> Void {
     MTLogSetEnabled(true)
     MTLogSetLoggingFunction({ str, args in
         //let string = NSString(format: str! as NSString, args!)
@@ -321,7 +321,7 @@ func fetchImageWithAccount(account: AccountData, resource: ImageResource, comple
     apiEnvironment.disableUpdates = true
     apiEnvironment = apiEnvironment.withUpdatedLangPackCode("en")
     
-    if let proxy = account.proxy {
+    if let proxy = proxyConnection {
         apiEnvironment = apiEnvironment.withUpdatedSocksProxySettings(MTSocksProxySettings(ip: proxy.host, port: UInt16(clamping: proxy.port), username: proxy.username, password: proxy.password, secret: proxy.secret))
     }
     

@@ -115,9 +115,13 @@ class NotificationService: UNNotificationServiceExtension {
     }
 
     override func didReceive(_ request: UNNotificationRequest, withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
-        let accountsData = self.rootPath.flatMap({ rootPath in
+        guard let rootPath = rootPath else {
+            contentHandler(request.content)
+            return
+        }
+        let accountInfos = self.rootPath.flatMap({ rootPath in
             loadAccountsData(rootPath: rootPath)
-        }) ?? [:]
+        }) ?? StoredAccountInfos(proxy: nil, accounts: [])
         
         self.contentHandler = contentHandler
         self.bestAttemptContent = request.content.mutableCopy() as? UNMutableNotificationContent
@@ -132,7 +136,7 @@ class NotificationService: UNNotificationServiceExtension {
             encryptedData = Data(base64Encoded: encryptedPayload)
         }
         
-        if let (account, dict) = encryptedData.flatMap({ decryptedNotificationPayload(accounts: accountsData, data: $0) }) {
+        if let (account, dict) = encryptedData.flatMap({ decryptedNotificationPayload(accounts: accountInfos.accounts, data: $0) }) {
             var userInfo = self.bestAttemptContent?.userInfo ?? [:]
             userInfo["accountId"] = account.id
             
@@ -172,7 +176,9 @@ class NotificationService: UNNotificationServiceExtension {
             let imagesPath = NSTemporaryDirectory() + "aps-data"
             let _ = try? FileManager.default.createDirectory(atPath: imagesPath, withIntermediateDirectories: true, attributes: nil)
             
-            let mediaBoxPath = account.basePath + "/postbox/media"
+            let accountBasePath = rootPath + "account-\(UInt64(bitPattern: account.id))"
+            
+            let mediaBoxPath = accountBasePath + "/postbox/media"
             
             let tempImagePath = thumbnailImage.flatMap({ imagesPath + "/\($0.resourceId).jpg" })
             let mediaBoxThumbnailImagePath = thumbnailImage.flatMap({ mediaBoxPath + "/\($0.resourceId)" })
@@ -188,8 +194,8 @@ class NotificationService: UNNotificationServiceExtension {
                     self.bestAttemptContent?.body = alert["body"] as? String ?? ""
                 }
                 
-                if accountsData.count > 1 {
-                    if let title = self.bestAttemptContent?.title, !account.peerName.isEmpty {
+                if accountInfos.accounts.count > 1 {
+                    if let title = self.bestAttemptContent?.title, !title.isEmpty, !account.peerName.isEmpty {
                         self.bestAttemptContent?.title = "\(title) [\(account.peerName)]"
                     }
                 }
@@ -241,7 +247,7 @@ class NotificationService: UNNotificationServiceExtension {
             
             self.cancelFetch?()
             if let mediaBoxThumbnailImagePath = mediaBoxThumbnailImagePath, let tempImagePath = tempImagePath, let thumbnailImage = thumbnailImage {
-                self.cancelFetch = fetchImageWithAccount(account: account, resource: thumbnailImage, completion: { [weak self] data in
+                self.cancelFetch = fetchImageWithAccount(proxyConnection: accountInfos.proxy, account: account, resource: thumbnailImage, completion: { [weak self] data in
                     DispatchQueue.main.async {
                         guard let strongSelf = self else {
                             return

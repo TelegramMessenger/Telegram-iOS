@@ -596,6 +596,16 @@ private final class SharedApplicationContext {
         }, navigateToChat: { accountId, peerId, messageId in
             self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
         })
+        
+        let rawAccounts = sharedContext.activeAccounts
+        |> map { _, accounts, _ -> [Account] in
+            return accounts.map({ $0.1 })
+        }
+        let _ = (sharedAccountInfos(accountManager: sharedContext.accountManager, accounts: rawAccounts)
+        |> deliverOn(Queue())).start(next: { infos in
+            storeAccountsData(rootPath: rootPath, accounts: infos)
+        })
+        
         sharedContext.presentGlobalController = { [weak self] c, a in
             guard let strongSelf = self else {
                 return
@@ -793,41 +803,41 @@ private final class SharedApplicationContext {
                 }
                 return true
             })
-            |> mapToSignal { authAndAccounts -> Signal<(UnauthorizedAccount, ((String, AccountRecordId)?, [(String, AccountRecordId)]))?, NoError> in
+            |> mapToSignal { authAndAccounts -> Signal<(UnauthorizedAccount, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))?, NoError> in
                 if let (primary, auth, accounts) = authAndAccounts {
-                    let phoneNumbers = combineLatest(accounts.map { account -> Signal<(AccountRecordId, String)?, NoError> in
-                        return account.postbox.transaction { transaction -> (AccountRecordId, String)? in
+                    let phoneNumbers = combineLatest(accounts.map { account -> Signal<(AccountRecordId, String, Bool)?, NoError> in
+                        return account.postbox.transaction { transaction -> (AccountRecordId, String, Bool)? in
                             if let phone = (transaction.getPeer(account.peerId) as? TelegramUser)?.phone {
-                                return (account.id, phone)
+                                return (account.id, phone, account.testingEnvironment)
                             } else {
                                 return nil
                             }
                         }
                     })
                     return phoneNumbers
-                    |> map { phoneNumbers -> (UnauthorizedAccount, ((String, AccountRecordId)?, [(String, AccountRecordId)]))? in
-                        var primaryNumber: (String, AccountRecordId)?
+                    |> map { phoneNumbers -> (UnauthorizedAccount, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))? in
+                        var primaryNumber: (String, AccountRecordId, Bool)?
                         if let primary = primary {
                             for idAndNumber in phoneNumbers {
-                                if let (id, number) = idAndNumber, id == primary.id {
-                                    primaryNumber = (number, id)
+                                if let (id, number, testingEnvironment) = idAndNumber, id == primary.id {
+                                    primaryNumber = (number, id, testingEnvironment)
                                     break
                                 }
                             }
                         }
-                        return (auth, (primaryNumber, phoneNumbers.compactMap({ $0.flatMap({ ($0.1, $0.0) }) })))
+                        return (auth, (primaryNumber, phoneNumbers.compactMap({ $0.flatMap({ ($0.1, $0.0, $0.2) }) })))
                     }
                 } else {
                     return .single(nil)
                 }
             }
-            |> mapToSignal { accountAndOtherAccountPhoneNumbers -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId)?, [(String, AccountRecordId)]))?, NoError> in
+            |> mapToSignal { accountAndOtherAccountPhoneNumbers -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))?, NoError> in
                 return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings in
                     return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings ?? CallListSettings.defaultSettings
                     }
-                |> mapToSignal { callListSettings -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId)?, [(String, AccountRecordId)]))?, NoError> in
+                |> mapToSignal { callListSettings -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))?, NoError> in
                     if let (account, otherAccountPhoneNumbers) = accountAndOtherAccountPhoneNumbers {
-                        return account.postbox.transaction { transaction -> (UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId)?, [(String, AccountRecordId)]))? in
+                        return account.postbox.transaction { transaction -> (UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))? in
                             let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
                             return (account, limitsConfiguration, callListSettings, otherAccountPhoneNumbers)
                         }
@@ -858,6 +868,7 @@ private final class SharedApplicationContext {
             let firstTime = self.contextValue == nil
             if let contextValue = self.contextValue {
                 contextValue.context.isCurrent = false
+                contextValue.passcodeController?.dismiss()
                 contextValue.context.account.shouldExplicitelyKeepWorkerConnections.set(.single(false))
                 contextValue.context.account.shouldKeepBackgroundDownloadConnections.set(.single(false))
             }

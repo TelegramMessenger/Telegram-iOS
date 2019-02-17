@@ -347,6 +347,9 @@
 		D096C2C21CC3C104006D814E /* Postbox.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D096C2C01CC3C104006D814E /* Postbox.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D096C2C51CC3C11A006D814E /* SwiftSignalKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D096C2C31CC3C11A006D814E /* SwiftSignalKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D09A59601B5858DB00FC3724 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D09A595F1B5858DB00FC3724 /* SystemConfiguration.framework */; };
+		D09B79C52219C784003B1F9D /* SharedAccountInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09B79C42219C784003B1F9D /* SharedAccountInfo.swift */; };
+		D09B79C62219C784003B1F9D /* SharedAccountInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09B79C42219C784003B1F9D /* SharedAccountInfo.swift */; };
+		D09B79C82219C7AE003B1F9D /* ManageSharedAccountInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09B79C72219C7AE003B1F9D /* ManageSharedAccountInfo.swift */; };
 		D09DCBB71D0C856B00F51FFE /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = D09DCBB51D0C856B00F51FFE /* Localizable.strings */; };
 		D0A18D631E149043004C6734 /* PushKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0A18D621E149043004C6734 /* PushKit.framework */; };
 		D0A18D651E15C020004C6734 /* WakeupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A18D641E15C020004C6734 /* WakeupManager.swift */; };
@@ -1071,6 +1074,8 @@
 		D096C2C31CC3C11A006D814E /* SwiftSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D09A595F1B5858DB00FC3724 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		D09A59B71B5876B600FC3724 /* Telegram-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Telegram-Bridging-Header.h"; sourceTree = "<group>"; };
+		D09B79C42219C784003B1F9D /* SharedAccountInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedAccountInfo.swift; sourceTree = "<group>"; };
+		D09B79C72219C7AE003B1F9D /* ManageSharedAccountInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageSharedAccountInfo.swift; sourceTree = "<group>"; };
 		D09DCBB61D0C856B00F51FFE /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		D0A18D621E149043004C6734 /* PushKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PushKit.framework; path = System/Library/Frameworks/PushKit.framework; sourceTree = SDKROOT; };
 		D0A18D641E15C020004C6734 /* WakeupManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WakeupManager.swift; sourceTree = "<group>"; };
@@ -1982,6 +1987,8 @@
 				D008599F1B28189D00EAF753 /* Supporting Files */,
 				D0B21B0C2203A9A1003F741D /* SharedWakeupManager.swift */,
 				D0B21B0E220438E9003F741D /* SharedNotificationManager.swift */,
+				D09B79C42219C784003B1F9D /* SharedAccountInfo.swift */,
+				D09B79C72219C7AE003B1F9D /* ManageSharedAccountInfo.swift */,
 			);
 			path = "Telegram-iOS";
 			sourceTree = "<group>";
@@ -3190,6 +3197,7 @@
 			files = (
 				D073E52222003E1E00742DDD /* Data.swift in Sources */,
 				D0ED633B21FF3EFD001D4648 /* BuildConfig.m in Sources */,
+				D09B79C62219C784003B1F9D /* SharedAccountInfo.swift in Sources */,
 				D0ED633D21FF4580001D4648 /* NotificationService.swift in Sources */,
 				D0ED633A21FF3EDF001D4648 /* AccountData.swift in Sources */,
 				D0ED634121FF4786001D4648 /* Serialization.swift in Sources */,
@@ -3224,6 +3232,7 @@
 				09D304242174340E00C00567 /* TGBridgeMessage.m in Sources */,
 				09D304362174344900C00567 /* TGBridgeUnsupportedMediaAttachment.m in Sources */,
 				D0ADF95A212B5AC600310BBC /* LegacyResourceImport.swift in Sources */,
+				D09B79C52219C784003B1F9D /* SharedAccountInfo.swift in Sources */,
 				D06E4C2F21347D9200088087 /* UIImage+ImageEffects.m in Sources */,
 				D0B3B53B21666C0000FC60A0 /* LegacyFileImport.swift in Sources */,
 				D0ADF95E212C818F00310BBC /* LegacyPreferencesImport.swift in Sources */,
@@ -3246,6 +3255,7 @@
 				09D304332174344900C00567 /* TGBridgeMessageEntitiesAttachment.m in Sources */,
 				09D304342174344900C00567 /* TGBridgeReplyMarkupMediaAttachment.m in Sources */,
 				D0A18D651E15C020004C6734 /* WakeupManager.swift in Sources */,
+				D09B79C82219C7AE003B1F9D /* ManageSharedAccountInfo.swift in Sources */,
 				D051DB5D21602D6E00F30F92 /* LegacyDataImportSplash.swift in Sources */,
 				09D304382174344900C00567 /* TGBridgeWebPageMediaAttachment.m in Sources */,
 				09D3042F2174344900C00567 /* TGBridgeDocumentMediaAttachment.m in Sources */,

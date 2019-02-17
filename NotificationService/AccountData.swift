@@ -1,78 +1,6 @@
 import Foundation
 import CommonCrypto
 
-struct MasterNotificationKey: Codable {
-    let id: Data
-    let data: Data
-}
-
-struct AccountDatacenterKey: Codable {
-    let id: Int64
-    let data: Data
-}
-
-struct AccountDatacenterAddress: Codable {
-    let host: String
-    let port: Int32
-    let isMedia: Bool
-    let secret: Data?
-}
-
-struct AccountDatacenterInfo: Codable {
-    let masterKey: AccountDatacenterKey
-    let addressList: [AccountDatacenterAddress]
-}
-
-struct AccountProxyConnection: Codable {
-    let host: String
-    let port: Int32
-    let username: String?
-    let password: String?
-    let secret: Data?
-}
-
-struct StoredAccountInfo: Codable {
-    let primaryId: Int32
-    let isTestingEnvironment: Bool
-    let peerName: String
-    let datacenters: [Int32: AccountDatacenterInfo]
-    let proxy: AccountProxyConnection?
-}
-
-struct AccountData {
-    let id: Int64
-    let isTestingEnvironment: Bool
-    let basePath: String
-    let datacenterId: Int32
-    let datacenters: [Int32: AccountDatacenterInfo]
-    let notificationKey: MasterNotificationKey?
-    let peerName: String
-    let proxy: AccountProxyConnection?
-}
-
-func loadAccountsData(rootPath: String) -> [Int64: AccountData] {
-    var result: [Int64: AccountData] = [:]
-    if let contents = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: rootPath), includingPropertiesForKeys: nil, options: [.skipsSubdirectoryDescendants]) {
-        for url in contents {
-            let directoryName = url.lastPathComponent
-            if directoryName.hasPrefix("account-"), let id = UInt64(directoryName[directoryName.index(directoryName.startIndex, offsetBy: "account-".count)...]) {
-                var notificationKey: MasterNotificationKey?
-                if let data = try? Data(contentsOf: URL(fileURLWithPath: url.path + "/notificationsKey")), let value = try? JSONDecoder().decode(MasterNotificationKey.self, from: data) {
-                    notificationKey = value
-                }
-                var storedInfo: StoredAccountInfo?
-                if let data = try? Data(contentsOf: URL(fileURLWithPath: url.path + "/storedInfo")), let value = try? JSONDecoder().decode(StoredAccountInfo.self, from: data) {
-                    storedInfo = value
-                }
-                if let storedInfo = storedInfo {
-                    result[Int64(bitPattern: id)] = AccountData(id: Int64(bitPattern: id), isTestingEnvironment: storedInfo.isTestingEnvironment, basePath: url.path, datacenterId: storedInfo.primaryId, datacenters: storedInfo.datacenters, notificationKey: notificationKey, peerName: storedInfo.peerName, proxy: storedInfo.proxy)
-                }
-            }
-        }
-    }
-    return result
-}
-
 private func sha256Digest(_ data: Data) -> Data {
     let length = data.count
     return data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Data in
@@ -84,15 +12,14 @@ private func sha256Digest(_ data: Data) -> Data {
     }
 }
 
-func decryptedNotificationPayload(accounts: [Int64: AccountData], data: Data) -> (AccountData, [AnyHashable: Any])? {
+func decryptedNotificationPayload(accounts: [StoredAccountInfo], data: Data) -> (StoredAccountInfo, [AnyHashable: Any])? {
     if data.count < 8 + 16 {
         return nil
     }
     
-    for (_, account) in accounts {
-        guard let notificationKey = account.notificationKey else {
-            continue
-        }
+    for account in accounts {
+        let notificationKey = account.notificationKey
+        
         if data.subdata(in: 0 ..< 8) != notificationKey.id {
             continue
         }
