@@ -186,7 +186,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
     }
     
-    func asyncLayout() -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: AutomaticMediaDownloadPeerType, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void))) {
+    func asyncLayout() -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: AutomaticMediaDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void))) {
         let currentMessage = self.message
         let currentMedia = self.media
         let imageLayout = self.imageNode.asyncLayout()
@@ -195,7 +195,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         let hasCurrentVideoNode = currentVideoNode != nil
         let previousAutomaticDownload = self.automaticDownload
         
-        return { [weak self] context, theme, strings, message, media, automaticDownload, peerType, automaticPlayback, sizeCalculation, layoutConstants, contentMode in
+        return { [weak self] context, theme, strings, message, media, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode in
             var nativeSize: CGSize
             
             let isSecretMedia = message.containsSecretMedia
@@ -244,7 +244,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 } else if file.isSticker {
                     unboundSize = unboundSize.aspectFilled(CGSize(width: 162.0, height: 162.0))
                 }
-                isInlinePlayableVideo = file.isVideo && !isSecretMedia && automaticPlayback
+                isInlinePlayableVideo = file.isVideo && !isSecretMedia
             } else if let image = media as? TelegramMediaWebFile, let dimensions = image.dimensions {
                 unboundSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5))
             } else if let wallpaper = media as? WallpaperPreviewMedia {
@@ -288,8 +288,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 let _ = PresentationResourcesChat.chatBubbleSecretMediaIcon(theme)
             }
             
-            return (nativeSize, maxWidth, { constrainedSize, corners in
+            return (nativeSize, maxWidth, { constrainedSize, automaticPlayback, corners in
                 var resultWidth: CGFloat
+                
+                isInlinePlayableVideo = isInlinePlayableVideo && automaticPlayback
                 
                 switch sizeCalculation {
                     case .constrained:
@@ -585,7 +587,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     updatedPlayerStatusSignal = videoNode.status
                                     |> mapToSignal { status -> Signal<MediaPlayerStatus?, NoError> in
                                         if let status = status, case .buffering = status.status {
-                                            return .complete() |> delay(0.3, queue: Queue.mainQueue())
+                                            return .complete() |> delay(0.5, queue: Queue.mainQueue())
                                         } else {
                                             return .single(status)
                                         }
@@ -906,7 +908,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                         state = automaticPlayback ? .none : .play(bubbleTheme.mediaOverlayControlForegroundColor)
                                     } else {
                                         if automaticPlayback {
-                                            mediaDownloadState = .fetching(progress: nil)
+                                            mediaDownloadState = .fetching(progress: progress)
                                             badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: active ? sizeString : nil, muted: muted, active: active)
                                         } else {
                                             badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: sizeString, size: nil, muted: false, active: false)
@@ -920,23 +922,37 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: strings.Conversation_Processing, size: nil, muted: false, active: active)
                             }
                         } else {
-                            if isMediaStreamable(message: message, media: file), let _ = file.size {
+                            if isMediaStreamable(message: message, media: file), let size = file.size {
+                                let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true)) / \(dataSizeString(size, forceDecimal: true))"
+                                
                                 if automaticPlayback && !message.flags.contains(.Unsent), let duration = file.duration {
                                     let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
-                                    badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
+                                    badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: active ? sizeString : nil, muted: muted, active: active)
+                                    
+                                    mediaDownloadState = .fetching(progress: automaticPlayback ? nil : progress)
+                                    if self.playerStatus?.status == .playing {
+                                        mediaDownloadState = nil
+                                    }
                                 } else {
                                     let progressString = String(format: "%d%%", Int(progress * 100.0))
                                     badgeContent = .text(inset: message.flags.contains(.Unsent) ? 0.0 : 12.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: progressString))
+                                    mediaDownloadState = automaticPlayback ? .none : .compactFetching(progress: progress)
                                 }
                                 
                                 if !message.flags.contains(.Unsent) {
-                                    mediaDownloadState = automaticPlayback ? .none : .compactFetching(progress: progress)
-                                    state = .none
+                                    state = automaticPlayback ? .none : .play(bubbleTheme.mediaOverlayControlForegroundColor)
                                 }
                             } else {
                                 if let duration = file.duration, !file.isAnimated {
                                     let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
-                                    badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
+                                    
+                                    if automaticPlayback, let size = file.size {
+                                         let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true)) / \(dataSizeString(size, forceDecimal: true))"
+                                        mediaDownloadState = .fetching(progress: progress)
+                                        badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: active ? sizeString : nil, muted: muted, active: active)
+                                    } else {
+                                        badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: nil, muted: false, active: active)
+                                    }
                                 }
                                 
                                 state = automaticPlayback ? .none : state
@@ -960,11 +976,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     } else if let file = media as? TelegramMediaFile {
                         let isInlinePlayableVideo = file.isVideo && !isSecretMedia && automaticPlayback
                         if !isInlinePlayableVideo && file.isVideo {
-                            if case .constrained = sizeCalculation {
-                                state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
-                            } else {
-                                state = .none
-                            }
+                            state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
                         } else {
                             state = .none
                         }
@@ -977,11 +989,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     }
                     if let file = media as? TelegramMediaFile, let duration = file.duration, !file.isAnimated {
                         let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
-                        if case .constrained = sizeCalculation {
-                            badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: nil, muted: muted, active: false)
-                        } else {
-                            badgeContent = .text(inset: 0.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
-                        }
+                        badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: nil, muted: muted, active: false)
                     }
                 case .Remote:
                     state = .download(bubbleTheme.mediaOverlayControlForegroundColor)
@@ -998,7 +1006,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             }
                         } else {
                             if isMediaStreamable(message: message, media: file) {
-                                state = .none
+                                state = automaticPlayback ? .none : .play(bubbleTheme.mediaOverlayControlForegroundColor)
                                 badgeContent = .text(inset: 12.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, shape: .round, text: NSAttributedString(string: durationString))
                                 mediaDownloadState = .compactRemote
                             } else {
@@ -1075,12 +1083,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: AutomaticMediaDownloadPeerType, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: AutomaticMediaDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
-        return { context, theme, strings, message, media, automaticDownload, peerType, automaticPlayback, sizeCalculation, layoutConstants, contentMode in
+        return { context, theme, strings, message, media, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode in
             var imageNode: ChatMessageInteractiveMediaNode
-            var imageLayout: (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: AutomaticMediaDownloadPeerType, _ automaticPlayback: Bool, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void)))
+            var imageLayout: (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: AutomaticMediaDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 imageNode = node
@@ -1090,10 +1098,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 imageLayout = imageNode.asyncLayout()
             }
             
-            let (unboundSize, initialWidth, continueLayout) = imageLayout(context, theme, strings, message, media, automaticDownload, peerType, automaticPlayback, sizeCalculation, layoutConstants, contentMode)
+            let (unboundSize, initialWidth, continueLayout) = imageLayout(context, theme, strings, message, media, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode)
             
-            return (unboundSize, initialWidth, { constrainedSize, corners in
-                let (finalWidth, finalLayout) = continueLayout(constrainedSize, corners)
+            return (unboundSize, initialWidth, { constrainedSize, automaticPlayback, corners in
+                let (finalWidth, finalLayout) = continueLayout(constrainedSize, automaticPlayback, corners)
                 
                 return (finalWidth, { boundingWidth in
                     let (finalSize, apply) = finalLayout(boundingWidth)

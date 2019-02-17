@@ -155,6 +155,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var isCentral = false
     private var _isVisible = false
     private var initiallyActivated = false
+    private var initiallyAppeared = false
     private var validLayout: (ContainerViewLayout, CGFloat)?
     private var didPause = false
     private var isPaused = true
@@ -316,7 +317,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if item.fromPlayingVideo {
                 videoNode.canAttachContent = false
             } else {
-                //videoNode.canAttachContent = true
                 self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
             }
             
@@ -514,6 +514,19 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
+    private func shouldAutoplayOnCentrality() -> Bool {
+        if let fetchStatus = self.fetchStatus, let item = self.item, let content = item.content as? NativeVideoContent, let contentInfo = item.contentInfo, case let .message(message) = contentInfo, !self.initiallyActivated {
+            var isLocal = false
+            if case .Local = fetchStatus {
+                isLocal = true
+            }
+            if isLocal || isMediaStreamable(message: message, media: content.fileReference.media) {
+                return true
+            }
+        }
+        return false
+    }
+    
     override func centralityUpdated(isCentral: Bool) {
         super.centralityUpdated(isCentral: isCentral)
         
@@ -522,17 +535,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             if let videoNode = self.videoNode {
                 if isCentral {
-                    if let fetchStatus = self.fetchStatus, let item = self.item, let content = item.content as? NativeVideoContent, let contentInfo = item.contentInfo, case let .message(message) = contentInfo, !self.initiallyActivated {
+                    if self.shouldAutoplayOnCentrality() {
                         self.initiallyActivated = true
-                        var isLocal = false
-                        if case .Local = fetchStatus {
-                            isLocal = true
-                        }
-                        if isLocal || isMediaStreamable(message: message, media: content.fileReference.media) {
-                            videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: .stop)
-                        }
+                        videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: .stop)
                     }
-                    //videoNode.canAttachContent = true
                 } else if videoNode.ownsContentNode {
                     videoNode.pause()
                 }
@@ -546,7 +552,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         if self._isVisible != isVisible {
             self._isVisible = isVisible
             
-            if let item = self.item, let videoNode = self.videoNode, self.initiallyActivated || !item.fromPlayingVideo {
+            if let item = self.item, let videoNode = self.videoNode, self.initiallyAppeared || !item.fromPlayingVideo {
                 videoNode.canAttachContent = isVisible
                 if isVisible {
                     videoNode.pause()
@@ -555,7 +561,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     videoNode.continuePlayingWithoutSound()
                 }
                 self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
+                if self.shouldAutoplayOnCentrality() {
+                    //self.
+                    self.statusButtonNode.isHidden = true
+                }
             }
+        } else if !isVisible {
+            self.initiallyAppeared = true
         }
     }
     
@@ -579,6 +591,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         guard let videoNode = self.videoNode else {
             return
         }
+        
+        self.initiallyAppeared = true
         
         if let node = node.0 as? OverlayMediaItemNode {
             var transformedFrame = node.view.convert(node.view.bounds, to: videoNode.view)
@@ -649,6 +663,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             Queue.mainQueue().after(0.001) {
                 videoNode.canAttachContent = true
+                self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
             }
             
             if let pictureInPictureNode = self.pictureInPictureNode {

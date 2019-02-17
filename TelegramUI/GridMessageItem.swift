@@ -143,7 +143,6 @@ final class GridMessageItemNode: GridItemNode {
     private var item: GridMessageItem?
     private var controllerInteraction: ChatControllerInteraction?
     private var statusNode: RadialStatusNode
-    //private let videoAccessoryNode = GridMessageVideoAccessoryNode()
     private let mediaBadgeNode: ChatMessageInteractiveMediaBadge
 
     private var selectionNode: GridMessageSelectionNode?
@@ -268,7 +267,7 @@ final class GridMessageItemNode: GridItemNode {
                                 badgeContent = .text(inset: 0.0, backgroundColor: mediaBadgeBackgroundColor, foregroundColor: mediaBadgeTextColor, shape: .round, text: NSAttributedString(string: durationString))
                             }
                             
-                            strongSelf.mediaBadgeNode.update(theme: item.theme, content: badgeContent, mediaDownloadState: mediaDownloadState, animated: false)
+                            strongSelf.mediaBadgeNode.update(theme: item.theme, content: badgeContent, mediaDownloadState: mediaDownloadState, alignment: .right, animated: false)
                         }
                     }
                 }))
@@ -304,8 +303,7 @@ final class GridMessageItemNode: GridItemNode {
         let progressDiameter: CGFloat = 40.0
         self.statusNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - progressDiameter) / 2.0), y: floor((imageFrame.size.height - progressDiameter) / 2.0)), size: CGSize(width: progressDiameter, height: progressDiameter))
         
-        //self.mediaBadgeNode.frame = CGRect(origin: <#T##CGPoint#>, size: <#T##CGSize#>)
-        //self.videoAccessoryNode.frame = CGRect(origin: CGPoint(x: imageFrame.maxX - self.videoAccessoryNode.contentSize.width - 5, y: imageFrame.maxY - self.videoAccessoryNode.contentSize.height - 5), size: self.videoAccessoryNode.contentSize)
+        self.mediaBadgeNode.frame = CGRect(origin: CGPoint(x: imageFrame.width - 3.0, y: imageFrame.height - 18.0 - 3.0), size: CGSize(width: 50.0, height: 50.0))
     }
     
     func updateSelectionState(animated: Bool) {

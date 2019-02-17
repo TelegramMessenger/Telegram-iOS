@@ -18,6 +18,10 @@ struct MosaicItemPosition: OptionSet {
     static let right = MosaicItemPosition(rawValue: 8)
     static let inside = MosaicItemPosition(rawValue: 16)
     static let unknown = MosaicItemPosition(rawValue: 65536)
+    
+    var isWide: Bool {
+        return self.contains(.left) && self.contains(.right) && (self.contains(.top) || self.contains(.bottom))
+    }
 }
 
 private struct MosaicItemInfo {

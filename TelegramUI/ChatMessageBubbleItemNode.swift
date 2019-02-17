@@ -976,7 +976,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         }
                     }
                     
-                    let (_, contentNodeFinalize) = contentNodeLayout(framesAndPositions[mosaicIndex].0.size, .mosaic(position: ChatMessageBubbleContentMosaicPosition(topLeft: topLeft, topRight: topRight, bottomLeft: bottomLeft, bottomRight: bottomRight)))
+                    let (_, contentNodeFinalize) = contentNodeLayout(framesAndPositions[mosaicIndex].0.size, .mosaic(position: ChatMessageBubbleContentMosaicPosition(topLeft: topLeft, topRight: topRight, bottomLeft: bottomLeft, bottomRight: bottomRight), wide: position.isWide))
                     
                     contentNodePropertiesAndFinalize.append((contentNodeProperties, contentNodeFinalize))
                     

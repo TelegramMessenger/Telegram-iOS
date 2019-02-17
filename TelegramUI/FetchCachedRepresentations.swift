@@ -8,7 +8,7 @@ import Display
 import UIKit
 import AVFoundation
 
-private func resourceData(account: Account, resource: MediaResource, chunkSize: Int) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+private func videoFirstFrameData(account: Account, resource: MediaResource, chunkSize: Int) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let size = resource.size {
         return account.postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, chunkSize))
         |> mapToSignal { _ -> Signal<CachedMediaResourceRepresentationResult, NoError> in
@@ -19,7 +19,7 @@ private func resourceData(account: Account, resource: MediaResource, chunkSize: 
                     if chunkSize > size {
                         return .complete()
                     } else {
-                        return resourceData(account: account, resource: resource, chunkSize: chunkSize + chunkSize)
+                        return videoFirstFrameData(account: account, resource: resource, chunkSize: chunkSize + chunkSize)
                     }
                 }
             }
@@ -55,7 +55,7 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
                     return .complete()
                 }
             } else if let size = resource.size {
-                return resourceData(account: account, resource: resource, chunkSize: min(size, 64 * 1024))
+                return videoFirstFrameData(account: account, resource: resource, chunkSize: min(size, 192 * 1024))
             } else {
                 return .complete()
             }

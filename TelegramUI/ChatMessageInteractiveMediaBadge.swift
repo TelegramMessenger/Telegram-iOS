@@ -76,54 +76,8 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
         }
     }
     
-    func update(theme: PresentationTheme, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, animated: Bool) {
+    func update(theme: PresentationTheme, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, alignment: NSTextAlignment = .left, animated: Bool) {
         var transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
-        
-        if self.mediaDownloadState != mediaDownloadState {
-            self.mediaDownloadState = mediaDownloadState
-            if let mediaDownloadState = self.mediaDownloadState {
-                let mediaDownloadStatusNode: RadialStatusNode
-                if let current = self.mediaDownloadStatusNode {
-                    mediaDownloadStatusNode = current
-                } else {
-                    mediaDownloadStatusNode = RadialStatusNode(backgroundNodeColor: .clear)
-                    self.mediaDownloadStatusNode = mediaDownloadStatusNode
-                    self.addSubnode(mediaDownloadStatusNode)
-                }
-                let state: RadialStatusNodeState
-                var isCompact = false
-                switch mediaDownloadState {
-                    case .remote:
-                        if let image = PresentationResourcesChat.chatBubbleFileCloudFetchMediaIcon(theme) {
-                            state = .customIcon(image)
-                        } else {
-                            state = .none
-                        }
-                    case let .fetching(progress):
-                        var cloudProgress: CGFloat?
-                        if let progress = progress {
-                            cloudProgress = CGFloat(progress)
-                        }
-                        state = .cloudProgress(color: .white, strokeBackgroundColor: UIColor(white: 1.0, alpha: 0.3), lineWidth: 2.0 - UIScreenPixel, value: cloudProgress)
-                    case .compactRemote:
-                        state = .download(.white)
-                        isCompact = true
-                    case .compactFetching:
-                        state = .progress(color: .white, lineWidth: nil, value: 0.0, cancelEnabled: true)
-                        isCompact = true
-                }
-                let mediaStatusFrame: CGRect
-                if isCompact {
-                    mediaStatusFrame = CGRect(origin: CGPoint(x: 1.0, y: -1.0), size: CGSize(width: 20.0, height: 20.0))
-                } else {
-                    mediaStatusFrame = CGRect(origin: CGPoint(x: 7.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0))
-                }
-                mediaDownloadStatusNode.frame = mediaStatusFrame
-                mediaDownloadStatusNode.transitionToState(state, animated: true, completion: {})
-            } else if let mediaDownloadStatusNode = self.mediaDownloadStatusNode {
-                mediaDownloadStatusNode.transitionToState(.none, animated: true, completion: {})
-            }
-        }
         
         var contentSize = CGSize()
         
@@ -238,7 +192,65 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         contentSize = CGSize(width: contentWidth, height: active ? 38.0 : 18.0)
                 }
             }
-            transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: contentSize.width, height: contentSize.height))
+            
+            var originX: CGFloat = 0.0
+            if alignment == .right {
+                originX = -contentSize.width
+            }
+            transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: originX, y: 0.0, width: contentSize.width, height: contentSize.height))
+        }
+        
+        if self.mediaDownloadState != mediaDownloadState {
+            self.mediaDownloadState = mediaDownloadState
+            if let mediaDownloadState = self.mediaDownloadState {
+                let mediaDownloadStatusNode: RadialStatusNode
+                if let current = self.mediaDownloadStatusNode {
+                    mediaDownloadStatusNode = current
+                } else {
+                    mediaDownloadStatusNode = RadialStatusNode(backgroundNodeColor: .clear)
+                    self.mediaDownloadStatusNode = mediaDownloadStatusNode
+                    self.addSubnode(mediaDownloadStatusNode)
+                }
+                let state: RadialStatusNodeState
+                var isCompact = false
+                var originX: CGFloat = 0.0
+                if alignment == .right {
+                    originX -= contentSize.width
+                }
+                var originY: CGFloat = 6.0
+                switch mediaDownloadState {
+                    case .remote:
+                        if let image = PresentationResourcesChat.chatBubbleFileCloudFetchMediaIcon(theme) {
+                            state = .customIcon(image)
+                        } else {
+                            state = .none
+                        }
+                    case let .fetching(progress):
+                        var cloudProgress: CGFloat?
+                        if let progress = progress {
+                            cloudProgress = CGFloat(progress)
+                        }
+                        state = .cloudProgress(color: .white, strokeBackgroundColor: UIColor(white: 1.0, alpha: 0.3), lineWidth: 2.0 - UIScreenPixel, value: cloudProgress)
+                    case .compactRemote:
+                        state = .download(.white)
+                        isCompact = true
+                        originY = -1.0 - UIScreenPixel
+                    case .compactFetching:
+                        state = .progress(color: .white, lineWidth: nil, value: 0.0, cancelEnabled: true)
+                        isCompact = true
+                        originY = -1.0
+                }
+                let mediaStatusFrame: CGRect
+                if isCompact {
+                    mediaStatusFrame = CGRect(origin: CGPoint(x: 1.0 + originX, y: originY), size: CGSize(width: 20.0, height: 20.0))
+                } else {
+                    mediaStatusFrame = CGRect(origin: CGPoint(x: 7.0 + originX, y: originY), size: CGSize(width: 28.0, height: 28.0))
+                }
+                mediaDownloadStatusNode.frame = mediaStatusFrame
+                mediaDownloadStatusNode.transitionToState(state, animated: true, completion: {})
+            } else if let mediaDownloadStatusNode = self.mediaDownloadStatusNode {
+                mediaDownloadStatusNode.transitionToState(.none, animated: true, completion: {})
+            }
         }
     }
     

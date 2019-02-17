@@ -229,9 +229,16 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 var mainMedia: Media?
 
                 var automaticPlayback = false
+                
                 if let file = webpage.file, !file.isAnimated, item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
+                    var automaticDownload: InteractiveMediaNodeAutodownloadMode = .none
                     if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: file) {
+                        automaticDownload = .full
+                    }
+                    if case .full = automaticDownload {
                         automaticPlayback = true
+                    } else {
+                        automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(file.resource) != nil
                     }
                 }
                 

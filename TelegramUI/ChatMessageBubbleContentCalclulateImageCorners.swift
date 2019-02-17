@@ -23,7 +23,7 @@ func chatMessageBubbleImageContentCorners(relativeContentPosition position: Chat
                             topRightCorner = .Corner(mergedRadius)
                     }
             }
-        case let .mosaic(position):
+        case let .mosaic(position, _):
             switch position.topLeft {
                 case .none:
                     topLeftCorner = .Corner(normalRadius)
@@ -69,7 +69,7 @@ func chatMessageBubbleImageContentCorners(relativeContentPosition position: Chat
                             bottomRightCorner = .Corner(mergedRadius)
                     }
             }
-        case let .mosaic(position):
+        case let .mosaic(position, _):
             switch position.bottomLeft {
                 case let .none(tail):
                     if tail {

@@ -81,7 +81,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     if telegramFile.isAnimated {
                         automaticPlayback = item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs
                         contentMode = .aspectFill
-                    } else if telegramFile.isVideo && item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos, case .linear = preparePosition {
+                    } else if telegramFile.isVideo && item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
                         var willDownloadOrLocal = false
                         if case .full = automaticDownload {
                             willDownloadOrLocal = true
@@ -121,12 +121,16 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     sizeCalculation = .unconstrained
             }
             
-            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData.theme.theme, item.presentationData.strings, item.message, selectedMedia!, automaticDownload, item.associatedData.automaticDownloadPeerType, automaticPlayback, sizeCalculation, layoutConstants, contentMode)
+            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData.theme.theme, item.presentationData.strings, item.message, selectedMedia!, automaticDownload, item.associatedData.automaticDownloadPeerType, sizeCalculation, layoutConstants, contentMode)
             
             let forceFullCorners = false
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 7.0, hidesBackground: .emptyWallpaper, forceFullCorners: forceFullCorners, forceAlignment: .none)
             
             return (contentProperties, unboundSize, initialWidth + bubbleInsets.left + bubbleInsets.right, { constrainedSize, position in
+                if case let .mosaic(_, wide) = position {
+                    automaticPlayback = automaticPlayback && wide
+                }
+                
                 var updatedPosition: ChatMessageBubbleContentPosition = position
                 if forceFullCorners, case .linear = updatedPosition {
                     updatedPosition = .linear(top: .None(.None(.None)), bottom: .None(.None(.None)))
@@ -136,7 +140,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: updatedPosition, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)
                 
-                let (refinedWidth, finishLayout) = refineLayout(CGSize(width: constrainedSize.width - bubbleInsets.left - bubbleInsets.right, height: constrainedSize.height), imageCorners)
+                let (refinedWidth, finishLayout) = refineLayout(CGSize(width: constrainedSize.width - bubbleInsets.left - bubbleInsets.right, height: constrainedSize.height), automaticPlayback, imageCorners)
                 
                 return (refinedWidth + bubbleInsets.left + bubbleInsets.right, { boundingWidth in
                     let (imageSize, imageApply) = finishLayout(boundingWidth - bubbleInsets.left - bubbleInsets.right)
