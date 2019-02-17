@@ -108,7 +108,9 @@ private enum LogoutOptionsEntry: ItemListNodeEntry, Equatable {
 private func logoutOptionsEntries(presentationData: PresentationData, canAddAccounts: Bool, hasPasscode: Bool) -> [LogoutOptionsEntry] {
     var entries: [LogoutOptionsEntry] = []
     entries.append(.alternativeHeader(presentationData.theme, presentationData.strings.LogoutOptions_AlternativeOptionsSection))
-    entries.append(.addAccount(presentationData.theme, presentationData.strings.LogoutOptions_AddAccountTitle, presentationData.strings.LogoutOptions_AddAccountText))
+    if canAddAccounts {
+        entries.append(.addAccount(presentationData.theme, presentationData.strings.LogoutOptions_AddAccountTitle, presentationData.strings.LogoutOptions_AddAccountText))
+    }
     if !hasPasscode {
         entries.append(.setPasscode(presentationData.theme, presentationData.strings.LogoutOptions_SetPasscodeTitle, presentationData.strings.LogoutOptions_SetPasscodeText))
     }
@@ -195,6 +197,7 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
             }),
             TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                 let _ = logoutFromAccount(id: context.account.id, accountManager: context.sharedContext.accountManager).start()
+                dismissImpl?()
             })
         ])
         presentControllerImpl?(alertController, nil)
