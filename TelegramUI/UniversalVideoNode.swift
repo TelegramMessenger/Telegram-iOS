@@ -20,6 +20,7 @@ protocol UniversalVideoContentNode: class {
     func playOnceWithSound(playAndRecord: Bool, seekToStart: MediaPlayerPlayOnceWithSoundSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd)
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool)
     func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd)
+    func setContinuePlayingWithoutSoundOnLostAudioSession(_ value: Bool)
     func setBaseRate(_ baseRate: Double)
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int
     func removePlaybackCompleted(_ index: Int)
@@ -274,6 +275,14 @@ final class UniversalVideoNode: ASDisplayNode {
         self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
             if let contentNode = contentNode {
                 contentNode.playOnceWithSound(playAndRecord: playAndRecord, seekToStart: seekToStart, actionAtEnd: actionAtEnd)
+            }
+        })
+    }
+    
+    func setContinuePlayingWithoutSoundOnLostAudioSession(_ value: Bool) {
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode = contentNode {
+                contentNode.setContinuePlayingWithoutSoundOnLostAudioSession(value)
             }
         })
     }

@@ -152,6 +152,10 @@ class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
             }
             
             sliderView.value = CGFloat(value)
+            
+            sliderView.isUserInteractionEnabled = item.enabled
+            sliderView.alpha = item.enabled ? 1.0 : 0.4
+            sliderView.layer.allowsGroupOpacity = !item.enabled
         }
     }
     
@@ -194,6 +198,8 @@ class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
         self.view.addSubview(sliderView)
         sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
         self.sliderView = sliderView
+        
+        self.updateSliderView()
     }
     
     func asyncLayout() -> (_ item: AutodownloadDataUsagePickerItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -298,10 +304,6 @@ class AutodownloadDataUsagePickerItemNode: ListViewItemNode {
                             sliderView.trackColor = item.theme.list.itemAccentColor
                             sliderView.knobImage = generateKnobImage()
                         }
-                        
-                        sliderView.isUserInteractionEnabled = item.enabled
-                        sliderView.alpha = item.enabled ? 1.0 : 0.4
-                        sliderView.layer.allowsGroupOpacity = !item.enabled
                         
                         sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: 37.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 15.0 * 2.0, height: 44.0))
                         sliderView.hitTestEdgeInsets = UIEdgeInsetsMake(-sliderView.frame.minX, 0.0, 0.0, -sliderView.frame.minX)

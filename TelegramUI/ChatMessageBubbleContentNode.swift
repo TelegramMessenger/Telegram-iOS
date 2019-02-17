@@ -54,7 +54,7 @@ struct ChatMessageBubbleContentMosaicPosition {
 
 enum ChatMessageBubbleContentPosition {
     case linear(top: ChatMessageBubbleRelativePosition, bottom: ChatMessageBubbleRelativePosition)
-    case mosaic(position: ChatMessageBubbleContentMosaicPosition)
+    case mosaic(position: ChatMessageBubbleContentMosaicPosition, wide: Bool)
 }
 
 enum ChatMessageBubblePreparePosition {

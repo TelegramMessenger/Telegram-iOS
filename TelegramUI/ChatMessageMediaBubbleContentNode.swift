@@ -16,6 +16,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     private var highlightedState: Bool = false
     
     private var media: Media?
+    private var automaticPlayback: Bool?
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -77,23 +78,18 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         automaticDownload = .prefetch
                     }
                     
-                    if telegramFile.isAnimated {
-                        automaticPlayback = item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs
-                        contentMode = .aspectFill
-                    } else {
-                        if item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
-                            var willDownloadOrLocal = false
+                    if !item.message.containsSecretMedia {
+                        if telegramFile.isAnimated {
+                            automaticPlayback = item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs
+                        } else if telegramFile.isVideo && item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
                             if case .full = automaticDownload {
-                                willDownloadOrLocal = true
-                            } else {
-                                willDownloadOrLocal = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
-                            }
-                            if willDownloadOrLocal {
                                 automaticPlayback = true
-                                contentMode = .aspectFill
+                            } else {
+                                automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
                             }
                         }
                     }
+                    contentMode = .aspectFill
                 }
             }
             
@@ -122,12 +118,16 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     sizeCalculation = .unconstrained
             }
             
-            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData.theme.theme, item.presentationData.strings, item.message, selectedMedia!, automaticDownload, item.associatedData.automaticDownloadPeerType, automaticPlayback, sizeCalculation, layoutConstants, contentMode)
+            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData.theme.theme, item.presentationData.strings, item.message, selectedMedia!, automaticDownload, item.associatedData.automaticDownloadPeerType, sizeCalculation, layoutConstants, contentMode)
             
             let forceFullCorners = false
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 7.0, hidesBackground: .emptyWallpaper, forceFullCorners: forceFullCorners, forceAlignment: .none)
             
             return (contentProperties, unboundSize, initialWidth + bubbleInsets.left + bubbleInsets.right, { constrainedSize, position in
+                if case let .mosaic(_, wide) = position {
+                    automaticPlayback = automaticPlayback && wide
+                }
+                
                 var updatedPosition: ChatMessageBubbleContentPosition = position
                 if forceFullCorners, case .linear = updatedPosition {
                     updatedPosition = .linear(top: .None(.None(.None)), bottom: .None(.None(.None)))
@@ -137,7 +137,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: updatedPosition, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius)
                 
-                let (refinedWidth, finishLayout) = refineLayout(CGSize(width: constrainedSize.width - bubbleInsets.left - bubbleInsets.right, height: constrainedSize.height), imageCorners)
+                let (refinedWidth, finishLayout) = refineLayout(CGSize(width: constrainedSize.width - bubbleInsets.left - bubbleInsets.right, height: constrainedSize.height), automaticPlayback, imageCorners)
                 
                 return (refinedWidth + bubbleInsets.left + bubbleInsets.right, { boundingWidth in
                     let (imageSize, imageApply) = finishLayout(boundingWidth - bubbleInsets.left - bubbleInsets.right)
@@ -205,6 +205,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         if let strongSelf = self {
                             strongSelf.item = item
                             strongSelf.media = selectedMedia
+                            strongSelf.automaticPlayback = automaticPlayback
                             
                             let imageFrame = CGRect(origin: CGPoint(x: bubbleInsets.left, y: bubbleInsets.top), size: imageSize)
                             var transition: ContainedViewLayoutTransition = .immediate
@@ -296,6 +297,20 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         
         self.interactiveImageNode.isHidden = mediaHidden
         self.interactiveImageNode.updateIsHidden(mediaHidden)
+        
+        if let automaticPlayback = self.automaticPlayback {
+            if !automaticPlayback {
+                self.dateAndStatusNode.isHidden = false
+            } else if self.dateAndStatusNode.isHidden != mediaHidden {
+                if mediaHidden {
+                    self.dateAndStatusNode.isHidden = true
+                } else {
+                    self.dateAndStatusNode.isHidden = false
+                    self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+        
         return mediaHidden
     }
     

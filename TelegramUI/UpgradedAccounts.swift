@@ -99,6 +99,14 @@ private let applicationSpecificPreferencesKeyMapping: [LegacyApplicationSpecific
     .contactSynchronizationSettings: .contactSynchronizationSettings
 ]
 
+private func upgradedSharedDataValue(_ value: PreferencesEntry?) -> PreferencesEntry? {
+    if let settings = value as? LegacyAutomaticMediaDownloadSettings {
+        return AutomaticMediaDownloadSettings.upgradeLegacySettings(settings)
+    } else {
+        return value
+    }
+}
+
 public func upgradedAccounts(accountManager: AccountManager, rootPath: String) -> Signal<Never, NoError> {
     return accountManager.transaction { transaction -> (Int32, AccountRecordId?) in
         return (transaction.getVersion(), transaction.getCurrent()?.0)
@@ -126,7 +134,7 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String) -
                             }
                             if let upgradedKey = upgradedKey {
                                 transaction.updateSharedData(upgradedKey, { _ in
-                                    return value
+                                    return upgradedSharedDataValue(value)
                                 })
                             }
                         }

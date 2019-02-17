@@ -1,22 +1,33 @@
 import Foundation
 import UIKit
+import SwiftSignalKit
 import MediaPlayer
 
 private let minVolume = 0.00001
 private let maxVolume = 0.99999
 
+private let delay = 0.4
+
 class VolumeChangeDetector: NSObject {
+    private weak var superview: UIView?
+    
     private let control: MPVolumeView
     private var observer: Any?
     private var currentValue: Float
     
-    init(view: UIView, valueChanged: @escaping () -> Void) {
+    private var ignoreUntil: CFTimeInterval?
+    
+    private var disposable: Disposable?
+    
+    init(view: UIView, shouldBeActive: Signal<Bool, NoError>, valueChanged: @escaping () -> Void) {
+        self.superview = view
+        
         self.control = MPVolumeView(frame: CGRect(origin: CGPoint(x: -100.0, y: -100.0), size: CGSize(width: 100.0, height: 20.0)))
         self.control.alpha = 0.0001
         self.control.isUserInteractionEnabled = false
         self.control.showsRouteButton = false
         self.currentValue = AVAudioSession.sharedInstance().outputVolume
-        
+    
         super.init()
         
         self.observer = NotificationCenter.default.addObserver(forName: NSNotification.Name(rawValue: "AVSystemController_SystemVolumeDidChangeNotification"), object: nil, queue: OperationQueue.main, using: { [weak self] notification in
@@ -31,6 +42,10 @@ class VolumeChangeDetector: NSObject {
                             ignore = true
                         }
                         
+                        if let ignoreUntil = strongSelf.ignoreUntil, CACurrentMediaTime() < ignoreUntil {
+                            ignore = true
+                        }
+                        
                         if !ignore {
                             valueChanged()
                         }
@@ -40,9 +55,24 @@ class VolumeChangeDetector: NSObject {
             }
         })
         
-        view.addSubview(self.control)
-        
-        self.fixVolume()
+        self.disposable = (shouldBeActive
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            if value {
+                if strongSelf.control.superview == nil {
+                    strongSelf.ignoreUntil = CACurrentMediaTime() + delay * 2.0
+                    strongSelf.superview?.addSubview(strongSelf.control)
+                    
+                    Queue.mainQueue().after(delay) {
+                        strongSelf.fixVolume()
+                    }
+                }
+            } else {
+                strongSelf.control.removeFromSuperview()
+            }
+        })
     }
     
     deinit {
@@ -50,6 +80,7 @@ class VolumeChangeDetector: NSObject {
             NotificationCenter.default.removeObserver(observer)
         }
         self.control.removeFromSuperview()
+        self.disposable?.dispose()
     }
     
     private func fixVolume() {

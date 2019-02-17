@@ -150,6 +150,9 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
     }
     
+    func setContinuePlayingWithoutSoundOnLostAudioSession(_ value: Bool) {   
+    }
+    
     func setBaseRate(_ baseRate: Double) {
     }
     

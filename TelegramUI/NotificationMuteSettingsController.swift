@@ -69,11 +69,7 @@ func notificationMuteSettingsController(presentationData: PresentationData, noti
             case .disable:
                 item = ActionSheetButtonItem(title: presentationData.strings.UserInfo_NotificationsDisable, action: {
                     dismissAction()
-                    if !notificationSettings.enabled {
-                        notificationAction(nil)
-                    } else {
-                         notificationAction(Int32.max)
-                    }
+                    notificationAction(Int32.max)
                 })
         }
         items.append(item)

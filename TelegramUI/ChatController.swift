@@ -3161,7 +3161,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }
         
-        self.volumeChangeDetector = VolumeChangeDetector(view: self.chatDisplayNode.view, valueChanged: { [weak self] in
+        self.volumeChangeDetector = VolumeChangeDetector(view: self.chatDisplayNode.view, shouldBeActive: self.chatDisplayNode.historyNode.hasVisiblePlayableItems, valueChanged: { [weak self] in
             guard let strongSelf = self, strongSelf.traceVisibility() && isTopmostChatController(strongSelf) else {
                 return
             }
@@ -4811,13 +4811,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             case .upperBound:
                                 searchLocation = .index(MessageIndex.upperBound(peerId: peerId))
                         }
-                        let historyView = chatHistoryViewForLocation(.InitialSearch(location: searchLocation, count: 50), account: self.context.account, chatLocation: self.chatLocation, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
+                        let historyView = chatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: searchLocation, count: 50), id: 0), account: self.context.account, chatLocation: self.chatLocation, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
                         let signal = historyView
                         |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
                             switch historyView {
                                 case .Loading:
                                     return .single((nil, true))
-                                case let .HistoryView(view, _, _, _, _):
+                                case let .HistoryView(view, _, _, _, _, _):
                                     for entry in view.entries {
                                         if case let .MessageEntry(message, _, _, _, _) = entry {
                                             if message.id == messageLocation.messageId {
@@ -4898,13 +4898,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         self.historyNavigationStack.add(fromIndex)
                     }
                     self.loadingMessage.set(true)
-                    let historyView = chatHistoryViewForLocation(.InitialSearch(location: searchLocation, count: 50), account: self.context.account, chatLocation: self.chatLocation, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
+                    let historyView = chatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: searchLocation, count: 50), id: 0), account: self.context.account, chatLocation: self.chatLocation, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
                     let signal = historyView
                         |> mapToSignal { historyView -> Signal<MessageIndex?, NoError> in
                             switch historyView {
                                 case .Loading:
                                     return .complete()
-                                case let .HistoryView(view, _, _, _, _):
+                                case let .HistoryView(view, _, _, _, _, _):
                                     for entry in view.entries {
                                         if case let .MessageEntry(message, _, _, _, _) = entry {
                                             if message.id == messageLocation.messageId {
@@ -5629,7 +5629,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     private func debugStreamSingleVideo(_ id: MessageId) {
-        let gallery = GalleryController(context: self.context, source: .peerMessagesAtId(id), streamSingleVideo: true, replaceRootController: { [weak self] controller, ready in
+        let gallery = GalleryController(context: self.context, source: .peerMessagesAtId(id, false), streamSingleVideo: true, replaceRootController: { [weak self] controller, ready in
             if let strongSelf = self {
                 (strongSelf.navigationController as? NavigationController)?.replaceTopController(controller, animated: false, ready: ready)
             }

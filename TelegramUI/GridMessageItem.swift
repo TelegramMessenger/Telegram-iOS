@@ -5,51 +5,6 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
-private let videoAccessoryFont: UIFont = Font.regular(11)
-
-private let videoAccessoryBackgorund: UIImage? = {
-    let diameter: CGFloat = 8.0
-    return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
-        context.setBlendMode(.copy)
-        context.setFillColor(UIColor.clear.cgColor)
-        context.fill(CGRect(origin: CGPoint(), size: size))
-        context.setBlendMode(.normal)
-        context.setFillColor(UIColor(white: 0.0, alpha: 0.6).cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-    }, opaque: false)?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
-}()
-
-private final class GridMessageVideoAccessoryNode : ASImageNode {
-    private let textNode: ImmediateTextNode = ImmediateTextNode()
-
-    override init() {
-        super.init()
-        self.image = videoAccessoryBackgorund
-        self.textNode.displaysAsynchronously = false
-        self.textNode.maximumNumberOfLines = 1
-        self.textNode.isUserInteractionEnabled = false
-        self.textNode.textAlignment = .left
-        self.textNode.lineSpacing = 0.1
-        self.addSubnode(self.textNode)
-    }
-    
-    var contentSize: CGSize {
-        return CGSize(width: textSize.width + 10, height: 16)
-    }
-    private var textSize: CGSize = CGSize()
-    
-    func setup(_ duration: String) {
-        self.textNode.attributedText = NSAttributedString(string: duration, font: videoAccessoryFont, textColor: .white, paragraphAlignment: nil)
-        self.textSize = self.textNode.updateLayout(CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
-    }
-    
-    override func layout() {
-        if let _ = self.textNode.attributedText {
-            self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.frame.width - self.textSize.width) / 2.0), y: floorToScreenPixels((self.frame.height - self.textSize.height) / 2.0) + 0.5), size: self.textSize)
-        }
-    }
-}
-
 private func mediaForMessage(_ message: Message) -> Media? {
     for media in message.media {
         if let media = media as? TelegramMediaImage {
@@ -67,13 +22,8 @@ private func mediaForMessage(_ message: Message) -> Media? {
     return nil
 }
 
-private let timezoneOffset: Int32 = {
-    let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-    var now: time_t = time_t(nowTimestamp)
-    var timeinfoNow: tm = tm()
-    localtime_r(&now, &timeinfoNow)
-    return Int32(timeinfoNow.tm_gmtoff)
-}()
+private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
+private let mediaBadgeTextColor = UIColor.white
 
 final class GridMessageItemSection: GridSection {
     let height: CGFloat = 36.0
@@ -193,7 +143,7 @@ final class GridMessageItemNode: GridItemNode {
     private var item: GridMessageItem?
     private var controllerInteraction: ChatControllerInteraction?
     private var statusNode: RadialStatusNode
-    private let videoAccessoryNode = GridMessageVideoAccessoryNode()
+    private let mediaBadgeNode: ChatMessageInteractiveMediaBadge
 
     private var selectionNode: GridMessageSelectionNode?
     
@@ -208,10 +158,13 @@ final class GridMessageItemNode: GridItemNode {
         self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
         self.statusNode.isUserInteractionEnabled = false
         
+        self.mediaBadgeNode = ChatMessageInteractiveMediaBadge()
+        self.mediaBadgeNode.frame = CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 50.0, height: 50.0))
+        
         super.init()
         
         self.addSubnode(self.imageNode)
-        self.imageNode.addSubnode(self.videoAccessoryNode)
+        self.addSubnode(self.mediaBadgeNode)
     }
     
     deinit {
@@ -222,6 +175,10 @@ final class GridMessageItemNode: GridItemNode {
     override func didLoad() {
         super.didLoad()
         
+        self.mediaBadgeNode.pressed = { [weak self] in
+            self?.progressPressed()
+        }
+        
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
         recognizer.tapActionAtPoint = { _ in
             return .waitForSingleTap
@@ -230,6 +187,8 @@ final class GridMessageItemNode: GridItemNode {
     }
     
     func setup(context: AccountContext, item: GridMessageItem, media: Media, messageId: MessageId, controllerInteraction: ChatControllerInteraction, synchronousLoad: Bool) {
+        self.item = item
+        
         if self.currentState == nil || self.currentState!.0 !== context || !self.currentState!.1.isEqual(to: media) {
             var mediaDimensions: CGSize?
             if let image = media as? TelegramMediaImage, let largestSize = largestImageRepresentation(image.representations)?.dimensions {
@@ -241,39 +200,43 @@ final class GridMessageItemNode: GridItemNode {
                 self.statusNode.transitionToState(.none, completion: { [weak self] in
                     self?.statusNode.isHidden = true
                 })
-                self.videoAccessoryNode.isHidden = true
+                self.mediaBadgeNode.isHidden = true
                 self.resourceStatus = nil
             } else if let file = media as? TelegramMediaFile, file.isVideo {
                 mediaDimensions = file.dimensions
                 self.imageNode.setSignal(mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(item.message), media: file), synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad)
                 
-                if let duration = file.duration {
-                    self.videoAccessoryNode.setup(stringForDuration(duration))
-                    self.videoAccessoryNode.isHidden = false
-                } else {
-                    self.videoAccessoryNode.isHidden = true
-                }
+                self.mediaBadgeNode.isHidden = false
                 
                 self.resourceStatus = nil
                 self.fetchStatusDisposable.set((messageMediaFileStatus(context: context, messageId: messageId, file: file) |> deliverOnMainQueue).start(next: { [weak self] status in
-                    if let strongSelf = self {
+                    if let strongSelf = self, let item = strongSelf.item {
                         strongSelf.resourceStatus = status
+                        
+                        let isStreamable = isMediaStreamable(message: item.message, media: file)
+                        
                         let statusState: RadialStatusNodeState
-                        switch status {
-                            case let .Fetching(_, progress):
-                                let adjustedProgress = max(progress, 0.027)
-                                statusState = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
-                            case .Local:
-                                statusState = .play(.white)
-                            case .Remote:
-                                statusState = .download(.white)
+                        if isStreamable {
+                            statusState = .none
+                        } else {
+                            switch status {
+                                case let .Fetching(_, progress):
+                                    let adjustedProgress = max(progress, 0.027)
+                                    statusState = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
+                                case .Local:
+                                    statusState = .none
+                                case .Remote:
+                                    statusState = .download(.white)
+                            }
                         }
+                        
                         switch statusState {
                             case .none:
                                  break
                             default:
                                 strongSelf.statusNode.isHidden = false
                         }
+                        
                         strongSelf.statusNode.transitionToState(statusState, animated: true, completion: {
                             if let strongSelf = self {
                                 if case .none = statusState {
@@ -281,13 +244,35 @@ final class GridMessageItemNode: GridItemNode {
                                 }
                             }
                         })
+                        
+                        if let duration = file.duration {
+                            let durationString = stringForDuration(duration)
+                            
+                            var badgeContent: ChatMessageInteractiveMediaBadgeContent?
+                            var mediaDownloadState: ChatMessageInteractiveMediaDownloadState?
+                            
+                            if isStreamable {
+                                switch status {
+                                    case let .Fetching(_, progress):
+                                        let progressString = String(format: "%d%%", Int(progress * 100.0))
+                                        badgeContent = .text(inset: 12.0, backgroundColor: mediaBadgeBackgroundColor, foregroundColor: mediaBadgeTextColor, shape: .round, text: NSAttributedString(string: progressString))
+                                        mediaDownloadState = .compactFetching(progress: progress)
+                                    case .Local:
+                                        badgeContent = .text(inset: 0.0, backgroundColor: mediaBadgeBackgroundColor, foregroundColor: mediaBadgeTextColor, shape: .round, text: NSAttributedString(string: durationString))
+                                    case .Remote:
+                                        badgeContent = .text(inset: 12.0, backgroundColor: mediaBadgeBackgroundColor, foregroundColor: mediaBadgeTextColor, shape: .round, text: NSAttributedString(string: durationString))
+                                        mediaDownloadState = .compactRemote
+                                }
+                            } else {
+                                badgeContent = .text(inset: 0.0, backgroundColor: mediaBadgeBackgroundColor, foregroundColor: mediaBadgeTextColor, shape: .round, text: NSAttributedString(string: durationString))
+                            }
+                            
+                            strongSelf.mediaBadgeNode.update(theme: item.theme, content: badgeContent, mediaDownloadState: mediaDownloadState, alignment: .right, animated: false)
+                        }
                     }
                 }))
-                if self.statusNode.supernode == nil {
-                    self.imageNode.addSubnode(self.statusNode)
-                }
             } else {
-                self.videoAccessoryNode.isHidden = true
+                self.mediaBadgeNode.isHidden = true
             }
             
             if let mediaDimensions = mediaDimensions {
@@ -297,7 +282,6 @@ final class GridMessageItemNode: GridItemNode {
         }
         
         self.messageId = messageId
-        self.item = item
         self.controllerInteraction = controllerInteraction
         
         self.updateSelectionState(animated: false)
@@ -319,7 +303,7 @@ final class GridMessageItemNode: GridItemNode {
         let progressDiameter: CGFloat = 40.0
         self.statusNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - progressDiameter) / 2.0), y: floor((imageFrame.size.height - progressDiameter) / 2.0)), size: CGSize(width: progressDiameter, height: progressDiameter))
         
-        self.videoAccessoryNode.frame = CGRect(origin: CGPoint(x: imageFrame.maxX - self.videoAccessoryNode.contentSize.width - 5, y: imageFrame.maxY - self.videoAccessoryNode.contentSize.height - 5), size: self.videoAccessoryNode.contentSize)
+        self.mediaBadgeNode.frame = CGRect(origin: CGPoint(x: imageFrame.width - 3.0, y: imageFrame.height - 18.0 - 3.0), size: CGSize(width: 50.0, height: 50.0))
     }
     
     func updateSelectionState(animated: Bool) {
@@ -372,14 +356,14 @@ final class GridMessageItemNode: GridItemNode {
                 var accessoryHidden = false
                 if let strongSelf = self {
                     statusNodeHidden = strongSelf.statusNode.isHidden
-                    accessoryHidden = strongSelf.videoAccessoryNode.isHidden
+                    accessoryHidden = strongSelf.mediaBadgeNode.isHidden
                     strongSelf.statusNode.isHidden = true
-                    strongSelf.videoAccessoryNode.isHidden = true
+                    strongSelf.mediaBadgeNode.isHidden = true
                 }
                 let view = imageNode?.view.snapshotContentTree(unhide: true)
                 if let strongSelf = self {
                     strongSelf.statusNode.isHidden = statusNodeHidden
-                    strongSelf.videoAccessoryNode.isHidden = accessoryHidden
+                    strongSelf.mediaBadgeNode.isHidden = accessoryHidden
                 }
                 return view
             })
@@ -391,7 +375,7 @@ final class GridMessageItemNode: GridItemNode {
     func updateHiddenMedia() {
         if let controllerInteraction = self.controllerInteraction, let messageId = self.messageId, controllerInteraction.hiddenMedia[messageId] != nil {
             self.imageNode.isHidden = true
-            self.videoAccessoryNode.alpha = 0.0
+            self.mediaBadgeNode.alpha = 0.0
             self.statusNode.alpha = 0.0
         } else {
             self.imageNode.isHidden = false
@@ -399,9 +383,26 @@ final class GridMessageItemNode: GridItemNode {
                 self.statusNode.alpha = 1.0
                 self.statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
-            if self.videoAccessoryNode.alpha < 1.0 {
-                self.videoAccessoryNode.alpha = 1.0
-                self.videoAccessoryNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            if self.mediaBadgeNode.alpha < 1.0 {
+                self.mediaBadgeNode.alpha = 1.0
+                self.mediaBadgeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
+        }
+    }
+    
+    private func progressPressed() {
+        guard let controllerInteraction = self.controllerInteraction, let message = self.item?.message else {
+            return
+        }
+        
+        if let (context, media, _) = self.currentState, let resourceStatus = self.resourceStatus, let file = media as? TelegramMediaFile {
+            switch resourceStatus {
+                case .Fetching:
+                    messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
+                case .Local:
+                    let _ = controllerInteraction.openMessage(message, .default)
+                case .Remote:
+                    self.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: true).start())
             }
         }
     }
@@ -416,20 +417,11 @@ final class GridMessageItemNode: GridItemNode {
                 if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
                         case .tap:
-                            if let (context, media, _) = self.currentState {
-                                if let file = media as? TelegramMediaFile {
-                                    if let resourceStatus = self.resourceStatus {
-                                        switch resourceStatus {
-                                        case .Fetching:
-                                            messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
-                                        case .Local:
-                                            let _ = controllerInteraction.openMessage(message, .default)
-                                        case .Remote:
-                                            self.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: true).start())
-                                        }
-                                    }
-                                } else {
+                            if let (_, media, _) = self.currentState, let file = media as? TelegramMediaFile {
+                                if isMediaStreamable(message: message, media: file) {
                                     let _ = controllerInteraction.openMessage(message, .default)
+                                } else {
+                                    self.progressPressed()
                                 }
                             }
                         case .longTap:

@@ -22,11 +22,12 @@ class UniversalVideoGalleryItem: GalleryItem {
     let credit: NSAttributedString?
     let hideControls: Bool
     let fromPlayingVideo: Bool
+    let returningFromOverlay: Bool
     let playbackCompleted: () -> Void
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, returningFromOverlay: Bool = false, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.content = content
@@ -37,6 +38,7 @@ class UniversalVideoGalleryItem: GalleryItem {
         self.credit = credit
         self.hideControls = hideControls
         self.fromPlayingVideo = fromPlayingVideo
+        self.returningFromOverlay = returningFromOverlay
         self.playbackCompleted = playbackCompleted
         self.performAction = performAction
         self.openActionOptions = openActionOptions
@@ -153,7 +155,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusNode: RadialStatusNode
     
     private var isCentral = false
+    private var _isVisible = false
     private var initiallyActivated = false
+    private var initiallyAppeared = false
     private var validLayout: (ContainerViewLayout, CGFloat)?
     private var didPause = false
     private var isPaused = true
@@ -203,6 +207,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if !strongSelf.isPaused {
                     strongSelf.didPause = true
                 }
+                
                 strongSelf.videoNode?.togglePlayPause()
             }
         }
@@ -314,7 +319,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if item.fromPlayingVideo {
                 videoNode.canAttachContent = false
             } else {
-                videoNode.canAttachContent = true
                 self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
             }
             
@@ -365,7 +369,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             |> deliverOnMainQueue).start(next: { [weak self] value, fetchStatus in
                 if let strongSelf = self {
                     var initialBuffering = false
-                    var buffering = false
+                    var playing = false
                     var isPaused = true
                     var seekable = false
                     var hasStarted = false
@@ -382,6 +386,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         switch value.status {
                             case .playing:
                                 isPaused = false
+                                playing = true
                             case let .buffering(_, whilePlaying):
                                 initialBuffering = true
                                 //buffering = true
@@ -423,8 +428,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     case .Remote:
                                         state = .download(.white)
                                     case let .Fetching(_, progress):
-                                        fetching = true
-                                        isPaused = true
+                                        if !playing {
+                                            fetching = true
+                                            isPaused = true
+                                        }
                                         state = .progress(color: .white, lineWidth: nil, value: CGFloat(progress), cancelEnabled: true)
                                     default:
                                         break
@@ -445,7 +452,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         strongSelf.footerContentNode.content = .info
                     }
                     else if isPaused {
-                        if hasStarted || strongSelf.didPause || buffering {
+                        if hasStarted || strongSelf.didPause {
                             strongSelf.footerContentNode.content = .playback(paused: true, seekable: seekable)
                         } else if let fetchStatus = fetchStatus, !strongSelf.requiresDownload {
                             strongSelf.footerContentNode.content = .fetch(status: fetchStatus)
@@ -512,6 +519,19 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
+    private func shouldAutoplayOnCentrality() -> Bool {
+        if let fetchStatus = self.fetchStatus, let item = self.item, let content = item.content as? NativeVideoContent, let contentInfo = item.contentInfo, case let .message(message) = contentInfo, !self.initiallyActivated {
+            var isLocal = false
+            if case .Local = fetchStatus {
+                isLocal = true
+            }
+            if isLocal || isMediaStreamable(message: message, media: content.fileReference.media) {
+                return true
+            }
+        }
+        return false
+    }
+    
     override func centralityUpdated(isCentral: Bool) {
         super.centralityUpdated(isCentral: isCentral)
         
@@ -520,21 +540,40 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             if let videoNode = self.videoNode {
                 if isCentral {
-                    if let fetchStatus = self.fetchStatus, let item = self.item, let content = item.content as? NativeVideoContent, let contentInfo = item.contentInfo, case let .message(message) = contentInfo, !self.initiallyActivated {
+                    if self.shouldAutoplayOnCentrality() {
                         self.initiallyActivated = true
-                        var isLocal = false
-                        if case .Local = fetchStatus {
-                            isLocal = true
-                        }
-                        if isLocal || isMediaStreamable(message: message, media: content.fileReference.media) {
-                            videoNode.play()
-                        }
+                        videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: .stop)
                     }
-                    //videoNode.canAttachContent = true
                 } else if videoNode.ownsContentNode {
                     videoNode.pause()
                 }
             }
+        }
+    }
+    
+    override func visibilityUpdated(isVisible: Bool) {
+        super.visibilityUpdated(isVisible: isVisible)
+        
+        if self._isVisible != isVisible {
+            self._isVisible = isVisible
+            
+            if let item = self.item, let videoNode = self.videoNode, self.initiallyAppeared || !item.fromPlayingVideo {
+                videoNode.canAttachContent = isVisible
+                if !item.returningFromOverlay {
+                    if isVisible {
+                        videoNode.pause()
+                        videoNode.seek(0.0)
+                    } else {
+                        videoNode.continuePlayingWithoutSound()
+                    }
+                }
+                self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
+                if self.shouldAutoplayOnCentrality() {
+                    self.statusButtonNode.isHidden = true
+                }
+            }
+        } else if !isVisible {
+            self.initiallyAppeared = true
         }
     }
     
@@ -549,7 +588,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if isAnimated {
                 videoNode.seek(0.0)
             } else {
-                videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .automatic, actionAtEnd: .stop)
+                videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
             }
         }
     }
@@ -558,6 +597,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         guard let videoNode = self.videoNode else {
             return
         }
+        
+        self.initiallyAppeared = true
         
         if let node = node.0 as? OverlayMediaItemNode {
             var transformedFrame = node.view.convert(node.view.bounds, to: videoNode.view)
@@ -628,6 +669,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             Queue.mainQueue().after(0.001) {
                 videoNode.canAttachContent = true
+                self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
             }
             
             if let pictureInPictureNode = self.pictureInPictureNode {
@@ -711,6 +753,19 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         let toTransform: CATransform3D
         
         if let interactiveMediaNode = node.0 as? ChatMessageInteractiveMediaNode, interactiveMediaNode.automaticPlayback ?? false {
+            copyView.removeFromSuperview()
+            surfaceCopyView.removeFromSuperview()
+            
+            let previousFrame = videoNode.frame
+            let previousSuperview = videoNode.view.superview
+            addToTransitionSurface(videoNode.view)
+            videoNode.view.superview?.bringSubview(toFront: videoNode.view)
+            
+            if let previousSuperview = previousSuperview {
+                videoNode.frame = previousSuperview.convert(previousFrame, to: videoNode.view.superview)
+                transformedSuperFrame = transformedSuperFrame.offsetBy(dx: videoNode.position.x - previousFrame.center.x, dy: videoNode.position.y - previousFrame.center.y)
+            }
+            
             let initialScale = min(videoNode.layer.bounds.width / node.0.view.bounds.width, videoNode.layer.bounds.height / node.0.view.bounds.height)
             let targetScale = max(transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height)
             
@@ -768,7 +823,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             pictureInPictureNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         }
         
-        videoNode.continuePlayingWithoutSound()
+        if videoNode.hasAttachedContext {
+            videoNode.continuePlayingWithoutSound()
+        }
     }
     
     func animateOut(toOverlay node: ASDisplayNode, completion: @escaping () -> Void) {
@@ -864,24 +921,27 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if let fetchStatus = self.fetchStatus {
                 switch fetchStatus {
                     case .Local:
-                        videoNode.togglePlayPause()
+                        videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: .stop)
                     case .Remote:
                         if self.requiresDownload {
                             self.fetchControls?.fetch()
                         } else {
-                            videoNode.togglePlayPause()
+                            videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: .stop)
                         }
                     case .Fetching:
                         self.fetchControls?.cancel()
                 }
             } else {
-                videoNode.togglePlayPause()
+                videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: .stop)
             }
         }
     }
     
     @objc func pictureInPictureButtonPressed() {
-        if let item = self.item, let _ = self.videoNode {
+        if let item = self.item, let videoNode = self.videoNode {
+            
+            videoNode.setContinuePlayingWithoutSoundOnLostAudioSession(false)
+            
             let context = self.context
             let baseNavigationController = self.baseNavigationController()
             let mediaManager = self.context.sharedContext.mediaManager
@@ -898,7 +958,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 switch contentInfo {
                     case let .message(message):
-                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(message.id), replaceRootController: { controller, ready in
+                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(message.id, true), replaceRootController: { controller, ready in
                             if let baseNavigationController = baseNavigationController {
                                 baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
                             }

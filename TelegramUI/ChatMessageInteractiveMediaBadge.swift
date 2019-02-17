@@ -76,54 +76,8 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
         }
     }
     
-    func update(theme: PresentationTheme, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, animated: Bool) {
-        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
-        
-        if self.mediaDownloadState != mediaDownloadState {
-            self.mediaDownloadState = mediaDownloadState
-            if let mediaDownloadState = self.mediaDownloadState {
-                let mediaDownloadStatusNode: RadialStatusNode
-                if let current = self.mediaDownloadStatusNode {
-                    mediaDownloadStatusNode = current
-                } else {
-                    mediaDownloadStatusNode = RadialStatusNode(backgroundNodeColor: .clear)
-                    self.mediaDownloadStatusNode = mediaDownloadStatusNode
-                    self.addSubnode(mediaDownloadStatusNode)
-                }
-                let state: RadialStatusNodeState
-                var isCompact = false
-                switch mediaDownloadState {
-                    case .remote:
-                        if let image = PresentationResourcesChat.chatBubbleFileCloudFetchMediaIcon(theme) {
-                            state = .customIcon(image)
-                        } else {
-                            state = .none
-                        }
-                    case let .fetching(progress):
-                        var cloudProgress: CGFloat?
-                        if let progress = progress {
-                            cloudProgress = CGFloat(progress)
-                        }
-                        state = .cloudProgress(color: .white, strokeBackgroundColor: UIColor(white: 1.0, alpha: 0.3), lineWidth: 2.0 - UIScreenPixel, value: cloudProgress)
-                    case .compactRemote:
-                        state = .download(.white)
-                        isCompact = true
-                    case .compactFetching:
-                        state = .progress(color: .white, lineWidth: nil, value: 0.0, cancelEnabled: true)
-                        isCompact = true
-                }
-                let mediaStatusFrame: CGRect
-                if isCompact {
-                    mediaStatusFrame = CGRect(origin: CGPoint(x: 1.0, y: -1.0), size: CGSize(width: 20.0, height: 20.0))
-                } else {
-                    mediaStatusFrame = CGRect(origin: CGPoint(x: 7.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0))
-                }
-                mediaDownloadStatusNode.frame = mediaStatusFrame
-                mediaDownloadStatusNode.transitionToState(state, animated: true, completion: {})
-            } else if let mediaDownloadStatusNode = self.mediaDownloadStatusNode {
-                mediaDownloadStatusNode.transitionToState(.none, animated: true, completion: {})
-            }
-        }
+    func update(theme: PresentationTheme, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, alignment: NSTextAlignment = .left, animated: Bool) {
+        var transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
         
         var contentSize = CGSize()
         
@@ -139,6 +93,8 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                 
                 switch content {
                     case let .text(inset, backgroundColor, foregroundColor, shape, text):
+                        transition = .immediate
+                        
                         if self.backgroundNodeColor != backgroundColor {
                             self.backgroundNodeColor = backgroundColor
                             self.backgroundNode.image = generateStretchableFilledCircleImage(radius: 9.0, color: backgroundColor)
@@ -167,7 +123,8 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         if previousActive == nil {
                             previousActive = active
                         }
-                        let textTransition: ContainedViewLayoutTransition = previousActive != active ? transition : .immediate
+                        
+                        transition = previousActive != active ? transition : .immediate
                         
                         let durationString = NSMutableAttributedString(string: duration, attributes: [.font: font, .foregroundColor: foregroundColor])
                         self.durationNode.attributedText = durationString
@@ -187,11 +144,11 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                             sizeNode.attributedText = sizeString
                             sizeSize = sizeNode.measure(CGSize(width: 160.0, height: 160.0))
                             
-                            textTransition.updateFrame(node: sizeNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 20.0 : 2.0, width: sizeSize.width, height: sizeSize.height))
+                            transition.updateFrame(node: sizeNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 20.0 : 2.0, width: sizeSize.width, height: sizeSize.height))
                             transition.updateAlpha(node: sizeNode, alpha: 1.0)
                         } else if let sizeNode = self.sizeNode {
                             let sizeSize = sizeNode.frame.size
-                            textTransition.updateFrame(node: sizeNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 20.0 : 2.0, width: sizeSize.width, height: sizeSize.height))
+                            transition.updateFrame(node: sizeNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 20.0 : 2.0, width: sizeSize.width, height: sizeSize.height))
                             transition.updateAlpha(node: sizeNode, alpha: 0.0)
                         }
                         
@@ -201,7 +158,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                             transition.updateAlpha(node: statusNode, alpha: active ? 1.0 : 0.0)
                         }
                         
-                        textTransition.updateFrame(node: self.durationNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 7.0 : 2.0, width: durationSize.width, height: durationSize.height))
+                        transition.updateFrame(node: self.durationNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 7.0 : 2.0, width: durationSize.width, height: durationSize.height))
                         
                         let iconNode: ASImageNode
                         if let current = self.iconNode {
@@ -235,7 +192,65 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         contentSize = CGSize(width: contentWidth, height: active ? 38.0 : 18.0)
                 }
             }
-            transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: contentSize.width, height: contentSize.height))
+            
+            var originX: CGFloat = 0.0
+            if alignment == .right {
+                originX = -contentSize.width
+            }
+            transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: originX, y: 0.0, width: contentSize.width, height: contentSize.height))
+        }
+        
+        if self.mediaDownloadState != mediaDownloadState {
+            self.mediaDownloadState = mediaDownloadState
+            if let mediaDownloadState = self.mediaDownloadState {
+                let mediaDownloadStatusNode: RadialStatusNode
+                if let current = self.mediaDownloadStatusNode {
+                    mediaDownloadStatusNode = current
+                } else {
+                    mediaDownloadStatusNode = RadialStatusNode(backgroundNodeColor: .clear)
+                    self.mediaDownloadStatusNode = mediaDownloadStatusNode
+                    self.addSubnode(mediaDownloadStatusNode)
+                }
+                let state: RadialStatusNodeState
+                var isCompact = false
+                var originX: CGFloat = 0.0
+                if alignment == .right {
+                    originX -= contentSize.width
+                }
+                var originY: CGFloat = 6.0
+                switch mediaDownloadState {
+                    case .remote:
+                        if let image = PresentationResourcesChat.chatBubbleFileCloudFetchMediaIcon(theme) {
+                            state = .customIcon(image)
+                        } else {
+                            state = .none
+                        }
+                    case let .fetching(progress):
+                        var cloudProgress: CGFloat?
+                        if let progress = progress {
+                            cloudProgress = CGFloat(progress)
+                        }
+                        state = .cloudProgress(color: .white, strokeBackgroundColor: UIColor(white: 1.0, alpha: 0.3), lineWidth: 2.0 - UIScreenPixel, value: cloudProgress)
+                    case .compactRemote:
+                        state = .download(.white)
+                        isCompact = true
+                        originY = -1.0 - UIScreenPixel
+                    case .compactFetching:
+                        state = .progress(color: .white, lineWidth: nil, value: 0.0, cancelEnabled: true)
+                        isCompact = true
+                        originY = -1.0
+                }
+                let mediaStatusFrame: CGRect
+                if isCompact {
+                    mediaStatusFrame = CGRect(origin: CGPoint(x: 1.0 + originX, y: originY), size: CGSize(width: 20.0, height: 20.0))
+                } else {
+                    mediaStatusFrame = CGRect(origin: CGPoint(x: 7.0 + originX, y: originY), size: CGSize(width: 28.0, height: 28.0))
+                }
+                mediaDownloadStatusNode.frame = mediaStatusFrame
+                mediaDownloadStatusNode.transitionToState(state, animated: true, completion: {})
+            } else if let mediaDownloadStatusNode = self.mediaDownloadStatusNode {
+                mediaDownloadStatusNode.transitionToState(.none, animated: true, completion: {})
+            }
         }
     }
     

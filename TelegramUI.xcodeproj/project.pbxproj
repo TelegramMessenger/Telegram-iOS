@@ -35,6 +35,7 @@
 		09310D32213ED5FC0020033A /* anim_ungroup.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D1A213BC5DE0020033A /* anim_ungroup.json */; };
 		09310D33213ED5FC0020033A /* anim_group.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D1B213BC5DE0020033A /* anim_group.json */; };
 		09310D34213ED5FC0020033A /* anim_mute.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D1C213BC5DE0020033A /* anim_mute.json */; };
+		0935F8EF22197FBF0070AE70 /* LegacyAutomaticMediaDownloadSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0935F8EE22197FBF0070AE70 /* LegacyAutomaticMediaDownloadSettings.swift */; };
 		0941A9A0210B057200EBE194 /* OpenInActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A99F210B057200EBE194 /* OpenInActionSheetController.swift */; };
 		0941A9A4210B0E2E00EBE194 /* OpenInAppIconResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */; };
 		0941A9A6210B822D00EBE194 /* OpenInOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A9A5210B822D00EBE194 /* OpenInOptions.swift */; };
@@ -1166,6 +1167,7 @@
 		09310D1A213BC5DE0020033A /* anim_ungroup.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_ungroup.json; sourceTree = "<group>"; };
 		09310D1B213BC5DE0020033A /* anim_group.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_group.json; sourceTree = "<group>"; };
 		09310D1C213BC5DE0020033A /* anim_mute.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_mute.json; sourceTree = "<group>"; };
+		0935F8EE22197FBF0070AE70 /* LegacyAutomaticMediaDownloadSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyAutomaticMediaDownloadSettings.swift; sourceTree = "<group>"; };
 		0941A99F210B057200EBE194 /* OpenInActionSheetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInActionSheetController.swift; sourceTree = "<group>"; };
 		0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInAppIconResources.swift; sourceTree = "<group>"; };
 		0941A9A5210B822D00EBE194 /* OpenInOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInOptions.swift; sourceTree = "<group>"; };
@@ -3400,6 +3402,7 @@
 				D01B279E1E394BD70022A4C0 /* InAppNotificationSettings.swift */,
 				D01B27A31E394FC90022A4C0 /* PresentationPasscodeSettings.swift */,
 				D0223A8F1EA53E6000211D94 /* AutomaticMediaDownloadSettings.swift */,
+				0935F8EE22197FBF0070AE70 /* LegacyAutomaticMediaDownloadSettings.swift */,
 				D0223A911EA5420C00211D94 /* GeneratedMediaStoreSettings.swift */,
 				D0223A931EA5442C00211D94 /* VoiceCallSettings.swift */,
 				D010C2C91EA7A59F00F41B96 /* PresentationThemeSettings.swift */,
@@ -5345,6 +5348,7 @@
 				D0EC6D1B1EB9F58800EBF1C3 /* FFMpegMediaVideoFrameDecoder.swift in Sources */,
 				D01C06AF1FBB461E001561AB /* JoinLinkPreviewController.swift in Sources */,
 				D0EC6D1C1EB9F58800EBF1C3 /* FFMpegMediaPassthroughVideoFrameDecoder.swift in Sources */,
+				0935F8EF22197FBF0070AE70 /* LegacyAutomaticMediaDownloadSettings.swift in Sources */,
 				D0D9DE0D20EFEA2E00F20B06 /* InstantPageMediaPlaylist.swift in Sources */,
 				D01C06B11FBB4643001561AB /* JoinLinkPreviewControllerNode.swift in Sources */,
 				D0EC6D1E1EB9F58800EBF1C3 /* MediaPlayerScrubbingNode.swift in Sources */,
