@@ -11,7 +11,8 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     }
     
     private let sharedContext: SharedAccountContext
-    private let otherAccountPhoneNumbers: ((String, AccountRecordId)?, [(String, AccountRecordId)])
+    private let isTestingEnvironment: Bool
+    private let otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)])
     private let network: Network
     private let strings: PresentationStrings
     private let theme: PresentationTheme
@@ -38,8 +39,9 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(sharedContext: SharedAccountContext, otherAccountPhoneNumbers: ((String, AccountRecordId)?, [(String, AccountRecordId)]), network: Network, strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContext, isTestingEnvironment: Bool, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), network: Network, strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
         self.sharedContext = sharedContext
+        self.isTestingEnvironment = isTestingEnvironment
         self.otherAccountPhoneNumbers = otherAccountPhoneNumbers
         self.network = network
         self.strings = strings
@@ -136,15 +138,15 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         if !number.isEmpty {
             let logInNumber = formatPhoneNumber(self.controllerNode.currentNumber)
             var existing: (String, AccountRecordId)?
-            for (number, id) in self.otherAccountPhoneNumbers.1 {
-                if formatPhoneNumber(number) == logInNumber {
+            for (number, id, isTestingEnvironment) in self.otherAccountPhoneNumbers.1 {
+                if isTestingEnvironment == self.isTestingEnvironment && formatPhoneNumber(number) == logInNumber {
                     existing = (number, id)
                 }
             }
             
             if let (_, id) = existing {
                 var actions: [TextAlertAction] = []
-                if let (current, _) = self.otherAccountPhoneNumbers.0, logInNumber != formatPhoneNumber(current) {
+                if let (current, _, _) = self.otherAccountPhoneNumbers.0, logInNumber != formatPhoneNumber(current) {
                     actions.append(TextAlertAction(type: .genericAction, title: self.strings.Login_PhoneNumberAlreadyAuthorizedSwitch, action: { [weak self] in
                         self?.sharedContext.switchToAccount(id: id)
                         self?.back()

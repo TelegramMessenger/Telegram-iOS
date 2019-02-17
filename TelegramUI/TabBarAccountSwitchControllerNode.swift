@@ -360,6 +360,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
         let sideInset: CGFloat = 18.0
         
         var contentSize = CGSize()
+        contentSize.width = min(layout.size.width - 40.0, 250.0)
         var applyNodes: [(ASDisplayNode, CGFloat, (CGFloat) -> Void)] = []
         for itemNode in self.contentNodes {
             let (width, height, apply) = itemNode.updateLayout(maxWidth: layout.size.width - sideInset * 2.0)

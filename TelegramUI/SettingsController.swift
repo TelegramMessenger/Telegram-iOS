@@ -8,6 +8,8 @@ import MtProtoKitDynamic
 
 private let maximumNumberOfAccounts = 3
 
+private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 13.0)!
+
 private final class SettingsItemIcons {
     static let proxy = UIImage(bundleImageName: "Settings/MenuIcons/Proxy")?.precomposed()
     static let savedMessages = UIImage(bundleImageName: "Settings/MenuIcons/SavedMessages")?.precomposed()
@@ -1195,7 +1197,17 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                     }
                 }
             } else {
-                return .single(nil)
+                return Signal { subscriber in
+                    let size = CGSize(width: 25.0, height: 25.0)
+                    let image = generateImage(size, rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        drawPeerAvatarLetters(context: context, size: size, font: avatarFont, letters: primary.1.displayLetters, accountPeerId: primary.1.id, peerId: primary.1.id)
+                    })?.withRenderingMode(.alwaysOriginal)
+                    subscriber.putNext(image)
+                    subscriber.putCompletion()
+                    return EmptyDisposable
+                }
+                |> runOn(.concurrentDefaultQueue())
             }
         } else {
             return .single(nil)

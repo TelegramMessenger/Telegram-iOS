@@ -20,7 +20,7 @@ public final class AuthorizationSequenceController: NavigationController {
     
     private let sharedContext: SharedAccountContext
     private var account: UnauthorizedAccount
-    private let otherAccountPhoneNumbers: ((String, AccountRecordId)?, [(String, AccountRecordId)])
+    private let otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)])
     private let apiId: Int32
     private let apiHash: String
     private var strings: PresentationStrings
@@ -32,7 +32,7 @@ public final class AuthorizationSequenceController: NavigationController {
     
     private var didPlayPresentationAnimation = false
     
-    public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId)?, [(String, AccountRecordId)]), strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String) {
+    public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), strings: PresentationStrings, theme: PresentationTheme, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String) {
         self.sharedContext = sharedContext
         self.account = account
         self.otherAccountPhoneNumbers = otherAccountPhoneNumbers
@@ -118,7 +118,7 @@ public final class AuthorizationSequenceController: NavigationController {
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequencePhoneEntryController(sharedContext: self.sharedContext, otherAccountPhoneNumbers: self.otherAccountPhoneNumbers, network: self.account.network, strings: self.strings, theme: self.theme, openUrl: { [weak self] url in
+            controller = AuthorizationSequencePhoneEntryController(sharedContext: self.sharedContext, isTestingEnvironment: self.account.testingEnvironment, otherAccountPhoneNumbers: self.otherAccountPhoneNumbers, network: self.account.network, strings: self.strings, theme: self.theme, openUrl: { [weak self] url in
                 self?.openUrl(url)
             }, back: { [weak self] in
                 guard let strongSelf = self else {

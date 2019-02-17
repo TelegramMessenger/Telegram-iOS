@@ -168,7 +168,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
             self?.performActionAtEnd()
         }
         
-        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, videoReference: fileReference, imageReference: imageReference) |> map { [weak self] getSize, getData in
+        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, videoReference: fileReference, imageReference: imageReference, autoFetchFullSizeThumbnail: fileReference.media.isInstantVideo) |> map { [weak self] getSize, getData in
             Queue.mainQueue().async {
                 if let strongSelf = self, strongSelf.dimensions == nil {
                     if let dimensions = getSize() {
