@@ -561,7 +561,14 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
         }
         var peerIds = Set<PeerId>()
         updateState { state in
-            peerIds = state.enableFor
+            switch target {
+            case .main:
+                peerIds = state.enableFor
+            case .callP2P:
+                if let callP2PEnableFor = state.callP2PEnableFor {
+                    peerIds = callP2PEnableFor
+                }
+            }
             return state
         }
         pushControllerImpl?(selectivePrivacyPeersController(context: context, title: title, initialPeerIds: Array(peerIds), updated: { updatedPeerIds in
@@ -586,7 +593,14 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
         }
         var peerIds = Set<PeerId>()
         updateState { state in
-            peerIds = state.disableFor
+            switch target {
+                case .main:
+                    peerIds = state.disableFor
+                case .callP2P:
+                    if let callP2PDisableFor = state.callP2PDisableFor {
+                        peerIds = callP2PDisableFor
+                    }
+            }
             return state
         }
         pushControllerImpl?(selectivePrivacyPeersController(context: context, title: title, initialPeerIds: Array(peerIds), updated: { updatedPeerIds in

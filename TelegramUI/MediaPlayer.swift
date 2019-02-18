@@ -56,6 +56,7 @@ enum MediaPlayerPlayOnceWithSoundActionAtEnd {
 enum MediaPlayerPlayOnceWithSoundSeek {
     case none
     case start
+    case automatic
 }
 
 private final class MediaPlayerAudioRendererContext {

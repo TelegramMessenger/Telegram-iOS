@@ -369,9 +369,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     var scrolledToIndex: ((MessageHistoryAnchorIndex) -> Void)?
     
-    private let hasVisiblePlayableItemsPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
-    var hasVisiblePlayableItems: Signal<Bool, NoError> {
-        return self.hasVisiblePlayableItemsPromise.get()
+    private let hasVisiblePlayableItemNodesPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    var hasVisiblePlayableItemNodes: Signal<Bool, NoError> {
+        return self.hasVisiblePlayableItemNodesPromise.get()
     }
     
     private var currentPresentationData: PresentationData
@@ -633,14 +633,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     if let visible = displayedRange.visibleRange {
                         let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
                         
-                        var containsPlayableWithSound = false
-                        strongSelf.forEachVisibleItemNode { itemNode in
-                            if let chatItemView = itemNode as? ChatMessageItemView, chatItemView.playMediaWithSound() != nil {
-                                containsPlayableWithSound = true
-                            }
-                        }
-                        strongSelf.hasVisiblePlayableItemsPromise.set(containsPlayableWithSound)
-                        
                         var readIndexRange = (0, historyView.filteredEntries.count - 1 - visible.firstIndex)
                         /*if !visible.firstIndexFullyVisible {
                             readIndexRange.1 -= 1
@@ -649,7 +641,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         var messageIdsWithViewCount: [MessageId] = []
                         var messageIdsWithUnsupportedMedia: [MessageId] = []
                         var messageIdsWithUnseenPersonalMention: [MessageId] = []
-                        var messageIdsWithPlayableVideos: [MessageId] = []
                         for i in (indexRange.0 ... indexRange.1) {
                             switch historyView.filteredEntries[i] {
                                 case let .MessageEntry(message, _, _, _, _, _):
@@ -674,8 +665,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                     for media in message.media {
                                         if let _ = media as? TelegramMediaUnsupported {
                                             messageIdsWithUnsupportedMedia.append(message.id)
-                                        } else if let file = media as? TelegramMediaFile, file.isVideo {
-                                            messageIdsWithPlayableVideos.append(message.id)
                                         }
                                     }
                                     if hasUnconsumedMention && !hasUnconsumedContent {
@@ -741,6 +730,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             strongSelf.chatHistoryLocation.set(ChatHistoryLocationInput(content: .Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: historyMessageCount), id: 0))
                         }
                     }
+                    
+                    var containsPlayableWithSoundItemNode = false
+                    strongSelf.forEachVisibleItemNode { itemNode in
+                        if let chatItemView = itemNode as? ChatMessageItemView, chatItemView.playMediaWithSound() != nil {
+                            containsPlayableWithSoundItemNode = true
+                        }
+                    }
+                    strongSelf.hasVisiblePlayableItemNodesPromise.set(containsPlayableWithSoundItemNode)
                 }
             }
         }

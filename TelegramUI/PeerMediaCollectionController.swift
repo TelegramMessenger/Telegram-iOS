@@ -84,7 +84,7 @@ public class PeerMediaCollectionController: TelegramController {
                     return false
                 }
                 strongSelf.mediaCollectionDisplayNode.view.endEditing(true)
-                return openChatMessage(context: context, message: galleryMessage.message, standalone: false, reverseMessageGalleryOrder: true, excludeWebPageMedia: mode == .shared, navigationController: navigationController, dismissInput: {
+                return openChatMessage(context: context, message: galleryMessage.message, standalone: false, reverseMessageGalleryOrder: true, navigationController: navigationController, dismissInput: {
                     self?.mediaCollectionDisplayNode.view.endEditing(true)
                 }, present: { c, a in
                     self?.present(c, in: .window(.root), with: a, blockInteraction: true)

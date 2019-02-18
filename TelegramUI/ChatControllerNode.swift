@@ -1471,13 +1471,20 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func playFirstMediaWithSound() {
-        var action: (() -> Void)?
+        var actions: [(CGFloat, () -> Void)] = []
         self.historyNode.forEachVisibleItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView, let playMediaWithSound = itemNode.playMediaWithSound() {
-                action = playMediaWithSound
+                if case let .visible(fraction) = itemNode.visibility {
+                actions.insert((fraction, playMediaWithSound), at: 0)
+                }
             }
         }
-        action?()
+        for (fraction, action) in actions {
+            if fraction > 0.6 {
+                action()
+                break
+            }
+        }
     }
     
     var isInputViewFocused: Bool {

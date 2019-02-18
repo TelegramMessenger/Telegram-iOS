@@ -65,6 +65,7 @@ public final class DeviceAccess {
     private static let contactsPromise = Promise<Bool?>(nil)
     static var contacts: Signal<Bool?, NoError> {
         return self.contactsPromise.get()
+        |> distinctUntilChanged
     }
     
     private static let notificationsPromise = Promise<Bool?>(nil)
