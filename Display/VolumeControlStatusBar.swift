@@ -6,6 +6,8 @@ import SwiftSignalKit
 
 private let volumeNotificationKey = "AVSystemController_SystemVolumeDidChangeNotification"
 private let volumeParameterKey = "AVSystemController_AudioVolumeNotificationParameter"
+private let changeReasonParameterKey = "AVSystemController_AudioVolumeChangeReasonNotificationParameter"
+private let explicitChangeReasonValue = "ExplicitVolumeChange"
 
 final class VolumeControlStatusBar: UIView {
     private let control: MPVolumeView
@@ -27,9 +29,9 @@ final class VolumeControlStatusBar: UIView {
         self.addSubview(self.control)
         self.observer = NotificationCenter.default.addObserver(forName: NSNotification.Name(rawValue: volumeNotificationKey), object: nil, queue: OperationQueue.main, using: { [weak self] notification in
             if let strongSelf = self, let userInfo = notification.userInfo {
-                /*guard let category = userInfo["AVSystemController_AudioCategoryNotificationParameter"] as? String else {
+                if let reason = userInfo[changeReasonParameterKey], reason as? String != explicitChangeReasonValue {
                     return
-                }*/
+                }
                 
                 if let volume = userInfo[volumeParameterKey] as? Float {
                     let previous = strongSelf.currentValue
