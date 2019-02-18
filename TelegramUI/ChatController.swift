@@ -195,7 +195,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    private var automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
+    private var automaticMediaDownloadSettings: MediaAutoDownloadSettings
     private var automaticMediaDownloadSettingsDisposable: Disposable?
     
     private var applicationInForegroundDisposable: Disposable?

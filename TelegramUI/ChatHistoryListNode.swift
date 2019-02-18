@@ -263,8 +263,8 @@ private final class ChatHistoryTransactionOpaqueState {
     }
 }
 
-private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: AutomaticDownloadNetworkType) -> ChatMessageItemAssociatedData {
-    var automaticMediaDownloadPeerType: AutomaticMediaDownloadPeerType = .channel
+private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType) -> ChatMessageItemAssociatedData {
+    var automaticMediaDownloadPeerType: MediaAutoDownloadPeerType = .channel
     var contactsPeerIds: Set<PeerId> = Set()
     if case let .peer(peerId) = chatLocation {
         if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
@@ -471,7 +471,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let previousView = Atomic<ChatHistoryView?>(value: nil)
         let automaticDownloadNetworkType = context.account.networkType
-        |> map { type -> AutomaticDownloadNetworkType in
+        |> map { type -> MediaAutoDownloadNetworkType in
             switch type {
                 case .none, .wifi:
                     return .wifi

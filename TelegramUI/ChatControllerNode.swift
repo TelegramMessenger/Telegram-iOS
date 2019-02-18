@@ -111,7 +111,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var scrollViewDismissStatus = false
     
     var chatPresentationInterfaceState: ChatPresentationInterfaceState
-    var automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
+    var automaticMediaDownloadSettings: MediaAutoDownloadSettings
     
     private let selectedMessagesPromise = Promise<Set<MessageId>?>(nil)
     var selectedMessages: Set<MessageId>? {
@@ -180,7 +180,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }*/
     
-    init(context: AccountContext, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, navigationBar: NavigationBar?, controller: ChatController?) {
+    init(context: AccountContext, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatController?) {
         self.context = context
         self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction

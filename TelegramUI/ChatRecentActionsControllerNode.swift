@@ -33,7 +33,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private var chatPresentationDataPromise: Promise<ChatPresentationData>
     private var presentationDataDisposable: Disposable?
     
-    private var automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
+    private var automaticMediaDownloadSettings: MediaAutoDownloadSettings
     
     private var state: ChatRecentActionsControllerState
     private var containerLayout: (ContainerViewLayout, CGFloat)?

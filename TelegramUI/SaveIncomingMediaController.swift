@@ -77,7 +77,7 @@ private enum SaveIncomingMediaEntry: ItemListNodeEntry {
     }
 }
 
-private func saveIncomingMediaControllerEntries(presentationData: PresentationData, settings: AutomaticMediaDownloadSettings) -> [SaveIncomingMediaEntry] {
+private func saveIncomingMediaControllerEntries(presentationData: PresentationData, settings: MediaAutoDownloadSettings) -> [SaveIncomingMediaEntry] {
     var entries: [SaveIncomingMediaEntry] = []
     
     entries.append(.header(presentationData.theme, presentationData.strings.SaveIncomingPhotosSettings_From))
@@ -110,11 +110,11 @@ func saveIncomingMediaController(context: AccountContext) -> ViewController {
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]))
     |> deliverOnMainQueue
     |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<SaveIncomingMediaEntry>, SaveIncomingMediaEntry.ItemGenerationArguments)) in
-        let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
-        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
+        let automaticMediaDownloadSettings: MediaAutoDownloadSettings
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
             automaticMediaDownloadSettings = value
         } else {
-            automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
+            automaticMediaDownloadSettings = MediaAutoDownloadSettings.defaultSettings
         }
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.SaveIncomingPhotosSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)

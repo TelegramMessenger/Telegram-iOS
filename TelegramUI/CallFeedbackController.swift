@@ -212,7 +212,6 @@ public func callFeedbackController(sharedContext: SharedAccountContext, account:
         statePromise.set(stateValue.modify { f($0) })
     }
 
-    var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     
@@ -235,7 +234,6 @@ public func callFeedbackController(sharedContext: SharedAccountContext, account:
     let signal = combineLatest(sharedContext.presentationData, statePromise.get())
         |> deliverOnMainQueue
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<CallFeedbackControllerEntry>, CallFeedbackControllerEntry.ItemGenerationArguments)) in
-            
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .bold, enabled: true, action: {
                 dismissImpl?()
             })
@@ -269,9 +267,6 @@ public func callFeedbackController(sharedContext: SharedAccountContext, account:
     
     
     let controller = ItemListController(sharedContext: sharedContext, state: signal)
-    pushControllerImpl = { [weak controller] c in
-        (controller?.navigationController as? NavigationController)?.pushViewController(c)
-    }
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root))
     }

@@ -718,7 +718,7 @@
 		D0EC6CED1EB9F58800EBF1C3 /* StringPluralization.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EAE09F1EB21256005296C1 /* StringPluralization.swift */; };
 		D0EC6CEE1EB9F58800EBF1C3 /* InAppNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01B279E1E394BD70022A4C0 /* InAppNotificationSettings.swift */; };
 		D0EC6CEF1EB9F58800EBF1C3 /* PresentationPasscodeSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01B27A31E394FC90022A4C0 /* PresentationPasscodeSettings.swift */; };
-		D0EC6CF01EB9F58800EBF1C3 /* AutomaticMediaDownloadSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0223A8F1EA53E6000211D94 /* AutomaticMediaDownloadSettings.swift */; };
+		D0EC6CF01EB9F58800EBF1C3 /* MediaAutoDownloadSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0223A8F1EA53E6000211D94 /* MediaAutoDownloadSettings.swift */; };
 		D0EC6CF11EB9F58800EBF1C3 /* GeneratedMediaStoreSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0223A911EA5420C00211D94 /* GeneratedMediaStoreSettings.swift */; };
 		D0EC6CF21EB9F58800EBF1C3 /* VoiceCallSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0223A931EA5442C00211D94 /* VoiceCallSettings.swift */; };
 		D0EC6CF31EB9F58800EBF1C3 /* PresentationThemeSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D010C2C91EA7A59F00F41B96 /* PresentationThemeSettings.swift */; };
@@ -1427,7 +1427,7 @@
 		D021E0CF1DB413BC00C6B04F /* ChatInputNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatInputNode.swift; sourceTree = "<group>"; };
 		D021E0D11DB4147500C6B04F /* ChatInterfaceInputNodes.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatInterfaceInputNodes.swift; sourceTree = "<group>"; };
 		D021E0E41DB55D0A00C6B04F /* ChatMediaInputStickerPackItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMediaInputStickerPackItem.swift; sourceTree = "<group>"; };
-		D0223A8F1EA53E6000211D94 /* AutomaticMediaDownloadSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AutomaticMediaDownloadSettings.swift; sourceTree = "<group>"; };
+		D0223A8F1EA53E6000211D94 /* MediaAutoDownloadSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaAutoDownloadSettings.swift; sourceTree = "<group>"; };
 		D0223A911EA5420C00211D94 /* GeneratedMediaStoreSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GeneratedMediaStoreSettings.swift; sourceTree = "<group>"; };
 		D0223A931EA5442C00211D94 /* VoiceCallSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VoiceCallSettings.swift; sourceTree = "<group>"; };
 		D0223A951EA54D0D00211D94 /* VoiceCallDataSavingController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VoiceCallDataSavingController.swift; sourceTree = "<group>"; };
@@ -3401,7 +3401,7 @@
 			children = (
 				D01B279E1E394BD70022A4C0 /* InAppNotificationSettings.swift */,
 				D01B27A31E394FC90022A4C0 /* PresentationPasscodeSettings.swift */,
-				D0223A8F1EA53E6000211D94 /* AutomaticMediaDownloadSettings.swift */,
+				D0223A8F1EA53E6000211D94 /* MediaAutoDownloadSettings.swift */,
 				0935F8EE22197FBF0070AE70 /* LegacyAutomaticMediaDownloadSettings.swift */,
 				D0223A911EA5420C00211D94 /* GeneratedMediaStoreSettings.swift */,
 				D0223A931EA5442C00211D94 /* VoiceCallSettings.swift */,
@@ -5258,7 +5258,7 @@
 				D0EC6CEE1EB9F58800EBF1C3 /* InAppNotificationSettings.swift in Sources */,
 				D0EC6CEF1EB9F58800EBF1C3 /* PresentationPasscodeSettings.swift in Sources */,
 				D06BEC8A1F6597A80035A545 /* OverlayVideoDecoration.swift in Sources */,
-				D0EC6CF01EB9F58800EBF1C3 /* AutomaticMediaDownloadSettings.swift in Sources */,
+				D0EC6CF01EB9F58800EBF1C3 /* MediaAutoDownloadSettings.swift in Sources */,
 				D0EC6CF11EB9F58800EBF1C3 /* GeneratedMediaStoreSettings.swift in Sources */,
 				D0EC6CF21EB9F58800EBF1C3 /* VoiceCallSettings.swift in Sources */,
 				09619B9621A4ABF600493558 /* InstantPageReferenceControllerNode.swift in Sources */,

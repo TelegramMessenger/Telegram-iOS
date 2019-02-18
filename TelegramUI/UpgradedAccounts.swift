@@ -100,8 +100,8 @@ private let applicationSpecificPreferencesKeyMapping: [LegacyApplicationSpecific
 ]
 
 private func upgradedSharedDataValue(_ value: PreferencesEntry?) -> PreferencesEntry? {
-    if let settings = value as? LegacyAutomaticMediaDownloadSettings {
-        return AutomaticMediaDownloadSettings.upgradeLegacySettings(settings)
+    if let settings = value as? AutomaticMediaDownloadSettings {
+        return MediaAutoDownloadSettings.upgradeLegacySettings(settings)
     } else {
         return value
     }

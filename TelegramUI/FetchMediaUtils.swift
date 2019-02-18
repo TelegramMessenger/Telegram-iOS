@@ -34,7 +34,7 @@ func messageMediaFileCancelInteractiveFetch(context: AccountContext, messageId: 
     context.fetchManager.cancelInteractiveFetches(category: fetchCategoryForFile(file), location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: file.resource)
 }
 
-public func messageMediaImageInteractiveFetched(context: AccountContext, message: Message, image: TelegramMediaImage, resource: MediaResource, storeToDownloadsPeerType: AutomaticMediaDownloadPeerType?) -> Signal<Void, NoError> {
+public func messageMediaImageInteractiveFetched(context: AccountContext, message: Message, image: TelegramMediaImage, resource: MediaResource, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<Void, NoError> {
     let mediaReference = AnyMediaReference.message(message: MessageReference(message), media: image)
     return context.fetchManager.interactivelyFetched(category: .image, location: .chat(message.id.peerId), locationKey: .messageId(message.id), mediaReference: mediaReference, resourceReference: mediaReference.resourceReference(resource), statsCategory: .image, elevatedPriority: false, userInitiated: true, storeToDownloadsPeerType: storeToDownloadsPeerType)
 }

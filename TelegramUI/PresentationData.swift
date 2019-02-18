@@ -163,13 +163,13 @@ private func currentPersonNameSortOrder() -> PresentationPersonNameOrder {
 
 public final class InitialPresentationDataAndSettings {
     public let presentationData: PresentationData
-    public let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
+    public let automaticMediaDownloadSettings: MediaAutoDownloadSettings
     public let callListSettings: CallListSettings
     public let inAppNotificationSettings: InAppNotificationSettings
     public let mediaInputSettings: MediaInputSettings
     public let experimentalUISettings: ExperimentalUISettings
     
-    init(presentationData: PresentationData, automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, callListSettings: CallListSettings, inAppNotificationSettings: InAppNotificationSettings, mediaInputSettings: MediaInputSettings, experimentalUISettings: ExperimentalUISettings) {
+    init(presentationData: PresentationData, automaticMediaDownloadSettings: MediaAutoDownloadSettings, callListSettings: CallListSettings, inAppNotificationSettings: InAppNotificationSettings, mediaInputSettings: MediaInputSettings, experimentalUISettings: ExperimentalUISettings) {
         self.presentationData = presentationData
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         self.callListSettings = callListSettings
@@ -195,11 +195,11 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager) -
             themeSettings = PresentationThemeSettings.defaultSettings
         }
         
-        let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
-        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings) as? AutomaticMediaDownloadSettings {
+        let automaticMediaDownloadSettings: MediaAutoDownloadSettings
+        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings) as? MediaAutoDownloadSettings {
             automaticMediaDownloadSettings = value
         } else {
-            automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
+            automaticMediaDownloadSettings = MediaAutoDownloadSettings.defaultSettings
         }
         
         let callListSettings: CallListSettings

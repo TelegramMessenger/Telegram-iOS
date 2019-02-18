@@ -312,12 +312,12 @@ private struct DataAndStorageControllerState: Equatable {
 }
 
 private struct DataAndStorageData: Equatable {
-    let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
+    let automaticMediaDownloadSettings: MediaAutoDownloadSettings
     let generatedMediaStoreSettings: GeneratedMediaStoreSettings
     let voiceCallSettings: VoiceCallSettings
     let proxySettings: ProxySettings?
     
-    init(automaticMediaDownloadSettings: AutomaticMediaDownloadSettings, generatedMediaStoreSettings: GeneratedMediaStoreSettings, voiceCallSettings: VoiceCallSettings, proxySettings: ProxySettings?) {
+    init(automaticMediaDownloadSettings: MediaAutoDownloadSettings, generatedMediaStoreSettings: GeneratedMediaStoreSettings, voiceCallSettings: VoiceCallSettings, proxySettings: ProxySettings?) {
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         self.generatedMediaStoreSettings = generatedMediaStoreSettings
         self.voiceCallSettings = voiceCallSettings
@@ -366,8 +366,8 @@ private func stringForAutoDownloadTypes(strings: PresentationStrings, photo: Boo
     return string
 }
 
-private func stringForAutoDownloadSetting(strings: PresentationStrings, settings: AutomaticMediaDownloadSettings, connectionType: AutomaticDownloadConnectionType) -> String {
-    let connection: AutomaticMediaDownloadConnection
+private func stringForAutoDownloadSetting(strings: PresentationStrings, settings: MediaAutoDownloadSettings, connectionType: AutomaticDownloadConnectionType) -> String {
+    let connection: MediaAutoDownloadConnection
     switch connectionType {
         case .cellular:
             connection = settings.cellular
@@ -396,7 +396,9 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.automaticDownloadHeader(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadTitle))
     entries.append(.automaticDownloadCellular(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadUsingCellular, stringForAutoDownloadSetting(strings: presentationData.strings, settings: data.automaticMediaDownloadSettings, connectionType: .cellular)))
     entries.append(.automaticDownloadWifi(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadUsingWiFi, stringForAutoDownloadSetting(strings: presentationData.strings, settings: data.automaticMediaDownloadSettings, connectionType: .wifi)))
-    entries.append(.automaticDownloadReset(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadReset, data.automaticMediaDownloadSettings.cellular != AutomaticMediaDownloadSettings.defaultSettings.cellular || data.automaticMediaDownloadSettings.wifi != AutomaticMediaDownloadSettings.defaultSettings.wifi))
+    
+    let defaultSettings = MediaAutoDownloadSettings.defaultSettings
+    entries.append(.automaticDownloadReset(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadReset, data.automaticMediaDownloadSettings.cellular != defaultSettings.cellular || data.automaticMediaDownloadSettings.wifi != defaultSettings.wifi))
     
     entries.append(.autoplayHeader(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayTitle))
     entries.append(.autoplayGifs(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayGifs, data.automaticMediaDownloadSettings.autoplayGifs))
@@ -440,11 +442,11 @@ func dataAndStorageController(context: AccountContext) -> ViewController {
     let dataAndStorageDataPromise = Promise<DataAndStorageData>()
     dataAndStorageDataPromise.set(context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings, ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.proxySettings])
     |> map { sharedData -> DataAndStorageData in
-        var automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
-        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
+        var automaticMediaDownloadSettings: MediaAutoDownloadSettings
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
             automaticMediaDownloadSettings = value
         } else {
-            automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
+            automaticMediaDownloadSettings = .defaultSettings
         }
         
         if let value = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings {
@@ -491,7 +493,7 @@ func dataAndStorageController(context: AccountContext) -> ViewController {
                 
                 let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
                     var settings = settings
-                    let defaultSettings = AutomaticMediaDownloadSettings.defaultSettings
+                    let defaultSettings = MediaAutoDownloadSettings.defaultSettings
                     settings.cellular = defaultSettings.cellular
                     settings.wifi = defaultSettings.wifi
                     return settings

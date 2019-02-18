@@ -125,9 +125,9 @@ public final class SharedAccountContext {
     public let currentInAppNotificationSettings: Atomic<InAppNotificationSettings>
     private var inAppNotificationSettingsDisposable: Disposable?
     
-    public let currentAutomaticMediaDownloadSettings: Atomic<AutomaticMediaDownloadSettings>
-    private let _automaticMediaDownloadSettings = Promise<AutomaticMediaDownloadSettings>()
-    public var automaticMediaDownloadSettings: Signal<AutomaticMediaDownloadSettings, NoError> {
+    public let currentAutomaticMediaDownloadSettings: Atomic<MediaAutoDownloadSettings>
+    private let _automaticMediaDownloadSettings = Promise<MediaAutoDownloadSettings>()
+    public var automaticMediaDownloadSettings: Signal<MediaAutoDownloadSettings, NoError> {
         return self._automaticMediaDownloadSettings.get()
     }
     
@@ -181,8 +181,8 @@ public final class SharedAccountContext {
         self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings)
         |> then(accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
             |> map { sharedData in
-                let autodownloadSettings: AutodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? AutodownloadSettings.defaultSettings
-                let automaticDownloadSettings: AutomaticMediaDownloadSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings ?? AutomaticMediaDownloadSettings.defaultSettings
+                let autodownloadSettings: AutodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? .defaultSettings
+                let automaticDownloadSettings: MediaAutoDownloadSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings ?? .defaultSettings
                 return automaticDownloadSettings.updatedWithAutodownloadSettings(autodownloadSettings)
             }
         ))

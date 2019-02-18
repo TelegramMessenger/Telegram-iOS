@@ -35,7 +35,7 @@ private final class FetchManagerLocationEntry {
     let statsCategory: MediaResourceStatsCategory
     
     var userInitiated: Bool = false
-    var storeToDownloadsPeerType: AutomaticMediaDownloadPeerType?
+    var storeToDownloadsPeerType: MediaAutoDownloadPeerType?
     var referenceCount: Int32 = 0
     var elevatedPriorityReferenceCount: Int32 = 0
     var userInitiatedPriorityIndices: [Int32] = []
@@ -440,7 +440,7 @@ public final class FetchManager {
         }
     }
     
-    func interactivelyFetched(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, mediaReference: AnyMediaReference?, resourceReference: MediaResourceReference, statsCategory: MediaResourceStatsCategory, elevatedPriority: Bool, userInitiated: Bool, storeToDownloadsPeerType: AutomaticMediaDownloadPeerType? = nil) -> Signal<Void, NoError> {
+    func interactivelyFetched(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, mediaReference: AnyMediaReference?, resourceReference: MediaResourceReference, statsCategory: MediaResourceStatsCategory, elevatedPriority: Bool, userInitiated: Bool, storeToDownloadsPeerType: MediaAutoDownloadPeerType? = nil) -> Signal<Void, NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             if let strongSelf = self {

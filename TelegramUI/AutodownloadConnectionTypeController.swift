@@ -8,7 +8,7 @@ enum AutomaticDownloadConnectionType {
     case cellular
     case wifi
     
-    var automaticDownloadNetworkType: AutomaticDownloadNetworkType {
+    var automaticDownloadNetworkType: MediaAutoDownloadNetworkType {
         switch self {
             case .cellular:
                 return .cellular
@@ -174,7 +174,7 @@ private struct AutomaticDownloadPeers {
     let channels: Bool
     let size: Int32?
     
-    init(category: AutomaticMediaDownloadCategory) {
+    init(category: MediaAutoDownloadCategory) {
         self.contacts = category.contacts
         self.otherPrivate = category.otherPrivate
         self.groups = category.groups
@@ -237,7 +237,7 @@ private func stringForAutomaticDownloadPeers(strings: PresentationStrings, peers
     }
 }
 
-private func autodownloadMediaConnectionTypeControllerEntries(presentationData: PresentationData, connectionType: AutomaticDownloadConnectionType, settings: AutomaticMediaDownloadSettings) -> [AutodownloadMediaCategoryEntry] {
+private func autodownloadMediaConnectionTypeControllerEntries(presentationData: PresentationData, connectionType: AutomaticDownloadConnectionType, settings: MediaAutoDownloadSettings) -> [AutodownloadMediaCategoryEntry] {
     var entries: [AutodownloadMediaCategoryEntry] = []
     
     let connection = settings.connectionSettings(for: connectionType.automaticDownloadNetworkType)
@@ -287,7 +287,7 @@ func autodownloadMediaConnectionTypeController(context: AccountContext, connecti
     }, changePreset: { value in
         let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
-            let preset: AutomaticMediaDownloadPreset
+            let preset: MediaAutoDownloadPreset
             switch value {
                 case .low:
                     preset = .low
@@ -314,11 +314,11 @@ func autodownloadMediaConnectionTypeController(context: AccountContext, connecti
     let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]))
         |> deliverOnMainQueue
         |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<AutodownloadMediaCategoryEntry>, AutodownloadMediaCategoryEntry.ItemGenerationArguments)) in
-            let settings: AutomaticMediaDownloadSettings
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
+            let settings: MediaAutoDownloadSettings
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
                 settings = value
             } else {
-                settings = AutomaticMediaDownloadSettings.defaultSettings
+                settings = MediaAutoDownloadSettings.defaultSettings
             }
             
             let title: String

@@ -141,7 +141,7 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
         return false
     }
     
-    func updateAutomaticMediaDownloadSettings(_ settings: AutomaticMediaDownloadSettings) {
+    func updateAutomaticMediaDownloadSettings(_ settings: MediaAutoDownloadSettings) {
     }
         
     func playMediaWithSound() -> (() -> Void)? {

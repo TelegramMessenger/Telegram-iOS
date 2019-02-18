@@ -9,6 +9,7 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(LocalFileGifMediaResource.self, f: { LocalFileGifMediaResource(decoder: $0) })
     declareEncodable(PhotoLibraryMediaResource.self, f: { PhotoLibraryMediaResource(decoder: $0) })
     declareEncodable(PresentationPasscodeSettings.self, f: { PresentationPasscodeSettings(decoder: $0) })
+    declareEncodable(MediaAutoDownloadSettings.self, f: { MediaAutoDownloadSettings(decoder: $0) })
     declareEncodable(AutomaticMediaDownloadSettings.self, f: { AutomaticMediaDownloadSettings(decoder: $0) })
     declareEncodable(GeneratedMediaStoreSettings.self, f: { GeneratedMediaStoreSettings(decoder: $0) })
     declareEncodable(PresentationThemeSettings.self, f: { PresentationThemeSettings(decoder: $0) })

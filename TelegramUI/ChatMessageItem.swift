@@ -188,12 +188,12 @@ enum ChatMessageMerge: Int32 {
 }
 
 public final class ChatMessageItemAssociatedData: Equatable {
-    let automaticDownloadPeerType: AutomaticMediaDownloadPeerType
-    let automaticDownloadNetworkType: AutomaticDownloadNetworkType
+    let automaticDownloadPeerType: MediaAutoDownloadPeerType
+    let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
     let isRecentActions: Bool
     let contactsPeerIds: Set<PeerId>
     
-    init(automaticDownloadPeerType: AutomaticMediaDownloadPeerType, automaticDownloadNetworkType: AutomaticDownloadNetworkType, isRecentActions: Bool, contactsPeerIds: Set<PeerId> = Set()) {
+    init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool, contactsPeerIds: Set<PeerId> = Set()) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions

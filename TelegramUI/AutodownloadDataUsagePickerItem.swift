@@ -12,7 +12,7 @@ enum AutomaticDownloadDataUsage: Int {
     case high
     case custom
     
-    init(preset: AutomaticMediaDownloadPreset) {
+    init(preset: MediaAutoDownloadPreset) {
         switch preset {
             case .low:
                 self = .low

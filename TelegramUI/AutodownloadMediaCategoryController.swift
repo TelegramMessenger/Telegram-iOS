@@ -205,7 +205,7 @@ private struct AutomaticDownloadPeers {
     let groups: Bool
     let channels: Bool
     
-    init(category: AutomaticMediaDownloadCategory) {
+    init(category: MediaAutoDownloadCategory) {
         self.contacts = category.contacts
         self.otherPrivate = category.otherPrivate
         self.groups = category.groups
@@ -213,7 +213,7 @@ private struct AutomaticDownloadPeers {
     }
 }
 
-private func autodownloadMediaCategoryControllerEntries(presentationData: PresentationData, connectionType: AutomaticDownloadConnectionType, category: AutomaticDownloadCategory, settings: AutomaticMediaDownloadSettings) -> [AutodownloadMediaCategoryEntry] {
+private func autodownloadMediaCategoryControllerEntries(presentationData: PresentationData, connectionType: AutomaticDownloadConnectionType, category: AutomaticDownloadCategory, settings: MediaAutoDownloadSettings) -> [AutodownloadMediaCategoryEntry] {
     var entries: [AutodownloadMediaCategoryEntry] = []
     
     let categories = effectiveAutodownloadCategories(settings: settings, networkType: connectionType.automaticDownloadNetworkType)
@@ -377,13 +377,15 @@ func autodownloadMediaCategoryController(context: AccountContext, connectionType
         }).start()
     })
     
+    
+    
     let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])) |> deliverOnMainQueue
         |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<AutodownloadMediaCategoryEntry>, AutodownloadMediaCategoryEntry.ItemGenerationArguments)) in
-            let automaticMediaDownloadSettings: AutomaticMediaDownloadSettings
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings {
+            let automaticMediaDownloadSettings: MediaAutoDownloadSettings
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
                 automaticMediaDownloadSettings = value
             } else {
-                automaticMediaDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
+                automaticMediaDownloadSettings = .defaultSettings
             }
             
             let title: String
@@ -403,6 +405,9 @@ func autodownloadMediaCategoryController(context: AccountContext, connectionType
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.willDisappear = { _ in
+        
+    }
     return controller
 }
 

@@ -1713,7 +1713,7 @@ public func standaloneChatMessagePhotoInteractiveFetched(account: Account, photo
     }
 }
 
-public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoReference: ImageMediaReference, storeToDownloadsPeerType: AutomaticMediaDownloadPeerType?) -> Signal<FetchResourceSourceType, FetchResourceError> {
+public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoReference: ImageMediaReference, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<FetchResourceSourceType, FetchResourceError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
         return fetchedMediaResource(postbox: context.account.postbox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image, reportResultStatus: true)
         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in

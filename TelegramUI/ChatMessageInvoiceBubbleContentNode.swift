@@ -54,7 +54,7 @@ final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContentNode {
                 text = invoice.description
                 
                 if let image = invoice.photo {
-                    automaticDownloadSettings = AutomaticMediaDownloadSettings.defaultSettings
+                    automaticDownloadSettings = MediaAutoDownloadSettings.defaultSettings
                     mediaAndFlags = (image, [.preferMediaBeforeText])
                 } else {
                     let invoiceLabel = item.presentationData.strings.Message_InvoiceLabel

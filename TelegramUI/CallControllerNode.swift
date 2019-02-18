@@ -449,21 +449,25 @@ final class CallControllerNode: ASDisplayNode {
             } else {
                 let point = recognizer.location(in: recognizer.view)
                 if self.statusNode.frame.contains(point) {
-                    let timestamp = CACurrentMediaTime()
-                    if self.debugTapCounter.0 < timestamp - 0.75 {
-                        self.debugTapCounter.0 = timestamp
-                        self.debugTapCounter.1 = 0
-                    }
-                    
-                    if self.debugTapCounter.0 >= timestamp - 0.75 {
-                        self.debugTapCounter.0 = timestamp
-                        self.debugTapCounter.1 += 1
-                    }
-                    
-                    if self.debugTapCounter.1 >= 10 {
-                        self.debugTapCounter.1 = 0
-                        
+                    if !GlobalExperimentalSettings.isAppStoreBuild {
                         self.presentDebugNode()
+                    } else {
+                        let timestamp = CACurrentMediaTime()
+                        if self.debugTapCounter.0 < timestamp - 0.75 {
+                            self.debugTapCounter.0 = timestamp
+                            self.debugTapCounter.1 = 0
+                        }
+                        
+                        if self.debugTapCounter.0 >= timestamp - 0.75 {
+                            self.debugTapCounter.0 = timestamp
+                            self.debugTapCounter.1 += 1
+                        }
+                        
+                        if self.debugTapCounter.1 >= 10 {
+                            self.debugTapCounter.1 = 0
+                            
+                            self.presentDebugNode()
+                        }
                     }
                 }
             }

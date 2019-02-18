@@ -189,7 +189,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
     }
     
-    func asyncLayout() -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: AutomaticMediaDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void))) {
+    func asyncLayout() -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void))) {
         let currentMessage = self.message
         let currentMedia = self.media
         let imageLayout = self.imageNode.asyncLayout()
@@ -215,7 +215,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 }
             }
             
-            var storeToDownloadsPeerType: AutomaticMediaDownloadPeerType?
+            var storeToDownloadsPeerType: MediaAutoDownloadPeerType?
             for media in message.media {
                 if media is TelegramMediaImage {
                     storeToDownloadsPeerType = peerType
@@ -917,14 +917,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true)) / \(dataSizeString(size, forceDecimal: true))"
                                     if isMediaStreamable(message: message, media: file) {
                                         badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: active ? sizeString : nil, muted: muted, active: active)
-                                        mediaDownloadState = .fetching(progress: automaticPlayback ? nil : progress)
+                                        mediaDownloadState = .fetching(progress: automaticPlayback ? nil : adjustedProgress)
                                         if self.playerStatus?.status == .playing {
                                             mediaDownloadState = nil
                                         }
                                         state = automaticPlayback ? .none : .play(bubbleTheme.mediaOverlayControlForegroundColor)
                                     } else {
                                         if automaticPlayback {
-                                            mediaDownloadState = .fetching(progress: progress)
+                                            mediaDownloadState = .fetching(progress: adjustedProgress)
                                             badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: active ? sizeString : nil, muted: muted, active: active)
                                         } else {
                                             badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: sizeString, size: nil, muted: false, active: false)
@@ -949,7 +949,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
                                     badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: active ? sizeString : nil, muted: muted, active: active)
                                     
-                                    mediaDownloadState = .fetching(progress: automaticPlayback ? nil : progress)
+                                    mediaDownloadState = .fetching(progress: automaticPlayback ? nil : adjustedProgress)
                                     if self.playerStatus?.status == .playing {
                                         mediaDownloadState = nil
                                     }
@@ -967,7 +967,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
                                     
                                     if automaticPlayback, let size = file.size {
-                                         let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true)) / \(dataSizeString(size, forceDecimal: true))"
+                                        let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true)) / \(dataSizeString(size, forceDecimal: true))"
                                         mediaDownloadState = .fetching(progress: progress)
                                         badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: active ? sizeString : nil, muted: muted, active: active)
                                     } else {
@@ -1103,12 +1103,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: AutomaticMediaDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
         return { context, theme, strings, message, media, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode in
             var imageNode: ChatMessageInteractiveMediaNode
-            var imageLayout: (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: AutomaticMediaDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void)))
+            var imageLayout: (_ context: AccountContext, _ theme: PresentationTheme, _ strings: PresentationStrings, _ message: Message, _ media: Media, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 imageNode = node

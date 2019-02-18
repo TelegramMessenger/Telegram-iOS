@@ -3,7 +3,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 
-public struct LegacyAutomaticMediaDownloadCategory: PostboxCoding, Equatable {
+public struct AutomaticMediaDownloadCategory: PostboxCoding, Equatable {
     public var cellular: Bool
     public var wifi: Bool
     public var sizeLimit: Int32
@@ -24,15 +24,15 @@ public struct LegacyAutomaticMediaDownloadCategory: PostboxCoding, Equatable {
     }
 }
 
-public struct LegacyAutomaticMediaDownloadCategories: Equatable, PostboxCoding {
-    public var photo: LegacyAutomaticMediaDownloadCategory
-    public var video: LegacyAutomaticMediaDownloadCategory
-    public var file: LegacyAutomaticMediaDownloadCategory
-    public var voiceMessage: LegacyAutomaticMediaDownloadCategory
-    public var videoMessage: LegacyAutomaticMediaDownloadCategory
+public struct AutomaticMediaDownloadCategories: Equatable, PostboxCoding {
+    public var photo: AutomaticMediaDownloadCategory
+    public var video: AutomaticMediaDownloadCategory
+    public var file: AutomaticMediaDownloadCategory
+    public var voiceMessage: AutomaticMediaDownloadCategory
+    public var videoMessage: AutomaticMediaDownloadCategory
     public var saveDownloadedPhotos: Bool
     
-    public init(photo: LegacyAutomaticMediaDownloadCategory, video: LegacyAutomaticMediaDownloadCategory, file: LegacyAutomaticMediaDownloadCategory, voiceMessage: LegacyAutomaticMediaDownloadCategory, videoMessage: LegacyAutomaticMediaDownloadCategory, saveDownloadedPhotos: Bool) {
+    public init(photo: AutomaticMediaDownloadCategory, video: AutomaticMediaDownloadCategory, file: AutomaticMediaDownloadCategory, voiceMessage: AutomaticMediaDownloadCategory, videoMessage: AutomaticMediaDownloadCategory, saveDownloadedPhotos: Bool) {
         self.photo = photo
         self.video = video
         self.file = file
@@ -42,11 +42,11 @@ public struct LegacyAutomaticMediaDownloadCategories: Equatable, PostboxCoding {
     }
     
     public init(decoder: PostboxDecoder) {
-        self.photo = decoder.decodeObjectForKey("photo", decoder: LegacyAutomaticMediaDownloadCategory.init(decoder:)) as! LegacyAutomaticMediaDownloadCategory
-        self.video = decoder.decodeObjectForKey("video", decoder: LegacyAutomaticMediaDownloadCategory.init(decoder:)) as! LegacyAutomaticMediaDownloadCategory
-        self.file = decoder.decodeObjectForKey("file", decoder: LegacyAutomaticMediaDownloadCategory.init(decoder:)) as! LegacyAutomaticMediaDownloadCategory
-        self.voiceMessage = decoder.decodeObjectForKey("voiceMessage", decoder: LegacyAutomaticMediaDownloadCategory.init(decoder:)) as! LegacyAutomaticMediaDownloadCategory
-        self.videoMessage = decoder.decodeObjectForKey("videoMessage", decoder: LegacyAutomaticMediaDownloadCategory.init(decoder:)) as! LegacyAutomaticMediaDownloadCategory
+        self.photo = decoder.decodeObjectForKey("photo", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
+        self.video = decoder.decodeObjectForKey("video", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
+        self.file = decoder.decodeObjectForKey("file", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
+        self.voiceMessage = decoder.decodeObjectForKey("voiceMessage", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
+        self.videoMessage = decoder.decodeObjectForKey("videoMessage", decoder: AutomaticMediaDownloadCategory.init(decoder:)) as! AutomaticMediaDownloadCategory
         self.saveDownloadedPhotos = decoder.decodeInt32ForKey("saveDownloadedPhotos", orElse: 0) != 0
     }
     
@@ -54,13 +54,13 @@ public struct LegacyAutomaticMediaDownloadCategories: Equatable, PostboxCoding {
     }
 }
 
-public struct LegacyAutomaticMediaDownloadPeers: Equatable, PostboxCoding {
-    public var contacts: LegacyAutomaticMediaDownloadCategories
-    public var otherPrivate: LegacyAutomaticMediaDownloadCategories
-    public var groups: LegacyAutomaticMediaDownloadCategories
-    public var channels: LegacyAutomaticMediaDownloadCategories
+public struct AutomaticMediaDownloadPeers: Equatable, PostboxCoding {
+    public var contacts: AutomaticMediaDownloadCategories
+    public var otherPrivate: AutomaticMediaDownloadCategories
+    public var groups: AutomaticMediaDownloadCategories
+    public var channels: AutomaticMediaDownloadCategories
     
-    public init(contacts: LegacyAutomaticMediaDownloadCategories, otherPrivate: LegacyAutomaticMediaDownloadCategories, groups: LegacyAutomaticMediaDownloadCategories, channels: LegacyAutomaticMediaDownloadCategories) {
+    public init(contacts: AutomaticMediaDownloadCategories, otherPrivate: AutomaticMediaDownloadCategories, groups: AutomaticMediaDownloadCategories, channels: AutomaticMediaDownloadCategories) {
         self.contacts = contacts
         self.otherPrivate = otherPrivate
         self.groups = groups
@@ -68,32 +68,32 @@ public struct LegacyAutomaticMediaDownloadPeers: Equatable, PostboxCoding {
     }
     
     public init(decoder: PostboxDecoder) {
-        self.contacts = decoder.decodeObjectForKey("contacts", decoder: LegacyAutomaticMediaDownloadCategories.init(decoder:)) as! LegacyAutomaticMediaDownloadCategories
-        self.otherPrivate = decoder.decodeObjectForKey("otherPrivate", decoder: LegacyAutomaticMediaDownloadCategories.init(decoder:)) as! LegacyAutomaticMediaDownloadCategories
-        self.groups = decoder.decodeObjectForKey("groups", decoder: LegacyAutomaticMediaDownloadCategories.init(decoder:)) as! LegacyAutomaticMediaDownloadCategories
-        self.channels = decoder.decodeObjectForKey("channels", decoder: LegacyAutomaticMediaDownloadCategories.init(decoder:)) as! LegacyAutomaticMediaDownloadCategories
+        self.contacts = decoder.decodeObjectForKey("contacts", decoder: AutomaticMediaDownloadCategories.init(decoder:)) as! AutomaticMediaDownloadCategories
+        self.otherPrivate = decoder.decodeObjectForKey("otherPrivate", decoder: AutomaticMediaDownloadCategories.init(decoder:)) as! AutomaticMediaDownloadCategories
+        self.groups = decoder.decodeObjectForKey("groups", decoder: AutomaticMediaDownloadCategories.init(decoder:)) as! AutomaticMediaDownloadCategories
+        self.channels = decoder.decodeObjectForKey("channels", decoder: AutomaticMediaDownloadCategories.init(decoder:)) as! AutomaticMediaDownloadCategories
     }
     
     public func encode(_ encoder: PostboxEncoder) {
     }
 }
 
-public struct LegacyAutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
+public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
     public var masterEnabled: Bool
-    public var peers: LegacyAutomaticMediaDownloadPeers
+    public var peers: AutomaticMediaDownloadPeers
     public var autoplayGifs: Bool
     public var downloadInBackground: Bool
     
-    public static var defaultSettings: LegacyAutomaticMediaDownloadSettings {
-        let defaultCategory = LegacyAutomaticMediaDownloadCategories(
-            photo: LegacyAutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: Int32.max),
-            video: LegacyAutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: 10 * 1024 * 1024),
-            file: LegacyAutomaticMediaDownloadCategory(cellular: false, wifi: false, sizeLimit: 1 * 1024 * 1024),
-            voiceMessage: LegacyAutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: 1 * 1024 * 1024),
-            videoMessage: LegacyAutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: 4 * 1024 * 1024),
+    public static var defaultSettings: AutomaticMediaDownloadSettings {
+        let defaultCategory = AutomaticMediaDownloadCategories(
+            photo: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: Int32.max),
+            video: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: 10 * 1024 * 1024),
+            file: AutomaticMediaDownloadCategory(cellular: false, wifi: false, sizeLimit: 1 * 1024 * 1024),
+            voiceMessage: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: 1 * 1024 * 1024),
+            videoMessage: AutomaticMediaDownloadCategory(cellular: true, wifi: true, sizeLimit: 4 * 1024 * 1024),
             saveDownloadedPhotos: false
         )
-        return LegacyAutomaticMediaDownloadSettings(masterEnabled: true, peers: LegacyAutomaticMediaDownloadPeers(
+        return AutomaticMediaDownloadSettings(masterEnabled: true, peers: AutomaticMediaDownloadPeers(
             contacts: defaultCategory,
             otherPrivate: defaultCategory,
             groups: defaultCategory,
@@ -101,7 +101,7 @@ public struct LegacyAutomaticMediaDownloadSettings: PreferencesEntry, Equatable 
         ), autoplayGifs: true, downloadInBackground: true)
     }
     
-    init(masterEnabled: Bool, peers: LegacyAutomaticMediaDownloadPeers, autoplayGifs: Bool, downloadInBackground: Bool) {
+    init(masterEnabled: Bool, peers: AutomaticMediaDownloadPeers, autoplayGifs: Bool, downloadInBackground: Bool) {
         self.masterEnabled = masterEnabled
         self.peers = peers
         self.autoplayGifs = autoplayGifs
@@ -110,7 +110,7 @@ public struct LegacyAutomaticMediaDownloadSettings: PreferencesEntry, Equatable 
     
     public init(decoder: PostboxDecoder) {
         self.masterEnabled = decoder.decodeInt32ForKey("masterEnabled", orElse: 1) != 0
-        self.peers = (decoder.decodeObjectForKey("peers", decoder: LegacyAutomaticMediaDownloadPeers.init(decoder:)) as? LegacyAutomaticMediaDownloadPeers) ?? LegacyAutomaticMediaDownloadSettings.defaultSettings.peers
+        self.peers = (decoder.decodeObjectForKey("peers", decoder: AutomaticMediaDownloadPeers.init(decoder:)) as? AutomaticMediaDownloadPeers) ?? AutomaticMediaDownloadSettings.defaultSettings.peers
         self.autoplayGifs = decoder.decodeInt32ForKey("autoplayGifs", orElse: 1) != 0
         self.downloadInBackground = decoder.decodeInt32ForKey("downloadInBackground", orElse: 1) != 0
     }
@@ -119,7 +119,7 @@ public struct LegacyAutomaticMediaDownloadSettings: PreferencesEntry, Equatable 
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? LegacyAutomaticMediaDownloadSettings {
+        if let to = to as? AutomaticMediaDownloadSettings {
             return self == to
         } else {
             return false
