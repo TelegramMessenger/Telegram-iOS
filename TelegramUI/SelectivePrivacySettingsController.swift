@@ -577,7 +577,8 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                     case .main:
                         return state.withUpdatedEnableFor(Set(updatedPeerIds)).withUpdatedDisableFor(state.disableFor.subtracting(Set(updatedPeerIds)))
                     case .callP2P:
-                        return state.withUpdatedCallP2PEnableFor(Set(updatedPeerIds)).withUpdatedCallP2PDisableFor(state.disableFor.subtracting(Set(updatedPeerIds)))
+                        var callP2PDisableFor = state.callP2PDisableFor ?? Set()
+                        return state.withUpdatedCallP2PEnableFor(Set(updatedPeerIds)).withUpdatedCallP2PDisableFor(callP2PDisableFor.subtracting(Set(updatedPeerIds)))
                 }
             }
         }))
@@ -609,7 +610,8 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                     case .main:
                         return state.withUpdatedDisableFor(Set(updatedPeerIds)).withUpdatedEnableFor(state.enableFor.subtracting(Set(updatedPeerIds)))
                     case .callP2P:
-                        return state.withUpdatedCallP2PDisableFor(Set(updatedPeerIds)).withUpdatedCallP2PEnableFor(state.enableFor.subtracting(Set(updatedPeerIds)))
+                        var callP2PEnableFor = state.callP2PEnableFor ?? Set()
+                        return state.withUpdatedCallP2PDisableFor(Set(updatedPeerIds)).withUpdatedCallP2PEnableFor(callP2PEnableFor.subtracting(Set(updatedPeerIds)))
                 }
             }
         }))
