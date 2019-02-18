@@ -69,7 +69,7 @@ public final class TabBarAccountSwitchController: ViewController {
         if !self.animatedAppearance {
             self.animatedAppearance = true
             
-            self.hapticFeedback.tap()
+            self.hapticFeedback.impact()
             self.controllerNode.animateIn()
         }
     }
@@ -81,11 +81,14 @@ public final class TabBarAccountSwitchController: ViewController {
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
-        self.controllerNode.animateOut(changedAccount: self.changedAccount, completion: { [weak self] in
+        self.changedAccount = false
+        self.dismiss(sourceNodes: [])
+    }
+    
+    public func dismiss(sourceNodes: [ASDisplayNode]) {
+        self.controllerNode.animateOut(sourceNodes: sourceNodes, changedAccount: self.changedAccount, completion: { [weak self] in
             self?.animatedAppearance = false
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
-            
-            completion?()
         })
     }
 }

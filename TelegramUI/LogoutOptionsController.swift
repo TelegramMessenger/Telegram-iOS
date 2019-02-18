@@ -10,7 +10,7 @@ private final class LogoutOptionsItemIcons {
     static let setPasscode = UIImage(bundleImageName: "Settings/MenuIcons/SetPasscode")?.precomposed()
     static let clearCache = UIImage(bundleImageName: "Settings/MenuIcons/ClearCache")?.precomposed()
     static let changePhoneNumber = UIImage(bundleImageName: "Settings/MenuIcons/ChangePhoneNumber")?.precomposed()
-    static let contactSupport = UIImage(bundleImageName: "Settings/MenuIcons/Faq")?.precomposed()
+    static let contactSupport = UIImage(bundleImageName: "Settings/MenuIcons/Support")?.precomposed()
 }
 
 private struct LogoutOptionsItemArguments {

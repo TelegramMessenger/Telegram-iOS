@@ -216,12 +216,12 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
     private let cancel: () -> Void
     
     private let effectView: UIVisualEffectView
-    private let tapNode: ASDisplayNode
+    private let dimNode: ASDisplayNode
     
     private let contentContainerNode: ASDisplayNode
     private let contentNodes: [ASDisplayNode & AbstractSwitchAccountItemNode]
     
-    private let sourceNodes: [ASDisplayNode]
+    private var sourceNodes: [ASDisplayNode]
     private var snapshotViews: [UIView] = []
     
     private var validLayout: ContainerViewLayout?
@@ -242,7 +242,11 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
             self.effectView.alpha = 0.0
         }
         
-        self.tapNode = ASDisplayNode()
+        self.dimNode = ASDisplayNode()
+        self.dimNode.alpha = 1.0
+        if presentationData.theme.chatList.searchBarKeyboardColor == .light {
+            self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.04)
+        }
         
         self.contentContainerNode = ASDisplayNode()
         self.contentContainerNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemBackgroundColor
@@ -264,7 +268,6 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
             let id = account.id
             contentNodes.append(SwitchAccountItemNode(account: account, peer: peer, isCurrent: false, unreadCount: count, displaySeparator: i != accounts.other.count - 1, presentationData: presentationData, action: {
                 switchToAccount(id)
-                cancel()
             }))
         }
         self.contentNodes = contentNodes
@@ -272,11 +275,11 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
         super.init()
         
         self.view.addSubview(self.effectView)
-        self.addSubnode(self.tapNode)
+        self.addSubnode(self.dimNode)
         self.addSubnode(self.contentContainerNode)
         self.contentNodes.forEach(self.contentContainerNode.addSubnode)
         
-        self.tapNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
+        self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
     }
     
     func animateIn() {
@@ -299,14 +302,22 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
                 self.effectView.alpha = 1.0
             }
         })
-        self.contentContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.contentContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.08)
         if let _ = self.validLayout, let sourceNode = self.sourceNodes.first {
             let sourceFrame = sourceNode.view.convert(sourceNode.bounds, to: self.view)
             self.contentContainerNode.layer.animateFrame(from: sourceFrame, to: self.contentContainerNode.frame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
         }
         
         for sourceNode in self.sourceNodes {
-            if let snapshot = sourceNode.view.snapshotContentTree() {
+            if let imageNode = sourceNode as? ASImageNode {
+                let snapshot = UIImageView()
+                snapshot.image = imageNode.image
+                snapshot.frame = sourceNode.view.convert(sourceNode.bounds, to: self.view)
+                snapshot.isUserInteractionEnabled = false
+                self.view.addSubview(snapshot)
+                self.snapshotViews.append(snapshot)
+            } else if let snapshot = sourceNode.view.snapshotContentTree() {
                 snapshot.frame = sourceNode.view.convert(sourceNode.bounds, to: self.view)
                 snapshot.isUserInteractionEnabled = false
                 self.view.addSubview(snapshot)
@@ -316,7 +327,16 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
         }
     }
     
-    func animateOut(changedAccount: Bool, completion: @escaping () -> Void) {
+    func animateOut(sourceNodes: [ASDisplayNode], changedAccount: Bool, completion: @escaping () -> Void) {
+        var completedEffect = false
+        var completedSourceNodes = false
+        
+        let intermediateCompletion: () -> Void = {
+            if completedEffect && completedSourceNodes {
+                completion()
+            }
+        }
+        
         UIView.animate(withDuration: 0.3, animations: {
             if #available(iOS 9.0, *) {
                 self.effectView.effect = nil
@@ -324,30 +344,100 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
                 self.effectView.alpha = 0.0
             }
         }, completion: { [weak self] _ in
-            if !changedAccount {
-                if let strongSelf = self {
-                    for sourceNode in strongSelf.sourceNodes {
-                        sourceNode.alpha = 1.0
-                    }
+            if let strongSelf = self {
+                for sourceNode in strongSelf.sourceNodes {
+                    sourceNode.alpha = 1.0
                 }
             }
             
-            completion()
+            completedEffect = true
+            intermediateCompletion()
         })
+        self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
         self.contentContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false, completion: { _ in
         })
         if let _ = self.validLayout, let sourceNode = self.sourceNodes.first {
             let sourceFrame = sourceNode.view.convert(sourceNode.bounds, to: self.view)
             self.contentContainerNode.layer.animateFrame(from: self.contentContainerNode.frame, to: sourceFrame, duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseIn, removeOnCompletion: false)
         }
+        
         if changedAccount {
             for sourceNode in self.sourceNodes {
                 sourceNode.alpha = 1.0
-                sourceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             }
-            for snapshotView in self.snapshotViews {
-                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+            
+            var previousImage: UIImage?
+            for i in 0 ..< self.snapshotViews.count {
+                let view = self.snapshotViews[i]
+                if view.bounds.size.width.isEqual(to: 42.0) {
+                    if i == 0, let imageView = view as? UIImageView {
+                        previousImage = imageView.image
+                    }
+                    view.removeFromSuperview()
+                } else {
+                    view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak view] _ in
+                        view?.removeFromSuperview()
+                    })
+                    view.layer.animateScale(from: 1.0, to: 0.2, duration: 0.25, removeOnCompletion: false)
+                }
             }
+            self.snapshotViews.removeAll()
+            
+            self.sourceNodes = sourceNodes
+            
+            var hadBounce = false
+            for i in 0 ..< self.sourceNodes.count {
+                let sourceNode = self.sourceNodes[i]
+                var snapshot: UIView?
+                if let imageNode = sourceNode as? ASImageNode {
+                    let snapshotView = UIImageView()
+                    snapshotView.image = imageNode.image
+                    snapshotView.frame = sourceNode.view.convert(sourceNode.bounds, to: self.view)
+                    snapshotView.isUserInteractionEnabled = false
+                    self.view.addSubview(snapshotView)
+                    self.snapshotViews.append(snapshotView)
+                    snapshot = snapshotView
+                } else if let genericSnapshot = sourceNode.view.snapshotContentTree() {
+                    genericSnapshot.frame = sourceNode.view.convert(sourceNode.bounds, to: self.view)
+                    genericSnapshot.isUserInteractionEnabled = false
+                    self.view.addSubview(genericSnapshot)
+                    self.snapshotViews.append(genericSnapshot)
+                    snapshot = genericSnapshot
+                }
+                
+                if let snapshot = snapshot {
+                    if snapshot.bounds.size.width.isEqual(to: 42.0) {
+                        if i == 0, let imageView = snapshot as? UIImageView {
+                            hadBounce = true
+                            let updatedImage = imageView.image
+                            imageView.image = previousImage
+                            imageView.layer.animateScale(from: 1.0, to: 0.6, duration: 0.1, removeOnCompletion: false, completion: { [weak imageView] _ in
+                                guard let imageView = imageView else {
+                                    return
+                                }
+                                imageView.image = updatedImage
+                                if let previousContents = previousImage?.cgImage, let updatedContents = updatedImage?.cgImage {
+                                    imageView.layer.animate(from: previousContents as AnyObject, to: updatedContents as AnyObject, keyPath: "contents", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.15)
+                                }
+                                imageView.layer.animateSpring(from: 0.6 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.6, completion: { _ in
+                                    completedSourceNodes = true
+                                    intermediateCompletion()
+                                })
+                            })
+                        }
+                    } else {
+                        snapshot.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        snapshot.layer.animateScale(from: 0.2, to: 1.0, duration: 0.2, removeOnCompletion: false)
+                    }
+                }
+                sourceNode.alpha = 0.0
+            }
+            
+            if !hadBounce {
+                completedSourceNodes = true
+            }
+        } else {
+            completedSourceNodes = true
         }
     }
     
@@ -355,7 +445,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
         self.validLayout = layout
         
         transition.updateFrame(view: self.effectView, frame: CGRect(origin: CGPoint(), size: layout.size))
-        transition.updateFrame(node: self.tapNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         let sideInset: CGFloat = 18.0
         
