@@ -22,12 +22,11 @@ class UniversalVideoGalleryItem: GalleryItem {
     let credit: NSAttributedString?
     let hideControls: Bool
     let fromPlayingVideo: Bool
-    let returningFromOverlay: Bool
     let playbackCompleted: () -> Void
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, returningFromOverlay: Bool = false, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.content = content
@@ -38,7 +37,6 @@ class UniversalVideoGalleryItem: GalleryItem {
         self.credit = credit
         self.hideControls = hideControls
         self.fromPlayingVideo = fromPlayingVideo
-        self.returningFromOverlay = returningFromOverlay
         self.playbackCompleted = playbackCompleted
         self.performAction = performAction
         self.openActionOptions = openActionOptions
@@ -155,10 +153,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusNode: RadialStatusNode
     
     private var isCentral = false
-    private var _isVisible = false
+    private var _isVisible: Bool?
     private var initiallyActivated = false
-    private var initiallyAppeared = false
-    private var ignoreNextVisibility = false
     private var hideStatusNodeUntilCentrality = false
     private var validLayout: (ContainerViewLayout, CGFloat)?
     private var didPause = false
@@ -563,17 +559,20 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         super.visibilityUpdated(isVisible: isVisible)
         
         if self._isVisible != isVisible {
+            let hadPreviousValue = self._isVisible != nil
             self._isVisible = isVisible
             
-            if let item = self.item, let videoNode = self.videoNode, !self.ignoreNextVisibility && (self.initiallyAppeared || !item.fromPlayingVideo) {
-                videoNode.canAttachContent = isVisible
-                if !item.returningFromOverlay {
+            if let item = self.item, let videoNode = self.videoNode {
+                if hadPreviousValue {
+                    videoNode.canAttachContent = isVisible
                     if isVisible {
                         videoNode.pause()
                         videoNode.seek(0.0)
                     } else {
                         videoNode.continuePlayingWithoutSound()
                     }
+                } else if !item.fromPlayingVideo {
+                    videoNode.canAttachContent = isVisible
                 }
                 self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
                 if self.shouldAutoplayOnCentrality() {
@@ -581,12 +580,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     self.statusButtonNode.isHidden = true
                 }
             }
-            
-            if !isVisible {
-                self.ignoreNextVisibility = false
-            }
-        } else if !isVisible {
-            self.initiallyAppeared = true
         }
     }
     
@@ -603,7 +596,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             } else {
                 videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
             }
-            self.ignoreNextVisibility = true
         }
     }
     
@@ -611,8 +603,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         guard let videoNode = self.videoNode else {
             return
         }
-        
-        self.initiallyAppeared = true
         
         if let node = node.0 as? OverlayMediaItemNode {
             var transformedFrame = node.view.convert(node.view.bounds, to: videoNode.view)
@@ -974,7 +964,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 switch contentInfo {
                     case let .message(message):
-                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(message.id, true), replaceRootController: { controller, ready in
+                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(message.id), replaceRootController: { controller, ready in
                             if let baseNavigationController = baseNavigationController {
                                 baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
                             }

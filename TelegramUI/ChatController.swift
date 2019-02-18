@@ -5627,7 +5627,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     private func debugStreamSingleVideo(_ id: MessageId) {
-        let gallery = GalleryController(context: self.context, source: .peerMessagesAtId(id, false), streamSingleVideo: true, replaceRootController: { [weak self] controller, ready in
+        let gallery = GalleryController(context: self.context, source: .peerMessagesAtId(id), streamSingleVideo: true, replaceRootController: { [weak self] controller, ready in
             if let strongSelf = self {
                 (strongSelf.navigationController as? NavigationController)?.replaceTopController(controller, animated: false, ready: ready)
             }
