@@ -665,7 +665,9 @@ private final class SharedApplicationContext {
         |> mapToSignal { context -> Signal<AccountRecordId?, NoError> in
             if let context = context, let watchManager = context.context.watchManager {
                 let accountId = context.context.account.id
-                return watchManager.runningTasks
+                let runningTasks: Signal<WatchRunningTasks?, NoError> = .single(nil)
+                |> then(watchManager.runningTasks)
+                return runningTasks
                 |> distinctUntilChanged
                 |> map { value -> AccountRecordId? in
                     if let value = value, value.running {
