@@ -661,7 +661,25 @@ private final class SharedApplicationContext {
                 return .single(nil)
             }
         }
-        let wakeupManager = SharedWakeupManager(beginBackgroundTask: { name, expiration in application.beginBackgroundTask(withName: name, expirationHandler: expiration) }, endBackgroundTask: { id in application.endBackgroundTask(id) }, backgroundTimeRemaining: { application.backgroundTimeRemaining }, activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1.map { ($0.0, $0.1) }) }, liveLocationPolling: liveLocationPolling, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
+        let watchTasks = self.context.get()
+        |> mapToSignal { context -> Signal<AccountRecordId?, NoError> in
+            if let context = context, let watchManager = context.context.watchManager {
+                let accountId = context.context.account.id
+                return watchManager.runningTasks
+                |> distinctUntilChanged
+                |> map { value -> AccountRecordId? in
+                    if let value = value, value.running {
+                        return accountId
+                    } else {
+                        return nil
+                    }
+                }
+                |> distinctUntilChanged
+            } else {
+                return .single(nil)
+            }
+        }
+        let wakeupManager = SharedWakeupManager(beginBackgroundTask: { name, expiration in application.beginBackgroundTask(withName: name, expirationHandler: expiration) }, endBackgroundTask: { id in application.endBackgroundTask(id) }, backgroundTimeRemaining: { application.backgroundTimeRemaining }, activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1.map { ($0.0, $0.1) }) }, liveLocationPolling: liveLocationPolling, watchTasks: watchTasks, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
             return sharedContext.accountUserInterfaceInUse(id)
         })
         let sharedApplicationContext = SharedApplicationContext(sharedContext: sharedContext, notificationManager: notificationManager, wakeupManager: wakeupManager)
@@ -891,6 +909,29 @@ private final class SharedApplicationContext {
                             }
                         })
                     }
+                    self.mainWindow.forEachViewController({ controller in
+                        if let controller = controller as? TabBarAccountSwitchController {
+                            var dismissed = false
+                            if let rootController = self.mainWindow.viewController as? TelegramRootController {
+                                if let tabsController = rootController.viewControllers.first as? TabBarController {
+                                    for i in 0 ..< tabsController.controllers.count {
+                                        if let _ = tabsController.controllers[i] as? (SettingsController & ViewController) {
+                                            let sourceNodes = tabsController.sourceNodesForController(at: i)
+                                            if let sourceNodes = sourceNodes {
+                                                dismissed = true
+                                                controller.dismiss(sourceNodes: sourceNodes)
+                                            }
+                                            return false
+                                        }
+                                    }
+                                }
+                            }
+                            if dismissed {
+                                controller.dismiss()
+                            }
+                        }
+                        return true
+                    })
                     self.mainWindow.topLevelOverlayControllers = [sharedApplicationContext.overlayMediaController, context.notificationController]
                     var authorizeNotifications = true
                     if #available(iOS 10.0, *) {
@@ -937,7 +978,9 @@ private final class SharedApplicationContext {
             }
         }))
         
-        self.watchCommunicationManagerPromise.set(watchCommunicationManager(context: self.context))
+        self.watchCommunicationManagerPromise.set(watchCommunicationManager(context: self.context, allowBackgroundTimeExtension: { timeout in
+            wakeupManager.allowBackgroundTimeExtension(timeout: timeout)
+        }))
         let _ = self.watchCommunicationManagerPromise.get().start(next: { manager in
             if let manager = manager {
                 watchManagerArgumentsPromise.set(.single(manager.arguments))
@@ -1578,16 +1621,33 @@ private final class SharedApplicationContext {
                 self.openChatWhenReady(accountId: accountIdFromNotification(response.notification), peerId: peerId, messageId: messageId)
             }
             completionHandler()
-        } else if response.actionIdentifier == "reply", let peerId = peerIdFromNotification(response.notification) {
-            if let response = response as? UNTextInputNotificationResponse, !response.userText.isEmpty {
-                let text = response.userText
-                let signal = self.authorizedContext()
-                |> take(1)
-                |> mapToSignal { context -> Signal<Void, NoError> in
-                    if let messageId = messageIdFromNotification(peerId: peerId, notification: response.notification) {
-                        let _ = applyMaxReadIndexInteractively(postbox: context.context.account.postbox, stateManager: context.context.account.stateManager, index: MessageIndex(id: messageId, timestamp: 0)).start()
+        } else if response.actionIdentifier == "reply", let peerId = peerIdFromNotification(response.notification), let accountId = accountIdFromNotification(response.notification) {
+            guard let response = response as? UNTextInputNotificationResponse, !response.userText.isEmpty else {
+                completionHandler()
+                return
+            }
+            let text = response.userText
+            let signal = self.sharedContextPromise.get()
+            |> take(1)
+            |> deliverOnMainQueue
+            |> mapToSignal { sharedContext -> Signal<Void, NoError> in
+                sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0)
+                return sharedContext.sharedContext.activeAccounts
+                |> mapToSignal { _, accounts, _ -> Signal<Account, NoError> in
+                    for account in accounts {
+                        if account.1.id == accountId {
+                            return .single(account.1)
+                        }
                     }
-                    return enqueueMessages(account: context.context.account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)])
+                    return .complete()
+                }
+                |> take(1)
+                |> deliverOnMainQueue
+                |> mapToSignal { account -> Signal<Void, NoError> in
+                    if let messageId = messageIdFromNotification(peerId: peerId, notification: response.notification) {
+                        let _ = applyMaxReadIndexInteractively(postbox: account.postbox, stateManager: account.stateManager, index: MessageIndex(id: messageId, timestamp: 0)).start()
+                    }
+                    return enqueueMessages(account: account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)])
                     |> map { messageIds -> MessageId? in
                         if messageIds.isEmpty {
                             return nil
@@ -1597,7 +1657,7 @@ private final class SharedApplicationContext {
                     }
                     |> mapToSignal { messageId -> Signal<Void, NoError> in
                         if let messageId = messageId {
-                            return context.context.account.postbox.unsentMessageIdsView()
+                            return account.postbox.unsentMessageIdsView()
                             |> filter { view in
                                 return !view.ids.contains(messageId)
                             }
@@ -1610,34 +1670,20 @@ private final class SharedApplicationContext {
                         }
                     }
                 }
-                |> deliverOnMainQueue
-                |> timeout(15.0, queue: Queue.mainQueue(), alternate: .complete() |> beforeCompleted {
-                    /*let content = UNMutableNotificationContent()
-                    content.body = "Please open the app to continue sending messages"
-                    content.sound = UNNotificationSound.default()
-                    content.categoryIdentifier = "error"
-                    content.userInfo = ["peerId": peerId as NSNumber]
-                    
-                    let request = UNNotificationRequest(identifier: "reply-error", content: content, trigger: nil)
-                    
-                    let center = UNUserNotificationCenter.current()
-                    center.add(request)*/
-                })
-                
-                let disposable = MetaDisposable()
-                disposable.set((signal
-                |> afterDisposed { [weak disposable] in
-                    Queue.mainQueue().async {
-                        if let disposable = disposable {
-                            self.replyFromNotificationsDisposables.remove(disposable)
-                        }
-                        completionHandler()
-                    }
-                }).start())
-                self.replyFromNotificationsDisposables.add(disposable)
-            } else {
-                completionHandler()
             }
+            |> deliverOnMainQueue
+            
+            let disposable = MetaDisposable()
+            disposable.set((signal
+            |> afterDisposed { [weak disposable] in
+                Queue.mainQueue().async {
+                    if let disposable = disposable {
+                        self.replyFromNotificationsDisposables.remove(disposable)
+                    }
+                    completionHandler()
+                }
+            }).start())
+            self.replyFromNotificationsDisposables.add(disposable)
         } else {
             completionHandler()
         }

@@ -9,7 +9,7 @@
 
 @property (nonatomic, readonly) bool isRunning;
 
-- (instancetype)initWithHandler:(SSignal *(^)(TGBridgeSubscription *))handler fileHandler:(void (^)(NSString *, NSDictionary *))fileHandler dispatchOnQueue:(void (^)(void (^)(void)))dispatchOnQueue logFunction:(void (^)(NSString *))logFunction;
+- (instancetype)initWithHandler:(SSignal *(^)(TGBridgeSubscription *))handler fileHandler:(void (^)(NSString *, NSDictionary *))fileHandler dispatchOnQueue:(void (^)(void (^)(void)))dispatchOnQueue logFunction:(void (^)(NSString *))logFunction allowBackgroundTimeExtension:(void (^)())allowBackgroundTimeExtension;
 - (void)startRunning;
 
 - (SSignal *)watchAppInstalledSignal;

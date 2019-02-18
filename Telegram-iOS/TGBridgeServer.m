@@ -49,6 +49,8 @@
     
     NSMutableDictionary *_runningTasks;
     SVariable *_hasRunningTasks;
+    
+    void (^_allowBackgroundTimeExtension)();
 }
 
 @property (nonatomic, readonly) WCSession *session;
@@ -57,7 +59,7 @@
 
 @implementation TGBridgeServer
 
-- (instancetype)initWithHandler:(SSignal *(^)(TGBridgeSubscription *))handler fileHandler:(void (^)(NSString *, NSDictionary *))fileHandler dispatchOnQueue:(void (^)(void (^)(void)))dispatchOnQueue logFunction:(void (^)(NSString *))logFunction
+- (instancetype)initWithHandler:(SSignal *(^)(TGBridgeSubscription *))handler fileHandler:(void (^)(NSString *, NSDictionary *))fileHandler dispatchOnQueue:(void (^)(void (^)(void)))dispatchOnQueue logFunction:(void (^)(NSString *))logFunction allowBackgroundTimeExtension:(void (^)())allowBackgroundTimeExtension
 {
     self = [super init];
     if (self != nil)
@@ -66,6 +68,7 @@
         _fileHandler = [fileHandler copy];
         _dispatch = [dispatchOnQueue copy];
         _logFunction = [logFunction copy];
+        _allowBackgroundTimeExtension = [allowBackgroundTimeExtension copy];
         
         _runningTasks = [[NSMutableDictionary alloc] init];
         _hasRunningTasks = [[SVariable alloc] init];
@@ -162,6 +165,10 @@
 
 - (void)handleMessageData:(NSData *)messageData task:(id<SDisposable>)task replyHandler:(void (^)(NSData *))replyHandler completion:(void (^)(void))completion
 {
+    if (_allowBackgroundTimeExtension) {
+        _allowBackgroundTimeExtension();
+    }
+    
     __block id<SDisposable> runningTask = task;
     void (^finishTask)(NSTimeInterval) = ^(NSTimeInterval delay)
     {

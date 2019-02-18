@@ -12,6 +12,7 @@ private struct AccountTasks {
     let backgroundDownloads: Bool
     let backgroundAudio: Bool
     let activeCalls: Bool
+    let watchTasks: Bool
     let userInterfaceInUse: Bool
     
     var isEmpty: Bool {
@@ -31,6 +32,9 @@ private struct AccountTasks {
             return false
         }
         if self.activeCalls {
+            return false
+        }
+        if self.watchTasks {
             return false
         }
         if self.userInterfaceInUse {
@@ -57,7 +61,7 @@ final class SharedWakeupManager {
     
     private var accountsAndTasks: [(Account, Bool, AccountTasks)] = []
     
-    init(beginBackgroundTask: @escaping (String, @escaping () -> Void) -> UIBackgroundTaskIdentifier?, endBackgroundTask: @escaping (UIBackgroundTaskIdentifier) -> Void, backgroundTimeRemaining: @escaping () -> Double, activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account)]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager?, mediaManager: MediaManager, callManager: PresentationCallManager?, accountUserInterfaceInUse: @escaping (AccountRecordId) -> Signal<Bool, NoError>) {
+    init(beginBackgroundTask: @escaping (String, @escaping () -> Void) -> UIBackgroundTaskIdentifier?, endBackgroundTask: @escaping (UIBackgroundTaskIdentifier) -> Void, backgroundTimeRemaining: @escaping () -> Double, activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account)]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, watchTasks: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager?, mediaManager: MediaManager, callManager: PresentationCallManager?, accountUserInterfaceInUse: @escaping (AccountRecordId) -> Signal<Bool, NoError>) {
         assert(Queue.mainQueue().isCurrent())
         
         self.beginBackgroundTask = beginBackgroundTask
@@ -120,11 +124,17 @@ final class SharedWakeupManager {
                 }
                 |> distinctUntilChanged
                 
+                let hasWatchTasks = watchTasks
+                |> map { id in
+                    return id == account.id
+                }
+                |> distinctUntilChanged
+                
                 let userInterfaceInUse = accountUserInterfaceInUse(account.id)
                 
-                return combineLatest(queue: .mainQueue(), account.importantTasksRunning, notificationManager?.isPollingState(accountId: account.id) ?? .single(false), hasActiveAudio, hasActiveCalls, hasActiveLiveLocationPolling, userInterfaceInUse)
-                |> map { importantTasksRunning, isPollingState, hasActiveAudio, hasActiveCalls, hasActiveLiveLocationPolling, userInterfaceInUse -> (Account, Bool, AccountTasks) in
-                    return (account, primary?.id == account.id, AccountTasks(stateSynchronization: isPollingState, importantTasks: importantTasksRunning, backgroundLocation: hasActiveLiveLocationPolling, backgroundDownloads: false, backgroundAudio: hasActiveAudio, activeCalls: hasActiveCalls, userInterfaceInUse: userInterfaceInUse))
+                return combineLatest(queue: .mainQueue(), account.importantTasksRunning, notificationManager?.isPollingState(accountId: account.id) ?? .single(false), hasActiveAudio, hasActiveCalls, hasActiveLiveLocationPolling, hasWatchTasks, userInterfaceInUse)
+                |> map { importantTasksRunning, isPollingState, hasActiveAudio, hasActiveCalls, hasActiveLiveLocationPolling, hasWatchTasks, userInterfaceInUse -> (Account, Bool, AccountTasks) in
+                    return (account, primary?.id == account.id, AccountTasks(stateSynchronization: isPollingState, importantTasks: importantTasksRunning, backgroundLocation: hasActiveLiveLocationPolling, backgroundDownloads: false, backgroundAudio: hasActiveAudio, activeCalls: hasActiveCalls, watchTasks: hasWatchTasks, userInterfaceInUse: userInterfaceInUse))
                 }
             }
             return combineLatest(signals)

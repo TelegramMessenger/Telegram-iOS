@@ -6,6 +6,8 @@ import TelegramUI
 
 final class WatchCommunicationManager {
     private let queue: Queue
+    private let allowBackgroundTimeExtension: (Double) -> Void
+    
     private var server: TGBridgeServer!
     
     private let contextDisposable = MetaDisposable()
@@ -15,8 +17,9 @@ final class WatchCommunicationManager {
     private let presets = Promise<WatchPresetSettings?>(nil)
     private let navigateToMessagePipe = ValuePipe<MessageId>()
     
-    init(queue: Queue, context: Promise<AuthorizedApplicationContext?>) {
+    init(queue: Queue, context: Promise<AuthorizedApplicationContext?>, allowBackgroundTimeExtension: @escaping (Double) -> Void) {
         self.queue = queue
+        self.allowBackgroundTimeExtension = allowBackgroundTimeExtension
         
         let handlers = allWatchRequestHandlers.reduce([String : AnyClass]()) { (map, handler) -> [String : AnyClass] in
             var map = map
@@ -50,6 +53,8 @@ final class WatchCommunicationManager {
             if let value = value {
                 Logger.shared.log("WatchBridge", value)
             }
+        }, allowBackgroundTimeExtension: {
+            allowBackgroundTimeExtension(4.0)
         })
         self.server.startRunning()
         
@@ -173,12 +178,12 @@ final class WatchCommunicationManager {
     }
 }
 
-func watchCommunicationManager(context: Promise<AuthorizedApplicationContext?>) -> Signal<WatchCommunicationManager?, NoError> {
+func watchCommunicationManager(context: Promise<AuthorizedApplicationContext?>, allowBackgroundTimeExtension: @escaping (Double) -> Void) -> Signal<WatchCommunicationManager?, NoError> {
     return Signal { subscriber in
         let queue = Queue()
         queue.async {
             if #available(iOSApplicationExtension 9.0, *) {
-                subscriber.putNext(WatchCommunicationManager(queue: queue, context: context))
+                subscriber.putNext(WatchCommunicationManager(queue: queue, context: context, allowBackgroundTimeExtension: allowBackgroundTimeExtension))
             } else {
                 subscriber.putNext(nil)
             }

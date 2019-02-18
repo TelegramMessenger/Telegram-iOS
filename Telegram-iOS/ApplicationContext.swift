@@ -389,7 +389,11 @@ final class AuthorizedApplicationContext {
             }*/
             if let tabsController = strongSelf.rootController.viewControllers.first as? TabBarController, !tabsController.controllers.isEmpty, tabsController.selectedIndex >= 0 {
                 let controller = tabsController.controllers[tabsController.selectedIndex]
-                strongSelf.isReady.set(controller.ready.get())
+                let combinedReady = combineLatest(tabsController.ready.get(), controller.ready.get())
+                |> map { $0 && $1 }
+                |> filter { $0 }
+                |> take(1)
+                strongSelf.isReady.set(combinedReady)
             } else {
                 strongSelf.isReady.set(.single(true))
             }
@@ -762,7 +766,8 @@ final class AuthorizedApplicationContext {
             }
         })
         
-        let _ = (watchManagerArguments |> deliverOnMainQueue).start(next: { [weak self] arguments in
+        let _ = (watchManagerArguments
+        |> deliverOnMainQueue).start(next: { [weak self] arguments in
             guard let strongSelf = self else {
                 return
             }
