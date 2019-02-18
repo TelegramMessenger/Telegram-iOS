@@ -807,6 +807,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             fromTransform = CATransform3DScale(videoNode.layer.transform, initialScale, initialScale, 1.0)
             toTransform = CATransform3DScale(videoNode.layer.transform, transformScale, transformScale, 1.0)
             
+            if videoNode.hasAttachedContext {
+                videoNode.continuePlayingWithoutSound()
+            }
         } else {
             videoNode.allowsGroupOpacity = true
             videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
@@ -838,10 +841,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 intermediateCompletion()
             })
             pictureInPictureNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-        }
-        
-        if videoNode.hasAttachedContext {
-            videoNode.continuePlayingWithoutSound()
         }
     }
     

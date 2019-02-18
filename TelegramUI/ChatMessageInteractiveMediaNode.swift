@@ -350,15 +350,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     var isSendingUpdated = false
                     if let currentMessage = currentMessage {
                         isSendingUpdated = message.flags.isSending != currentMessage.flags.isSending
-                    } else {
-                        isSendingUpdated = true
                     }
                     
                     var automaticPlaybackUpdated = false
                     if let currentAutomaticPlayback = currentAutomaticPlayback {
                         automaticPlaybackUpdated = automaticPlayback != currentAutomaticPlayback
-                    } else {
-                        automaticPlaybackUpdated = true
                     }
                     
                     var statusUpdated = mediaUpdated
