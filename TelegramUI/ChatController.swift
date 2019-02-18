@@ -3141,15 +3141,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     }
                 }
                 
-                //if controllerInteraction.hiddenMedia != messageIdAndMedia {
-                    controllerInteraction.hiddenMedia = messageIdAndMedia
-                
-                    strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-                        if let itemNode = itemNode as? ChatMessageItemView {
-                            itemNode.updateHiddenMedia()
-                        }
+                controllerInteraction.hiddenMedia = messageIdAndMedia
+            
+                strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                    if let itemNode = itemNode as? ChatMessageItemView {
+                        itemNode.updateHiddenMedia()
                     }
-                //}
+                }
             }
         }))
         
@@ -3161,7 +3159,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }
         
-        self.volumeChangeDetector = VolumeChangeDetector(view: self.chatDisplayNode.view, shouldBeActive: self.chatDisplayNode.historyNode.hasVisiblePlayableItems, valueChanged: { [weak self] in
+        self.volumeChangeDetector = VolumeChangeDetector(view: self.chatDisplayNode.view, shouldBeActive: self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes, valueChanged: { [weak self] in
             guard let strongSelf = self, strongSelf.traceVisibility() && isTopmostChatController(strongSelf) else {
                 return
             }

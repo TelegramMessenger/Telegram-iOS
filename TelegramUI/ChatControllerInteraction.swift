@@ -40,8 +40,8 @@ public enum ChatControllerInteractionLongTapAction {
 public enum ChatControllerInteractionOpenMessageMode {
     case `default`
     case stream
-    case shared
     case automaticPlayback
+    case playWithSound
 }
 
 struct ChatInterfacePollActionState: Equatable {

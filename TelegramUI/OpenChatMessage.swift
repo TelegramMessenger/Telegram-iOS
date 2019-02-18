@@ -20,7 +20,7 @@ private enum ChatMessageGalleryControllerData {
     case chatAvatars(AvatarGalleryController, Media)
 }
 
-private func chatMessageGalleryControllerData(context: AccountContext, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, stream: Bool, fromPlayingVideo: Bool, synchronousLoad: Bool, excludeWebPageMedia: Bool = false, actionInteraction: GalleryControllerActionInteraction?) -> ChatMessageGalleryControllerData? {
+private func chatMessageGalleryControllerData(context: AccountContext, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, stream: Bool, fromPlayingVideo: Bool, synchronousLoad: Bool, actionInteraction: GalleryControllerActionInteraction?) -> ChatMessageGalleryControllerData? {
     var galleryMedia: Media?
     var otherMedia: Media?
     var instantPageMedia: (TelegramMediaWebpage, [InstantPageGalleryEntry])?
@@ -42,7 +42,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
             galleryMedia = file
         } else if let image = media as? TelegramMediaImage {
             galleryMedia = image
-        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, !excludeWebPageMedia {
+        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                 if let file = content.file {
                     galleryMedia = file
                 } else if let image = content.image {
@@ -160,8 +160,8 @@ func chatMessagePreviewControllerData(context: AccountContext, message: Message,
     return nil
 }
 
-func openChatMessage(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, stream: Bool = false, fromPlayingVideo: Bool = false, excludeWebPageMedia: Bool = false, navigationController: NavigationController?, modal: Bool = false, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> UIView?)?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void, chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void, actionInteraction: GalleryControllerActionInteraction? = nil) -> Bool {
-    if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, stream: stream, fromPlayingVideo: fromPlayingVideo, synchronousLoad: false, excludeWebPageMedia: excludeWebPageMedia, actionInteraction: actionInteraction) {
+func openChatMessage(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, stream: Bool = false, fromPlayingVideo: Bool = false, navigationController: NavigationController?, modal: Bool = false, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> UIView?)?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void, chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void, actionInteraction: GalleryControllerActionInteraction? = nil) -> Bool {
+    if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, stream: stream, fromPlayingVideo: fromPlayingVideo, synchronousLoad: false, actionInteraction: actionInteraction) {
         switch mediaData {
             case let .url(url):
                 openUrl(url)

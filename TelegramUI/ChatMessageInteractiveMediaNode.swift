@@ -196,7 +196,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         
         let currentVideoNode = self.videoNode
         let hasCurrentVideoNode = currentVideoNode != nil
-        let previousAutomaticDownload = self.automaticDownload
+        let currentAutomaticDownload = self.automaticDownload
+        let currentAutomaticPlayback = self.automaticPlayback
         
         return { [weak self] context, theme, strings, message, media, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode in
             var nativeSize: CGSize
@@ -353,6 +354,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         isSendingUpdated = true
                     }
                     
+                    var automaticPlaybackUpdated = false
+                    if let currentAutomaticPlayback = currentAutomaticPlayback {
+                        automaticPlaybackUpdated = automaticPlayback != currentAutomaticPlayback
+                    } else {
+                        automaticPlaybackUpdated = true
+                    }
+                    
                     var statusUpdated = mediaUpdated
                     if currentMessage?.id != message.id || currentMessage?.flags != message.flags {
                         statusUpdated = true
@@ -360,13 +368,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     
                     var replaceVideoNode: Bool?
                     var updateVideoFile: TelegramMediaFile?
+                    var onlyFullSizeVideoThumbnail: Bool?
                     
                     var emptyColor: UIColor = message.effectivelyIncoming(context.account.peerId) ? theme.chat.bubble.incomingMediaPlaceholderColor : theme.chat.bubble.outgoingMediaPlaceholderColor
                     if let wallpaper = media as? WallpaperPreviewMedia, case let .file(_, patternColor) = wallpaper.content {
                         emptyColor = patternColor ?? UIColor(rgb: 0xd6e2ee, alpha: 0.5)
                     }
                     
-                    if mediaUpdated || isSendingUpdated {
+                    if mediaUpdated || isSendingUpdated || automaticPlaybackUpdated {
                         if let image = media as? TelegramMediaImage {
                             if hasCurrentVideoNode {
                                 replaceVideoNode = true
@@ -421,6 +430,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                         return chatMessageSticker(account: context.account, file: file, small: false)
                                     }
                                 } else {
+                                    onlyFullSizeVideoThumbnail = isSendingUpdated
                                     updateImageSignal = { synchronousLoad in
                                         return mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile)
                                     }
@@ -584,7 +594,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     let mediaManager = context.sharedContext.mediaManager
                                     
                                     let streamVideo = !updatedVideoFile.isAnimated && isMediaStreamable(message: message, media: updatedVideoFile)
-                                    let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo, enableSound: false, fetchAutomatically: false, hasImagePlaceholder: false, continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo, placeholderColor: emptyColor), priority: .embedded)
+                                    let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false), continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo, placeholderColor: emptyColor), priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     
                                     strongSelf.videoNode = videoNode
@@ -727,7 +737,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                         strongSelf.fetchDisposable.set(visibilityAwareFetchSignal.start())
                                     }
                                 }
-                            } else if previousAutomaticDownload != automaticDownload, case .full = automaticDownload {
+                            } else if currentAutomaticDownload != automaticDownload, case .full = automaticDownload {
                                 strongSelf.fetchControls.with({ $0 })?.fetch(false)
                             }
                             
@@ -1191,9 +1201,26 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         if let file = self.media as? TelegramMediaFile, file.isAnimated {
             isAnimated = true
         }
-        if case .visible(true) = self.visibility, let videoNode = self.videoNode, (self.automaticPlayback ?? false) && !isAnimated {
+        if let videoNode = self.videoNode, let context = self.context, (self.automaticPlayback ?? false) && !isAnimated {
             return {
-                videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none)
+                let _ = (context.sharedContext.mediaManager.globalMediaPlayerState
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { playlistStateAndType in
+                    var canPlay = true
+                    if let (_, state, _) = playlistStateAndType {
+                        switch state {
+                            case let .state(state):
+                                if case .playing = state.status.status {
+                                    canPlay = false
+                                }
+                            case .loading:
+                                break
+                        }
+                    }
+                    if canPlay {
+                        videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none)
+                    }
+                })
             }
         } else {
             return nil

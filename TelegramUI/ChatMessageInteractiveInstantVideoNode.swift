@@ -683,10 +683,27 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     }
     
     func playMediaWithSound() -> (() -> Void)? {
-        if case .visible(true) = self.visibility, let item = self.item {
+        if let item = self.item {
             return {
                 if !self.infoBackgroundNode.alpha.isZero {
-                    let _ = item.controllerInteraction.openMessage(item.message, .default)
+                    let _ = (item.context.sharedContext.mediaManager.globalMediaPlayerState
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { playlistStateAndType in
+                        var canPlay = true
+                        if let (_, state, _) = playlistStateAndType {
+                            switch state {
+                                case let .state(state):
+                                    if case .playing = state.status.status {
+                                        canPlay = false
+                                    }
+                                case .loading:
+                                    break
+                            }
+                        }
+                        if canPlay {
+                            let _ = item.controllerInteraction.openMessage(item.message, .default)
+                        }
+                    })
                 }
             }
         } else {
