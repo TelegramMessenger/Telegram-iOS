@@ -253,8 +253,8 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                 var settings: AutomaticMediaDownloadSettings = current as? AutomaticMediaDownloadSettings ?? .defaultSettings
 
                 if let preferences = autoDownloadPreferences, !preferences.isDefaultPreferences() {
-                    settings.cellular.enabled = !preferences.disabled
-                    settings.wifi.enabled = !preferences.disabled
+                    //settings.cellular.enabled = !preferences.disabled
+                    //settings.wifi.enabled = !preferences.disabled
                 
 //                    let peerPaths: [(WritableKeyPath<AutomaticMediaDownloadPeers, AutomaticMediaDownloadCategories>, TGAutoDownloadMode, TGAutoDownloadMode)] = [
 //                        (\AutomaticMediaDownloadPeers.contacts, TGAutoDownloadModeCellularContacts, TGAutoDownloadModeWifiContacts),
