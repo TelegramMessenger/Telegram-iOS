@@ -52,7 +52,7 @@ public struct ListViewItemNodeLayout {
 
 public enum ListViewItemNodeVisibility: Equatable {
     case none
-    case visible(Bool)
+    case visible(CGFloat)
     
     public static func ==(lhs: ListViewItemNodeVisibility, rhs: ListViewItemNodeVisibility) -> Bool {
         switch lhs {
@@ -62,8 +62,8 @@ public enum ListViewItemNodeVisibility: Equatable {
                 } else {
                     return false
                 }
-            case let .visible(full):
-                if case .visible(full) = rhs {
+            case let .visible(fraction):
+                if case .visible(fraction) = rhs {
                     return true
                 } else {
                     return false
