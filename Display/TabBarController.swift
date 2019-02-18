@@ -75,6 +75,11 @@ open class TabBarController: ViewController {
     
     public private(set) var controllers: [ViewController] = []
     
+    private let _ready = Promise<Bool>()
+    override open var ready: Promise<Bool> {
+        return self._ready
+    }
+    
     private var _selectedIndex: Int?
     public var selectedIndex: Int {
         get {
@@ -124,6 +129,10 @@ open class TabBarController: ViewController {
     }
     
     private var debugTapCounter: (Double, Int) = (0.0, 0)
+    
+    public func sourceNodesForController(at index: Int) -> [ASDisplayNode]? {
+        return self.tabBarControllerNode.tabBarNode.sourceNodesForController(at: index)
+    }
     
     override open func loadDisplayNode() {
         self.displayNode = TabBarControllerNode(theme: self.theme, navigationBar: self.navigationBar, itemSelected: { [weak self] index, longTap, itemNodes in
@@ -287,6 +296,40 @@ open class TabBarController: ViewController {
         }
         self.controllers = controllers
         self.tabBarControllerNode.tabBarNode.tabBarItems = self.controllers.map({ $0.tabBarItem })
+        
+        let signals = combineLatest(self.controllers.map({ $0.tabBarItem }).map { tabBarItem -> Signal<Bool, NoError> in
+            if let tabBarItem = tabBarItem, tabBarItem.image == nil {
+                return Signal { [weak tabBarItem] subscriber in
+                    let index = tabBarItem?.addSetImageListener({ image in
+                        if image != nil {
+                            subscriber.putNext(true)
+                            subscriber.putCompletion()
+                        }
+                    })
+                    return ActionDisposable {
+                        Queue.mainQueue().async {
+                            if let index = index {
+                                tabBarItem?.removeSetImageListener(index)
+                            }
+                        }
+                    }
+                }
+                |> runOn(.mainQueue())
+            } else {
+                return .single(true)
+            }
+        })
+        |> map { items -> Bool in
+            for item in items {
+                if !item {
+                    return false
+                }
+            }
+            return true
+        }
+        |> filter { $0 }
+        |> take(1)
+        self._ready.set(signals)
         
         if let updatedSelectedIndex = updatedSelectedIndex {
             self.selectedIndex = updatedSelectedIndex
