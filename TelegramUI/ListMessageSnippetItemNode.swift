@@ -457,11 +457,11 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         }
     }
     
-    override func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
+    override func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
         if let item = self.item, item.message.id == id, self.iconImageNode.supernode != nil {
             let iconImageNode = self.iconImageNode
             return (self.iconImageNode, { [weak iconImageNode] in
-                return iconImageNode?.view.snapshotContentTree(unhide: true)
+                return (iconImageNode?.view.snapshotContentTree(unhide: true), nil)
             })
         }
         return nil

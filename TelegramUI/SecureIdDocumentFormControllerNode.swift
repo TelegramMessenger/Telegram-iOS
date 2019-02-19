@@ -3028,7 +3028,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                 if let itemNode = itemNode as? SecureIdValueFormFileItemNode, let item = itemNode.item, let document = item.document {
                     if document.resource.isEqual(to: entry.resource) {
                         return GalleryTransitionArguments(transitionNode: (itemNode.imageNode, {
-                            return itemNode.imageNode.view.snapshotContentTree(unhide: true)
+                            return (itemNode.imageNode.view.snapshotContentTree(unhide: true), nil)
                         }), addToTransitionSurface: { view in
                             self?.view.addSubview(view)
                         })

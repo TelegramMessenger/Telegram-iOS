@@ -1167,7 +1167,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
     }
     
-    func transitionNode() -> (ASDisplayNode, () -> UIView?)? {
+    func transitionNode() -> (ASDisplayNode, () -> (UIView?, UIView?))? {
         return (self, { [weak self] in
             var badgeNodeHidden: Bool?
             if let badgeNode = self?.badgeNode {
@@ -1188,7 +1188,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
             if let statusNode = self?.statusNode, let statusNodeHidden = statusNodeHidden {
                 statusNode.isHidden = statusNodeHidden
             }
-            return view
+            return (view, nil)
         })
     }
     

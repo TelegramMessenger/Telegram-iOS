@@ -235,7 +235,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
         return self._title.get()
     }
     
-    override func animateIn(from node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.containerNode.view)
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.containerNode.view.superview)
         
@@ -251,7 +251,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
         self.statusNodeContainer.layer.animateScale(from: 0.5, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
-    override func animateOut(to node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
+    override func animateOut(to node: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.containerNode.view)
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.containerNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
@@ -261,7 +261,9 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
         var boundsCompleted = false
         var copyCompleted = false
         
-        let copyView = node.1()!
+        let (maybeCopyView, copyViewBackgrond) = node.1()
+        copyViewBackgrond?.alpha = 0.0
+        let copyView = maybeCopyView!
         
         self.view.insertSubview(copyView, belowSubview: self.containerNode.view)
         copyView.frame = transformedSelfFrame

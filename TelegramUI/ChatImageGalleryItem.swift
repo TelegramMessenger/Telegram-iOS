@@ -296,14 +296,17 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         }))
     }
     
-    override func animateIn(from node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
         let transformedCopyViewFinalFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: self.view)
         
-        let surfaceCopyView = node.1()!
-        let copyView = node.1()!
+        let (maybeSurfaceCopyView, _) = node.1()
+        let (maybeCopyView, copyViewBackgrond) = node.1()
+        copyViewBackgrond?.alpha = 0.0
+        let surfaceCopyView = maybeSurfaceCopyView!
+        let copyView = maybeCopyView!
         
         addToTransitionSurface(surfaceCopyView)
         
@@ -352,7 +355,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.statusNodeContainer.layer.animateScale(from: 0.5, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
-    override func animateOut(to node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
+    override func animateOut(to node: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         self.fetchDisposable.set(nil)
         
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
@@ -364,8 +367,11 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         var boundsCompleted = false
         var copyCompleted = false
         
-        let copyView = node.1()!
-        let surfaceCopyView = node.1()!
+        let (maybeSurfaceCopyView, _) = node.1()
+        let (maybeCopyView, copyViewBackgrond) = node.1()
+        copyViewBackgrond?.alpha = 0.0
+        let surfaceCopyView = maybeSurfaceCopyView!
+        let copyView = maybeCopyView!
         
         addToTransitionSurface(surfaceCopyView)
         

@@ -42,7 +42,7 @@ private final class GalleryHiddenMediaContext {
 }
 
 protocol GalleryHiddenMediaTarget: class {
-    func getTransitionInfo(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> UIView?)?
+    func getTransitionInfo(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> (UIView?, UIView?))?
 }
 
 private final class GalleryHiddenMediaTargetHolder {
@@ -147,7 +147,7 @@ final class GalleryHiddenMediaManager {
         }
     }
     
-    func findTarget(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> UIView?)? {
+    func findTarget(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> (UIView?, UIView?))? {
         for i in (0 ..< self.targets.count).reversed() {
             if let holderTarget = self.targets[i].target {
                 if let result = holderTarget.getTransitionInfo(messageId: messageId, media: media) {

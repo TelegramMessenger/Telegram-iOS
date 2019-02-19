@@ -63,7 +63,7 @@ class ChatMessageBackground: ASImageNode {
     override init() {
         super.init()
         
-        self.isLayerBacked = true
+        self.isUserInteractionEnabled = false
         self.displaysAsynchronously = false
         self.displayWithoutProcessing = true
     }

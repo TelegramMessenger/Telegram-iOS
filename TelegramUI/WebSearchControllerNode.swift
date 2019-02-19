@@ -732,7 +732,7 @@ class WebSearchControllerNode: ASDisplayNode {
                             }
                             if let transitionNode = transitionNode {
                                 return GalleryTransitionArguments(transitionNode: (transitionNode, { [weak transitionNode] in
-                                        return transitionNode?.transitionView().snapshotContentTree(unhide: true)
+                                        return (transitionNode?.transitionView().snapshotContentTree(unhide: true), nil)
                                 }), addToTransitionSurface: { view in
                                     if let strongSelf = self {
                                         strongSelf.gridNode.view.superview?.insertSubview(view, aboveSubview: strongSelf.gridNode.view)

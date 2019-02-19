@@ -348,7 +348,7 @@ final class GridMessageItemNode: GridItemNode {
         }
     }
     
-    func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
+    func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
         if self.messageId == id {
             let imageNode = self.imageNode
             return (self.imageNode, { [weak self, weak imageNode] in
@@ -365,7 +365,7 @@ final class GridMessageItemNode: GridItemNode {
                     strongSelf.statusNode.isHidden = statusNodeHidden
                     strongSelf.mediaBadgeNode.isHidden = accessoryHidden
                 }
-                return view
+                return (view, nil)
             })
         } else {
             return nil

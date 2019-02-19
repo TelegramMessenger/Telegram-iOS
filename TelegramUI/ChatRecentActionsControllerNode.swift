@@ -145,7 +145,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }, present: { c, a in
                     self?.presentController(c, a)
                 }, transitionNode: { messageId, media in
-                    var selectedNode: (ASDisplayNode, () -> UIView?)?
+                    var selectedNode: (ASDisplayNode, () -> (UIView?, UIView?))?
                     if let strongSelf = self {
                         strongSelf.listNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? ChatMessageItemView {

@@ -9,12 +9,14 @@ private final class ChannelBannedMemberControllerArguments {
     let toggleRight: (TelegramChatBannedRightsFlags, Bool) -> Void
     let openTimeout: () -> Void
     let delete: () -> Void
+    let notifyPermissionGloballyDisabled: () -> Void
     
-    init(account: Account, toggleRight: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, openTimeout: @escaping () -> Void, delete: @escaping () -> Void) {
+    init(account: Account, toggleRight: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, openTimeout: @escaping () -> Void, delete: @escaping () -> Void, notifyPermissionGloballyDisabled: @escaping () -> Void) {
         self.account = account
         self.toggleRight = toggleRight
         self.openTimeout = openTimeout
         self.delete = delete
+        self.notifyPermissionGloballyDisabled = notifyPermissionGloballyDisabled
     }
 }
 
@@ -217,8 +219,12 @@ private enum ChannelBannedMemberEntry: ItemListNodeEntry {
             case let .rightsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .rightItem(theme, _, text, right, value, enabled):
-                return ItemListSwitchItem(theme: theme, title: text, value: value, type: .icon, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.toggleRight(right, value)
+                return ItemListSwitchItem(theme: theme, title: text, value: value, type: .icon, enableInteractiveChanges: enabled, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
+                    if enabled {
+                        arguments.toggleRight(right, value)
+                    } else {
+                        arguments.notifyPermissionGloballyDisabled()
+                    }
                 })
             case let .timeout(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
@@ -483,6 +489,9 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
             })
         ])])
         presentControllerImpl?(actionSheet, nil)
+    }, notifyPermissionGloballyDisabled: {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.GroupPermission_PermissionGloballyDisabled, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
     })
     
     var keys: [PostboxViewKey] = [.peer(peerId: peerId, components: .all), .peer(peerId: memberId, components: .all)]

@@ -308,7 +308,7 @@ final class InstantPageContentNode : ASDisplayNode {
         self.requestLayoutUpdate?(animated)
     }
     
-    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
         for (_, itemNode) in self.visibleItemsWithNodes {
             if let transitionNode = itemNode.transitionNode(media: media) {
                 return transitionNode

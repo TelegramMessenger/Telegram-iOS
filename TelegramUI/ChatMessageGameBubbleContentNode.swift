@@ -125,7 +125,7 @@ final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNode {
         return self.contentNode.updateHiddenMedia(media)
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
+    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
         if self.item?.message.id != messageId {
             return nil
         }

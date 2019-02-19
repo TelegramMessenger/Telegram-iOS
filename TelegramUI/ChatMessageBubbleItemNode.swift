@@ -1776,9 +1776,27 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         return super.hitTest(point, with: event)
     }
     
-    override func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
+    override func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
         for contentNode in self.contentNodes {
             if let result = contentNode.transitionNode(messageId: id, media: media) {
+                if self.contentNodes.count == 1 && self.nameNode == nil && self.adminBadgeNode == nil && self.forwardInfoNode == nil && self.replyInfoNode == nil {
+                    return (result.0, { [weak self] in
+                        guard let strongSelf = self, let resultView = result.1().0 else {
+                            return (nil, nil)
+                        }
+                        if strongSelf.backgroundNode.supernode != nil, let backgroundView = strongSelf.backgroundNode.view.snapshotContentTree(unhide: true) {
+                            let backgroundFrame = strongSelf.backgroundNode.layer.convert(strongSelf.backgroundNode.bounds, to: result.0.layer)
+                            backgroundView.frame = backgroundFrame
+                            let viewWithBackground = UIView()
+                            viewWithBackground.addSubview(backgroundView)
+                            viewWithBackground.frame = resultView.frame
+                            resultView.frame = CGRect(origin: CGPoint(), size: resultView.frame.size)
+                            viewWithBackground.addSubview(resultView)
+                            return (viewWithBackground, backgroundView)
+                        }
+                        return (resultView, nil)
+                    })
+                }
                 return result
             }
         }
@@ -1824,7 +1842,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             }
         }
         
-        //self.backgroundNode.isHidden = hasHiddenBackground
+        self.backgroundNode.isHidden = hasHiddenBackground
     }
     
     override func updateAutomaticMediaDownloadSettings() {

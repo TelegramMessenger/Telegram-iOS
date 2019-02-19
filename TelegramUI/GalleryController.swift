@@ -196,10 +196,10 @@ func galleryItemForEntry(context: AccountContext, presentationData: Presentation
 }
 
 final class GalleryTransitionArguments {
-    let transitionNode: (ASDisplayNode, () -> UIView?)
+    let transitionNode: (ASDisplayNode, () -> (UIView?, UIView?))
     let addToTransitionSurface: (UIView) -> Void
     
-    init(transitionNode: (ASDisplayNode, () -> UIView?), addToTransitionSurface: @escaping (UIView) -> Void) {
+    init(transitionNode: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: @escaping (UIView) -> Void) {
         self.transitionNode = transitionNode
         self.addToTransitionSurface = addToTransitionSurface
     }

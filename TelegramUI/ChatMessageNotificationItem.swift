@@ -286,7 +286,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 if file.isSticker {
                     updateImageSignal = chatMessageSticker(account: item.context.account, file: file, small: true, fetched: true)
                 } else if file.isVideo {
-                    updateImageSignal = mediaGridMessageVideo(postbox: item.context.account.postbox, videoReference: .message(message: MessageReference(firstMessage), media: file))
+                    updateImageSignal = mediaGridMessageVideo(postbox: item.context.account.postbox, videoReference: .message(message: MessageReference(firstMessage), media: file), autoFetchFullSizeThumbnail: true)
                 }
             }
         }

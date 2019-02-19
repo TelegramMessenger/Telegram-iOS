@@ -120,7 +120,7 @@ final class InstantPageArticleNode: ASDisplayNode, InstantPageNode {
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
     }
     
-    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
         return nil
     }
     

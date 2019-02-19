@@ -328,7 +328,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }, present: { c, a in
                 self?.present(c, in: .window(.root), with: a, blockInteraction: true)
             }, transitionNode: { messageId, media in
-                var selectedNode: (ASDisplayNode, () -> UIView?)?
+                var selectedNode: (ASDisplayNode, () -> (UIView?, UIView?))?
                 if let strongSelf = self {
                     strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? ChatMessageItemView {
@@ -3092,16 +3092,27 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 |> deliverOnMainQueue).start(next: { [weak self] reason in
                     if let strongSelf = self {
                         let text: String
+                        let moreInfo: Bool
                         switch reason {
                             case .flood:
                                 text = strongSelf.presentationData.strings.Conversation_SendMessageErrorFlood
+                                moreInfo = true
                             case .publicBan:
                                 text = strongSelf.presentationData.strings.Conversation_SendMessageErrorGroupRestricted
-                            
+                                moreInfo = true
+                            case .mediaRestricted:
+                                text = strongSelf.presentationData.strings.Conversation_DefaultRestrictedMedia
+                                moreInfo = false
                         }
-                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Generic_ErrorMoreInfo, action: {
-                            self?.openPeerMention("spambot", navigation: .chat(textInputState: nil, messageId: nil))
-                        }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        let actions: [TextAlertAction]
+                        if moreInfo {
+                            actions = [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Generic_ErrorMoreInfo, action: {
+                                self?.openPeerMention("spambot", navigation: .chat(textInputState: nil, messageId: nil))
+                            }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]
+                        } else {
+                            actions = [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]
+                        }
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: text, actions: actions), in: .window(.root))
                     }
                 }))
             case let .group(groupId):
@@ -5468,7 +5479,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         if let (message, content) = result {
             switch content {
                 case let .media(media):
-                    var selectedTransitionNode: (ASDisplayNode, () -> UIView?)?
+                    var selectedTransitionNode: (ASDisplayNode, () -> (UIView?, UIView?))?
                     self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? ChatMessageItemView {
                             if let result = itemNode.transitionNode(id: message.id, media: media) {
@@ -5524,7 +5535,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             
             self.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(animated: false, transitionArguments: { [weak self] messageId, media in
                 if let strongSelf = self {
-                    var selectedTransitionNode: (ASDisplayNode, () -> UIView?)?
+                    var selectedTransitionNode: (ASDisplayNode, () -> (UIView?, UIView?))?
                     strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? ChatMessageItemView {
                             if let result = itemNode.transitionNode(id: messageId, media: media) {
@@ -5640,7 +5651,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         self.chatDisplayNode.dismissInput()
         self.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { [weak self] messageId, media in
             if let strongSelf = self {
-                var transitionNode: (ASDisplayNode, () -> UIView?)?
+                var transitionNode: (ASDisplayNode, () -> (UIView?, UIView?))?
                 strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                     if let itemNode = itemNode as? ChatMessageItemView {
                         if let result = itemNode.transitionNode(id: messageId, media: media) {
@@ -5996,8 +6007,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
     }
     
-    func getTransitionInfo(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> UIView?)? {
-        var selectedNode: (ASDisplayNode, () -> UIView?)?
+    func getTransitionInfo(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> (UIView?, UIView?))? {
+        var selectedNode: (ASDisplayNode, () -> (UIView?, UIView?))?
         self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {
                 if let result = itemNode.transitionNode(id: messageId, media: media) {

@@ -277,7 +277,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func animateIn(from node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
         guard let videoNode = self.videoNode else {
             return
         }
@@ -300,8 +300,8 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
             let transformedCopyViewFinalFrame = videoNode.view.convert(videoNode.view.bounds, to: self.view)
             
-            let surfaceCopyView = node.1()!
-            let copyView = node.1()!
+            let surfaceCopyView = node.1().0!
+            let copyView = node.1().0!
             
             addToTransitionSurface(surfaceCopyView)
             
@@ -354,7 +354,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func animateOut(to node: (ASDisplayNode, () -> UIView?), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
+    override func animateOut(to node: (ASDisplayNode, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         guard let videoNode = self.videoNode else {
             completion()
             return
@@ -369,8 +369,8 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         var boundsCompleted = false
         var copyCompleted = false
         
-        let copyView = node.1()!
-        let surfaceCopyView = node.1()!
+        let copyView = node.1().0!
+        let surfaceCopyView = node.1().0!
         
         addToTransitionSurface(surfaceCopyView)
         

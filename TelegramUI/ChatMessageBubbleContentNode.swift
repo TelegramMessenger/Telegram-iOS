@@ -129,7 +129,7 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
         })
     }
     
-    func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
+    func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
         return nil
     }
     

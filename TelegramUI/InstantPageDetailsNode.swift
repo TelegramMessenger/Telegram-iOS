@@ -136,7 +136,7 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         
     }
     
-    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)? {
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
         return self.contentNode.transitionNode(media: media)
     }
     

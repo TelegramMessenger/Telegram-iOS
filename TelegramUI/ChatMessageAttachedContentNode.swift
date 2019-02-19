@@ -926,14 +926,14 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         return false
     }
     
-    func transitionNode(media: Media) -> (ASDisplayNode, () -> UIView?)? {
+    func transitionNode(media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
         if let contentImageNode = self.contentImageNode, let image = self.media as? TelegramMediaImage, image.isEqual(to: media) {
             return (contentImageNode, { [weak contentImageNode] in
-                return contentImageNode?.view.snapshotContentTree(unhide: true)
+                return (contentImageNode?.view.snapshotContentTree(unhide: true), nil)
             })
         } else if let contentImageNode = self.contentImageNode, let file = self.media as? TelegramMediaFile, file.isEqual(to: media) {
             return (contentImageNode, { [weak contentImageNode] in
-                return contentImageNode?.view.snapshotContentTree(unhide: true)
+                return (contentImageNode?.view.snapshotContentTree(unhide: true), nil)
             })
         }
         return nil

@@ -938,10 +938,10 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
         }
     }
     
-    func avatarTransitionNode() -> ((ASDisplayNode, () -> UIView?), CGRect) {
+    func avatarTransitionNode() -> ((ASDisplayNode, () -> (UIView?, UIView?)), CGRect) {
         let avatarNode = self.avatarNode
         return ((self.avatarNode, { [weak avatarNode] in
-            return avatarNode?.view.snapshotContentTree(unhide: true)
+            return (avatarNode?.view.snapshotContentTree(unhide: true), nil)
         }), self.avatarNode.bounds)
     }
     

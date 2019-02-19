@@ -5,7 +5,7 @@ import Display
 protocol InstantPageNode {    
     func updateIsVisible(_ isVisible: Bool)
     
-    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> UIView?)?
+    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, () -> (UIView?, UIView?))?
     func updateHiddenMedia(media: InstantPageMedia?)
     func update(strings: PresentationStrings, theme: InstantPageTheme)
     

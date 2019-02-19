@@ -358,8 +358,8 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         }
     }
     
-    func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
-        var transitionNode: (ASDisplayNode, () -> UIView?)?
+    func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+        var transitionNode: (ASDisplayNode, () -> (UIView?, UIView?))?
         self.listNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {
                 if let result = itemNode.transitionNode(id: messageId, media: media) {

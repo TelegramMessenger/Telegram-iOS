@@ -195,7 +195,7 @@ public class ChatMessageItemView: ListViewItemNode {
         }
     }
     
-    func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> UIView?)? {
+    func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
         return nil
     }
     

@@ -1480,8 +1480,8 @@ func gifPaneVideoThumbnail(account: Account, videoReference: FileMediaReference)
     }
 }
 
-func mediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaReference, onlyFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    return internalMediaGridMessageVideo(postbox: postbox, videoReference: videoReference, onlyFullSize: onlyFullSize, synchronousLoad: synchronousLoad)
+func mediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaReference, onlyFullSize: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return internalMediaGridMessageVideo(postbox: postbox, videoReference: videoReference, onlyFullSize: onlyFullSize, synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: autoFetchFullSizeThumbnail)
     |> map {
         return $0.1
     }
@@ -1561,7 +1561,7 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
             
             var blurredThumbnailImage: UIImage?
             if let thumbnailImage = thumbnailImage {
-                if min(thumbnailImage.width, thumbnailImage.height) > 200 {
+                if min(thumbnailImage.width, thumbnailImage.height) > Int(min(200.0, min(drawingSize.width, drawingSize.height))) {
                     blurredThumbnailImage = UIImage(cgImage: thumbnailImage)
                 } else {
                     let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
