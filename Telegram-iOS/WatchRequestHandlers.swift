@@ -278,28 +278,6 @@ final class WatchPeerInfoHandler: WatchRequestHandler {
             }
         } else if let _ = subscription as? TGBridgeUserBotInfoSubscription {
             return SSignal.complete()
-//            return SSignal { subscriber in
-//                let signal = manager.accountContext.get()
-//                    |> take(1)
-//                    |> mapToSignal({ account -> Signal<PeerView, NoError> in
-//                        if let account = account, let userId = args.userIds.first as? Int64, let peerId = makePeerIdFromBridgeIdentifier(userId) {
-//                            return peerCommands(account: account, id: peerId)
-//                        } else {
-//                            return .complete()
-//                        }
-//                })
-//                let disposable = signal.start(next: { view in
-//                    if let user = makeBridgeUser(peerViewMainPeer(view), presence: view.peerPresences[view.peerId], cachedData: view.cachedData) {
-//                        subscriber?.putNext([user.identifier: user])
-//                    } else {
-//                        subscriber?.putCompletion()
-//                    }
-//                })
-//
-//                return SBlockDisposable {
-//                    disposable.dispose()
-//                }
-//            }
         } else if let args = subscription as? TGBridgeConversationSubscription {
             return SSignal { subscriber in
                 let signal = manager.accountContext.get() |> take(1) |> mapToSignal({ context -> Signal<PeerView, NoError> in
