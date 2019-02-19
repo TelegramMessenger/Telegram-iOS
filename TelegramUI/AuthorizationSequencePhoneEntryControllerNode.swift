@@ -171,6 +171,8 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     private let phoneAndCountryNode: PhoneAndCountryNode
     private let termsOfServiceNode: ImmediateTextNode
     
+    private let debugAction: () -> Void
+    
     var currentNumber: String {
         return self.phoneAndCountryNode.phoneInputNode.number
     }
@@ -194,12 +196,13 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         }
     }
     
-    init(strings: PresentationStrings, theme: PresentationTheme) {
+    init(strings: PresentationStrings, theme: PresentationTheme, debugAction: @escaping () -> Void) {
         self.strings = strings
         self.theme = theme
+        self.debugAction = debugAction
         
         self.titleNode = ASTextNode()
-        self.titleNode.isUserInteractionEnabled = false
+        self.titleNode.isUserInteractionEnabled = true
         self.titleNode.displaysAsynchronously = false
         self.titleNode.attributedText = NSAttributedString(string: strings.Login_PhoneTitle, font: Font.light(30.0), textColor: theme.list.itemPrimaryTextColor)
         
@@ -257,6 +260,12 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.termsOfServiceNode.linkHighlightColor = theme.list.itemAccentColor.withAlphaComponent(0.5)
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        self.titleNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.debugTap(_:))))
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         var insets = layout.insets(options: [])
         insets.top = navigationBarHeight
@@ -300,5 +309,27 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     func animateError() {
         self.phoneAndCountryNode.phoneInputNode.countryCodeField.layer.addShakeAnimation()
         self.phoneAndCountryNode.phoneInputNode.numberField.layer.addShakeAnimation()
+    }
+    
+    private var debugTapCounter: (Double, Int) = (0.0, 0)
+    @objc private func debugTap(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            let timestamp = CACurrentMediaTime()
+            if self.debugTapCounter.0 < timestamp - 0.4 {
+                self.debugTapCounter.0 = timestamp
+                self.debugTapCounter.1 = 0
+            }
+            
+            if self.debugTapCounter.0 >= timestamp - 0.4 {
+                self.debugTapCounter.0 = timestamp
+                self.debugTapCounter.1 += 1
+            }
+            
+            if self.debugTapCounter.1 >= 10 {
+                self.debugTapCounter.1 = 0
+                
+                self.debugAction()
+            }
+        }
     }
 }

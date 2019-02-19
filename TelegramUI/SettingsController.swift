@@ -1280,8 +1280,8 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     controller.tabBarItemDebugTapAction = {
         let _ = (contextValue.get()
         |> take(1)
-        |> deliverOnMainQueue).start(next: { context in
-            pushControllerImpl?(debugController(context: context, accountManager: accountManager))
+        |> deliverOnMainQueue).start(next: { accountContext in
+            pushControllerImpl?(debugController(sharedContext: sharedContext, context: accountContext))
         })
     }
     

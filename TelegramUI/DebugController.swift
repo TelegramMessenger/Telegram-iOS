@@ -6,14 +6,14 @@ import TelegramCore
 import MtProtoKitDynamic
 
 private final class DebugControllerArguments {
-    let context: AccountContext
-    let accountManager: AccountManager
+    let sharedContext: SharedAccountContext
+    let context: AccountContext?
     let presentController: (ViewController, ViewControllerPresentationArguments?) -> Void
     let pushController: (ViewController) -> Void
     
-    init(context: AccountContext, accountManager: AccountManager, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping (ViewController) -> Void) {
+    init(sharedContext: SharedAccountContext, context: AccountContext?, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping (ViewController) -> Void) {
+        self.sharedContext = sharedContext
         self.context = context
-        self.accountManager = accountManager
         self.presentController = presentController
         self.pushController = pushController
     }
@@ -21,7 +21,6 @@ private final class DebugControllerArguments {
 
 private enum DebugControllerSection: Int32 {
     case logs
-    case removal
     case logging
     case experiments
     case info
@@ -31,8 +30,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case sendLogs(PresentationTheme)
     case sendOneLog(PresentationTheme)
     case accounts(PresentationTheme)
-    case resetServerContacts(PresentationTheme)
-    case clearPaymentData(PresentationTheme)
     case logToFile(PresentationTheme, Bool)
     case logToConsole(PresentationTheme, Bool)
     case redactSensitiveData(PresentationTheme, Bool)
@@ -50,8 +47,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logs.rawValue
             case .accounts:
                 return DebugControllerSection.logs.rawValue
-            case .resetServerContacts, .clearPaymentData:
-                return DebugControllerSection.removal.rawValue
             case .logToFile, .logToConsole, .redactSensitiveData:
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack:
@@ -71,10 +66,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 1
             case .accounts:
                 return 2
-            case .resetServerContacts:
-                return 3
-            case .clearPaymentData:
-                return 4
             case .logToFile:
                 return 5
             case .logToConsole:
@@ -107,28 +98,34 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             case let .sendLogs(theme):
                 return ItemListDisclosureItem(theme: theme, title: "Send Logs", label: "", sectionId: self.section, style: .blocks, action: {
                     let _ = (Logger.shared.collectLogs()
-                        |> deliverOnMainQueue).start(next: { logs in
-                            let controller = PeerSelectionController(context: arguments.context)
-                            controller.peerSelected = { [weak controller] peerId in
-                                if let strongController = controller {
-                                    strongController.dismiss()
-                                    
-                                    let messages = logs.map { (name, path) -> EnqueueMessage in
-                                        let id = arc4random64()
-                                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
-                                        return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
-                                    }
-                                    let _ = enqueueMessages(account: arguments.context.account, peerId: peerId, messages: messages).start()
+                    |> deliverOnMainQueue).start(next: { logs in
+                        guard let context = arguments.context else {
+                            return
+                        }
+                        let controller = PeerSelectionController(context: context)
+                        controller.peerSelected = { [weak controller] peerId in
+                            if let strongController = controller {
+                                strongController.dismiss()
+                                
+                                let messages = logs.map { (name, path) -> EnqueueMessage in
+                                    let id = arc4random64()
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
+                                    return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
                                 }
+                                let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
                             }
-                            arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
-                        })
+                        }
+                        arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+                    })
                 })
             case let .sendOneLog(theme):
                 return ItemListDisclosureItem(theme: theme, title: "Send Latest Log", label: "", sectionId: self.section, style: .blocks, action: {
                     let _ = (Logger.shared.collectLogs()
                     |> deliverOnMainQueue).start(next: { logs in
-                        let controller = PeerSelectionController(context: arguments.context)
+                        guard let context = arguments.context else {
+                            return
+                        }
+                        let controller = PeerSelectionController(context: context)
                         controller.peerSelected = { [weak controller] peerId in
                             if let strongController = controller {
                                 strongController.dismiss()
@@ -140,7 +137,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
                                     return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
                                 }
-                                let _ = enqueueMessages(account: arguments.context.account, peerId: peerId, messages: messages).start()
+                                let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
                             }
                         }
                         arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
@@ -148,43 +145,38 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 })
             case let .accounts(theme):
                 return ItemListDisclosureItem(theme: theme, title: "Accounts", label: "", sectionId: self.section, style: .blocks, action: {
-                    arguments.pushController(debugAccountsController(context: arguments.context, accountManager: arguments.accountManager))
-                })
-            case let .resetServerContacts(theme):
-                return ItemListActionItem(theme: theme, title: "Reset Server Contacts", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    let _ = resetSavedContacts(network: arguments.context.account.network).start()
-                })
-            case let .clearPaymentData(theme):
-                return ItemListActionItem(theme: theme, title: "Clear Payment Password", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    let _ = cacheTwoStepPasswordToken(postbox: arguments.context.account.postbox, token: nil).start()
+                    guard let context = arguments.context else {
+                        return
+                    }
+                    arguments.pushController(debugAccountsController(context: context, accountManager: arguments.sharedContext.accountManager))
                 })
             case let .logToFile(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Log to File", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    let _ = updateLoggingSettings(accountManager: arguments.accountManager, {
+                    let _ = updateLoggingSettings(accountManager: arguments.sharedContext.accountManager, {
                         $0.withUpdatedLogToFile(value)
                     }).start()
                 })
             case let .logToConsole(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Log to Console", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    let _ = updateLoggingSettings(accountManager: arguments.accountManager, {
+                    let _ = updateLoggingSettings(accountManager: arguments.sharedContext.accountManager, {
                         $0.withUpdatedLogToConsole(value)
                     }).start()
                 })
             case let .redactSensitiveData(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Remove Sensitive Data", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    let _ = updateLoggingSettings(accountManager: arguments.accountManager, {
+                    let _ = updateLoggingSettings(accountManager: arguments.sharedContext.accountManager, {
                         $0.withUpdatedRedactSensitiveData(value)
                     }).start()
                 })
             case let .enableRaiseToSpeak(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Enable Raise to Speak", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    let _ = updateMediaInputSettingsInteractively(accountManager: arguments.context.sharedContext.accountManager, {
+                    let _ = updateMediaInputSettingsInteractively(accountManager: arguments.sharedContext.accountManager, {
                         $0.withUpdatedEnableRaiseToSpeak(value)
                     }).start()
                 })
             case let .keepChatNavigationStack(theme, value):
                 return ItemListSwitchItem(theme: theme, title: "Keep Chat Stack", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.context.sharedContext.accountManager, { settings in
+                    let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
                         var settings = settings
                         settings.keepChatNavigationStack = value
                         return settings
@@ -192,8 +184,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 })
             case let .clearTips(theme):
                 return ItemListActionItem(theme: theme, title: "Clear Tips", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    let _ = (arguments.context.account.postbox.transaction { transaction -> Void in
-                        transaction.clearNoticeEntries()
+                    let _ = (arguments.sharedContext.accountManager.transaction { transaction -> Void in
+                        transaction.clearNotices()
                     }).start()
                 })
             case let .reimport(theme):
@@ -213,13 +205,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 })
             case let .resetData(theme):
                 return ItemListActionItem(theme: theme, title: "Reset Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    let presentationData = arguments.context.sharedContext.currentPresentationData.with { $0 }
+                    let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                     let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: [
                         ActionSheetTextItem(title: "All data will be lost."),
                         ActionSheetButtonItem(title: "Reset Data", color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
-                            let databasePath = arguments.accountManager.basePath + "/db"
+                            let databasePath = arguments.sharedContext.accountManager.basePath + "/db"
                             let _ = try? FileManager.default.removeItem(atPath: databasePath)
                             preconditionFailure()
                         }),
@@ -251,9 +243,6 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.sendOneLog(presentationData.theme))
     entries.append(.accounts(presentationData.theme))
     
-    entries.append(.resetServerContacts(presentationData.theme))
-    entries.append(.clearPaymentData(presentationData.theme))
-    
     entries.append(.logToFile(presentationData.theme, loggingSettings.logToFile))
     entries.append(.logToConsole(presentationData.theme, loggingSettings.logToConsole))
     entries.append(.redactSensitiveData(presentationData.theme, loggingSettings.redactSensitiveData))
@@ -271,11 +260,12 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     return entries
 }
 
-public func debugController(context: AccountContext, accountManager: AccountManager) -> ViewController {
+public func debugController(sharedContext: SharedAccountContext, context: AccountContext?, modal: Bool = false) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
+    var dismissImpl: (() -> Void)?
     
-    let arguments = DebugControllerArguments(context: context, accountManager: accountManager, presentController: { controller, arguments in
+    let arguments = DebugControllerArguments(sharedContext: sharedContext, context: context, presentController: { controller, arguments in
         presentControllerImpl?(controller, arguments)
     }, pushController: { controller in
         pushControllerImpl?(controller)
@@ -290,7 +280,7 @@ public func debugController(context: AccountContext, accountManager: AccountMana
         hasLegacyAppData = FileManager.default.fileExists(atPath: statusPath)
     }
     
-    let signal = combineLatest(context.sharedContext.presentationData, accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.mediaInputSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings])))
+    let signal = combineLatest(sharedContext.presentationData, sharedContext.accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.mediaInputSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings])))
     |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
         let loggingSettings: LoggingSettings
         if let value = sharedData.entries[SharedDataKeys.loggingSettings] as? LoggingSettings {
@@ -308,18 +298,29 @@ public func debugController(context: AccountContext, accountManager: AccountMana
         
         let experimentalSettings: ExperimentalUISettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Debug"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        var leftNavigationButton: ItemListNavigationButton?
+        if modal {
+            leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+                dismissImpl?()
+            })
+        }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Debug"), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(entries: debugControllerEntries(presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, hasLegacyAppData: hasLegacyAppData), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }
     
-    let controller = ItemListController(context: context, state: signal)
+    
+    let controller = ItemListController(sharedContext: sharedContext, state: signal)
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
+    }
+    dismissImpl = { [weak controller] in
+        controller?.dismiss()
     }
     return controller
 }

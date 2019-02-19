@@ -89,7 +89,12 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = AuthorizationSequencePhoneEntryControllerNode(strings: self.strings, theme: self.theme)
+        self.displayNode = AuthorizationSequencePhoneEntryControllerNode(strings: self.strings, theme: self.theme, debugAction: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            self?.present(debugController(sharedContext: strongSelf.sharedContext, context: nil, modal: true), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        })
         if let (code, name, number) = self.currentData {
             self.controllerNode.codeAndNumber = (code, name, number)
         }
