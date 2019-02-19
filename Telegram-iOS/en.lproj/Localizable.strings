@@ -3849,6 +3849,7 @@ Unused sets are archived when you add more.";
 "GroupPermission.ApplyAlertAction" = "Apply";
 "GroupPermission.AddSuccess" = "Exception Added";
 "GroupPermission.NotAvailableInPublicGroups" = "This permission is not available in public groups.";
+"GroupPermission.AddMembersNotAvailable" = "You don't have persmission to add members.";
 
 "Channel.Management.RemovedBy" = "Removed by %@";
 
