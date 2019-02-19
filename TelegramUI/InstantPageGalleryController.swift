@@ -45,9 +45,15 @@ struct InstantPageGalleryEntry: Equatable {
             
             let titleString = RichText.bold(.plain(presentationData.strings.InstantPage_TapToOpenLink + "\n"))
             let urlString = RichText.url(text: .plain(url.url), url: url.url, webpageId: url.webpageId)
-            let urlText = RichText.concat([titleString, urlString])
             
-            caption = attributedStringForRichText(urlText, styleStack: styleStack)
+            let concatText: RichText
+            if let mediaCaption = self.media.caption {
+                concatText = RichText.concat([titleString, urlString, .plain("\n\n"), mediaCaption])
+            } else {
+                concatText = RichText.concat([titleString, urlString])
+            }
+            
+            caption = attributedStringForRichText(concatText, styleStack: styleStack)
             credit = NSAttributedString(string: "")
         } else {
             if let mediaCaption = self.media.caption {
