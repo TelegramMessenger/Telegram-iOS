@@ -692,7 +692,7 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                                 return state.withUpdatedSaving(false)
                             }
                             if case .voiceCalls = kind, let dataSaving = state.callDataSaving, let callP2PSettings = callP2PSettings, let systemIntegrationEnabled = state.callIntegrationEnabled {
-                                updated(settings, (callP2PSettings, VoiceCallSettings(dataSaving: dataSaving, p2pMode: nil, enableSystemIntegration: systemIntegrationEnabled)))
+                                updated(settings, (callP2PSettings, VoiceCallSettings(dataSaving: dataSaving, enableSystemIntegration: systemIntegrationEnabled)))
                             } else {
                                 updated(settings, nil)
                             }

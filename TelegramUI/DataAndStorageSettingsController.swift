@@ -313,12 +313,14 @@ private struct DataAndStorageControllerState: Equatable {
 
 private struct DataAndStorageData: Equatable {
     let automaticMediaDownloadSettings: MediaAutoDownloadSettings
+    let autodownloadSettings: AutodownloadSettings
     let generatedMediaStoreSettings: GeneratedMediaStoreSettings
     let voiceCallSettings: VoiceCallSettings
     let proxySettings: ProxySettings?
     
-    init(automaticMediaDownloadSettings: MediaAutoDownloadSettings, generatedMediaStoreSettings: GeneratedMediaStoreSettings, voiceCallSettings: VoiceCallSettings, proxySettings: ProxySettings?) {
+    init(automaticMediaDownloadSettings: MediaAutoDownloadSettings, autodownloadSettings: AutodownloadSettings, generatedMediaStoreSettings: GeneratedMediaStoreSettings, voiceCallSettings: VoiceCallSettings, proxySettings: ProxySettings?) {
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
+        self.autodownloadSettings = autodownloadSettings
         self.generatedMediaStoreSettings = generatedMediaStoreSettings
         self.voiceCallSettings = voiceCallSettings
         self.proxySettings = proxySettings
@@ -329,14 +331,16 @@ private struct DataAndStorageData: Equatable {
     }
 }
 
-private func stringForUseLessDataSetting(strings: PresentationStrings, settings: VoiceCallSettings) -> String {
-    switch settings.dataSaving {
+private func stringForUseLessDataSetting(_ dataSaving: VoiceCallDataSaving, strings: PresentationStrings) -> String {
+    switch dataSaving {
         case .never:
             return strings.CallSettings_Never
         case .cellular:
             return strings.CallSettings_OnMobile
         case .always:
             return strings.CallSettings_Always
+        case .default:
+            return ""
     }
 }
 
@@ -405,7 +409,8 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.autoplayVideos(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayVideos, data.automaticMediaDownloadSettings.autoplayVideos))
     
     entries.append(.voiceCallsHeader(presentationData.theme, presentationData.strings.Settings_CallSettings.uppercased()))
-    entries.append(.useLessVoiceData(presentationData.theme, presentationData.strings.CallSettings_UseLessData, stringForUseLessDataSetting(strings: presentationData.strings, settings: data.voiceCallSettings)))
+    let dataSaving = effectiveDataSaving(for: data.voiceCallSettings, autodownloadSettings: data.autodownloadSettings)
+    entries.append(.useLessVoiceData(presentationData.theme, presentationData.strings.CallSettings_UseLessData, stringForUseLessDataSetting(dataSaving, strings: presentationData.strings)))
     
     entries.append(.otherHeader(presentationData.theme, presentationData.strings.ChatSettings_Other))
     entries.append(.saveIncomingPhotos(presentationData.theme, presentationData.strings.Settings_SaveIncomingPhotos))
@@ -449,8 +454,12 @@ func dataAndStorageController(context: AccountContext) -> ViewController {
             automaticMediaDownloadSettings = .defaultSettings
         }
         
+        var autodownloadSettings: AutodownloadSettings
         if let value = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings {
-            automaticMediaDownloadSettings = automaticMediaDownloadSettings.updatedWithAutodownloadSettings(value)
+            autodownloadSettings = value
+            automaticMediaDownloadSettings = automaticMediaDownloadSettings.updatedWithAutodownloadSettings(autodownloadSettings)
+        } else {
+            autodownloadSettings = .defaultSettings
         }
         
         let generatedMediaStoreSettings: GeneratedMediaStoreSettings
@@ -472,7 +481,7 @@ func dataAndStorageController(context: AccountContext) -> ViewController {
             proxySettings = value
         }
         
-        return DataAndStorageData(automaticMediaDownloadSettings: automaticMediaDownloadSettings, generatedMediaStoreSettings: generatedMediaStoreSettings, voiceCallSettings: voiceCallSettings, proxySettings: proxySettings)
+        return DataAndStorageData(automaticMediaDownloadSettings: automaticMediaDownloadSettings, autodownloadSettings: autodownloadSettings, generatedMediaStoreSettings: generatedMediaStoreSettings, voiceCallSettings: voiceCallSettings, proxySettings: proxySettings)
     })
     
     let arguments = DataAndStorageControllerArguments(openStorageUsage: {
