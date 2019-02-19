@@ -290,6 +290,7 @@ public class Window1 {
     private let statusBarManager: StatusBarManager?
     private let keyboardManager: KeyboardManager?
     private var statusBarChangeObserver: AnyObject?
+    private var keyboardRotationChangeObserver: AnyObject?
     private var keyboardFrameChangeObserver: AnyObject?
     private var keyboardTypeChangeObserver: AnyObject?
     private var voiceOverStatusObserver: AnyObject?
@@ -436,6 +437,28 @@ public class Window1 {
                 strongSelf.updateLayout { $0.update(statusBarHeight: statusBarHeight, transition: transition, overrideTransition: false) }
             }
         })
+        self.keyboardRotationChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name("UITextEffectsWindowDidRotateNotification"), object: nil, queue: nil, using: { [weak self] notification in
+            if let strongSelf = self {
+                if !strongSelf.hostView.isUpdatingOrientationLayout {
+                    return
+                }
+                let keyboardHeight = max(0.0, strongSelf.keyboardManager?.getCurrentKeyboardHeight() ?? 0.0)
+                var duration: Double = (notification.userInfo?[UIKeyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
+                if duration > Double.ulpOfOne {
+                    duration = 0.5
+                }
+                let curve: UInt = (notification.userInfo?[UIKeyboardAnimationCurveUserInfoKey] as? NSNumber)?.uintValue ?? 7
+                
+                let transitionCurve: ContainedViewLayoutTransitionCurve
+                if curve == 7 {
+                    transitionCurve = .spring
+                } else {
+                    transitionCurve = .easeInOut
+                }
+                
+                strongSelf.updateLayout { $0.update(inputHeight: keyboardHeight.isLessThanOrEqualTo(0.0) ? nil : keyboardHeight, transition: .animated(duration: duration, curve: transitionCurve), overrideTransition: false) }
+            }
+        })
         
         self.keyboardFrameChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIKeyboardWillChangeFrame, object: nil, queue: nil, using: { [weak self] notification in
             if let strongSelf = self {
@@ -535,6 +558,9 @@ public class Window1 {
     deinit {
         if let statusBarChangeObserver = self.statusBarChangeObserver {
             NotificationCenter.default.removeObserver(statusBarChangeObserver)
+        }
+        if let keyboardRotationChangeObserver = self.keyboardRotationChangeObserver {
+            NotificationCenter.default.removeObserver(keyboardRotationChangeObserver)
         }
         if let keyboardFrameChangeObserver = self.keyboardFrameChangeObserver {
             NotificationCenter.default.removeObserver(keyboardFrameChangeObserver)
@@ -794,7 +820,7 @@ public class Window1 {
         }
         
         if !UIWindow.isDeviceRotating() {
-            if true || !self.hostView.isUpdatingOrientationLayout {
+            if !self.hostView.isUpdatingOrientationLayout {
                 self.commitUpdatingLayout()
             } else {
                 self.addPostUpdateToInterfaceOrientationBlock(f: { [weak self] in

@@ -180,13 +180,6 @@ private final class NativeWindow: UIWindow, WindowHost {
     var forEachControllerImpl: (((ContainableController) -> Void) -> Void)?
     var getAccessibilityElementsImpl: (() -> [Any]?)?
     
-    /*override var accessibilityElements: [Any]? {
-        get {
-            return self.getAccessibilityElementsImpl?()
-        } set(value) {
-        }
-    }*/
-    
     override var frame: CGRect {
         get {
             return super.frame
@@ -248,13 +241,13 @@ private final class NativeWindow: UIWindow, WindowHost {
         self.layoutSubviewsEvent?()
     }
     
-    /*override func _update(toInterfaceOrientation arg1: Int32, duration arg2: Double, force arg3: Bool) {
+    override func _update(toInterfaceOrientation arg1: Int32, duration arg2: Double, force arg3: Bool) {
         self.updateIsUpdatingOrientationLayout?(true)
         super._update(toInterfaceOrientation: arg1, duration: arg2, force: arg3)
         self.updateIsUpdatingOrientationLayout?(false)
         
         self.updateToInterfaceOrientation?()
-    }*/
+    }
     
     func present(_ controller: ContainableController, on level: PresentationSurfaceLevel, blockInteraction: Bool, completion: @escaping () -> Void) {
         self.presentController?(controller, level, blockInteraction, completion)

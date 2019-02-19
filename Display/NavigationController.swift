@@ -812,8 +812,12 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     public func replaceTopController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil) {
         self.view.endEditing(true)
+        if !controller.hasActiveInput {
+            self.view.endEditing(true)
+        }
         if let validLayout = self.validLayout {
-            let (_, controllerLayout) = self.layoutDataForConfiguration(self.layoutConfiguration(for: validLayout), layout: validLayout, index: self.viewControllers.count)
+            var (_, controllerLayout) = self.layoutDataForConfiguration(self.layoutConfiguration(for: validLayout), layout: validLayout, index: self.viewControllers.count)
+            controllerLayout.inputHeight = nil
             controller.containerLayoutUpdated(controllerLayout, transition: .immediate)
         }
         self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { [weak self] _ in
