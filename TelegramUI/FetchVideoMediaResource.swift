@@ -143,7 +143,7 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                         if let result = next as? TGMediaVideoConversionResult {
                             var value = stat()
                             if stat(result.fileURL.path, &value) == 0 {
-                                if false && config.remuxToFMp4 {
+                                if config.remuxToFMp4 {
                                     let tempFile = TempBox.shared.tempFile(fileName: "video.mp4")
                                     if FFMpegRemuxer.remux(result.fileURL.path, to: tempFile.path) {
                                         let _ = try? FileManager.default.removeItem(atPath: result.fileURL.path)
@@ -228,7 +228,7 @@ func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFileVideo
                 if let result = next as? TGMediaVideoConversionResult {
                     var value = stat()
                     if stat(result.fileURL.path, &value) == 0 {
-                        if false && config.remuxToFMp4 {
+                        if config.remuxToFMp4 {
                             let tempFile = TempBox.shared.tempFile(fileName: "video.mp4")
                             if FFMpegRemuxer.remux(result.fileURL.path, to: tempFile.path) {
                                 let _ = try? FileManager.default.removeItem(atPath: result.fileURL.path)
