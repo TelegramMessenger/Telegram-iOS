@@ -196,7 +196,7 @@ class NotificationService: UNNotificationServiceExtension {
                 
                 if accountInfos.accounts.count > 1 {
                     if let title = self.bestAttemptContent?.title, !title.isEmpty, !account.peerName.isEmpty {
-                        self.bestAttemptContent?.title = "\(title) [\(account.peerName)]"
+                        self.bestAttemptContent?.title = "\(title) → \(account.peerName)"
                     }
                 }
                 
