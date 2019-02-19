@@ -250,31 +250,11 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
             })
             
             transaction.updateSharedData(ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings, { current in
-                var settings: AutomaticMediaDownloadSettings = current as? AutomaticMediaDownloadSettings ?? .defaultSettings
+                var settings: MediaAutoDownloadSettings = current as? MediaAutoDownloadSettings ?? .defaultSettings
 
                 if let preferences = autoDownloadPreferences, !preferences.isDefaultPreferences() {
-                    //settings.cellular.enabled = !preferences.disabled
-                    //settings.wifi.enabled = !preferences.disabled
-                
-//                    let peerPaths: [(WritableKeyPath<AutomaticMediaDownloadPeers, AutomaticMediaDownloadCategories>, TGAutoDownloadMode, TGAutoDownloadMode)] = [
-//                        (\AutomaticMediaDownloadPeers.contacts, TGAutoDownloadModeCellularContacts, TGAutoDownloadModeWifiContacts),
-//                        (\AutomaticMediaDownloadPeers.channels, TGAutoDownloadModeCellularChannels, TGAutoDownloadModeWifiChannels),
-//                        (\AutomaticMediaDownloadPeers.groups, TGAutoDownloadModeCellularGroups, TGAutoDownloadModeWifiGroups),
-//                        (\AutomaticMediaDownloadPeers.otherPrivate, TGAutoDownloadModeCellularPrivateChats, TGAutoDownloadModeWifiPrivateChats)
-//                    ]
-//                
-//                    let categoryPaths: [(WritableKeyPath<AutomaticMediaDownloadCategories, AutomaticMediaDownloadCategory>, TGAutoDownloadMode, Int32)] = [
-//                        (\AutomaticMediaDownloadCategories.photo, preferences.photos, Int32.max),
-//                        (\AutomaticMediaDownloadCategories.file, preferences.documents, preferences.maximumDocumentSize),
-//                        (\AutomaticMediaDownloadCategories.video, preferences.videos, preferences.maximumVideoSize)
-//                    ]
-//                
-//                    for (categoryPath, category, maxSize) in categoryPaths {
-//                        for (peerPath, cellular, wifi) in peerPaths {
-//                            let targetPath = peerPath.appending(path: categoryPath)
-//                            settings.peers[keyPath: targetPath] = AutomaticMediaDownloadCategory(cellular: (category.rawValue & cellular.rawValue) != 0, cellularSizeLimit: maxSize, cellularPredownload: true, wifi: (category.rawValue & wifi.rawValue) != 0, wifiSizeLimit: maxSize, wifiPredownload: true)
-//                        }
-//                    }
+                    settings.cellular.enabled = !preferences.disabled
+                    settings.wifi.enabled = !preferences.disabled
                 }
                 
                 if let parsedAutoplayGifs = parsedAutoplayGifs {
