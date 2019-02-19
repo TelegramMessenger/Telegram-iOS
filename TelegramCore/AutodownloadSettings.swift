@@ -19,13 +19,15 @@ public struct AutodownloadPresetSettings: PostboxCoding, Equatable {
     public let videoSizeMax: Int32
     public let fileSizeMax: Int32
     public let preloadLargeVideo: Bool
+    public let lessDataForPhoneCalls: Bool
     
-    public init(disabled: Bool, photoSizeMax: Int32, videoSizeMax: Int32, fileSizeMax: Int32, preloadLargeVideo: Bool) {
+    public init(disabled: Bool, photoSizeMax: Int32, videoSizeMax: Int32, fileSizeMax: Int32, preloadLargeVideo: Bool, lessDataForPhoneCalls: Bool) {
         self.disabled = disabled
         self.photoSizeMax = photoSizeMax
         self.videoSizeMax = videoSizeMax
         self.fileSizeMax = fileSizeMax
         self.preloadLargeVideo = preloadLargeVideo
+        self.lessDataForPhoneCalls = lessDataForPhoneCalls
     }
     
     public init(decoder: PostboxDecoder) {
@@ -34,6 +36,7 @@ public struct AutodownloadPresetSettings: PostboxCoding, Equatable {
         self.videoSizeMax = decoder.decodeInt32ForKey("videoSizeMax", orElse: 0)
         self.fileSizeMax = decoder.decodeInt32ForKey("fileSizeMax", orElse: 0)
         self.preloadLargeVideo = decoder.decodeInt32ForKey("preloadLargeVideo", orElse: 0) != 0
+        self.lessDataForPhoneCalls = decoder.decodeInt32ForKey("lessDataForPhoneCalls", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -42,6 +45,7 @@ public struct AutodownloadPresetSettings: PostboxCoding, Equatable {
         encoder.encodeInt32(self.videoSizeMax, forKey: "videoSizeMax")
         encoder.encodeInt32(self.fileSizeMax, forKey: "fileSizeMax")
         encoder.encodeInt32(self.preloadLargeVideo ? 1 : 0, forKey: "preloadLargeVideo")
+        encoder.encodeInt32(self.lessDataForPhoneCalls ? 1 : 0, forKey: "lessDataForPhoneCalls")
     }
 }
 
@@ -51,9 +55,9 @@ public struct AutodownloadSettings: PreferencesEntry, Equatable {
     public let highPreset: AutodownloadPresetSettings
     
     public static var defaultSettings: AutodownloadSettings {
-        return AutodownloadSettings(lowPreset: AutodownloadPresetSettings(disabled: false, photoSizeMax: 1 * 1024 * 1024, videoSizeMax: 0, fileSizeMax: 0, preloadLargeVideo: false),
-                                    mediumPreset: AutodownloadPresetSettings(disabled: false, photoSizeMax: 1 * 1024 * 1024, videoSizeMax: Int32(2.5 * 1024 * 1024), fileSizeMax: 1 * 1024 * 1024, preloadLargeVideo: false),
-                                    highPreset: AutodownloadPresetSettings(disabled: false, photoSizeMax: 1 * 1024 * 1024, videoSizeMax: 10 * 1024 * 1024, fileSizeMax: 3 * 1024 * 1024, preloadLargeVideo: false))
+        return AutodownloadSettings(lowPreset: AutodownloadPresetSettings(disabled: false, photoSizeMax: 1 * 1024 * 1024, videoSizeMax: 0, fileSizeMax: 0, preloadLargeVideo: false, lessDataForPhoneCalls: true),
+                                    mediumPreset: AutodownloadPresetSettings(disabled: false, photoSizeMax: 1 * 1024 * 1024, videoSizeMax: Int32(2.5 * 1024 * 1024), fileSizeMax: 1 * 1024 * 1024, preloadLargeVideo: false, lessDataForPhoneCalls: false),
+                                    highPreset: AutodownloadPresetSettings(disabled: false, photoSizeMax: 1 * 1024 * 1024, videoSizeMax: 10 * 1024 * 1024, fileSizeMax: 3 * 1024 * 1024, preloadLargeVideo: false, lessDataForPhoneCalls: false))
     }
     
     init(lowPreset: AutodownloadPresetSettings, mediumPreset: AutodownloadPresetSettings, highPreset: AutodownloadPresetSettings) {
@@ -105,7 +109,7 @@ extension AutodownloadPresetSettings {
     init(apiAutodownloadSettings: Api.AutoDownloadSettings) {
         switch apiAutodownloadSettings {
             case let .autoDownloadSettings(flags, photoSizeMax, videoSizeMax, fileSizeMax):
-                self.init(disabled: (flags & (1 << 0)) != 0, photoSizeMax: photoSizeMax, videoSizeMax: videoSizeMax, fileSizeMax: fileSizeMax, preloadLargeVideo: (flags & (1 << 1)) != 0)
+                self.init(disabled: (flags & (1 << 0)) != 0, photoSizeMax: photoSizeMax, videoSizeMax: videoSizeMax, fileSizeMax: fileSizeMax, preloadLargeVideo: (flags & (1 << 1)) != 0, lessDataForPhoneCalls: (flags & (1 << 3)) != 0)
         }
     }
 }
@@ -127,6 +131,9 @@ func apiAutodownloadPresetSettings(_ autodownloadPresetSettings: AutodownloadPre
     if autodownloadPresetSettings.preloadLargeVideo {
         flags |= (1 << 1)
     }
-    return .autoDownloadSettings(flags: 0, photoSizeMax: autodownloadPresetSettings.photoSizeMax, videoSizeMax: autodownloadPresetSettings.videoSizeMax, fileSizeMax: autodownloadPresetSettings.fileSizeMax)
+    if autodownloadPresetSettings.lessDataForPhoneCalls {
+        flags |= (1 << 3)
+    }
+    return .autoDownloadSettings(flags: flags, photoSizeMax: autodownloadPresetSettings.photoSizeMax, videoSizeMax: autodownloadPresetSettings.videoSizeMax, fileSizeMax: autodownloadPresetSettings.fileSizeMax)
 }
 
