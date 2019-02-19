@@ -377,7 +377,20 @@ func autodownloadMediaCategoryController(context: AccountContext, connectionType
         }).start()
     })
     
+    let currentAutodownloadSettings = {
+        return context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
+        |> take(1)
+        |> map { sharedData -> MediaAutoDownloadSettings in
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
+                return value
+            } else {
+                return .defaultSettings
+            }
+        }
+    }
     
+    let initialValuePromise: Promise<MediaAutoDownloadSettings> = Promise()
+    initialValuePromise.set(currentAutodownloadSettings())
     
     let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])) |> deliverOnMainQueue
         |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<AutodownloadMediaCategoryEntry>, AutodownloadMediaCategoryEntry.ItemGenerationArguments)) in
@@ -406,7 +419,23 @@ func autodownloadMediaCategoryController(context: AccountContext, connectionType
     
     let controller = ItemListController(context: context, state: signal)
     controller.willDisappear = { _ in
-        
+        let _ = (combineLatest(initialValuePromise.get(), currentAutodownloadSettings())
+        |> mapToSignal { initialValue, currentValue -> Signal<Void, NoError> in
+            let initialConnection = initialValue.connectionSettings(for: connectionType.automaticDownloadNetworkType)
+            let currentConnection = currentValue.connectionSettings(for: connectionType.automaticDownloadNetworkType)
+            if currentConnection != initialConnection, let categories = currentConnection.custom, currentConnection.preset == .custom {
+                let preset: SavedAutodownloadPreset
+                switch connectionType {
+                    case .cellular:
+                        preset = .medium
+                    case .wifi:
+                        preset = .high
+                }
+                let settings = AutodownloadPresetSettings(disabled: false, photoSizeMax: categories.photo.sizeLimit, videoSizeMax: categories.video.sizeLimit, fileSizeMax: categories.file.sizeLimit, preloadLargeVideo: categories.video.predownload)
+                return saveAutodownloadSettings(account: context.account, preset: preset, settings: settings)
+            }
+            return .complete()
+        }).start()
     }
     return controller
 }
