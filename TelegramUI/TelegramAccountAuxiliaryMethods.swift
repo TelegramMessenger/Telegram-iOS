@@ -12,9 +12,9 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerC
     }
 }, fetchResource: { account, resource, ranges, _ in
     if let resource = resource as? VideoLibraryMediaResource {
-        return fetchVideoLibraryMediaResource(resource: resource)
+        return fetchVideoLibraryMediaResource(postbox: account.postbox, resource: resource)
     } else if let resource = resource as? LocalFileVideoMediaResource {
-        return fetchLocalFileVideoMediaResource(resource: resource)
+        return fetchLocalFileVideoMediaResource(postbox: account.postbox, resource: resource)
     } else if let resource = resource as? LocalFileGifMediaResource {
         return fetchLocalFileGifMediaResource(resource: resource)
     } else if let photoLibraryResource = resource as? PhotoLibraryMediaResource {

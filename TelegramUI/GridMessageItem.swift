@@ -256,7 +256,7 @@ final class GridMessageItemNode: GridItemNode {
                                     case let .Fetching(_, progress):
                                         let progressString = String(format: "%d%%", Int(progress * 100.0))
                                         badgeContent = .text(inset: 12.0, backgroundColor: mediaBadgeBackgroundColor, foregroundColor: mediaBadgeTextColor, text: NSAttributedString(string: progressString))
-                                        mediaDownloadState = .compactFetching(progress: progress)
+                                        mediaDownloadState = .compactFetching(progress: 0.0)
                                     case .Local:
                                         badgeContent = .text(inset: 0.0, backgroundColor: mediaBadgeBackgroundColor, foregroundColor: mediaBadgeTextColor, text: NSAttributedString(string: durationString))
                                     case .Remote:
@@ -271,6 +271,9 @@ final class GridMessageItemNode: GridItemNode {
                         }
                     }
                 }))
+                if self.statusNode.supernode == nil {
+                    self.imageNode.addSubnode(self.statusNode)
+                }
             } else {
                 self.mediaBadgeNode.isHidden = true
             }

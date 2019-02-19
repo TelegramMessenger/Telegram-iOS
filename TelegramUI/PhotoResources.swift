@@ -1902,10 +1902,13 @@ private func chatSecretMessageVideoData(account: Account, fileReference: FileMed
         
         let fetchedThumbnail = fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(thumbnailResource))
         
+        let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
+        
         let thumbnail = Signal<Data?, NoError> { subscriber in
             let fetchedDisposable = fetchedThumbnail.start()
             let thumbnailDisposable = account.postbox.mediaBox.resourceData(thumbnailResource).start(next: { next in
-                subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+                let data = next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [])
+                subscriber.putNext(data ?? decodedThumbnailData)
             }, error: subscriber.putError, completed: subscriber.putCompletion)
             
             return ActionDisposable {
