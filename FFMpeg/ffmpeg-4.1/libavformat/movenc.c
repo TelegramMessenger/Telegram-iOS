@@ -2730,7 +2730,7 @@ static int mov_write_mdhd_tag(AVIOContext *pb, MOVMuxContext *mov,
     avio_wb32(pb, track->timescale); /* time scale (sample rate for audio) */
     if (!track->entry && mov->mode == MODE_ISM)
         (version == 1) ? avio_wb64(pb, UINT64_C(0xffffffffffffffff)) : avio_wb32(pb, 0xffffffff);
-    else if (!track->entry)
+    else if (!track->entry && track->track_duration == 0)
         (version == 1) ? avio_wb64(pb, 0) : avio_wb32(pb, 0);
     else
         (version == 1) ? avio_wb64(pb, track->track_duration) : avio_wb32(pb, track->track_duration); /* duration */
@@ -3214,6 +3214,8 @@ static int mov_write_mvhd_tag(AVIOContext *pb, MOVMuxContext *mov)
     int max_track_id = 1, i;
     int64_t max_track_len = 0;
     int version;
+    
+    int additional_max_track_id = 1;
 
     for (i = 0; i < mov->nb_streams; i++) {
         if (mov->tracks[i].entry > 0 && mov->tracks[i].timescale) {
@@ -3227,11 +3229,15 @@ static int mov_write_mvhd_tag(AVIOContext *pb, MOVMuxContext *mov)
                 max_track_id = mov->tracks[i].track_id;
         }
     }
+    for (i = 0; i < mov->nb_streams; i++) {
+        if (additional_max_track_id < mov->tracks[i].track_id)
+            additional_max_track_id = mov->tracks[i].track_id;
+    }
     /* If using delay_moov, make sure the output is the same as if no
      * samples had been written yet. */
     if (mov->flags & FF_MOV_FLAG_EMPTY_MOOV) {
         max_track_len = custom_maxTrackLength_value;
-        max_track_id  = 1;
+        max_track_id  = additional_max_track_id;
     }
 
     version = max_track_len < UINT32_MAX ? 0 : 1;
@@ -6222,9 +6228,10 @@ static int mov_init(AVFormatContext *s)
                 track->timescale = mov->video_track_timescale;
             } else {
                 track->timescale = st->time_base.den;
-                while(track->timescale < 10000)
-                    track->timescale *= 2;
+                //while(track->timescale < 10000)
+                //    track->timescale *= 2;
             }
+            track->track_duration = st->duration;
             if (st->codecpar->width > 65535 || st->codecpar->height > 65535) {
                 av_log(s, AV_LOG_ERROR, "Resolution %dx%d too large for mov/mp4\n", st->codecpar->width, st->codecpar->height);
                 return AVERROR(EINVAL);

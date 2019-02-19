@@ -71,6 +71,8 @@
         
         streams_list[i] = stream_index++;
         out_stream = avformat_new_stream(output_format_context, NULL);
+        out_stream->time_base = in_stream->time_base;
+        out_stream->duration = in_stream->duration;
         if (!out_stream) {
             fprintf(stderr, "Failed allocating output stream\n");
             ret = AVERROR_UNKNOWN;
