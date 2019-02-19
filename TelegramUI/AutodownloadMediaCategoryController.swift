@@ -431,7 +431,7 @@ func autodownloadMediaCategoryController(context: AccountContext, connectionType
                     case .wifi:
                         preset = .high
                 }
-                let settings = AutodownloadPresetSettings(disabled: false, photoSizeMax: categories.photo.sizeLimit, videoSizeMax: categories.video.sizeLimit, fileSizeMax: categories.file.sizeLimit, preloadLargeVideo: categories.video.predownload)
+                let settings = AutodownloadPresetSettings(disabled: false, photoSizeMax: categories.photo.sizeLimit, videoSizeMax: categories.video.sizeLimit, fileSizeMax: categories.file.sizeLimit, preloadLargeVideo: categories.video.predownload, lessDataForPhoneCalls: false)
                 return saveAutodownloadSettings(account: context.account, preset: preset, settings: settings)
             }
             return .complete()

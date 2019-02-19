@@ -1220,8 +1220,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let updatedBadgeBackgroundFrame = CGRect(origin: CGPoint(x: contentRect.maxX - badgeBackgroundFrame.size.width, y: contentRect.maxY - badgeBackgroundFrame.size.height - 2.0), size: badgeBackgroundFrame.size)
             transition.updateFrame(node: self.badgeBackgroundNode, frame: updatedBadgeBackgroundFrame)
             
-            if self.mentionBadgeNode.supernode != nil {
-                let mentionBadgeSize = self.mentionBadgeNode.bounds.size
+            let mentionBadgeSize = self.mentionBadgeNode.bounds.size
+            if mentionBadgeSize != CGSize.zero {
                 let mentionBadgeOffset: CGFloat
                 if updatedBadgeBackgroundFrame.size.width.isZero || self.badgeBackgroundNode.image == nil {
                     mentionBadgeOffset = contentRect.maxX - mentionBadgeSize.width

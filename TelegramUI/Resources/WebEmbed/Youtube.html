@@ -25,6 +25,8 @@
         var duration = 0.0;
         var position = 0.0;
         var downloadProgress = 0.0;
+        var quality = "";
+        var availableQualities = "";
         var failed = false;
         var autostarted = false;
 
@@ -57,7 +59,7 @@
         }
         
         function updateState() {
-            window.location.href = "embed://onState?failed=" + failed + "&playback=" + playbackState + "&position=" + position + "&duration=" + duration + "&download=" + downloadProgress;
+            window.location.href = "embed://onState?failed=" + failed + "&playback=" + playbackState + "&position=" + position + "&duration=" + duration + "&download=" + downloadProgress + '&quality=' + quality + '&availableQualities=' + availableQualities;
         }
 
         function onReady(event) {
@@ -78,7 +80,8 @@
         }
 
         function onPlaybackQualityChange(event) {
-            window.location.href = "embed://onPlaybackQualityChange?data=" + event.data;
+            quality = event.data;
+            updateState();
         }
 
         function onPlayerError(event) {

@@ -88,6 +88,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
     
     private let videoId: String
     private let timestamp: Int
+    private var ignoreEarlierTimestamps = false
     private var status : MediaPlayerStatus
     
     private var ready: Bool = false
@@ -100,10 +101,17 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
     }
     private var playbackDelay = PlaybackDelay.none
     
+    private let benchmarkStartTime: CFAbsoluteTime
+    
     init(videoId: String, timestamp: Int = 0) {
         self.videoId = videoId
         self.timestamp = timestamp
+        if timestamp > 0 {
+            self.ignoreEarlierTimestamps = true
+        }
         self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: Double(timestamp), baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true), soundEnabled: true)
+        
+        self.benchmarkStartTime = CFAbsoluteTimeGetCurrent()
     }
     
     func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void) {
@@ -232,7 +240,12 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                     }
                     
                     if let position = position {
-                        if let ticksToIgnore = self.ignorePosition {
+                        if self.ignoreEarlierTimestamps {
+                            if position >= Double(self.timestamp) {
+                                self.ignoreEarlierTimestamps = false
+                                newTimestamp = Double(position)
+                            }
+                        } else if let ticksToIgnore = self.ignorePosition {
                             if ticksToIgnore > 1 {
                                 self.ignorePosition = ticksToIgnore - 1
                             } else {
@@ -263,6 +276,13 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                                 playbackStatus = .buffering(initial: true, whilePlaying: false)
                         }
                         
+                        if case .playing = playbackStatus, !self.started {
+                            self.started = true
+                            print("YT started in \(CFAbsoluteTimeGetCurrent() - self.benchmarkStartTime)")
+                            
+                            self.onPlaybackStarted?()
+                        }
+                        
                         self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: Double(duration), dimensions: self.status.dimensions, timestamp: newTimestamp, baseRate: 1.0, seekId: self.status.seekId, status: playbackStatus, soundEnabled: true)
                         updateStatus(self.status)
                     }
@@ -284,11 +304,14 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                     self.playbackDelay = .none
                     self.play()
                 }
+                
+                print("YT ready in \(CFAbsoluteTimeGetCurrent() - self.benchmarkStartTime)")
 
                 Queue.mainQueue().async {
                     self.play()
                     
-                    Queue.mainQueue().after(2.0, {
+                    let delay = self.timestamp > 0 ? 2.8 : 2.0
+                    Queue.mainQueue().after(delay, {
                         if !self.started {
                             self.play()
                         }

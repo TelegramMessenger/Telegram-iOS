@@ -77,8 +77,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
     private func widthForString(_ string: String) -> CGFloat {
         let convertedString = string.components(separatedBy: digitsSet).joined(separator: "8")
         self.measureNode.attributedText = NSMutableAttributedString(string: convertedString, attributes: [.font: font])
-        let size = self.measureNode.measure(CGSize(width: 240.0, height: 160.0))
-        return size.width
+        return self.measureNode.measure(CGSize(width: 240.0, height: 160.0)).width
     }
     
     func update(theme: PresentationTheme, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, alignment: NSTextAlignment = .left, animated: Bool) {
@@ -155,12 +154,23 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                             sizeWidth = widthForString(size)
                             sizeNode.attributedText = sizeString
                             let sizeSize = sizeNode.measure(CGSize(width: 160.0, height: 160.0))
+                            let sizeFrame = CGRect(x: active ? 42.0 : 7.0, y: active ? 19.0 : 2.0, width: sizeSize.width, height: sizeSize.height)
+                            sizeNode.bounds = CGRect(origin: CGPoint(), size: sizeFrame.size)
                             
-                            textTransition.updateFrame(node: sizeNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 19.0 : 2.0, width: sizeSize.width, height: sizeSize.height))
+                            let previousFrame = sizeNode.frame
+                            if previousFrame.center.y != sizeFrame.center.y {
+                                textTransition.updatePosition(node: sizeNode, position: sizeFrame.center)
+                            } else {
+                                sizeNode.layer.removeAllAnimations()
+                                sizeNode.frame = sizeFrame
+                            }
                             transition.updateAlpha(node: sizeNode, alpha: 1.0)
                         } else if let sizeNode = self.sizeNode {
                             let sizeSize = sizeNode.frame.size
-                            textTransition.updateFrame(node: sizeNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 19.0 : 2.0, width: sizeSize.width, height: sizeSize.height))
+                            let sizeFrame = CGRect(x: active ? 42.0 : 7.0, y: active ? 19.0 : 2.0, width: sizeSize.width, height: sizeSize.height)
+                            sizeNode.bounds = CGRect(origin: CGPoint(), size: sizeFrame.size)
+                            textTransition.updatePosition(node: sizeNode, position: sizeFrame.center)
+                            
                             transition.updateAlpha(node: sizeNode, alpha: 0.0)
                         }
                         
@@ -169,7 +179,9 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                             transition.updateAlpha(node: statusNode, alpha: active ? 1.0 : 0.0)
                         }
                         
-                        textTransition.updateFrame(node: self.durationNode, frame: CGRect(x: active ? 42.0 : 7.0, y: active ? 6.0 : 2.0, width: durationSize.width, height: durationSize.height))
+                        let durationFrame = CGRect(x: active ? 42.0 : 7.0, y: active ? 6.0 : 2.0, width: durationSize.width, height: durationSize.height)
+                        self.durationNode.bounds = CGRect(origin: CGPoint(), size: durationFrame.size)
+                        textTransition.updatePosition(node: self.durationNode, position: durationFrame.center)
                         
                         let iconNode: ASImageNode
                         if let current = self.iconNode {
@@ -209,7 +221,12 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
             if alignment == .right {
                 originX = -contentSize.width
             }
-            transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: originX, y: 0.0, width: contentSize.width, height: contentSize.height))
+            let previousSize = self.backgroundNode.frame.size
+            if previousSize.height == 0 || (previousSize.height == contentSize.height && contentSize.height == 38.0) {
+                self.backgroundNode.frame = CGRect(x: originX, y: 0.0, width: contentSize.width, height: contentSize.height)
+            } else {
+                transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: originX, y: 0.0, width: contentSize.width, height: contentSize.height))
+            }
         }
         
         if self.mediaDownloadState != mediaDownloadState {

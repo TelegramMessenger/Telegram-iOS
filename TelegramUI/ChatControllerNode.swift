@@ -1475,12 +1475,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.historyNode.forEachVisibleItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView, let playMediaWithSound = itemNode.playMediaWithSound() {
                 if case let .visible(fraction) = itemNode.visibility {
-                actions.insert((fraction, playMediaWithSound), at: 0)
+                    actions.insert((fraction, playMediaWithSound), at: 0)
                 }
             }
         }
         for (fraction, action) in actions {
-            if fraction > 0.6 {
+            if fraction > 0.7 {
                 action()
                 break
             }

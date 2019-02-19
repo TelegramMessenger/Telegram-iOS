@@ -428,7 +428,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 } else {
                                     onlyFullSizeVideoThumbnail = isSendingUpdated
                                     updateImageSignal = { synchronousLoad in
-                                        return mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile)
+                                        return mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile, autoFetchFullSizeThumbnail: true)
                                     }
                                 }
                             }
@@ -956,7 +956,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 } else {
                                     let progressString = String(format: "%d%%", Int(progress * 100.0))
                                     badgeContent = .text(inset: message.flags.contains(.Unsent) ? 0.0 : 12.0, backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: progressString))
-                                    mediaDownloadState = automaticPlayback ? .none : .compactFetching(progress: progress)
+                                    mediaDownloadState = automaticPlayback ? .none : .compactFetching(progress: 0.0)
                                 }
                                 
                                 if !message.flags.contains(.Unsent) {
