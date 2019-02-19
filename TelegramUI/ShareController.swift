@@ -30,7 +30,7 @@ public enum ShareControllerSubject {
     case image([ImageRepresentationWithReference])
     case media(AnyMediaReference)
     case mapMedia(TelegramMediaMap)
-    case fromExternal(([PeerId], String) -> Signal<ShareControllerExternalStatus, NoError>)
+    case fromExternal(([PeerId], String, Account) -> Signal<ShareControllerExternalStatus, NoError>)
 }
 
 private enum ExternalShareItem {
@@ -427,7 +427,7 @@ public final class ShareController: ViewController {
                         }
                         return .single(.done)
                     case let .fromExternal(f):
-                        return f(peerIds, text)
+                        return f(peerIds, text, strongSelf.currentAccount)
                         |> map { state -> ShareState in
                             switch state {
                                 case .preparing:

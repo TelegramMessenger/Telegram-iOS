@@ -129,11 +129,15 @@ final class GameControllerNode: ViewControllerTracingNode {
         if eventName == "share_game" || eventName == "share_score" {
             if let (botPeer, gameName) = self.shareData(), let addressName = botPeer.addressName, !addressName.isEmpty, !gameName.isEmpty {
                 if eventName == "share_score" {
-                    self.present(ShareController(context: self.context, subject: .fromExternal({ [weak self] peerIds, text in
+                    self.present(ShareController(context: self.context, subject: .fromExternal({ [weak self] peerIds, text, account in
                         if let strongSelf = self {
-                            let signals = peerIds.map { forwardGameWithScore(account: strongSelf.context.account, messageId: strongSelf.message.id, to: $0) }
-                            return .single(.preparing) |> then(combineLatest(signals)
-                                |> mapToSignal { _ -> Signal<ShareControllerExternalStatus, NoError> in return .complete() }) |> then(.single(.done))
+                            let signals = peerIds.map { forwardGameWithScore(account: account, messageId: strongSelf.message.id, to: $0) }
+                            return .single(.preparing)
+                            |> then(
+                                combineLatest(signals)
+                                |> mapToSignal { _ -> Signal<ShareControllerExternalStatus, NoError> in return .complete() }
+                            )
+                            |> then(.single(.done))
                         } else {
                             return .single(.done)
                         }

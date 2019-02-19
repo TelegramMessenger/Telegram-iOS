@@ -14,9 +14,9 @@ private final class ChannelPermissionsControllerArguments {
     let openPeer: (ChannelParticipant) -> Void
     let openPeerInfo: (Peer) -> Void
     let openKicked: () -> Void
-    let presentRestrictedPublicGroupPermissionsAlert: () -> Void
+    let presentRestrictedPermissionAlert: (TelegramChatBannedRightsFlags) -> Void
     
-    init(account: Account, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPublicGroupPermissionsAlert: @escaping () -> Void) {
+    init(account: Account, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void) {
         self.account = account
         self.updatePermission = updatePermission
         self.addPeer = addPeer
@@ -25,7 +25,7 @@ private final class ChannelPermissionsControllerArguments {
         self.openPeer = openPeer
         self.openPeerInfo = openPeerInfo
         self.openKicked = openKicked
-        self.presentRestrictedPublicGroupPermissionsAlert = presentRestrictedPublicGroupPermissionsAlert
+        self.presentRestrictedPermissionAlert = presentRestrictedPermissionAlert
     }
 }
 
@@ -179,7 +179,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                     if let _ = enabled {
                         arguments.updatePermission(rights, value)
                     } else {
-                        arguments.presentRestrictedPublicGroupPermissionsAlert()
+                        arguments.presentRestrictedPermissionAlert(rights)
                     }
                 })
             case let .kicked(theme, text, value):
@@ -350,6 +350,11 @@ private func channelPermissionsControllerEntries(presentationData: PresentationD
             var enabled: Bool? = true
             if channel.addressName != nil && publicGroupRestrictedPermissions.contains(rights) {
                 enabled = nil
+            }
+            if !channel.hasPermission(.inviteMembers) {
+                if rights.contains(TelegramChatBannedRightsFlags.banAddMembers) {
+                    enabled = nil
+                }
             }
             entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights), !effectiveRightsFlags.contains(rights), rights, enabled))
             rightIndex += 1
@@ -568,9 +573,15 @@ public func channelPermissionsController(context: AccountContext, peerId: PeerId
         }
     }, openKicked: {
         pushControllerImpl?(channelBlacklistController(context: context, peerId: peerId))
-    }, presentRestrictedPublicGroupPermissionsAlert: {
+    }, presentRestrictedPermissionAlert: { rights in
+        let text: String
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.GroupPermission_NotAvailableInPublicGroups, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+        if rights.contains(TelegramChatBannedRightsFlags.banAddMembers) {
+            text = presentationData.strings.GroupPermission_AddMembersNotAvailable
+        } else {
+            text = presentationData.strings.GroupPermission_NotAvailableInPublicGroups
+        }
+        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
     })
     
     let previousParticipants = Atomic<[RenderedChannelParticipant]?>(value: nil)

@@ -188,14 +188,14 @@ func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedMedia: B
         if let selectionContext = selectionContext, let editingContext = editingContext {
             let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedMedia, saveEditedPhotos: saveEditedPhotos, descriptionGenerator: legacyAssetPickerItemGenerator())
             if let parentController = parentController {
-                parentController.present(ShareController(context: context, subject: .fromExternal({ peerIds, text in
-                    return legacyAssetPickerEnqueueMessages(account: context.account, signals: signals!)
+                parentController.present(ShareController(context: context, subject: .fromExternal({ peerIds, text, account in
+                    return legacyAssetPickerEnqueueMessages(account: account, signals: signals!)
                     |> `catch` { _ -> Signal<[EnqueueMessage], NoError> in
                         return .single([])
                     }
                     |> mapToSignal { messages -> Signal<ShareControllerExternalStatus, NoError> in
                         let resultSignals = peerIds.map({ peerId in
-                            return enqueueMessages(account: context.account, peerId: peerId, messages: messages)
+                            return enqueueMessages(account: account, peerId: peerId, messages: messages)
                             |> mapToSignal { _ -> Signal<ShareControllerExternalStatus, NoError> in
                                 return .complete()
                             }

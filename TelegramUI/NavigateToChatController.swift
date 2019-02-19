@@ -19,13 +19,15 @@ public func navigateToChatController(navigationController: NavigationController,
                     if let navigationController = navigationController, let controller = controller {
                         let _ = navigationController.popToViewController(controller, animated: animated)
                     }
+                }, customPresentProgress: { [weak navigationController] c, a in
+                    (navigationController?.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
                 })
             } else if scrollToEndIfExists && isFirst {
                 controller.scrollToEndOfHistory()
+                let _ = navigationController.popToViewController(controller, animated: animated)
+                completion()
             }
             controller.purposefulAction = purposefulAction
-            let _ = navigationController.popToViewController(controller, animated: animated)
-            completion()
             found = true
             break
         }
