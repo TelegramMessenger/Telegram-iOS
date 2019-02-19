@@ -22,6 +22,7 @@ public struct AccountManagerModifier {
     public let setVersion: (Int32) -> Void
     public let getNotice: (NoticeEntryKey) -> NoticeEntry?
     public let setNotice: (NoticeEntryKey, NoticeEntry?) -> Void
+    public let clearNotices: () -> Void
 }
 
 final class AccountManagerImpl {
@@ -131,6 +132,8 @@ final class AccountManagerImpl {
                 }, setNotice: { key, value in
                     self.noticeTable.set(key: key, value: value)
                     self.currentUpdatedNoticeEntryKeys.insert(key)
+                }, clearNotices: {
+                    self.noticeTable.clear()
                 })
                 
                 let result = f(transaction)
