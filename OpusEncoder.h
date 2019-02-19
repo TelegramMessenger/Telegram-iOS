@@ -72,6 +72,11 @@ private:
 	bool vadMode=false;
 	uint32_t vadNoVoiceBitrate;
 	std::vector<effects::AudioEffect*> postProcEffects;
+	int secondaryEnabledBandwidth;
+	int vadModeVoiceBandwidth;
+	int vadModeNoVoiceBandwidth;
+
+	bool wasSecondaryEncoderEnabled=false;
 
 	void (*callback)(unsigned char*, size_t, unsigned char*, size_t, void*);
 	void* callbackParam;

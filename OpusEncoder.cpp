@@ -15,6 +15,24 @@
 #include "opus.h"
 #endif
 
+namespace{
+	int serverConfigValueToBandwidth(int config){
+		switch(config){
+			case 0:
+				return OPUS_BANDWIDTH_NARROWBAND;
+			case 1:
+				return OPUS_BANDWIDTH_MEDIUMBAND;
+			case 2:
+				return OPUS_BANDWIDTH_WIDEBAND;
+			case 3:
+				return OPUS_BANDWIDTH_SUPERWIDEBAND;
+			case 4:
+			default:
+				return OPUS_BANDWIDTH_FULLBAND;
+		}
+	}
+}
+
 tgvoip::OpusEncoder::OpusEncoder(MediaStreamItf *source, bool needSecondary):queue(11), bufferPool(960*2, 10){
 	this->source=source;
 	source->SetCallback(tgvoip::OpusEncoder::Callback, this);
@@ -36,6 +54,9 @@ tgvoip::OpusEncoder::OpusEncoder(MediaStreamItf *source, bool needSecondary):que
 	mediumCorrectionMultiplier=ServerConfig::GetSharedInstance()->GetDouble("audio_medium_fec_multiplier", 0.8);
 	strongCorrectionMultiplier=ServerConfig::GetSharedInstance()->GetDouble("audio_strong_fec_multiplier", 0.5);
 	vadNoVoiceBitrate=static_cast<uint32_t>(ServerConfig::GetSharedInstance()->GetInt("audio_vad_no_voice_bitrate", 6000));
+	vadModeVoiceBandwidth=serverConfigValueToBandwidth(ServerConfig::GetSharedInstance()->GetInt("audio_vad_bandwidth", 3));
+	vadModeNoVoiceBandwidth=serverConfigValueToBandwidth(ServerConfig::GetSharedInstance()->GetInt("audio_vad_no_voice_bandwidth", 0));
+	secondaryEnabledBandwidth=serverConfigValueToBandwidth(ServerConfig::GetSharedInstance()->GetInt("audio_extra_ec_bandwidth", 2));
 	secondaryEncoderEnabled=false;
 
 	if(needSecondary){
@@ -46,7 +67,7 @@ tgvoip::OpusEncoder::OpusEncoder(MediaStreamItf *source, bool needSecondary):que
 		opus_encoder_ctl(secondaryEncoder, OPUS_SET_BITRATE(8000));
 		opus_encoder_ctl(secondaryEncoder, OPUS_SET_INBAND_FEC(1));
 		opus_encoder_ctl(secondaryEncoder, OPUS_SET_PACKET_LOSS_PERC(15));
-		opus_encoder_ctl(secondaryEncoder, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_SUPERWIDEBAND));
+		opus_encoder_ctl(secondaryEncoder, OPUS_SET_BANDWIDTH(secondaryEnabledBandwidth));
 	}else{
 		secondaryEncoder=NULL;
 	}
@@ -90,6 +111,10 @@ void tgvoip::OpusEncoder::Encode(int16_t* data, size_t len){
 	}
 	if(levelMeter)
 		levelMeter->Update(data, len);
+	if(secondaryEncoderEnabled!=wasSecondaryEncoderEnabled){
+		wasSecondaryEncoderEnabled=secondaryEncoderEnabled;
+		opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(secondaryEncoderEnabled ? secondaryEnabledBandwidth : OPUS_BANDWIDTH_FULLBAND));
+	}
 	int32_t r=opus_encode(enc, data, static_cast<int>(len), buffer, 4096);
 	if(r<=0){
 		LOGE("Error encoding: %d", r);
@@ -165,27 +190,27 @@ void tgvoip::OpusEncoder::RunThread(){
 					if(vadMode){
 						if(frameHasVoice){
 							opus_encoder_ctl(enc, OPUS_SET_BITRATE(currentBitrate));
-							opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_SUPERWIDEBAND));
+							opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(vadModeVoiceBandwidth));
 							if(secondaryEncoder){
 								opus_encoder_ctl(secondaryEncoder, OPUS_SET_BITRATE(currentBitrate));
-								opus_encoder_ctl(secondaryEncoder, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_SUPERWIDEBAND));
+								opus_encoder_ctl(secondaryEncoder, OPUS_SET_BANDWIDTH(vadModeVoiceBandwidth));
 							}
 						}else{
 							opus_encoder_ctl(enc, OPUS_SET_BITRATE(vadNoVoiceBitrate));
-							opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_NARROWBAND));
+							opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(vadModeNoVoiceBandwidth));
 							if(secondaryEncoder){
 								opus_encoder_ctl(secondaryEncoder, OPUS_SET_BITRATE(vadNoVoiceBitrate));
-								opus_encoder_ctl(secondaryEncoder, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_NARROWBAND));
+								opus_encoder_ctl(secondaryEncoder, OPUS_SET_BANDWIDTH(vadModeNoVoiceBandwidth));
 							}
 						}
 						wasVadMode=true;
 					}else if(wasVadMode){
 						wasVadMode=false;
 						opus_encoder_ctl(enc, OPUS_SET_BITRATE(currentBitrate));
-						opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_FULLBAND));
+						opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(secondaryEncoderEnabled ? secondaryEnabledBandwidth : OPUS_BANDWIDTH_FULLBAND));
 						if(secondaryEncoder){
 							opus_encoder_ctl(secondaryEncoder, OPUS_SET_BITRATE(currentBitrate));
-							opus_encoder_ctl(secondaryEncoder, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_SUPERWIDEBAND));
+							opus_encoder_ctl(secondaryEncoder, OPUS_SET_BANDWIDTH(secondaryEnabledBandwidth));
 						}
 					}
 					Encode(frame, 960*packetsPerFrame);
