@@ -4,6 +4,8 @@
 #include "libavformat/avformat.h"
 #include "libavcodec/avcodec.h"
 
+#define MOV_TIMESCALE 1000
+
 @implementation FFMpegRemuxer
 
 + (bool)remux:(NSString * _Nonnull)path to:(NSString * _Nonnull)outPath {
@@ -43,9 +45,12 @@
         goto end;
     }
     
+    int64_t maxTrackLength = 0;
+    
     for (i = 0; i < input_format_context->nb_streams; i++) {
         AVStream *out_stream;
         AVStream *in_stream = input_format_context->streams[i];
+        
         AVCodecParameters *in_codecpar = in_stream->codecpar;
         if (in_codecpar->codec_type != AVMEDIA_TYPE_AUDIO &&
             in_codecpar->codec_type != AVMEDIA_TYPE_VIDEO &&
@@ -53,6 +58,17 @@
             streams_list[i] = -1;
             continue;
         }
+        
+        if (in_stream->time_base.den != 0) {
+            int64_t trackLength = av_rescale_rnd(in_stream->duration, MOV_TIMESCALE, (int64_t)in_stream->time_base.den, AV_ROUND_UP);
+            maxTrackLength = MAX(trackLength, maxTrackLength);
+            /*int64_t max_track_len_temp = av_rescale_rnd(mov->tracks[i].track_duration,
+                                                        MOV_TIMESCALE,
+                                                        mov->tracks[i].timescale,
+                                                        AV_ROUND_UP);*/
+            
+        }
+        
         streams_list[i] = stream_index++;
         out_stream = avformat_new_stream(output_format_context, NULL);
         if (!out_stream) {
@@ -84,6 +100,9 @@
     if (fragmented_mp4_options) {
         // https://developer.mozilla.org/en-US/docs/Web/API/Media_Source_Extensions_API/Transcoding_assets_for_MSE
         av_dict_set(&opts, "movflags", "dash+faststart+global_sidx+skip_trailer", 0);
+        if (maxTrackLength > 0) {
+            av_dict_set_int(&opts, "custom_maxTrackLength", maxTrackLength, 0);
+        }
     }
     // https://ffmpeg.org/doxygen/trunk/group__lavf__encoding.html#ga18b7b10bb5b94c4842de18166bc677cb
     ret = avformat_write_header(output_format_context, &opts);

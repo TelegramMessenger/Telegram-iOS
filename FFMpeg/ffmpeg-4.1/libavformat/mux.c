@@ -44,6 +44,8 @@
 #include "network.h"
 #endif
 
+#include "libavformat/movenc.h"
+
 /**
  * @file
  * muxing functions for use within libavformat
@@ -518,7 +520,15 @@ int avformat_write_header(AVFormatContext *s, AVDictionary **options)
     if (!(s->oformat->flags & AVFMT_NOFILE) && s->pb)
         avio_write_marker(s->pb, AV_NOPTS_VALUE, AVIO_DATA_MARKER_HEADER);
     if (s->oformat->write_header) {
+        if (options != NULL) {
+            AVDictionaryEntry *custom_maxTrackLength = av_dict_get(*options, "custom_maxTrackLength", NULL, 0);
+            if (custom_maxTrackLength != NULL && custom_maxTrackLength->value != NULL) {
+                int64_t intValue = strtoll(custom_maxTrackLength->value, NULL, 10);
+                custom_maxTrackLength_value = intValue;
+            }
+        }
         ret = s->oformat->write_header(s);
+        custom_maxTrackLength_value = 0;
         if (ret >= 0 && s->pb && s->pb->error < 0)
             ret = s->pb->error;
         if (ret < 0)

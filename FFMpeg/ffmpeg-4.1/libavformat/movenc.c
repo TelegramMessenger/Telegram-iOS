@@ -57,6 +57,8 @@
 #include "mov_chan.h"
 #include "vpcc.h"
 
+int64_t custom_maxTrackLength_value = 0;
+
 static const AVOption options[] = {
     { "movflags", "MOV muxer flags", offsetof(MOVMuxContext, flags), AV_OPT_TYPE_FLAGS, {.i64 = 0}, INT_MIN, INT_MAX, AV_OPT_FLAG_ENCODING_PARAM, "movflags" },
     { "rtphint", "Add RTP hint tracks", 0, AV_OPT_TYPE_CONST, {.i64 = FF_MOV_FLAG_RTP_HINT}, INT_MIN, INT_MAX, AV_OPT_FLAG_ENCODING_PARAM, "movflags" },
@@ -3228,7 +3230,7 @@ static int mov_write_mvhd_tag(AVIOContext *pb, MOVMuxContext *mov)
     /* If using delay_moov, make sure the output is the same as if no
      * samples had been written yet. */
     if (mov->flags & FF_MOV_FLAG_EMPTY_MOOV) {
-        max_track_len = 0;
+        max_track_len = custom_maxTrackLength_value;
         max_track_id  = 1;
     }
 
