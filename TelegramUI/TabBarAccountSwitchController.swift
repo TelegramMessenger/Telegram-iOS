@@ -55,9 +55,17 @@ public final class TabBarAccountSwitchController: ViewController {
     
     override public func loadDisplayNode() {
         self.displayNode = TabBarAccountSwitchControllerNode(sharedContext: self.sharedContext, accounts: self.accounts, presentationData: self.presentationData, canAddAccounts: self.canAddAccounts, switchToAccount: { [weak self] id in
-            self?.changedAccount = true
-            self?.switchToAccount(id)
-        }, addAccount: self.addAccount, cancel: { [weak self] in
+            guard let strongSelf = self, !strongSelf.changedAccount else {
+                return
+            }
+            strongSelf.changedAccount = true
+            strongSelf.switchToAccount(id)
+        }, addAccount: { [weak self] in
+            guard let strongSelf = self, !strongSelf.changedAccount else {
+                return
+            }
+            strongSelf.addAccount()
+        }, cancel: { [weak self] in
             self?.dismiss()
         }, sourceNodes: self.sourceNodes)
         self.displayNodeDidLoad()

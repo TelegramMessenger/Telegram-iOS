@@ -246,6 +246,8 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
         self.dimNode.alpha = 1.0
         if presentationData.theme.chatList.searchBarKeyboardColor == .light {
             self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.04)
+        } else {
+            self.dimNode.backgroundColor = presentationData.theme.chatList.backgroundColor.withAlphaComponent(0.2)
         }
         
         self.contentContainerNode = ASDisplayNode()
@@ -288,6 +290,9 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
                 if self.presentationData.theme.chatList.searchBarKeyboardColor == .dark {
                     if #available(iOSApplicationExtension 10.0, *) {
                         self.effectView.effect = UIBlurEffect(style: .regular)
+                        if self.effectView.subviews.count == 2 {
+                            self.effectView.subviews[1].isHidden = true
+                        }
                     } else {
                         self.effectView.effect = UIBlurEffect(style: .dark)
                     }
@@ -301,7 +306,17 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
             } else {
                 self.effectView.alpha = 1.0
             }
+        }, completion: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.presentationData.theme.chatList.searchBarKeyboardColor == .dark {
+                if strongSelf.effectView.subviews.count == 2 {
+                    strongSelf.effectView.subviews[1].isHidden = true
+                }
+            }
         })
+        self.effectView.subviews[1].layer.removeAnimation(forKey: "backgroundColor")
         self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.contentContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.08)
         if let _ = self.validLayout, let sourceNode = self.sourceNodes.first {
@@ -328,6 +343,8 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
     }
     
     func animateOut(sourceNodes: [ASDisplayNode], changedAccount: Bool, completion: @escaping () -> Void) {
+        self.isUserInteractionEnabled = false
+        
         var completedEffect = false
         var completedSourceNodes = false
         
