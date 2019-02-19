@@ -4043,3 +4043,5 @@ Unused sets are archived when you add more.";
 "LogoutOptions.ContactSupportText" = "Tell us about any issues; logging out doesn't usually help.";
 "LogoutOptions.LogOut" = "Log Out";
 "LogoutOptions.LogOutInfo" = "Remember, logging out kills all your Secret Chats.";
+
+"GroupPermission.PermissionGloballyDisabled" = "This permission is disabled in this group.";
