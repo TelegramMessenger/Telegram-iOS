@@ -20,7 +20,7 @@ public struct AutodownloadPresetSettings: PostboxCoding, Equatable {
     public let fileSizeMax: Int32
     public let preloadLargeVideo: Bool
     
-    init(disabled: Bool, photoSizeMax: Int32, videoSizeMax: Int32, fileSizeMax: Int32, preloadLargeVideo: Bool) {
+    public init(disabled: Bool, photoSizeMax: Int32, videoSizeMax: Int32, fileSizeMax: Int32, preloadLargeVideo: Bool) {
         self.disabled = disabled
         self.photoSizeMax = photoSizeMax
         self.videoSizeMax = videoSizeMax
