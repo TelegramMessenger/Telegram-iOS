@@ -474,7 +474,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     case let .file(file, _):
                                         let representations: [ImageRepresentationWithReference] = file.previewRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference($0.resource)) })
                                         if file.mimeType == "image/png" {
-                                            return patternWallpaperImage(account: context.account, representations: representations, mode: .thumbnail)
+                                            return patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: representations, mode: .thumbnail)
                                         } else {
                                             return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), representations: representations, alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true)
                                         }

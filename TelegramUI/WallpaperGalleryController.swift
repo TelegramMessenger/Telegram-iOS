@@ -382,8 +382,11 @@ class WallpaperGalleryController: ViewController {
                                         self?.dismiss(forceAway: true)
                                     })
                                 
-                                    if case .wallpaper = strongSelf.source {
-                                        let _ = saveWallpaper(account: strongSelf.context.account, wallpaper: wallpaper).start()
+                                    switch strongSelf.source {
+                                        case .wallpaper, .slug:
+                                            let _ = saveWallpaper(account: strongSelf.context.account, wallpaper: wallpaper).start()
+                                        default:
+                                            break
                                     }
                                     let _ = installWallpaper(account: strongSelf.context.account, wallpaper: wallpaper).start()
                                 }
@@ -391,18 +394,33 @@ class WallpaperGalleryController: ViewController {
                                 let applyWallpaper: (TelegramWallpaper) -> Void = { wallpaper in
                                     if options.contains(.blur) {
                                         if let resource = resource {
-                                            let _ = strongSelf.context.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+                                            let representation = CachedBlurredWallpaperRepresentation()
+                                            let _ = strongSelf.context.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true).start()
+                                            
+                                            if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                                strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
+                                                let _ = strongSelf.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true).start(completed: {
+                                                    completion(wallpaper)
+                                                })
+                                            }
+                                        }
+                                    } else if case let .file(file) = wallpaper {
+                                        if file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
+                                            let representation = CachedPatternWallpaperRepresentation(color: color, intensity: intensity)
+                                            let _ = strongSelf.context.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: representation, complete: true, fetch: true).start()
+                                            
+                                            if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                                strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)
+                                                let _ = strongSelf.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: representation, complete: true, fetch: true).start(completed: {
+                                                    completion(wallpaper)
+                                                })
+                                            }
+                                        } else if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                                strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)
                                                 completion(wallpaper)
-                                            })
                                         }
                                     } else {
-                                        if case let .file(file) = wallpaper, file.isPattern, let color = file.settings.color, let intensity = file.settings.intensity {
-                                            let _ = strongSelf.context.account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPatternWallpaperRepresentation(color: color, intensity: intensity), complete: true, fetch: true).start(completed: {
-                                                completion(wallpaper)
-                                            })
-                                        } else {
-                                            completion(wallpaper)
-                                        }
+                                        completion(wallpaper)
                                     }
                                 }
                             

@@ -121,7 +121,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                         }
                         self.backgroundNode.backgroundColor = patternColor
                         self.color = patternColor
-                        imageSignal = patternWallpaperImage(account: context.account, representations: convertedRepresentations, mode: .thumbnail, autoFetchFullSize: true)
+                        imageSignal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .thumbnail, autoFetchFullSize: true)
                     } else {
                         self.backgroundNode.isHidden = true
                         

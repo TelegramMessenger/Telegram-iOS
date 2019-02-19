@@ -457,10 +457,9 @@ final class ThemeGridController: ViewController {
                 }
                 
                 if mode.contains(.blur) {
-                    let _ = self.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
-                        apply()
-                    })
-                    let _ = self.context.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start(completed: {
+                    let representation = CachedBlurredWallpaperRepresentation()
+                    let _ = self.context.account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true).start()
+                    let _ = self.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true).start(completed: {
                         apply()
                     })
                 } else {
