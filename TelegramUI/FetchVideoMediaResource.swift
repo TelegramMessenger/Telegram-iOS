@@ -51,7 +51,7 @@ class VideoConversionWatcher: TGMediaVideoFileWatcher {
 }
 
 struct VideoConversionConfiguration {
-    public static var defaultValue: VideoConversionConfiguration {
+    static var defaultValue: VideoConversionConfiguration {
         return VideoConversionConfiguration(remuxToFMp4: true)
     }
     
