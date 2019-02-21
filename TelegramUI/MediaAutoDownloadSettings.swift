@@ -228,7 +228,7 @@ public struct MediaAutoDownloadSettings: PreferencesEntry, Equatable {
     func updatedWithAutodownloadSettings(_ autodownloadSettings: AutodownloadSettings) -> MediaAutoDownloadSettings {
         var settings = self
         settings.presets = presetsWithAutodownloadSettings(autodownloadSettings)
-        return self
+        return settings
     }
 }
 

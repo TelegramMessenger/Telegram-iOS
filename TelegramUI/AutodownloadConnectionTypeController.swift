@@ -311,14 +311,22 @@ func autodownloadMediaConnectionTypeController(context: AccountContext, connecti
         pushControllerImpl?(controller)
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]))
+    let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]))
         |> deliverOnMainQueue
         |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<AutodownloadMediaCategoryEntry>, AutodownloadMediaCategoryEntry.ItemGenerationArguments)) in
-            let settings: MediaAutoDownloadSettings
+            var automaticMediaDownloadSettings: MediaAutoDownloadSettings
             if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
-                settings = value
+                automaticMediaDownloadSettings = value
             } else {
-                settings = MediaAutoDownloadSettings.defaultSettings
+                automaticMediaDownloadSettings = MediaAutoDownloadSettings.defaultSettings
+            }
+            
+            var autodownloadSettings: AutodownloadSettings
+            if let value = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings {
+                autodownloadSettings = value
+                automaticMediaDownloadSettings = automaticMediaDownloadSettings.updatedWithAutodownloadSettings(autodownloadSettings)
+            } else {
+                autodownloadSettings = .defaultSettings
             }
             
             let title: String
@@ -330,7 +338,7 @@ func autodownloadMediaConnectionTypeController(context: AccountContext, connecti
             }
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: autodownloadMediaConnectionTypeControllerEntries(presentationData: presentationData, connectionType: connectionType, settings: settings), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let listState = ItemListNodeState(entries: autodownloadMediaConnectionTypeControllerEntries(presentationData: presentationData, connectionType: connectionType, settings: automaticMediaDownloadSettings), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
     }

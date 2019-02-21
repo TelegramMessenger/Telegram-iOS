@@ -204,19 +204,11 @@ public final class PresentationCallManager {
             }
         })
         
-        //postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState])
-        
         self.callSettingsDisposable = (accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings])
         |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             if let strongSelf = self {
                 strongSelf.callSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
             }
-            
-//            let configuration: VoipConfiguration = .defaultValue// = preferences.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
-//            let derivedState: VoipDerivedState = .default// = preferences.values[ApplicationSpecificPreferencesKeys.voipDerivedState] as? VoipDerivedState ?? .default
-//            if let strongSelf = self {
-//                strongSelf.callSettings = (callSettings, configuration, derivedState)
-//            }
         })
     }
     
