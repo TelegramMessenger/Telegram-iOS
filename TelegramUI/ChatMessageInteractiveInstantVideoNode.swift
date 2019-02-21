@@ -34,7 +34,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     
     private var item: ChatMessageBubbleContentItem?
     private var automaticDownload: Bool?
-    var telegramFile: TelegramMediaFile?
+    var media: TelegramMediaFile?
     private var secretProgressIcon: UIImage?
     
     private let fetchDisposable = MetaDisposable()
@@ -112,7 +112,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     }
     
     func asyncLayout() -> (_ item: ChatMessageBubbleContentItem, _ width: CGFloat, _ displaySize: CGSize, _ statusType: ChatMessageInteractiveInstantVideoNodeStatusType, _ automaticDownload: Bool) -> (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> Void) {
-        let previousFile = self.telegramFile
+        let previousFile = self.media
         
         let currentItem = self.item
         let previousAutomaticDownload = self.automaticDownload
@@ -283,7 +283,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         strongSelf.secretVideoPlaceholderBackground.image = secretVideoPlaceholderBackgroundImage
                     }
                     
-                    strongSelf.telegramFile = updatedFile
+                    strongSelf.media = updatedFile
                     
                     if let infoBackgroundImage = strongSelf.infoBackgroundNode.image, let muteImage = strongSelf.muteIconNode.image {
                         let infoWidth = muteImage.size.width
@@ -603,10 +603,16 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             return
         }
         if self.infoBackgroundNode.alpha.isZero {
-            item.context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: .voice)
+            if let status = self.status, case let .fetchStatus(fetchStatus) = status, case .Remote = fetchStatus {
+                item.context.sharedContext.mediaManager.playlistControl(.playback(.pause), type: .voice)
+                self.videoNode?.fetchControl(.fetch)
+            } else {
+                item.context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: .voice)
+            }
         } else {
             let _ = item.controllerInteraction.openMessage(item.message, .default)
         }
+        
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -623,7 +629,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     }
     
     private func progressPressed() {
-        guard let item = self.item, let file = self.telegramFile else {
+        guard let item = self.item, let file = self.media else {
             return
         }
         if let status = self.status {

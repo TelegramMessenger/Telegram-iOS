@@ -112,10 +112,10 @@ final class InstantVideoRadialStatusNode: ASDisplayNode {
         if let (timestamp, duration, baseRate) = timestampAndDuration, let statusValue = self.statusValue {
             let progress = CGFloat(timestamp / duration)
             
-            if progress.isNaN || !progress.isFinite || statusValue.generationTimestamp.isZero {
+            if progress.isNaN || !progress.isFinite {
                 self.pop_removeAnimation(forKey: "progress")
                 self.effectiveProgress = 0.0
-            } else if statusValue.status != .playing {
+            } else if statusValue.status != .playing || statusValue.generationTimestamp.isZero {
                 self.pop_removeAnimation(forKey: "progress")
                 self.effectiveProgress = progress
             } else {
@@ -130,14 +130,11 @@ final class InstantVideoRadialStatusNode: ASDisplayNode {
                         (node as! InstantVideoRadialStatusNode).effectiveProgress = values!.pointee
                     }
                     property?.threshold = 0.01
-                }) as! POPAnimatableProperty
+                }) as? POPAnimatableProperty
                 animation.fromValue = progress as NSNumber
                 animation.toValue = 1.0 as NSNumber
                 animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
                 animation.duration = max(0.0, duration - timestamp) / baseRate
-                animation.completionBlock = { [weak self] _, _ in
-                    
-                }
                 animation.beginTime = statusValue.generationTimestamp
                 self.pop_add(animation, forKey: "progress")
             }

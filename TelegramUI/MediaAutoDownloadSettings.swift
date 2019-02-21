@@ -95,8 +95,8 @@ public struct MediaAutoDownloadCategories: PostboxCoding, Equatable, Comparable 
     }
     
     public static func < (lhs: MediaAutoDownloadCategories, rhs: MediaAutoDownloadCategories) -> Bool {
-        let lhsSizeLimit = (isAutodownloadEnabledForAnyPeerType(category: lhs.video) ? lhs.video.sizeLimit : 0) + (isAutodownloadEnabledForAnyPeerType(category: lhs.file) ? lhs.file.sizeLimit : 0)
-        let rhsSizeLimit = (isAutodownloadEnabledForAnyPeerType(category: rhs.video) ? rhs.video.sizeLimit : 0) + (isAutodownloadEnabledForAnyPeerType(category: rhs.file) ? rhs.file.sizeLimit : 0)
+        let lhsSizeLimit: Int64 = Int64((isAutodownloadEnabledForAnyPeerType(category: lhs.video) ? lhs.video.sizeLimit : 0)) + Int64((isAutodownloadEnabledForAnyPeerType(category: lhs.file) ? lhs.file.sizeLimit : 0))
+        let rhsSizeLimit: Int64 = Int64((isAutodownloadEnabledForAnyPeerType(category: rhs.video) ? rhs.video.sizeLimit : 0)) + Int64((isAutodownloadEnabledForAnyPeerType(category: rhs.file) ? rhs.file.sizeLimit : 0))
         return lhsSizeLimit < rhsSizeLimit
     }
 }

@@ -5465,6 +5465,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     func previewingController(from sourceView: UIView, for location: CGPoint) -> (UIViewController, CGRect)? {
+        guard let view =  self.chatDisplayNode.view.hitTest(location, with: nil), view.isDescendant(of: self.chatDisplayNode.historyNode.view) else {
+            return nil
+        }
+        
         let historyPoint = sourceView.convert(location, to: self.chatDisplayNode.historyNode.view)
         var result: (Message, ChatMessagePeekPreviewContent)?
         self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
