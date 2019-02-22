@@ -100,24 +100,23 @@ private func stringForDataSavingOption(_ option: VoiceCallDataSaving, strings: P
             return strings.CallSettings_OnMobile
         case .always:
             return strings.CallSettings_Always
+        default:
+            return ""
     }
 }
 
-private func voiceCallDataSavingControllerEntries(presentationData: PresentationData, settings: VoiceCallSettings) -> [VoiceCallDataSavingEntry] {
+private func voiceCallDataSavingControllerEntries(presentationData: PresentationData, dataSaving: VoiceCallDataSaving) -> [VoiceCallDataSavingEntry] {
     var entries: [VoiceCallDataSavingEntry] = []
-    
-    entries.append(.never(presentationData.theme, stringForDataSavingOption(.never, strings: presentationData.strings), settings.dataSaving == .never))
-    entries.append(.cellular(presentationData.theme, stringForDataSavingOption(.cellular, strings: presentationData.strings), settings.dataSaving == .cellular))
-    entries.append(.always(presentationData.theme, stringForDataSavingOption(.always, strings: presentationData.strings), settings.dataSaving == .always))
+    entries.append(.never(presentationData.theme, stringForDataSavingOption(.never, strings: presentationData.strings), dataSaving == .never))
+    entries.append(.cellular(presentationData.theme, stringForDataSavingOption(.cellular, strings: presentationData.strings), dataSaving == .cellular))
+    entries.append(.always(presentationData.theme, stringForDataSavingOption(.always, strings: presentationData.strings), dataSaving == .always))
     entries.append(.info(presentationData.theme, presentationData.strings.CallSettings_UseLessDataLongDescription))
-    
     return entries
 }
 
 func voiceCallDataSavingController(context: AccountContext) -> ViewController {
-    let voiceCallSettingsPromise = Promise<VoiceCallSettings>()
-    voiceCallSettingsPromise.set(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings])
-    |> map { sharedData -> VoiceCallSettings in
+    let sharedSettings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings])
+    |> map { sharedData -> (VoiceCallSettings, AutodownloadSettings) in
         let voiceCallSettings: VoiceCallSettings
         if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings {
             voiceCallSettings = value
@@ -125,8 +124,15 @@ func voiceCallDataSavingController(context: AccountContext) -> ViewController {
             voiceCallSettings = VoiceCallSettings.defaultSettings
         }
         
-        return voiceCallSettings
-    })
+        let autodownloadSettings: AutodownloadSettings
+        if let value = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings {
+            autodownloadSettings = value
+        } else {
+            autodownloadSettings = AutodownloadSettings.defaultSettings
+        }
+        
+        return (voiceCallSettings, autodownloadSettings)
+    }
     
     let arguments = VoiceCallDataSavingControllerArguments(updateSelection: { option in
         let _ = updateVoiceCallSettingsSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
@@ -136,11 +142,13 @@ func voiceCallDataSavingController(context: AccountContext) -> ViewController {
         }).start()
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, voiceCallSettingsPromise.get()) |> deliverOnMainQueue
-        |> map { presentationData, data -> (ItemListControllerState, (ItemListNodeState<VoiceCallDataSavingEntry>, VoiceCallDataSavingEntry.ItemGenerationArguments)) in
+    let signal = combineLatest(context.sharedContext.presentationData, sharedSettings) |> deliverOnMainQueue
+        |> map { presentationData, sharedSettings -> (ItemListControllerState, (ItemListNodeState<VoiceCallDataSavingEntry>, VoiceCallDataSavingEntry.ItemGenerationArguments)) in
+            
+            let dataSaving = effectiveDataSaving(for: sharedSettings.0, autodownloadSettings: sharedSettings.1)
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.CallSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: voiceCallDataSavingControllerEntries(presentationData: presentationData, settings: data), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let listState = ItemListNodeState(entries: voiceCallDataSavingControllerEntries(presentationData: presentationData, dataSaving: dataSaving), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         }

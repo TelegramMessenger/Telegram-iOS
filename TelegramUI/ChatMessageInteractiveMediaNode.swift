@@ -444,7 +444,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     if let currentFile = currentMedia as? TelegramMediaFile, currentFile.resource is EmptyMediaResource {
                                         replaceVideoNode = true
                                     }
-                                } else {
+                                } else if !(file.resource is LocalFileVideoMediaResource) {
                                     replaceVideoNode = true
                                 }
                             } else {
@@ -592,7 +592,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     let streamVideo = !updatedVideoFile.isAnimated && isMediaStreamable(message: message, media: updatedVideoFile)
                                     let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false), continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo, placeholderColor: emptyColor), priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
-                                    
+                                    videoNode.ownsContentNodeUpdated = { [weak self] owns in
+                                        if let strongSelf = self {
+                                            strongSelf.videoNode?.isHidden = !owns
+                                        }
+                                    }
                                     strongSelf.videoNode = videoNode
                                     
                                     updatedVideoNodeReadySignal = videoNode.ready

@@ -16,14 +16,6 @@ const uint8_t ID3v3Artwork[4] = {0x41, 0x50, 0x49, 0x43};
 const uint8_t JPGMagic[3] = {0xff, 0xd8, 0xff};
 const uint8_t PNGMagic[4] = {0x89, 0x50, 0x4e, 0x47};
 
-uint32_t getSize(const uint8_t *bytes) {
-    uint32_t size = CFSwapInt32HostToBig(*(const uint32_t *)(bytes + ID3SizeOffset));
-    uint32_t b1 = (size & 0x7F000000) >> 3;
-    uint32_t b2 = (size & 0x007F0000) >> 2;
-    uint32_t b3 = (size & 0x00007F00) >> 1;
-    uint32_t b4 =  size & 0x0000007F;
-    return b1 + b2 + b3 + b4;
-}
 
 uint32_t frameOffsetForVersion(uint8_t version) {
     return version == 2 ? ID3v2FrameOffset : ID3v3FrameOffset;

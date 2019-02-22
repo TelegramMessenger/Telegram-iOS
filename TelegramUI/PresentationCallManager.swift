@@ -33,10 +33,13 @@ public enum RequestCallResult {
 
 public final class PresentationCallManager {
     private let getDeviceAccessData: () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void)
+
+    private let accountManager: AccountManager
     private let audioSession: ManagedAudioSession
     private let callKitIntegration: CallKitIntegration?
     
     private var currentCall: PresentationCall?
+    private var currentCallDisposable = MetaDisposable()
     private let removeCurrentCallDisposable = MetaDisposable()
     
     private var ringingStatesDisposable: Disposable?
@@ -56,7 +59,7 @@ public final class PresentationCallManager {
     private var proxyServer: ProxyServerSettings?
     private var proxyServerDisposable: Disposable?
     
-    private var callSettings: (VoiceCallSettings, VoipConfiguration, VoipDerivedState)?
+    private var callSettings: VoiceCallSettings?
     private var callSettingsDisposable: Disposable?
     
     public static var voipMaxLayer: Int32 {
@@ -65,6 +68,7 @@ public final class PresentationCallManager {
     
     public init(accountManager: AccountManager, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), audioSession: ManagedAudioSession, activeAccounts: Signal<[Account], NoError>) {
         self.getDeviceAccessData = getDeviceAccessData
+        self.accountManager = accountManager
         self.audioSession = audioSession
         
         var startCallImpl: ((Account, UUID, String) -> Signal<Bool, NoError>)?
@@ -200,37 +204,16 @@ public final class PresentationCallManager {
             }
         })
         
-        self.callSettingsDisposable = (combineLatest(queue: .mainQueue(), accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings]), Signal<Void, NoError>.single(Void())/*, postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState])*/)
-        |> deliverOnMainQueue).start(next: { [weak self] sharedData, preferences in
-            let callSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
-            let configuration: VoipConfiguration = .defaultValue// = preferences.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
-            let derivedState: VoipDerivedState = .default// = preferences.values[ApplicationSpecificPreferencesKeys.voipDerivedState] as? VoipDerivedState ?? .default
+        self.callSettingsDisposable = (accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings])
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             if let strongSelf = self {
-                strongSelf.callSettings = (callSettings, configuration, derivedState)
-                
-                if let legacyP2PMode = callSettings.legacyP2PMode {
-                    _ = updateVoiceCallSettingsSettingsInteractively(accountManager: accountManager, { settings -> VoiceCallSettings in
-                        var settings = settings
-                        settings.legacyP2PMode = nil
-                        return settings
-                    }).start()
-                    
-                    /*let settings: SelectivePrivacySettings
-                    switch legacyP2PMode {
-                        case .always:
-                            settings = .enableEveryone(disableFor: Set<PeerId>())
-                        case .contacts:
-                            settings = .enableContacts(enableFor: Set<PeerId>(), disableFor: Set<PeerId>())
-                        case .never:
-                            settings = .disableEveryone(enableFor: Set<PeerId>())
-                    }
-                    _ = updateSelectiveAccountPrivacySettings(account: strongSelf.tempAccount, type: .voiceCallsP2P, settings: settings).start()*/
-                }
+                strongSelf.callSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
             }
         })
     }
     
     deinit {
+        self.currentCallDisposable.dispose()
         self.ringingStatesDisposable?.dispose()
         self.removeCurrentCallDisposable.dispose()
         self.startCallDisposable.dispose()
@@ -241,19 +224,30 @@ public final class PresentationCallManager {
     private func ringingStatesUpdated(_ ringingStates: [(Account, Peer, CallSessionRingingState, Bool, NetworkType)], enableCallKit: Bool) {
         if let firstState = ringingStates.first {
             if self.currentCall == nil {
-                let call = PresentationCall(account: firstState.0, audioSession: self.audioSession, callSessionManager: firstState.0.callSessionManager, callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(self.callKitIntegration, settings: self.callSettings?.0) : nil, serializedData: self.callSettings?.1.serializedData, dataSaving: self.callSettings?.0.dataSaving ?? .never, derivedState: self.callSettings?.2 ?? VoipDerivedState.default, getDeviceAccessData: self.getDeviceAccessData, internalId: firstState.2.id, peerId: firstState.2.peerId, isOutgoing: false, peer: firstState.1, proxyServer: self.proxyServer, currentNetworkType: firstState.4, updatedNetworkType: firstState.0.networkType)
-                self.currentCall = call
-                self.currentCallPromise.set(.single(call))
-                self.hasActiveCallsPromise.set(true)
-                self.removeCurrentCallDisposable.set((call.canBeRemoved
-                |> deliverOnMainQueue).start(next: { [weak self, weak call] value in
-                    if value, let strongSelf = self, let call = call {
-                        if strongSelf.currentCall === call {
-                            strongSelf.currentCall = nil
-                            strongSelf.currentCallPromise.set(.single(nil))
-                            strongSelf.hasActiveCallsPromise.set(false)
-                        }
+                self.currentCallDisposable.set((combineLatest(firstState.0.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings]) |> take(1))
+                |> deliverOnMainQueue).start(next: { [weak self] preferences, sharedData in
+                    guard let strongSelf = self else {
+                        return
                     }
+                    
+                    let configuration = preferences.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
+                    let derivedState = preferences.values[ApplicationSpecificPreferencesKeys.voipDerivedState] as? VoipDerivedState ?? .default
+                    let autodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? .defaultSettings
+                    
+                    let call = PresentationCall(account: firstState.0, audioSession: strongSelf.audioSession, callSessionManager: firstState.0.callSessionManager, callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings) : nil, serializedData: configuration.serializedData, dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings), derivedState: derivedState, getDeviceAccessData: strongSelf.getDeviceAccessData, internalId: firstState.2.id, peerId: firstState.2.peerId, isOutgoing: false, peer: firstState.1, proxyServer: strongSelf.proxyServer, currentNetworkType: firstState.4, updatedNetworkType: firstState.0.networkType)
+                    strongSelf.currentCall = call
+                    strongSelf.currentCallPromise.set(.single(call))
+                    strongSelf.hasActiveCallsPromise.set(true)
+                    strongSelf.removeCurrentCallDisposable.set((call.canBeRemoved
+                    |> deliverOnMainQueue).start(next: { [weak self, weak call] value in
+                        if value, let strongSelf = self, let call = call {
+                            if strongSelf.currentCall === call {
+                                strongSelf.currentCall = nil
+                                strongSelf.currentCallPromise.set(.single(nil))
+                                strongSelf.hasActiveCallsPromise.set(false)
+                            }
+                        }
+                    }))
                 }))
             } else {
                 for (account, _, state, _, _) in ringingStates {
@@ -269,7 +263,7 @@ public final class PresentationCallManager {
         if let call = self.currentCall, !endCurrentIfAny {
             return .alreadyInProgress(call.peerId)
         }
-        if let _ = callKitIntegrationIfEnabled(self.callKitIntegration, settings: self.callSettings?.0) {
+        if let _ = callKitIntegrationIfEnabled(self.callKitIntegration, settings: self.callSettings) {
             let begin: () -> Void = { [weak self] in
                 guard let strongSelf = self else {
                     return
@@ -350,22 +344,27 @@ public final class PresentationCallManager {
         |> runOn(Queue.mainQueue())
         
         let networkType = account.networkType
+        let accountManager = self.accountManager
         return accessEnabledSignal
         |> mapToSignal { [weak self] accessEnabled -> Signal<Bool, NoError> in
             if !accessEnabled {
                 return .single(false)
             }
-            return (combineLatest(queue: .mainQueue(), account.callSessionManager.request(peerId: peerId, internalId: internalId), networkType |> take(1), account.postbox.peerView(id: peerId) |> take(1) |> map({ peerView -> Bool in
+            return (combineLatest(queue: .mainQueue(), account.callSessionManager.request(peerId: peerId, internalId: internalId), networkType |> take(1), account.postbox.peerView(id: peerId) |> map { peerView -> Bool in
                 return peerView.peerIsContact
-            }) |> take(1))
+            } |> take(1), account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings]) |> take(1))
             |> deliverOnMainQueue
-            |> beforeNext { internalId, currentNetworkType, isContact in
+            |> beforeNext { internalId, currentNetworkType, isContact, preferences, sharedData in
                 if let strongSelf = self, accessEnabled {
                     if let currentCall = strongSelf.currentCall {
                         currentCall.rejectBusy()
                     }
                     
-                    let call = PresentationCall(account: account, audioSession: strongSelf.audioSession, callSessionManager: account.callSessionManager, callKitIntegration: callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings?.0), serializedData: strongSelf.callSettings?.1.serializedData, dataSaving: strongSelf.callSettings?.0.dataSaving ?? .never, derivedState: strongSelf.callSettings?.2 ?? VoipDerivedState.default, getDeviceAccessData: strongSelf.getDeviceAccessData, internalId: internalId, peerId: peerId, isOutgoing: true, peer: nil, proxyServer: strongSelf.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: account.networkType)
+                    let configuration = preferences.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
+                    let derivedState = preferences.values[ApplicationSpecificPreferencesKeys.voipDerivedState] as? VoipDerivedState ?? .default
+                    let autodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? .defaultSettings
+                    
+                    let call = PresentationCall(account: account, audioSession: strongSelf.audioSession, callSessionManager: account.callSessionManager, callKitIntegration: callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings), serializedData: configuration.serializedData, dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings), derivedState: derivedState, getDeviceAccessData: strongSelf.getDeviceAccessData, internalId: internalId, peerId: peerId, isOutgoing: true, peer: nil, proxyServer: strongSelf.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: account.networkType)
                     strongSelf.currentCall = call
                     strongSelf.currentCallPromise.set(.single(call))
                     strongSelf.hasActiveCallsPromise.set(true)

@@ -571,10 +571,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     } else {
                         videoNode.continuePlayingWithoutSound()
                     }
+                    self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
                 } else if !item.fromPlayingVideo {
                     videoNode.canAttachContent = isVisible
+                    self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
                 }
-                self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
                 if self.shouldAutoplayOnCentrality() {
                     self.hideStatusNodeUntilCentrality = true
                     self.statusButtonNode.isHidden = true
@@ -593,6 +594,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             if isAnimated {
                 videoNode.seek(0.0)
+                videoNode.play()
             } else {
                 videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
             }
@@ -765,7 +767,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         let fromTransform: CATransform3D
         let toTransform: CATransform3D
         
-        if let interactiveMediaNode = node.0 as? ChatMessageInteractiveMediaNode, interactiveMediaNode.automaticPlayback ?? false {
+        if let interactiveMediaNode = node.0 as? ChatMessageInteractiveMediaNode, interactiveMediaNode.automaticPlayback ?? false, videoNode.hasAttachedContext {
             copyView.removeFromSuperview()
             surfaceCopyView.removeFromSuperview()
             

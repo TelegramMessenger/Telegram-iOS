@@ -392,13 +392,21 @@ func autodownloadMediaCategoryController(context: AccountContext, connectionType
     let initialValuePromise: Promise<MediaAutoDownloadSettings> = Promise()
     initialValuePromise.set(currentAutodownloadSettings())
     
-    let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])) |> deliverOnMainQueue
+    let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])) |> deliverOnMainQueue
         |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<AutodownloadMediaCategoryEntry>, AutodownloadMediaCategoryEntry.ItemGenerationArguments)) in
-            let automaticMediaDownloadSettings: MediaAutoDownloadSettings
+            var automaticMediaDownloadSettings: MediaAutoDownloadSettings
             if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
                 automaticMediaDownloadSettings = value
             } else {
                 automaticMediaDownloadSettings = .defaultSettings
+            }
+            
+            var autodownloadSettings: AutodownloadSettings
+            if let value = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings {
+                autodownloadSettings = value
+                automaticMediaDownloadSettings = automaticMediaDownloadSettings.updatedWithAutodownloadSettings(autodownloadSettings)
+            } else {
+                autodownloadSettings = .defaultSettings
             }
             
             let title: String

@@ -124,6 +124,8 @@ private func ongoingDataSavingForType(_ type: VoiceCallDataSaving) -> OngoingCal
             return .cellular
         case .always:
             return .always
+        default:
+            return .never
     }
 }
 
