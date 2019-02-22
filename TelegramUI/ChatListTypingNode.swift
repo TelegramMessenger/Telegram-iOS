@@ -95,24 +95,20 @@ private func getDotsImage(color: UIColor) -> UIImage? {
 }
 
 final class ChatListInputActivitiesNode: ASDisplayNode {
-    private let textNode: TextNode
-    private let dotsNode: ChatListInputActivitiesDotsNode
+    private let activityNode: ChatTitleActivityNode
     
     override init() {
-        self.textNode = TextNode()
-        
-        self.dotsNode = ChatListInputActivitiesDotsNode()
+        self.activityNode = ChatTitleActivityNode()
         
         super.init()
         
-        self.addSubnode(self.textNode)
-        self.addSubnode(self.dotsNode)
+        self.addSubnode(self.activityNode)
     }
     
     func asyncLayout() -> (CGSize, PresentationStrings, UIColor, PeerId, [(Peer, PeerInputActivity)]) -> (CGSize, () -> Void) {
-        let makeTextLayout = TextNode.asyncLayout(self.textNode)
         return { [weak self] boundingSize, strings, color, peerId, activities in
-            let string: NSAttributedString?
+            var state = ChatTitleActivityNodeState.none
+            
             if !activities.isEmpty {
                 var commonKey: Int32? = activities[0].1.key
                 for i in 1 ..< activities.count {
@@ -143,7 +139,20 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                             case .typingText:
                                 text = strings.DialogList_Typing
                         }
-                        string = NSAttributedString(string: text, font: textFont, textColor: color)
+                        let string = NSAttributedString(string: text, font: textFont, textColor: color)
+                        
+                        switch activities[0].1 {
+                            case .typingText:
+                                state = .typingText(string, color)
+                            case .recordingVoice:
+                                state = .recordingVoice(string, color)
+                            case .recordingInstantVideo:
+                                state = .recordingVideo(string, color)
+                            case .uploadingFile, .uploadingInstantVideo, .uploadingPhoto, .uploadingVideo:
+                                state = .uploading(string, color)
+                            case .playingGame:
+                                state = .playingGame(string, color)
+                        }
                     } else {
                         let text: String
                         if let _ = commonKey {
@@ -169,34 +178,38 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                         } else {
                             text = activities[0].0.compactDisplayTitle
                         }
-                        string = NSAttributedString(string: text, font: textFont, textColor: color)
+                        let string = NSAttributedString(string: text, font: textFont, textColor: color)
+                        
+                        switch activities[0].1 {
+                            case .typingText:
+                                state = .typingText(string, color)
+                            case .recordingVoice:
+                                state = .recordingVoice(string, color)
+                            case .recordingInstantVideo:
+                                state = .recordingVideo(string, color)
+                            case .uploadingFile, .uploadingInstantVideo, .uploadingPhoto, .uploadingVideo:
+                                state = .uploading(string, color)
+                            case .playingGame:
+                                state = .playingGame(string, color)
+                        }
                     }
                 } else {
+                    let string: NSAttributedString
                     if activities.count > 1 {
                         let peerTitle = activities[0].0.compactDisplayTitle
                         string = NSAttributedString(string: strings.DialogList_MultipleTyping(peerTitle, strings.DialogList_MultipleTypingSuffix(activities.count - 1).0).0, font: textFont, textColor: color)
                     } else {
                         string = NSAttributedString(string: strings.DialogList_MultipleTypingSuffix(activities.count).0, font: textFont, textColor: color)
                     }
+                    state = .typingText(string, color)
                 }
-            } else {
-                string = nil
             }
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: boundingSize.width - 12.0, height: boundingSize.height), alignment: .left, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
-            
-            let dots = getDotsImage(color: color)
             
             return (boundingSize, {
                 if let strongSelf = self {
-                    let _ = textApply()
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(), size: textLayout.size)
-                    
-                    if let dots = dots {
-                        strongSelf.dotsNode.image = dots
-                        let dotsSize = CGSize(width: 20.0, height: 10.0)
-                        let dotsFrame = CGRect(origin: CGPoint(x: textLayout.size.width - 1.0, y: textLayout.size.height - dotsSize.height - 2.0), size: dotsSize)
-                        strongSelf.dotsNode.frame = dotsFrame
-                    }
+                    let _ = strongSelf.activityNode.transitionToState(state, animation: .none)
+                    let size = strongSelf.activityNode.updateLayout(CGSize(width: boundingSize.width - 12.0, height: boundingSize.height), alignment: .left)
+                    strongSelf.activityNode.frame = CGRect(origin: CGPoint(x: -3.0, y: 1.0), size: size)
                 }
             })
         }

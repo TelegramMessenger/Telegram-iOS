@@ -84,9 +84,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     private let titleNode: ImmediateTextNode
     private let titleLeftIconNode: ASImageNode
     private let titleRightIconNode: ASImageNode
-    private let infoNode: ImmediateTextNode
-    private let typingNode: ImmediateTextNode
-    private var typingIndicator: TGModernConversationTitleActivityIndicator?
+ 
+    private let activityNode: ChatTitleActivityNode
+    
     private let button: HighlightTrackingButtonNode
     
     private var validLayout: (CGSize, CGRect)?
@@ -100,102 +100,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     
     var inputActivities: (PeerId, [(Peer, PeerInputActivity)])? {
         didSet {
-            var inputActivitiesAllowed = true
-            if let titleContent = self.titleContent {
-                switch titleContent {
-                    case let .peer(peerView, _):
-                        if let peer = peerViewMainPeer(peerView) {
-                            if peer.id == self.account.peerId {
-                                inputActivitiesAllowed = false
-                            }
-                        }
-                    default:
-                        break
-                }
-            }
-            
-            if let (peerId, inputActivities) = self.inputActivities, !inputActivities.isEmpty, inputActivitiesAllowed {
-                self.typingNode.isHidden = false
-                self.infoNode.isHidden = true
-                var stringValue = ""
-                var first = true
-                var mergedActivity = inputActivities[0].1
-                for (_, activity) in inputActivities {
-                    if activity != mergedActivity {
-                        mergedActivity = .typingText
-                        break
-                    }
-                }
-                if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
-                    switch mergedActivity {
-                        case .typingText:
-                            stringValue = strings.Conversation_typing
-                        case .uploadingFile:
-                            stringValue = strings.Activity_UploadingDocument
-                        case .recordingVoice:
-                            stringValue = strings.Activity_RecordingAudio
-                        case .uploadingPhoto:
-                            stringValue = strings.Activity_UploadingPhoto
-                        case .uploadingVideo:
-                            stringValue = strings.Activity_UploadingVideo
-                        case .playingGame:
-                            stringValue = strings.Activity_PlayingGame
-                        case .recordingInstantVideo:
-                            stringValue = strings.Activity_RecordingVideoMessage
-                        case .uploadingInstantVideo:
-                            stringValue = strings.Activity_UploadingVideoMessage
-                    }
-                } else {
-                    for (peer, _) in inputActivities {
-                        let title = peer.compactDisplayTitle
-                        if !title.isEmpty {
-                            if first {
-                                first = false
-                            } else {
-                                stringValue += ", "
-                            }
-                            stringValue += title
-                        }
-                    }
-                }
-                let string = NSAttributedString(string: stringValue, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.accentTextColor)
-                if self.typingNode.attributedText == nil || !self.typingNode.attributedText!.isEqual(to: string) {
-                    self.typingNode.attributedText = string
-                    self.setNeedsLayout()
-                }
-                if self.typingIndicator == nil {
-                    let typingIndicator = TGModernConversationTitleActivityIndicator()
-                    typingIndicator.setColor(self.theme.rootController.navigationBar.accentTextColor)
-                    self.contentContainer.view.addSubview(typingIndicator)
-                    self.typingIndicator = typingIndicator
-                }
-                switch mergedActivity {
-                    case .typingText:
-                        self.typingIndicator?.setTyping()
-                    case .recordingVoice:
-                        self.typingIndicator?.setAudioRecording()
-                    case .uploadingFile:
-                        self.typingIndicator?.setUploading()
-                    case .playingGame:
-                        self.typingIndicator?.setPlaying()
-                    case .recordingInstantVideo:
-                        self.typingIndicator?.setVideoRecording()
-                    case .uploadingInstantVideo:
-                        self.typingIndicator?.setUploading()
-                    case .uploadingPhoto:
-                        self.typingIndicator?.setUploading()
-                    case .uploadingVideo:
-                        self.typingIndicator?.setUploading()
-                }
-            } else {
-                self.typingNode.isHidden = true
-                self.infoNode.isHidden = false
-                self.typingNode.attributedText = nil
-                if let typingIndicator = self.typingIndicator {
-                    typingIndicator.removeFromSuperview()
-                    self.typingIndicator = nil
-                }
-            }
+            self.updateStatus()
         }
     }
     
@@ -318,161 +223,194 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     }
     
     private func updateStatus() {
-        var shouldUpdateLayout = false
+        var inputActivitiesAllowed = true
         if let titleContent = self.titleContent {
             switch titleContent {
-                case let .peer(peerView, onlineMemberCount):
-                    if let peer = peerViewMainPeer(peerView) {
-                        if peer.id == self.account.peerId {
-                            let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                            if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
-                                self.infoNode.attributedText = string
-                                shouldUpdateLayout = true
-                            }
-                        } else if let user = peer as? TelegramUser {
-                            if user.id.namespace == Namespaces.Peer.CloudUser && user.id.id == 777000 {
+            case let .peer(peerView, _):
+                if let peer = peerViewMainPeer(peerView) {
+                    if peer.id == self.account.peerId {
+                        inputActivitiesAllowed = false
+                    }
+                }
+            default:
+                break
+            }
+        }
+        
+        var state = ChatTitleActivityNodeState.none
+        if let (peerId, inputActivities) = self.inputActivities, !inputActivities.isEmpty, inputActivitiesAllowed {
+            var stringValue = ""
+            var first = true
+            var mergedActivity = inputActivities[0].1
+            for (_, activity) in inputActivities {
+                if activity != mergedActivity {
+                    mergedActivity = .typingText
+                    break
+                }
+            }
+            if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
+                switch mergedActivity {
+                    case .typingText:
+                        stringValue = strings.Conversation_typing
+                    case .uploadingFile:
+                        stringValue = strings.Activity_UploadingDocument
+                    case .recordingVoice:
+                        stringValue = strings.Activity_RecordingAudio
+                    case .uploadingPhoto:
+                        stringValue = strings.Activity_UploadingPhoto
+                    case .uploadingVideo:
+                        stringValue = strings.Activity_UploadingVideo
+                    case .playingGame:
+                        stringValue = strings.Activity_PlayingGame
+                    case .recordingInstantVideo:
+                        stringValue = strings.Activity_RecordingVideoMessage
+                    case .uploadingInstantVideo:
+                        stringValue = strings.Activity_UploadingVideoMessage
+                }
+            } else {
+                for (peer, _) in inputActivities {
+                    let title = peer.compactDisplayTitle
+                    if !title.isEmpty {
+                        if first {
+                            first = false
+                        } else {
+                            stringValue += ", "
+                        }
+                        stringValue += title
+                    }
+                }
+            }
+            let color = self.theme.rootController.navigationBar.accentTextColor
+            let string = NSAttributedString(string: stringValue, font: Font.regular(13.0), textColor: color)
+            switch mergedActivity {
+                case .typingText:
+                    state = .typingText(string, color)
+                case .recordingVoice:
+                    state = .recordingVoice(string, color)
+                case .recordingInstantVideo:
+                    state = .recordingVideo(string, color)
+                case .uploadingFile, .uploadingInstantVideo, .uploadingPhoto, .uploadingVideo:
+                    state = .uploading(string, color)
+                case .playingGame:
+                    state = .playingGame(string, color)
+            }
+        } else {
+            if let titleContent = self.titleContent {
+                switch titleContent {
+                    case let .peer(peerView, onlineMemberCount):
+                        if let peer = peerViewMainPeer(peerView) {
+                            if peer.id == self.account.peerId {
                                 let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
-                                    self.infoNode.attributedText = string
-                                    shouldUpdateLayout = true
-                                }
-                            } else if user.flags.contains(.isSupport) {
-                                let statusText = self.strings.Bot_GenericSupportStatus
-                                
-                                let string = NSAttributedString(string: statusText, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
-                                    self.infoNode.attributedText = string
-                                    shouldUpdateLayout = true
-                                }
-                            } else if let _ = user.botInfo {
-                                let statusText = self.strings.Bot_GenericBotStatus
-                                
-                                let string = NSAttributedString(string: statusText, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
-                                    self.infoNode.attributedText = string
-                                    shouldUpdateLayout = true
-                                }
-                            } else if let peer = peerViewMainPeer(peerView) {
-                                let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                                let userPresence: TelegramUserPresence
-                                if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence {
-                                    userPresence = presence
-                                    self.presenceManager?.reset(presence: presence)
+                                state = .info(string)
+                            } else if let user = peer as? TelegramUser {
+                                if user.id.namespace == Namespaces.Peer.CloudUser && user.id.id == 777000 {
+                                    let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                    state = .info(string)
+                                } else if user.flags.contains(.isSupport) {
+                                    let statusText = self.strings.Bot_GenericSupportStatus
+                                    
+                                    let string = NSAttributedString(string: statusText, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                    state = .info(string)
+                                } else if let _ = user.botInfo {
+                                    let statusText = self.strings.Bot_GenericBotStatus
+                                    
+                                    let string = NSAttributedString(string: statusText, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                    state = .info(string)
+                                } else if let peer = peerViewMainPeer(peerView) {
+                                    let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                                    let userPresence: TelegramUserPresence
+                                    if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence {
+                                        userPresence = presence
+                                        self.presenceManager?.reset(presence: presence)
+                                    } else {
+                                        userPresence = TelegramUserPresence(status: .none, lastActivity: 0)
+                                    }
+                                    let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, dateTimeFormat: self.dateTimeFormat, presence: userPresence, relativeTo: Int32(timestamp))
+                                    let attributedString = NSAttributedString(string: string, font: Font.regular(13.0), textColor: activity ? self.theme.rootController.navigationBar.accentTextColor : self.theme.rootController.navigationBar.secondaryTextColor)
+                                    state = .info(attributedString)
                                 } else {
-                                    userPresence = TelegramUserPresence(status: .none, lastActivity: 0)
+                                    let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                    state = .info(string)
                                 }
-                                let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, dateTimeFormat: self.dateTimeFormat, presence: userPresence, relativeTo: Int32(timestamp))
-                                let attributedString = NSAttributedString(string: string, font: Font.regular(13.0), textColor: activity ? self.theme.rootController.navigationBar.accentTextColor : self.theme.rootController.navigationBar.secondaryTextColor)
-                                if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: attributedString) {
-                                    self.infoNode.attributedText = attributedString
-                                    shouldUpdateLayout = true
-                                }
-                            } else {
-                                let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
-                                    self.infoNode.attributedText = string
-                                    shouldUpdateLayout = true
-                                }
-                            }
-                        } else if let group = peer as? TelegramGroup {
-                            var onlineCount = 0
-                            if let cachedGroupData = peerView.cachedData as? CachedGroupData, let participants = cachedGroupData.participants {
-                                let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                                for participant in participants.participants {
-                                    if let presence = peerView.peerPresences[participant.peerId] as? TelegramUserPresence {
-                                        let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
-                                        switch relativeStatus {
-                                            case .online:
-                                                onlineCount += 1
-                                            default:
-                                                break
+                            } else if let group = peer as? TelegramGroup {
+                                var onlineCount = 0
+                                if let cachedGroupData = peerView.cachedData as? CachedGroupData, let participants = cachedGroupData.participants {
+                                    let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                                    for participant in participants.participants {
+                                        if let presence = peerView.peerPresences[participant.peerId] as? TelegramUserPresence {
+                                            let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
+                                            switch relativeStatus {
+                                                case .online:
+                                                    onlineCount += 1
+                                                default:
+                                                    break
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            if onlineCount > 1 {
-                                let string = NSMutableAttributedString()
-                                
-                                string.append(NSAttributedString(string: "\(strings.Conversation_StatusMembers(Int32(group.participantCount))), ", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
-                                string.append(NSAttributedString(string: strings.Conversation_StatusOnline(Int32(onlineCount)), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
-                                if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
-                                    self.infoNode.attributedText = string
-                                    shouldUpdateLayout = true
-                                }
-                            } else {
-                                let string = NSAttributedString(string: strings.Conversation_StatusMembers(Int32(group.participantCount)), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
-                                    self.infoNode.attributedText = string
-                                    shouldUpdateLayout = true
-                                }
-                            }
-                        } else if let channel = peer as? TelegramChannel {
-                            if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
-                                if memberCount == 0 {
-                                    let string: NSAttributedString
-                                    if case .group = channel.info {
-                                        string = NSAttributedString(string: strings.Group_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                    } else {
-                                        string = NSAttributedString(string: strings.Channel_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                    }
-                                    if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
-                                        self.infoNode.attributedText = string
-                                        shouldUpdateLayout = true
-                                    }
+                                if onlineCount > 1 {
+                                    let string = NSMutableAttributedString()
+                                    
+                                    string.append(NSAttributedString(string: "\(strings.Conversation_StatusMembers(Int32(group.participantCount))), ", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
+                                    string.append(NSAttributedString(string: strings.Conversation_StatusOnline(Int32(onlineCount)), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
+                                    state = .info(string)
                                 } else {
-                                    if case .group = channel.info, let onlineMemberCount = onlineMemberCount, onlineMemberCount > 1 {
-                                        let string = NSMutableAttributedString()
-                                        
-                                        string.append(NSAttributedString(string: "\(strings.Conversation_StatusMembers(Int32(memberCount))), ", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
-                                        string.append(NSAttributedString(string: strings.Conversation_StatusOnline(Int32(onlineMemberCount)), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
-                                        if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
-                                            self.infoNode.attributedText = string
-                                            shouldUpdateLayout = true
-                                        }
-                                    } else {
-                                        let membersString: String
+                                    let string = NSAttributedString(string: strings.Conversation_StatusMembers(Int32(group.participantCount)), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                    state = .info(string)
+                                }
+                            } else if let channel = peer as? TelegramChannel {
+                                if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
+                                    if memberCount == 0 {
+                                        let string: NSAttributedString
                                         if case .group = channel.info {
-                                            membersString = strings.Conversation_StatusMembers(memberCount)
+                                            string = NSAttributedString(string: strings.Group_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                                         } else {
-                                            membersString = strings.Conversation_StatusSubscribers(memberCount)
+                                            string = NSAttributedString(string: strings.Channel_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                                         }
-                                        let string = NSAttributedString(string: membersString, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                        if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
-                                            self.infoNode.attributedText = string
-                                            shouldUpdateLayout = true
+                                        state = .info(string)
+                                    } else {
+                                        if case .group = channel.info, let onlineMemberCount = onlineMemberCount, onlineMemberCount > 1 {
+                                            let string = NSMutableAttributedString()
+                                            
+                                            string.append(NSAttributedString(string: "\(strings.Conversation_StatusMembers(Int32(memberCount))), ", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
+                                            string.append(NSAttributedString(string: strings.Conversation_StatusOnline(Int32(onlineMemberCount)), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
+                                            state = .info(string)
+                                        } else {
+                                            let membersString: String
+                                            if case .group = channel.info {
+                                                membersString = strings.Conversation_StatusMembers(memberCount)
+                                            } else {
+                                                membersString = strings.Conversation_StatusSubscribers(memberCount)
+                                            }
+                                            let string = NSAttributedString(string: membersString, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                            state = .info(string)
                                         }
                                     }
-                                }
-                            } else {
-                                switch channel.info {
-                                    case .group:
-                                        let string = NSAttributedString(string: strings.Group_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                        if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
-                                            self.infoNode.attributedText = string
-                                            shouldUpdateLayout = true
-                                        }
-                                    case .broadcast:
-                                        let string = NSAttributedString(string: strings.Channel_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                        if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
-                                            self.infoNode.attributedText = string
-                                            shouldUpdateLayout = true
-                                        }
+                                } else {
+                                    switch channel.info {
+                                        case .group:
+                                            let string = NSAttributedString(string: strings.Group_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                            state = .info(string)
+                                        case .broadcast:
+                                            let string = NSAttributedString(string: strings.Channel_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+                                            state = .info(string)
+                                    }
                                 }
                             }
                         }
-                    }
-                case .group:
-                    break
+                    case .group:
+                        break
+                }
+                
+                self.accessibilityLabel = self.titleNode.attributedText?.string
+                self.accessibilityValue = state.string
+            } else {
+                self.accessibilityLabel = nil
             }
-            
-            self.accessibilityLabel = self.titleNode.attributedText?.string
-            self.accessibilityValue = self.infoNode.attributedText?.string
-            
-            if shouldUpdateLayout {
-                self.setNeedsLayout()
-            }
-        } else {
-            self.accessibilityLabel = nil
+        }
+        
+        if self.activityNode.transitionToState(state, animation: .slide) {
+            self.setNeedsLayout()
         }
     }
     
@@ -500,16 +438,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         self.titleRightIconNode.displayWithoutProcessing = true
         self.titleRightIconNode.displaysAsynchronously = false
         
-        self.infoNode = ImmediateTextNode()
-        self.infoNode.displaysAsynchronously = false
-        self.infoNode.maximumNumberOfLines = 1
-        self.infoNode.isOpaque = false
-        
-        self.typingNode = ImmediateTextNode()
-        self.typingNode.displaysAsynchronously = false
-        self.typingNode.maximumNumberOfLines = 1
-        self.typingNode.isOpaque = false
-        
+        self.activityNode = ChatTitleActivityNode()
         self.button = HighlightTrackingButtonNode()
         
         super.init(frame: CGRect())
@@ -519,8 +448,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         
         self.addSubnode(self.contentContainer)
         self.contentContainer.addSubnode(self.titleNode)
-        self.contentContainer.addSubnode(self.infoNode)
-        self.contentContainer.addSubnode(self.typingNode)
+        self.contentContainer.addSubnode(self.activityNode)
         self.addSubnode(self.button)
         
         self.presenceManager = PeerPresenceStatusManager(update: { [weak self] in
@@ -532,18 +460,14 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             if let strongSelf = self {
                 if highlighted {
                     strongSelf.titleNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.infoNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.typingNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.activityNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.titleNode.alpha = 0.4
-                    strongSelf.infoNode.alpha = 0.4
-                    strongSelf.typingNode.alpha = 0.4
+                    strongSelf.activityNode.alpha = 0.4
                 } else {
                     strongSelf.titleNode.alpha = 1.0
-                    strongSelf.infoNode.alpha = 1.0
-                    strongSelf.typingNode.alpha = 1.0
+                    strongSelf.activityNode.alpha = 1.0
                     strongSelf.titleNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    strongSelf.infoNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    strongSelf.typingNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.activityNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
         }
@@ -607,20 +531,19 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         let titleSideInset: CGFloat = 3.0
         if size.height > 40.0 {
             let titleSize = self.titleNode.updateLayout(CGSize(width: clearBounds.width - leftIconWidth - rightIconWidth - titleSideInset * 2.0, height: size.height))
-            let infoSize = self.infoNode.updateLayout(clearBounds.size)
-            let typingSize = self.typingNode.updateLayout(clearBounds.size)
+            let activitySize = self.activityNode.updateLayout(clearBounds.size, alignment: .center)
             let titleInfoSpacing: CGFloat = 0.0
             
             var titleFrame: CGRect
             
-            if infoSize.width.isZero && typingSize.width.isZero {
+            if activitySize.height.isZero {
                 titleFrame = CGRect(origin: CGPoint(x: floor((clearBounds.width - titleSize.width) / 2.0), y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
                 if titleFrame.size.width < size.width {
                     titleFrame.origin.x = -clearBounds.minX + floor((size.width - titleFrame.width) / 2.0)
                 }
                 self.titleNode.frame = titleFrame
             } else {
-                let combinedHeight = titleSize.height + infoSize.height + titleInfoSpacing
+                let combinedHeight = titleSize.height + activitySize.height + titleInfoSpacing
                 
                 titleFrame = CGRect(origin: CGPoint(x: floor((clearBounds.width - titleSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
                 if titleFrame.size.width < size.width {
@@ -629,20 +552,11 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 titleFrame.origin.x = max(titleFrame.origin.x, clearBounds.minX + leftIconWidth)
                 self.titleNode.frame = titleFrame
                 
-                var infoFrame = CGRect(origin: CGPoint(x: floor((clearBounds.width - infoSize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + titleInfoSpacing), size: infoSize)
-                if infoFrame.size.width < size.width {
-                    infoFrame.origin.x = -clearBounds.minX + floor((size.width - infoFrame.width) / 2.0)
+                var activityFrame = CGRect(origin: CGPoint(x: floor((clearBounds.width - activitySize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + titleInfoSpacing), size: activitySize)
+                if activitySize.width < size.width {
+                    activityFrame.origin.x = -clearBounds.minX + floor((size.width - activityFrame.width) / 2.0)
                 }
-                self.infoNode.frame = infoFrame
-                var typingFrame = CGRect(origin: CGPoint(x: floor((clearBounds.width - typingSize.width + 14.0) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + titleInfoSpacing), size: typingSize)
-                if typingFrame.size.width < size.width {
-                    typingFrame.origin.x = -clearBounds.minX + floor((size.width - typingFrame.width + 14.0) / 2.0)
-                }
-                self.typingNode.frame = typingFrame
-                
-                if let typingIndicator = self.typingIndicator {
-                    typingIndicator.frame = CGRect(x: typingFrame.origin.x - 24.0, y: typingFrame.origin.y, width: 24.0, height: 16.0)
-                }
+                self.activityNode.frame = activityFrame
             }
             
             if let image = self.titleLeftIconNode.image {
@@ -653,16 +567,14 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             }
         } else {
             let titleSize = self.titleNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0 - leftIconWidth - rightIconWidth - titleSideInset * 2.0), height: size.height))
-            let infoSize = self.infoNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0), height: size.height))
-            let typingSize = self.typingNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0), height: size.height))
+            let activitySize = self.activityNode.updateLayout(CGSize(width: floor(clearBounds.width / 2.0), height: size.height), alignment: .center)
             
             let titleInfoSpacing: CGFloat = 8.0
-            let combinedWidth = titleSize.width + leftIconWidth + rightIconWidth + infoSize.width + titleInfoSpacing
+            let combinedWidth = titleSize.width + leftIconWidth + rightIconWidth + activitySize.width + titleInfoSpacing
             
             let titleFrame = CGRect(origin: CGPoint(x: leftIconWidth + floor((clearBounds.width - combinedWidth) / 2.0), y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
             self.titleNode.frame = titleFrame
-            self.infoNode.frame = CGRect(origin: CGPoint(x: floor((clearBounds.width - combinedWidth) / 2.0 + titleSize.width + leftIconWidth + rightIconWidth + titleInfoSpacing), y: floor((size.height - infoSize.height) / 2.0)), size: infoSize)
-            self.typingNode.frame = CGRect(origin: CGPoint(x: floor((clearBounds.width - combinedWidth) / 2.0 + titleSize.width + leftIconWidth + rightIconWidth + titleInfoSpacing), y: floor((size.height - typingSize.height) / 2.0)), size: typingSize)
+            self.activityNode.frame = CGRect(origin: CGPoint(x: floor((clearBounds.width - combinedWidth) / 2.0 + titleSize.width + leftIconWidth + rightIconWidth + titleInfoSpacing), y: floor((size.height - activitySize.height) / 2.0)), size: activitySize)
             
             if let image = self.titleLeftIconNode.image {
                 self.titleLeftIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.minY + 4.0), size: image.size)

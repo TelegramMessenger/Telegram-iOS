@@ -103,6 +103,14 @@
 		09C9EA3821A044B500E90146 /* StringForDuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C9EA3721A044B500E90146 /* StringForDuration.swift */; };
 		09D304152173C0E900C00567 /* WatchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304142173C0E900C00567 /* WatchManager.swift */; };
 		09D304182173C15700C00567 /* WatchSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304172173C15700C00567 /* WatchSettingsController.swift */; };
+		09D96899221DE92600B1458A /* ID3ArtworkReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D96898221DE92600B1458A /* ID3ArtworkReader.swift */; };
+		09D9689D221F74F000B1458A /* ChatTitleActivityNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D9689C221F74F000B1458A /* ChatTitleActivityNode.swift */; };
+		09D9689F221F760900B1458A /* ChatTitleActivityContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D9689E221F760900B1458A /* ChatTitleActivityContentNode.swift */; };
+		09D968A1221F7FF100B1458A /* ChatTypingActivityContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D968A0221F7FF100B1458A /* ChatTypingActivityContentNode.swift */; };
+		09D968A3221F800A00B1458A /* ChatUploadingActivityContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D968A2221F800A00B1458A /* ChatUploadingActivityContentNode.swift */; };
+		09D968A5221F801A00B1458A /* ChatPlayingActivityContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D968A4221F801A00B1458A /* ChatPlayingActivityContentNode.swift */; };
+		09D968A7221F803500B1458A /* ChatRecordingVoiceActivityContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D968A6221F803500B1458A /* ChatRecordingVoiceActivityContentNode.swift */; };
+		09D968A9221F804700B1458A /* ChatRecordingVideoActivityContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D968A8221F804700B1458A /* ChatRecordingVideoActivityContentNode.swift */; };
 		09DD5D5021ECC3C400D7007A /* SuppressContactsWarning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD5D4F21ECC3C400D7007A /* SuppressContactsWarning.swift */; };
 		09DD5D5221ED175300D7007A /* WallpaperColorPickerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD5D5121ED175300D7007A /* WallpaperColorPickerNode.swift */; };
 		09DD88E921BAF65E000766BC /* ItemListAddressItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88E821BAF65E000766BC /* ItemListAddressItem.swift */; };
@@ -1241,6 +1249,14 @@
 		09C9EA3721A044B500E90146 /* StringForDuration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StringForDuration.swift; sourceTree = "<group>"; };
 		09D304142173C0E900C00567 /* WatchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchManager.swift; sourceTree = "<group>"; };
 		09D304172173C15700C00567 /* WatchSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSettingsController.swift; sourceTree = "<group>"; };
+		09D96898221DE92600B1458A /* ID3ArtworkReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ID3ArtworkReader.swift; sourceTree = "<group>"; };
+		09D9689C221F74F000B1458A /* ChatTitleActivityNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTitleActivityNode.swift; sourceTree = "<group>"; };
+		09D9689E221F760900B1458A /* ChatTitleActivityContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTitleActivityContentNode.swift; sourceTree = "<group>"; };
+		09D968A0221F7FF100B1458A /* ChatTypingActivityContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTypingActivityContentNode.swift; sourceTree = "<group>"; };
+		09D968A2221F800A00B1458A /* ChatUploadingActivityContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatUploadingActivityContentNode.swift; sourceTree = "<group>"; };
+		09D968A4221F801A00B1458A /* ChatPlayingActivityContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPlayingActivityContentNode.swift; sourceTree = "<group>"; };
+		09D968A6221F803500B1458A /* ChatRecordingVoiceActivityContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecordingVoiceActivityContentNode.swift; sourceTree = "<group>"; };
+		09D968A8221F804700B1458A /* ChatRecordingVideoActivityContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecordingVideoActivityContentNode.swift; sourceTree = "<group>"; };
 		09DD5D4F21ECC3C400D7007A /* SuppressContactsWarning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuppressContactsWarning.swift; sourceTree = "<group>"; };
 		09DD5D5121ED175300D7007A /* WallpaperColorPickerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperColorPickerNode.swift; sourceTree = "<group>"; };
 		09DD88E821BAF65E000766BC /* ItemListAddressItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListAddressItem.swift; sourceTree = "<group>"; };
@@ -2542,6 +2558,20 @@
 				09D304172173C15700C00567 /* WatchSettingsController.swift */,
 			);
 			name = Watch;
+			sourceTree = "<group>";
+		};
+		09D9689B221F74AA00B1458A /* Title Activity Indicator */ = {
+			isa = PBXGroup;
+			children = (
+				09D9689C221F74F000B1458A /* ChatTitleActivityNode.swift */,
+				09D9689E221F760900B1458A /* ChatTitleActivityContentNode.swift */,
+				09D968A0221F7FF100B1458A /* ChatTypingActivityContentNode.swift */,
+				09D968A2221F800A00B1458A /* ChatUploadingActivityContentNode.swift */,
+				09D968A6221F803500B1458A /* ChatRecordingVoiceActivityContentNode.swift */,
+				09D968A8221F804700B1458A /* ChatRecordingVideoActivityContentNode.swift */,
+				09D968A4221F801A00B1458A /* ChatPlayingActivityContentNode.swift */,
+			);
+			name = "Title Activity Indicator";
 			sourceTree = "<group>";
 		};
 		09DD88F821BFD6FA000766BC /* Alert */ = {
@@ -4484,6 +4514,7 @@
 				D0DF0C961D81FD87008AEB01 /* Input Context Panels */,
 				D0BA6F811D784C3A0034826E /* Input Panels */,
 				D0D2686A1D788F6600C422DA /* Title Accessory Panels */,
+				09D9689B221F74AA00B1458A /* Title Activity Indicator */,
 				D0F69E441D6B8B850046BCD6 /* History Navigation */,
 				D044A0FA20BDC40C00326FAC /* CachedChannelAdmins.swift */,
 				D01848E721A03BDA00B6DEBD /* ChatSearchState.swift */,
@@ -4760,6 +4791,7 @@
 				D000CABB21F158AD0011B15D /* PrepareSecretThumbnailData.swift */,
 				090B48C72200BCA8005083FA /* WallpaperUploadManager.swift */,
 				09EDAD29220DA6A40012A50B /* VolumeButtons.swift */,
+				09D96898221DE92600B1458A /* ID3ArtworkReader.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -5126,6 +5158,7 @@
 				09B4EE6221AD791600847FA6 /* InstantPageStoredState.swift in Sources */,
 				D0EC6CB21EB9F58800EBF1C3 /* rngs.c in Sources */,
 				09EDAD2A220DA6A40012A50B /* VolumeButtons.swift in Sources */,
+				09D968A9221F804700B1458A /* ChatRecordingVideoActivityContentNode.swift in Sources */,
 				D083491C209361DC008CFD52 /* AvatarGalleryItemFooterContentNode.swift in Sources */,
 				D0EC6CB31EB9F58800EBF1C3 /* shader.c in Sources */,
 				D06E4C352134AE3C00088087 /* ThemeAutoNightSettingsController.swift in Sources */,
@@ -5270,10 +5303,12 @@
 				09619B9621A4ABF600493558 /* InstantPageReferenceControllerNode.swift in Sources */,
 				D0AB263321C3DFEA008F6685 /* CreatePollOptionActionItem.swift in Sources */,
 				D0F8C397201774A200236FC5 /* FeedGroupingController.swift in Sources */,
+				09D968A1221F7FF100B1458A /* ChatTypingActivityContentNode.swift in Sources */,
 				D0EC6CF31EB9F58800EBF1C3 /* PresentationThemeSettings.swift in Sources */,
 				D067B4AD211C916300796039 /* TGChannelIntroController.m in Sources */,
 				D0BE303220601FFC00FBE6D8 /* LocationBroadcastActionSheetItem.swift in Sources */,
 				D0EC6CF41EB9F58800EBF1C3 /* ManagedMediaId.swift in Sources */,
+				09D968A3221F800A00B1458A /* ChatUploadingActivityContentNode.swift in Sources */,
 				D0CFBB971FD8B0F700B65C0D /* ChatBubbleInstantVideoDecoration.swift in Sources */,
 				D0471B601EFEB5A70074D609 /* BotPaymentTextItemNode.swift in Sources */,
 				D0EC6CF51EB9F58800EBF1C3 /* PeerMessageManagedMediaId.swift in Sources */,
@@ -5369,6 +5404,7 @@
 				09749BCD21F23139008FDDE9 /* WallpaperGalleryDecorationNode.swift in Sources */,
 				09EDAD26220D30980012A50B /* AutodownloadConnectionTypeController.swift in Sources */,
 				D0B3AC802142E2E900CD1374 /* ResetPasswordController.swift in Sources */,
+				09D968A7221F803500B1458A /* ChatRecordingVoiceActivityContentNode.swift in Sources */,
 				D05D8B3A2192FC460064586F /* LocalizationListController.swift in Sources */,
 				D0943AFE1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift in Sources */,
 				D0B21B15220D85DD003F741D /* TabBarAccountSwitchController.swift in Sources */,
@@ -5631,6 +5667,7 @@
 				D0CAD8FD20AE467D00ACD96E /* PeerChannelMemberCategoriesContextsManager.swift in Sources */,
 				D073D2DB1FB61DA9009E1DA2 /* CallListSettings.swift in Sources */,
 				D0430B001FF4570500A35ADD /* WebController.swift in Sources */,
+				09D9689D221F74F000B1458A /* ChatTitleActivityNode.swift in Sources */,
 				D0EC6D991EB9F58900EBF1C3 /* ChatMessageMediaBubbleContentNode.swift in Sources */,
 				D0EC6D9A1EB9F58900EBF1C3 /* ChatMessageReplyInfoNode.swift in Sources */,
 				D0FE4DE41F0AEBB900E8A0B3 /* SharedVideoContextManager.swift in Sources */,
@@ -5802,6 +5839,7 @@
 				D0EC6DE71EB9F58900EBF1C3 /* ChatTitleAccessoryPanelNode.swift in Sources */,
 				D0EC6DE81EB9F58900EBF1C3 /* ChatPinnedMessageTitlePanelNode.swift in Sources */,
 				D0EC6DE91EB9F58900EBF1C3 /* ChatInfoTitlePanelNode.swift in Sources */,
+				09D96899221DE92600B1458A /* ID3ArtworkReader.swift in Sources */,
 				D0EC6DEA1EB9F58900EBF1C3 /* ChatReportPeerTitlePanelNode.swift in Sources */,
 				D0B21B1F22156D92003F741D /* LegacyCache.swift in Sources */,
 				D0EC6DEB1EB9F58900EBF1C3 /* ChatRequestInProgressTitlePanelNode.swift in Sources */,
@@ -5833,6 +5871,7 @@
 				D0EC6DFE1EB9F58900EBF1C3 /* GalleryControllerPresentationState.swift in Sources */,
 				09EDAD2C2211552F0012A50B /* AutodownloadMediaCategoryController.swift in Sources */,
 				090B48C82200BCA8005083FA /* WallpaperUploadManager.swift in Sources */,
+				09D968A5221F801A00B1458A /* ChatPlayingActivityContentNode.swift in Sources */,
 				D0E8B8BB2044780600605593 /* ItemListSecretChatKeyItem.swift in Sources */,
 				D0EC6DFF1EB9F58900EBF1C3 /* GalleryItem.swift in Sources */,
 				09619B9521A4ABF600493558 /* InstantPageReferenceController.swift in Sources */,
@@ -6101,6 +6140,7 @@
 				D0EC6E8D1EB9F58900EBF1C3 /* SecretChatKeyVisualization.m in Sources */,
 				09F664C221EAAFCB00AB7E26 /* ThemeColorsGridControllerNode.swift in Sources */,
 				D0BCC3D420404CC7008126C2 /* ChatMessageActionSheetController.swift in Sources */,
+				09D9689F221F760900B1458A /* ChatTitleActivityContentNode.swift in Sources */,
 				D0EC6E8E1EB9F58900EBF1C3 /* NumberPluralizationForm.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

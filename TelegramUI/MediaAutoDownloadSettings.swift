@@ -352,15 +352,19 @@ public func shouldDownloadMediaAutomatically(settings: MediaAutoDownloadSettings
 }
 
 public func shouldPredownloadMedia(settings: MediaAutoDownloadSettings, peerType: MediaAutoDownloadPeerType, networkType: MediaAutoDownloadNetworkType, media: Media) -> Bool {
-    if (networkType == .cellular && !settings.cellular.enabled) || (networkType == .wifi && !settings.wifi.enabled) {
-        return false
-    }
-    
-    if let (category, _) = categoryAndSizeForMedia(media, categories: effectiveAutodownloadCategories(settings: settings, networkType: networkType)) {
-        guard isAutodownloadEnabledForPeerType(peerType, category: category) else {
+    if #available(iOSApplicationExtension 10.3, *) {
+        if (networkType == .cellular && !settings.cellular.enabled) || (networkType == .wifi && !settings.wifi.enabled) {
             return false
         }
-        return category.sizeLimit > 2 * 1024 * 1024 && category.predownload
+        
+        if let (category, _) = categoryAndSizeForMedia(media, categories: effectiveAutodownloadCategories(settings: settings, networkType: networkType)) {
+            guard isAutodownloadEnabledForPeerType(peerType, category: category) else {
+                return false
+            }
+            return category.sizeLimit > 2 * 1024 * 1024 && category.predownload
+        } else {
+            return false
+        }
     } else {
         return false
     }

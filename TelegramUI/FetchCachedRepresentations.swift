@@ -274,6 +274,7 @@ private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource
                     }
                 }
                 
+                let _ = try? FileManager.default.removeItem(atPath: tempFilePath)
                 subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
                 subscriber.putCompletion()
             } catch (let _) {
