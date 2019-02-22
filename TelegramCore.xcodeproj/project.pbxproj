@@ -739,6 +739,8 @@
 		D0F3CC7D1DDE289E008148FA /* ResolvePeerByName.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3CC7C1DDE289E008148FA /* ResolvePeerByName.swift */; };
 		D0F53BE91E784A4800117362 /* ChangeAccountPhoneNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F53BE81E784A4800117362 /* ChangeAccountPhoneNumber.swift */; };
 		D0F53BEA1E784A4800117362 /* ChangeAccountPhoneNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F53BE81E784A4800117362 /* ChangeAccountPhoneNumber.swift */; };
+		D0F760D822202FE20074F7E5 /* ChannelStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F760D722202FE20074F7E5 /* ChannelStats.swift */; };
+		D0F760D922202FE20074F7E5 /* ChannelStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F760D722202FE20074F7E5 /* ChannelStats.swift */; };
 		D0F7AB2C1DCE889D009AD9A1 /* EditedMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB2B1DCE889D009AD9A1 /* EditedMessageAttribute.swift */; };
 		D0F7AB2D1DCE889D009AD9A1 /* EditedMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB2B1DCE889D009AD9A1 /* EditedMessageAttribute.swift */; };
 		D0F7AB2F1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB2E1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift */; };
@@ -1200,6 +1202,7 @@
 		D0F3A8A71E82CD7D00B4C64C /* UpdatePeerChatInterfaceState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdatePeerChatInterfaceState.swift; sourceTree = "<group>"; };
 		D0F3CC7C1DDE289E008148FA /* ResolvePeerByName.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResolvePeerByName.swift; sourceTree = "<group>"; };
 		D0F53BE81E784A4800117362 /* ChangeAccountPhoneNumber.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChangeAccountPhoneNumber.swift; sourceTree = "<group>"; };
+		D0F760D722202FE20074F7E5 /* ChannelStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelStats.swift; sourceTree = "<group>"; };
 		D0F7AB2B1DCE889D009AD9A1 /* EditedMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EditedMessageAttribute.swift; sourceTree = "<group>"; };
 		D0F7AB2E1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReplyMarkupMessageAttribute.swift; sourceTree = "<group>"; };
 		D0F8C39C20178B9B00236FC5 /* GroupFeedPeers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupFeedPeers.swift; sourceTree = "<group>"; };
@@ -1962,6 +1965,7 @@
 				D0F8C39C20178B9B00236FC5 /* GroupFeedPeers.swift */,
 				D018EE042045E95000CBB130 /* CheckPeerChatServiceActions.swift */,
 				9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */,
+				D0F760D722202FE20074F7E5 /* ChannelStats.swift */,
 			);
 			name = Peers;
 			sourceTree = "<group>";
@@ -2469,6 +2473,7 @@
 				D0CA3F84207391560042D2B6 /* SecureIdPadding.swift in Sources */,
 				D0FA8BB61E223C16001E855B /* SecretApiLayer8.swift in Sources */,
 				D0B843C71DA7FF30005F29E1 /* NBPhoneNumberDefines.m in Sources */,
+				D0F760D822202FE20074F7E5 /* ChannelStats.swift in Sources */,
 				0962E66921B5A11100245FD9 /* SynchronizeAppLogEventsOperation.swift in Sources */,
 				D049EAF51E44DF3300A2CD3A /* AccountState.swift in Sources */,
 				C28725421EF967E700613564 /* NotificationInfoMessageAttribute.swift in Sources */,
@@ -2861,6 +2866,7 @@
 				D0F7B1E41E045C7B007EB8A5 /* InstantPage.swift in Sources */,
 				D03E5E0D1E55E02D0029569A /* LoggedOutAccountAttribute.swift in Sources */,
 				D0B418AD1D7E0597004562A4 /* Serialization.swift in Sources */,
+				D0F760D922202FE20074F7E5 /* ChannelStats.swift in Sources */,
 				D0ADF912212B00DD00310BBC /* SecureIdConfiguration.swift in Sources */,
 				C28725431EF967E700613564 /* NotificationInfoMessageAttribute.swift in Sources */,
 				D0A89990217A37A000759EE6 /* NotificationAutolockReportManager.swift in Sources */,

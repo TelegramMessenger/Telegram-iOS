@@ -2740,11 +2740,12 @@ extension Api {
                     })
                 }
             
-                static func getStatsURL(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StatsURL>) {
+                static func getStatsURL(peer: Api.InputPeer, params: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StatsURL>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-2080980787)
+                    buffer.appendInt32(-338326349)
                     peer.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.getStatsURL", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.StatsURL? in
+                    serializeString(params, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getStatsURL", parameters: [("peer", peer), ("params", params)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.StatsURL? in
                         let reader = BufferReader(buffer)
                         var result: Api.StatsURL?
                         if let signature = reader.readInt32() {
