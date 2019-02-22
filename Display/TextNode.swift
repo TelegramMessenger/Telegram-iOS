@@ -216,6 +216,54 @@ public final class TextNodeLayout: NSObject {
         return rects
     }
     
+    public func textRangesRects(text: String) -> [[CGRect]] {
+        guard let attributedString = self.attributedString else {
+            return []
+        }
+        var ranges: [Range<String.Index>] = []
+        var searchRange = attributedString.string.startIndex ..< attributedString.string.endIndex
+        while searchRange.lowerBound != attributedString.string.endIndex {
+            if let range = attributedString.string.range(of: text, options: [.caseInsensitive, .diacriticInsensitive], range: searchRange, locale: nil) {
+                ranges.append(range)
+                searchRange = range.upperBound ..< attributedString.string.endIndex
+            } else {
+                break
+            }
+        }
+        var result: [[CGRect]] = []
+        for stringRange in ranges {
+            var rects: [CGRect] = []
+            let range = NSRange(stringRange, in: attributedString.string)
+            for line in self.lines {
+                let lineRange = NSIntersectionRange(range, line.range)
+                if lineRange.length != 0 {
+                    var leftOffset: CGFloat = 0.0
+                    if lineRange.location != line.range.location {
+                        leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
+                    }
+                    var rightOffset: CGFloat = line.frame.width
+                    if lineRange.location + lineRange.length != line.range.length {
+                        var secondaryOffset: CGFloat = 0.0
+                        let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
+                        rightOffset = ceil(rawOffset)
+                        if !rawOffset.isEqual(to: secondaryOffset) {
+                            rightOffset = ceil(secondaryOffset)
+                        }
+                    }
+                    var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                    
+                    lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
+                    
+                    rects.append(CGRect(origin: CGPoint(x: lineFrame.minX + leftOffset + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: rightOffset - leftOffset, height: lineFrame.size.height)))
+                }
+            }
+            if !rects.isEmpty {
+                result.append(rects)
+            }
+        }
+        return result
+    }
+    
     public func attributeSubstring(name: String, index: Int) -> String? {
         if let attributedString = self.attributedString {
             var range = NSRange()
@@ -282,6 +330,10 @@ public class TextNode: ASDisplayNode {
         } else {
             return nil
         }
+    }
+    
+    public func textRangesRects(text: String) -> [[CGRect]] {
+        return self.cachedLayout?.textRangesRects(text: text) ?? []
     }
     
     public func attributeSubstring(name: String, index: Int) -> String? {
