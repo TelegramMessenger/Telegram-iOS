@@ -177,14 +177,18 @@ public func collectCacheUsageStats(account: Account, additionalCachePaths: [Stri
                         var tempPaths: [String] = []
                         var tempSize: Int64 = 0
                         #if os(iOS)
-                            if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: NSTemporaryDirectory()), includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey]) {
+                            if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: NSTemporaryDirectory()), includingPropertiesForKeys: [.isDirectoryKey, .fileAllocatedSizeKey, .isSymbolicLinkKey]) {
                                 for url in enumerator {
                                     if let url = url as? URL {
                                         if let isDirectoryValue = (try? url.resourceValues(forKeys: Set([.isDirectoryKey])))?.isDirectory, isDirectoryValue {
                                             tempPaths.append(url.path)
-                                        } else if let fileSizeValue = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize {
+                                        } else if let fileSizeValue = (try? url.resourceValues(forKeys: Set([.fileAllocatedSizeKey])))?.fileAllocatedSize {
                                             tempPaths.append(url.path)
-                                            tempSize += Int64(fileSizeValue)
+                                            
+                                            if let isSymbolicLinkValue = (try? url.resourceValues(forKeys: Set([.isSymbolicLinkKey])))?.isSymbolicLink, isSymbolicLinkValue {
+                                            } else {
+                                                tempSize += Int64(fileSizeValue)
+                                            }
                                         }
                                     }
                                 }
@@ -208,15 +212,17 @@ public func collectCacheUsageStats(account: Account, additionalCachePaths: [Stri
                         }
                         
                         for additionalPath in additionalCachePaths {
-                            if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: additionalPath), includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey]) {
+                            if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: additionalPath), includingPropertiesForKeys: [.isDirectoryKey, .fileAllocatedSizeKey, .isSymbolicLinkKey]) {
                                 for url in enumerator {
                                     if let url = url as? URL {
                                         if let isDirectoryValue = (try? url.resourceValues(forKeys: Set([.isDirectoryKey])))?.isDirectory, isDirectoryValue {
-                                            //tempPaths.append(url.path)
-                                        } else if let fileSizeValue = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize {
+                                        } else if let fileSizeValue = (try? url.resourceValues(forKeys: Set([.fileAllocatedSizeKey])))?.fileAllocatedSize {
                                             tempPaths.append(url.path)
-                                            //print("\(url.path) \(fileSizeValue)")
-                                            tempSize += Int64(fileSizeValue)
+
+                                            if let isSymbolicLinkValue = (try? url.resourceValues(forKeys: Set([.isSymbolicLinkKey])))?.isSymbolicLink, isSymbolicLinkValue {
+                                            } else {
+                                                tempSize += Int64(fileSizeValue)
+                                            }
                                         }
                                     }
                                 }
