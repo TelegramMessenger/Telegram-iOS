@@ -19,7 +19,7 @@ func managedAutodownloadSettingsUpdates(accountManager: AccountManager, network:
             })
         }).start()
     }
-    return (poll |> then(.complete() |> suspendAwareDelay(24.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+    return (poll |> then(.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
 
 public enum SavedAutodownloadPreset {
