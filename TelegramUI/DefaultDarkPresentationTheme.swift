@@ -158,6 +158,8 @@ private let bubble = PresentationThemeChatBubble(
     outgoingLinkHighlightColor: accentColor.withAlphaComponent(0.5),
     infoPrimaryTextColor: UIColor(rgb: 0xffffff),
     infoLinkTextColor: accentColor,
+    incomingTextHighlightColor: UIColor(rgb: 0xffe438),
+    outgoingTextHighlightColor: UIColor(rgb: 0xffe438),
     incomingAccentTextColor: UIColor(rgb: 0xffffff),
     outgoingAccentTextColor: UIColor(rgb: 0xffffff),
     incomingAccentControlColor: UIColor(rgb: 0xffffff),

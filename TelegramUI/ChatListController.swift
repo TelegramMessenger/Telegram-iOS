@@ -445,7 +445,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         
                         if let strongSelf = self {
                             strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
-                            let _ = removePeerChat(postbox: strongSelf.context.account.postbox, peerId: peerId, reportChatSpam: false).start(completed: {
+                            let _ = removePeerChat(account: strongSelf.context.account, peerId: peerId, reportChatSpam: false).start(completed: {
                                 self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
                             })
                             let _ = requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.peerId, isBlocked: true).start()
@@ -1087,7 +1087,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 
                 let signal: Signal<Void, NoError> = strongSelf.context.account.postbox.transaction { transaction -> Void in
                     for peerId in peerIds {
-                        removePeerChat(transaction: transaction, mediaBox: context.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: false)
+                        removePeerChat(account: context.account, transaction: transaction, mediaBox: context.account.postbox.mediaBox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: false)
                     }
                 }
                 |> afterDisposed {
@@ -1157,7 +1157,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
             if shouldCommit {
                 strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
-                let _ = removePeerChat(postbox: strongSelf.context.account.postbox, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: deleteGloballyIfPossible).start(completed: {
+                let _ = removePeerChat(account: strongSelf.context.account, peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: deleteGloballyIfPossible).start(completed: {
                     guard let strongSelf = self else {
                         return
                     }

@@ -970,6 +970,25 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                     }
                     if let contactDataManager = context.sharedContext.contactDataManager {
                         let _ = (contactDataManager.createContactWithData(composedContactData)
+                        |> mapToSignal { contactIdAndData -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, NoError> in
+                            guard let (id, data) = contactIdAndData else {
+                                return .single(nil)
+                            }
+                            if filteredPhoneNumbers.count == 1 {
+                                return importContact(account: context.account, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers[0].value)
+                                |> mapToSignal { peerId -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, NoError> in
+                                    if let peerId = peerId {
+                                        return context.account.postbox.transaction { transaction -> (DeviceContactStableId, DeviceContactExtendedData, Peer?)? in
+                                            return (id, data, transaction.getPeer(peerId))
+                                        }
+                                    } else {
+                                        return .single((id, data, nil))
+                                    }
+                                }
+                            } else {
+                                return .single((id, data, nil))
+                            }
+                        }
                         |> deliverOnMainQueue).start(next: { contactIdAndData in
                             updateState { state in
                                 var state = state
@@ -977,7 +996,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                                 return state
                             }
                             if let contactIdAndData = contactIdAndData {
-                                //completion(nil, contactIdAndData.0, contactIdAndData.1)
+                                completion(contactIdAndData.2, contactIdAndData.0, contactIdAndData.1)
                             }
                             completed?()
                             dismissImpl?(true)

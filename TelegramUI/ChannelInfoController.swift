@@ -15,6 +15,7 @@ private final class ChannelInfoControllerArguments {
     let openChannelTypeSetup: () -> Void
     let changeNotificationMuteSettings: () -> Void
     let openSharedMedia: () -> Void
+    let openStats: () -> Void
     let openAdmins: () -> Void
     let openMembers: () -> Void
     let openBanned: () -> Void
@@ -25,7 +26,7 @@ private final class ChannelInfoControllerArguments {
     let displayContextMenu: (ChannelInfoEntryTag, String) -> Void
     let aboutLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
     let toggleSignatures:(Bool) -> Void
-    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void, displayAddressNameContextMenu: @escaping (String) -> Void, displayContextMenu: @escaping (ChannelInfoEntryTag, String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, toggleSignatures: @escaping(Bool)->Void) {
+    init(account: Account, avatarAndNameInfoContext: ItemListAvatarAndNameInfoItemContext, tapAvatarAction: @escaping () -> Void, changeProfilePhoto: @escaping () -> Void, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updateEditingDescriptionText: @escaping (String) -> Void, openChannelTypeSetup: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openSharedMedia: @escaping () -> Void, openStats: @escaping () -> Void, openAdmins: @escaping () -> Void, openMembers: @escaping () -> Void, openBanned: @escaping () -> Void, reportChannel: @escaping () -> Void, leaveChannel: @escaping () -> Void, deleteChannel: @escaping () -> Void, displayAddressNameContextMenu: @escaping (String) -> Void, displayContextMenu: @escaping (ChannelInfoEntryTag, String) -> Void, aboutLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void, toggleSignatures: @escaping(Bool)->Void) {
         self.account = account
         self.avatarAndNameInfoContext = avatarAndNameInfoContext
         self.tapAvatarAction = tapAvatarAction
@@ -35,6 +36,7 @@ private final class ChannelInfoControllerArguments {
         self.openChannelTypeSetup = openChannelTypeSetup
         self.changeNotificationMuteSettings = changeNotificationMuteSettings
         self.openSharedMedia = openSharedMedia
+        self.openStats = openStats
         self.openAdmins = openAdmins
         self.openMembers = openMembers
         self.openBanned = openBanned
@@ -73,6 +75,7 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
     case banned(theme: PresentationTheme, text: String, value: String)
     case notifications(theme: PresentationTheme, text: String, value: String)
     case sharedMedia(theme: PresentationTheme, text: String)
+    case stats(theme: PresentationTheme, text: String)
     case signMessages(theme: PresentationTheme, text: String, value: Bool)
     case signInfo(theme: PresentationTheme, text: String)
     case report(theme: PresentationTheme, text: String)
@@ -87,7 +90,7 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 return ChannelInfoSection.discriptionAndType.rawValue
             case .admins, .members, .banned:
                 return ChannelInfoSection.members.rawValue
-            case .sharedMedia, .notifications:
+            case .sharedMedia, .notifications, .stats:
                 return ChannelInfoSection.sharedMediaAndNotifications.rawValue
             case .report, .leave, .deleteChannel:
                 return ChannelInfoSection.reportOrLeave.rawValue
@@ -122,12 +125,14 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 return 12
             case .sharedMedia:
                 return 14
-            case .report:
+            case .stats:
                 return 15
-            case .leave:
+            case .report:
                 return 16
-            case .deleteChannel:
+            case .leave:
                 return 17
+            case .deleteChannel:
+                return 18
         }
     }
     
@@ -235,6 +240,12 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .stats(lhsTheme, lhsText):
+                if case let .stats(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .report(lhsTheme, lhsText):
                 if case let .report(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -321,6 +332,10 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
             case let .sharedMedia(theme, text):
                 return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .plain, action: {
                     arguments.openSharedMedia()
+                })
+            case let .stats(theme, text):
+                return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .plain, action: {
+                    arguments.openStats()
                 })
             case let .notifications(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {
@@ -482,6 +497,9 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
         }
         if state.editingState == nil {
             entries.append(ChannelInfoEntry.sharedMedia(theme: presentationData.theme, text: presentationData.strings.GroupInfo_SharedMedia))
+            if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.flags.contains(.canViewStats) {
+                entries.append(ChannelInfoEntry.stats(theme: presentationData.theme, text: presentationData.strings.ChannelInfo_Stats))
+            }
         }
         
         if peer.flags.contains(.isCreator) {
@@ -556,6 +574,9 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     
     let navigateDisposable = MetaDisposable()
     actionsDisposable.add(navigateDisposable)
+    
+    let statsUrlDisposable = MetaDisposable()
+    actionsDisposable.add(statsUrlDisposable)
     
     var avatarGalleryTransitionArguments: ((AvatarGalleryEntry) -> GalleryTransitionArguments?)?
     let avatarAndNameInfoContext = ItemListAvatarAndNameInfoItemContext()
@@ -722,6 +743,43 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
         if let controller = peerSharedMediaController(context: context, peerId: peerId) {
             pushControllerImpl?(controller)
         }
+    }, openStats: {
+        var urlSignal = channelStatsUrl(postbox: context.account.postbox, network: context.account.network, peerId: peerId, params: "")
+        
+        var cancelImpl: (() -> Void)?
+        let progressSignal = Signal<Never, NoError> { subscriber in
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
+                cancelImpl?()
+            }))
+            presentControllerImpl?(controller, nil)
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.15, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        urlSignal = urlSignal
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        cancelImpl = {
+            statsUrlDisposable.set(nil)
+        }
+        
+        statsUrlDisposable.set((urlSignal
+        |> deliverOnMainQueue).start(next: { url in
+            pushControllerImpl?(ChannelStatsController(context: context, url: url, peerId: peerId))
+        }, error: { _ in
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+        }))
     }, openAdmins: {
         pushControllerImpl?(channelAdminsController(context: context, peerId: peerId))
     }, openMembers: {

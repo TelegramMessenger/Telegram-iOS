@@ -35,6 +35,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let statusNode: ChatMessageDateAndStatusNode
     private var linkHighlightingNode: LinkHighlightingNode?
     
+    private var textHighlightingNodes: [LinkHighlightingNode] = []
+    
     private var cachedChatMessageText: CachedChatMessageText?
     
     required init() {
@@ -383,5 +385,34 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         return nil
+    }
+    
+    override func updateSearchTextHighlightState(text: String?) {
+        guard let item = self.item else {
+            return
+        }
+        let rectsSet: [[CGRect]]
+        if let text = text, !text.isEmpty {
+            rectsSet = self.textNode.textRangesRects(text: text)
+        } else {
+            rectsSet = []
+        }
+        for i in 0 ..< rectsSet.count {
+            let rects = rectsSet[i]
+            let textHighlightNode: LinkHighlightingNode
+            if self.textHighlightingNodes.count < i {
+                textHighlightNode = self.textHighlightingNodes[i]
+            } else {
+                textHighlightNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingTextHighlightColor : item.presentationData.theme.theme.chat.bubble.outgoingTextHighlightColor)
+                self.textHighlightingNodes.append(textHighlightNode)
+                self.insertSubnode(textHighlightNode, belowSubnode: self.textNode)
+            }
+            textHighlightNode.frame = self.textNode.frame
+            textHighlightNode.updateRects(rects)
+        }
+        for i in (rectsSet.count ..< self.textHighlightingNodes.count).reversed() {
+            self.textHighlightingNodes[i].removeFromSupernode()
+            self.textHighlightingNodes.remove(at: i)
+        }
     }
 }

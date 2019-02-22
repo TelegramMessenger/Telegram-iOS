@@ -2117,6 +2117,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             if let strongSelf = self, strongSelf.isNodeLoaded, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
                 if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageId(message.id) }).updatedSearch(nil) })
+                    strongSelf.updateItemNodesSearchTextHighlightStates()
                     strongSelf.chatDisplayNode.ensureInputViewFocused()
                 }
             }
@@ -2353,6 +2354,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         }
                     }.updatedSearch(current.search == nil ? ChatSearchData(domain: domain).withUpdatedQuery(query) : current.search?.withUpdatedDomain(domain).withUpdatedQuery(query))
                 })
+                strongSelf.updateItemNodesSearchTextHighlightStates()
             }
         }, dismissMessageSearch: { [weak self] in
             if let strongSelf = self {
@@ -2369,6 +2371,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         return current
                     }
                 })
+                strongSelf.updateItemNodesSearchTextHighlightStates()
             }
         }, navigateMessageSearch: { [weak self] action in
             if let strongSelf = self {
@@ -2395,6 +2398,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     }
                     return current
                 })
+                strongSelf.updateItemNodesSearchTextHighlightStates()
                 if let navigateIndex = navigateIndex {
                     switch strongSelf.chatLocation {
                         case .peer:
@@ -2441,6 +2445,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         return state
                     }
                 })
+                strongSelf.updateItemNodesSearchTextHighlightStates()
             }
         }, navigateToMessage: { [weak self] messageId in
             self?.navigateToMessage(from: nil, to: .id(messageId))
@@ -3692,6 +3697,21 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
     }
     
+    private func updateItemNodesSearchTextHighlightStates() {
+        var searchString: String?
+        if let search = self.presentationInterfaceState.search, let resultsState = search.resultsState, !resultsState.messageIndices.isEmpty {
+            searchString = search.query
+        }
+        if searchString != self.controllerInteraction?.searchTextHighightState {
+            self.controllerInteraction?.searchTextHighightState = searchString
+            self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ChatMessageItemView {
+                    itemNode.updateSearchTextHighlightState()
+                }
+            }
+        }
+    }
+    
     private func updateItemNodesHighlightedStates(animated: Bool) {
         self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {
@@ -4721,6 +4741,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                         strongSelf.navigateToMessage(from: nil, to: .index(navigateIndex))
                                 }
                             }
+                            strongSelf.updateItemNodesSearchTextHighlightStates()
                         }, completed: { [weak self] in
                             if let strongSelf = self {
                                 strongSelf.searching.set(false)
@@ -4771,6 +4792,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }
             }
         }
+        self.updateItemNodesSearchTextHighlightStates()
         return nil
     }
     
@@ -5303,7 +5325,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
         self.commitPurposefulAction()
         self.chatDisplayNode.historyNode.disconnect()
-        let _ = removePeerChat(postbox: self.context.account.postbox, peerId: peerId, reportChatSpam: reportChatSpam).start()
+        let _ = removePeerChat(account: self.context.account, peerId: peerId, reportChatSpam: reportChatSpam).start()
         (self.navigationController as? NavigationController)?.popToRoot(animated: true)
         
         let _ = requestUpdatePeerIsBlocked(account: self.context.account, peerId: peerId, isBlocked: true).start()

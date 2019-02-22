@@ -85,14 +85,21 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
                 fetchedData = fileData
             } else {
                 let semaphore = DispatchSemaphore(value: 0)
+                let _ = context.currentSemaphore.swap(semaphore)
+                var completedRequest = false
                 let disposable = data.start(next: { data in
                     if data.count == readCount {
                         fetchedData = data
+                        completedRequest = true
                         semaphore.signal()
                     }
                 })
                 semaphore.wait()
+                let _ = context.currentSemaphore.swap(nil)
                 disposable.dispose()
+                if !completedRequest {
+                    return -1
+                }
             }
         }
     } else {
@@ -115,7 +122,9 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
         } else {
             let data = postbox.mediaBox.resourceData(resourceReference.resource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false))
             let semaphore = DispatchSemaphore(value: 0)
+            let _ = context.currentSemaphore.swap(semaphore)
             let readingOffset = context.readingOffset
+            var completedRequest = false
             let disposable = data.start(next: { next in
                 if next.complete {
                     let readCount = max(0, min(next.size - readingOffset, Int(bufferSize)))
@@ -132,11 +141,16 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
                         fetchedData = data
                         close(fd)
                     }
+                    completedRequest = true
                     semaphore.signal()
                 }
             })
             semaphore.wait()
+            let _ = context.currentSemaphore.swap(nil)
             disposable.dispose()
+            if !completedRequest {
+                return -1
+            }
         }
     }
     if let fetchedData = fetchedData {
@@ -147,6 +161,9 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
         context.readingOffset += Int(fetchedCount)
     }
     
+    if context.closed {
+        return -1
+    }
     return fetchedCount
 }
 
@@ -169,14 +186,21 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
                 var resultSize: Int = Int(Int32.max - 1)
                 let data = postbox.mediaBox.resourceData(resourceReference.resource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false))
                 let semaphore = DispatchSemaphore(value: 0)
+                let _ = context.currentSemaphore.swap(semaphore)
+                var completedRequest = false
                 let disposable = data.start(next: { next in
                     if next.complete {
                         resultSize = Int(next.size)
+                        completedRequest = true
                         semaphore.signal()
                     }
                 })
                 semaphore.wait()
+                let _ = context.currentSemaphore.swap(nil)
                 disposable.dispose()
+                if !completedRequest {
+                    return -1
+                }
                 resourceSize = resultSize
             }
         } else {
@@ -210,6 +234,10 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
         }
     }
     
+    if context.closed {
+        return -1
+    }
+    
     return result
 }
 
@@ -239,6 +267,8 @@ final class FFMpegMediaFrameSourceContext: NSObject {
     
     private var preferSoftwareDecoding: Bool = false
     fileprivate var fetchAutomatically: Bool = true
+    
+    let currentSemaphore = Atomic<DispatchSemaphore?>(value: nil)
     
     init(thread: Thread) {
         self.thread = thread
@@ -583,6 +613,10 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             
             completed(FFMpegMediaFrameSourceDescriptionSet(audio: audioDescription, video: videoDescription, extraVideoFrames: extraVideoFrames), actualPts)
         }
+    }
+    
+    func close() {
+        self.closed = true
     }
 }
 

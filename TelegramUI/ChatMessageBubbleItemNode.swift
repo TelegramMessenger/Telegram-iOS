@@ -1449,6 +1449,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         actionButtonsNode.removeFromSupernode()
                         strongSelf.actionButtonsNode = nil
                     }
+                    
+                    strongSelf.updateSearchTextHighlightState()
                 }
             })
         }
@@ -1955,6 +1957,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     selectionNode.removeFromSupernode()
                 }
             }
+        }
+    }
+    
+    override func updateSearchTextHighlightState() {
+        for contentNode in self.contentNodes {
+            contentNode.updateSearchTextHighlightState(text: self.item?.controllerInteraction.searchTextHighightState)
         }
     }
     

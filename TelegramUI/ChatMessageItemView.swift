@@ -209,6 +209,9 @@ public class ChatMessageItemView: ListViewItemNode {
     func updateSelectionState(animated: Bool) {
     }
     
+    func updateSearchTextHighlightState() {
+    }
+    
     func updateHighlightedState(animated: Bool) {
         var isHighlightedInOverlay = false
         if let item = self.item, let contextHighlightedState = item.controllerInteraction.contextHighlightedState {

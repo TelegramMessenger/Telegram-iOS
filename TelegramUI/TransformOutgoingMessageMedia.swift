@@ -140,7 +140,8 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                 
                 let result: Signal<MediaResourceData, NoError>
                 if opportunistic {
-                    result = signal |> take(1)
+                    result = signal
+                    |> take(1)
                 } else {
                     result = signal
                 }

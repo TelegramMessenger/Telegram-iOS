@@ -1120,6 +1120,8 @@
 		D0F67FF21EE6B915000E5906 /* ChannelMembersSearchControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F67FF11EE6B915000E5906 /* ChannelMembersSearchControllerNode.swift */; };
 		D0F67FF41EE6C10F000E5906 /* ChannelMembersSearchContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F67FF31EE6C10F000E5906 /* ChannelMembersSearchContainerNode.swift */; };
 		D0F6800A1EE750EE000E5906 /* ChannelBannedMemberController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F680091EE750EE000E5906 /* ChannelBannedMemberController.swift */; };
+		D0F760DB222034910074F7E5 /* ChannelStatsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F760DA222034910074F7E5 /* ChannelStatsController.swift */; };
+		D0F760DD222034980074F7E5 /* ChannelStatsControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F760DC222034980074F7E5 /* ChannelStatsControllerNode.swift */; };
 		D0F8C397201774A200236FC5 /* FeedGroupingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F8C396201774A200236FC5 /* FeedGroupingController.swift */; };
 		D0F8C399201774AF00236FC5 /* FeedGroupingControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F8C398201774AF00236FC5 /* FeedGroupingControllerNode.swift */; };
 		D0F9720F1FFE4BD5002595C8 /* notification.caf in Resources */ = {isa = PBXBuildFile; fileRef = D0C50E431E93FCD200F62E39 /* notification.caf */; };
@@ -2332,6 +2334,8 @@
 		D0F69EA91D6B9BCB0046BCD6 /* libavformat.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavformat.a; path = "third-party/FFmpeg-iOS/lib/libavformat.a"; sourceTree = "<group>"; };
 		D0F69EAA1D6B9BCB0046BCD6 /* libavutil.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavutil.a; path = "third-party/FFmpeg-iOS/lib/libavutil.a"; sourceTree = "<group>"; };
 		D0F69EAB1D6B9BCB0046BCD6 /* libswresample.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libswresample.a; path = "third-party/FFmpeg-iOS/lib/libswresample.a"; sourceTree = "<group>"; };
+		D0F760DA222034910074F7E5 /* ChannelStatsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelStatsController.swift; sourceTree = "<group>"; };
+		D0F760DC222034980074F7E5 /* ChannelStatsControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelStatsControllerNode.swift; sourceTree = "<group>"; };
 		D0F7AB341DCFADCD009AD9A1 /* ChatMessageBubbleImages.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageBubbleImages.swift; sourceTree = "<group>"; };
 		D0F7AB381DCFF87B009AD9A1 /* ChatMessageDateHeader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageDateHeader.swift; sourceTree = "<group>"; };
 		D0F8C396201774A200236FC5 /* FeedGroupingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedGroupingController.swift; sourceTree = "<group>"; };
@@ -4206,6 +4210,8 @@
 				D0F4B019211073C500912B92 /* DeviceContactInfoController.swift */,
 				092F368F2157AB46001A9F49 /* ItemListCallListItem.swift */,
 				09DD88E821BAF65E000766BC /* ItemListAddressItem.swift */,
+				D0F760DA222034910074F7E5 /* ChannelStatsController.swift */,
+				D0F760DC222034980074F7E5 /* ChannelStatsControllerNode.swift */,
 			);
 			name = "Peer Info";
 			sourceTree = "<group>";
@@ -5335,6 +5341,7 @@
 				D0EC6D161EB9F58800EBF1C3 /* MediaTrackFrameDecoder.swift in Sources */,
 				D056CD701FF147B000880D28 /* IconButtonNode.swift in Sources */,
 				D0EC6D171EB9F58800EBF1C3 /* FFMpegAudioFrameDecoder.swift in Sources */,
+				D0F760DB222034910074F7E5 /* ChannelStatsController.swift in Sources */,
 				D0EC6D181EB9F58800EBF1C3 /* FFMpegMediaFrameSource.swift in Sources */,
 				D0EC6D191EB9F58800EBF1C3 /* FFMpegMediaFrameSourceContext.swift in Sources */,
 				D02D60AE206BD47300FEFE1E /* SecureIdDocumentTypeSelectionController.swift in Sources */,
@@ -5369,6 +5376,7 @@
 				D007019E2029EFDD006B9E34 /* ICloudResources.swift in Sources */,
 				D0EC6D221EB9F58800EBF1C3 /* PhotoResources.swift in Sources */,
 				D048EA871F4F296400188713 /* InstantPageSettingsFontSizeItemNode.swift in Sources */,
+				D0F760DD222034980074F7E5 /* ChannelStatsControllerNode.swift in Sources */,
 				D0EC6D231EB9F58800EBF1C3 /* StickerResources.swift in Sources */,
 				09C9EA3821A044B500E90146 /* StringForDuration.swift in Sources */,
 				D0EC6D241EB9F58800EBF1C3 /* CachedResourceRepresentations.swift in Sources */,

@@ -21,7 +21,7 @@ func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceD
             let madeProgress = Atomic<Bool>(value: false)
             option.progressHandler = { progress, error, _, _ in
                 if !madeProgress.swap(true) {
-                    subscriber.putNext(.reset)
+                    //subscriber.putNext(.reset)
                 }
             }
             let size = CGSize(width: 1280.0, height: 1280.0)
@@ -37,7 +37,7 @@ func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceD
                     if let image = image {
                         if let info = info, let degraded = info[PHImageResultIsDegradedKey], (degraded as AnyObject).boolValue!{
                             if !madeProgress.swap(true) {
-                                subscriber.putNext(.reset)
+                                //subscriber.putNext(.reset)
                             }
                         } else {
                             _ = madeProgress.swap(true)
@@ -71,7 +71,7 @@ func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceD
                         }
                     } else {
                         if !madeProgress.swap(true) {
-                            subscriber.putNext(.reset)
+                            //subscriber.putNext(.reset)
                         }
                     }
                 }
