@@ -108,18 +108,6 @@ final class AuthorizedApplicationContext {
         
         self.context = context
         
-        let runningWatchTasksPromise = Promise<WatchRunningTasks?>(nil)
-        
-        let runningDownloadTasks = combineLatest(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]), context.account.shouldKeepBackgroundDownloadConnections.get())
-        |> map { sharedData, shouldKeepBackgroundDownloadConnections -> Bool in
-            let settings: AutomaticMediaDownloadSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? AutomaticMediaDownloadSettings ?? AutomaticMediaDownloadSettings.defaultSettings
-            if !settings.downloadInBackground {
-                return false
-            }
-            return shouldKeepBackgroundDownloadConnections
-        }
-        |> distinctUntilChanged
-        
         self.showCallsTab = showCallsTab
         
         self.notificationController = NotificationContainerController(context: context)
@@ -774,7 +762,6 @@ final class AuthorizedApplicationContext {
             
             let watchManager = WatchManager(arguments: arguments)
             strongSelf.context.watchManager = watchManager
-            runningWatchTasksPromise.set(watchManager.runningTasks)
             
             strongSelf.watchNavigateToMessageDisposable.set((strongSelf.context.sharedContext.applicationBindings.applicationInForeground |> mapToSignal({ applicationInForeground -> Signal<(Bool, MessageId), NoError> in
                 return watchManager.navigateToMessageRequested

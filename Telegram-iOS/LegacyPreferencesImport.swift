@@ -290,9 +290,6 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                             settings.dataSaving = .never
                     }
                 }
-                if let callsDisableP2P = callsDisableP2P, callsDisableP2P {
-                    settings.legacyP2PMode = .never
-                }
                 if let callsDisableCallKit = callsDisableCallKit, callsDisableCallKit {
                     settings.enableSystemIntegration = false
                 }
