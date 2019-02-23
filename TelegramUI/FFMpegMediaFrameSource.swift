@@ -209,9 +209,6 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
             let currentSemaphore = Atomic<Atomic<DispatchSemaphore?>?>(value: nil)
             
             disposable.set(ActionDisposable {
-                self.performWithContext({ context in
-                    context.close()
-                })
                 currentSemaphore.with({ $0 })?.with({ $0 })?.signal()
             })
             
