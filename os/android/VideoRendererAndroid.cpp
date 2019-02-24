@@ -48,7 +48,7 @@ void VideoRendererAndroid::Reset(uint32_t codec, unsigned int width, unsigned in
 void VideoRendererAndroid::DecodeAndDisplay(Buffer frame, uint32_t pts){
 	/*decoderThread.Post(std::bind([this](Buffer frame){
 	}, std::move(frame)));*/
-	LOGV("2 before decode %u", (unsigned int)frame.Length());
+	//LOGV("2 before decode %u", (unsigned int)frame.Length());
 	queue.Put(std::move(frame));
 }
 
@@ -89,9 +89,9 @@ void VideoRendererAndroid::RunThread(){
 	jobject jbuf=env->NewDirectByteBuffer(buf, bufferSize);
 
 	while(running){
-		LOGV("before get from queue");
+		//LOGV("before get from queue");
 		Buffer frame=std::move(queue.GetBlocking());
-		LOGV("1 before decode %u", (unsigned int)frame.Length());
+		//LOGV("1 before decode %u", (unsigned int)frame.Length());
 		if(!running)
 			break;
 		if(frame.Length()>bufferSize){

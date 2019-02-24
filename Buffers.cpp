@@ -130,6 +130,8 @@ void BufferInputStream::EnsureEnoughRemaining(size_t need){
 
 BufferOutputStream::BufferOutputStream(size_t size){
 	buffer=(unsigned char*) malloc(size);
+	if(!buffer)
+		throw std::bad_alloc();
 	offset=0;
 	this->size=size;
 	bufferProvided=false;
@@ -217,6 +219,8 @@ void BufferOutputStream::ExpandBufferIfNeeded(size_t need){
 			buffer=(unsigned char *) realloc(buffer, size+need);
 			size+=need;
 		}
+		if(!buffer)
+			throw std::bad_alloc();
 	}
 }
 

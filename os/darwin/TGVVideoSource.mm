@@ -1,0 +1,48 @@
+//
+// libtgvoip is free and unencumbered public domain software.
+// For more information, see http://unlicense.org or the UNLICENSE file
+// you should have received with this source code distribution.
+//
+
+#import "TGVVideoSource.h"
+#include "VideoToolboxEncoderSource.h"
+
+@implementation TGVVideoSource{
+	tgvoip::video::VideoToolboxEncoderSource* nativeSource;
+}
+
+- (instancetype)init{
+	self=[super init];
+	nativeSource=new tgvoip::video::VideoToolboxEncoderSource();
+	return self;
+}
+
+- (void)dealloc{
+	delete nativeSource;
+}
+
+- (void)sendVideoFrame: (CMSampleBufferRef)buffer{
+	nativeSource->EncodeFrame(buffer);
+}
+
+- (TGVVideoResolution)maximumSupportedVideoResolution{
+	return TGVVideoResolution1080;
+}
+
+- (void)setVideoRotation: (int)rotation{
+
+}
+
+- (void)pauseStream{
+
+}
+
+- (void)resumeStream{
+
+}
+
+- (tgvoip::video::VideoSource*)nativeVideoSource{
+	return nativeSource;
+}
+
+@end

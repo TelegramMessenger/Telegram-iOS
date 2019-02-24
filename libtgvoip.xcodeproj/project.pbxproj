@@ -314,6 +314,14 @@
 		69DD8D03218CD401001E8140 /* VideoSource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69DD8CFF218CD400001E8140 /* VideoSource.cpp */; };
 		69E357B020F88955002E163B /* AudioIO.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69E357A720F88954002E163B /* AudioIO.cpp */; };
 		69E629EE21AF62A900377D0F /* json11.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69E629ED21AF62A900377D0F /* json11.cpp */; };
+		69F7914C2220A41000FE53C4 /* TGVVideoSource.h in Headers */ = {isa = PBXBuildFile; fileRef = 69F7914A2220A41000FE53C4 /* TGVVideoSource.h */; };
+		69F7914D2220A41000FE53C4 /* TGVVideoSource.mm in Sources */ = {isa = PBXBuildFile; fileRef = 69F7914B2220A41000FE53C4 /* TGVVideoSource.mm */; };
+		69F791502220A76500FE53C4 /* TGVVideoRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = 69F7914E2220A76500FE53C4 /* TGVVideoRenderer.h */; };
+		69F791512220A76500FE53C4 /* TGVVideoRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 69F7914F2220A76500FE53C4 /* TGVVideoRenderer.mm */; };
+		69F791542221F16C00FE53C4 /* VideoToolboxEncoderSource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69F791522221F16C00FE53C4 /* VideoToolboxEncoderSource.cpp */; };
+		69F791552221F16C00FE53C4 /* VideoToolboxEncoderSource.h in Headers */ = {isa = PBXBuildFile; fileRef = 69F791532221F16C00FE53C4 /* VideoToolboxEncoderSource.h */; };
+		69F791582222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69F791562222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.cpp */; };
+		69F791592222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = 69F791572222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.h */; };
 		69FB0B2D20F6860E00827817 /* MessageThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69FB0B2420F6860D00827817 /* MessageThread.cpp */; };
 /* End PBXBuildFile section */
 
@@ -1024,6 +1032,14 @@
 		69E357A720F88954002E163B /* AudioIO.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AudioIO.cpp; sourceTree = "<group>"; };
 		69E357AF20F88954002E163B /* AudioIO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioIO.h; sourceTree = "<group>"; };
 		69E629ED21AF62A900377D0F /* json11.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = json11.cpp; sourceTree = "<group>"; };
+		69F7914A2220A41000FE53C4 /* TGVVideoSource.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGVVideoSource.h; sourceTree = "<group>"; };
+		69F7914B2220A41000FE53C4 /* TGVVideoSource.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = TGVVideoSource.mm; sourceTree = "<group>"; };
+		69F7914E2220A76500FE53C4 /* TGVVideoRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGVVideoRenderer.h; sourceTree = "<group>"; };
+		69F7914F2220A76500FE53C4 /* TGVVideoRenderer.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = TGVVideoRenderer.mm; sourceTree = "<group>"; };
+		69F791522221F16C00FE53C4 /* VideoToolboxEncoderSource.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = VideoToolboxEncoderSource.cpp; sourceTree = "<group>"; };
+		69F791532221F16C00FE53C4 /* VideoToolboxEncoderSource.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VideoToolboxEncoderSource.h; sourceTree = "<group>"; };
+		69F791562222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SampleBufferDisplayLayerRenderer.cpp; sourceTree = "<group>"; };
+		69F791572222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SampleBufferDisplayLayerRenderer.h; sourceTree = "<group>"; };
 		69F842361E67540700C110F7 /* libtgvoip.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = libtgvoip.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		69FB0B2420F6860D00827817 /* MessageThread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MessageThread.cpp; sourceTree = "<group>"; };
 		69FB0B2C20F6860D00827817 /* MessageThread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MessageThread.h; sourceTree = "<group>"; };
@@ -1124,6 +1140,14 @@
 			isa = PBXGroup;
 			children = (
 				692AB8BE1E6759DD00706ACC /* AudioInputAudioUnit.cpp */,
+				69F7914A2220A41000FE53C4 /* TGVVideoSource.h */,
+				69F7914B2220A41000FE53C4 /* TGVVideoSource.mm */,
+				69F7914E2220A76500FE53C4 /* TGVVideoRenderer.h */,
+				69F7914F2220A76500FE53C4 /* TGVVideoRenderer.mm */,
+				69F791562222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.cpp */,
+				69F791572222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.h */,
+				69F791522221F16C00FE53C4 /* VideoToolboxEncoderSource.cpp */,
+				69F791532221F16C00FE53C4 /* VideoToolboxEncoderSource.h */,
 				692AB8BF1E6759DD00706ACC /* AudioInputAudioUnit.h */,
 				692AB8C01E6759DD00706ACC /* AudioOutputAudioUnit.cpp */,
 				692AB8C11E6759DD00706ACC /* AudioOutputAudioUnit.h */,
@@ -2330,8 +2354,12 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				69F791552221F16C00FE53C4 /* VideoToolboxEncoderSource.h in Headers */,
+				69F7914C2220A41000FE53C4 /* TGVVideoSource.h in Headers */,
 				692AB9051E6759DD00706ACC /* VoIPServerConfig.h in Headers */,
 				692AB9031E6759DD00706ACC /* VoIPController.h in Headers */,
+				69F791592222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.h in Headers */,
+				69F791502220A76500FE53C4 /* TGVVideoRenderer.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2487,6 +2515,7 @@
 				697E9C9721A4ED6D00E03846 /* biquad_filter.cc in Sources */,
 				697E9B5021A4ED6B00E03846 /* audio_converter.cc in Sources */,
 				697E9CFC21A4ED6D00E03846 /* subband_erle_estimator.cc in Sources */,
+				69F791512220A76500FE53C4 /* TGVVideoRenderer.mm in Sources */,
 				697E9B4E21A4ED6B00E03846 /* fft4g.c in Sources */,
 				697E9C6821A4ED6C00E03846 /* spectral_features_internal.cc in Sources */,
 				697E9CAE21A4ED6D00E03846 /* aec_resampler.cc in Sources */,
@@ -2583,6 +2612,7 @@
 				697E9D1521A4ED6D00E03846 /* render_signal_analyzer.cc in Sources */,
 				697E9B5E21A4ED6B00E03846 /* levinson_durbin.c in Sources */,
 				697E9D0321A4ED6D00E03846 /* adaptive_fir_filter.cc in Sources */,
+				69F791542221F16C00FE53C4 /* VideoToolboxEncoderSource.cpp in Sources */,
 				697E9B4A21A4ED6B00E03846 /* wav_file.cc in Sources */,
 				697E9CE721A4ED6D00E03846 /* render_delay_buffer2.cc in Sources */,
 				697E9C1121A4ED6C00E03846 /* lpc_gain_swb_tables.c in Sources */,
@@ -2641,6 +2671,7 @@
 				697E9D3821A4ED6D00E03846 /* block_processor2.cc in Sources */,
 				697E9BEB21A4ED6C00E03846 /* criticalsection.cc in Sources */,
 				69791A571EE8272A00BB85FB /* Resampler.cpp in Sources */,
+				69F7914D2220A41000FE53C4 /* TGVVideoSource.mm in Sources */,
 				697E9B8221A4ED6B00E03846 /* resample_by_2.c in Sources */,
 				697E9B3521A4ED6B00E03846 /* wav_header.cc in Sources */,
 				697E9D5621A4ED6E00E03846 /* vad_circular_buffer.cc in Sources */,
@@ -2712,6 +2743,7 @@
 				697E9D6321A4ED6E00E03846 /* gmm.cc in Sources */,
 				697E9CAA21A4ED6D00E03846 /* level_estimator_impl.cc in Sources */,
 				697E9D3021A4ED6D00E03846 /* echo_remover.cc in Sources */,
+				69F791582222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.cpp in Sources */,
 				697E9C8721A4ED6C00E03846 /* vad_with_level.cc in Sources */,
 				697E9B3721A4ED6B00E03846 /* fir_filter_neon.cc in Sources */,
 				697E9C4621A4ED6C00E03846 /* noise_suppression.c in Sources */,
