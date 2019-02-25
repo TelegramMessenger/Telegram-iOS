@@ -11,11 +11,13 @@ private final class MediaBoxFileMap {
     fileprivate(set) var sum: Int32
     private(set) var ranges: IndexSet
     private(set) var truncationSize: Int32?
-    
+    private(set) var progress: Float?
+
     init() {
         self.sum = 0
         self.ranges = IndexSet()
         self.truncationSize = nil
+        self.progress = nil
     }
     
     init?(fd: ManagedFile) {
@@ -121,11 +123,15 @@ private final class MediaBoxFileMap {
     fileprivate func truncate(_ size: Int32) {
         self.truncationSize = size
     }
+    fileprivate func progressUpdated(_ progress: Float) {
+        self.progress = progress
+    }
     
     fileprivate func reset() {
         self.truncationSize = nil
         self.ranges.removeAll()
         self.sum = 0
+        self.progress = nil
     }
     
     fileprivate func contains(_ range: Range<Int32>) -> Bool {
@@ -314,6 +320,13 @@ final class MediaBoxPartialFile {
         self.fileMap.serialize(to: self.metadataFd)
         
         self.checkDataRequestsAfterFill(range: range)
+    }
+    
+    func progressUpdated(_ progress: Float) {
+        assert(self.queue.isCurrent())
+        
+        self.fileMap.progressUpdated(progress)
+        self.updateStatuses()
     }
     
     func write(offset: Int32, data: Data, dataRange: Range<Int>) {
@@ -568,7 +581,7 @@ final class MediaBoxPartialFile {
             } else if let size = size {
                 progress = Float(self.fileMap.sum) / Float(size)
             } else {
-                progress = 0.0
+                progress = self.fileMap.progress ?? 0.0
             }
             status = .Fetching(isActive: true, progress: progress)
         }
@@ -644,6 +657,8 @@ final class MediaBoxPartialFile {
                                 TempBox.shared.dispose(file)
                             case let .copyLocalItem(item):
                                 strongSelf.copyLocalItem(item)
+                            case let .progressUpdated(progress):
+                                strongSelf.progressUpdated(progress)
                         }
                         if !strongSelf.processedAtLeastOneFetch {
                             strongSelf.processedAtLeastOneFetch = true

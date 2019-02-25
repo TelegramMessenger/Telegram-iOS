@@ -75,6 +75,7 @@ public enum MediaBoxFetchPriority: Int32 {
 public enum MediaResourceDataFetchResult {
     case dataPart(resourceOffset: Int, data: Data, range: Range<Int>, complete: Bool)
     case resourceSizeUpdated(Int)
+    case progressUpdated(Float)
     case replaceHeader(data: Data, range: Range<Int>)
     case moveLocalFile(path: String)
     case moveTempFile(file: TempBoxFile)
