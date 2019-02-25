@@ -66,7 +66,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
         })
         
         return f(transaction, result)
-        } |> switchToLatest
+    } |> switchToLatest
 }
 
 func managedSynchronizeAppLogEventsOperations(postbox: Postbox, network: Network) -> Signal<Void, NoError> {

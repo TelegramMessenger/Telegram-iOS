@@ -127,9 +127,10 @@ public func updateSelectiveAccountPrivacySettings(account: Account, type: Update
                 rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowAll)
         }
         return account.network.request(Api.functions.account.setPrivacy(key: type.apiKey, rules: rules))
-            |> retryRequest
-            |> mapToSignal { _ -> Signal<Void, NoError> in
-                return .complete()
+        |> retryRequest
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            return .complete()
         }
-    } |> switchToLatest
+    }
+    |> switchToLatest
 }

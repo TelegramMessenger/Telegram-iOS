@@ -69,7 +69,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
         } |> switchToLatest
 }
 
-func managedLocalizationUpdatesOperations(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+func managedLocalizationUpdatesOperations(accountManager: AccountManager, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     return Signal { _ in
         let tag: PeerOperationLogTag = OperationLogTags.SynchronizeLocalizationUpdates
         
@@ -88,7 +88,7 @@ func managedLocalizationUpdatesOperations(postbox: Postbox, network: Network) ->
                 let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let _ = entry.contents as? SynchronizeLocalizationUpdatesOperation {
-                            return synchronizeLocalizationUpdates(transaction: transaction, postbox: postbox, network: network)
+                            return synchronizeLocalizationUpdates(accountManager: accountManager, postbox: postbox, network: network)
                         } else {
                             assertionFailure()
                         }
@@ -120,9 +120,9 @@ private enum SynchronizeLocalizationUpdatesError {
     case reset
 }
 
-func getLocalization(_ transaction: Transaction) -> (primary: (code: String, version: Int32, entries: [LocalizationEntry]), secondary: (code: String, version: Int32, entries: [LocalizationEntry])?) {
+func getLocalization(_ transaction: AccountManagerModifier) -> (primary: (code: String, version: Int32, entries: [LocalizationEntry]), secondary: (code: String, version: Int32, entries: [LocalizationEntry])?) {
     let localizationSettings: LocalizationSettings?
-    if let current = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings {
+    if let current = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings {
         localizationSettings = current
     } else {
         localizationSettings = nil
@@ -152,8 +152,8 @@ private func parseLangPackDifference(_ difference: Api.LangPackDifference) -> (c
     }
 }
 
-private func synchronizeLocalizationUpdates(transaction: Transaction, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
-    let currentLanguageAndVersion = postbox.transaction { transaction -> (primary: (code: String, version: Int32), secondary: (code: String, version: Int32)?) in
+private func synchronizeLocalizationUpdates(accountManager: AccountManager, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    let currentLanguageAndVersion = accountManager.transaction { transaction -> (primary: (code: String, version: Int32), secondary: (code: String, version: Int32)?) in
         let (primary, secondary) = getLocalization(transaction)
         return ((primary.code, primary.version), secondary.flatMap({ ($0.code, $0.version) }))
     }
@@ -171,10 +171,10 @@ private func synchronizeLocalizationUpdates(transaction: Transaction, postbox: P
         |> mapError { _ -> SynchronizeLocalizationUpdatesError in return .reset }
         |> mapToSignal { differences -> Signal<Void, SynchronizeLocalizationUpdatesError> in
             let parsedDifferences = differences.map(parseLangPackDifference)
-            return postbox.transaction { transaction -> Signal<Void, SynchronizeLocalizationUpdatesError> in
+            return accountManager.transaction { transaction -> Signal<Void, SynchronizeLocalizationUpdatesError> in
                 let (primary, secondary) = getLocalization(transaction)
                 
-                var currentSettings = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings ?? LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: "en", localizedName: "English", localization: Localization(version: 0, entries: []), customPluralizationCode: nil), secondaryComponent: nil)
+                var currentSettings = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings ?? LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: "en", localizedName: "English", localization: Localization(version: 0, entries: []), customPluralizationCode: nil), secondaryComponent: nil)
                 
                 for difference in parsedDifferences {
                     let current: (isPrimary: Bool, entries: [LocalizationEntry])
@@ -211,7 +211,9 @@ private func synchronizeLocalizationUpdates(transaction: Transaction, postbox: P
                     }
                 }
                 
-                transaction.setPreferencesEntry(key: PreferencesKeys.localizationSettings, value: currentSettings)
+                transaction.updateSharedData(SharedDataKeys.localizationSettings, { _ in
+                    return currentSettings
+                })
                 return .fail(.done)
             }
             |> mapError { _ -> SynchronizeLocalizationUpdatesError in
@@ -227,9 +229,9 @@ private func synchronizeLocalizationUpdates(transaction: Transaction, postbox: P
             case .done:
                 return .fail(Void())
             case .reset:
-                return postbox.transaction { transaction -> Signal<Void, Void> in
+                return accountManager.transaction { transaction -> Signal<Void, Void> in
                     let (primary, _) = getLocalization(transaction)
-                    return downloadAndApplyLocalization(postbox: postbox, network: network, languageCode: primary.code)
+                    return downloadAndApplyLocalization(accountManager: accountManager, postbox: postbox, network: network, languageCode: primary.code)
                     |> mapError { _ -> Void in
                         return Void()
                     }
@@ -242,7 +244,7 @@ private func synchronizeLocalizationUpdates(transaction: Transaction, postbox: P
     }
 }
 
-func tryApplyingLanguageDifference(transaction: Transaction, langCode: String, difference: Api.LangPackDifference) -> Bool {
+func tryApplyingLanguageDifference(transaction: AccountManagerModifier, langCode: String, difference: Api.LangPackDifference) -> Bool {
     let (primary, secondary) = getLocalization(transaction)
     switch difference {
         case let .langPackDifference(updatedCode, fromVersion, updatedVersion, strings):
@@ -284,7 +286,7 @@ func tryApplyingLanguageDifference(transaction: Transaction, langCode: String, d
             }
             mergedEntries.append(contentsOf: updatedEntries)
             
-            let currentSettings = transaction.getPreferencesEntry(key: PreferencesKeys.localizationSettings) as? LocalizationSettings ?? LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: "en", localizedName: "English", localization: Localization(version: 0, entries: []), customPluralizationCode: nil), secondaryComponent: nil)
+            let currentSettings = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings ?? LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: "en", localizedName: "English", localization: Localization(version: 0, entries: []), customPluralizationCode: nil), secondaryComponent: nil)
             
             var updatedSettings: LocalizationSettings
             if isPrimary {
@@ -296,7 +298,9 @@ func tryApplyingLanguageDifference(transaction: Transaction, langCode: String, d
                 return false
             }
             
-            transaction.setPreferencesEntry(key: PreferencesKeys.localizationSettings, value: updatedSettings)
+            transaction.updateSharedData(SharedDataKeys.localizationSettings, { _ in
+                return updatedSettings
+            })
             
             return true
     }

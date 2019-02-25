@@ -858,6 +858,54 @@ struct account {
         }
     
     }
+    enum AutoDownloadSettings: TypeConstructorDescription {
+        case autoDownloadSettings(low: Api.AutoDownloadSettings, medium: Api.AutoDownloadSettings, high: Api.AutoDownloadSettings)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .autoDownloadSettings(let low, let medium, let high):
+                    if boxed {
+                        buffer.appendInt32(1674235686)
+                    }
+                    low.serialize(buffer, true)
+                    medium.serialize(buffer, true)
+                    high.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .autoDownloadSettings(let low, let medium, let high):
+                return ("autoDownloadSettings", [("low", low), ("medium", medium), ("high", high)])
+    }
+    }
+    
+        static func parse_autoDownloadSettings(_ reader: BufferReader) -> AutoDownloadSettings? {
+            var _1: Api.AutoDownloadSettings?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.AutoDownloadSettings
+            }
+            var _2: Api.AutoDownloadSettings?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.AutoDownloadSettings
+            }
+            var _3: Api.AutoDownloadSettings?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.AutoDownloadSettings
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.account.AutoDownloadSettings.autoDownloadSettings(low: _1!, medium: _2!, high: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
 }
 }
 extension Api {
@@ -2692,11 +2740,12 @@ extension Api {
                     })
                 }
             
-                static func getStatsURL(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StatsURL>) {
+                static func getStatsURL(peer: Api.InputPeer, params: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StatsURL>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-2080980787)
+                    buffer.appendInt32(-338326349)
                     peer.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.getStatsURL", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.StatsURL? in
+                    serializeString(params, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getStatsURL", parameters: [("peer", peer), ("params", params)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.StatsURL? in
                         let reader = BufferReader(buffer)
                         var result: Api.StatsURL?
                         if let signature = reader.readInt32() {
@@ -5167,6 +5216,35 @@ extension Api {
                         return result
                     })
                 }
+            
+                static func getAutoDownloadSettings() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.AutoDownloadSettings>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1457130303)
+                    
+                    return (FunctionDescription(name: "account.getAutoDownloadSettings", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.AutoDownloadSettings? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.AutoDownloadSettings?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.AutoDownloadSettings
+                        }
+                        return result
+                    })
+                }
+            
+                static func saveAutoDownloadSettings(flags: Int32, settings: Api.AutoDownloadSettings) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1995661875)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    settings.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.saveAutoDownloadSettings", parameters: [("flags", flags), ("settings", settings)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
             }
             struct langpack {
                 static func getLangPack(langPack: String, langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.LangPackDifference>) {
@@ -5408,22 +5486,6 @@ extension Api {
                     })
                 }
             
-                static func setCallRating(peer: Api.InputPhoneCall, rating: Int32, comment: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(475228724)
-                    peer.serialize(buffer, true)
-                    serializeInt32(rating, buffer: buffer, boxed: false)
-                    serializeString(comment, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "phone.setCallRating", parameters: [("peer", peer), ("rating", rating), ("comment", comment)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
                 static func saveCallDebug(peer: Api.InputPhoneCall, debug: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(662363518)
@@ -5434,6 +5496,23 @@ extension Api {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                static func setCallRating(flags: Int32, peer: Api.InputPhoneCall, rating: Int32, comment: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1508562471)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(rating, buffer: buffer, boxed: false)
+                    serializeString(comment, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "phone.setCallRating", parameters: [("flags", flags), ("peer", peer), ("rating", rating), ("comment", comment)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })

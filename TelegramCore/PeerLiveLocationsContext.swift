@@ -21,7 +21,7 @@ public func topPeerActiveLiveLocationMessages(viewTracker: AccountViewTracker, a
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
         var result: [Message] = []
         for entry in view.entries {
-            if case let .MessageEntry(message, _, _, _) = entry {
+            if case let .MessageEntry(message, _, _, _, _) = entry {
                 for media in message.media {
                     if let location = media as? TelegramMediaMap, let liveBroadcastingTimeout = location.liveBroadcastingTimeout {
                         if message.timestamp + liveBroadcastingTimeout > timestamp {

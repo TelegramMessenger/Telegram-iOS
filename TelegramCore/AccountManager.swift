@@ -15,6 +15,7 @@ private enum AccountKind {
 }
 
 private var declaredEncodables: Void = {
+    declareEncodable(AuthAccountRecord.self, f: { AuthAccountRecord(decoder: $0) })
     declareEncodable(UnauthorizedAccountState.self, f: { UnauthorizedAccountState(decoder: $0) })
     declareEncodable(AuthorizedAccountState.self, f: { AuthorizedAccountState(decoder: $0) })
     declareEncodable(TelegramUser.self, f: { TelegramUser(decoder: $0) })
@@ -75,6 +76,7 @@ private var declaredEncodables: Void = {
     declareEncodable(RecentHashtagItem.self, f: { RecentHashtagItem(decoder: $0) })
     declareEncodable(LoggedOutAccountAttribute.self, f: { LoggedOutAccountAttribute(decoder: $0) })
     declareEncodable(AccountEnvironmentAttribute.self, f: { AccountEnvironmentAttribute(decoder: $0) })
+    declareEncodable(AccountSortOrderAttribute.self, f: { AccountSortOrderAttribute(decoder: $0) })
     declareEncodable(CloudChatClearHistoryOperation.self, f: { CloudChatClearHistoryOperation(decoder: $0) })
     declareEncodable(OutgoingContentInfoMessageAttribute.self, f: { OutgoingContentInfoMessageAttribute(decoder: $0) })
     declareEncodable(ConsumableContentMessageAttribute.self, f: { ConsumableContentMessageAttribute(decoder: $0) })
@@ -126,6 +128,7 @@ private var declaredEncodables: Void = {
     declareEncodable(AppConfiguration.self, f: { AppConfiguration(decoder: $0) })
     declareEncodable(JSON.self, f: { JSON(decoder: $0) })
     declareEncodable(SearchBotsConfiguration.self, f: { SearchBotsConfiguration(decoder: $0) })
+    declareEncodable(AutodownloadSettings.self, f: { AutodownloadSettings(decoder: $0 )})
     declareEncodable(TelegramMediaPoll.self, f: { TelegramMediaPoll(decoder: $0) })
     declareEncodable(TelegramMediaUnsupported.self, f: { TelegramMediaUnsupported(decoder: $0) })
     
@@ -208,7 +211,7 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
                         return false
                     }
                 })
-                return accountWithId(networkArguments: networkArguments, id: record.0, supplementary: supplementary, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, auxiliaryMethods: auxiliaryMethods)
+                return accountWithId(accountManager: manager, networkArguments: networkArguments, id: record.0, supplementary: supplementary, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, auxiliaryMethods: auxiliaryMethods)
                 |> mapToSignal { accountResult -> Signal<AccountResult?, NoError> in
                     let postbox: Postbox
                     let initialKind: AccountKind
@@ -276,10 +279,6 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
                 return nil
             }
         })
-        if transaction.getCurrent()?.0 == id {
-            let updatedId = transaction.createRecord([])
-            transaction.setCurrentId(updatedId)
-        }
     }
 }
 
@@ -347,6 +346,9 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                 }
                 validPaths.insert("\(accountRecordIdPathName(record.id))")
             }
+            if let record = view.currentAuthAccount {
+                validPaths.insert("\(accountRecordIdPathName(record.id))")
+            }
             
             if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: rootPath), includingPropertiesForKeys: [], options: []) {
                 for url in files {
@@ -373,7 +375,7 @@ private func cleanupAccount(networkArguments: NetworkInitializationArguments, ac
             return false
         }
     })
-    return accountWithId(networkArguments: networkArguments, id: id, supplementary: true, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, auxiliaryMethods: auxiliaryMethods)
+    return accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, supplementary: true, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, auxiliaryMethods: auxiliaryMethods)
     |> mapToSignal { account -> Signal<Void, NoError> in
         switch account {
             case .upgrading:

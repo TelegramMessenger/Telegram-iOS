@@ -307,7 +307,6 @@ public enum TelegramChannelPermission {
     case deleteAllMessages
     case banMembers
     case addAdmins
-    case manageInviteLink
     case changeInfo
 }
 
@@ -410,11 +409,6 @@ public extension TelegramChannel {
                 }
             case .addAdmins:
                 if let adminRights = self.adminRights, adminRights.flags.contains(.canAddAdmins) {
-                    return true
-                }
-                return false
-            case .manageInviteLink:
-                if let adminRights = self.adminRights, adminRights.flags.contains(.canChangeInviteLink) {
                     return true
                 }
                 return false

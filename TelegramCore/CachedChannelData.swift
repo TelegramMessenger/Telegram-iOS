@@ -20,6 +20,7 @@ public struct CachedChannelFlags: OptionSet {
     public static let canChangeUsername = CachedChannelFlags(rawValue: 1 << 1)
     public static let canSetStickerSet = CachedChannelFlags(rawValue: 1 << 2)
     public static let preHistoryEnabled = CachedChannelFlags(rawValue: 1 << 3)
+    public static let canViewStats = CachedChannelFlags(rawValue: 1 << 4)
 }
 
 public struct CachedChannelParticipantsSummary: PostboxCoding, Equatable {

@@ -7,13 +7,22 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-public func removePeerChat(postbox: Postbox, peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool = false) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Void in
-        removePeerChat(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId, reportChatSpam: reportChatSpam, deleteGloballyIfPossible: deleteGloballyIfPossible)
+public func removePeerChat(account: Account, peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool = false) -> Signal<Void, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        removePeerChat(account: account, transaction: transaction, mediaBox: account.postbox.mediaBox, peerId: peerId, reportChatSpam: reportChatSpam, deleteGloballyIfPossible: deleteGloballyIfPossible)
     }
 }
 
-public func removePeerChat(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool) {
+public func removePeerChat(account: Account, transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, reportChatSpam: Bool, deleteGloballyIfPossible: Bool) {
+    if let _ = transaction.getPeerChatInterfaceState(peerId) {
+        transaction.updatePeerChatInterfaceState(peerId, update: { current in
+            if let current = current {
+                return account.auxiliaryMethods.updatePeerChatInputState(current, nil)
+            } else {
+                return nil
+            }
+        })
+    }
     if peerId.namespace == Namespaces.Peer.SecretChat {
         if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
             

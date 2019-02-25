@@ -59,6 +59,7 @@ private final class PendingMessageContext {
 public enum PendingMessageFailureReason {
     case flood
     case publicBan
+    case mediaRestricted
 }
 
 private func reasonForError(_ error: String) -> PendingMessageFailureReason? {
@@ -66,6 +67,8 @@ private func reasonForError(_ error: String) -> PendingMessageFailureReason? {
         return .flood
     } else if error.hasPrefix("USER_BANNED_IN_CHANNEL") {
         return .publicBan
+    } else if error.hasPrefix("CHAT_SEND_") && error.hasSuffix("_FORBIDDEN") {
+        return .mediaRestricted
     } else {
         return nil
     }

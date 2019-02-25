@@ -167,7 +167,7 @@ final class HistoryViewStateValidationContexts {
                 
                 for entry in view.entries {
                     switch entry {
-                        case let .MessageEntry(message, _, _, _):
+                        case let .MessageEntry(message, _, _, _, _):
                             if historyState.matchesPeerId(message.id.peerId) && message.id.namespace == Namespaces.Message.Cloud {
                                 if !historyState.isMessageValid(message) {
                                     addToRange(message.id, &rangesToInvalidate)
