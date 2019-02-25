@@ -1,16 +1,16 @@
 import Foundation
 
-final class MutableAccessChallengeDataView: MutablePostboxView {
+final class MutableAccessChallengeDataView {
     var data: PostboxAccessChallengeData
     
-    init(postbox: Postbox) {
-        self.data = postbox.metadataTable.accessChallengeData()
+    init(data: PostboxAccessChallengeData) {
+        self.data = data
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(updatedData: PostboxAccessChallengeData?) -> Bool {
         var updated = false
         
-        if let data = transaction.updatedAccessChallengeData {
+        if let data = updatedData {
             if self.data != data {
                 self.data = data
                 updated = true
@@ -18,10 +18,6 @@ final class MutableAccessChallengeDataView: MutablePostboxView {
         }
         
         return updated
-    }
-    
-    func immutableView() -> PostboxView {
-        return AccessChallengeDataView(self)
     }
 }
 

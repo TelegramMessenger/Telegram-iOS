@@ -25,6 +25,7 @@ public final class ManagedFile {
     private let mode: ManagedFileMode
     
     public init?(queue: Queue, path: String, mode: ManagedFileMode) {
+        assert(queue.isCurrent())
         self.queue = queue
         self.mode = mode
         let fileMode: Int32
@@ -63,15 +64,28 @@ public final class ManagedFile {
         return wrappedRead(self.fd, data, count)
     }
     
+    public func readData(count: Int) -> Data {
+        assert(self.queue.isCurrent())
+        var result = Data(count: count)
+        result.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            let readCount = self.read(bytes, count)
+            assert(readCount == count)
+        }
+        return result
+    }
+    
     public func seek(position: Int64) {
+        assert(self.queue.isCurrent())
         lseek(self.fd, position, SEEK_SET)
     }
     
     public func truncate(count: Int64) {
+        assert(self.queue.isCurrent())
         ftruncate(self.fd, count)
     }
     
     public func getSize() -> Int? {
+        assert(self.queue.isCurrent())
         var value = stat()
         if fstat(self.fd, &value) == 0 {
             return Int(value.st_size)
@@ -81,6 +95,7 @@ public final class ManagedFile {
     }
     
     public func sync() {
+        assert(self.queue.isCurrent())
         fsync(self.fd)
     }
 }

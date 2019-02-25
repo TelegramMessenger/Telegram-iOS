@@ -396,37 +396,37 @@ final class ChatListIndexTable: Table {
                 let initialReadState = alteredInitialPeerCombinedReadStates[peerId] ?? postbox.readStateTable.getCombinedState(peerId)
                 let currentReadState = postbox.readStateTable.getCombinedState(peerId)
                 
-                var initialValue: (Int32, Bool) = (0, false)
-                var currentValue: (Int32, Bool) = (0, false)
+                var initialValue: (Int32, Bool, Bool) = (0, false, false)
+                var currentValue: (Int32, Bool, Bool) = (0, false, false)
                 if addedChatListPeerIds.contains(peerId) {
                     if let currentReadState = currentReadState {
-                        currentValue = (currentReadState.count, currentReadState.isUnread)
+                        currentValue = (currentReadState.count, currentReadState.isUnread, currentReadState.markedUnread)
                     }
                 } else if removedChatListPeerIds.contains(peerId) {
                     if let initialReadState = initialReadState {
-                        initialValue = (initialReadState.count, initialReadState.isUnread)
+                        initialValue = (initialReadState.count, initialReadState.isUnread, initialReadState.markedUnread)
                     }
                 } else {
                     if self.get(peerId: peerId).includedIndex(peerId: peerId) != nil {
                         if let initialReadState = initialReadState {
-                            initialValue = (initialReadState.count, initialReadState.isUnread)
+                            initialValue = (initialReadState.count, initialReadState.isUnread, initialReadState.markedUnread)
                         }
                         if let currentReadState = currentReadState {
-                            currentValue = (currentReadState.count, currentReadState.isUnread)
+                            currentValue = (currentReadState.count, currentReadState.isUnread, currentReadState.markedUnread)
                         }
                     }
                 }
-                var initialFilteredValue: (Int32, Bool) = initialValue
-                var currentFilteredValue: (Int32, Bool) = currentValue
+                var initialFilteredValue: (Int32, Bool, Bool) = initialValue
+                var currentFilteredValue: (Int32, Bool, Bool) = currentValue
                 if transactionParticipationInTotalUnreadCountUpdates.added.contains(peerId) {
-                    initialFilteredValue = (0, false)
+                    initialFilteredValue = (0, false, false)
                 } else if transactionParticipationInTotalUnreadCountUpdates.removed.contains(peerId) {
-                    currentFilteredValue = (0, false)
+                    currentFilteredValue = (0, false, false)
                 } else {
                     if let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(notificationPeerId), !notificationSettings.isRemovedFromTotalUnreadCount {
                     } else {
-                        initialFilteredValue = (0, false)
-                        currentFilteredValue = (0, false)
+                        initialFilteredValue = (0, false, false)
+                        currentFilteredValue = (0, false, false)
                     }
                 }
                 
@@ -443,9 +443,15 @@ final class ChatListIndexTable: Table {
                             if initialValue.1 {
                                 absolute.chatCount -= 1
                             }
+                            if initialValue.2 && initialValue.0 == 0 {
+                                absolute.messageCount -= 1
+                            }
                             filtered.messageCount -= initialFilteredValue.0
                             if initialFilteredValue.1 {
                                 filtered.chatCount -= 1
+                            }
+                            if initialFilteredValue.2 && initialFilteredValue.0 == 0 {
+                                filtered.messageCount -= 1
                             }
                             return (absolute, filtered)
                         })
@@ -455,12 +461,18 @@ final class ChatListIndexTable: Table {
                             var absolute = absolute
                             var filtered = filtered
                             absolute.messageCount += currentValue.0
+                            if currentValue.2 && currentValue.0 == 0 {
+                                absolute.messageCount += 1
+                            }
                             if currentValue.1 {
                                 absolute.chatCount += 1
                             }
                             filtered.messageCount += currentFilteredValue.0
                             if currentFilteredValue.1 {
                                 filtered.chatCount += 1
+                            }
+                            if currentFilteredValue.2 && currentFilteredValue.0 == 0 {
+                                filtered.messageCount += 1
                             }
                             return (absolute, filtered)
                         })
@@ -478,7 +490,10 @@ final class ChatListIndexTable: Table {
                         } else {
                             chatDifference = 0
                         }
-                        let messageDifference = currentValue.0 - initialValue.0
+                        
+                        let currentUnreadMark: Int32 = currentValue.2 ? 1 : 0
+                        let initialUnreadMark: Int32 = initialValue.2 ? 1 : 0
+                        let messageDifference = max(currentValue.0, currentUnreadMark) - max(initialValue.0, initialUnreadMark)
                         
                         let chatFilteredDifference: Int32
                         if initialFilteredValue.1 != currentFilteredValue.1 {
@@ -486,7 +501,9 @@ final class ChatListIndexTable: Table {
                         } else {
                             chatFilteredDifference = 0
                         }
-                        let messageFilteredDifference = currentFilteredValue.0 - initialFilteredValue.0
+                        let currentFilteredUnreadMark: Int32 = currentFilteredValue.2 ? 1 : 0
+                        let initialFilteredUnreadMark: Int32 = initialFilteredValue.2 ? 1 : 0
+                        let messageFilteredDifference = max(currentFilteredValue.0, currentFilteredUnreadMark) - max(initialFilteredValue.0, initialFilteredUnreadMark)
                         
                         absolute.messageCount += messageDifference
                         absolute.chatCount += chatDifference
@@ -516,16 +533,14 @@ final class ChatListIndexTable: Table {
                 totalUnreadState.filteredCounters.removeValue(forKey: tag)
             }
             
-            #if DEBUG
-            #if targetEnvironment(simulator)
+            /*#if DEBUG && targetEnvironment(simulator)
             let reindexedCounts = self.debugReindexUnreadCounts(postbox: postbox)
             
             if reindexedCounts != totalUnreadState {
                 print("reindexedCounts \(reindexedCounts) != totalUnreadState \(totalUnreadState)")
                 totalUnreadState = reindexedCounts
             }
-            #endif
-            #endif
+            #endif*/
             
             if self.metadataTable.getChatListTotalUnreadState() != totalUnreadState {
                 self.metadataTable.setChatListTotalUnreadState(totalUnreadState)
@@ -614,10 +629,13 @@ final class ChatListIndexTable: Table {
                         if messageCount < 0 {
                             messageCount = 0
                         }
-                        state.absoluteCounters[tag]!.messageCount = messageCount
                         if combinedState.isUnread {
                             state.absoluteCounters[tag]!.chatCount += 1
                         }
+                        if combinedState.markedUnread {
+                            messageCount = max(1, messageCount)
+                        }
+                        state.absoluteCounters[tag]!.messageCount = messageCount
                     }
                     
                     if let notificationSettings = notificationSettings, !notificationSettings.isRemovedFromTotalUnreadCount {
@@ -630,10 +648,13 @@ final class ChatListIndexTable: Table {
                             if messageCount < 0 {
                                 messageCount = 0
                             }
-                            state.filteredCounters[tag]!.messageCount = messageCount
                             if combinedState.isUnread {
                                 state.filteredCounters[tag]!.chatCount += 1
                             }
+                            if combinedState.markedUnread {
+                                messageCount = max(1, messageCount)
+                            }
+                            state.filteredCounters[tag]!.messageCount = messageCount
                         }
                     }
                 }

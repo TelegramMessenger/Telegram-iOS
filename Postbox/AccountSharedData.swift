@@ -1,12 +1,8 @@
 import Foundation
 
-public protocol AccountSharedData: PostboxCoding {
-    func isEqual(to other: AccountSharedData) -> Bool
-}
-
 final class MutableAccountSharedDataView {
     private let keys: Set<ValueBoxKey>
-    fileprivate var entries: [ValueBoxKey: AccountSharedData] = [:]
+    fileprivate var entries: [ValueBoxKey: PreferencesEntry] = [:]
     
     init(accountManagerImpl: AccountManagerImpl, keys: Set<ValueBoxKey>) {
         self.keys = keys
@@ -32,7 +28,7 @@ final class MutableAccountSharedDataView {
 }
 
 public final class AccountSharedDataView {
-    public let entries: [ValueBoxKey: AccountSharedData]
+    public let entries: [ValueBoxKey: PreferencesEntry]
     
     init(_ view: MutableAccountSharedDataView) {
         self.entries = view.entries

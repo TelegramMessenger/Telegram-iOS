@@ -157,7 +157,7 @@ final class ViewTracker {
                 }
                 
                 if updated {
-                    mutableView.render(self.renderMessage)
+                    mutableView.render(self.renderMessage, postbox: postbox)
                     pipe.putNext((MessageHistoryView(mutableView), updateType))
                     
                     self.updateTrackedHoles()
@@ -274,7 +274,7 @@ final class ViewTracker {
             if mutableView.refreshDueToExternalTransaction(postbox: postbox) {
                 mutableView.incrementVersion()
                 
-                mutableView.render(self.renderMessage)
+                mutableView.render(self.renderMessage, postbox: postbox)
                 pipe.putNext((MessageHistoryView(mutableView), .Generic))
                 
                 updateTrackedHoles = true
@@ -405,7 +405,7 @@ final class ViewTracker {
         
             if updated {
                 updateTrackedHoles = true
-                mutableView.render(self.renderMessage)
+                mutableView.render(self.renderMessage, postbox: postbox)
                 
                 pipe.putNext((MessageHistoryView(mutableView), updateType))
             }

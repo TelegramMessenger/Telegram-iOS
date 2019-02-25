@@ -16,6 +16,8 @@
 		C2A315BE1E2E733900D89000 /* PeerMergedOperationLogIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D010B6191E1E463900C3E282 /* PeerMergedOperationLogIndexTable.swift */; };
 		C2A315BF1E2E733900D89000 /* PeerMergedOperationLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F019FC1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift */; };
 		C2AC9C131E1E5D200085C7DE /* UnreadMessageCountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A18D661E16874D004C6734 /* UnreadMessageCountsView.swift */; };
+		D000CADA22006C6C0011B15D /* SharedAccountMediaManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D000CAD922006C6C0011B15D /* SharedAccountMediaManager.swift */; };
+		D000CADB22006C6C0011B15D /* SharedAccountMediaManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D000CAD922006C6C0011B15D /* SharedAccountMediaManager.swift */; };
 		D001388620BD942B007C9721 /* PostboxUpgrade_16to17.swift in Sources */ = {isa = PBXBuildFile; fileRef = D001388520BD942B007C9721 /* PostboxUpgrade_16to17.swift */; };
 		D001388720BD942B007C9721 /* PostboxUpgrade_16to17.swift in Sources */ = {isa = PBXBuildFile; fileRef = D001388520BD942B007C9721 /* PostboxUpgrade_16to17.swift */; };
 		D003E4E61B38DBDB00C22CBC /* MessageHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003E4E51B38DBDB00C22CBC /* MessageHistoryView.swift */; };
@@ -396,6 +398,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		D000CAD922006C6C0011B15D /* SharedAccountMediaManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedAccountMediaManager.swift; sourceTree = "<group>"; };
 		D001388520BD942B007C9721 /* PostboxUpgrade_16to17.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostboxUpgrade_16to17.swift; sourceTree = "<group>"; };
 		D003E4E51B38DBDB00C22CBC /* MessageHistoryView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryView.swift; sourceTree = "<group>"; };
 		D0079F591D592E8B00A27A2C /* ContactTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactTable.swift; sourceTree = "<group>"; };
@@ -703,6 +706,9 @@
 				D05D8B33218F1EBB0064586F /* AccountManagerSharedDataTable.swift */,
 				D0BEAF6F1E54BC1E00BD963D /* AccountRecordsView.swift */,
 				D05D8B30218F1D3D0064586F /* AccountSharedData.swift */,
+				D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */,
+				D000CAD922006C6C0011B15D /* SharedAccountMediaManager.swift */,
+				D06ECFC420B796DC00C576C2 /* NoticeEntryView.swift */,
 			);
 			name = "Account Manager";
 			sourceTree = "<group>";
@@ -873,7 +879,6 @@
 				D0FA0AC91E780A26005BB9B7 /* PostboxView.swift */,
 				D0FA0ACC1E781067005BB9B7 /* Views.swift */,
 				D0F53BF21E794C6700117362 /* PeerChatStateView.swift */,
-				D0575AE21E9ECBB2006F2541 /* AccessChallengeDataView.swift */,
 				D0E1D30E1ECA53F900FCEEF1 /* GlobalMessageTagsView.swift */,
 				D07047A41F3CF63800F6A8D4 /* MessageHistoryTagSummaryView.swift */,
 				D07047AA1F3DD8D100F6A8D4 /* PendingMessageActionsView.swift */,
@@ -891,7 +896,6 @@
 				D0FC19542020CB7700FEDBB2 /* PeerGroupStateView.swift */,
 				D0BE3033206026C800FBE6D8 /* MessagesView.swift */,
 				D048B4AE20A5EEAE00C79D31 /* AdditionalChatListItemsView.swift */,
-				D06ECFC420B796DC00C576C2 /* NoticeEntryView.swift */,
 				D037178A20D923CA004773C8 /* CachedItemView.swift */,
 				D029AA512167BC22006D4947 /* OrderedContactsView.swift */,
 				D039FB1A21714D9800BD1BAD /* PeerPresencesView.swift */,
@@ -1166,6 +1170,7 @@
 				C2A315BF1E2E733900D89000 /* PeerMergedOperationLogView.swift in Sources */,
 				C2A315BD1E2E732000D89000 /* PeerOperationLogMetadataTable.swift in Sources */,
 				D0C26D731FE2E7A8004ABF18 /* GroupFeedReadStateTable.swift in Sources */,
+				D000CADB22006C6C0011B15D /* SharedAccountMediaManager.swift in Sources */,
 				D0575AE41E9ECBB2006F2541 /* AccessChallengeDataView.swift in Sources */,
 				C2A315BC1E2E730400D89000 /* PeerOperationLogTable.swift in Sources */,
 				D0B2F75E204F551D00D3BFB9 /* DeviceContactImportInfoTable.swift in Sources */,
@@ -1347,6 +1352,7 @@
 				D0575AE31E9ECBB2006F2541 /* AccessChallengeDataView.swift in Sources */,
 				D0CE8CF31F70249400AA2DB0 /* PostboxUpgrade_13to14.swift in Sources */,
 				D0E3A79E1B28B50400A402D9 /* Message.swift in Sources */,
+				D000CADA22006C6C0011B15D /* SharedAccountMediaManager.swift in Sources */,
 				D0C674C81CBB11C600183765 /* MessageHistoryReadStateTable.swift in Sources */,
 				D0DF0C8F1D81A350008AEB01 /* PeerView.swift in Sources */,
 				D0B2F75D204F551D00D3BFB9 /* DeviceContactImportInfoTable.swift in Sources */,
