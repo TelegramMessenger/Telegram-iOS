@@ -2,6 +2,25 @@ import Foundation
 import AsyncDisplayKit
 import SwiftSignalKit
 
+public enum TooltipControllerContent: Equatable {
+    case text(String)
+    case iconAndText(UIImage, String)
+    
+    var text: String {
+        switch self {
+            case let .text(text), let .iconAndText(_, text):
+                return text
+        }
+    }
+    
+    var image: UIImage? {
+        if case let .iconAndText(image, _) = self {
+            return image
+        }
+        return nil
+    }
+}
+
 private enum SourceAndRect {
     case node(() -> (ASDisplayNode, CGRect)?)
     case view(() -> (UIView, CGRect)?)
@@ -38,11 +57,11 @@ public final class TooltipController: ViewController {
         return self.displayNode as! TooltipControllerNode
     }
     
-    public var text: String {
+    public var content: TooltipControllerContent {
         didSet {
-            if self.text != oldValue {
+            if self.content != oldValue {
                 if self.isNodeLoaded {
-                    self.controllerNode.updateText(self.text, transition: .animated(duration: 0.25, curve: .easeInOut))
+                    self.controllerNode.updateText(self.content.text, transition: .animated(duration: 0.25, curve: .easeInOut))
                     if self.timeoutTimer != nil {
                         self.timeoutTimer?.invalidate()
                         self.timeoutTimer = nil
@@ -61,8 +80,8 @@ public final class TooltipController: ViewController {
     
     public var dismissed: (() -> Void)?
     
-    public init(text: String, timeout: Double = 2.0, dismissByTapOutside: Bool = false) {
-        self.text = text
+    public init(content: TooltipControllerContent, timeout: Double = 2.0, dismissByTapOutside: Bool = false) {
+        self.content = content
         self.timeout = timeout
         self.dismissByTapOutside = dismissByTapOutside
         
@@ -78,7 +97,7 @@ public final class TooltipController: ViewController {
     }
     
     public override func loadDisplayNode() {
-        self.displayNode = TooltipControllerNode(text: self.text, dismiss: { [weak self] in
+        self.displayNode = TooltipControllerNode(content: self.content, dismiss: { [weak self] in
             self?.dismiss()
         }, dismissByTapOutside: self.dismissByTapOutside)
         self.displayNodeDidLoad()

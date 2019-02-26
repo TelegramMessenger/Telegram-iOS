@@ -8,6 +8,7 @@ final class TooltipControllerNode: ASDisplayNode {
     private var validLayout: ContainerViewLayout?
     
     private let containerNode: ContextMenuContainerNode
+    private let imageNode: ASImageNode
     private let textNode: ImmediateTextNode
     
     private let dismissByTapOutside: Bool
@@ -17,14 +18,17 @@ final class TooltipControllerNode: ASDisplayNode {
     
     private var dismissedByTouchOutside = false
     
-    init(text: String, dismiss: @escaping () -> Void, dismissByTapOutside: Bool) {
+    init(content: TooltipControllerContent, dismiss: @escaping () -> Void, dismissByTapOutside: Bool) {
         self.dismissByTapOutside = dismissByTapOutside
         
         self.containerNode = ContextMenuContainerNode()
         self.containerNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
         
+        self.imageNode = ASImageNode()
+        self.imageNode.image = content.image
+        
         self.textNode = ImmediateTextNode()
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: content.text, font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 0
@@ -33,6 +37,7 @@ final class TooltipControllerNode: ASDisplayNode {
         
         super.init()
         
+        self.containerNode.addSubnode(self.imageNode)
         self.containerNode.addSubnode(self.textNode)
         
         self.addSubnode(self.containerNode)
@@ -58,10 +63,17 @@ final class TooltipControllerNode: ASDisplayNode {
         
         let maxActionsWidth = layout.size.width - 20.0
         
+        var imageSize = CGSize()
+        var imageSizeWithInset = CGSize()
+        if let image = self.imageNode.image {
+            imageSize = image.size
+            imageSizeWithInset = CGSize(width: image.size.width + 12.0, height: image.size.height)
+        }
+        
         var textSize = self.textNode.updateLayout(CGSize(width: maxActionsWidth, height: CGFloat.greatestFiniteMagnitude))
         textSize.width = ceil(textSize.width / 2.0) * 2.0
         textSize.height = ceil(textSize.height / 2.0) * 2.0
-        let contentSize = CGSize(width: textSize.width + 12.0, height: textSize.height + 34.0)
+        let contentSize = CGSize(width: imageSizeWithInset.width + textSize.width + 12.0, height: textSize.height + 34.0)
         
         let sourceRect: CGRect = self.sourceRect ?? CGRect(origin: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0), size: CGSize())
         
@@ -84,10 +96,13 @@ final class TooltipControllerNode: ASDisplayNode {
         
         self.containerNode.updateLayout(transition: transition)
         
-        let textFrame = CGRect(origin: CGPoint(x: 6.0, y: 17.0), size: textSize)
+        let textFrame = CGRect(origin: CGPoint(x: 6.0 + imageSizeWithInset.width, y: 17.0), size: textSize)
         if transition.isAnimated, textFrame.size != self.textNode.frame.size {
             transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: textFrame.minX - self.textNode.frame.minX, y: 0.0))
         }
+        
+        let imageFrame = CGRect(origin: CGPoint(x: 10.0, y: floor((contentSize.height - imageSize.height) / 2.0)), size: imageSize)
+        self.imageNode.frame = imageFrame
         self.textNode.frame = textFrame
     }
     
