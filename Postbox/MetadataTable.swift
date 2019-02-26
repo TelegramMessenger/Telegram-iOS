@@ -108,9 +108,6 @@ final class MetadataTable: Table {
     }
     
     func accessChallengeData() -> PostboxAccessChallengeData {
-        let encoder = PostboxEncoder()
-        PostboxAccessChallengeData.numericalPassword(value: "1111", timeout: nil, attempts: nil).encode(encoder)
-        self.valueBox.set(self.table, key: self.key(.AccessChallenge), value: encoder.makeReadBufferAndReset())
         if let value = self.valueBox.get(self.table, key: self.key(.AccessChallenge)) {
             return PostboxAccessChallengeData(decoder: PostboxDecoder(buffer: value))
         } else {
