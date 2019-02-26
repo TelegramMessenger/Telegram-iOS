@@ -121,12 +121,15 @@ private enum ItemListRevealOptionAlignment {
 }
 
 private final class ItemListRevealOptionNode: ASDisplayNode {
+    private let highlightNode: ASDisplayNode
     private let titleNode: ASTextNode
     private let iconNode: ASImageNode?
     private let animationNode: ItemListRevealAnimationNode?
     var alignment: ItemListRevealOptionAlignment?
     
     init(title: String, icon: ItemListRevealOptionIcon, color: UIColor, textColor: UIColor) {
+        self.highlightNode = ASDisplayNode()
+        
         self.titleNode = ASTextNode()
         self.titleNode.attributedText = NSAttributedString(string: title, font: icon == .none ? titleFontWithoutIcon : titleFontWithIcon, textColor: textColor)
         
@@ -156,9 +159,23 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
             self.addSubnode(animationNode)
         }
         self.backgroundColor = color
+        self.highlightNode.backgroundColor = color.withMultipliedBrightnessBy(0.9)
+    }
+    
+    func setHighlighted(_ highlighted: Bool) {
+        if highlighted {
+            self.insertSubnode(self.highlightNode, at: 0)
+            self.highlightNode.layer.animate(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.3)
+            self.highlightNode.alpha = 1.0
+        } else {
+            self.highlightNode.removeFromSupernode()
+            self.highlightNode.alpha = 0.0
+        }
     }
     
     func updateLayout(baseSize: CGSize, alignment: ItemListRevealOptionAlignment, extendedWidth: CGFloat, sideInset: CGFloat, transition: ContainedViewLayoutTransition, revealFactor: CGFloat) {
+        self.highlightNode.frame = CGRect(origin: CGPoint(), size: baseSize)
+        
         var animateAdditive = false
         if transition.isAnimated, self.alignment != alignment {
             animateAdditive = true
@@ -229,7 +246,22 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
     override func didLoad() {
         super.didLoad()
         
-        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+        let gestureRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        gestureRecognizer.highlight = { [weak self] location in
+            guard let strongSelf = self, let location = location else {
+                return
+            }
+            for node in strongSelf.optionNodes {
+                if node.frame.contains(location) {
+                    node.setHighlighted(true)
+                    break
+                }
+            }
+        }
+        gestureRecognizer.tapActionAtPoint = { _ in
+            return .waitForSingleTap
+        }
+        self.view.addGestureRecognizer(gestureRecognizer)
     }
     
     func setOptions(_ options: [ItemListRevealOption]) {
@@ -302,14 +334,18 @@ final class ItemListRevealOptionsNode: ASDisplayNode {
         }
     }
     
-    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
+    @objc func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         if case .ended = recognizer.state {
             let location = recognizer.location(in: self.view)
+            var selectedOption: Int?
             for i in 0 ..< self.optionNodes.count {
+                self.optionNodes[i].setHighlighted(false)
                 if self.optionNodes[i].frame.contains(location) {
-                    self.optionSelected(self.options[i])
-                    break
+                    selectedOption = i
                 }
+            }
+            if let selectedOption = selectedOption {
+                self.optionSelected(self.options[selectedOption])
             }
         }
     }

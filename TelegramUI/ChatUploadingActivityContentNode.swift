@@ -47,20 +47,18 @@ private class ChatUploadingActivityIndicatorNode: ChatTitleActivityIndicatorNode
             return
         }
         
-        let origin = CGPoint(x: 11.0 / 2.0 - 1.0, y: 21.0 / 2.0 + 1.0)
-        let size = CGSize(width: 26.0 / 2.0, height: 8.0 / 2.0)
+        let origin = CGPoint(x: 4.0 + UIScreenPixel, y: 7.0)
+        let size = CGSize(width: 13.0, height: 4.0)
         let radius: CGFloat = 1.25
         
-        var dotsColor = parameters.color
+        var dotsColor = parameters.color.withAlphaComponent(0.3)
         context.setFillColor(dotsColor.cgColor)
         
         var path = UIBezierPath(roundedRect: CGRect(origin: origin, size: size), cornerRadius: radius)
         path.fill(with: .normal, alpha: 1.0)
+        path.addClip()
         
-        dotsColor = parameters.color.withAlphaComponent(0.3)
-        context.setFillColor(dotsColor.cgColor)
-        
-        let progress = interpolate(from: 0.0, to: size.width, value: parameters.progress)
+        let progress = interpolate(from: 0.0, to: size.width * 2.0, value: parameters.progress)
         
         dotsColor = parameters.color
         context.setFillColor(dotsColor.cgColor)
@@ -84,12 +82,13 @@ class ChatUploadingActivityContentNode: ChatTitleActivityContentNode {
     override func updateLayout(_ constrainedSize: CGSize, alignment: NSTextAlignment) -> CGSize {
         let size = self.textNode.updateLayout(constrainedSize)
         let indicatorSize = CGSize(width: 24.0, height: 16.0)
-        self.textNode.bounds = CGRect(origin: CGPoint(), size: size)
+        let originX: CGFloat
         if case .center = alignment {
-            self.textNode.position = CGPoint(x: indicatorSize.width / 2.0, y: size.height / 2.0)
+            originX = floorToScreenPixels((indicatorSize.width - size.width) / 2.0)
         } else {
-            self.textNode.position = CGPoint(x: indicatorSize.width + size.width / 2.0, y: size.height / 2.0)
+            originX = indicatorSize.width
         }
+        self.textNode.frame = CGRect(origin: CGPoint(x: originX, y: 0.0), size: size)
         self.indicatorNode.frame = CGRect(origin: CGPoint(x: self.textNode.frame.minX - indicatorSize.width, y: 0.0), size: indicatorSize)
         return CGSize(width: size.width + indicatorSize.width, height: size.height)
     }

@@ -102,12 +102,13 @@ class ChatPlayingActivityContentNode: ChatTitleActivityContentNode {
     override func updateLayout(_ constrainedSize: CGSize, alignment: NSTextAlignment) -> CGSize {
         let size = self.textNode.updateLayout(constrainedSize)
         let indicatorSize = CGSize(width: 24.0, height: 16.0)
-        self.textNode.bounds = CGRect(origin: CGPoint(), size: size)
+        let originX: CGFloat
         if case .center = alignment {
-            self.textNode.position = CGPoint(x: indicatorSize.width / 2.0, y: size.height / 2.0)
+            originX = floorToScreenPixels((indicatorSize.width - size.width) / 2.0)
         } else {
-            self.textNode.position = CGPoint(x: indicatorSize.width + size.width / 2.0, y: size.height / 2.0)
+            originX = indicatorSize.width
         }
+        self.textNode.frame = CGRect(origin: CGPoint(x: originX, y: 0.0), size: size)
         self.indicatorNode.frame = CGRect(origin: CGPoint(x: self.textNode.frame.minX - indicatorSize.width, y: 0.0), size: indicatorSize)
         return CGSize(width: size.width + indicatorSize.width, height: size.height)
     }

@@ -301,21 +301,21 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                         if let peer = peerViewMainPeer(peerView) {
                             if peer.id == self.account.peerId {
                                 let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                state = .info(string)
+                                state = .info(string, .generic)
                             } else if let user = peer as? TelegramUser {
                                 if user.id.namespace == Namespaces.Peer.CloudUser && user.id.id == 777000 {
                                     let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                    state = .info(string)
+                                    state = .info(string, .generic)
                                 } else if user.flags.contains(.isSupport) {
                                     let statusText = self.strings.Bot_GenericSupportStatus
                                     
                                     let string = NSAttributedString(string: statusText, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                    state = .info(string)
+                                    state = .info(string, .generic)
                                 } else if let _ = user.botInfo {
                                     let statusText = self.strings.Bot_GenericBotStatus
                                     
                                     let string = NSAttributedString(string: statusText, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                    state = .info(string)
+                                    state = .info(string, .generic)
                                 } else if let peer = peerViewMainPeer(peerView) {
                                     let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                                     let userPresence: TelegramUserPresence
@@ -327,10 +327,10 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                     }
                                     let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, dateTimeFormat: self.dateTimeFormat, presence: userPresence, relativeTo: Int32(timestamp))
                                     let attributedString = NSAttributedString(string: string, font: Font.regular(13.0), textColor: activity ? self.theme.rootController.navigationBar.accentTextColor : self.theme.rootController.navigationBar.secondaryTextColor)
-                                    state = .info(attributedString)
+                                    state = .info(attributedString, activity ? .online : .lastSeenTime)
                                 } else {
                                     let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                    state = .info(string)
+                                    state = .info(string, .generic)
                                 }
                             } else if let group = peer as? TelegramGroup {
                                 var onlineCount = 0
@@ -353,10 +353,10 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                     
                                     string.append(NSAttributedString(string: "\(strings.Conversation_StatusMembers(Int32(group.participantCount))), ", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
                                     string.append(NSAttributedString(string: strings.Conversation_StatusOnline(Int32(onlineCount)), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
-                                    state = .info(string)
+                                    state = .info(string, .generic)
                                 } else {
                                     let string = NSAttributedString(string: strings.Conversation_StatusMembers(Int32(group.participantCount)), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                    state = .info(string)
+                                    state = .info(string, .generic)
                                 }
                             } else if let channel = peer as? TelegramChannel {
                                 if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
@@ -367,14 +367,14 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                         } else {
                                             string = NSAttributedString(string: strings.Channel_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                                         }
-                                        state = .info(string)
+                                        state = .info(string, .generic)
                                     } else {
                                         if case .group = channel.info, let onlineMemberCount = onlineMemberCount, onlineMemberCount > 1 {
                                             let string = NSMutableAttributedString()
                                             
                                             string.append(NSAttributedString(string: "\(strings.Conversation_StatusMembers(Int32(memberCount))), ", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
                                             string.append(NSAttributedString(string: strings.Conversation_StatusOnline(Int32(onlineMemberCount)), font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor))
-                                            state = .info(string)
+                                            state = .info(string, .generic)
                                         } else {
                                             let membersString: String
                                             if case .group = channel.info {
@@ -383,17 +383,17 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                                 membersString = strings.Conversation_StatusSubscribers(memberCount)
                                             }
                                             let string = NSAttributedString(string: membersString, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                            state = .info(string)
+                                            state = .info(string, .generic)
                                         }
                                     }
                                 } else {
                                     switch channel.info {
                                         case .group:
                                             let string = NSAttributedString(string: strings.Group_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                            state = .info(string)
+                                            state = .info(string, .generic)
                                         case .broadcast:
                                             let string = NSAttributedString(string: strings.Channel_Status, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                                            state = .info(string)
+                                            state = .info(string, .generic)
                                     }
                                 }
                             }

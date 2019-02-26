@@ -274,14 +274,22 @@ private func fontSizeMultiplierForVariant(_ variant: InstantPagePresentationFont
     }
 }
 
-func instantPageThemeTypeForSettingsAndTime(presentationTheme: PresentationTheme, settings: InstantPagePresentationSettings, time: Date?) -> InstantPageThemeType {
+func instantPageThemeTypeForSettingsAndTime(themeSettings: PresentationThemeSettings?, settings: InstantPagePresentationSettings, time: Date?) -> InstantPageThemeType {
     if settings.autoNightMode {
         switch settings.themeType {
             case .light, .sepia, .gray:
                 var useDarkTheme = false
-                if let time = time {
-                    let calendar = Calendar.current
-                    let hour = calendar.component(.hour, from: time)
+                
+                var fallback = true
+                if let themeSettings = themeSettings {
+                    if case .none = themeSettings.automaticThemeSwitchSetting.trigger {
+                    } else {
+                        fallback = false
+                        useDarkTheme = automaticThemeShouldSwitchNow(themeSettings.automaticThemeSwitchSetting, currentTheme: themeSettings.theme)
+                    }
+                }
+                if fallback, let time = time {
+                    let hour = Calendar.current.component(.hour, from: time)
                     if hour <= 8 || hour >= 22 {
                         useDarkTheme = true
                     }

@@ -9,6 +9,7 @@ import SafariServices
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var settings: InstantPagePresentationSettings?
+    private var themeSettings: PresentationThemeSettings?
     private var presentationTheme: PresentationTheme
     private var strings: PresentationStrings
     private var dateTimeFormat: PresentationDateTimeFormat
@@ -73,7 +74,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return InstantPageStoredState(contentOffset: Double(self.scrollNode.view.contentOffset.y), details: details)
     }
     
-    init(context: AccountContext, settings: InstantPagePresentationSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, statusBar: StatusBar, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
+    init(context: AccountContext, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, statusBar: StatusBar, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
         self.context = context
         self.presentationTheme = presentationTheme
         self.dateTimeFormat = dateTimeFormat
@@ -82,7 +83,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let themeReferenceDate = Date()
         self.themeReferenceDate = themeReferenceDate
         self.theme = settings.flatMap { settings in
-            return instantPageThemeForType(instantPageThemeTypeForSettingsAndTime(presentationTheme: presentationTheme, settings: settings, time: themeReferenceDate), settings: settings)
+            return instantPageThemeForType(instantPageThemeTypeForSettingsAndTime(themeSettings: themeSettings, settings: settings, time: themeReferenceDate), settings: settings)
         }
         
         self.statusBar = statusBar
@@ -159,7 +160,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             
             self.settings = settings
-            let themeType = instantPageThemeTypeForSettingsAndTime(presentationTheme: self.presentationTheme, settings: settings, time: self.themeReferenceDate)
+            let themeType = instantPageThemeTypeForSettingsAndTime(themeSettings: self.themeSettings, settings: settings, time: self.themeReferenceDate)
             let theme = instantPageThemeForType(themeType, settings: settings)
             self.theme = theme
             self.strings = strings
@@ -1304,7 +1305,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         if self.settingsNode == nil {
-            let settingsNode = InstantPageSettingsNode(strings: self.strings, settings: settings, currentThemeType: instantPageThemeTypeForSettingsAndTime(presentationTheme: self.presentationTheme, settings: settings, time: self.themeReferenceDate), applySettings: { [weak self] settings in
+            let settingsNode = InstantPageSettingsNode(strings: self.strings, settings: settings, currentThemeType: instantPageThemeTypeForSettingsAndTime(themeSettings: self.themeSettings, settings: settings, time: self.themeReferenceDate), applySettings: { [weak self] settings in
                 if let strongSelf = self {
                     strongSelf.update(settings: settings, strings: strongSelf.strings)
                     let _ = updateInstantPagePresentationSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { _ in

@@ -286,7 +286,7 @@ private func roundTimeToDay(_ timestamp: Int32) -> Int32 {
     return Int32(components.hour! * 60 * 60 + components.minute! * 60 + components.second!)
 }
 
-private func automaticThemeShouldSwitchNow(_ settings: AutomaticThemeSwitchSetting, currentTheme: PresentationThemeReference) -> Bool {
+func automaticThemeShouldSwitchNow(_ settings: AutomaticThemeSwitchSetting, currentTheme: PresentationThemeReference) -> Bool {
     switch currentTheme {
         case let .builtin(builtin):
             switch builtin {
