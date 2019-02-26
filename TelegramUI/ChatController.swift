@@ -3698,6 +3698,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     private func updateItemNodesSearchTextHighlightStates() {
+        if true {
+            return
+        }
         var searchString: String?
         if let search = self.presentationInterfaceState.search, let resultsState = search.resultsState, !resultsState.messageIndices.isEmpty {
             searchString = search.query
