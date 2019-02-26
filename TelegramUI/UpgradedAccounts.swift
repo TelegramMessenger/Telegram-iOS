@@ -219,6 +219,28 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String) -
             |> ignoreValues
             signal = signal |> then(upgradeSortOrder)
         }
+        if version < 3 {
+            if let currentId = currentId {
+                let upgradeAccessChallengeData = accountLegacyAccessChallengeData(rootPath: rootPath, id: currentId)
+                |> mapToSignal { accessChallengeData -> Signal<Void, NoError> in
+                    return accountManager.transaction { transaction -> Void in
+                        if case .none = transaction.getAccessChallengeData() {
+                            transaction.setAccessChallengeData(accessChallengeData)
+                        }
+                        
+                        transaction.setVersion(3)
+                    }
+                }
+                |> ignoreValues
+                signal = signal |> then(upgradeAccessChallengeData)
+            } else {
+                let upgradeAccessChallengeData = accountManager.transaction { transaction -> Void in
+                    transaction.setVersion(3)
+                }
+                |> ignoreValues
+                signal = signal |> then(upgradeAccessChallengeData)
+            }
+        }
         return signal
     }
 }
