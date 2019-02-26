@@ -237,7 +237,7 @@ final class VolumeControlStatusBarNode: ASDisplayNode {
         if let graphics = self.innerGraphics {
             if self.value > 0.5 {
                 self.iconNode.image = graphics.2
-            } else if self.value > 0.0 {
+            } else if self.value > 0.001 {
                 self.iconNode.image = graphics.1
             } else {
                 self.iconNode.image = graphics.0

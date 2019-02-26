@@ -188,7 +188,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             if let emptyDetailView = self.controllerView.emptyDetailView {
                 emptyDetailView.image = theme.emptyDetailIcon
                 if let image = theme.emptyDetailIcon {
-                    emptyDetailView.frame = CGRect(origin: CGPoint(x: floor((self.controllerView.containerView.bounds.size.width - image.size.width) / 2.0), y: floor((self.controllerView.containerView.bounds.size.height - image.size.height) / 2.0)), size: image.size)
+                    emptyDetailView.frame = CGRect(origin: CGPoint(x: floor(emptyDetailView.center.x - image.size.width / 2.0), y: floor(emptyDetailView.center.y - image.size.height / 2.0)), size: image.size)
                 }
             }
         }
