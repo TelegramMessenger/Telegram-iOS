@@ -298,6 +298,22 @@ public func accountNoticeEntries(rootPath: String, id: AccountRecordId) -> Signa
     }
 }
 
+public func accountLegacyAccessChallengeData(rootPath: String, id: AccountRecordId) -> Signal<PostboxAccessChallengeData, NoError> {
+    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
+    let postbox = openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: telegramPostboxSeedConfiguration)
+    return postbox
+    |> mapToSignal { value -> Signal<PostboxAccessChallengeData, NoError> in
+        switch value {
+            case let .postbox(postbox):
+                return postbox.transaction { transaction -> PostboxAccessChallengeData in
+                    return transaction.legacyGetAccessChallengeData()
+                }
+            default:
+                return .complete()
+        }
+    }
+}
+
 public func accountWithId(accountManager: AccountManager, networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     
