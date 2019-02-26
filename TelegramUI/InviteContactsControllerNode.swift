@@ -182,6 +182,16 @@ struct InviteContactsGroupSelectionState: Equatable {
         }
     }
     
+    func withSelectedContactId(_ contactId: String) -> InviteContactsGroupSelectionState {
+        var updatedIndices = self.selectedContactIndices
+        if let _ = updatedIndices[contactId] {
+            return self
+        } else {
+            updatedIndices[contactId] = self.nextSelectionIndex
+            return InviteContactsGroupSelectionState(selectedContactIndices: updatedIndices, nextSelectionIndex: self.nextSelectionIndex + 1)
+        }
+    }
+    
     func withClearedSelection() -> InviteContactsGroupSelectionState {
         return InviteContactsGroupSelectionState(selectedContactIndices: [:], nextSelectionIndex: self.nextSelectionIndex)
     }
@@ -519,7 +529,11 @@ final class InviteContactsControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: [.deviceContacts], openPeer: { _ in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: [.deviceContacts], openPeer: { [weak self] peer in
+            if let strongSelf = self, case let .deviceContact(id, _) = peer {
+                strongSelf.selectionState = strongSelf.selectionState.withSelectedContactId(id)
+                strongSelf.requestDeactivateSearch?()
+            }
         }), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()

@@ -24,6 +24,7 @@ final class InstantPageController: ViewController {
     
     private var settings: InstantPagePresentationSettings?
     private var settingsDisposable: Disposable?
+    private var themeSettings: PresentationThemeSettings?
     
     init(context: AccountContext, webPage: TelegramMediaWebpage, anchor: String? = nil) {
         self.context = context
@@ -45,7 +46,7 @@ final class InstantPageController: ViewController {
             }
         })
         
-        self.settingsDisposable = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.instantPagePresentationSettings])
+        self.settingsDisposable = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.instantPagePresentationSettings,  ApplicationSpecificSharedDataKeys.presentationThemeSettings])
         |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             if let strongSelf = self {
                 let settings: InstantPagePresentationSettings
@@ -54,7 +55,15 @@ final class InstantPageController: ViewController {
                 } else {
                     settings = InstantPagePresentationSettings.defaultSettings
                 }
+                let themeSettings: PresentationThemeSettings
+                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings {
+                    themeSettings = current
+                } else {
+                    themeSettings = PresentationThemeSettings.defaultSettings
+                }
+                
                 strongSelf.settings = settings
+                strongSelf.themeSettings = themeSettings
                 if strongSelf.isNodeLoaded {
                     strongSelf.controllerNode.update(settings: settings, strings: strongSelf.presentationData.strings)
                 }
@@ -76,7 +85,7 @@ final class InstantPageController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = InstantPageControllerNode(context: self.context, settings: self.settings, presentationTheme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, statusBar: self.statusBar, getNavigationController: { [weak self] in
+        self.displayNode = InstantPageControllerNode(context: self.context, settings: self.settings, themeSettings: self.themeSettings, presentationTheme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, statusBar: self.statusBar, getNavigationController: { [weak self] in
             return self?.navigationController as? NavigationController
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)

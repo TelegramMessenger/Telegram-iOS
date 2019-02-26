@@ -8,9 +8,15 @@ public enum ChatTitleActivityAnimationStyle {
     case slide
 }
 
+public enum ChatTitleActivityInfoType {
+    case online
+    case lastSeenTime
+    case generic
+}
+
 public enum ChatTitleActivityNodeState: Equatable {
     case none
-    case info(NSAttributedString)
+    case info(NSAttributedString, ChatTitleActivityInfoType)
     case typingText(NSAttributedString, UIColor)
     case uploading(NSAttributedString, UIColor)
     case recordingVoice(NSAttributedString, UIColor)
@@ -21,7 +27,7 @@ public enum ChatTitleActivityNodeState: Equatable {
         switch self {
             case .none:
                 return nil
-            case let .info(text):
+            case let .info(text, _):
                 return ChatTitleActivityContentNode(text: text)
             case let .typingText(text, color):
                 return ChatTypingActivityContentNode(text: text, color: color)
@@ -37,7 +43,7 @@ public enum ChatTitleActivityNodeState: Equatable {
     }
     
     var string: String? {
-        if case let .info(text) = self {
+        if case let .info(text, _) = self {
             return text.string
         }
         return nil
@@ -76,6 +82,11 @@ class ChatTitleActivityNode: ASDisplayNode {
                     self.addSubnode(contentNode)
                 }
             } else {
+                var animation = animation
+                if case let .info(_, fromType) = fromState, case let .info(_, toType) = state, fromType == toType {
+                    animation = .none
+                }
+                    
                 self.contentNode = node
                 if let contentNode = self.contentNode {
                     self.addSubnode(contentNode)

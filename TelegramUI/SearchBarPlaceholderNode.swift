@@ -159,7 +159,7 @@ class SearchBarPlaceholderNode: ASDisplayNode {
         }
     }
     
-    @objc private func backgroundTap(_ recognizer: UITapGestureRecognizer) {
+    @objc private func backgroundTap(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.backgroundNode.layer.animate(from: (self.backgroundNode.backgroundColor ?? self.foregroundColor).cgColor, to: self.foregroundColor.cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.2, completion: { _ in
                 self.backgroundNode.backgroundColor = self.foregroundColor

@@ -628,11 +628,11 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                 infoIconRightInset -= 36.0
             }
             
-            transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 52.0, y: 8.0), size: CGSize(width: 40.0, height: 40.0)))
+            transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 52.0, y: 5.0), size: CGSize(width: 40.0, height: 40.0)))
             
-            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 8.0), size: self.titleNode.bounds.size))
+            transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 6.0), size: self.titleNode.bounds.size))
             
-            transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 30.0), size: self.statusNode.bounds.size))
+            transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: 27.0), size: self.statusNode.bounds.size))
             
             transition.updateFrame(node: self.dateNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + self.bounds.size.width - dateRightInset - self.dateNode.bounds.size.width, y: self.dateNode.frame.minY), size: self.dateNode.bounds.size))
             
