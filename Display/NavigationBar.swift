@@ -340,6 +340,9 @@ open class NavigationBar: ASDisplayNode {
             if self.rightButtonNode.supernode != nil {
                 addAccessibilityChildren(of: self.rightButtonNode, container: self, to: &accessibilityElements)
             }
+            if let contentNode = self.contentNode {
+                addAccessibilityChildren(of: contentNode, container: self, to: &accessibilityElements)
+            }
             return accessibilityElements
         } set(value) {
         }

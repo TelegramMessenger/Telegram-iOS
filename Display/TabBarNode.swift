@@ -95,11 +95,15 @@ private final class TabBarItemNode: ASDisplayNode {
         self.imageNode = ASImageNode()
         self.imageNode.displayWithoutProcessing = true
         self.imageNode.displaysAsynchronously = false
+        self.imageNode.isAccessibilityElement = false
         self.textImageNode = ASImageNode()
         self.textImageNode.displayWithoutProcessing = true
         self.textImageNode.displaysAsynchronously = false
+        self.textImageNode.isAccessibilityElement = false
         
         super.init()
+        
+        self.isAccessibilityElement = true
         
         self.addSubnode(self.textImageNode)
         self.addSubnode(self.imageNode)
@@ -116,7 +120,7 @@ private final class TabBarNodeContainer {
     let imageNode: TabBarItemNode
     let badgeContainerNode: ASDisplayNode
     let badgeBackgroundNode: ASImageNode
-    let badgeTextNode: ASTextNode
+    let badgeTextNode: ImmediateTextNode
     
     var badgeValue: String?
     var appliedBadgeValue: String?
@@ -134,6 +138,8 @@ private final class TabBarNodeContainer {
         self.item = item
         
         self.imageNode = imageNode
+        self.imageNode.isAccessibilityElement = true
+        self.imageNode.accessibilityTraits = UIAccessibilityTraitButton
         
         self.badgeContainerNode = ASDisplayNode()
         self.badgeContainerNode.isUserInteractionEnabled = false
@@ -145,7 +151,7 @@ private final class TabBarNodeContainer {
         self.badgeBackgroundNode.displaysAsynchronously = false
         self.badgeBackgroundNode.isAccessibilityElement = false
         
-        self.badgeTextNode = ASTextNode()
+        self.badgeTextNode = ImmediateTextNode()
         self.badgeTextNode.maximumNumberOfLines = 1
         self.badgeTextNode.isUserInteractionEnabled = false
         self.badgeTextNode.displaysAsynchronously = false
@@ -228,7 +234,7 @@ class TabBarNode: ASDisplayNode {
         
         super.init()
         
-        self.isAccessibilityContainer = true
+        self.isAccessibilityContainer = false
         
         self.isOpaque = true
         self.backgroundColor = theme.tabBarBackgroundColor
@@ -298,11 +304,13 @@ class TabBarNode: ASDisplayNode {
                 let (image, imageContentWidth) = tabBarItemImage(item.selectedImage, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal, imageMode: true)
                 node.textImageNode.image = textImage
                 node.imageNode.image = image
+                node.accessibilityLabel = item.title
                 node.contentWidth = max(contentWidth, imageContentWidth)
             } else {
                 let (textImage, contentWidth) = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal, imageMode: false)
                 let (image, imageContentWidth) = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal, imageMode: true)
                 node.textImageNode.image = textImage
+                node.accessibilityLabel = item.title
                 node.imageNode.image = image
                 node.contentWidth = max(contentWidth, imageContentWidth)
             }
@@ -331,12 +339,14 @@ class TabBarNode: ASDisplayNode {
                 let (textImage, contentWidth) = tabBarItemImage(item.selectedImage, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal, imageMode: false)
                 let (image, imageContentWidth) = tabBarItemImage(item.selectedImage, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal, imageMode: true)
                 node.textImageNode.image = textImage
+                node.accessibilityLabel = item.title
                 node.imageNode.image = image
                 node.contentWidth = max(contentWidth, imageContentWidth)
             } else {
                 let (textImage, contentWidth) = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal, imageMode: false)
                 let (image, imageContentWidth) = tabBarItemImage(item.image, title: item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarTextColor, horizontal: self.horizontal, imageMode: true)
                 node.textImageNode.image = textImage
+                node.accessibilityLabel = item.title
                 node.imageNode.image = image
                 node.contentWidth = max(contentWidth, imageContentWidth)
             }
@@ -411,7 +421,7 @@ class TabBarNode: ASDisplayNode {
                 }
                 
                 if !container.badgeContainerNode.isHidden {
-                    let badgeSize = container.badgeTextNode.measure(CGSize(width: 200.0, height: 100.0))
+                    let badgeSize = container.badgeTextNode.updateLayout(CGSize(width: 200.0, height: 100.0))
                     let backgroundSize = CGSize(width: max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
                     let backgroundFrame: CGRect
                     if horizontal {
