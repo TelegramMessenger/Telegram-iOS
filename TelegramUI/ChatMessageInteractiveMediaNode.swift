@@ -32,6 +32,11 @@ enum InteractiveMediaNodeAutodownloadMode {
     case full
 }
 
+enum InteractiveMediaNodePlayWithSoundMode {
+    case single
+    case loop
+}
+
 final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private let imageNode: TransformImageNode
     private var currentImageArguments: TransformImageArguments?
@@ -59,7 +64,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private let videoNodeReadyDisposable = MetaDisposable()
     private let playerStatusDisposable = MetaDisposable()
     
-    private var updateTimer: SwiftSignalKit.Timer?
+    private var playerUpdateTimer: SwiftSignalKit.Timer?
     private var playerStatus: MediaPlayerStatus? {
         didSet {
             if self.playerStatus != oldValue {
@@ -750,18 +755,18 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     }
     
     private func ensureHasTimer() {
-        if self.updateTimer == nil {
+        if self.playerUpdateTimer == nil {
             let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
                 self?.updateFetchStatus()
                 }, queue: Queue.mainQueue())
-            self.updateTimer = timer
+            self.playerUpdateTimer = timer
             timer.start()
         }
     }
     
     private func stopTimer() {
-        self.updateTimer?.invalidate()
-        self.updateTimer = nil
+        self.playerUpdateTimer?.invalidate()
+        self.playerUpdateTimer = nil
     }
     
     private func updateFetchStatus() {
@@ -1196,13 +1201,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         })
     }
     
-    func playMediaWithSound() -> (() -> Void)? {
+    func playMediaWithSound() -> (() -> Void, Bool, Bool, ASDisplayNode?)? {
         var isAnimated = false
         if let file = self.media as? TelegramMediaFile, file.isAnimated {
             isAnimated = true
         }
         if let videoNode = self.videoNode, let context = self.context, (self.automaticPlayback ?? false) && !isAnimated {
-            return {
+            return ({
                 let _ = (context.sharedContext.mediaManager.globalMediaPlayerState
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { playlistStateAndType in
@@ -1221,7 +1226,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none)
                     }
                 })
-            }
+            }, false, false, self.badgeNode)
         } else {
             return nil
         }

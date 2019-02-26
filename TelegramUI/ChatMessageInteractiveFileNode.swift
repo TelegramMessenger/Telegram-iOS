@@ -34,6 +34,21 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private let statusDisposable = MetaDisposable()
     private let playbackStatusDisposable = MetaDisposable()
     private let playbackStatus = Promise<MediaPlayerStatus>()
+    
+    private var playerUpdateTimer: SwiftSignalKit.Timer?
+    private var playerStatus: MediaPlayerStatus? {
+        didSet {
+            if self.playerStatus != oldValue {
+                if let playerStatus = playerStatus, case .playing = playerStatus.status {
+                    self.ensureHasTimer()
+                } else {
+                    self.stopTimer()
+                }
+                //self.updateFetchStatus()
+            }
+        }
+    }
+    
     private let fetchControls = Atomic<FetchControls?>(value: nil)
     private var resourceStatus: FileMediaResourceStatus?
     private let fetchDisposable = MetaDisposable()
@@ -875,5 +890,20 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
         self.iconNode?.isHidden = isHidden
         return isHidden
+    }
+    
+    private func ensureHasTimer() {
+        if self.playerUpdateTimer == nil {
+            let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
+                //self?.updateFetchStatus()
+            }, queue: Queue.mainQueue())
+            self.playerUpdateTimer = timer
+            timer.start()
+        }
+    }
+    
+    private func stopTimer() {
+        self.playerUpdateTimer?.invalidate()
+        self.playerUpdateTimer = nil
     }
 }

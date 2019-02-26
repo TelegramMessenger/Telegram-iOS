@@ -125,6 +125,8 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case passcodeLockTips = 6
     case contactsPermissionWarning = 7
     case notificationsPermissionWarning = 8
+    case volumeButtonToUnmuteTip = 9
+    
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
         v.setInt32(0, value: self.rawValue)
@@ -175,6 +177,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func notificationsPermissionWarning() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: permissionsNamespace), key: ApplicationSpecificGlobalNotice.notificationsPermissionWarning.key)
+    }
+    
+    static func volumeButtonToUnmuteTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.volumeButtonToUnmuteTip.key)
     }
 }
 
@@ -364,6 +370,22 @@ public struct ApplicationSpecificNotice {
     public static func setNotificationsPermissionWarning(accountManager: AccountManager, value: Int32) {
         let _ = accountManager.transaction { transaction -> Void in
             transaction.setNotice(ApplicationSpecificNoticeKeys.notificationsPermissionWarning(), ApplicationSpecificTimestampNotice(value: value))
+        }.start()
+    }
+    
+    static func getVolumeButtonToUnmute(accountManager: AccountManager) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction -> Bool in
+            if let _ = transaction.getNotice(ApplicationSpecificNoticeKeys.volumeButtonToUnmuteTip()) as? ApplicationSpecificBoolNotice {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    public static func setVolumeButtonToUnmute(accountManager: AccountManager) {
+        let _ = accountManager.transaction { transaction -> Void in
+            transaction.setNotice(ApplicationSpecificNoticeKeys.volumeButtonToUnmuteTip(), ApplicationSpecificBoolNotice())
         }.start()
     }
 

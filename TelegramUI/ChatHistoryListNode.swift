@@ -374,6 +374,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         return self.hasVisiblePlayableItemNodesPromise.get()
     }
     
+    private let isInteractivelyScrollingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    var isInteractivelyScrolling: Signal<Bool, NoError> {
+        return self.isInteractivelyScrollingPromise.get()
+    }
+    
     private var currentPresentationData: PresentationData
     private var chatPresentationDataPromise: Promise<ChatPresentationData>
     private var presentationDataDisposable: Disposable?
@@ -633,7 +638,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     if let visible = displayedRange.visibleRange {
                         let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
                         
-                        var readIndexRange = (0, historyView.filteredEntries.count - 1 - visible.firstIndex)
+                        let readIndexRange = (0, historyView.filteredEntries.count - 1 - visible.firstIndex)
                         /*if !visible.firstIndexFullyVisible {
                             readIndexRange.1 -= 1
                         }*/
@@ -805,6 +810,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 return .complete()
             }
         }).start()
+        
+        self.beganInteractiveDragging = { [weak self] in
+            self?.isInteractivelyScrollingPromise.set(true)
+        }
+        
+        self.didEndScrolling = { [weak self] in
+            self?.isInteractivelyScrollingPromise.set(false)
+        }
     }
     
     deinit {

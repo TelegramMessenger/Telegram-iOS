@@ -688,9 +688,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
     }
     
-    func playMediaWithSound() -> (() -> Void)? {
+    func playMediaWithSound() -> (() -> Void, Bool, Bool, ASDisplayNode?)? {
         if let item = self.item {
-            return {
+            return ({
                 if !self.infoBackgroundNode.alpha.isZero {
                     let _ = (item.context.sharedContext.mediaManager.globalMediaPlayerState
                     |> take(1)
@@ -711,7 +711,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }
                     })
                 }
-            }
+            }, true, false, nil)
         } else {
             return nil
         }

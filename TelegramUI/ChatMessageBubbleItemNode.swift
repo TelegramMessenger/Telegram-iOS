@@ -1822,7 +1822,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             for contentNode in self.contentNodes {
                 if let contentItem = contentNode.item {
                     if contentNode.updateHiddenMedia(item.controllerInteraction.hiddenMedia[contentItem.message.id]) {
-                        if self.contentNodes.count == 1 && self.nameNode == nil && self.adminBadgeNode == nil && self.forwardInfoNode == nil && self.replyInfoNode == nil {
+                        if self.contentNodes.count == 1 && self.contentNodes.first is ChatMessageMediaBubbleContentNode && self.nameNode == nil && self.adminBadgeNode == nil && self.forwardInfoNode == nil && self.replyInfoNode == nil {
                             hasHiddenBackground = true
                         }
                         if let mosaicStatusNode = self.mosaicStatusNode, mosaicStatusNode.frame.intersects(contentNode.frame) {
@@ -1856,7 +1856,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     }
     
     
-    override func playMediaWithSound() -> (() -> Void)? {
+    override func playMediaWithSound() -> (() -> Void, Bool, Bool, ASDisplayNode?)? {
         for contentNode in self.contentNodes {
             if let playMediaWithSound = contentNode.playMediaWithSound() {
                 return playMediaWithSound

@@ -170,6 +170,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     private var openStickersDisposable: Disposable?
+    private var displayVideoUnmuteTipDisposable: Disposable?
     
     /*override var accessibilityElements: [Any]? {
         get {
@@ -347,12 +348,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.textInputPanelNode?.updateActivity = { [weak self] in
             self?.updateTypingActivity(true)
         }
-        
-
     }
     
     deinit {
         self.openStickersDisposable?.dispose()
+        self.displayVideoUnmuteTipDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -395,6 +395,41 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         (self.view as? ChatControllerNodeView)?.controller = self.controller
+        
+        self.displayVideoUnmuteTipDisposable = (combineLatest(queue: Queue.mainQueue(), ApplicationSpecificNotice.getVolumeButtonToUnmute(accountManager: self.context.sharedContext.accountManager), self.historyNode.hasVisiblePlayableItemNodes, self.historyNode.isInteractivelyScrolling)
+        |> mapToSignal { notice, hasVisiblePlayableItemNodes, isInteractivelyScrolling -> Signal<Bool, NoError> in
+            let display = !notice && hasVisiblePlayableItemNodes && !isInteractivelyScrolling
+            if display {
+                return .complete()
+                |> delay(2.0, queue: Queue.mainQueue())
+                |> then(
+                    .single(display)
+                )
+            } else {
+                return .single(display)
+            }
+        }).start(next: { [weak self] display in
+            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
+                if display {
+                    var nodes: [(CGFloat, ChatMessageItemView, ASDisplayNode)] = []
+                    strongSelf.historyNode.forEachVisibleItemNode { itemNode in
+                        if let itemNode = itemNode as? ChatMessageItemView, let (_, isVideoMessage, _, badgeNode) = itemNode.playMediaWithSound(), let node = badgeNode {
+                            if !isVideoMessage, case let .visible(fraction) = itemNode.visibility {
+                                nodes.insert((fraction, itemNode, node), at: 0)
+                            }
+                        }
+                    }
+                    for (fraction, _, badgeNode) in nodes {
+                        if fraction > 0.7 {
+                            interfaceInteraction.displayVideoUnmuteTip(badgeNode.view.convert(badgeNode.view.bounds, to: strongSelf.view).origin.offsetBy(dx: 42.0, dy: -1.0))
+                            break
+                        }
+                    }
+                } else {
+                    interfaceInteraction.displayVideoUnmuteTip(nil)
+                }
+            }
+        })
     }
     
     private func updateIsEmpty(_ isEmpty: Bool, animated: Bool) {
@@ -547,29 +582,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             previousInputPanelOrigin.y -= inputPanelNode.bounds.size.height
         }
         self.containerLayoutAndNavigationBarHeight = (layout, navigationBarHeight)
-        
-//        let transitionIsAnimated: Bool
-//        if case .immediate = transition {
-//            transitionIsAnimated = false
-//        } else {
-//            transitionIsAnimated = true
-//        }
-//
-//        if let _ = self.chatPresentationInterfaceState.search, let interfaceInteraction = self.interfaceInteraction {
-//            var activate = false
-//            if self.searchNavigationNode == nil {
-//                activate = true
-//                self.searchNavigationNode = ChatSearchNavigationContentNode(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, chatLocation: self.chatPresentationInterfaceState.chatLocation, interaction: interfaceInteraction)
-//            }
-//            self.navigationBar?.setContentNode(self.searchNavigationNode, animated: transitionIsAnimated)
-//            self.searchNavigationNode?.update(presentationInterfaceState: self.chatPresentationInterfaceState)
-//            if activate {
-//                self.searchNavigationNode?.activate()
-//            }
-//        } else if let _ = self.searchNavigationNode {
-//            self.searchNavigationNode = nil
-//            self.navigationBar?.setContentNode(nil, animated: transitionIsAnimated)
-//        }
         
         var dismissedTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
         var immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance = false
@@ -1472,10 +1484,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func playFirstMediaWithSound() {
         var actions: [(CGFloat, () -> Void)] = []
+        var hasUnconsumed = false
         self.historyNode.forEachVisibleItemNode { itemNode in
-            if let itemNode = itemNode as? ChatMessageItemView, let playMediaWithSound = itemNode.playMediaWithSound() {
+            if let itemNode = itemNode as? ChatMessageItemView, let (action, isVideoMessage, isUnconsumed, _) = itemNode.playMediaWithSound() {
                 if case let .visible(fraction) = itemNode.visibility {
-                    actions.insert((fraction, playMediaWithSound), at: 0)
+                    actions.insert((fraction, action), at: 0)
                 }
             }
         }

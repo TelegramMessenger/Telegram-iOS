@@ -1407,7 +1407,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let text: String = presentationData.strings.UserInfo_TapToCall
                 
-                let tooltipController = TooltipController(text: text, dismissByTapOutside: true)
+                let tooltipController = TooltipController(content: .text(text), dismissByTapOutside: true)
                 tooltipController.dismissed = {
                 }
                 controller.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in

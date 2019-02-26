@@ -71,6 +71,7 @@ final class ChatRecentActionsController: TelegramController {
         }, deleteRecordedMedia: {
         }, sendRecordedMedia: {
         }, displayRestrictedInfo: { _ in
+        }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
         }, sendSticker: { _ in

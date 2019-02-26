@@ -205,6 +205,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     private var raiseToListen: RaiseToListenManager?
     private var voicePlaylistDidEndTimestamp: Double = 0.0
     
+    private weak var videoUnmuteTooltipController: TooltipController?
     private weak var silentPostTooltipController: TooltipController?
     private weak var mediaRecordingModeTooltipController: TooltipController?
     private weak var mediaRestrictedTooltipController: TooltipController?
@@ -2637,10 +2638,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }
                 
                 if let tooltipController = strongSelf.mediaRestrictedTooltipController, strongSelf.mediaRestrictedTooltipControllerMode == isStickers {
-                    tooltipController.text = banDescription
+                    tooltipController.content = .text(banDescription)
                 } else if let rect = rect {
                     strongSelf.mediaRestrictedTooltipController?.dismiss()
-                    let tooltipController = TooltipController(text: banDescription)
+                    let tooltipController = TooltipController(content: .text(banDescription))
                     strongSelf.mediaRestrictedTooltipController = tooltipController
                     strongSelf.mediaRestrictedTooltipControllerMode = isStickers
                     tooltipController.dismissed = { [weak tooltipController] in
@@ -2655,6 +2656,30 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         return nil
                     }))
                 }
+            }
+        }, displayVideoUnmuteTip: { [weak self] location in
+            guard let strongSelf = self else {
+                return
+            }
+            if let location = location, let icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIconX") {
+                strongSelf.mediaRestrictedTooltipController?.dismiss()
+                let tooltipController = TooltipController(content: .iconAndText(icon, strongSelf.presentationInterfaceState.strings.Conversation_PressVolumeButtonForSound), timeout: 3.5)
+                strongSelf.videoUnmuteTooltipController = tooltipController
+                tooltipController.dismissed = { [weak tooltipController] in
+                    if let strongSelf = self, let tooltipController = tooltipController, strongSelf.videoUnmuteTooltipController === tooltipController {
+                        strongSelf.videoUnmuteTooltipController = nil
+                        
+                        ApplicationSpecificNotice.setVolumeButtonToUnmute(accountManager: strongSelf.context.sharedContext.accountManager)
+                    }
+                }
+                strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                    if let strongSelf = self {
+                        return (strongSelf.chatDisplayNode, CGRect(origin: location, size: CGSize()))
+                    }
+                    return nil
+                }))
+            } else if let tooltipController = strongSelf.videoUnmuteTooltipController {
+                tooltipController.dismiss()
             }
         }, switchMediaRecordingMode: { [weak self] in
             if let strongSelf = self {
@@ -2896,9 +2921,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }
                 
                 if let tooltipController = strongSelf.silentPostTooltipController {
-                    tooltipController.text = text
+                    tooltipController.content = .text(text)
                 } else if let rect = rect {
-                    let tooltipController = TooltipController(text: text)
+                    let tooltipController = TooltipController(content: .text(text))
                     strongSelf.silentPostTooltipController = tooltipController
                     tooltipController.dismissed = { [weak tooltipController] in
                         if let strongSelf = self, let tooltipController = tooltipController, strongSelf.silentPostTooltipController === tooltipController {
@@ -3179,6 +3204,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             guard let strongSelf = self, strongSelf.traceVisibility() && isTopmostChatController(strongSelf) else {
                 return
             }
+            ApplicationSpecificNotice.setVolumeButtonToUnmute(accountManager: strongSelf.context.sharedContext.accountManager)
             strongSelf.chatDisplayNode.playFirstMediaWithSound()
         })
         
@@ -3337,8 +3363,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         self.chatDisplayNode.historyNode.canReadHistory.set(.single(false))
         self.saveInterfaceState()
         
+        self.videoUnmuteTooltipController?.dismiss()
         self.silentPostTooltipController?.dismiss()
         self.mediaRecordingModeTooltipController?.dismiss()
+        self.mediaRestrictedTooltipController?.dismiss()
         
         self.window?.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {
@@ -5908,9 +5936,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
         
         if let tooltipController = self.mediaRecordingModeTooltipController {
-            tooltipController.text = text
+            tooltipController.content = .text(text)
         } else if let rect = rect {
-            let tooltipController = TooltipController(text: text)
+            let tooltipController = TooltipController(content: .text(text))
             self.mediaRecordingModeTooltipController = tooltipController
             tooltipController.dismissed = { [weak self, weak tooltipController] in
                 if let strongSelf = self, let tooltipController = tooltipController, strongSelf.mediaRecordingModeTooltipController === tooltipController {
