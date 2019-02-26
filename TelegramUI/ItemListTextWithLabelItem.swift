@@ -132,6 +132,8 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
+        self.isAccessibilityElement = true
+        
         self.addSubnode(self.labelNode)
         self.addSubnode(self.textNode)
     }
@@ -217,6 +219,9 @@ class ItemListTextWithLabelItemNode: ListViewItemNode {
                     }
                     
                     strongSelf.item = item
+                    
+                    strongSelf.accessibilityLabel = item.label
+                    strongSelf.accessibilityValue = item.text
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = item.theme.list.itemPlainSeparatorColor

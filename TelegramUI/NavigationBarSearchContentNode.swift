@@ -24,6 +24,10 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
         
         super.init()
         
+        self.placeholderNode.isAccessibilityElement = true
+        self.placeholderNode.accessibilityLabel = placeholder
+        self.placeholderNode.accessibilityTraits = UIAccessibilityTraitSearchField
+        
         self.addSubnode(self.placeholderNode)
         self.placeholderNode.activate = activate
     }
@@ -31,6 +35,7 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
     func updateThemeAndPlaceholder(theme: PresentationTheme, placeholder: String) {
         self.theme = theme
         self.placeholder = placeholder
+        self.placeholderNode.accessibilityLabel = placeholder
         if let disabledOverlay = self.disabledOverlay {
             disabledOverlay.backgroundColor = theme.rootController.navigationBar.backgroundColor.withAlphaComponent(0.5)
         }

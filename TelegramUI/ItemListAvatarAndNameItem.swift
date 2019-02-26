@@ -327,6 +327,8 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
         
         super.init(layerBacked: false, dynamicBounce: false)
         
+        self.isAccessibilityElement = true
+        
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.activityIndicator)
         
@@ -523,6 +525,8 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
             return (layout, { [weak self] animated, synchronousLoads in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    strongSelf.accessibilityLabel = displayTitle.composedTitle
                     
                     strongSelf.layoutWidthAndNeighbors = (params, neighbors)
                     

@@ -335,6 +335,8 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
+        self.isAccessibilityElement = true
+        
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.avatarNode)
@@ -619,6 +621,9 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     return (.complete(), { [weak strongSelf] animated, synchronousLoads in
                         if let strongSelf = strongSelf {
                             strongSelf.layoutParams = (item, params, first, last, firstWithHeader)
+                            
+                            strongSelf.accessibilityLabel = titleAttributedString?.string
+                            strongSelf.accessibilityValue = statusAttributedString?.string
                             
                             switch item.peer {
                                 case let .peer(peer, _):

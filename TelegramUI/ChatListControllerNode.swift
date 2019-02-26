@@ -198,6 +198,7 @@ final class ChatListControllerNode: ASDisplayNode {
                 requestDeactivateSearch()
             }
         })
+        self.chatListNode.accessibilityElementsHidden = true
         
         self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
         self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
@@ -215,6 +216,7 @@ final class ChatListControllerNode: ASDisplayNode {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.deactivate(placeholder: placeholderNode, animated: animated)
             self.searchDisplayController = nil
+            self.chatListNode.accessibilityElementsHidden = false
         }
     }
     

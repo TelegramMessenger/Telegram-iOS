@@ -155,6 +155,8 @@ class ItemListDisclosureItemNode: ListViewItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
+        self.isAccessibilityElement = true
+        
         self.addSubnode(self.titleNode)
         self.addSubnode(self.labelNode)
         self.addSubnode(self.arrowNode)
@@ -285,6 +287,10 @@ class ItemListDisclosureItemNode: ListViewItemNode {
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    strongSelf.accessibilityLabel = item.title
+                    strongSelf.accessibilityValue = item.label
+                    strongSelf.accessibilityTraits = UIAccessibilityTraitButton
                     
                     if let icon = item.icon {
                         if strongSelf.iconNode.supernode == nil {
