@@ -114,6 +114,8 @@ class ItemListPeerActionItemNode: ListViewItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
+        self.isAccessibilityElement = true
+        
         self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
     }
@@ -146,6 +148,8 @@ class ItemListPeerActionItemNode: ListViewItemNode {
             return (layout, { [weak self] animated in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    strongSelf.accessibilityLabel = item.title
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor

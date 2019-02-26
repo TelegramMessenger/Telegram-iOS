@@ -116,6 +116,8 @@ class ItemListActionItemNode: ListViewItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
+        self.isAccessibilityElement = true
+        
         self.addSubnode(self.titleNode)
     }
     
@@ -169,6 +171,16 @@ class ItemListActionItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    strongSelf.accessibilityLabel = item.title
+                    var accessibilityTraits: UIAccessibilityTraits = UIAccessibilityTraitButton
+                    switch item.kind {
+                        case .disabled:
+                            accessibilityTraits |= UIAccessibilityTraitNotEnabled
+                        default:
+                            break
+                    }
+                    strongSelf.accessibilityTraits = accessibilityTraits
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor

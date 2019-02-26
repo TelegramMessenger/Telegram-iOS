@@ -246,6 +246,8 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
+        self.isAccessibilityElement = true
+        
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.statusNode)
@@ -496,6 +498,17 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
             return (layout, { [weak self] synchronousLoad, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, params, neighbors)
+                    
+                    strongSelf.accessibilityLabel = titleAttributedString?.string
+                    var combinedValueString = ""
+                    if let statusString = statusAttributedString?.string, !statusString.isEmpty {
+                        combinedValueString.append(statusString)
+                    }
+                    if let labelString = labelAttributedString?.string, !labelString.isEmpty {
+                        combinedValueString.append(labelString)
+                    }
+                    
+                    strongSelf.accessibilityValue = combinedValueString
                     
                     if let updateArrowImage = updateArrowImage {
                         strongSelf.labelArrowNode?.image = updateArrowImage

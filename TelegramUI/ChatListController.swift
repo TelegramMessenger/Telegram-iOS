@@ -593,7 +593,11 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         }
         
         self.chatListDisplayNode.chatListNode.contentOffsetChanged = { [weak self] offset in
-            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode, let validLayout = strongSelf.validLayout {
+                var offset = offset
+                if validLayout.inVoiceOver {
+                    offset = .known(0.0)
+                }
                 searchContentNode.updateListVisibleContentOffset(offset)
             }
         }
@@ -789,7 +793,14 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
+        let wasInVoiceOver = self.validLayout?.inVoiceOver ?? false
+        
         self.validLayout = layout
+        
+        if let searchContentNode = self.searchContentNode, layout.inVoiceOver != wasInVoiceOver {
+            searchContentNode.updateListVisibleContentOffset(.known(0.0))
+            self.chatListDisplayNode.chatListNode.scrollToPosition(.top)
+        }
         
         self.chatListDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
     }
