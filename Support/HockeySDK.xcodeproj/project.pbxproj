@@ -1584,6 +1584,9 @@
 				LastTestingUpgradeCheck = 0600;
 				LastUpgradeCheck = 0920;
 				TargetAttributes = {
+					1E5954CB15B6F24A00A03429 = {
+						ProvisioningStyle = Manual;
+					};
 					1EB6173E1B0A30480035A986 = {
 						CreatedOnToolsVersion = 6.3.1;
 					};
@@ -2095,6 +2098,7 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Manual;
 				DSTROOT = /tmp/HockeySDK.dst;
 				ENABLE_BITCODE = NO;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -2344,6 +2348,7 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Manual;
 				DSTROOT = /tmp/HockeySDK.dst;
 				ENABLE_BITCODE = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -2370,6 +2375,7 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Manual;
 				DSTROOT = /tmp/HockeySDK.dst;
 				ENABLE_BITCODE = NO;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -2593,6 +2599,7 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Manual;
 				DSTROOT = /tmp/HockeySDK.dst;
 				ENABLE_BITCODE = NO;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -3124,6 +3131,7 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Manual;
 				DSTROOT = /tmp/HockeySDK.dst;
 				ENABLE_BITCODE = NO;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -3405,6 +3413,7 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Manual;
 				DSTROOT = /tmp/HockeySDK.dst;
 				ENABLE_BITCODE = NO;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -3692,6 +3701,7 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Manual;
 				DSTROOT = /tmp/HockeySDK.dst;
 				ENABLE_BITCODE = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -3984,6 +3994,7 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Manual;
 				DSTROOT = /tmp/HockeySDK.dst;
 				ENABLE_BITCODE = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -4276,6 +4287,7 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Manual;
 				DSTROOT = /tmp/HockeySDK.dst;
 				ENABLE_BITCODE = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -4561,6 +4573,7 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Manual;
 				DSTROOT = /tmp/HockeySDK.dst;
 				ENABLE_BITCODE = NO;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -4841,6 +4854,7 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Manual;
 				DSTROOT = /tmp/HockeySDK.dst;
 				ENABLE_BITCODE = NO;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -5121,6 +5135,7 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Manual;
 				DSTROOT = /tmp/HockeySDK.dst;
 				ENABLE_BITCODE = NO;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -5408,6 +5423,7 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Manual;
 				DSTROOT = /tmp/HockeySDK.dst;
 				ENABLE_BITCODE = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -5693,6 +5709,7 @@
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Manual;
 				DSTROOT = /tmp/HockeySDK.dst;
 				ENABLE_BITCODE = NO;
 				ENABLE_NS_ASSERTIONS = NO;
