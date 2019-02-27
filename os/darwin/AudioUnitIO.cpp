@@ -23,7 +23,7 @@
 #define kOutputBus 0
 #define kInputBus 1
 
-#if TARGET_OS_OSX
+#if TARGET_OS_OSX && !defined(TGVOIP_NO_OSX_PRIVATE_API)
 extern "C" {
 OSStatus AudioDeviceDuck(AudioDeviceID inDevice,
                          Float32 inDuckedLevel,
@@ -177,7 +177,7 @@ void AudioUnitIO::EnableInput(bool enabled){
 void AudioUnitIO::EnableOutput(bool enabled){
 	outputEnabled=enabled;
 	StartIfNeeded();
-#if TARGET_OS_OSX
+#if TARGET_OS_OSX && !defined(TGVOIP_NO_OSX_PRIVATE_API)
 	if(actualDuckingEnabled!=duckingEnabled){
 		actualDuckingEnabled=duckingEnabled;
     	AudioDeviceDuck(currentOutputDeviceID, duckingEnabled ? 0.177828f : 1.0f, NULL, 0.1f);
@@ -310,10 +310,12 @@ void AudioUnitIO::SetCurrentDevice(bool input, std::string deviceID){
 
 void AudioUnitIO::SetDuckingEnabled(bool enabled){
 	duckingEnabled=enabled;
+#ifndef TGVOIP_NO_OSX_PRIVATE_API
 	if(outputEnabled && duckingEnabled!=actualDuckingEnabled){
 		actualDuckingEnabled=enabled;
     	AudioDeviceDuck(currentOutputDeviceID, enabled ? 0.177828f : 1.0f, NULL, 0.1f);
 	}
+#endif
 }
 
 #endif
