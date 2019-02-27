@@ -103,7 +103,7 @@ static void
 _play_updated(void *data, Eo *obj, void *ev)
 {
    Eo *slider = (Eo *) data;
-   elm_slider_value_set(slider, elm_animation_view_keyframe_get(obj));
+   elm_slider_value_set(slider, elm_animation_view_progress_get(obj));
 }
 
 static void
@@ -123,7 +123,7 @@ static void
 _slider_drag_cb(void *data, Eo *obj, void *ev)
 {
    Eo *anim_view = (Eo *) data;
-   elm_animation_view_keyframe_set(anim_view, elm_slider_value_get(obj));
+   elm_animation_view_progress_set(anim_view, elm_slider_value_get(obj));
 }
 
 static void
