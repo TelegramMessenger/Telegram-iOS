@@ -66,6 +66,7 @@ private struct AccountAttributes: Equatable {
 public final class SharedAccountContext {
     let mainWindow: Window1?
     public let applicationBindings: TelegramApplicationBindings
+    public let basePath: String
     public let accountManager: AccountManager
     
     private let navigateToChatImpl: (AccountRecordId, PeerId, MessageId?) -> Void
@@ -145,10 +146,11 @@ public final class SharedAccountContext {
     public var presentGlobalController: (ViewController, Any?) -> Void = { _, _ in }
     public var presentCrossfadeController: () -> Void = {}
     
-    public init(mainWindow: Window1?, accountManager: AccountManager, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void) {
+    public init(mainWindow: Window1?, basePath: String, accountManager: AccountManager, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void) {
         assert(Queue.mainQueue().isCurrent())
         self.mainWindow = mainWindow
         self.applicationBindings = applicationBindings
+        self.basePath = basePath
         self.accountManager = accountManager
         self.navigateToChatImpl = navigateToChat
         

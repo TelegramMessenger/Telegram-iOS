@@ -29,6 +29,7 @@ private enum DebugControllerSection: Int32 {
 private enum DebugControllerEntry: ItemListNodeEntry {
     case sendLogs(PresentationTheme)
     case sendOneLog(PresentationTheme)
+    case sendNotificationLogs(PresentationTheme)
     case accounts(PresentationTheme)
     case logToFile(PresentationTheme, Bool)
     case logToConsole(PresentationTheme, Bool)
@@ -43,7 +44,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .sendLogs, .sendOneLog:
+            case .sendLogs, .sendOneLog, .sendNotificationLogs:
                 return DebugControllerSection.logs.rawValue
             case .accounts:
                 return DebugControllerSection.logs.rawValue
@@ -64,18 +65,20 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 0
             case .sendOneLog:
                 return 1
-            case .accounts:
+            case .sendNotificationLogs:
                 return 2
+            case .accounts:
+                return 3
             case .logToFile:
-                return 5
+                return 4
             case .logToConsole:
-                return 6
+                return 5
             case .redactSensitiveData:
-                return 7
+                return 6
             case .enableRaiseToSpeak:
-                return 8
+                return 7
             case .keepChatNavigationStack:
-                return 9
+                return 8
             case .clearTips:
                 return 10
             case .reimport:
@@ -133,6 +136,29 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                 let updatedLogs = logs.last.flatMap({ [$0] }) ?? []
                                 
                                 let messages = updatedLogs.map { (name, path) -> EnqueueMessage in
+                                    let id = arc4random64()
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
+                                    return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                }
+                                let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
+                            }
+                        }
+                        arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+                    })
+                })
+            case let .sendNotificationLogs(theme):
+                return ItemListDisclosureItem(theme: theme, title: "Send Notification Logs", label: "", sectionId: self.section, style: .blocks, action: {
+                    let _ = (Logger(basePath: arguments.sharedContext.basePath + "/notificationServiceLogs").collectLogs()
+                    |> deliverOnMainQueue).start(next: { logs in
+                        guard let context = arguments.context else {
+                            return
+                        }
+                        let controller = PeerSelectionController(context: context)
+                        controller.peerSelected = { [weak controller] peerId in
+                            if let strongController = controller {
+                                strongController.dismiss()
+                                
+                                let messages = logs.map { (name, path) -> EnqueueMessage in
                                     let id = arc4random64()
                                     let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
                                     return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
@@ -241,6 +267,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     
     entries.append(.sendLogs(presentationData.theme))
     entries.append(.sendOneLog(presentationData.theme))
+    entries.append(.sendNotificationLogs(presentationData.theme))
     entries.append(.accounts(presentationData.theme))
     
     entries.append(.logToFile(presentationData.theme, loggingSettings.logToFile))
