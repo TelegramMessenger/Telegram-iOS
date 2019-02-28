@@ -416,6 +416,7 @@
 		D0D2276F212739120028F943 /* LegacyDataImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D2276E212739120028F943 /* LegacyDataImport.swift */; };
 		D0D268791D79A70A00C422DA /* IntentHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D268781D79A70A00C422DA /* IntentHandler.swift */; };
 		D0D2688E1D79A70B00C422DA /* SiriIntents.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D0D268761D79A70A00C422DA /* SiriIntents.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D0E2CE642227F0680084E3DD /* ManagedFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E2CE632227F0680084E3DD /* ManagedFile.swift */; };
 		D0E8B8AD2044496C00605593 /* voip_connecting.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D0E8B8A82044496B00605593 /* voip_connecting.mp3 */; };
 		D0E8B8AE2044496C00605593 /* voip_end.caf in Resources */ = {isa = PBXBuildFile; fileRef = D0E8B8A92044496C00605593 /* voip_end.caf */; };
 		D0E8B8AF2044496C00605593 /* voip_fail.caf in Resources */ = {isa = PBXBuildFile; fileRef = D0E8B8AA2044496C00605593 /* voip_fail.caf */; };
@@ -1165,6 +1166,7 @@
 		D0D268881D79A70A00C422DA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0D268971D79AF1B00C422DA /* SiriIntents-AppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SiriIntents-AppStore.entitlements"; sourceTree = "<group>"; };
 		D0D268981D79AF3900C422DA /* SiriIntentsUI.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SiriIntentsUI.entitlements; sourceTree = "<group>"; };
+		D0E2CE632227F0680084E3DD /* ManagedFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedFile.swift; sourceTree = "<group>"; };
 		D0E3A7071B285B5000A402D9 /* Telegram-iOS-Hockeyapp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Telegram-iOS-Hockeyapp.entitlements"; sourceTree = "<group>"; };
 		D0E41A381D65A69C00FBFC00 /* NotificationCenter.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NotificationCenter.framework; path = System/Library/Frameworks/NotificationCenter.framework; sourceTree = SDKROOT; };
 		D0E41A3B1D65A69C00FBFC00 /* TodayViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayViewController.swift; sourceTree = "<group>"; };
@@ -2176,6 +2178,7 @@
 				D073E51E21FF7CE900742DDD /* Crypto.h */,
 				D073E51F21FF7CE900742DDD /* Crypto.m */,
 				D073E52122003E1E00742DDD /* Data.swift */,
+				D0E2CE632227F0680084E3DD /* ManagedFile.swift */,
 			);
 			path = NotificationService;
 			sourceTree = "<group>";
@@ -3196,6 +3199,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D073E52222003E1E00742DDD /* Data.swift in Sources */,
+				D0E2CE642227F0680084E3DD /* ManagedFile.swift in Sources */,
 				D0ED633B21FF3EFD001D4648 /* BuildConfig.m in Sources */,
 				D09B79C62219C784003B1F9D /* SharedAccountInfo.swift in Sources */,
 				D0ED633D21FF4580001D4648 /* NotificationService.swift in Sources */,

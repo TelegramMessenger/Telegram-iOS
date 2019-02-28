@@ -591,7 +591,7 @@ private final class SharedApplicationContext {
         let legacyCache = LegacyCache(path: legacyBasePath + "/Caches")
         
         var setPresentationCall: ((PresentationCall?) -> Void)?
-        let sharedContext = SharedAccountContext(mainWindow: self.mainWindow, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
+        let sharedContext = SharedAccountContext(mainWindow: self.mainWindow, basePath: rootPath, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
             setPresentationCall?(call)
         }, navigateToChat: { accountId, peerId, messageId in
             self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
