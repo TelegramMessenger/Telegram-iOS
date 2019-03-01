@@ -271,7 +271,7 @@ public final class AccountViewTracker {
     
     private let historyViewStateValidationContexts: HistoryViewStateValidationContexts
     
-    public var orderedPreloadMedia: Signal<[HolesViewMedia], NoError> {
+    public var orderedPreloadMedia: Signal<[ChatHistoryPreloadMediaItem], NoError> {
         return self.chatHistoryPreloadManager.orderedMedia
     }
     
