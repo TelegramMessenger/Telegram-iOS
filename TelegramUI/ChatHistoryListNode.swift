@@ -118,6 +118,8 @@ struct ChatHistoryListViewTransition {
     let cachedDataMessages: [MessageId: Message]?
     let readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?
     let scrolledToIndex: MessageHistoryAnchorIndex?
+    let peerType: MediaAutoDownloadPeerType
+    let networkType: MediaAutoDownloadNetworkType
     let animateIn: Bool
 }
 
@@ -252,7 +254,7 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
 }
 
 private func mappedChatHistoryViewListTransition(context: AccountContext, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, transition: ChatHistoryViewTransition) -> ChatHistoryListViewTransition {
-    return ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, entries: transition.insertEntries), updateItems: mappedUpdateEntries(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, animateIn: transition.animateIn)
+    return ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, entries: transition.insertEntries), updateItems: mappedUpdateEntries(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, animateIn: transition.animateIn)
 }
 
 private final class ChatHistoryTransactionOpaqueState {
@@ -363,6 +365,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let messageProcessingManager = ChatMessageThrottledProcessingManager()
     private let unsupportedMessageProcessingManager = ChatMessageThrottledProcessingManager()
     private let messageMentionProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2)
+    let prefetchManager: InChatPrefetchManager
+    private var currentEarlierPrefetchMessages: [(Message, Media)] = []
+    private var currentLaterPrefetchMessages: [(Message, Media)] = []
+    private var currentPrefetchDirectionIsToLater: Bool = true
     
     private var maxVisibleMessageIndexReported: MessageIndex?
     var maxVisibleMessageIndexUpdated: ((MessageIndex) -> Void)?
@@ -415,6 +421,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.currentPresentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.chatPresentationDataPromise = Promise(ChatPresentationData(theme: ChatPresentationThemeData(theme: self.currentPresentationData.theme, wallpaper: self.currentPresentationData.chatWallpaper), fontSize: self.currentPresentationData.fontSize, strings: self.currentPresentationData.strings, dateTimeFormat: self.currentPresentationData.dateTimeFormat, nameDisplayOrder: self.currentPresentationData.nameDisplayOrder, disableAnimations: self.currentPresentationData.disableAnimations))
+        
+        self.prefetchManager = InChatPrefetchManager(context: context)
         
         super.init()
         
@@ -632,6 +640,21 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             self.chatHistoryLocation.set(ChatHistoryLocationInput(content: .Initial(count: 60), id: 0))
         }
         
+        self.generalScrollDirectionUpdated = { [weak self] direction in
+            guard let strongSelf = self else {
+                return
+            }
+            let prefetchDirectionIsToLater = direction == .up
+            if strongSelf.currentPrefetchDirectionIsToLater != prefetchDirectionIsToLater {
+                strongSelf.currentPrefetchDirectionIsToLater = prefetchDirectionIsToLater
+                if strongSelf.currentPrefetchDirectionIsToLater {
+                    strongSelf.prefetchManager.updateMessages(strongSelf.currentLaterPrefetchMessages, directionIsToLater: strongSelf.currentPrefetchDirectionIsToLater)
+                } else {
+                    strongSelf.prefetchManager.updateMessages(strongSelf.currentEarlierPrefetchMessages, directionIsToLater: strongSelf.currentPrefetchDirectionIsToLater)
+                }
+            }
+        }
+        
         self.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
             if let strongSelf = self {
                 if let historyView = (opaqueTransactionState as? ChatHistoryTransactionOpaqueState)?.historyView {
@@ -639,13 +662,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
                         
                         let readIndexRange = (0, historyView.filteredEntries.count - 1 - visible.firstIndex)
-                        /*if !visible.firstIndexFullyVisible {
-                            readIndexRange.1 -= 1
-                        }*/
+                        
+                        let toEarlierRange = (0, historyView.filteredEntries.count - 1 - visible.firstIndex - 1)
+                        let toLaterRange = (historyView.filteredEntries.count - 1 - visible.lastIndex + 1, historyView.filteredEntries.count - 1)
                         
                         var messageIdsWithViewCount: [MessageId] = []
                         var messageIdsWithUnsupportedMedia: [MessageId] = []
                         var messageIdsWithUnseenPersonalMention: [MessageId] = []
+                        var messagesWithPreloadableMediaToEarlier: [(Message, Media)] = []
+                        var messagesWithPreloadableMediaToLater: [(Message, Media)] = []
+                        
                         for i in (indexRange.0 ... indexRange.1) {
                             switch historyView.filteredEntries[i] {
                                 case let .MessageEntry(message, _, _, _, _, _):
@@ -704,6 +730,69 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             }
                         }
                         
+                        func addMediaToPrefetch(_ message: Message, _ media: Media, _ messages: inout [(Message, Media)]) -> Bool {
+                            if media is TelegramMediaImage || media is TelegramMediaFile {
+                                messages.append((message, media))
+                            }
+                            if messages.count >= 3 {
+                                return false
+                            } else {
+                                return true
+                            }
+                        }
+                        
+                        var toEarlierMediaMessages: [(Message, Media)] = []
+                        if toEarlierRange.0 <= toEarlierRange.1 {
+                            outer: for i in (toEarlierRange.0 ... toEarlierRange.1).reversed() {
+                                switch historyView.filteredEntries[i] {
+                                    case let .MessageEntry(message, _, _, _, _, _):
+                                        for media in message.media {
+                                            if !addMediaToPrefetch(message, media, &toEarlierMediaMessages) {
+                                                break outer
+                                            }
+                                        }
+                                    case let .MessageGroupEntry(_, messages, _):
+                                        for (message, _, _, _) in messages {
+                                            var stop = false
+                                            for media in message.media {
+                                                if !addMediaToPrefetch(message, media, &toEarlierMediaMessages) {
+                                                    stop = true
+                                                }
+                                            }
+                                            if stop {
+                                                break outer
+                                            }
+                                        }
+                                    default:
+                                        break
+                                }
+                            }
+                        }
+                        
+                        var toLaterMediaMessages: [(Message, Media)] = []
+                        if toLaterRange.0 <= toLaterRange.1 {
+                            outer: for i in (toLaterRange.0 ... toLaterRange.1) {
+                                switch historyView.filteredEntries[i] {
+                                    case let .MessageEntry(message, _, _, _, _, _):
+                                        for media in message.media {
+                                            if !addMediaToPrefetch(message, media, &toLaterMediaMessages) {
+                                                break outer
+                                            }
+                                        }
+                                    case let .MessageGroupEntry(_, messages, _):
+                                        for (message, _, _, _) in messages {
+                                            for media in message.media {
+                                                if !addMediaToPrefetch(message, media, &toLaterMediaMessages) {
+                                                    break outer
+                                                }
+                                            }
+                                        }
+                                    default:
+                                        break
+                                }
+                            }
+                        }
+                        
                         if !messageIdsWithViewCount.isEmpty {
                             strongSelf.messageProcessingManager.add(messageIdsWithViewCount)
                         }
@@ -712,6 +801,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                         if !messageIdsWithUnseenPersonalMention.isEmpty {
                             strongSelf.messageMentionProcessingManager.add(messageIdsWithUnseenPersonalMention)
+                        }
+                        
+                        strongSelf.currentEarlierPrefetchMessages = toEarlierMediaMessages
+                        strongSelf.currentLaterPrefetchMessages = toLaterMediaMessages
+                        if strongSelf.currentPrefetchDirectionIsToLater {
+                            strongSelf.prefetchManager.updateMessages(toLaterMediaMessages, directionIsToLater: strongSelf.currentPrefetchDirectionIsToLater)
+                        } else {
+                            strongSelf.prefetchManager.updateMessages(toEarlierMediaMessages, directionIsToLater: strongSelf.currentPrefetchDirectionIsToLater)
                         }
                         
                         if readIndexRange.0 <= readIndexRange.1 {
@@ -977,6 +1074,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 if let _ = strongSelf.enqueuedHistoryViewTransition {
                     preconditionFailure()
                 }
+                
+                strongSelf.prefetchManager.updateOptions(InChatPrefetchOptions(networkType: transition.networkType, peerType: transition.peerType))
                 
                 if !strongSelf.didSetInitialData {
                     strongSelf.didSetInitialData = true

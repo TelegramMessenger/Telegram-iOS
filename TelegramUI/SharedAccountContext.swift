@@ -361,6 +361,7 @@ public final class SharedAccountContext {
                             assertionFailure()
                         }
                         self.activeAccountsValue!.accounts.append((account.id, account, accountRecord.2))
+                        account.resetStateManagement()
                         hadUpdates = true
                     } else {
                         let _ = accountManager.transaction({ transaction in

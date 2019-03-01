@@ -1474,12 +1474,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func updateAutomaticMediaDownloadSettings() {
+    func updateAutomaticMediaDownloadSettings(_ settings: MediaAutoDownloadSettings) {
         self.historyNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {
                 itemNode.updateAutomaticMediaDownloadSettings()
             }
         }
+        self.historyNode.prefetchManager.updateAutoDownloadSettings(settings)
     }
     
     func playFirstMediaWithSound() {

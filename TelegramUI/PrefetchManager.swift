@@ -4,11 +4,9 @@ import Postbox
 import TelegramCore
 
 private final class PrefetchMediaContext {
-    let media: HolesViewMedia
     let fetchDisposable = MetaDisposable()
     
-    init(media: HolesViewMedia) {
-        self.media = media
+    init() {
     }
 }
 
@@ -48,36 +46,39 @@ private final class PrefetchManagerImpl {
         self.listDisposable?.dispose()
     }
     
-    private func updateOrderedPreloadMedia(_ orderedPreloadMedia: [HolesViewMedia], automaticDownloadSettings: MediaAutoDownloadSettings, networkType: MediaAutoDownloadNetworkType) {
+    private func updateOrderedPreloadMedia(_ orderedPreloadMedia: [ChatHistoryPreloadMediaItem], automaticDownloadSettings: MediaAutoDownloadSettings, networkType: MediaAutoDownloadNetworkType) {
         var validIds = Set<MediaId>()
         for mediaItem in orderedPreloadMedia {
-            guard let id = mediaItem.media.id else {
+            guard let id = mediaItem.media.media.id else {
+                continue
+            }
+            if validIds.contains(id) {
                 continue
             }
             
             var automaticDownload: InteractiveMediaNodeAutodownloadMode = .none
             let peerType: MediaAutoDownloadPeerType
-            if mediaItem.authorIsContact {
+            if mediaItem.media.authorIsContact {
                 peerType = .contact
-            } else if let channel = mediaItem.peer as? TelegramChannel {
+            } else if let channel = mediaItem.media.peer as? TelegramChannel {
                 if case .group = channel.info {
                     peerType = .group
                 } else {
                     peerType = .channel
                 }
-            } else if mediaItem.peer is TelegramGroup {
+            } else if mediaItem.media.peer is TelegramGroup {
                 peerType = .group
             } else {
                 peerType = .otherPrivate
             }
             var mediaResource: MediaResource?
             
-            if let telegramImage = mediaItem.media as? TelegramMediaImage {
+            if let telegramImage = mediaItem.media.media as? TelegramMediaImage {
                 mediaResource = largestRepresentationForPhoto(telegramImage)?.resource
                 if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: peerType, networkType: networkType, authorPeerId: nil, contactsPeerIds: [], media: telegramImage) {
                     automaticDownload = .full
                 }
-            } else if let telegramFile = mediaItem.media as? TelegramMediaFile {
+            } else if let telegramFile = mediaItem.media.media as? TelegramMediaFile {
                 mediaResource = telegramFile.resource
                 if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: peerType, networkType: networkType, authorPeerId: nil, contactsPeerIds: [], media: telegramFile) {
                     automaticDownload = .full
@@ -98,21 +99,23 @@ private final class PrefetchManagerImpl {
             if let current = self.contexts[id] {
                 context = current
             } else {
-                context = PrefetchMediaContext(media: mediaItem)
+                context = PrefetchMediaContext()
                 self.contexts[id] = context
                 
-                let media = mediaItem.media
+                let media = mediaItem.media.media
+                
+                let priority: FetchManagerPriority = .backgroundPrefetch(locationOrder: mediaItem.preloadIndex, localOrder: mediaItem.media.index)
                 
                 if case .full = automaticDownload {
                     if let image = media as? TelegramMediaImage {
-                        context.fetchDisposable.set(messageMediaImageInteractiveFetched(fetchManager: self.fetchManager, messageId: mediaItem.index.id, messageReference: MessageReference(peer: mediaItem.peer, id: mediaItem.index.id, timestamp: mediaItem.index.timestamp, incoming: true, secret: false), image: image, resource: resource, userInitiated: false, priority: .backgroundPrefetch(mediaItem.index), storeToDownloadsPeerType: nil).start())
+                        context.fetchDisposable.set(messageMediaImageInteractiveFetched(fetchManager: self.fetchManager, messageId: mediaItem.media.index.id, messageReference: MessageReference(peer: mediaItem.media.peer, id: mediaItem.media.index.id, timestamp: mediaItem.media.index.timestamp, incoming: true, secret: false), image: image, resource: resource, userInitiated: false, priority: priority, storeToDownloadsPeerType: nil).start())
                     } else if let _ = media as? TelegramMediaWebFile {
                         //strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, image: image).start())
                     } else if let file = media as? TelegramMediaFile {
-                        let fetchSignal = messageMediaFileInteractiveFetched(fetchManager: self.fetchManager, messageId: mediaItem.index.id, messageReference: MessageReference(peer: mediaItem.peer, id: mediaItem.index.id, timestamp: mediaItem.index.timestamp, incoming: true, secret: false), file: file, userInitiated: false, priority: .backgroundPrefetch(mediaItem.index))
+                        let fetchSignal = messageMediaFileInteractiveFetched(fetchManager: self.fetchManager, messageId: mediaItem.media.index.id, messageReference: MessageReference(peer: mediaItem.media.peer, id: mediaItem.media.index.id, timestamp: mediaItem.media.index.timestamp, incoming: true, secret: false), file: file, userInitiated: false, priority: priority)
                         context.fetchDisposable.set(fetchSignal.start())
                     }
-                } else if case .prefetch = automaticDownload, mediaItem.peer.id.namespace != Namespaces.Peer.SecretChat {
+                } else if case .prefetch = automaticDownload, mediaItem.media.peer.id.namespace != Namespaces.Peer.SecretChat {
                     if let file = media as? TelegramMediaFile, let fileSize = file.size {
                         let fetchHeadRange: Range<Int> = 0 ..< 2 * 1024 * 1024
                         let fetchTailRange: Range<Int> = fileSize - 256 * 1024 ..< Int(Int32.max)
@@ -121,7 +124,7 @@ private final class PrefetchManagerImpl {
                         ranges.insert(integersIn: fetchHeadRange)
                         ranges.insert(integersIn: fetchTailRange)
                         
-                        let fetchSignal = messageMediaFileInteractiveFetched(fetchManager: self.fetchManager, messageId: mediaItem.index.id, messageReference: MessageReference(peer: mediaItem.peer, id: mediaItem.index.id, timestamp: mediaItem.index.timestamp, incoming: true, secret: false), file: file, ranges: ranges, userInitiated: false, priority: .backgroundPrefetch(mediaItem.index))
+                        let fetchSignal = messageMediaFileInteractiveFetched(fetchManager: self.fetchManager, messageId: mediaItem.media.index.id, messageReference: MessageReference(peer: mediaItem.media.peer, id: mediaItem.media.index.id, timestamp: mediaItem.media.index.timestamp, incoming: true, secret: false), file: file, ranges: ranges, userInitiated: false, priority: priority)
                         context.fetchDisposable.set(fetchSignal.start())
                     }
                 }
