@@ -60,6 +60,7 @@ struct FetchManagerPriorityKey: Comparable {
     let locationKey: FetchManagerLocationKey
     let hasElevatedPriority: Bool
     let userInitiatedPriority: Int32?
+    let topReference: FetchManagerPriority?
     
     static func ==(lhs: FetchManagerPriorityKey, rhs: FetchManagerPriorityKey) -> Bool {
         if lhs.locationKey != rhs.locationKey {
@@ -69,6 +70,9 @@ struct FetchManagerPriorityKey: Comparable {
             return false
         }
         if lhs.userInitiatedPriority != rhs.userInitiatedPriority {
+            return false
+        }
+        if lhs.topReference != rhs.topReference {
             return false
         }
         return true
@@ -93,6 +97,16 @@ struct FetchManagerPriorityKey: Comparable {
         
         if lhs.hasElevatedPriority != rhs.hasElevatedPriority {
             if lhs.hasElevatedPriority {
+                return false
+            } else {
+                return true
+            }
+        }
+        
+        if lhs.topReference != rhs.topReference {
+            if let lhsTopReference = lhs.topReference, let rhsTopReference = rhs.topReference {
+                return lhsTopReference < rhsTopReference
+            } else if lhs.topReference != nil {
                 return false
             } else {
                 return true

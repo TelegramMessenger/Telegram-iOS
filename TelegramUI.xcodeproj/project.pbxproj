@@ -518,6 +518,7 @@
 		D0DE66061F9A51E200EF4AE9 /* GalleryHiddenMediaManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE66051F9A51E200EF4AE9 /* GalleryHiddenMediaManager.swift */; };
 		D0DFD5E21FCE2BA50039B3B1 /* CalculatingCacheSizeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DFD5E11FCE2BA50039B3B1 /* CalculatingCacheSizeItem.swift */; };
 		D0E266FD1F66706500BFC79F /* ChatBubbleVideoDecoration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E266FC1F66706500BFC79F /* ChatBubbleVideoDecoration.swift */; };
+		D0E2CE6C222930540084E3DD /* PrefetchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E2CE6B222930540084E3DD /* PrefetchManager.swift */; };
 		D0E412C62069B60600BEE4A2 /* FormControllerHeaderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412C52069B60600BEE4A2 /* FormControllerHeaderItem.swift */; };
 		D0E412C8206A537600BEE4A2 /* FormBlockItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412C7206A537600BEE4A2 /* FormBlockItemNode.swift */; };
 		D0E412CA206A5B0B00BEE4A2 /* FormControllerTextInputItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E412C9206A5B0B00BEE4A2 /* FormControllerTextInputItem.swift */; };
@@ -2054,6 +2055,7 @@
 		D0E23DD71E805E2600B9B6D2 /* FeaturedStickerPacksController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FeaturedStickerPacksController.swift; sourceTree = "<group>"; };
 		D0E23DDC1E8081A200B9B6D2 /* ArchivedStickerPacksController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArchivedStickerPacksController.swift; sourceTree = "<group>"; };
 		D0E266FC1F66706500BFC79F /* ChatBubbleVideoDecoration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatBubbleVideoDecoration.swift; sourceTree = "<group>"; };
+		D0E2CE6B222930540084E3DD /* PrefetchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrefetchManager.swift; sourceTree = "<group>"; };
 		D0E305A41E5B2BFB00D7A3A2 /* ValidateAddressNameInteractive.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValidateAddressNameInteractive.swift; sourceTree = "<group>"; };
 		D0E305AC1E5BA3E700D7A3A2 /* ItemListControllerEmptyStateItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListControllerEmptyStateItem.swift; sourceTree = "<group>"; };
 		D0E305AE1E5BA8E000D7A3A2 /* ItemListLoadingIndicatorEmptyStateItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListLoadingIndicatorEmptyStateItem.swift; sourceTree = "<group>"; };
@@ -2782,6 +2784,7 @@
 			children = (
 				D025A4251F79428E00563950 /* FetchManagerLocation.swift */,
 				D025A4221F79344500563950 /* FetchManager.swift */,
+				D0E2CE6B222930540084E3DD /* PrefetchManager.swift */,
 			);
 			name = "Fetch Manager";
 			sourceTree = "<group>";
@@ -5480,6 +5483,7 @@
 				D0AD02EC20000D0100C1DCFF /* ChatMessageLiveLocationPositionNode.swift in Sources */,
 				D0EC6D3D1EB9F58800EBF1C3 /* ProgressNavigationButtonNode.swift in Sources */,
 				D01BAA581ED3283D00295217 /* AddFormatToStringWithRanges.swift in Sources */,
+				D0E2CE6C222930540084E3DD /* PrefetchManager.swift in Sources */,
 				D0EC6D3E1EB9F58800EBF1C3 /* TelegramController.swift in Sources */,
 				D0EB42011F30ED4F00838FE6 /* LegacyImageProcessors.m in Sources */,
 				D087BFAF1F741BB7003FD209 /* ShareLoadingContainerNode.swift in Sources */,

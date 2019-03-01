@@ -423,7 +423,7 @@ private struct SettingsState: Equatable {
     var accountIdWithRevealedOptions: AccountRecordId?
 }
 
-private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)]) -> [SettingsEntry] {
+private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)], inAppNotificationSettings: InAppNotificationSettings) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -439,7 +439,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         if !accountsAndPeers.isEmpty {
             var index = 0
             for (peerAccount, peer, badgeCount) in accountsAndPeers {
-                entries.append(.account(index, peerAccount, presentationData.theme, presentationData.strings, peer, badgeCount, state.accountIdWithRevealedOptions == peerAccount.id))
+                entries.append(.account(index, peerAccount, presentationData.theme, presentationData.strings, peer, inAppNotificationSettings.displayNotificationsFromAllAccounts ? badgeCount : 0, state.accountIdWithRevealedOptions == peerAccount.id))
                 index += 1
             }
             if accountsAndPeers.count + 1 < maximumNumberOfAccounts {
@@ -1126,16 +1126,17 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         return context.sharedContext.presentationData
     }
     
-    let proxyPreferences = context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
+    let preferences = context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.proxySettings, ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
     
     let featuredStickerPacks = contextValue.get()
     |> mapToSignal { context in
         return context.account.viewTracker.featuredStickerPacks()
     }
     
-    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), proxyPreferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()), accountsAndPeers.get())
+    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()), accountsAndPeers.get())
     |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasPassportAndWatch, accountsAndPeers -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
         let proxySettings: ProxySettings = preferencesAndExceptions.0.entries[SharedDataKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
+        let inAppNotificationSettings: InAppNotificationSettings = preferencesAndExceptions.0.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
     
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
             arguments.openEditing()
@@ -1151,7 +1152,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         }
         
         let (hasPassport, hasWatchApp) = hasPassportAndWatch
-        let listState = ItemListNodeState(entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1), style: .blocks)
+        let listState = ItemListNodeState(entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }
@@ -1166,8 +1167,19 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
     }
     
-    let accountTabBarAvatarBadge: Signal<Int32, NoError> = accountsAndPeers.get()
-    |> map { primary, other -> Int32 in
+    let notificationsFromAllAccounts = accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
+    |> map { sharedData -> Bool in
+        let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
+        return settings.displayNotificationsFromAllAccounts
+    }
+    |> distinctUntilChanged
+    
+    let accountTabBarAvatarBadge: Signal<Int32, NoError> = combineLatest(notificationsFromAllAccounts, accountsAndPeers.get())
+    |> map { notificationsFromAllAccounts, primaryAndOther -> Int32 in
+        if !notificationsFromAllAccounts {
+            return 0
+        }
+        let (primary, other) = primaryAndOther
         if let _ = primary, !other.isEmpty {
             return other.reduce(into: 0, { (result, next) in
                 result += next.2

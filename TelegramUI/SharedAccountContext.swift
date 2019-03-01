@@ -565,12 +565,39 @@ public final class SharedAccountContext {
         sandbox = false
         #endif
         
-        self.registeredNotificationTokensDisposable.set((self.activeAccounts
-        |> mapToSignal { _, activeAccounts, _ -> Signal<Never, NoError> in
+        let allAccounts = self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
+        |> map { sharedData -> Bool in
+            let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
+            return settings.displayNotificationsFromAllAccounts
+        }
+        |> distinctUntilChanged
+        
+        self.registeredNotificationTokensDisposable.set((combineLatest(allAccounts, self.activeAccounts)
+        |> mapToSignal { allAccounts, activeAccountsAndInfo -> Signal<Never, NoError> in
+            let (primary, activeAccounts, _) = activeAccountsAndInfo
             var applied: [Signal<Never, NoError>] = []
-            let activeProductionUserIds = activeAccounts.map({ $0.1 }).filter({ !$0.testingEnvironment }).map({ $0.peerId.id })
-            let activeTestingUserIds = activeAccounts.map({ $0.1 }).filter({ $0.testingEnvironment }).map({ $0.peerId.id })
+            var activeProductionUserIds = activeAccounts.map({ $0.1 }).filter({ !$0.testingEnvironment }).map({ $0.peerId.id })
+            var activeTestingUserIds = activeAccounts.map({ $0.1 }).filter({ $0.testingEnvironment }).map({ $0.peerId.id })
+            
+            if !allAccounts {
+                if let primary = primary {
+                    if primary.testingEnvironment {
+                        activeProductionUserIds = [primary.peerId.id]
+                        activeTestingUserIds = []
+                    } else {
+                        activeProductionUserIds = []
+                        activeTestingUserIds = [primary.peerId.id]
+                    }
+                } else {
+                    activeProductionUserIds = []
+                    activeTestingUserIds = []
+                }
+            }
+            
             for (_, account, _) in activeAccounts {
+                if !activeProductionUserIds.contains(account.peerId.id) && !activeTestingUserIds.contains(account.peerId.id) {
+                    continue
+                }
                 let appliedAps = self.apsNotificationToken
                 |> distinctUntilChanged(isEqual: { $0 == $1 })
                 |> mapToSignal { token -> Signal<Never, NoError> in

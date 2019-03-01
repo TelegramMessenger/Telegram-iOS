@@ -38,12 +38,13 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
     public var totalUnreadCountDisplayCategory: TotalUnreadCountDisplayCategory
     public var totalUnreadCountIncludeTags: PeerSummaryCounterTags
     public var displayNameOnLockscreen: Bool
+    public var displayNotificationsFromAllAccounts: Bool
     
     public static var defaultSettings: InAppNotificationSettings {
-        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .raw, totalUnreadCountDisplayCategory: .messages, totalUnreadCountIncludeTags: [.regularChatsAndPrivateGroups], displayNameOnLockscreen: true)
+        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .raw, totalUnreadCountDisplayCategory: .messages, totalUnreadCountIncludeTags: [.regularChatsAndPrivateGroups], displayNameOnLockscreen: true, displayNotificationsFromAllAccounts: true)
     }
     
-    init(playSounds: Bool, vibrate: Bool, displayPreviews: Bool, totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle, totalUnreadCountDisplayCategory: TotalUnreadCountDisplayCategory, totalUnreadCountIncludeTags: PeerSummaryCounterTags, displayNameOnLockscreen: Bool) {
+    init(playSounds: Bool, vibrate: Bool, displayPreviews: Bool, totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle, totalUnreadCountDisplayCategory: TotalUnreadCountDisplayCategory, totalUnreadCountIncludeTags: PeerSummaryCounterTags, displayNameOnLockscreen: Bool, displayNotificationsFromAllAccounts: Bool) {
         self.playSounds = playSounds
         self.vibrate = vibrate
         self.displayPreviews = displayPreviews
@@ -51,6 +52,7 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         self.totalUnreadCountDisplayCategory = totalUnreadCountDisplayCategory
         self.totalUnreadCountIncludeTags = totalUnreadCountIncludeTags
         self.displayNameOnLockscreen = displayNameOnLockscreen
+        self.displayNotificationsFromAllAccounts = displayNotificationsFromAllAccounts
     }
     
     public init(decoder: PostboxDecoder) {
@@ -65,6 +67,7 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
             self.totalUnreadCountIncludeTags = [.regularChatsAndPrivateGroups]
         }
         self.displayNameOnLockscreen = decoder.decodeInt32ForKey("displayNameOnLockscreen", orElse: 1) != 0
+        self.displayNotificationsFromAllAccounts = decoder.decodeInt32ForKey("displayNotificationsFromAllAccounts", orElse: 1) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -75,6 +78,7 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         encoder.encodeInt32(self.totalUnreadCountDisplayCategory.rawValue, forKey: "totalUnreadCountDisplayCategory")
         encoder.encodeInt32(self.totalUnreadCountIncludeTags.rawValue, forKey: "totalUnreadCountIncludeTags")
         encoder.encodeInt32(self.displayNameOnLockscreen ? 1 : 0, forKey: "displayNameOnLockscreen")
+        encoder.encodeInt32(self.displayNotificationsFromAllAccounts ? 1 : 0, forKey: "displayNotificationsFromAllAccounts")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {

@@ -64,6 +64,7 @@ public final class AccountContext {
     public let account: Account
     
     public let fetchManager: FetchManager
+    private let prefetchManager: PrefetchManager?
     
     public var keyShortcutsController: KeyShortcutsController?
     
@@ -84,14 +85,6 @@ public final class AccountContext {
     
     private var storedPassword: (String, CFAbsoluteTime, SwiftSignalKit.Timer)?
     
-    public var isCurrent: Bool = false {
-        didSet {
-            if !self.isCurrent {
-                //self.callManager = nil
-            }
-        }
-    }
-    
     public init(sharedContext: SharedAccountContext, account: Account, limitsConfiguration: LimitsConfiguration) {
         self.sharedContext = sharedContext
         self.account = account
@@ -105,8 +98,10 @@ public final class AccountContext {
         }
         self.fetchManager = FetchManager(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager)
         if sharedContext.applicationBindings.isMainApp {
+            self.prefetchManager = PrefetchManager(sharedContext: sharedContext, account: account, fetchManager: fetchManager)
             self.wallpaperUploadManager = WallpaperUploadManager(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
         } else {
+            self.prefetchManager = nil
             self.wallpaperUploadManager = nil
         }
         
