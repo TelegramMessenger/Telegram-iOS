@@ -4051,3 +4051,8 @@ Unused sets are archived when you add more.";
 "ChatList.SelectedChats_any" = "%@ Chats Selected";
 "ChatList.SelectedChats_many" = "%@ Chats Selected";
 "ChatList.SelectedChats_0" = "%@ Chats Selected";
+
+"NotificationSettings.ShowNotificationsFromAccountsSection" = "SHOW NOTIFICATIONS FROM";
+"NotificationSettings.ShowNotificationsAllAccounts" = "All Accounts";
+"NotificationSettings.ShowNotificationsAllAccountsInfoOn" = "Turn this off if you want to receive notifications only from your active account.";
+"NotificationSettings.ShowNotificationsAllAccountsInfoOff" = "Turn this on if you want to receive notifications from all your accounts.";

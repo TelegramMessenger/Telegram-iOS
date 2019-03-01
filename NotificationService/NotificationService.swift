@@ -258,9 +258,11 @@ class NotificationService: UNNotificationServiceExtension {
                 }
             } else {
                 self.rootPath = nil
+                preconditionFailure()
             }
         } else {
             self.rootPath = nil
+            preconditionFailure()
         }
         
         super.init()

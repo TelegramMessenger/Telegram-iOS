@@ -887,7 +887,6 @@ private final class SharedApplicationContext {
             
             let firstTime = self.contextValue == nil
             if let contextValue = self.contextValue {
-                contextValue.context.isCurrent = false
                 contextValue.passcodeController?.dismiss()
                 contextValue.context.account.shouldExplicitelyKeepWorkerConnections.set(.single(false))
                 contextValue.context.account.shouldKeepBackgroundDownloadConnections.set(.single(false))
@@ -895,7 +894,6 @@ private final class SharedApplicationContext {
             self.contextValue = context
             if let context = context {
                 setupLegacyComponents(context: context.context)
-                context.context.isCurrent = true
                 let isReady = context.isReady.get()
                 contextReadyDisposable.set((isReady
                 |> filter { $0 }
