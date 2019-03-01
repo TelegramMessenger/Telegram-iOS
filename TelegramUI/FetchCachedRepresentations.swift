@@ -8,27 +8,6 @@ import Display
 import UIKit
 import AVFoundation
 
-private func videoFirstFrameData(account: Account, resource: MediaResource, chunkSize: Int) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
-    if let size = resource.size {
-        return account.postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, chunkSize))
-        |> mapToSignal { _ -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-            return account.postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: false), attemptSynchronously: false)
-            |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-                return fetchCachedVideoFirstFrameRepresentation(account: account, resource: resource, resourceData: data)
-                |> `catch` { _ -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-                    if chunkSize > size {
-                        return .complete()
-                    } else {
-                        return videoFirstFrameData(account: account, resource: resource, chunkSize: chunkSize + chunkSize)
-                    }
-                }
-            }
-        }
-    } else {
-        return .complete()
-    }
-}
-
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {
         return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
@@ -94,6 +73,27 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
         }
     }
     return .never()
+}
+
+private func videoFirstFrameData(account: Account, resource: MediaResource, chunkSize: Int) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+    if let size = resource.size {
+        return account.postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, chunkSize))
+            |> mapToSignal { _ -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+                return account.postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: false), attemptSynchronously: false)
+                    |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+                        return fetchCachedVideoFirstFrameRepresentation(account: account, resource: resource, resourceData: data)
+                        |> `catch` { _ -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+                            if chunkSize > size {
+                                return .complete()
+                            } else {
+                                return videoFirstFrameData(account: account, resource: resource, chunkSize: chunkSize + chunkSize)
+                            }
+                        }
+                }
+        }
+    } else {
+        return .complete()
+    }
 }
 
 private func fetchCachedStickerAJpegRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedStickerAJpegRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
@@ -275,8 +275,6 @@ private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource
                 }
                 
                 let _ = try? FileManager.default.removeItem(atPath: tempFilePath)
-                subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
-                subscriber.putCompletion()
             } catch (let _) {
                 let _ = try? FileManager.default.removeItem(atPath: tempFilePath)
                 subscriber.putError(.generic)

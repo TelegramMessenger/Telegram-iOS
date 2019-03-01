@@ -14,6 +14,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var strings: PresentationStrings
     private var dateTimeFormat: PresentationDateTimeFormat
     private var theme: InstantPageTheme?
+    private let sourcePeerType: MediaAutoDownloadPeerType
     private var manualThemeOverride: InstantPageThemeType?
     private let getNavigationController: () -> NavigationController?
     private let present: (ViewController, Any?) -> Void
@@ -74,7 +75,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return InstantPageStoredState(contentOffset: Double(self.scrollNode.view.contentOffset.y), details: details)
     }
     
-    init(context: AccountContext, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, statusBar: StatusBar, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
+    init(context: AccountContext, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, statusBar: StatusBar, sourcePeerType: MediaAutoDownloadPeerType,  getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
         self.context = context
         self.presentationTheme = presentationTheme
         self.dateTimeFormat = dateTimeFormat
@@ -85,7 +86,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.theme = settings.flatMap { settings in
             return instantPageThemeForType(instantPageThemeTypeForSettingsAndTime(themeSettings: themeSettings, settings: settings, time: themeReferenceDate), settings: settings)
         }
-        
+        self.sourcePeerType = sourcePeerType
         self.statusBar = statusBar
         self.getNavigationController = getNavigationController
         self.present = present
@@ -1122,7 +1123,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                         case let .result(webpage):
                                             if let webpage = webpage, case .Loaded = webpage.content {
                                                 strongSelf.loadProgress.set(1.0)
-                                                strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, anchor: anchor))
+                                                strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourcePeerType: strongSelf.sourcePeerType, anchor: anchor))
                                             }
                                             break
                                         case let .progress(progress):

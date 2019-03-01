@@ -418,7 +418,7 @@ final class ChatListNode: ListView {
         }, setPeerIdWithRevealedOptions: { [weak self] peerId, fromPeerId in
             if let strongSelf = self {
                 strongSelf.updateState { state in
-                    if (peerId == nil && fromPeerId == state.peerIdWithRevealedOptions) || (peerId != nil && fromPeerId == nil) {
+                    if (peerId == nil && fromPeerId == state.peerIdWithRevealedOptions) || (peerId != nil && fromPeerId == nil) || (peerId == nil && fromPeerId == nil) {
                         var state = state
                         state.peerIdWithRevealedOptions = peerId
                         return state

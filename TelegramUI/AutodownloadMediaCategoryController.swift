@@ -426,8 +426,8 @@ func autodownloadMediaCategoryController(context: AccountContext, connectionType
     }
     
     let controller = ItemListController(context: context, state: signal)
-    controller.willDisappear = { _ in
-        let _ = (combineLatest(initialValuePromise.get(), currentAutodownloadSettings())
+    controller.didDisappear = { _ in
+        let _ = (combineLatest(initialValuePromise.get() |> take(1), currentAutodownloadSettings())
         |> mapToSignal { initialValue, currentValue -> Signal<Void, NoError> in
             let initialConnection = initialValue.connectionSettings(for: connectionType.automaticDownloadNetworkType)
             let currentConnection = currentValue.connectionSettings(for: connectionType.automaticDownloadNetworkType)

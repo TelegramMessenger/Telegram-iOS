@@ -594,7 +594,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     strongSelf.videoNodeDecoration = decoration
                                     let mediaManager = context.sharedContext.mediaManager
                                     
-                                    let streamVideo = !updatedVideoFile.isAnimated && isMediaStreamable(message: message, media: updatedVideoFile)
+                                    let streamVideo = isMediaStreamable(message: message, media: updatedVideoFile)
                                     let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: NativeVideoContent(id: .message(message.id, message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false), continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo, placeholderColor: emptyColor), priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     videoNode.ownsContentNodeUpdated = { [weak self] owns in
@@ -897,6 +897,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 active = true
             }
             
+            if let file = self.media as? TelegramMediaFile, file.isAnimated {
+                muted = false
+            }
+            
             if message.flags.contains(.Unsent) {
                 automaticPlayback = false
             }
@@ -918,11 +922,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
                     }
                     
-                    if let file = self.media as? TelegramMediaFile, (!file.isAnimated || message.flags.contains(.Unsent)) {
+                    if let file = self.media as? TelegramMediaFile {
                         if wideLayout {
                             if let size = file.size {
                                 if let duration = file.duration, !message.flags.contains(.Unsent) {
-                                    let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
+                                    let durationString = file.isAnimated ? "GIF" : stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
                                     let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true)) / \(dataSizeString(size, forceDecimal: true))"
                                     if isMediaStreamable(message: message, media: file) {
                                         badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: active ? sizeString : nil, muted: muted, active: active)
@@ -1016,14 +1020,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                             state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
                         }
                     }
-                    if let file = media as? TelegramMediaFile, let duration = file.duration, !file.isAnimated {
-                        let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
+                    if let file = media as? TelegramMediaFile, let duration = file.duration {
+                        let durationString = file.isAnimated ? "GIF" : stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
                         badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: durationString, size: nil, muted: muted, active: false)
                     }
                 case .Remote:
                     state = .download(bubbleTheme.mediaOverlayControlForegroundColor)
-                    if let file = self.media as? TelegramMediaFile, !file.isAnimated {
-                        let durationString = stringForDuration(playerDuration > 0 ? playerDuration : (file.duration ?? 0), position: playerPosition)
+                    if let file = self.media as? TelegramMediaFile {
+                        let durationString = file.isAnimated ? "GIF" : stringForDuration(playerDuration > 0 ? playerDuration : (file.duration ?? 0), position: playerPosition)
                         if wideLayout {
                             if isMediaStreamable(message: message, media: file) {
                                 state = automaticPlayback ? .none : .play(bubbleTheme.mediaOverlayControlForegroundColor)
@@ -1201,12 +1205,17 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         })
     }
     
-    func playMediaWithSound() -> (() -> Void, Bool, Bool, ASDisplayNode?)? {
+    func playMediaWithSound() -> (action: () -> Void, soundEnabled: Bool, isVideoMessage: Bool, isUnread: Bool, badgeNode: ASDisplayNode?)? {
         var isAnimated = false
         if let file = self.media as? TelegramMediaFile, file.isAnimated {
             isAnimated = true
         }
+        
         if let videoNode = self.videoNode, let context = self.context, (self.automaticPlayback ?? false) && !isAnimated {
+            var isHorizontal = false
+            if let file = self.media as? TelegramMediaFile, let dimensions = file.dimensions {
+                isHorizontal = dimensions.width >= dimensions.height
+            }
             return ({
                 let _ = (context.sharedContext.mediaManager.globalMediaPlayerState
                 |> take(1)
@@ -1226,7 +1235,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none)
                     }
                 })
-            }, false, false, self.badgeNode)
+            }, (self.playerStatus?.soundEnabled ?? false) && isHorizontal, false, false, self.badgeNode)
         } else {
             return nil
         }

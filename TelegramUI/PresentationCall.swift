@@ -521,7 +521,11 @@ public final class PresentationCall {
                 case .accepting, .active, .dropping, .requesting:
                     switch state {
                         case .connecting:
-                            tone = .connecting
+                            if case .requesting = previous.state {
+                                tone = .ringing
+                            } else {
+                                tone = .connecting
+                            }
                         case .requesting(true):
                             tone = .ringing
                         case let .terminated(_, reason, _):
@@ -529,10 +533,10 @@ public final class PresentationCall {
                                 switch reason {
                                     case let .ended(type):
                                         switch type {
-                                        case .busy:
-                                            tone = .busy
-                                        case .hungUp, .missed:
-                                            tone = .ended
+                                            case .busy:
+                                                tone = .busy
+                                            case .hungUp, .missed:
+                                                tone = .ended
                                         }
                                     case .error:
                                         tone = .failed

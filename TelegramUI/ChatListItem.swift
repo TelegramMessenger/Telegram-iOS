@@ -1239,6 +1239,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
+    override func touchesToOtherItemsPrevented() {
+        super.touchesToOtherItemsPrevented()
+        if let item = self.item {
+            item.interaction.setPeerIdWithRevealedOptions(nil, nil)
+        }
+    }
+    
     override func revealOptionsInteractivelyOpened() {
         if let item = self.item {
             item.interaction.setPeerIdWithRevealedOptions(item.index.messageIndex.id.peerId, nil)

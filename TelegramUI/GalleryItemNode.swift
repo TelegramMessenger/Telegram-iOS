@@ -20,6 +20,7 @@ open class GalleryItemNode: ASDisplayNode {
     }
     
     var toggleControlsVisibility: () -> Void = { }
+    var dismiss: () -> Void = { }
     var beginCustomDismiss: () -> Void = { }
     var completeCustomDismiss: () -> Void = { }
     var baseNavigationController: () -> NavigationController? = { return nil }

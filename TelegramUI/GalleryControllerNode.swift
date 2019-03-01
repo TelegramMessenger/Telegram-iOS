@@ -59,6 +59,35 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
             }
         }
         
+        self.pager.dismiss = { [weak self] in
+            if let strongSelf = self {
+                var interfaceAnimationCompleted = false
+                var contentAnimationCompleted = true
+                
+                strongSelf.scrollView.isScrollEnabled = false
+                let completion = { [weak self] in
+                    if interfaceAnimationCompleted && contentAnimationCompleted {
+                        if let dismiss = self?.dismiss {
+                            self?.scrollView.isScrollEnabled = true
+                            dismiss()
+                        }
+                    }
+                }
+                
+                if let centralItemNode = strongSelf.pager.centralItemNode(), let (transitionNodeForCentralItem, addToTransitionSurface) = strongSelf.transitionDataForCentralItem?(), let node = transitionNodeForCentralItem {
+                    contentAnimationCompleted = false
+                    centralItemNode.animateOut(to: node, addToTransitionSurface: addToTransitionSurface, completion: {
+                        contentAnimationCompleted = true
+                        completion()
+                    })
+                }
+                strongSelf.animateOut(animateContent: false, completion: {
+                    interfaceAnimationCompleted = true
+                    completion()
+                })
+            }
+        }
+                
         self.pager.beginCustomDismiss = { [weak self] in
             if let strongSelf = self {
                 strongSelf.beginCustomDismiss()

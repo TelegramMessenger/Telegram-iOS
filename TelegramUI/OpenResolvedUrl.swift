@@ -77,7 +77,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
             controller.sendSticker = sendFile
             present(controller, nil)
         case let .instantView(webpage, anchor):
-            navigationController?.pushViewController(InstantPageController(context: context, webPage: webpage, anchor: anchor))
+            navigationController?.pushViewController(InstantPageController(context: context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
         case let .join(link):
             dismissInput()
             present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId in

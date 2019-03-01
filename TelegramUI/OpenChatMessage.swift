@@ -20,7 +20,7 @@ private enum ChatMessageGalleryControllerData {
     case chatAvatars(AvatarGalleryController, Media)
 }
 
-private func chatMessageGalleryControllerData(context: AccountContext, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, stream: Bool, fromPlayingVideo: Bool, synchronousLoad: Bool, actionInteraction: GalleryControllerActionInteraction?) -> ChatMessageGalleryControllerData? {
+private func chatMessageGalleryControllerData(context: AccountContext, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode, synchronousLoad: Bool, actionInteraction: GalleryControllerActionInteraction?) -> ChatMessageGalleryControllerData? {
     var galleryMedia: Media?
     var otherMedia: Media?
     var instantPageMedia: (TelegramMediaWebpage, [InstantPageGalleryEntry])?
@@ -69,6 +69,21 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
         }
     }
     
+    var stream = false
+    var fromPlayingVideo = false
+    var landscape = false
+    
+    if case .stream = mode {
+        stream = true
+    }
+    if case .automaticPlayback = mode {
+        fromPlayingVideo = true
+    }
+    if case .landscape = mode {
+        fromPlayingVideo = true
+        landscape = true
+    }
+    
     if let (webPage, instantPageMedia) = instantPageMedia, let galleryMedia = galleryMedia {
         var centralIndex: Int = 0
         for i in 0 ..< instantPageMedia.count {
@@ -109,7 +124,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                     }
                     #if DEBUG
                     if ext == "mkv" {
-                        let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: fromPlayingVideo, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                        let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: fromPlayingVideo, landscape: landscape, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                             navigationController?.replaceTopController(controller, animated: false, ready: ready)
                             }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
                         return .gallery(gallery)
@@ -126,7 +141,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                 let gallery = SecretMediaPreviewController(context: context, messageId: message.id)
                 return .secretGallery(gallery)
             } else {
-                let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: fromPlayingVideo, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: fromPlayingVideo, landscape: landscape, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                     navigationController?.replaceTopController(controller, animated: false, ready: ready)
                     }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
                 gallery.temporaryDoNotWaitForReady = fromPlayingVideo
@@ -147,7 +162,7 @@ enum ChatMessagePreviewControllerData {
 }
 
 func chatMessagePreviewControllerData(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?) -> ChatMessagePreviewControllerData? {
-    if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, stream: false, fromPlayingVideo: false, synchronousLoad: true, actionInteraction: nil) {
+    if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, mode: .default, synchronousLoad: true, actionInteraction: nil) {
         switch mediaData {
             case let .gallery(gallery):
                 return .gallery(gallery)
@@ -160,8 +175,8 @@ func chatMessagePreviewControllerData(context: AccountContext, message: Message,
     return nil
 }
 
-func openChatMessage(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, stream: Bool = false, fromPlayingVideo: Bool = false, navigationController: NavigationController?, modal: Bool = false, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> (UIView?, UIView?))?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void, chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void, actionInteraction: GalleryControllerActionInteraction? = nil) -> Bool {
-    if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, stream: stream, fromPlayingVideo: fromPlayingVideo, synchronousLoad: false, actionInteraction: actionInteraction) {
+func openChatMessage(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode = .default, navigationController: NavigationController?, modal: Bool = false, dismissInput: @escaping () -> Void, present: @escaping (ViewController, Any?) -> Void, transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, () -> (UIView?, UIView?))?, addToTransitionSurface: @escaping (UIView) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void, callPeer: @escaping (PeerId) -> Void, enqueueMessage: @escaping (EnqueueMessage) -> Void, sendSticker: ((FileMediaReference) -> Void)?, setupTemporaryHiddenMedia: @escaping (Signal<InstantPageGalleryEntry?, NoError>, Int, Media) -> Void, chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void, actionInteraction: GalleryControllerActionInteraction? = nil) -> Bool {
+    if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, mode: mode, synchronousLoad: false, actionInteraction: actionInteraction) {
         switch mediaData {
             case let .url(url):
                 openUrl(url)
@@ -360,7 +375,7 @@ func openChatMessage(context: AccountContext, message: Message, standalone: Bool
     return false
 }
 
-func openChatInstantPage(context: AccountContext, message: Message, navigationController: NavigationController) {
+func openChatInstantPage(context: AccountContext, message: Message, sourcePeerType: MediaAutoDownloadPeerType?, navigationController: NavigationController) {
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
             if let _ = content.instantPage {
@@ -402,7 +417,7 @@ func openChatInstantPage(context: AccountContext, message: Message, navigationCo
                     anchor = String(textUrl[anchorRange.upperBound...])
                 }
                 
-                let pageController = InstantPageController(context: context, webPage: webpage, anchor: anchor)
+                let pageController = InstantPageController(context: context, webPage: webpage, sourcePeerType: sourcePeerType ?? .channel, anchor: anchor)
                 navigationController.pushViewController(pageController)
             }
             break

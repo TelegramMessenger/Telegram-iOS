@@ -5,21 +5,30 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
+private struct FetchControls {
+    let fetch: (Bool) -> Void
+    let cancel: () -> Void
+}
+
 final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
     private let context: AccountContext
     let media: InstantPageMedia
     private let interactive: Bool
     private let openMedia: (InstantPageMedia) -> Void
+    private var fetchControls: FetchControls?
     
     private let videoNode: UniversalVideoNode
+    private let statusNode: RadialStatusNode
     
     private var currentSize: CGSize?
     
+    private var fetchStatus: MediaResourceStatus?
     private var fetchedDisposable = MetaDisposable()
+    private var statusDisposable = MetaDisposable()
     
     private var localIsVisible = false
     
-    init(context: AccountContext, webPage: TelegramMediaWebpage, theme: InstantPageTheme, media: InstantPageMedia, interactive: Bool, openMedia: @escaping  (InstantPageMedia) -> Void) {
+    init(context: AccountContext, webPage: TelegramMediaWebpage, theme: InstantPageTheme, media: InstantPageMedia, interactive: Bool, openMedia: @escaping (InstantPageMedia) -> Void) {
         self.context = context
         self.media = media
         self.interactive = interactive
@@ -31,8 +40,15 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
             imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
         }
         
-        self.videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: NativeVideoContent(id: .instantPage(webPage.webpageId, media.media.id!), fileReference: .webPage(webPage: WebpageReference(webPage), media: media.media as! TelegramMediaFile), imageReference: imageReference, loopVideo: true, enableSound: false, fetchAutomatically: true, placeholderColor: theme.pageBackgroundColor), priority: .embedded, autoplay: true)
+        var streamVideo = false
+        if let file = media.media as? TelegramMediaFile {
+            streamVideo = isMediaStreamable(media: file)
+        }
+        
+        self.videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: NativeVideoContent(id: .instantPage(webPage.webpageId, media.media.id!), fileReference: .webPage(webPage: WebpageReference(webPage), media: media.media as! TelegramMediaFile), imageReference: imageReference, streamVideo: streamVideo, loopVideo: true, enableSound: false, fetchAutomatically: true, placeholderColor: theme.pageBackgroundColor), priority: .embedded, autoplay: true)
         self.videoNode.isUserInteractionEnabled = false
+        
+        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
         
         super.init()
         
@@ -40,6 +56,15 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
         
         if let file = media.media as? TelegramMediaFile {
             self.fetchedDisposable.set(fetchedMediaResource(postbox: context.account.postbox, reference: AnyMediaReference.webPage(webPage: WebpageReference(webPage), media: file).resourceReference(file.resource)).start())
+            
+            self.statusDisposable.set((context.account.postbox.mediaBox.resourceStatus(file.resource) |> deliverOnMainQueue).start(next: { [weak self] status in
+                displayLinkDispatcher.dispatch {
+                    if let strongSelf = self {
+                        strongSelf.fetchStatus = status
+                        strongSelf.updateFetchStatus()
+                    }
+                }
+            }))
         }
     }
     
@@ -69,6 +94,26 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
     func update(strings: PresentationStrings, theme: InstantPageTheme) {
     }
     
+    private func updateFetchStatus() {
+        var state: RadialStatusNodeState = .none
+        if let fetchStatus = self.fetchStatus {
+            switch fetchStatus {
+                case let .Fetching(_, progress):
+                    let adjustedProgress = max(progress, 0.027)
+                    state = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
+                case .Remote:
+                    state = .download(.white)
+                default:
+                    break
+            }
+        }
+        self.statusNode.transitionToState(state, completion: { [weak statusNode] in
+            if state == .none {
+                statusNode?.removeFromSupernode()
+            }
+        })
+    }
+    
     override func layout() {
         super.layout()
         
@@ -79,6 +124,9 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
             
             self.videoNode.frame = CGRect(origin: CGPoint(), size: size)
             self.videoNode.updateLayout(size: size, transition: .immediate)
+            
+            let radialStatusSize: CGFloat = 50.0
+            self.statusNode.frame = CGRect(x: floorToScreenPixels((size.width - radialStatusSize) / 2.0), y: floorToScreenPixels((size.height - radialStatusSize) / 2.0), width: radialStatusSize, height: radialStatusSize)
         }
     }
     
@@ -98,8 +146,15 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
     }
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
-        if case .ended = recognizer.state {
-            self.openMedia(self.media)
+        if case .ended = recognizer.state, let fetchStatus = self.fetchStatus {
+            switch fetchStatus {
+                case .Local:
+                    self.openMedia(self.media)
+                case .Remote:
+                    self.fetchControls?.fetch(true)
+                case .Fetching:
+                    self.fetchControls?.cancel()
+            }
         }
     }
 }

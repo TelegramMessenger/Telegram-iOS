@@ -324,7 +324,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }
             }
             
-            return openChatMessage(context: context, message: message, standalone: false, reverseMessageGalleryOrder: false, stream: mode == .stream, fromPlayingVideo: mode == .automaticPlayback, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
+            return openChatMessage(context: context, message: message, standalone: false, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
             }, present: { c, a in
                 self?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -699,9 +699,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }
                 strongSelf.sendMessages([.message(text: command, attributes: attributes, mediaReference: nil, replyToMessageId: (postAsReply && messageId != nil) ? messageId! : nil, localGroupingKey: nil)])
             }
-        }, openInstantPage: { [weak self] message in
+        }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, strongSelf.isNodeLoaded, let navigationController = strongSelf.navigationController as? NavigationController, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
-                openChatInstantPage(context: strongSelf.context, message: message, navigationController: navigationController)
+                openChatInstantPage(context: strongSelf.context, message: message, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
             }
         }, openWallpaper: { [weak self] message in
             if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
@@ -3414,12 +3414,21 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
+        var shouldOpenCurrentlyActiveVideo = false
+        if let previousLayout = self.validLayout, previousLayout.size.width < previousLayout.size.height && previousLayout.size.height == layout.size.width && self.traceVisibility() && isTopmostChatController(self) {
+            shouldOpenCurrentlyActiveVideo = true
+        }
+        
         self.validLayout = layout
         self.chatTitleView?.layout = layout
         
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop)
         })
+        
+        if shouldOpenCurrentlyActiveVideo {
+            self.chatDisplayNode.openCurrentPlayingWithSoundMedia()
+        }
     }
     
     func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) {

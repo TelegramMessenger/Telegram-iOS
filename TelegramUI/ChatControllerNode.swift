@@ -413,7 +413,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if display {
                     var nodes: [(CGFloat, ChatMessageItemView, ASDisplayNode)] = []
                     strongSelf.historyNode.forEachVisibleItemNode { itemNode in
-                        if let itemNode = itemNode as? ChatMessageItemView, let (_, isVideoMessage, _, badgeNode) = itemNode.playMediaWithSound(), let node = badgeNode {
+                        if let itemNode = itemNode as? ChatMessageItemView, let (_, _, isVideoMessage, _, badgeNode) = itemNode.playMediaWithSound(), let node = badgeNode {
                             if !isVideoMessage, case let .visible(fraction) = itemNode.visibility {
                                 nodes.insert((fraction, itemNode, node), at: 0)
                             }
@@ -566,6 +566,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
         }
+        
         self.validLayout = (layout, navigationBarHeight)
         
         let cleanInsets = layout.intrinsicInsets
@@ -1369,7 +1370,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let textInputPanelNode = self.textInputPanelNode, updateInputTextState {
                 textInputPanelNode.updateInputTextState(chatPresentationInterfaceState.interfaceState.effectiveInputState, keepSendButtonEnabled: keepSendButtonEnabled, extendedSearchLayout: extendedSearchLayout, animated: transition.isAnimated)
             } else {
-                textInputPanelNode?.updateKeepSendButtonEnabled(keepSendButtonEnabled: keepSendButtonEnabled, extendedSearchLayout: extendedSearchLayout, animated: transition.isAnimated)
+                self.textInputPanelNode?.updateKeepSendButtonEnabled(keepSendButtonEnabled: keepSendButtonEnabled, extendedSearchLayout: extendedSearchLayout, animated: transition.isAnimated)
             }
             
             var restrictionText: String?
@@ -1484,20 +1485,39 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func playFirstMediaWithSound() {
-        var actions: [(CGFloat, () -> Void)] = []
+        var actions: [(CGFloat, Bool, () -> Void)] = []
         var hasUnconsumed = false
         self.historyNode.forEachVisibleItemNode { itemNode in
-            if let itemNode = itemNode as? ChatMessageItemView, let (action, isVideoMessage, isUnconsumed, _) = itemNode.playMediaWithSound() {
+            if let itemNode = itemNode as? ChatMessageItemView, let (action, _, _, isUnconsumed, _) = itemNode.playMediaWithSound() {
                 if case let .visible(fraction) = itemNode.visibility {
-                    actions.insert((fraction, action), at: 0)
+                    hasUnconsumed = isUnconsumed
+                    actions.insert((fraction, isUnconsumed, action), at: 0)
                 }
             }
         }
-        for (fraction, action) in actions {
-            if fraction > 0.7 {
+        for (fraction, isUnconsumed, action) in actions {
+            if fraction > 0.7 && (!hasUnconsumed || isUnconsumed) {
                 action()
                 break
             }
+        }
+    }
+    
+    func openCurrentPlayingWithSoundMedia() {
+        var result: (Message?, ListViewItemNode)?
+        self.historyNode.forEachVisibleItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView, let (_, soundEnabled, _, _, _) = itemNode.playMediaWithSound(), soundEnabled {
+                if case let .visible(fraction) = itemNode.visibility, fraction > 0.7 {
+                    result = (itemNode.item?.message, itemNode)
+                }
+            }
+        }
+        if let (message, itemNode) = result {
+            if let message = message {
+                let _ = self.controllerInteraction.openMessage(message, .landscape)
+            }
+            
+            self.historyNode.ensureItemNodeVisibleAtTopInset(itemNode)
         }
     }
     
