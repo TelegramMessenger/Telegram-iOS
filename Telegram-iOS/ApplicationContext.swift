@@ -710,8 +710,6 @@ final class AuthorizedApplicationContext {
                 strongSelf.context.sharedContext.applicationBindings.clearMessageNotifications(ids)
             }
         })
-        
-        self.context.account.resetStateManagement()
        
         let importableContacts = self.context.sharedContext.contactDataManager?.importable() ?? .single([:])
         self.context.account.importableContacts.set(self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings])
