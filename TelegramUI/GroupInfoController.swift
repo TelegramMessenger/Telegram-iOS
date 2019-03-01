@@ -2233,7 +2233,7 @@ func handlePeerInfoAboutTextAction(context: AccountContext, peerId: PeerId, navi
                 case let .stickerPack(name):
                     controller.present(StickerPackPreviewController(context: context, stickerPack: .name(name), parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
                 case let .instantView(webpage, anchor):
-                    (controller.navigationController as? NavigationController)?.pushViewController(InstantPageController(context: context, webPage: webpage, anchor: anchor))
+                    (controller.navigationController as? NavigationController)?.pushViewController(InstantPageController(context: context, webPage: webpage, sourcePeerType: .group, anchor: anchor))
                 case let .join(link):
                     controller.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId in
                         openResolvedPeerImpl(peerId, .chat(textInputState: nil, messageId: nil))

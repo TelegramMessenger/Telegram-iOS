@@ -180,9 +180,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame)
         }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _ in
             self?.openUrl(url)
-        }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message in
+        }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
-                openChatInstantPage(context: strongSelf.context, message: message, navigationController: navigationController)
+                openChatInstantPage(context: strongSelf.context, message: message, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
             }
         }, openWallpaper: { [weak self] message in
             if let strongSelf = self{
@@ -756,7 +756,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     case let .stickerPack(name):
                         strongSelf.presentController(StickerPackPreviewController(context: strongSelf.context, stickerPack: .name(name), parentNavigationController: strongSelf.getNavigationController()), nil)
                     case let .instantView(webpage, anchor):
-                        strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, anchor: anchor))
+                        strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
                     case let .join(link):
                         strongSelf.presentController(JoinLinkPreviewController(context: strongSelf.context, link: link, navigateToPeer: { peerId in
                             if let strongSelf = self {

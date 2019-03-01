@@ -1622,7 +1622,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     case let .botCommand(command):
                                         foundTapAction = true
                                         if let item = self.item {
-                                        item.controllerInteraction.sendBotCommand(item.message.id, command)
+                                            item.controllerInteraction.sendBotCommand(item.message.id, command)
                                         }
                                         break loop
                                     case let .hashtag(peerName, hashtag):
@@ -1632,7 +1632,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     case .instantPage:
                                         foundTapAction = true
                                         if let item = self.item {
-                                            item.controllerInteraction.openInstantPage(item.message)
+                                            item.controllerInteraction.openInstantPage(item.message, item.associatedData)
                                         }
                                         break loop
                                     case .wallpaper:
@@ -1781,7 +1781,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     override func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
         for contentNode in self.contentNodes {
             if let result = contentNode.transitionNode(messageId: id, media: media) {
-                if self.contentNodes.count == 1 && self.nameNode == nil && self.adminBadgeNode == nil && self.forwardInfoNode == nil && self.replyInfoNode == nil {
+                if self.contentNodes.count == 1 && self.contentNodes.first is ChatMessageMediaBubbleContentNode && self.nameNode == nil && self.adminBadgeNode == nil && self.forwardInfoNode == nil && self.replyInfoNode == nil {
                     return (result.0, { [weak self] in
                         guard let strongSelf = self, let resultView = result.1().0 else {
                             return (nil, nil)
@@ -1856,7 +1856,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     }
     
     
-    override func playMediaWithSound() -> (() -> Void, Bool, Bool, ASDisplayNode?)? {
+    override func playMediaWithSound() -> (() -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         for contentNode in self.contentNodes {
             if let playMediaWithSound = contentNode.playMediaWithSound() {
                 return playMediaWithSound

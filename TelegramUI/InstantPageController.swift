@@ -7,6 +7,7 @@ import Display
 final class InstantPageController: ViewController {
     private let context: AccountContext
     private var webPage: TelegramMediaWebpage
+    private let sourcePeerType: MediaAutoDownloadPeerType
     private let anchor: String?
     
     private var presentationData: PresentationData
@@ -26,12 +27,13 @@ final class InstantPageController: ViewController {
     private var settingsDisposable: Disposable?
     private var themeSettings: PresentationThemeSettings?
     
-    init(context: AccountContext, webPage: TelegramMediaWebpage, anchor: String? = nil) {
+    init(context: AccountContext, webPage: TelegramMediaWebpage, sourcePeerType: MediaAutoDownloadPeerType, anchor: String? = nil) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.webPage = webPage
         self.anchor = anchor
+        self.sourcePeerType = sourcePeerType
         
         super.init(navigationBarPresentationData: nil)
         
@@ -85,7 +87,7 @@ final class InstantPageController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = InstantPageControllerNode(context: self.context, settings: self.settings, themeSettings: self.themeSettings, presentationTheme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, statusBar: self.statusBar, getNavigationController: { [weak self] in
+        self.displayNode = InstantPageControllerNode(context: self.context, settings: self.settings, themeSettings: self.themeSettings, presentationTheme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, statusBar: self.statusBar, sourcePeerType: self.sourcePeerType, getNavigationController: { [weak self] in
             return self?.navigationController as? NavigationController
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)

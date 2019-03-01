@@ -203,6 +203,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     var commitPreview: ((UIViewController) -> Void)?
     
     var willDisappear: ((Bool) -> Void)?
+    var didDisappear: ((Bool) -> Void)?
     
     convenience init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
         self.init(sharedContext: context.sharedContext, state: state, tabBarItem: tabBarItem)
@@ -458,6 +459,12 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         super.viewWillDisappear(animated)
         
         self.willDisappear?(animated)
+    }
+    
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        
+        self.didDisappear?(animated)
     }
     
     override func dismiss(completion: (() -> Void)? = nil) {

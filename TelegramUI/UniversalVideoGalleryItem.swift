@@ -22,11 +22,12 @@ class UniversalVideoGalleryItem: GalleryItem {
     let credit: NSAttributedString?
     let hideControls: Bool
     let fromPlayingVideo: Bool
+    let landscape: Bool
     let playbackCompleted: () -> Void
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.content = content
@@ -37,6 +38,7 @@ class UniversalVideoGalleryItem: GalleryItem {
         self.credit = credit
         self.hideControls = hideControls
         self.fromPlayingVideo = fromPlayingVideo
+        self.landscape = landscape
         self.playbackCompleted = playbackCompleted
         self.performAction = performAction
         self.openActionOptions = openActionOptions
@@ -159,6 +161,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var validLayout: (ContainerViewLayout, CGFloat)?
     private var didPause = false
     private var isPaused = true
+    private var dismissOnOrientationChange = false
+    private var keepSoundOnDismiss = false
     
     private var requiresDownload = false
     
@@ -260,6 +264,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
+        var dismiss = false
+        if let (previousLayout, _) = self.validLayout, self.dismissOnOrientationChange, previousLayout.size.width > previousLayout.size.height && previousLayout.size.height == layout.size.width {
+            dismiss = true
+        }
         self.validLayout = (layout, navigationBarHeight)
         
         let statusDiameter: CGFloat = 50.0
@@ -274,6 +282,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 pictureInPictureNode.updateLayout(placeholderSize, transition: transition)
             }
         }
+        
+        if dismiss {
+            self.keepSoundOnDismiss = true
+            self.dismiss()
+        }
     }
     
     func setupItem(_ item: UniversalVideoGalleryItem) {
@@ -281,6 +294,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if item.hideControls {
                 self.statusButtonNode.isHidden = true
             }
+            
+            self.dismissOnOrientationChange = item.landscape
             
             var disablePlayerControls = false
             var isAnimated = false
@@ -548,8 +563,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         self.initiallyActivated = true
                         videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
                     }
-                } else if videoNode.ownsContentNode {
-                    videoNode.pause()
+                } else {
+                    self.dismissOnOrientationChange = false
+                    if videoNode.ownsContentNode {
+                        videoNode.pause()
+                    }
                 }
             }
         }
@@ -623,8 +641,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             self.context.sharedContext.mediaManager.setOverlayVideoNode(nil)
         } else {
             var transformedFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view)
-            let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view.superview)
-            let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
+            var transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view.superview)
+            var transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
             let transformedCopyViewFinalFrame = videoNode.view.convert(videoNode.view.bounds, to: self.view)
             
             let (maybeSurfaceCopyView, _) = node.1()
@@ -640,6 +658,18 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if let contentSurface = surfaceCopyView.superview {
                 transformedSurfaceFrame = node.0.view.convert(node.0.view.bounds, to: contentSurface)
                 transformedSurfaceFinalFrame = videoNode.view.convert(videoNode.view.bounds, to: contentSurface)
+                
+                if let frame = transformedSurfaceFrame, frame.minY < 0.0 {
+                    transformedSurfaceFrame = CGRect(x: frame.minX, y: 0.0, width: frame.width, height: frame.height)
+                }
+            }
+            
+            if transformedSelfFrame.maxY < 0.0 {
+                transformedSelfFrame = CGRect(x: transformedSelfFrame.minX, y: 0.0, width: transformedSelfFrame.width, height: transformedSelfFrame.height)
+            }
+            
+            if transformedSuperFrame.maxY < 0.0 {
+                transformedSuperFrame = CGRect(x: transformedSuperFrame.minX, y: 0.0, width: transformedSuperFrame.width, height: transformedSuperFrame.height)
             }
             
             if let transformedSurfaceFrame = transformedSurfaceFrame {
@@ -806,7 +836,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             toTransform = CATransform3DScale(videoNode.layer.transform, transformScale, transformScale, 1.0)
             
             if videoNode.hasAttachedContext {
-                videoNode.continuePlayingWithoutSound()
+                if self.isPaused || !self.keepSoundOnDismiss {
+                    videoNode.continuePlayingWithoutSound()
+                }
             }
         } else {
             videoNode.allowsGroupOpacity = true

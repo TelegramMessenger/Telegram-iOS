@@ -15,9 +15,6 @@ func isMediaStreamable(message: Message, media: TelegramMediaFile) -> Bool {
     if size < 1 * 1024 * 1024 {
         return false
     }
-//    if media.isAnimated {
-//        return false
-//    }
     for attribute in media.attributes {
         if case let .Video(video) = attribute {
             if video.flags.contains(.supportsStreaming) {
@@ -41,9 +38,6 @@ func isMediaStreamable(media: TelegramMediaFile) -> Bool {
     if size < 1 * 1024 * 1024 {
         return false
     }
-//    if media.isAnimated {
-//        return false
-//    }
     for attribute in media.attributes {
         if case let .Video(video) = attribute {
             if video.flags.contains(.supportsStreaming) {

@@ -187,9 +187,9 @@ public class PeerMediaCollectionController: TelegramController {
             }, shareCurrentLocation: {
             }, shareAccountContact: {
             }, sendBotCommand: { _, _ in
-            }, openInstantPage: { [weak self] message in
+            }, openInstantPage: { [weak self] message, associatedData in
                 if let strongSelf = self, strongSelf.isNodeLoaded, let navigationController = strongSelf.navigationController as? NavigationController, let message = strongSelf.mediaCollectionDisplayNode.messageForGallery(message.id)?.message {
-                    openChatInstantPage(context: strongSelf.context, message: message, navigationController: navigationController)
+                    openChatInstantPage(context: strongSelf.context, message: message, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
                 }
             }, openWallpaper: { [weak self] message in
                 if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.mediaCollectionDisplayNode.messageForGallery(message.id)?.message {

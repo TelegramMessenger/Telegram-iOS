@@ -5,6 +5,11 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
+private struct FetchControls {
+    let fetch: (Bool) -> Void
+    let cancel: () -> Void
+}
+
 final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     private let context: AccountContext
     private let webPage: TelegramMediaWebpage
@@ -16,6 +21,8 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     private let fit: Bool
     private let openMedia: (InstantPageMedia) -> Void
     private let longPressMedia: (InstantPageMedia) -> Void
+    
+    private var fetchControls: FetchControls?
     
     private let imageNode: TransformImageNode
     private let statusNode: RadialStatusNode
@@ -54,7 +61,18 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         if let image = media.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
             self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, photoReference: imageReference))
-            self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
+            
+            if false {
+                self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
+            }
+            
+            self.fetchControls = FetchControls(fetch: { [weak self] manual in
+                if let strongSelf = self {
+                    strongSelf.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
+                }
+            }, cancel: {
+                chatMessagePhotoCancelInteractiveFetch(account: context.account, photoReference: imageReference)
+            })
             
             if interactive {
                 self.statusDisposable.set((context.account.postbox.mediaBox.resourceStatus(largest.resource) |> deliverOnMainQueue).start(next: { [weak self] status in
@@ -143,9 +161,11 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         var state: RadialStatusNodeState = .none
         if let fetchStatus = self.fetchStatus {
             switch fetchStatus {
-                case let .Fetching(isActive, progress):
+                case let .Fetching(_, progress):
                     let adjustedProgress = max(progress, 0.027)
-                    state = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: false)
+                    state = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true)
+                case .Remote:
+                    state = .download(.white)
                 default:
                     break
             }
@@ -236,17 +256,28 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     @objc private func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
             case .ended:
-                if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
-                    switch gesture {
-                        case .tap:
-                            if self.media.media is TelegramMediaImage && self.media.index == -1 {
-                                return
+                if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation, let fetchStatus = self.fetchStatus {
+                    switch fetchStatus {
+                        case .Local:
+                            switch gesture {
+                                case .tap:
+                                    if self.media.media is TelegramMediaImage && self.media.index == -1 {
+                                        return
+                                    }
+                                    self.openMedia(self.media)
+                                case .longTap:
+                                    self.longPressMedia(self.media)
+                                default:
+                                    break
                             }
-                            self.openMedia(self.media)
-                        case .longTap:
-                            self.longPressMedia(self.media)
-                        default:
-                            break
+                        case .Remote:
+                            if case .tap = gesture {
+                                self.fetchControls?.fetch(true)
+                            }
+                        case .Fetching:
+                            if case .tap = gesture {
+                                self.fetchControls?.cancel()
+                            }
                     }
                 }
             default:

@@ -370,7 +370,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                     }
                                 }
                             }
-                        }), content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, telegramFile.fileId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), streamVideo: false, enableSound: false, fetchAutomatically: false), priority: .embedded, autoplay: true)
+                        }), content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, telegramFile.fileId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), streamVideo: true, enableSound: false, fetchAutomatically: false), priority: .embedded, autoplay: true)
                         let previousVideoNode = strongSelf.videoNode
                         strongSelf.videoNode = videoNode
                         strongSelf.insertSubnode(videoNode, belowSubnode: previousVideoNode ?? strongSelf.dateAndStatusNode)
@@ -453,7 +453,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     case .Local:
                         displayMute = true
                     default:
-                        displayMute = false
+                        displayMute = self.automaticDownload ?? false
                 }
             case .playbackStatus:
                 displayMute = false
@@ -481,6 +481,10 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             } else {
                 progressRequired = true
             }
+        }
+        
+        if self.automaticDownload ?? false {
+            progressRequired = false
         }
         
         if progressRequired {
@@ -688,8 +692,18 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
     }
     
-    func playMediaWithSound() -> (() -> Void, Bool, Bool, ASDisplayNode?)? {
+    func playMediaWithSound() -> (action: () -> Void, soundEnabled: Bool, isVideoMessage: Bool, isUnread: Bool, badgeNode: ASDisplayNode?)? {
         if let item = self.item {
+            var notConsumed = false
+            for attribute in item.message.attributes {
+                if let attribute = attribute as? ConsumableContentMessageAttribute {
+                    if !attribute.consumed {
+                        notConsumed = true
+                    }
+                    break
+                }
+            }
+            
             return ({
                 if !self.infoBackgroundNode.alpha.isZero {
                     let _ = (item.context.sharedContext.mediaManager.globalMediaPlayerState
@@ -711,7 +725,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }
                     })
                 }
-            }, true, false, nil)
+            }, false, true, !notConsumed, nil)
         } else {
             return nil
         }

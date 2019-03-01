@@ -322,7 +322,7 @@ func isAutodownloadEnabledForAnyPeerType(category: MediaAutoDownloadCategory) ->
     return category.contacts || category.otherPrivate || category.groups || category.channels
 }
 
-public func shouldDownloadMediaAutomatically(settings: MediaAutoDownloadSettings, peerType: MediaAutoDownloadPeerType, networkType: MediaAutoDownloadNetworkType, authorPeerId: PeerId?, contactsPeerIds: Set<PeerId>, media: Media) -> Bool {
+public func shouldDownloadMediaAutomatically(settings: MediaAutoDownloadSettings, peerType: MediaAutoDownloadPeerType, networkType: MediaAutoDownloadNetworkType, authorPeerId: PeerId? = nil, contactsPeerIds: Set<PeerId> = Set(), media: Media) -> Bool {
     if (networkType == .cellular && !settings.cellular.enabled) || (networkType == .wifi && !settings.wifi.enabled) {
         return false
     }
@@ -340,7 +340,11 @@ public func shouldDownloadMediaAutomatically(settings: MediaAutoDownloadSettings
             return false
         }
         if let size = size {
-            return size <= category.sizeLimit
+            var sizeLimit = category.sizeLimit
+            if let file = media as? TelegramMediaFile, file.isVoice {
+                sizeLimit = max(2 * 1024 * 1024, sizeLimit)
+            }
+            return size <= sizeLimit
         } else if category.sizeLimit == Int32.max {
             return true
         } else {

@@ -147,3 +147,27 @@ final class CachedPatternWallpaperRepresentation: CachedMediaResourceRepresentat
         }
     }
 }
+
+final class CachedAlbumArtworkRepresentation: CachedMediaResourceRepresentation {
+    let size: CGSize?
+    
+    var uniqueId: String {
+        if let size = self.size {
+            return "album-artwork-\(Int(size.width))x\(Int(size.height))"
+        } else {
+            return "album-artwork"
+        }
+    }
+    
+    init(size: CGSize) {
+        self.size = size
+    }
+    
+    func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
+        if let to = to as? CachedAlbumArtworkRepresentation {
+            return self.size == to.size
+        } else {
+            return false
+        }
+    }
+}

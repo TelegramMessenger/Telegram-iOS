@@ -72,13 +72,18 @@ class SearchBarPlaceholderNode: ASDisplayNode {
         super.didLoad()
         
         let gestureRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.backgroundTap(_:)))
-        gestureRecognizer.highlight = { [weak self] _ in
+        gestureRecognizer.highlight = { [weak self] point in
             guard let strongSelf = self else {
                 return
             }
-
-            strongSelf.backgroundNode.layer.animate(from: (strongSelf.backgroundNode.backgroundColor ?? strongSelf.foregroundColor).cgColor, to: strongSelf.foregroundColor.withMultipliedBrightnessBy(0.9).cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.3)
-            strongSelf.backgroundNode.backgroundColor = strongSelf.foregroundColor.withMultipliedBrightnessBy(0.9)
+            if let _ = point {
+                strongSelf.backgroundNode.layer.animate(from: (strongSelf.backgroundNode.backgroundColor ?? strongSelf.foregroundColor).cgColor, to: strongSelf.foregroundColor.withMultipliedBrightnessBy(0.9).cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.3)
+                strongSelf.backgroundNode.backgroundColor = strongSelf.foregroundColor.withMultipliedBrightnessBy(0.9)
+            } else {
+                strongSelf.backgroundNode.layer.animate(from: (strongSelf.backgroundNode.backgroundColor ?? strongSelf.foregroundColor).cgColor, to: strongSelf.foregroundColor.cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.2, completion: { _ in
+                    strongSelf.backgroundNode.backgroundColor = strongSelf.foregroundColor
+                })
+            }
         }
         gestureRecognizer.tapActionAtPoint = { _ in
             return .waitForSingleTap
@@ -161,13 +166,7 @@ class SearchBarPlaceholderNode: ASDisplayNode {
     
     @objc private func backgroundTap(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         if case .ended = recognizer.state {
-            self.backgroundNode.layer.animate(from: (self.backgroundNode.backgroundColor ?? self.foregroundColor).cgColor, to: self.foregroundColor.cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.2, completion: { _ in
-                self.backgroundNode.backgroundColor = self.foregroundColor
-            })
-            
-            if let activate = self.activate {
-                activate()
-            }
+            self.activate?()
         }
     }
 }

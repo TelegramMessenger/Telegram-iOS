@@ -235,7 +235,7 @@ public class ChatMessageItemView: ListViewItemNode {
     func updateAutomaticMediaDownloadSettings() {
     }
     
-    func playMediaWithSound() -> (() -> Void, Bool, Bool, ASDisplayNode?)? {
+    func playMediaWithSound() -> (() -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         return nil
     }
     

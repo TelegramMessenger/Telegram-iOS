@@ -133,7 +133,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                                 break
                         }
                         if !isGallery {
-                            item.controllerInteraction.openInstantPage(item.message)
+                            item.controllerInteraction.openInstantPage(item.message, item.associatedData)
                             return
                         }
                     } else if content.type == "telegram_background" {
@@ -369,7 +369,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
     }
     
-    override func playMediaWithSound() -> (() -> Void, Bool, Bool, ASDisplayNode?)? {
+    override func playMediaWithSound() -> (() -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         return self.contentNode.playMediaWithSound()
     }
     

@@ -484,10 +484,10 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                 if content.instantPage != nil {
                     if websiteType(of: content) == .instagram {
                         if !item.controllerInteraction.openMessage(item.message, .default) {
-                            item.controllerInteraction.openInstantPage(item.message)
+                            item.controllerInteraction.openInstantPage(item.message, nil)
                         }
                     } else {
-                        item.controllerInteraction.openInstantPage(item.message)
+                        item.controllerInteraction.openInstantPage(item.message, nil)
                     }
                 } else {
                     if isTelegramMeLink(content.url) || !item.controllerInteraction.openMessage(item.message, .default) {
