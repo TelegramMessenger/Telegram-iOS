@@ -271,6 +271,10 @@ public final class AccountViewTracker {
     
     private let historyViewStateValidationContexts: HistoryViewStateValidationContexts
     
+    public var orderedPreloadMedia: Signal<[HolesViewMedia], NoError> {
+        return self.chatHistoryPreloadManager.orderedMedia
+    }
+    
     init(account: Account) {
         self.account = account
         

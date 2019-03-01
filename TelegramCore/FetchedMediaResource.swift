@@ -54,6 +54,14 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
         }
     }
     
+    public init(peer: Peer, id: MessageId, timestamp: Int32, incoming: Bool, secret: Bool) {
+        if let inputPeer = PeerReference(peer) {
+            self.content = .message(peer: inputPeer, id: id, timestamp: timestamp, incoming: incoming, secret: secret)
+        } else {
+            self.content = .none
+        }
+    }
+    
     public init(decoder: PostboxDecoder) {
         self.content = decoder.decodeObjectForKey("c", decoder: { MessageReferenceContent(decoder: $0) }) as! MessageReferenceContent
     }
@@ -505,9 +513,16 @@ final class TelegramCloudMediaResourceFetchInfo: MediaResourceFetchInfo {
 }
 
 public func fetchedMediaResource(postbox: Postbox, reference: MediaResourceReference, range: (Range<Int>, MediaBoxFetchPriority)? = nil, statsCategory: MediaResourceStatsCategory = .generic, reportResultStatus: Bool = false, preferBackgroundReferenceRevalidation: Bool = false, continueInBackground: Bool = false) -> Signal<FetchResourceSourceType, FetchResourceError> {
-    if let (range, priority) = range {
-        return postbox.mediaBox.fetchedResourceData(reference.resource, in: range, priority: priority, parameters: MediaResourceFetchParameters(tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory), info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground)))
-        |> map { _ in .local }
+    return fetchedMediaResource(postbox: postbox, reference: reference, ranges: range.flatMap({ [$0] }), statsCategory: statsCategory, reportResultStatus: reportResultStatus, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground)
+}
+
+public func fetchedMediaResource(postbox: Postbox, reference: MediaResourceReference, ranges: [(Range<Int>, MediaBoxFetchPriority)]?, statsCategory: MediaResourceStatsCategory = .generic, reportResultStatus: Bool = false, preferBackgroundReferenceRevalidation: Bool = false, continueInBackground: Bool = false) -> Signal<FetchResourceSourceType, FetchResourceError> {
+    if let ranges = ranges {
+        let signals = ranges.map { (range, priority) -> Signal<Void, FetchResourceError> in
+            return postbox.mediaBox.fetchedResourceData(reference.resource, in: range, priority: priority, parameters: MediaResourceFetchParameters(tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory), info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground)))
+        }
+        return combineLatest(signals)
+        |> map { _ -> FetchResourceSourceType in .local }
     } else {
         return postbox.mediaBox.fetchedResource(reference.resource, parameters: MediaResourceFetchParameters(tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory), info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground)), implNext: reportResultStatus)
     }

@@ -85,6 +85,7 @@ private final class HistoryPreloadViewContext {
     var isMuted: Bool
     let disposable = MetaDisposable()
     var hole: MessageOfInterestHole?
+    var media: [HolesViewMedia] = []
     
     var currentHole: HistoryPreloadHole? {
         if let hole = self.hole {
@@ -157,6 +158,12 @@ final class ChatHistoryPreloadManager {
     private var views: [ChatHistoryPreloadEntity: HistoryPreloadViewContext] = [:]
     
     private var entries: [HistoryPreloadEntry] = []
+    
+    private var orderedMediaValue: [HolesViewMedia] = []
+    private let orderedMediaPromise = ValuePromise<[HolesViewMedia]>([])
+    var orderedMedia: Signal<[HolesViewMedia], NoError> {
+        return self.orderedMediaPromise.get()
+    }
     
     init(postbox: Postbox, network: Network, accountPeerId: PeerId, networkState: Signal<AccountNetworkState, NoError>) {
         self.postbox = postbox
@@ -252,11 +259,29 @@ final class ChatHistoryPreloadManager {
                         case let .group(groupId):
                             key = .messageOfInterestHole(location: .group(groupId), namespace: Namespaces.Message.Cloud, count: 60)
                     }
-                    view.disposable.set((self.postbox.combinedView(keys: [key]) |> deliverOn(self.queue)).start(next: { [weak self] next in
+                    view.disposable.set((self.postbox.combinedView(keys: [key])
+                    |> deliverOn(self.queue)).start(next: { [weak self] next in
                         if let strongSelf = self, let value = next.views[key] as? MessageOfInterestHolesView {
                             if let view = strongSelf.views[index.entity] {
                                 let previousHole = view.currentHole
                                 view.hole = value.closestHole
+                                
+                                var mediaUpdated = false
+                                if view.media.count != value.closestLaterMedia.count {
+                                    mediaUpdated = true
+                                } else {
+                                    for i in 0 ..< view.media.count {
+                                        if view.media[i] != value.closestLaterMedia[i] {
+                                            mediaUpdated = true
+                                            break
+                                        }
+                                    }
+                                }
+                                if mediaUpdated {
+                                    view.media = value.closestLaterMedia
+                                    strongSelf.updateMedia()
+                                }
+                                
                                 let updatedHole = view.currentHole
                                 if previousHole != updatedHole {
                                     strongSelf.update(from: previousHole, to: updatedHole)
@@ -266,6 +291,18 @@ final class ChatHistoryPreloadManager {
                     }))
                 }
             }
+        }
+    }
+    
+    private func updateMedia() {
+        var media: [HolesViewMedia] = []
+        for (_, view) in self.views {
+            media.append(contentsOf: view.media)
+        }
+        media.sort()
+        if media != self.orderedMediaValue {
+            self.orderedMediaValue = media
+            self.orderedMediaPromise.set(media)
         }
     }
     
