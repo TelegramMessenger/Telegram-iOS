@@ -116,6 +116,11 @@ public struct ListViewKeepTopItemOverscrollBackground {
     }
 }
 
+public enum GeneralScrollDirection {
+    case up
+    case down
+}
+
 open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGestureRecognizerDelegate {
     private final let scroller: ListViewScroller
     private final var visibleSize: CGSize = CGSize()
@@ -227,6 +232,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public final var visibleBottomContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     public final var beganInteractiveDragging: () -> Void = { }
     public final var didEndScrolling: (() -> Void)?
+    
+    private var currentGeneralScrollDirection: GeneralScrollDirection?
+    public final var generalScrollDirectionUpdated: (GeneralScrollDirection) -> Void = { _ in }
     
     public final var reorderItem: (Int, Int, Any?) -> Signal<Bool, NoError> = { _, _, _ in return .single(false) }
     
@@ -602,6 +610,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.updateScrollViewDidScroll(scrollView, synchronous: false)
     }
     
+    private var generalAccumulatedDeltaY: CGFloat = 0.0
+    
     private func updateScrollViewDidScroll(_ scrollView: UIScrollView, synchronous: Bool) {
         if self.ignoreScrollingEvents || scroller !== self.scroller {
             return
@@ -611,6 +621,15 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         //CATransaction.setDisableActions(true)
         
         let deltaY = scrollView.contentOffset.y - self.lastContentOffset.y
+        self.generalAccumulatedDeltaY += deltaY
+        if abs(self.generalAccumulatedDeltaY) > 14.0 {
+            let direction: GeneralScrollDirection = self.generalAccumulatedDeltaY < 0 ? .up : .down
+            self.generalAccumulatedDeltaY = 0.0
+            if self.currentGeneralScrollDirection != direction {
+                self.currentGeneralScrollDirection = direction
+                self.generalScrollDirectionUpdated(direction)
+            }
+        }
         
         self.lastContentOffset = scrollView.contentOffset
         if !self.lastContentOffsetTimestamp.isZero {
