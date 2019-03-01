@@ -2630,6 +2630,34 @@ final class MessageHistoryTable: Table {
         return parsedAttributes
     }
     
+    func renderMessageMedia(referencedMedia: [MediaId], embeddedMediaData: ReadBuffer) -> [Media] {
+        var parsedMedia: [Media] = []
+        
+        let embeddedMediaData = embeddedMediaData.sharedBufferNoCopy()
+        if embeddedMediaData.length > 4 {
+            var embeddedMediaCount: Int32 = 0
+            embeddedMediaData.read(&embeddedMediaCount, offset: 0, length: 4)
+            for _ in 0 ..< embeddedMediaCount {
+                var mediaLength: Int32 = 0
+                embeddedMediaData.read(&mediaLength, offset: 0, length: 4)
+                if let media = PostboxDecoder(buffer: MemoryBuffer(memory: embeddedMediaData.memory + embeddedMediaData.offset, capacity: Int(mediaLength), length: Int(mediaLength), freeWhenDone: false)).decodeRootObject() as? Media {
+                    parsedMedia.append(media)
+                }
+                embeddedMediaData.skip(Int(mediaLength))
+            }
+        }
+        
+        for mediaId in referencedMedia {
+            if let media = self.messageMediaTable.get(mediaId, embedded: { _, _ in
+                return nil
+            })?.1 {
+                parsedMedia.append(media)
+            }
+        }
+        
+        return parsedMedia
+    }
+    
     func renderMessage(_ message: IntermediateMessage, peerTable: PeerTable, addAssociatedMessages: Bool = true) -> Message {
         var parsedAttributes: [MessageAttribute] = []
         var parsedMedia: [Media] = []
@@ -2648,7 +2676,6 @@ final class MessageHistoryTable: Table {
             }
         }
         
-        let readMediaStart = CFAbsoluteTimeGetCurrent()
         let embeddedMediaData = message.embeddedMediaData.sharedBufferNoCopy()
         if embeddedMediaData.length > 4 {
             var embeddedMediaCount: Int32 = 0
