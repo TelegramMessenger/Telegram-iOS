@@ -90,14 +90,14 @@ bool LottieLoader::load(const std::string &path)
     return true;
 }
 
-bool LottieLoader::loadFromData(std::string &&jsonData, const std::string &key)
+bool LottieLoader::loadFromData(std::string &&jsonData, const std::string &key, const std::string &resourcePath)
 {
     LottieFileCache &fileCache = LottieFileCache::get();
 
     mModel = fileCache.find(key);
     if (mModel) return true;
 
-    LottieParser parser(const_cast<char *>(jsonData.c_str()));
+    LottieParser parser(const_cast<char *>(jsonData.c_str()), resourcePath.c_str());
     mModel = parser.model();
     fileCache.add(key, mModel);
 

@@ -49,6 +49,7 @@ LOT_EXPORT Lottie_Animation *lottie_animation_from_file(const char *path);
  *
  *  @param[in] data The JSON string data.
  *  @param[in] key the string that will be used to cache the JSON string data.
+ *  @param[in] resource_path the path that will be used to load external resource needed by the JSON data.
  *
  *  @return Animation object that can build the contents of the
  *          Lottie resource represented by JSON string data.
@@ -56,7 +57,7 @@ LOT_EXPORT Lottie_Animation *lottie_animation_from_file(const char *path);
  *  @ingroup Lottie_Animation
  *  @internal
  */
-LOT_EXPORT Lottie_Animation *lottie_animation_from_data(const char *data, const char *key);
+LOT_EXPORT Lottie_Animation *lottie_animation_from_data(const char *data, const char *key, const char *resource_path);
 
 /**
  *  @brief Free given Animation object resource.

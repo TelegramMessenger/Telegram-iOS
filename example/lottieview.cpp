@@ -369,9 +369,9 @@ void LottieView::setFilePath(const char *filePath)
     }
 }
 
-void LottieView::loadFromData(const std::string &jsonData, const std::string &key)
+void LottieView::loadFromData(const std::string &jsonData, const std::string &key, const std::string &resourcePath)
 {
-    if (mPlayer = Animation::loadFromData(jsonData, key)) {
+    if (mPlayer = Animation::loadFromData(jsonData, key, resourcePath)) {
         mFrameRate = mPlayer->frameRate();
         mTotalFrame = mPlayer->totalFrame();
     } else {

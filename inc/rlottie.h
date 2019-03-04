@@ -143,7 +143,7 @@ public:
      *  @internal
      */
     static std::unique_ptr<Animation>
-    loadFromData(std::string jsonData, const std::string &key);
+    loadFromData(std::string jsonData, const std::string &key, const std::string &resourcePath="");
 
     /**
      *  @brief Returns default framerate of the Lottie resource.

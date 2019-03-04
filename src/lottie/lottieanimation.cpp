@@ -198,7 +198,7 @@ std::future<Surface> AnimationImpl::renderAsync(size_t frameNo, Surface &&surfac
  * @param path  add the details
  */
 std::unique_ptr<Animation>
-Animation::loadFromData(std::string jsonData, const std::string &key)
+Animation::loadFromData(std::string jsonData, const std::string &key, const std::string &resourcePath)
 {
     if (jsonData.empty()) {
         vWarning << "jason data is empty";
@@ -206,7 +206,8 @@ Animation::loadFromData(std::string jsonData, const std::string &key)
     }
 
     LottieLoader loader;
-    if (loader.loadFromData(std::move(jsonData), key)) {
+    if (loader.loadFromData(std::move(jsonData), key,
+                            (resourcePath.empty() ? " " : resourcePath))) {
         auto animation = std::unique_ptr<Animation>(new Animation);
         animation->d->init(loader.model());
         return animation;

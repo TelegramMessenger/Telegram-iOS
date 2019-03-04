@@ -41,9 +41,9 @@ LOT_EXPORT Lottie_Animation_S *lottie_animation_from_file(const char *path)
     }
 }
 
-LOT_EXPORT Lottie_Animation_S *lottie_animation_from_data(const char *data, const char *key)
+LOT_EXPORT Lottie_Animation_S *lottie_animation_from_data(const char *data, const char *key, const char *resourcePath)
 {
-    if (auto animation = Animation::loadFromData(data, key) ) {
+    if (auto animation = Animation::loadFromData(data, key, resourcePath) ) {
         Lottie_Animation_S *handle = new Lottie_Animation_S();
         handle->mAnimation = std::move(animation);
         return handle;

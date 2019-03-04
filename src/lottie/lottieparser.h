@@ -25,7 +25,7 @@ class LottieParserImpl;
 class LottieParser {
 public:
     ~LottieParser();
-    LottieParser(char* str, const char *dir_path="");
+    LottieParser(char* str, const char *dir_path);
     std::shared_ptr<LOTModel> model();
 private:
    LottieParserImpl   *d;
