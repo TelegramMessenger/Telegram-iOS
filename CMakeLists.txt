@@ -22,9 +22,8 @@ add_library(rlottie::rlottie ALIAS rlottie)
 #declare target compilation options
 target_compile_options(rlottie
                     PUBLIC
-                        -std=c++14
                     PRIVATE
-                        -Wall -fvisibility=hidden -O2)
+                        -Wall -fvisibility=hidden -O2 -std=c++14)
 
 #declare dependancy
 set( CMAKE_THREAD_PREFER_PTHREAD TRUE )

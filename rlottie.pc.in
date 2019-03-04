@@ -3,4 +3,4 @@ Description: A rlottie library
 Version: @player_version@
 Requires:
 Libs: -L@LIBDIR@ -lrlottie
-Cflags: -I@INCDIR@ -std=c++14
+Cflags: -I@INCDIR@
