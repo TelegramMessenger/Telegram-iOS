@@ -49,6 +49,7 @@ private struct HolesViewEntryHole {
 }
 
 private enum HolesViewEntryMedia {
+    case media(authorId: PeerId?, [Media])
     case intermediate(authorId: PeerId?, [MediaId], ReadBuffer)
 }
 
@@ -59,7 +60,7 @@ public struct HolesViewMedia: Comparable {
     public let index: MessageIndex
     
     public static func ==(lhs: HolesViewMedia, rhs: HolesViewMedia) -> Bool {
-        return lhs.index == rhs.index && lhs.media.isEqual(to: rhs.media) && lhs.peer.isEqual(rhs.peer) && lhs.authorIsContact == rhs.authorIsContact
+        return lhs.index == rhs.index && (lhs.media === rhs.media || lhs.media.isEqual(to: rhs.media)) && lhs.peer.isEqual(rhs.peer) && lhs.authorIsContact == rhs.authorIsContact
     }
     
     public static func <(lhs: HolesViewMedia, rhs: HolesViewMedia) -> Bool {
@@ -70,7 +71,7 @@ public struct HolesViewMedia: Comparable {
 private struct HolesViewEntry {
     let index: MessageIndex
     let hole: HolesViewEntryHole?
-    let media: HolesViewEntryMedia?
+    var media: HolesViewEntryMedia?
     
     init(index: MessageIndex, hole: HolesViewEntryHole?, media: HolesViewEntryMedia?) {
         self.index = index
@@ -496,15 +497,27 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                 index = value
         }
         var result: [HolesViewMedia] = []
-        for entry in self.entries {
+        for i in 0 ..< self.entries.count {
+            let entry = self.entries[i]
             guard entry.index > index, let media = entry.media else {
                 continue
             }
             switch media {
+                case let .media(authorId, media):
+                    for m in media {
+                        if m.id != nil, let peer = postbox.peerTable.get(index.id.peerId) {
+                            var isContact = false
+                            if let authorId = authorId {
+                                isContact = postbox.contactsTable.isContact(peerId: authorId)
+                            }
+                            result.append(HolesViewMedia(media: m, peer: peer, authorIsContact: isContact, index: index))
+                        }
+                    }
                 case let .intermediate(authorId, ids, data):
                     if ids.isEmpty && data.length <= 4 {
                         continue
                     }
+                    var itemMedia: [Media] = []
                     for item in postbox.messageHistoryTable.renderMessageMedia(referencedMedia: ids, embeddedMediaData: data) {
                         if item.id != nil, let peer = postbox.peerTable.get(index.id.peerId) {
                             var isContact = false
@@ -512,7 +525,13 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                                 isContact = postbox.contactsTable.isContact(peerId: authorId)
                             }
                             result.append(HolesViewMedia(media: item, peer: peer, authorIsContact: isContact, index: entry.index))
+                            itemMedia.append(item)
                         }
+                    }
+                    if itemMedia.isEmpty {
+                        entries[i].media = nil
+                    } else {
+                        entries[i].media = .media(authorId: authorId, itemMedia)
                     }
             }
             
