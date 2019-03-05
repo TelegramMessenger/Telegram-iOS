@@ -1,6 +1,6 @@
 import Foundation
 
-private enum ID3Tag {
+private enum ID3Tag: CaseIterable {
     case v2
     case v3
     
@@ -32,7 +32,7 @@ private enum ID3Tag {
         }
     }
     
-    var frameOffset: Int32 {
+    var frameOffset: Int {
         switch self {
             case .v2:
                 return 6
@@ -41,12 +41,12 @@ private enum ID3Tag {
         }
     }
     
-    func frameSize(_ value: Int32) -> Int32 {
+    func frameSize(_ value: Int32) -> Int {
         switch self {
             case .v2:
-                return (value & 0x00ffffff) + self.frameOffset
+                return Int(value & 0x00ffffff) + self.frameOffset
             case .v3:
-                return value + self.frameOffset
+                return Int(value) + self.frameOffset
         }
     }
 }
@@ -58,12 +58,25 @@ private let artOffset = 10
 private let v2FrameOffset: UInt32 = 6
 private let v3FrameOffset: UInt32 = 10
 
-private let jpgMagic = Data(bytes: [ 0xff, 0xd8, 0xff ])
-private let pngMagic = Data(bytes: [ 0x89, 0x50, 0x4e, 0x47 ])
+private let tagEnding = Data(bytes: [ 0x00, 0x00, 0x00 ])
+
+private enum ID3ArtworkFormat: CaseIterable {
+    case jpg
+    case png
+    
+    var magic: Data {
+        switch self {
+            case .jpg:
+                return Data(bytes: [ 0xff, 0xd8, 0xff ])
+            case .png:
+                return Data(bytes: [ 0x89, 0x50, 0x4e, 0x47 ])
+        }
+    }
+}
 
 private class DataStream {
-    let data: Data
-    var position = 0
+    private let data: Data
+    private(set) var position = 0
     var reachedEnd: Bool {
         return self.position >= self.data.count
     }
@@ -93,12 +106,14 @@ private class DataStream {
         return value
     }
     
-    func next(_ count: Int) -> Data? {
-        guard self.position + count <= self.data.count else {
+    func next(_ count: Int, offset: Int = 0, peek: Bool = false) -> Data? {
+        guard self.position + offset + count <= self.data.count else {
             return nil
         }
-        let subdata = self.data.subdata(in: self.position..<self.position + count)
-        self.position += count
+        let subdata = self.data.subdata(in: self.position + offset ..< self.position + offset + count)
+        if !peek {
+            self.position += count + offset
+        }
         return subdata
     }
     
@@ -125,50 +140,99 @@ private class DataStream {
     }
 }
 
-func readAlbumArtworkData(_ data: Data) -> Data? {
+enum ID3ArtworkResult {
+    case notFound
+    case moreDataNeeded(Int)
+    case artworkData(Data)
+}
+
+func readAlbumArtworkData(_ data: Data) -> ID3ArtworkResult {
     guard data.count >= 4 else {
-        return nil
+        return .notFound
     }
     
     let stream = DataStream(data)
     let versionHeader = stream.next(ID3Tag.headerLength)
     
-    let id3Tag: ID3Tag
-    if versionHeader == ID3Tag.v2.header {
-        id3Tag = .v2
-    } else if versionHeader == ID3Tag.v2.header {
-        id3Tag = .v3
-    } else {
-        return nil
+    var version: ID3Tag?
+    for tag in ID3Tag.allCases {
+        if versionHeader == tag.header {
+            version = tag
+            break
+        }
+    }
+    guard let id3Tag = version else {
+        return .notFound
     }
     
+    stream.skip()
     guard let value: UInt32 = stream.nextValue() else {
-        return nil
+        return .notFound
     }
     let size = CFSwapInt32HostToBig(value)
     let b1 = (size & 0x7f000000) >> 3
     let b2 = (size & 0x007f0000) >> 2
     let b3 = (size & 0x00007f00) >> 1
     let b4 = size & 0x0000007f
-    let tagSize = b1 + b2 + b3 + b4
+    let tagSize = Int(b1 + b2 + b3 + b4)
     
     while !stream.reachedEnd {
+        guard let frameHeader = stream.next(4, peek: true) else {
+            return .moreDataNeeded(tagSize)
+        }
+        
         stream.skip(id3Tag.frameSizeOffset)
         guard let value: UInt32 = stream.nextValue() else {
-            return nil
+            return .moreDataNeeded(tagSize)
         }
         let frameSize = id3Tag.frameSize(Int32(CFSwapInt32HostToBig(value)))
+        let bytesLeft = frameSize - id3Tag.frameSizeOffset - 4
         
-        guard let frameHeader = stream.next(id3Tag.artworkHeader.count) else {
-            return nil
-        }
         if frameHeader == id3Tag.artworkHeader {
+            var image: (ID3ArtworkFormat, Int)?
+            outer: for i in 0 ..< frameSize - 4 {
+                if let head = stream.next(4, offset: i, peek: true) {
+                    for format in ID3ArtworkFormat.allCases {
+                        if head.prefix(format.magic.count) == format.magic {
+                            image = (format, i)
+                            break outer
+                        }
+                    }
+                }
+            }
             
-        } else {
-            
+            if let (format, offset) = image {
+                stream.skip(offset)
+                
+                switch format {
+                    case .jpg:
+                        var data = Data(capacity: frameSize + 1024)
+                        var previousByte: UInt8 = 0xff
+                    
+                        for _ in 0 ..< frameSize - offset {
+                            if let byte: UInt8 = stream.nextValue() {
+                                data.append(byte)
+                                if byte == 0xd9 && previousByte == 0xff {
+                                    break
+                                }
+                                previousByte = byte
+                            } else {
+                                return .moreDataNeeded(tagSize)
+                            }
+                        }
+                        return .artworkData(data)
+                    case .png:
+                        if let data = stream.next(frameSize - offset) {
+                            return .artworkData(data)
+                        } else {
+                            return .moreDataNeeded(tagSize)
+                        }
+                }
+            }
+        } else if frameHeader.prefix(3) == tagEnding {
+            return .notFound
         }
-        
+        stream.skip(bytesLeft)
     }
-    
-    return Data()
+    return .notFound
 }

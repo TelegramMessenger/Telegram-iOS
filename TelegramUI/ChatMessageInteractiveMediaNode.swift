@@ -130,15 +130,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     
     private func progressPressed(canActivate: Bool) {
         if let fetchStatus = self.fetchStatus {
-            var isAnimated = false
-            if let file = self.media as? TelegramMediaFile, file.isAnimated {
-                isAnimated = true
-            }
-            
             var activateContent = false
             if let state = self.statusNode?.state, case .play = state {
                 activateContent = true
-            } else if let message = self.message, !message.flags.isSending && (self.automaticPlayback ?? false) && !isAnimated {
+            } else if let message = self.message, !message.flags.isSending && (self.automaticPlayback ?? false) {
                 activateContent = true
             }
             if canActivate, activateContent {
@@ -229,6 +224,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
             
             var isInlinePlayableVideo = false
             var maxDimensions = layoutConstants.image.maxDimensions
+            var maxHeight = layoutConstants.image.maxDimensions.height
             
             var unboundSize: CGSize
             if let image = media as? TelegramMediaImage, let dimensions = largestImageRepresentation(image.representations)?.dimensions {
@@ -250,6 +246,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     } else {
                         maxDimensions = CGSize(width: constrainedSize.width, height: layoutConstants.video.maxVerticalHeight)
                     }
+                    maxHeight = maxDimensions.height
                 } else if file.isSticker {
                     unboundSize = unboundSize.aspectFilled(CGSize(width: 162.0, height: 162.0))
                 }
@@ -326,7 +323,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 drawingSize = nativeSize.aspectFilled(boundingSize)
                             } else {
                                 let fittedSize = nativeSize.fittedToWidthOrSmaller(boundingWidth)
-                                boundingSize = CGSize(width: boundingWidth, height: fittedSize.height).cropped(CGSize(width: CGFloat.greatestFiniteMagnitude, height: layoutConstants.image.maxDimensions.height))
+                                let filledSize = fittedSize.aspectFilled(CGSize(width: boundingWidth, height: fittedSize.height))
+                                
+                                boundingSize = CGSize(width: boundingWidth, height: filledSize.height).cropped(CGSize(width: CGFloat.greatestFiniteMagnitude, height: maxHeight))
                                 boundingSize.height = max(boundingSize.height, layoutConstants.image.minDimensions.height)
                                 boundingSize.width = max(boundingSize.width, layoutConstants.image.minDimensions.width)
                                 switch contentMode {
@@ -791,11 +790,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         
         var webpage: TelegramMediaWebpage?
         var invoice: TelegramMediaInvoice?
-        for m in message.media {
-            if let m = m as? TelegramMediaWebpage {
-                webpage = m
-            } else if let m = m as? TelegramMediaInvoice {
-                invoice = m
+        for media in message.media {
+            if let media = media as? TelegramMediaWebpage {
+                webpage = media
+            } else if let media = media as? TelegramMediaInvoice {
+                invoice = media
             }
         }
         
@@ -832,7 +831,6 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
         
         let radialStatusSize: CGFloat = wideLayout ? 50.0 : 32.0
-        
         if progressRequired {
             if self.statusNode == nil {
                 let statusNode = RadialStatusNode(backgroundNodeColor: theme.chat.bubble.mediaOverlayControlBackgroundColor)

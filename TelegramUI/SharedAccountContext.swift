@@ -444,8 +444,8 @@ public final class SharedAccountContext {
             let callManager = PresentationCallManager(accountManager: self.accountManager, getDeviceAccessData: {
                 return (self.currentPresentationData.with { $0 }, { [weak self] c, a in
                     self?.presentGlobalController(c, a)
-                    }, {
-                        applicationBindings.openSettings()
+                }, {
+                    applicationBindings.openSettings()
                 })
             }, audioSession: self.mediaManager.audioSession, activeAccounts: self.activeAccounts |> map { _, accounts, _ in
                 return Array(accounts.map({ $0.1 }))

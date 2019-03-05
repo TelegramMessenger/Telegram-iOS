@@ -131,14 +131,12 @@ class ContactListActionItem: ListViewItem {
             firstWithHeader = item.header != nil
         }
         if let nextItem = nextItem {
-            if let header = item.header {
-                if let nextItem = nextItem as? ContactsPeerItem {
-                    last = header.id != nextItem.header?.id
-                } else if let nextItem = nextItem as? ContactListActionItem {
-                    last = header.id != nextItem.header?.id
-                } else {
-                    last = true
-                }
+            if let nextItem = nextItem as? ContactsPeerItem {
+                last = item.header?.id != nextItem.header?.id
+            } else if let nextItem = nextItem as? ContactListActionItem {
+                last = item.header?.id != nextItem.header?.id
+            } else {
+                last = true
             }
         } else {
             last = true
@@ -267,6 +265,9 @@ class ContactListActionItemNode: ListViewItemNode {
                     
                     strongSelf.topStripeNode.isHidden = true
                     strongSelf.bottomStripeNode.isHidden = hideBottomStripe
+                    if !hideBottomStripe {
+                        print("")
+                    }
                     
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                     

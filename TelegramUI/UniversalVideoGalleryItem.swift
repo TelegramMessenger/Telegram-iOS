@@ -799,7 +799,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         if let interactiveMediaNode = node.0 as? ChatMessageInteractiveMediaNode, interactiveMediaNode.automaticPlayback ?? false, videoNode.hasAttachedContext {
             copyView.removeFromSuperview()
-            surfaceCopyView.removeFromSuperview()
+            //surfaceCopyView.removeFromSuperview()
             
             let previousFrame = videoNode.frame
             let previousSuperview = videoNode.view.superview

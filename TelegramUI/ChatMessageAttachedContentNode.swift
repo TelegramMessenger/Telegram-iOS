@@ -917,10 +917,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 }
                 if let contentImageNode = self.contentImageNode {
                     contentImageNode.isHidden = found
+                    contentImageNode.updateIsHidden(found)
                     return found
                 }
             } else if let contentImageNode = self.contentImageNode {
                 contentImageNode.isHidden = false
+                contentImageNode.updateIsHidden(false)
             }
         }
         return false

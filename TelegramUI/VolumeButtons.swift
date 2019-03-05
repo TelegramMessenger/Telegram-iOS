@@ -3,8 +3,8 @@ import UIKit
 import SwiftSignalKit
 import MediaPlayer
 
-private let minVolume = 0.00001
-private let maxVolume = 0.99999
+private let minVolume: Float = 0.0001
+private let maxVolume: Float = 0.9999
 
 private let delay = 0.4
 
@@ -86,8 +86,10 @@ class VolumeChangeDetector: NSObject {
     private func fixVolume() {
         for view in self.control.subviews {
             if let slider = view as? UISlider {
-                if slider.value == 0.0 { slider.value = Float(minVolume) }
-                if slider.value == 1.0 { slider.value = Float(maxVolume) }
+                if slider.value == 1.0 {
+                    slider.value = maxVolume
+                    self.currentValue = maxVolume
+                }
             }
         }
     }

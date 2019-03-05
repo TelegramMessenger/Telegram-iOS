@@ -406,6 +406,7 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
             var statusText: String = ""
             let statusColor: UIColor
             if let peer = item.peer as? TelegramUser {
+                let isServicePeer = (peer.id.namespace == Namespaces.Peer.CloudUser && (peer.id.id == 777000 || peer.id.id == 333000))
                 switch item.mode {
                     case .settings:
                         if let phone = peer.phone, !phone.isEmpty {
@@ -422,13 +423,13 @@ class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNode, Ite
                         if let label = item.label {
                             statusText = label
                             statusColor = item.theme.list.itemSecondaryTextColor
-                        } else if peer.flags.contains(.isSupport) {
+                        } else if peer.flags.contains(.isSupport), !isServicePeer {
                             statusText = item.strings.Bot_GenericSupportStatus
                             statusColor = item.theme.list.itemSecondaryTextColor
                         } else if let _ = peer.botInfo {
                             statusText = item.strings.Bot_GenericBotStatus
                             statusColor = item.theme.list.itemSecondaryTextColor
-                        } else if case .generic = item.mode, !(peer.id.namespace == Namespaces.Peer.CloudUser && (peer.id.id == 777000 || peer.id.id == 333000)) {
+                        } else if case .generic = item.mode, !isServicePeer {
                             let presence = (item.presence as? TelegramUserPresence) ?? TelegramUserPresence(status: .none, lastActivity: 0)
                             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                             let (string, activity) = stringAndActivityForUserPresence(strings: item.strings, dateTimeFormat: item.dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
