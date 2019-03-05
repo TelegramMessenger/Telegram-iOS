@@ -13,7 +13,7 @@ private enum InnerState: Equatable {
     case authorized
 }
 
-public final class AuthorizationSequenceController: NavigationController {
+public final class AuthorizationSequenceController: NavigationController, MFMailComposeViewControllerDelegate {
     static func navigationBarTheme(_ theme: PresentationTheme) -> NavigationBarTheme {
         return NavigationBarTheme(buttonColor: theme.rootController.navigationBar.buttonColor, disabledButtonColor: theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: theme.rootController.navigationBar.badgeBackgroundColor, badgeStrokeColor: theme.rootController.navigationBar.badgeStrokeColor, badgeTextColor: theme.rootController.navigationBar.badgeTextColor)
     }
@@ -350,16 +350,9 @@ public final class AuthorizationSequenceController: NavigationController {
         controller.requestNextOption = { [weak self, weak controller] in
             if let strongSelf = self {
                 if nextType == nil {
-                    if MFMailComposeViewController.canSendMail() {
-                        let phoneFormatted = formatPhoneNumber(number)
-                        
-                        let composeController = MFMailComposeViewController()
-                        //composeController.mailComposeDelegate = strongSelf
-                        composeController.setToRecipients(["sms@stel.com"])
-                        composeController.setSubject(strongSelf.strings.Login_EmailCodeSubject(phoneFormatted).0)
-                        composeController.setMessageBody(strongSelf.strings.Login_EmailCodeBody(phoneFormatted).0, isHTML: false)
-                        
-                        controller?.view.window?.rootViewController?.present(composeController, animated: true, completion: nil)
+                    if MFMailComposeViewController.canSendMail(), let controller = controller {
+                        let formattedNumber = formatPhoneNumber(number)
+                        strongSelf.presentEmailComposeController(address: "sms@stel.com", subject: strongSelf.strings.Login_EmailCodeSubject(formattedNumber).0, body: strongSelf.strings.Login_EmailCodeBody(formattedNumber).0, from: controller)
                     } else {
                         controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: strongSelf.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), in: .window(.root))
                     }
@@ -475,7 +468,7 @@ public final class AuthorizationSequenceController: NavigationController {
                         }
                     }
                 }, error: { error in
-                    if let strongSelf = self, let strongController = controller {
+                    if let strongController = controller {
                         strongController.inProgress = false
                     }
                 }))
@@ -782,6 +775,7 @@ public final class AuthorizationSequenceController: NavigationController {
             composeController.setToRecipients([address])
             composeController.setSubject(subject)
             composeController.setMessageBody(body, isHTML: false)
+            composeController.mailComposeDelegate = self
             
             controller.view.window?.rootViewController?.present(composeController, animated: true, completion: nil)
         } else {
@@ -789,12 +783,16 @@ public final class AuthorizationSequenceController: NavigationController {
         }
     }
     
+    public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
+        controller.dismiss(animated: true, completion: nil)
+    }
+    
     private func animateIn() {
         self.view.layer.animatePosition(from: CGPoint(x: self.view.layer.position.x, y: self.view.layer.position.y + self.view.layer.bounds.size.height), to: self.view.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
     private func animateOut(completion: (() -> Void)? = nil) {
-        self.view.layer.animatePosition(from: self.view.layer.position, to: CGPoint(x: self.view.layer.position.x, y: self.view.layer.position.y + self.view.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { [weak self] _ in
+        self.view.layer.animatePosition(from: self.view.layer.position, to: CGPoint(x: self.view.layer.position.x, y: self.view.layer.position.y + self.view.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
             completion?()
         })
     }

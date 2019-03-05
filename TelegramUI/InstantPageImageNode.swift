@@ -62,9 +62,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
             self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, photoReference: imageReference))
             
-            if false {
-                self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
-            }
+            self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
             
             self.fetchControls = FetchControls(fetch: { [weak self] manual in
                 if let strongSelf = self {

@@ -711,28 +711,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     }
                                 } else if case .prefetch = automaticDownload, message.id.namespace != Namespaces.Message.SecretIncoming {
                                     if let file = media as? TelegramMediaFile, let fileSize = file.size {
-                                        /*let fetchHeadRange: Range<Int> = 0 ..< 2 * 1024 * 1024
-                                        let fetchTailRange: Range<Int> = fileSize - 256 * 1024 ..< Int(Int32.max)
-                                        
-                                        let fetchHeadSignal = fetchedMediaResource(postbox: context.account.postbox, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), range: (fetchHeadRange, .default), statsCategory: statsCategoryForFileWithAttributes(file.attributes))
-                                        |> ignoreValues
-                                        |> `catch` { _ -> Signal<Never, NoError> in
-                                            return .complete()
-                                        }
-                                        
-                                        let fetchTailSignal = fetchedMediaResource(postbox: context.account.postbox, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), range: (fetchTailRange, .default), statsCategory: statsCategoryForFileWithAttributes(file.attributes))
-                                        |> ignoreValues
-                                        |> `catch` { _ -> Signal<Never, NoError> in
-                                            return .complete()
-                                        }*/
-                                        
                                         let fetchSignal = preloadVideoResource(postbox: context.account.postbox, resourceReference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), duration: 4.0)
-                                        
                                         let visibilityAwareFetchSignal = strongSelf.visibilityPromise.get()
                                         |> mapToSignal { visibility -> Signal<Void, NoError> in
                                             switch visibility {
                                                 case .visible:
-                                                    //return combineLatest(fetchHeadSignal, fetchTailSignal)
                                                     return fetchSignal
                                                     |> mapToSignal { _ -> Signal<Void, NoError> in
                                                         return .complete()

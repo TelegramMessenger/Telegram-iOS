@@ -98,8 +98,6 @@
 		09B4EE6221AD791600847FA6 /* InstantPageStoredState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE6121AD791600847FA6 /* InstantPageStoredState.swift */; };
 		09C3466D2167D63A00B76780 /* Accessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C3466C2167D63A00B76780 /* Accessibility.swift */; };
 		09C500242142BA6400EF253E /* ItemListWebsiteItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */; };
-		09C9EA33219F79F600E90146 /* ID3Artwork.m in Sources */ = {isa = PBXBuildFile; fileRef = 09C9EA31219F79F500E90146 /* ID3Artwork.m */; };
-		09C9EA34219F79F600E90146 /* ID3Artwork.h in Headers */ = {isa = PBXBuildFile; fileRef = 09C9EA32219F79F600E90146 /* ID3Artwork.h */; };
 		09C9EA3821A044B500E90146 /* StringForDuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C9EA3721A044B500E90146 /* StringForDuration.swift */; };
 		09D304152173C0E900C00567 /* WatchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304142173C0E900C00567 /* WatchManager.swift */; };
 		09D304182173C15700C00567 /* WatchSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304172173C15700C00567 /* WatchSettingsController.swift */; };
@@ -1247,8 +1245,6 @@
 		09B4EE6121AD791600847FA6 /* InstantPageStoredState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageStoredState.swift; sourceTree = "<group>"; };
 		09C3466C2167D63A00B76780 /* Accessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Accessibility.swift; sourceTree = "<group>"; };
 		09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListWebsiteItem.swift; sourceTree = "<group>"; };
-		09C9EA31219F79F500E90146 /* ID3Artwork.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ID3Artwork.m; sourceTree = "<group>"; };
-		09C9EA32219F79F600E90146 /* ID3Artwork.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ID3Artwork.h; sourceTree = "<group>"; };
 		09C9EA3721A044B500E90146 /* StringForDuration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StringForDuration.swift; sourceTree = "<group>"; };
 		09D304142173C0E900C00567 /* WatchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchManager.swift; sourceTree = "<group>"; };
 		09D304172173C15700C00567 /* WatchSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSettingsController.swift; sourceTree = "<group>"; };
@@ -4790,8 +4786,6 @@
 				09C3466C2167D63A00B76780 /* Accessibility.swift */,
 				D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */,
 				0902838C2194AEB90067EFBD /* ImageTransparency.swift */,
-				09C9EA32219F79F600E90146 /* ID3Artwork.h */,
-				09C9EA31219F79F500E90146 /* ID3Artwork.m */,
 				09F664CD21EBB3A100AB7E26 /* ImageBlur.swift */,
 				099529B321D3E5D800805E13 /* CheckDiskSpace.swift */,
 				09DD5D4F21ECC3C400D7007A /* SuppressContactsWarning.swift */,
@@ -4960,7 +4954,6 @@
 				D0E9BAC61F05738600F079A4 /* STPAPIClient.h in Headers */,
 				D00ADFD91EBA2E9D00873D2E /* OngoingCallThreadLocalContext.h in Headers */,
 				D06F31E22135829B001A0F12 /* EDSunriseSet.h in Headers */,
-				09C9EA34219F79F600E90146 /* ID3Artwork.h in Headers */,
 				D0E9BA531F0559DA00F079A4 /* STPImageLibrary+Private.h in Headers */,
 				D0E9BA601F055A4300F079A4 /* STPDelegateProxy.h in Headers */,
 				096C98C121787C6700C211FF /* TGBridgeAudioDecoder.h in Headers */,
@@ -5391,7 +5384,6 @@
 				D02D60AE206BD47300FEFE1E /* SecureIdDocumentTypeSelectionController.swift in Sources */,
 				09DD88ED21BDC8B7000766BC /* FormEditableBlockItemNode.swift in Sources */,
 				D079FCE11F05C9380038FADE /* BotReceiptControllerNode.swift in Sources */,
-				09C9EA33219F79F600E90146 /* ID3Artwork.m in Sources */,
 				D0FA08CA2049BEAC00DD23FC /* ChatEmptyNode.swift in Sources */,
 				D053DADC201AAAB100993D32 /* ChatTextInputMenu.swift in Sources */,
 				0962E66321B3513100245FD9 /* WebSearchControllerNode.swift in Sources */,

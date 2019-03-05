@@ -3,8 +3,8 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
-private let compactNameFont = Font.light(28.0)
-private let regularNameFont = Font.light(36.0)
+private let compactNameFont = Font.regular(28.0)
+private let regularNameFont = Font.regular(36.0)
 
 private let compactStatusFont = Font.regular(18.0)
 private let regularStatusFont = Font.regular(18.0)
@@ -203,7 +203,7 @@ final class CallControllerReceptionNode : ASDisplayNode {
                     context.setAlpha(0.4)
                 }
                 
-                let path = UIBezierPath(roundedRect: rect, cornerRadius: 1.0)
+                let path = UIBezierPath(roundedRect: rect, cornerRadius: 0.5)
                 context.addPath(path.cgPath)
                 context.fillPath()
             }

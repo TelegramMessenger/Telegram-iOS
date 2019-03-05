@@ -2715,12 +2715,19 @@ private func drawAlbumArtPlaceholder(into c: CGContext, arguments: TransformImag
 
 func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumArt: SharedMediaPlaybackAlbumArt?, thumbnail: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     var fileArtworkData: Signal<Data?, NoError> = .single(nil)
-    if let fileReference = fileReference, let size = fileReference.media.resource.size {
+    if let fileReference = fileReference {
+        let size = thumbnail ? CGSize(width: 48.0, height: 48.0) : CGSize(width: 320.0, height: 320.0)
         fileArtworkData = fileArtworkData
-        |> then(postbox.mediaBox.resourceData(fileReference.media.resource, size: size, in: 0 ..< min(size, 1024 * 384))
-        |> mapToSignal { data -> Signal<Data?, NoError> in
-            return .single(albumArtworkData(data))
-        })
+        |> then(
+            postbox.mediaBox.cachedResourceRepresentation(fileReference.media.resource, representation: CachedAlbumArtworkRepresentation(size: size), complete: false, fetch: true)
+            |> map { data -> Data? in
+                if data.complete, let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: .mappedRead) {
+                    return fileData
+                } else {
+                    return nil
+                }
+            }
+        )
     }
     
     var immediateArtworkData: Signal<(Data?, Data?, Bool), NoError> = .single((nil, nil, false))

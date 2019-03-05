@@ -71,6 +71,35 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
             }
             return fetchCachedPatternWallpaperRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
         }
+    } else if let representation = representation as? CachedAlbumArtworkRepresentation {
+        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+            if data.complete, let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                return fetchCachedAlbumArtworkRepresentation(account: account, resource: resource, data: fileData, representation: representation)
+                |> `catch` { _ -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+                    return .complete()
+                }
+            } else if let size = resource.size {
+                return account.postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, 256 * 1024))
+                |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+                    return fetchCachedAlbumArtworkRepresentation(account: account, resource: resource, data: data, representation: representation)
+                    |> `catch` { error -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+                        switch error {
+                            case let .moreDataNeeded(targetSize):
+                                return account.postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, targetSize))
+                                |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+                                    return fetchCachedAlbumArtworkRepresentation(account: account, resource: resource, data: data, representation: representation)
+                                    |> `catch` { error -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+                                        return .complete()
+                                    }
+                                }
+                        }
+                    }
+                }
+            } else {
+                return .complete()
+            }
+        }
     }
     return .never()
 }
@@ -78,18 +107,18 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
 private func videoFirstFrameData(account: Account, resource: MediaResource, chunkSize: Int) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let size = resource.size {
         return account.postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, chunkSize))
-            |> mapToSignal { _ -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-                return account.postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: false), attemptSynchronously: false)
-                    |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-                        return fetchCachedVideoFirstFrameRepresentation(account: account, resource: resource, resourceData: data)
-                        |> `catch` { _ -> Signal<CachedMediaResourceRepresentationResult, NoError> in
-                            if chunkSize > size {
-                                return .complete()
-                            } else {
-                                return videoFirstFrameData(account: account, resource: resource, chunkSize: chunkSize + chunkSize)
-                            }
+        |> mapToSignal { _ -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+            return account.postbox.mediaBox.resourceData(resource, option: .incremental(waitUntilFetchStatus: false), attemptSynchronously: false)
+                |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+                    return fetchCachedVideoFirstFrameRepresentation(account: account, resource: resource, resourceData: data)
+                    |> `catch` { _ -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+                        if chunkSize > size {
+                            return .complete()
+                        } else {
+                            return videoFirstFrameData(account: account, resource: resource, chunkSize: chunkSize + chunkSize)
                         }
-                }
+                    }
+            }
         }
     } else {
         return .complete()
@@ -593,3 +622,51 @@ private func fetchCachedPatternWallpaperRepresentation(account: Account, resourc
     }) |> runOn(Queue.concurrentDefaultQueue())
 }
 
+public enum FetchAlbumArtworkError {
+    case moreDataNeeded(Int)
+}
+
+private func fetchCachedAlbumArtworkRepresentation(account: Account, resource: MediaResource, data: Data, representation: CachedAlbumArtworkRepresentation) -> Signal<CachedMediaResourceRepresentationResult, FetchAlbumArtworkError> {
+    return Signal({ subscriber in
+        let result = readAlbumArtworkData(data)
+        switch result {
+            case let .artworkData(data):
+                if let image = UIImage(data: data) {
+                    var randomId: Int64 = 0
+                    arc4random_buf(&randomId, 8)
+                    let path = NSTemporaryDirectory() + "\(randomId)"
+                    let url = URL(fileURLWithPath: path)
+                    
+                    var size = image.size
+                    if let targetSize = representation.size {
+                        size = size.aspectFilled(targetSize)
+                    }
+                    
+                    let colorImage = generateImage(size, contextGenerator: { size, context in
+                        context.setBlendMode(.copy)
+                        drawImage(context: context, image: image.cgImage!, orientation: image.imageOrientation, in: CGRect(origin: CGPoint(), size: size))
+                    })!
+                    
+                    if let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
+                        CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
+                        
+                        let colorQuality: Float = 0.5
+                        
+                        let options = NSMutableDictionary()
+                        options.setObject(colorQuality as NSNumber, forKey: kCGImageDestinationLossyCompressionQuality as NSString)
+                        
+                        CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
+                        if CGImageDestinationFinalize(colorDestination) {
+                            subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+                        }
+                    }
+                }
+            case let .moreDataNeeded(size):
+                subscriber.putError(.moreDataNeeded(size))
+            default:
+                break
+        }
+        subscriber.putCompletion()
+        return EmptyDisposable
+    }) |> runOn(Queue.concurrentDefaultQueue())
+}
