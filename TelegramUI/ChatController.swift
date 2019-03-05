@@ -1544,7 +1544,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 strongSelf.automaticMediaDownloadSettings = downloadSettings
                 strongSelf.controllerInteraction?.automaticMediaDownloadSettings = downloadSettings
                 if strongSelf.isNodeLoaded {
-                    strongSelf.chatDisplayNode.updateAutomaticMediaDownloadSettings()
+                    strongSelf.chatDisplayNode.updateAutomaticMediaDownloadSettings(downloadSettings)
                 }
             }
         })
@@ -1964,7 +1964,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             stationaryItemRange = (maxInsertedItem + 1, Int.max)
                         }
                         
-                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, animateIn: false), updateSizeAndInsets)
+                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false), updateSizeAndInsets)
                     })
                     
                     if let mappedTransition = mappedTransition {

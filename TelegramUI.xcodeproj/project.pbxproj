@@ -323,6 +323,7 @@
 		D05D8B742195CD890064586F /* SetupTwoStepVerificationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B732195CD890064586F /* SetupTwoStepVerificationController.swift */; };
 		D05D8B762195CD930064586F /* SetupTwoStepVerificationControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B752195CD930064586F /* SetupTwoStepVerificationControllerNode.swift */; };
 		D05D8B782195E0050064586F /* SetupTwoStepVerificationContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05D8B772195E0050064586F /* SetupTwoStepVerificationContentNode.swift */; };
+		D06350AE2229A7F800FA2B32 /* InChatPrefetchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06350AD2229A7F800FA2B32 /* InChatPrefetchManager.swift */; };
 		D0642EFC1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0642EFB1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift */; };
 		D064EF871F69A06F00AC0398 /* MessageContentKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = D064EF861F69A06F00AC0398 /* MessageContentKind.swift */; };
 		D0671F232143BDA6000A8AE7 /* TwoStepVerificationEmptyItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0671F222143BDA6000A8AE7 /* TwoStepVerificationEmptyItem.swift */; };
@@ -1701,6 +1702,7 @@
 		D0613FC71E5F8AB100202CDB /* ChannelInfoController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelInfoController.swift; sourceTree = "<group>"; };
 		D0613FCC1E60482300202CDB /* ChannelMembersController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelMembersController.swift; sourceTree = "<group>"; };
 		D0613FD41E6064D200202CDB /* ConvertToSupergroupController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConvertToSupergroupController.swift; sourceTree = "<group>"; };
+		D06350AD2229A7F800FA2B32 /* InChatPrefetchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InChatPrefetchManager.swift; sourceTree = "<group>"; };
 		D0642EFB1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatHistoryNavigationButtons.swift; sourceTree = "<group>"; };
 		D064EF861F69A06F00AC0398 /* MessageContentKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageContentKind.swift; sourceTree = "<group>"; };
 		D0671F222143BDA6000A8AE7 /* TwoStepVerificationEmptyItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TwoStepVerificationEmptyItem.swift; sourceTree = "<group>"; };
@@ -4521,6 +4523,7 @@
 				D0F69E441D6B8B850046BCD6 /* History Navigation */,
 				D044A0FA20BDC40C00326FAC /* CachedChannelAdmins.swift */,
 				D01848E721A03BDA00B6DEBD /* ChatSearchState.swift */,
+				D06350AD2229A7F800FA2B32 /* InChatPrefetchManager.swift */,
 			);
 			name = Chat;
 			sourceTree = "<group>";
@@ -5816,6 +5819,7 @@
 				D0477D1B1F617E5800412B44 /* UniversalVideoNode.swift in Sources */,
 				D0E9BA081F0446A300F079A4 /* BotCheckoutPaymentShippingOptionSheetController.swift in Sources */,
 				D0EC6DDC1EB9F58900EBF1C3 /* ChatTextInputPanelNode.swift in Sources */,
+				D06350AE2229A7F800FA2B32 /* InChatPrefetchManager.swift in Sources */,
 				D0EB41F51F30D26A00838FE6 /* LegacySuggestionContext.swift in Sources */,
 				D0EC6DDD1EB9F58900EBF1C3 /* ChatTextInputMediaRecordingButton.swift in Sources */,
 				D0F0AAE61EC21B68005EE2A5 /* CallControllerButton.swift in Sources */,
