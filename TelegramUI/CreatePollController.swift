@@ -508,6 +508,7 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
         }
     }
     controller.isOpaqueWhenInOverlay = true
+    controller.blocksBackgroundWhenInOverlay = true
     controller.experimentalSnapScrollToItem = true
     
     return controller

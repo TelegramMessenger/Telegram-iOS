@@ -137,6 +137,8 @@ class ItemListSwitchItemNode: ListViewItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
+        self.isAccessibilityElement = true
+        
         self.addSubnode(self.titleNode)
         self.addSubnode(self.switchNode)
         self.addSubnode(self.switchGestureNode)
@@ -200,6 +202,15 @@ class ItemListSwitchItemNode: ListViewItemNode {
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] animated in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    strongSelf.accessibilityLabel = item.title
+                    strongSelf.accessibilityValue = item.value ? "On" : "Off"
+                    var accessibilityTraits = UIAccessibilityTraits()
+                    if item.enabled {
+                    } else {
+                        accessibilityTraits |= UIAccessibilityTraitNotEnabled
+                    }
+                    strongSelf.accessibilityTraits = accessibilityTraits
                     
                     let transition: ContainedViewLayoutTransition
                     if animated {

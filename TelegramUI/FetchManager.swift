@@ -290,7 +290,17 @@ private final class FetchManagerCategoryContext {
         
         if (previousPriorityKey != nil) != (updatedPriorityKey != nil) {
             if let statusContext = self.statusContexts[id] {
-                if updatedPriorityKey != nil {
+                var hasForegroundPriorityKey = false
+                if let updatedPriorityKey = updatedPriorityKey, let topReference = updatedPriorityKey.topReference {
+                    switch topReference {
+                        case .userInitiated:
+                            hasForegroundPriorityKey = true
+                        default:
+                            hasForegroundPriorityKey = false
+                    }
+                }
+                
+                if hasForegroundPriorityKey {
                     if !statusContext.hasEntry {
                         let previousStatus = statusContext.combinedStatus
                         statusContext.hasEntry = true
@@ -311,8 +321,6 @@ private final class FetchManagerCategoryContext {
                                 f(combinedStatus)
                             }
                         }
-                    } else {
-                        assertionFailure()
                     }
                 }
             }
@@ -351,11 +359,16 @@ private final class FetchManagerCategoryContext {
                 
                 var count = 0
                 var isCompleteRange = false
+                var isVideoPreload = false
                 for range in ranges.rangeView {
                     count += 1
                     if range.lowerBound == 0 && range.upperBound == Int(Int32.max) {
                         isCompleteRange = true
                     }
+                }
+                
+                if count == 2, let range = ranges.rangeView.first, range.lowerBound == 0 && range.upperBound == 2 * 1024 * 1024 {
+                    isVideoPreload = true
                 }
                 
                 if count == 1 && isCompleteRange {
@@ -385,7 +398,15 @@ private final class FetchManagerCategoryContext {
                     let entryCompleted = self.entryCompleted
                     let storeManager = self.storeManager
                     activeContext.disposable?.dispose()
-                    if ranges.isEmpty {
+                    if isVideoPreload {
+                        activeContext.disposable = (preloadVideoResource(postbox: self.postbox, resourceReference: entry.resourceReference, duration: 4.0)
+                        |> introduceError(FetchResourceError.self)
+                        |> map { _ -> FetchResourceSourceType in return .local }
+                        |> then(.single(.local))
+                        |> deliverOnMainQueue).start(next: { _ in
+                            entryCompleted(topEntryId)
+                        })
+                    } else if ranges.isEmpty {
                     } else {
                         activeContext.disposable = (fetchedMediaResource(postbox: self.postbox, reference: entry.resourceReference, ranges: parsedRanges, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
                         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
@@ -439,8 +460,6 @@ private final class FetchManagerCategoryContext {
                             f(combinedStatus)
                         }
                     }
-                } else {
-                    assertionFailure()
                 }
             }
         }

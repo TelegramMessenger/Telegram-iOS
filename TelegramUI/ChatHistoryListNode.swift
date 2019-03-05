@@ -663,8 +663,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         
                         let readIndexRange = (0, historyView.filteredEntries.count - 1 - visible.firstIndex)
                         
-                        let toEarlierRange = (0, historyView.filteredEntries.count - 1 - visible.firstIndex - 1)
-                        let toLaterRange = (historyView.filteredEntries.count - 1 - visible.lastIndex + 1, historyView.filteredEntries.count - 1)
+                        let toEarlierRange = (0, historyView.filteredEntries.count - 1 - visible.lastIndex - 1)
+                        let toLaterRange = (historyView.filteredEntries.count - 1 - (visible.firstIndex - 1), historyView.filteredEntries.count - 1)
                         
                         var messageIdsWithViewCount: [MessageId] = []
                         var messageIdsWithUnsupportedMedia: [MessageId] = []

@@ -74,6 +74,7 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
     private let video: Bool
     private let preferSoftwareDecoding: Bool
     private let fetchAutomatically: Bool
+    private let maximumFetchSize: Int?
     
     private let taskQueue: ThreadTaskQueue
     private let thread: Thread
@@ -94,7 +95,7 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         }
     }
    
-    init(queue: Queue, postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool) {
+    init(queue: Queue, postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int? = nil) {
         self.queue = queue
         self.postbox = postbox
         self.resourceReference = resourceReference
@@ -103,6 +104,7 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         self.video = video
         self.preferSoftwareDecoding = preferSoftwareDecoding
         self.fetchAutomatically = fetchAutomatically
+        self.maximumFetchSize = maximumFetchSize
         
         self.taskQueue = ThreadTaskQueue()
         
@@ -141,6 +143,26 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         }
     }
     
+    func ensureHasFrames(until timestamp: Double) -> Signal<Never, NoError> {
+        assert(self.queue.isCurrent())
+        
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            let currentSemaphore = Atomic<Atomic<DispatchSemaphore?>?>(value: nil)
+            
+            disposable.set(ActionDisposable {
+                currentSemaphore.with({ $0 })?.with({ $0 })?.signal()
+            })
+            self.performWithContext({ context in
+                let _ = currentSemaphore.swap(context.currentSemaphore)
+                let _ = context.takeFrames(until: timestamp)
+                subscriber.putCompletion()
+            })
+            return disposable
+        }
+        |> runOn(self.queue)
+    }
+    
     private func internalGenerateFrames(until timestamp: Double) {
         if self.generatingFrames {
             return
@@ -156,9 +178,10 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         let video = self.video
         let preferSoftwareDecoding = self.preferSoftwareDecoding
         let fetchAutomatically = self.fetchAutomatically
+        let maximumFetchSize = self.maximumFetchSize
         
         self.performWithContext { [weak self] context in
-            context.initializeState(postbox: postbox, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically)
+            context.initializeState(postbox: postbox, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically, maximumFetchSize: maximumFetchSize)
             
             let (frames, endOfStream) = context.takeFrames(until: timestamp)
             
@@ -205,6 +228,7 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
             let video = self.video
             let preferSoftwareDecoding = self.preferSoftwareDecoding
             let fetchAutomatically = self.fetchAutomatically
+            let maximumFetchSize = self.maximumFetchSize
             
             let currentSemaphore = Atomic<Atomic<DispatchSemaphore?>?>(value: nil)
             
@@ -215,37 +239,41 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
             self.performWithContext { [weak self] context in
                 let _ = currentSemaphore.swap(context.currentSemaphore)
                 
-                context.initializeState(postbox: postbox, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically)
+                context.initializeState(postbox: postbox, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, fetchAutomatically: fetchAutomatically, maximumFetchSize: maximumFetchSize)
                 
-                context.seek(timestamp: timestamp, completed: { streamDescriptions, timestamp in
+                context.seek(timestamp: timestamp, completed: { streamDescriptionsAndTimestamp in
                     queue.async {
                         if let strongSelf = self {
-                            strongSelf.requestedFrameGenerationTimestamp = nil
-                            subscriber.putNext(QueueLocalObject(queue: queue, generate: {
-                                if let strongSelf = self {
-                                    var audioBuffer: MediaTrackFrameBuffer?
-                                    var videoBuffer: MediaTrackFrameBuffer?
-                                    
-                                    if let audio = streamDescriptions.audio {
-                                        audioBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: audio.decoder, type: .audio, duration: audio.duration, rotationAngle: 0.0, aspect: 1.0)
-                                    }
-                                    
-                                    var extraDecodedVideoFrames: [MediaTrackFrame] = []
-                                    if let video = streamDescriptions.video {
-                                        videoBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: video.decoder, type: .video, duration: video.duration, rotationAngle: video.rotationAngle, aspect: video.aspect)
-                                        for videoFrame in streamDescriptions.extraVideoFrames {
-                                            if let decodedFrame = video.decoder.decode(frame: videoFrame) {
-                                                extraDecodedVideoFrames.append(decodedFrame)
+                            if let (streamDescriptions, timestamp) = streamDescriptionsAndTimestamp {
+                                strongSelf.requestedFrameGenerationTimestamp = nil
+                                subscriber.putNext(QueueLocalObject(queue: queue, generate: {
+                                    if let strongSelf = self {
+                                        var audioBuffer: MediaTrackFrameBuffer?
+                                        var videoBuffer: MediaTrackFrameBuffer?
+                                        
+                                        if let audio = streamDescriptions.audio {
+                                            audioBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: audio.decoder, type: .audio, duration: audio.duration, rotationAngle: 0.0, aspect: 1.0)
+                                        }
+                                        
+                                        var extraDecodedVideoFrames: [MediaTrackFrame] = []
+                                        if let video = streamDescriptions.video {
+                                            videoBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: video.decoder, type: .video, duration: video.duration, rotationAngle: video.rotationAngle, aspect: video.aspect)
+                                            for videoFrame in streamDescriptions.extraVideoFrames {
+                                                if let decodedFrame = video.decoder.decode(frame: videoFrame) {
+                                                    extraDecodedVideoFrames.append(decodedFrame)
+                                                }
                                             }
                                         }
+                                        
+                                        return MediaFrameSourceSeekResult(buffers: MediaPlaybackBuffers(audioBuffer: audioBuffer, videoBuffer: videoBuffer), extraDecodedVideoFrames: extraDecodedVideoFrames, timestamp: timestamp)
+                                    } else {
+                                        return MediaFrameSourceSeekResult(buffers: MediaPlaybackBuffers(audioBuffer: nil, videoBuffer: nil), extraDecodedVideoFrames: [], timestamp: timestamp)
                                     }
-                                    
-                                    return MediaFrameSourceSeekResult(buffers: MediaPlaybackBuffers(audioBuffer: audioBuffer, videoBuffer: videoBuffer), extraDecodedVideoFrames: extraDecodedVideoFrames, timestamp: timestamp)
-                                } else {
-                                    return MediaFrameSourceSeekResult(buffers: MediaPlaybackBuffers(audioBuffer: nil, videoBuffer: nil), extraDecodedVideoFrames: [], timestamp: timestamp)
-                                }
-                            }))
-                            subscriber.putCompletion()
+                                }))
+                                subscriber.putCompletion()
+                            } else {
+                                subscriber.putError(.generic)
+                            }
                         }
                     }
                 })

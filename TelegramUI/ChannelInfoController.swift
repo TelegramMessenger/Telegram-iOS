@@ -760,7 +760,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
             }
         }
         |> runOn(Queue.mainQueue())
-        |> delay(0.15, queue: Queue.mainQueue())
+        |> delay(0.05, queue: Queue.mainQueue())
         let progressDisposable = progressSignal.start()
         
         urlSignal = urlSignal

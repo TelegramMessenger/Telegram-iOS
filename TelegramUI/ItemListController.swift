@@ -222,6 +222,9 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
+        self.isOpaqueWhenInOverlay = true
+        self.blocksBackgroundWhenInOverlay = true
+        
         self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
         
         self.scrollToTop = { [weak self] in
