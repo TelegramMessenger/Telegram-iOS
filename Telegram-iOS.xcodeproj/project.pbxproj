@@ -381,6 +381,7 @@
 		D0CAD6A421C03BEB001E3055 /* FFMpeg.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAD6A321C03BEB001E3055 /* FFMpeg.framework */; };
 		D0CAD6A521C03BEB001E3055 /* FFMpeg.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAD6A321C03BEB001E3055 /* FFMpeg.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D0CAF3191D763B230011F558 /* MtProtoKitDynamic.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAF2F21D75FFAB0011F558 /* MtProtoKitDynamic.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D0CCD61D222EFFB000EE1E08 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CCD61C222EFFB000EE1E08 /* MtProtoKitDynamic.framework */; };
 		D0CD17B51CC3AE14007C5650 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CD17B41CC3AE14007C5650 /* AsyncDisplayKit.framework */; };
 		D0CD17B61CC3AE14007C5650 /* AsyncDisplayKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0CD17B41CC3AE14007C5650 /* AsyncDisplayKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D0CE6F1C213ED11100BCD44B /* TGPresentationAutoNightPreferences.m in Sources */ = {isa = PBXBuildFile; fileRef = D0CE6F1B213ED11100BCD44B /* TGPresentationAutoNightPreferences.m */; };
@@ -1126,6 +1127,7 @@
 		D0CAD6A321C03BEB001E3055 /* FFMpeg.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = FFMpeg.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CAF2F21D75FFAB0011F558 /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CAF3171D76394C0011F558 /* TelegramCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = TelegramCore.framework; path = "submodules/TelegramCore/build/Debug-iphoneos/TelegramCore.framework"; sourceTree = "<group>"; };
+		D0CCD61C222EFFB000EE1E08 /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CD17B41CC3AE14007C5650 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CE6F1A213ED11100BCD44B /* TGPresentationAutoNightPreferences.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGPresentationAutoNightPreferences.h; sourceTree = "<group>"; };
 		D0CE6F1B213ED11100BCD44B /* TGPresentationAutoNightPreferences.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGPresentationAutoNightPreferences.m; sourceTree = "<group>"; };
@@ -1208,6 +1210,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0CCD61D222EFFB000EE1E08 /* MtProtoKitDynamic.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2038,6 +2041,7 @@
 		D00859C21B281E0000EAF753 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0CCD61C222EFFB000EE1E08 /* MtProtoKitDynamic.framework */,
 				D0CAD6A121C03BE2001E3055 /* FFMpeg.framework */,
 				D006CFA121A8D12600FDCD32 /* ModernProto.framework */,
 				0972C6DF21791D950069E98A /* UserNotifications.framework */,
