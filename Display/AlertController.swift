@@ -68,6 +68,8 @@ open class AlertController: ViewController {
         
         super.init(navigationBarPresentationData: nil)
         
+        self.blocksBackgroundWhenInOverlay = true
+        
         self.statusBar.statusBarStyle = .Ignore
     }
     

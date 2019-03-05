@@ -74,6 +74,7 @@ open class ViewControllerPresentationArguments {
     }
     
     public final var isOpaqueWhenInOverlay: Bool = false
+    public final var blocksBackgroundWhenInOverlay: Bool = false
     
     public func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
         return self.supportedOrientations

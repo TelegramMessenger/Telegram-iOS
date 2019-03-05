@@ -370,6 +370,10 @@ public class Window1 {
             self?.isInteractionBlocked = value
         }
         
+        self.presentationContext.updateHasOpaqueOverlay = { [weak self] value in
+            self?._rootController?.displayNode.accessibilityElementsHidden = value
+        }
+        
         self.hostView.present = { [weak self] controller, level, blockInteraction, completion in
             self?.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
         }

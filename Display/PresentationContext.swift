@@ -33,6 +33,15 @@ final class PresentationContext {
     
     var updateIsInteractionBlocked: ((Bool) -> Void)?
     
+    var updateHasOpaqueOverlay: ((Bool) -> Void)?
+    private(set) var hasOpaqueOverlay: Bool = false {
+        didSet {
+            if self.hasOpaqueOverlay != oldValue {
+                self.updateHasOpaqueOverlay?(self.hasOpaqueOverlay)
+            }
+        }
+    }
+    
     private var layout: ContainerViewLayout?
     
     private var ready: Bool {
@@ -51,6 +60,15 @@ final class PresentationContext {
                 if traceIsOpaque(layer: controller.view.layer, rect: controller.view.bounds) {
                     return true
                 }
+            }
+        }
+        return false
+    }
+    
+    var currentlyBlocksBackgroundWhenInOverlay: Bool {
+        for (controller, _) in self.controllers {
+            if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
+                return true
             }
         }
         return false
@@ -173,10 +191,12 @@ final class PresentationContext {
                         controller.viewWillAppear(false)
                         controller.viewDidAppear(false)
                     }
+                    strongSelf.updateViews()
                 }
             }))
         } else {
             self.controllers.append((controller, level))
+            self.updateViews()
         }
     }
     
@@ -190,6 +210,7 @@ final class PresentationContext {
             controller.viewWillDisappear(false)
             controller.view.removeFromSuperview()
             controller.viewDidDisappear(false)
+            self.updateViews()
         }
     }
     
@@ -227,6 +248,7 @@ final class PresentationContext {
                 controller.containerLayoutUpdated(layout, transition: .immediate)
                 controller.viewDidAppear(false)
             }
+            self.updateViews()
         }
     }
     
@@ -235,6 +257,21 @@ final class PresentationContext {
             controller.viewWillDisappear(false)
             controller.view.removeFromSuperview()
             controller.viewDidDisappear(false)
+        }
+    }
+    
+    private func updateViews() {
+        self.hasOpaqueOverlay = self.isCurrentlyOpaque
+        var topHasOpaque = false
+        for (controller, _) in self.controllers.reversed() {
+            if topHasOpaque {
+                controller.displayNode.accessibilityElementsHidden = true
+            } else {
+                if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
+                    topHasOpaque = true
+                }
+                controller.displayNode.accessibilityElementsHidden = false
+            }
         }
     }
     

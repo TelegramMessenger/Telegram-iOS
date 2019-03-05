@@ -96,6 +96,7 @@ public enum NavigationControllerMode {
 
 open class NavigationController: UINavigationController, ContainableController, UIGestureRecognizerDelegate {
     public var isOpaqueWhenInOverlay: Bool = true
+    public var blocksBackgroundWhenInOverlay: Bool = true
     
     public var ready: Promise<Bool> = Promise(true)
     
@@ -138,6 +139,11 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     override open var topViewController: UIViewController? {
         return self._viewControllers.last?.controller
+    }
+    
+    private var _displayNode: ASDisplayNode?
+    public var displayNode: ASDisplayNode {
+        return self._displayNode!
     }
     
     public init(mode: NavigationControllerMode, theme: NavigationControllerTheme) {
@@ -594,7 +600,11 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     open override func loadView() {
-        self.view = NavigationControllerView()
+        self._displayNode = ASDisplayNode(viewBlock: {
+            return NavigationControllerView()
+        }, didLoad: nil)
+        
+        self.view = self.displayNode.view
         self.view.clipsToBounds = true
         self.view.autoresizingMask = []
         

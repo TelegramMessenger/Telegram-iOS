@@ -4,8 +4,10 @@ import SwiftSignalKit
 
 public protocol ContainableController: class {
     var view: UIView! { get }
+    var displayNode: ASDisplayNode { get }
     var isViewLoaded: Bool { get }
     var isOpaqueWhenInOverlay: Bool { get }
+    var blocksBackgroundWhenInOverlay: Bool { get }
     var ready: Promise<Bool> { get }
     
     func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations

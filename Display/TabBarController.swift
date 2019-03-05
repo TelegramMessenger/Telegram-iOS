@@ -329,7 +329,16 @@ open class TabBarController: ViewController {
         }
         |> filter { $0 }
         |> take(1)
-        self._ready.set(signals)
+        
+        let allReady = signals
+        |> deliverOnMainQueue
+        |> mapToSignal { _ -> Signal<Bool, NoError> in
+            // wait for tab bar items to be applied
+            return .single(true)
+            |> delay(0.0, queue: Queue.mainQueue())
+        }
+        
+        self._ready.set(allReady)
         
         if let updatedSelectedIndex = updatedSelectedIndex {
             self.selectedIndex = updatedSelectedIndex
