@@ -72,36 +72,6 @@ final class ChannelStatsControllerNode: ViewControllerTracingNode, WKNavigationD
         })
     }
     
-    func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
-        if let url = webView.url, url.scheme == "tg" {
-            if url.host == "statsrefresh" {
-                var params = ""
-                if let query = url.query, let components = URLComponents(string: "/" + query) {
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "params" {
-                                    params = value
-                                }
-                            }
-                        }
-                    }
-                }
-                self.refreshDisposable.set((channelStatsUrl(postbox: self.context.account.postbox, network: self.context.account.network, peerId: self.peerId, params: params)
-                |> deliverOnMainQueue).start(next: { [weak self] url in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if let parsedUrl = URL(string: url) {
-                        strongSelf.webView?.load(URLRequest(url: parsedUrl))
-                    }
-                }, error: { _ in
-                        
-                }))
-            }
-        }
-    }
-    
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Swift.Void) {
         if let url = navigationAction.request.url, url.scheme == "tg" {
             if url.host == "statsrefresh" {
@@ -117,7 +87,7 @@ final class ChannelStatsControllerNode: ViewControllerTracingNode, WKNavigationD
                         }
                     }
                 }
-                self.refreshDisposable.set((channelStatsUrl(postbox: self.context.account.postbox, network: self.context.account.network, peerId: self.peerId, params: params)
+                self.refreshDisposable.set((channelStatsUrl(postbox: self.context.account.postbox, network: self.context.account.network, peerId: self.peerId, params: params, darkTheme: self.presentationData.theme.chatList.searchBarKeyboardColor.keyboardAppearance == .dark)
                 |> deliverOnMainQueue).start(next: { [weak self] url in
                     guard let strongSelf = self else {
                         return
