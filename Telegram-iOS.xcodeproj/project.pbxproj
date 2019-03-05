@@ -428,7 +428,6 @@
 		D0ECCB7F1FE9C38500609802 /* Telegram_iOS_UITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECCB7E1FE9C38500609802 /* Telegram_iOS_UITests.swift */; };
 		D0ECCB8A1FE9C4AC00609802 /* SnapshotHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECCB891FE9C4AC00609802 /* SnapshotHelper.swift */; };
 		D0ECCB8D1FE9CE3F00609802 /* SnapshotChatList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECCB8C1FE9CE3F00609802 /* SnapshotChatList.swift */; };
-		D0ED633821FF3E1E001D4648 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAF2F21D75FFAB0011F558 /* MtProtoKitDynamic.framework */; };
 		D0ED633A21FF3EDF001D4648 /* AccountData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ED633921FF3EDF001D4648 /* AccountData.swift */; };
 		D0ED633B21FF3EFD001D4648 /* BuildConfig.m in Sources */ = {isa = PBXBuildFile; fileRef = D09250011FE52D2A003F693F /* BuildConfig.m */; };
 		D0ED633D21FF4580001D4648 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0400EE41D5B912E007931CE /* NotificationService.swift */; };
@@ -1209,7 +1208,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0ED633821FF3E1E001D4648 /* MtProtoKitDynamic.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
