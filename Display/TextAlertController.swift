@@ -141,6 +141,7 @@ public final class TextAlertContentNode: AlertContentNode {
             titleNode.isUserInteractionEnabled = false
             titleNode.maximumNumberOfLines = 2
             titleNode.truncationMode = .byTruncatingTail
+            titleNode.isAccessibilityElement = true
             self.titleNode = titleNode
         } else {
             self.titleNode = nil
@@ -151,6 +152,8 @@ public final class TextAlertContentNode: AlertContentNode {
         self.textNode.attributedText = text
         self.textNode.displaysAsynchronously = false
         self.textNode.isLayerBacked = false
+        self.textNode.isAccessibilityElement = true
+        self.textNode.accessibilityLabel = text.string
         if text.length != 0 {
             if let paragraphStyle = text.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle {
                 self.textNode.textAlignment = paragraphStyle.alignment
