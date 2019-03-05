@@ -152,8 +152,10 @@ public enum CallSessionState {
                 self = .ringing
             case .accepting, .awaitingConfirmation:
                 self = .accepting
-            case .requesting, .confirming:
+            case .requesting:
                 self = .requesting(ringing: false)
+            case .confirming:
+                self = .requesting(ringing: true)
             case let .requested(_, _, _, _, _, remoteConfirmationTimestamp):
                 self = .requesting(ringing: remoteConfirmationTimestamp != nil)
             case let .active(id, accessHash, _, key, _, keyVisualHash, connections, maxLayer, allowsP2P):
