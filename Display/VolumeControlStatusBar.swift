@@ -29,10 +29,6 @@ final class VolumeControlStatusBar: UIView {
         self.addSubview(self.control)
         self.observer = NotificationCenter.default.addObserver(forName: NSNotification.Name(rawValue: volumeNotificationKey), object: nil, queue: OperationQueue.main, using: { [weak self] notification in
             if let strongSelf = self, let userInfo = notification.userInfo {
-                if let reason = userInfo[changeReasonParameterKey], reason as? String != explicitChangeReasonValue {
-                    return
-                }
-                
                 if let volume = userInfo[volumeParameterKey] as? Float {
                     let previous = strongSelf.currentValue
                     if !previous.isEqual(to: volume) {
@@ -41,6 +37,9 @@ final class VolumeControlStatusBar: UIView {
                             strongSelf.ignoreAdjustmentOnce = false
                         } else {
                             if strongSelf.control.superview != nil {
+                                if let reason = userInfo[changeReasonParameterKey], reason as? String != explicitChangeReasonValue {
+                                    return
+                                }
                                 strongSelf.valueChanged?(previous, volume)
                             }
                         }
