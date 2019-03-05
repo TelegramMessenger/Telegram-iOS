@@ -744,7 +744,8 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
             pushControllerImpl?(controller)
         }
     }, openStats: {
-        var urlSignal = channelStatsUrl(postbox: context.account.postbox, network: context.account.network, peerId: peerId, params: "")
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        var urlSignal = channelStatsUrl(postbox: context.account.postbox, network: context.account.network, peerId: peerId, params: "", darkTheme: presentationData.theme.chatList.searchBarKeyboardColor.keyboardAppearance == .dark)
         
         var cancelImpl: (() -> Void)?
         let progressSignal = Signal<Never, NoError> { subscriber in
