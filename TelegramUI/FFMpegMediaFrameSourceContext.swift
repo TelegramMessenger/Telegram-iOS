@@ -72,11 +72,24 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     print("maxOffset \(maxOffset)")
     #endif*/
     
+    let resourceSize: Int = resourceReference.resource.size ?? Int(Int32.max - 1)
+    let readCount = min(resourceSize - context.readingOffset, Int(bufferSize))
+    let requestRange: Range<Int> = context.readingOffset ..< (context.readingOffset + readCount)
+    
+    if let maximumFetchSize = context.maximumFetchSize {
+        context.touchedRanges.insert(integersIn: requestRange)
+        var totalCount = 0
+        for range in context.touchedRanges.rangeView {
+            totalCount += range.count
+        }
+        if totalCount > maximumFetchSize {
+            context.readingError = true
+            return -1
+        }
+    }
+    
     if streamable {
         let data: Signal<Data, NoError>
-        let resourceSize: Int = resourceReference.resource.size ?? Int(Int32.max - 1)
-        let readCount = min(resourceSize - context.readingOffset, Int(bufferSize))
-        let requestRange: Range<Int> = context.readingOffset ..< (context.readingOffset + readCount)
         data = postbox.mediaBox.resourceData(resourceReference.resource, size: resourceSize, in: requestRange, mode: .complete)
         if readCount == 0 {
             fetchedData = Data()
@@ -260,13 +273,20 @@ final class FFMpegMediaFrameSourceContext: NSObject {
     fileprivate let fetchedFullDataDisposable = MetaDisposable()
     fileprivate var requestedCompleteFetch = false
     
-    fileprivate var readingError = false
+    fileprivate var readingError = false {
+        didSet {
+            self.fetchedDataDisposable.dispose()
+            self.fetchedFullDataDisposable.dispose()
+        }
+    }
     
     private var initializedState: InitializedState?
     private var packetQueue: [FFMpegPacket] = []
     
     private var preferSoftwareDecoding: Bool = false
     fileprivate var fetchAutomatically: Bool = true
+    fileprivate var maximumFetchSize: Int? = nil
+    fileprivate var touchedRanges = IndexSet()
     
     let currentSemaphore = Atomic<DispatchSemaphore?>(value: nil)
     
@@ -281,7 +301,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         self.fetchedFullDataDisposable.dispose()
     }
     
-    func initializeState(postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool) {
+    func initializeState(postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int?) {
         if self.readingError || self.initializedState != nil {
             return
         }
@@ -295,6 +315,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         self.statsCategory = video ? .video : .audio
         self.preferSoftwareDecoding = preferSoftwareDecoding
         self.fetchAutomatically = fetchAutomatically
+        self.maximumFetchSize = maximumFetchSize
         
         var preferSoftwareAudioDecoding = false
         if case let .media(media, _) = resourceReference, let file = media.media as? TelegramMediaFile {
@@ -519,7 +540,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         return nil
     }
     
-    func seek(timestamp: Double, completed: (FFMpegMediaFrameSourceDescriptionSet, CMTime) -> Void) {
+    func seek(timestamp: Double, completed: ((FFMpegMediaFrameSourceDescriptionSet, CMTime)?) -> Void) {
         if let initializedState = self.initializedState {
             self.packetQueue.removeAll()
             
@@ -611,7 +632,9 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                 }
             }
             
-            completed(FFMpegMediaFrameSourceDescriptionSet(audio: audioDescription, video: videoDescription, extraVideoFrames: extraVideoFrames), actualPts)
+            completed((FFMpegMediaFrameSourceDescriptionSet(audio: audioDescription, video: videoDescription, extraVideoFrames: extraVideoFrames), actualPts))
+        } else {
+            completed(nil)
         }
     }
     

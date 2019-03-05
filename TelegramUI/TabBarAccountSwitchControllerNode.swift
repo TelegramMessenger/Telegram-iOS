@@ -398,7 +398,8 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
                     view.layer.animateScale(from: 1.0, to: 0.2, duration: 0.25, removeOnCompletion: false)
                 }
             }
-            self.snapshotViews.removeAll()
+            let previousSnapshotViews = self.snapshotViews
+            self.snapshotViews = []
             
             self.sourceNodes = sourceNodes
             
@@ -428,6 +429,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
                             hadBounce = true
                             let updatedImage = imageView.image
                             imageView.image = previousImage
+                            setAnchorPoint(anchorPoint: CGPoint(x: 0.5, y: 0.3), forView: imageView)
                             imageView.layer.animateScale(from: 1.0, to: 0.6, duration: 0.1, removeOnCompletion: false, completion: { [weak imageView] _ in
                                 guard let imageView = imageView else {
                                     return
@@ -448,6 +450,10 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
                     }
                 }
                 sourceNode.alpha = 0.0
+            }
+            
+            previousSnapshotViews.forEach { view in
+                self.view.bringSubview(toFront: view)
             }
             
             if !hadBounce {
@@ -491,4 +497,26 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
             self.cancel()
         }
     }
+}
+
+private func setAnchorPoint(anchorPoint: CGPoint, forView view: UIView) {
+    var newPoint = CGPoint(x: view.bounds.size.width * anchorPoint.x,
+                           y: view.bounds.size.height * anchorPoint.y)
+    
+    
+    var oldPoint = CGPoint(x: view.bounds.size.width * view.layer.anchorPoint.x,
+                           y: view.bounds.size.height * view.layer.anchorPoint.y)
+    
+    newPoint = newPoint.applying(view.transform)
+    oldPoint = oldPoint.applying(view.transform)
+    
+    var position = view.layer.position
+    position.x -= oldPoint.x
+    position.x += newPoint.x
+    
+    position.y -= oldPoint.y
+    position.y += newPoint.y
+    
+    view.layer.position = position
+    view.layer.anchorPoint = anchorPoint
 }

@@ -503,6 +503,7 @@
 		D0CAD90120AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CAD90020AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift */; };
 		D0CB27CF20C17A4A001ACF93 /* TermsOfServiceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CB27CE20C17A4A001ACF93 /* TermsOfServiceController.swift */; };
 		D0CB27D220C17A7F001ACF93 /* TermsOfServiceControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CB27D120C17A7F001ACF93 /* TermsOfServiceControllerNode.swift */; };
+		D0CCD61B222E8B4500EE1E08 /* TimeBasedVideoPreload.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CCD61A222E8B4500EE1E08 /* TimeBasedVideoPreload.swift */; };
 		D0CE67941F7DB45100FFB557 /* ChatMessageContactBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CE67931F7DB45100FFB557 /* ChatMessageContactBubbleContentNode.swift */; };
 		D0CE6F6E213EDF8800BCD44B /* SecureIdAuthPasswordSetupContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CE6F6D213EDF8800BCD44B /* SecureIdAuthPasswordSetupContentNode.swift */; };
 		D0CE6F70213EEE5000BCD44B /* CreatePasswordController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CE6F6F213EEE5000BCD44B /* CreatePasswordController.swift */; };
@@ -1979,6 +1980,7 @@
 		D0CAD90020AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatEditInterfaceMessageState.swift; sourceTree = "<group>"; };
 		D0CB27CE20C17A4A001ACF93 /* TermsOfServiceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceController.swift; sourceTree = "<group>"; };
 		D0CB27D120C17A7F001ACF93 /* TermsOfServiceControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceControllerNode.swift; sourceTree = "<group>"; };
+		D0CCD61A222E8B4500EE1E08 /* TimeBasedVideoPreload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeBasedVideoPreload.swift; sourceTree = "<group>"; };
 		D0CE1BD21E51BC6100404327 /* DebugController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DebugController.swift; sourceTree = "<group>"; };
 		D0CE67931F7DB45100FFB557 /* ChatMessageContactBubbleContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageContactBubbleContentNode.swift; sourceTree = "<group>"; };
 		D0CE6F6D213EDF8800BCD44B /* SecureIdAuthPasswordSetupContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdAuthPasswordSetupContentNode.swift; sourceTree = "<group>"; };
@@ -4823,6 +4825,7 @@
 				D01FB436217CEC62009C6134 /* FetchVideoThumbnail.swift */,
 				099529AB21CDBBB200805E13 /* QRCode.swift */,
 				0910B0EE21FA532D00F8F87D /* WallpaperResources.swift */,
+				D0CCD61A222E8B4500EE1E08 /* TimeBasedVideoPreload.swift */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -5661,6 +5664,7 @@
 				D0EC6D961EB9F58900EBF1C3 /* ChatMessageInteractiveMediaNode.swift in Sources */,
 				D0B2F7722052D0DD00D3BFB9 /* InviteContactsCountPanelNode.swift in Sources */,
 				D0EC6D971EB9F58900EBF1C3 /* ChatMessageItem.swift in Sources */,
+				D0CCD61B222E8B4500EE1E08 /* TimeBasedVideoPreload.swift in Sources */,
 				D044A0F320BDA05800326FAC /* ThrottledValue.swift in Sources */,
 				D08D7E79209FA2930005D80C /* SecureIdValues.swift in Sources */,
 				D0E8175720122DAD00B82BBB /* ChatRecentActionsSearchNavigationContentNode.swift in Sources */,

@@ -41,6 +41,15 @@ final class ChannelStatsController: ViewController {
     override func loadDisplayNode() {
         self.displayNode = ChannelStatsControllerNode(context: self.context, presentationData: self.presentationData, peerId: self.peerId, url: self.url, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
+        }, updateActivity: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            if value {
+                strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: strongSelf.presentationData.theme))
+            } else {
+                strongSelf.navigationItem.rightBarButtonItem = nil
+            }
         })
     }
     

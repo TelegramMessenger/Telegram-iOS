@@ -81,6 +81,9 @@ class ItemListTextItemNode: ListViewItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = UIAccessibilityTraitStaticText
+        
         self.addSubnode(self.titleNode)
     }
     
@@ -122,6 +125,8 @@ class ItemListTextItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    strongSelf.accessibilityLabel = attributedText.string
                     
                     let _ = titleApply()
                     

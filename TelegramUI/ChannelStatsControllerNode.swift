@@ -6,20 +6,6 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
-private class WeakChannelStatsScriptMessageHandler: NSObject, WKScriptMessageHandler {
-    private let f: (WKScriptMessage) -> ()
-    
-    init(_ f: @escaping (WKScriptMessage) -> ()) {
-        self.f = f
-        
-        super.init()
-    }
-    
-    func userContentController(_ controller: WKUserContentController, didReceive scriptMessage: WKScriptMessage) {
-        self.f(scriptMessage)
-    }
-}
-
 final class ChannelStatsControllerNode: ViewControllerTracingNode, WKNavigationDelegate {
     private var webView: WKWebView?
     
@@ -27,36 +13,23 @@ final class ChannelStatsControllerNode: ViewControllerTracingNode, WKNavigationD
     private let peerId: PeerId
     var presentationData: PresentationData
     private let present: (ViewController, Any?) -> Void
+    private let updateActivity: (Bool) -> Void
     
     private let refreshDisposable = MetaDisposable()
     
-    init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, url: String, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, url: String, present: @escaping (ViewController, Any?) -> Void, updateActivity: @escaping (Bool) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.peerId = peerId
         self.present = present
+        self.updateActivity = updateActivity
         
         super.init()
         
         self.backgroundColor = .white
         
-        let js = "var TelegramWebviewProxyProto = function() {}; " +
-            "TelegramWebviewProxyProto.prototype.postEvent = function(eventName, eventData) { " +
-            "window.webkit.messageHandlers.performAction.postMessage({'eventName': eventName, 'eventData': eventData}); " +
-            "}; " +
-        "var TelegramWebviewProxy = new TelegramWebviewProxyProto();"
-        
         let configuration = WKWebViewConfiguration()
         let userController = WKUserContentController()
-        
-        let userScript = WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: false)
-        userController.addUserScript(userScript)
-        
-        userController.add(WeakChannelStatsScriptMessageHandler { [weak self] message in
-            if let strongSelf = self {
-                strongSelf.handleScriptMessage(message)
-            }
-        }, name: "performAction")
         
         configuration.userContentController = userController
         let webView = WKWebView(frame: CGRect(), configuration: configuration)
@@ -99,21 +72,41 @@ final class ChannelStatsControllerNode: ViewControllerTracingNode, WKNavigationD
         })
     }
     
-    private func handleScriptMessage(_ message: WKScriptMessage) {
-        guard let body = message.body as? [String: Any] else {
-            return
-        }
-        
-        guard let eventName = body["eventName"] as? String else {
-            return
+    func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
+        if let url = webView.url, url.scheme == "tg" {
+            if url.host == "statsrefresh" {
+                var params = ""
+                if let query = url.query, let components = URLComponents(string: "/" + query) {
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "params" {
+                                    params = value
+                                }
+                            }
+                        }
+                    }
+                }
+                self.refreshDisposable.set((channelStatsUrl(postbox: self.context.account.postbox, network: self.context.account.network, peerId: self.peerId, params: params)
+                |> deliverOnMainQueue).start(next: { [weak self] url in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let parsedUrl = URL(string: url) {
+                        strongSelf.webView?.load(URLRequest(url: parsedUrl))
+                    }
+                }, error: { _ in
+                        
+                }))
+            }
         }
     }
     
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Swift.Void) {
         if let url = navigationAction.request.url, url.scheme == "tg" {
-            if url.path == "statsrefresh" {
+            if url.host == "statsrefresh" {
                 var params = ""
-                if let query = url.query, let components = URLComponents(string: "/" + query) {
+                if let query = url.query, let components = URLComponents(string: "/?" + query) {
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
@@ -140,5 +133,21 @@ final class ChannelStatsControllerNode: ViewControllerTracingNode, WKNavigationD
         } else {
             decisionHandler(.allow)
         }
+    }
+    
+    private func updateActivityIndicator(show: Bool) {
+        self.updateActivity(show)
+    }
+    
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        updateActivityIndicator(show: false)
+    }
+    
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        updateActivityIndicator(show: true)
+    }
+    
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        updateActivityIndicator(show: false)
     }
 }
