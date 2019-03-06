@@ -68,6 +68,24 @@ public:
     Surface(uint32_t *buffer, size_t width, size_t height, size_t bytesPerLine);
 
     /**
+     *  @brief Sets the Draw Area available on the Surface.
+     *
+     *  Lottie will use the draw region size to generate frame image
+     *  and will update only the draw rgion of the surface.
+     *
+     *  @param[in] x      region area x position.
+     *  @param[in] y      region area y position.
+     *  @param[in] width  region area width.
+     *  @param[in] height region area height.
+     *
+     *  @note Default surface format is ARGB32_Premultiplied.
+     *  @note Default draw region area is [ 0 , 0, surface width , surface height]
+     *
+     *  @internal
+     */
+    void setDrawRegion(size_t x, size_t y, size_t width, size_t height);
+
+    /**
      *  @brief Returns width of the surface.
      *
      *  @return surface width
@@ -105,6 +123,51 @@ public:
     uint32_t *buffer() const {return mBuffer;}
 
     /**
+     *  @brief Returns drawable area width of the surface.
+     *
+     *  @return drawable area width
+     *
+     *  @note Default value is width() of the surface
+     *
+     *  @internal
+     *
+     */
+    size_t drawRegionWidth() const {return mDrawArea.w;}
+
+    /**
+     *  @brief Returns drawable area height of the surface.
+     *
+     *  @return drawable area height
+     *
+     *  @note Default value is height() of the surface
+     *
+     *  @internal
+     */
+    size_t drawRegionHeight() const {return mDrawArea.h;}
+
+    /**
+     *  @brief Returns drawable area's x position of the surface.
+     *
+     *  @return drawable area's x potition.
+     *
+     *  @note Default value is 0
+     *
+     *  @internal
+     */
+    size_t drawRegionPosX() const {return mDrawArea.x;}
+
+    /**
+     *  @brief Returns drawable area's y position of the surface.
+     *
+     *  @return drawable area's y potition.
+     *
+     *  @note Default value is 0
+     *
+     *  @internal
+     */
+    size_t drawRegionPosY() const {return mDrawArea.x;}
+
+    /**
      *  @brief Default constructor.
      */
     Surface() = default;
@@ -113,6 +176,12 @@ private:
     size_t       mWidth{0};
     size_t       mHeight{0};
     size_t       mBytesPerLine{0};
+    struct {
+        size_t   x{0};
+        size_t   y{0};
+        size_t   w{0};
+        size_t   h{0};
+    }mDrawArea;
 };
 
 class LOT_EXPORT Animation {
@@ -136,6 +205,7 @@ public:
      *
      *  @param[in] jsonData The JSON string data.
      *  @param[in] key the string that will be used to cache the JSON string data.
+     *  @param[in] resourcePath the path will be used to search for external resource.
      *
      *  @return Animation object that can render the contents of the
      *          Lottie resource represented by JSON string data.

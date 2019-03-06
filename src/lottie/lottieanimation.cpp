@@ -89,7 +89,7 @@ Surface AnimationImpl::render(size_t frameNo, const Surface &surface)
       }
 
     mRenderInProgress.store(true);
-    update(frameNo, VSize(surface.width(), surface.height()));
+    update(frameNo, VSize(surface.drawRegionWidth(), surface.drawRegionHeight()));
     mCompItem->render(surface);
     mRenderInProgress.store(false);
 
@@ -289,9 +289,22 @@ Surface::Surface(uint32_t *buffer,
                 :mBuffer(buffer),
                  mWidth(width),
                  mHeight(height),
-                 mBytesPerLine(bytesPerLine) {}
+                 mBytesPerLine(bytesPerLine)
+{
+    mDrawArea.w = mWidth;
+    mDrawArea.h = mHeight;
+}
 
+void Surface::setDrawRegion(size_t x, size_t y, size_t width, size_t height)
+{
+    if ((x + width > mWidth) ||
+        (y + height > mHeight)) return;
 
+    mDrawArea.x = x;
+    mDrawArea.y = y;
+    mDrawArea.w = width;
+    mDrawArea.h = height;
+}
 void initLogging()
 {
 #if defined(__ARM_NEON__)
