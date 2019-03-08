@@ -48,24 +48,35 @@ private struct HolesViewEntryHole {
     let lowerIndex: MessageIndex?
 }
 
+private enum HolesViewEntryMedia {
+    case media(authorId: PeerId?, [Media])
+    case intermediate(authorId: PeerId?, [MediaId], ReadBuffer)
+}
+
+public struct HolesViewMedia: Comparable {
+    public let media: Media
+    public let peer: Peer
+    public let authorIsContact: Bool
+    public let index: MessageIndex
+    
+    public static func ==(lhs: HolesViewMedia, rhs: HolesViewMedia) -> Bool {
+        return lhs.index == rhs.index && (lhs.media === rhs.media || lhs.media.isEqual(to: rhs.media)) && lhs.peer.isEqual(rhs.peer) && lhs.authorIsContact == rhs.authorIsContact
+    }
+    
+    public static func <(lhs: HolesViewMedia, rhs: HolesViewMedia) -> Bool {
+        return lhs.index < rhs.index
+    }
+}
+
 private struct HolesViewEntry {
     let index: MessageIndex
     let hole: HolesViewEntryHole?
+    var media: HolesViewEntryMedia?
     
-    init(index: MessageIndex, hole: HolesViewEntryHole?) {
+    init(index: MessageIndex, hole: HolesViewEntryHole?, media: HolesViewEntryMedia?) {
         self.index = index
         self.hole = hole
-    }
-    
-    init(_ entry: HistoryIndexEntry) {
-        switch entry {
-            case let .Message(index):
-                self.index = index
-                self.hole = nil
-            case let .Hole(hole):
-                self.index = hole.maxIndex
-                self.hole = HolesViewEntryHole(hole: hole, lowerIndex: nil)
-        }
+        self.media = media
     }
     
     init(_ entry: IntermediateMessageHistoryEntry) {
@@ -73,9 +84,25 @@ private struct HolesViewEntry {
             case let .Message(message):
                 self.index = MessageIndex(message)
                 self.hole = nil
+                self.media = .intermediate(authorId: message.authorId, message.referencedMedia, message.embeddedMediaData)
             case let .Hole(hole, lowerIndex):
                 self.index = hole.maxIndex
                 self.hole = HolesViewEntryHole(hole: hole, lowerIndex: lowerIndex)
+                self.media = nil
+        }
+    }
+}
+
+private func entriesFromIndexEntries(entries: [HistoryIndexEntry], postbox: Postbox) -> [HolesViewEntry] {
+    return entries.compactMap { entry -> HolesViewEntry? in
+        switch entry {
+            case let .Message(index):
+                guard let message = postbox.messageHistoryTable.getMessage(entry.index) else {
+                    return nil
+                }
+                return HolesViewEntry(index: index, hole: nil, media: .intermediate(authorId: message.authorId, message.referencedMedia, message.embeddedMediaData))
+            case let .Hole(hole):
+                return HolesViewEntry(index: hole.maxIndex, hole: HolesViewEntryHole(hole: hole, lowerIndex: nil), media: nil)
         }
     }
 }
@@ -87,11 +114,11 @@ private func fetchEntries(postbox: Postbox, location: MessageOfInterestViewLocat
                 case let .id(id):
                     assert(peerId == id.peerId)
                     let (entries, earlier, later) = postbox.messageHistoryIndexTable.entriesAround(id: id, count: count)
-                    return (entries.map(HolesViewEntry.init), earlier?.index, later?.index)
+                    return (entriesFromIndexEntries(entries: entries, postbox: postbox), earlier?.index, later?.index)
                 case let .index(index):
                     assert(peerId == index.id.peerId)
                     let (entries, earlier, later) = postbox.messageHistoryIndexTable.entriesAround(id: index.id, count: count)
-                    return (entries.map(HolesViewEntry.init), earlier?.index, later?.index)
+                    return (entriesFromIndexEntries(entries: entries, postbox: postbox), earlier?.index, later?.index)
             }
         case let .group(groupId):
             switch anchor {
@@ -111,10 +138,10 @@ private func fetchLater(postbox: Postbox, location: MessageOfInterestViewLocatio
             switch anchor {
                 case let .id(id):
                     assert(id.peerId == peerId)
-                    return postbox.messageHistoryIndexTable.laterEntries(id: id, count: count).map(HolesViewEntry.init)
+                    return entriesFromIndexEntries(entries: postbox.messageHistoryIndexTable.laterEntries(id: id, count: count), postbox: postbox)
                 case let .index(index):
                     assert(index.id.peerId == peerId)
-                    return postbox.messageHistoryIndexTable.laterEntries(id: index.id, count: count).map(HolesViewEntry.init)
+                    return entriesFromIndexEntries(entries: postbox.messageHistoryIndexTable.laterEntries(id: index.id, count: count), postbox: postbox)
             }
         case let .group(groupId):
             switch anchor {
@@ -133,10 +160,10 @@ private func fetchEarlier(postbox: Postbox, location: MessageOfInterestViewLocat
             switch anchor {
                 case let .id(id):
                     assert(id.peerId == peerId)
-                    return postbox.messageHistoryIndexTable.earlierEntries(id: id, count: count).map(HolesViewEntry.init)
+                    return entriesFromIndexEntries(entries: postbox.messageHistoryIndexTable.earlierEntries(id: id, count: count), postbox: postbox)
                 case let .index(index):
                     assert(index.id.peerId == peerId)
-                    return postbox.messageHistoryIndexTable.earlierEntries(id: index.id, count: count).map(HolesViewEntry.init)
+                    return entriesFromIndexEntries(entries: postbox.messageHistoryIndexTable.earlierEntries(id: index.id, count: count), postbox: postbox)
             }
         case let .group(groupId):
             switch anchor {
@@ -214,6 +241,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
     private var entries: [HolesViewEntry] = []
     
     fileprivate var closestHole: MessageOfInterestHole?
+    fileprivate var closestLaterMedia: [HolesViewMedia] = []
     
     init(postbox: Postbox, location: MessageOfInterestViewLocation, namespace: MessageId.Namespace, count: Int) {
         self.location = location
@@ -227,6 +255,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
             self.later = later
             
             self.closestHole = self.firstHole()
+            self.closestLaterMedia = self.topLaterMedia(postbox: postbox)
         }
     }
     
@@ -277,16 +306,18 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                             switch operation {
                                 case let .InsertHole(hole):
                                     if hole.id.namespace == self.namespace {
-                                        if self.add(HolesViewEntry(index: hole.maxIndex, hole: HolesViewEntryHole(hole: hole, lowerIndex: nil))) {
+                                        if self.add(HolesViewEntry(index: hole.maxIndex, hole: HolesViewEntryHole(hole: hole, lowerIndex: nil), media: nil)) {
                                             hasChanges = true
                                         }
                                     }
                                 case let .InsertMessage(intermediateMessage):
                                     if intermediateMessage.id.namespace == self.namespace {
-                                        if self.add(HolesViewEntry(index: MessageIndex(intermediateMessage), hole: nil)) {
+                                        if self.add(HolesViewEntry(index: MessageIndex(intermediateMessage), hole: nil, media: .intermediate(authorId: intermediateMessage.authorId, intermediateMessage.referencedMedia, intermediateMessage.embeddedMediaData))) {
                                             hasChanges = true
                                         }
                                     }
+                                case let .UpdateEmbeddedMedia(index, embeddedMedia):
+                                    break
                                 case let .Remove(indices):
                                     if self.remove(indices, invalidEarlier: &invalidEarlier, invalidLater: &invalidLater, removedEntries: &removedEntries) {
                                         hasChanges = true
@@ -301,11 +332,11 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                         for operation in operations {
                             switch operation {
                                 case let .insertMessage(message):
-                                    if self.add(HolesViewEntry(index: MessageIndex(message), hole: nil)) {
+                                    if self.add(HolesViewEntry(index: MessageIndex(message), hole: nil, media: .intermediate(authorId: message.authorId, message.referencedMedia, message.embeddedMediaData))) {
                                         hasChanges = true
                                     }
                                 case let .insertHole(hole, lowerIndex):
-                                    if self.add(HolesViewEntry(index: hole.maxIndex, hole: HolesViewEntryHole(hole: hole, lowerIndex: lowerIndex))) {
+                                    if self.add(HolesViewEntry(index: hole.maxIndex, hole: HolesViewEntryHole(hole: hole, lowerIndex: lowerIndex), media: nil)) {
                                         hasChanges = true
                                     }
                                 case let .removeMessage(index):
@@ -417,16 +448,98 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
         }
         
         if updated {
+            var updatedResult = false
             let closestHole = self.firstHole()
             if closestHole != self.closestHole {
                 self.closestHole = closestHole
-                return true
-            } else {
-                return false
+                updatedResult = true
             }
+            
+            let closestLaterMedia = self.topLaterMedia(postbox: postbox)
+            updatedResult = true
+            if closestLaterMedia.count != self.closestLaterMedia.count {
+                updatedResult = true
+            } else {
+                for i in 0 ..< closestLaterMedia.count {
+                    if closestLaterMedia[i] != self.closestLaterMedia[i] {
+                        updatedResult = true
+                        break
+                    }
+                }
+            }
+            self.closestLaterMedia = closestLaterMedia
+            
+            return updatedResult
         } else {
             return false
         }
+    }
+    
+    private func topLaterMedia(postbox: Postbox) -> [HolesViewMedia] {
+        guard let anchorLocation = self.anchorLocation else {
+            return []
+        }
+        let index: MessageIndex
+        switch anchorLocation {
+            case let .id(id):
+                guard let anchorIndex = postbox.messageHistoryTable.anchorIndex(id) else {
+                    return []
+                }
+                switch anchorIndex {
+                    case let .message(value, _):
+                        index = value
+                    case .lowerBound:
+                        index = MessageIndex.lowerBound(peerId: id.peerId)
+                    case .upperBound:
+                        index = MessageIndex.upperBound(peerId: id.peerId)
+                }
+            case let .index(value):
+                index = value
+        }
+        var result: [HolesViewMedia] = []
+        for i in 0 ..< self.entries.count {
+            let entry = self.entries[i]
+            guard entry.index > index, let media = entry.media else {
+                continue
+            }
+            switch media {
+                case let .media(authorId, media):
+                    for m in media {
+                        if m.id != nil, let peer = postbox.peerTable.get(index.id.peerId) {
+                            var isContact = false
+                            if let authorId = authorId {
+                                isContact = postbox.contactsTable.isContact(peerId: authorId)
+                            }
+                            result.append(HolesViewMedia(media: m, peer: peer, authorIsContact: isContact, index: index))
+                        }
+                    }
+                case let .intermediate(authorId, ids, data):
+                    if ids.isEmpty && data.length <= 4 {
+                        continue
+                    }
+                    var itemMedia: [Media] = []
+                    for item in postbox.messageHistoryTable.renderMessageMedia(referencedMedia: ids, embeddedMediaData: data) {
+                        if item.id != nil, let peer = postbox.peerTable.get(index.id.peerId) {
+                            var isContact = false
+                            if let authorId = authorId {
+                                isContact = postbox.contactsTable.isContact(peerId: authorId)
+                            }
+                            result.append(HolesViewMedia(media: item, peer: peer, authorIsContact: isContact, index: entry.index))
+                            itemMedia.append(item)
+                        }
+                    }
+                    if itemMedia.isEmpty {
+                        entries[i].media = nil
+                    } else {
+                        entries[i].media = .media(authorId: authorId, itemMedia)
+                    }
+            }
+            
+            if result.count >= 3 {
+                break
+            }
+        }
+        return result
     }
     
     private func add(_ entry: HolesViewEntry) -> Bool {
@@ -637,9 +750,10 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
 
 public final class MessageOfInterestHolesView: PostboxView {
     public let closestHole: MessageOfInterestHole?
+    public let closestLaterMedia: [HolesViewMedia]
     
     init(_ view: MutableMessageOfInterestHolesView) {
         self.closestHole = view.closestHole
+        self.closestLaterMedia = view.closestLaterMedia
     }
 }
-

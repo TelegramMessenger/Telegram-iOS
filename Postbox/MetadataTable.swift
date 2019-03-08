@@ -5,6 +5,7 @@ private enum MetadataKey: Int32 {
     case State = 2
     case TransactionStateVersion = 3
     case MasterClientId = 4
+    case AccessChallenge = 5
     case RemoteContactCount = 6
 }
 
@@ -104,6 +105,14 @@ final class MetadataTable: Table {
         var clientId = id
         buffer.write(&clientId, offset: 0, length: 8)
         self.valueBox.set(self.table, key: self.key(.MasterClientId), value: buffer)
+    }
+    
+    func accessChallengeData() -> PostboxAccessChallengeData {
+        if let value = self.valueBox.get(self.table, key: self.key(.AccessChallenge)) {
+            return PostboxAccessChallengeData(decoder: PostboxDecoder(buffer: value))
+        } else {
+            return .none
+        }
     }
     
     func setRemoteContactCount(_ count: Int32) {
