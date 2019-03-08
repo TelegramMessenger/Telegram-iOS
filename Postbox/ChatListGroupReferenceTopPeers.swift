@@ -1,6 +1,6 @@
 import Foundation
 
-private struct GroupReferenceTopPeersEntry {
+/*private struct GroupReferenceTopPeersEntry {
     let index: ChatListIndex
     let peer: Peer?
 }
@@ -107,3 +107,4 @@ final class ChatListGroupReferenceTopPeers {
         return result
     }
 }
+*/

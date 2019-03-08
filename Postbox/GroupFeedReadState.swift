@@ -1,6 +1,6 @@
 import Foundation
 
-public struct GroupFeedReadState: Equatable {
+/*public struct GroupFeedReadState: Equatable {
     public let maxReadIndex: MessageIndex
     
     public init(maxReadIndex: MessageIndex) {
@@ -11,3 +11,4 @@ public struct GroupFeedReadState: Equatable {
         return self.maxReadIndex >= index
     }
 }
+*/

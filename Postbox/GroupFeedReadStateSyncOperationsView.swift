@@ -1,6 +1,6 @@
 import Foundation
 
-final class MutableGroupFeedReadStateSyncOperationsView: MutablePostboxView {
+/*final class MutableGroupFeedReadStateSyncOperationsView: MutablePostboxView {
     var entries: [PeerGroupId: GroupFeedReadStateSyncOperation] = [:]
     
     init(postbox: Postbox) {
@@ -29,3 +29,4 @@ public final class GroupFeedReadStateSyncOperationsView: PostboxView {
     }
 }
 
+*/

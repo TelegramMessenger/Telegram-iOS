@@ -8,7 +8,7 @@ import Foundation
 public enum ViewUpdateType {
     case InitialUnread(MessageIndex)
     case Generic
-    case FillHole(insertions: [MessageIndex: HoleFillDirection], deletions: [MessageIndex: HoleFillDirection])
+    case FillHole
     case UpdateVisible
 }
 
@@ -335,14 +335,14 @@ final class ViewTracker {
             var updateType: ViewUpdateType
             switch mutableView.peerIds {
                 case let .single(peerId):
-                    if let filledIndices = transaction.peerIdsWithFilledHoles[peerId] {
+                    /*if let filledIndices = transaction.peerIdsWithFilledHoles[peerId] {
                         updateType = .FillHole(insertions: filledIndices, deletions: transaction.removedHolesByPeerId[peerId] ?? [:])
-                    } else {
+                    } else {*/
                         updateType = .Generic
-                    }
-                case .associated, .group:
-                    var holeFillDirections: [MessageIndex: HoleFillDirection] = [:]
-                    var removedHolesByPeerId: [MessageIndex: HoleFillDirection] = [:]
+                    //}
+                case .associated://, .group:
+                    /*var holeFillDirections: [MessageIndex: HoleFillDirection] = [:]
+                    var removedHolesByPeerId: [MessageIndex: HoleFillDirection] = [:]*/
                     
                     var ids = Set<PeerId>()
                     switch mutableView.peerIds {
@@ -353,17 +353,17 @@ final class ViewTracker {
                             if let associatedId = associatedId {
                                 ids.insert(associatedId.peerId)
                             }
-                        case let .group(groupId):
+                        /*case let .group(groupId):
                             if let value = transaction.groupFeedIdsWithFilledHoles[groupId] {
                                 holeFillDirections = value
                             }
                             if let value = transaction.removedHolesByPeerGroupId[groupId] {
                                 removedHolesByPeerId = value
-                            }
+                            }*/
                     }
                     
                     if !ids.isEmpty {
-                        for (peerId, value) in transaction.peerIdsWithFilledHoles {
+                        /*for (peerId, value) in transaction.peerIdsWithFilledHoles {
                             if ids.contains(peerId) {
                                 for (k, v) in value {
                                     holeFillDirections[k] = v
@@ -377,14 +377,14 @@ final class ViewTracker {
                                     removedHolesByPeerId[k] = v
                                 }
                             }
-                        }
+                        }*/
                     }
                     
-                    if !holeFillDirections.isEmpty {
+                    /*if !holeFillDirections.isEmpty {
                         updateType = .FillHole(insertions: holeFillDirections, deletions: removedHolesByPeerId)
-                    } else {
+                    } else {*/
                         updateType = .Generic
-                    }
+                    //}
             }
         
             if mutableView.updateAnchorIndex(self.fetchAnchorIndex) {

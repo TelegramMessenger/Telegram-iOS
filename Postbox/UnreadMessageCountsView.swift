@@ -3,19 +3,16 @@ import Foundation
 public enum UnreadMessageCountsItem: Equatable {
     case total(ValueBoxKey?)
     case peer(PeerId)
-    case group(PeerGroupId)
 }
 
 private enum MutableUnreadMessageCountsItemEntry {
     case total((ValueBoxKey, PreferencesEntry?)?, ChatListTotalUnreadState)
     case peer(PeerId, CombinedPeerReadState?)
-    case group(PeerGroupId, ChatListGroupReferenceUnreadCounters)
 }
 
 public enum UnreadMessageCountsItemEntry {
     case total(PreferencesEntry?, ChatListTotalUnreadState)
     case peer(PeerId, CombinedPeerReadState?)
-    case group(PeerGroupId, Int32)
 }
 
 final class MutableUnreadMessageCountsView: MutablePostboxView {
@@ -28,8 +25,6 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                     return .total(preferencesKey.flatMap({ ($0, postbox.preferencesTable.get(key: $0)) }), postbox.messageHistoryMetadataTable.getChatListTotalUnreadState())
                 case let .peer(peerId):
                     return .peer(peerId, postbox.readStateTable.getCombinedState(peerId))
-                case let .group(groupId):
-                    return .group(groupId, ChatListGroupReferenceUnreadCounters(postbox: postbox, groupId: groupId))
             }
         }
     }
@@ -68,10 +63,6 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                             self.entries[i] = .peer(peerId, postbox.readStateTable.getCombinedState(peerId))
                             updated = true
                         }
-                    case let .group(_, counters):
-                        if counters.replay(postbox: postbox, transaction: transaction) {
-                            updated = true
-                        }
                 }
             }
         }
@@ -94,9 +85,6 @@ public final class UnreadMessageCountsView: PostboxView {
                     return .total(keyAndValue?.1, state)
                 case let .peer(peerId, count):
                     return .peer(peerId, count)
-                case let .group(groupId, counters):
-                    let (unread, mutedUnread) = counters.getCounters()
-                    return .group(groupId, unread + mutedUnread)
             }
         }
     }
@@ -121,10 +109,6 @@ public final class UnreadMessageCountsView: PostboxView {
                 case let .peer(peerId, state):
                     if case .peer(peerId) = item {
                         return state?.count ?? 0
-                    }
-                case let .group(groupId, count):
-                    if case .group(groupId) = item {
-                        return count
                     }
             }
         }

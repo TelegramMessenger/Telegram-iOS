@@ -35,10 +35,6 @@ private func getAnchorId(postbox: Postbox, location: MessageOfInterestViewLocati
                     }
                 }
             }
-        case let .group(groupId):
-            if let state = postbox.groupFeedReadStateTable.get(groupId) {
-                return .index(state.maxReadIndex)
-            }
     }
     return nil
 }
@@ -93,17 +89,12 @@ private struct HolesViewEntry {
     }
 }
 
-private func entriesFromIndexEntries(entries: [HistoryIndexEntry], postbox: Postbox) -> [HolesViewEntry] {
-    return entries.compactMap { entry -> HolesViewEntry? in
-        switch entry {
-            case let .Message(index):
-                guard let message = postbox.messageHistoryTable.getMessage(entry.index) else {
-                    return nil
-                }
-                return HolesViewEntry(index: index, hole: nil, media: .intermediate(authorId: message.authorId, message.referencedMedia, message.embeddedMediaData))
-            case let .Hole(hole):
-                return HolesViewEntry(index: hole.maxIndex, hole: HolesViewEntryHole(hole: hole, lowerIndex: nil), media: nil)
+private func entriesFromIndexEntries(entries: [MessageIndex], postbox: Postbox) -> [HolesViewEntry] {
+    return entries.compactMap { index -> HolesViewEntry? in
+        guard let message = postbox.messageHistoryTable.getMessage(index) else {
+            return nil
         }
+        return HolesViewEntry(index: index, hole: nil, media: .intermediate(authorId: message.authorId, message.referencedMedia, message.embeddedMediaData))
     }
 }
 
@@ -114,13 +105,13 @@ private func fetchEntries(postbox: Postbox, location: MessageOfInterestViewLocat
                 case let .id(id):
                     assert(peerId == id.peerId)
                     let (entries, earlier, later) = postbox.messageHistoryIndexTable.entriesAround(id: id, count: count)
-                    return (entriesFromIndexEntries(entries: entries, postbox: postbox), earlier?.index, later?.index)
+                    return (entriesFromIndexEntries(entries: entries, postbox: postbox), earlier, later)
                 case let .index(index):
                     assert(peerId == index.id.peerId)
                     let (entries, earlier, later) = postbox.messageHistoryIndexTable.entriesAround(id: index.id, count: count)
-                    return (entriesFromIndexEntries(entries: entries, postbox: postbox), earlier?.index, later?.index)
+                    return (entriesFromIndexEntries(entries: entries, postbox: postbox), earlier, later)
             }
-        case let .group(groupId):
+        /*case let .group(groupId):
             switch anchor {
                 case let .index(index):
                     let (entries, earlier, later) = postbox.groupFeedIndexTable.entriesAround(groupId: groupId, index: index, count: count, messageHistoryTable: postbox.messageHistoryTable)
@@ -128,7 +119,7 @@ private func fetchEntries(postbox: Postbox, location: MessageOfInterestViewLocat
                 default:
                     assertionFailure()
                     return ([], nil, nil)
-            }
+            }*/
     }
 }
 
@@ -143,14 +134,6 @@ private func fetchLater(postbox: Postbox, location: MessageOfInterestViewLocatio
                     assert(index.id.peerId == peerId)
                     return entriesFromIndexEntries(entries: postbox.messageHistoryIndexTable.laterEntries(id: index.id, count: count), postbox: postbox)
             }
-        case let .group(groupId):
-            switch anchor {
-                case let .index(index):
-                    return postbox.groupFeedIndexTable.laterEntries(groupId: groupId, index: index, count: count, messageHistoryTable: postbox.messageHistoryTable).map(HolesViewEntry.init)
-                default:
-                    assertionFailure()
-                    return []
-            }
     }
 }
 
@@ -164,14 +147,6 @@ private func fetchEarlier(postbox: Postbox, location: MessageOfInterestViewLocat
                 case let .index(index):
                     assert(index.id.peerId == peerId)
                     return entriesFromIndexEntries(entries: postbox.messageHistoryIndexTable.earlierEntries(id: index.id, count: count), postbox: postbox)
-            }
-        case let .group(groupId):
-            switch anchor {
-                case let .index(index):
-                    return postbox.groupFeedIndexTable.earlierEntries(groupId: groupId, index: index, count: count, messageHistoryTable: postbox.messageHistoryTable).map(HolesViewEntry.init)
-                default:
-                    assertionFailure()
-                    return []
             }
     }
 }
@@ -191,18 +166,11 @@ public struct MessageOfInterestHole: Hashable, Equatable {
 
 public enum MessageOfInterestViewLocation: Hashable {
     case peer(PeerId)
-    case group(PeerGroupId)
     
     public static func ==(lhs: MessageOfInterestViewLocation, rhs: MessageOfInterestViewLocation) -> Bool {
         switch lhs {
             case let .peer(value):
                 if case .peer(value) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .group(value):
-                if case .group(value) = rhs {
                     return true
                 } else {
                     return false
@@ -213,8 +181,6 @@ public enum MessageOfInterestViewLocation: Hashable {
     public var hashValue: Int {
         switch self {
             case let .peer(id):
-                return id.hashValue
-            case let .group(id):
                 return id.hashValue
         }
     }
@@ -272,14 +238,6 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                         anchorUpdated = true
                     }
                 }
-            case let .group(groupId):
-                if transaction.currentGroupFeedReadStateContext.updatedStates[groupId] != nil {
-                    let anchorLocation = getAnchorId(postbox: postbox, location: self.location, namespace: self.namespace)
-                    if self.anchorLocation != anchorLocation {
-                        self.anchorLocation = anchorLocation
-                        anchorUpdated = true
-                    }
-                }
         }
         if anchorUpdated {
             if let anchorLocation = self.anchorLocation {
@@ -324,29 +282,6 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                                     }
                                 default:
                                     break
-                            }
-                        }
-                    }
-                case let .group(groupId):
-                    if let operations = transaction.currentGroupFeedOperations[groupId] {
-                        for operation in operations {
-                            switch operation {
-                                case let .insertMessage(message):
-                                    if self.add(HolesViewEntry(index: MessageIndex(message), hole: nil, media: .intermediate(authorId: message.authorId, message.referencedMedia, message.embeddedMediaData))) {
-                                        hasChanges = true
-                                    }
-                                case let .insertHole(hole, lowerIndex):
-                                    if self.add(HolesViewEntry(index: hole.maxIndex, hole: HolesViewEntryHole(hole: hole, lowerIndex: lowerIndex), media: nil)) {
-                                        hasChanges = true
-                                    }
-                                case let .removeMessage(index):
-                                    if self.remove([(index, false, [])], invalidEarlier: &invalidEarlier, invalidLater: &invalidLater, removedEntries: &removedEntries) {
-                                        hasChanges = true
-                                    }
-                                case let .removeHole(index):
-                                    if self.remove([(index, false, [])], invalidEarlier: &invalidEarlier, invalidLater: &invalidLater, removedEntries: &removedEntries) {
-                                        hasChanges = true
-                                    }
                             }
                         }
                     }
@@ -643,69 +578,6 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
         let upperJ = min(referenceIndex + 50, self.entries.count)
         
         switch self.location {
-            case let .group(groupId):
-                while i >= lowerI || j < upperJ {
-                    if j < upperJ {
-                        if let hole = self.entries[j].hole {
-                            switch anchorLocation {
-                                case let .index(index):
-                                    if let lowerIndex = hole.lowerIndex {
-                                        if index >= lowerIndex && index <= hole.hole.maxIndex {
-                                            return MessageOfInterestHole(hole: .groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.hole.maxIndex), direction: .AroundIndex(index))
-                                        }
-                                    } else {
-                                        assertionFailure()
-                                    }
-                                default:
-                                    break
-                            }
-                            
-                            if let lowerIndex = hole.lowerIndex {
-                                return MessageOfInterestHole(hole: .groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.hole.maxIndex), direction: isGreaterOrEqual(index: hole.hole.maxIndex, than: anchorLocation) ? .LowerToUpper : .UpperToLower)
-                            } else {
-                                assertionFailure()
-                            }
-                        }
-                    }
-                    
-                    if i >= lowerI  {
-                        if let hole = self.entries[i].hole {
-                            switch anchorLocation {
-                                case let .index(index):
-                                    if let lowerIndex = hole.lowerIndex {
-                                        if index >= lowerIndex && index <= hole.hole.maxIndex {
-                                            return MessageOfInterestHole(hole: .groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.hole.maxIndex), direction: .AroundIndex(index))
-                                        }
-                                        
-                                        if hole.hole.maxIndex.timestamp >= Int32.max - 1 && index.timestamp >= Int32.max - 1 {
-                                            return MessageOfInterestHole(hole: .groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.hole.maxIndex), direction: .UpperToLower)
-                                        }
-                                    } else {
-                                        assertionFailure()
-                                    }
-                                default:
-                                    break
-                            }
-                            
-                            /*if case .upperBound = self.anchorIndex, hole.maxIndex.timestamp >= Int32.max - 1 {
-                                if case let .group(groupId) = self.peerIds {
-                                    if let lowerIndex = lowerIndex {
-                                        return (.groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.maxIndex), .UpperToLower)
-                                    }
-                                } else {
-                                    return (.peer(hole), .UpperToLower)
-                                }
-                            } else {*/
-                                if let lowerIndex = hole.lowerIndex {
-                                    return MessageOfInterestHole(hole: .groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.hole.maxIndex), direction: isGreaterOrEqual(index: hole.hole.maxIndex, than: anchorLocation) ? .LowerToUpper : .UpperToLower)
-                                }
-                            //}
-                        }
-                    }
-                    
-                    i -= 1
-                    j += 1
-                }
             case .peer:
                 let anchorId: MessageId
                 switch anchorLocation {

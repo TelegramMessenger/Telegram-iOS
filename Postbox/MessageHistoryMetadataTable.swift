@@ -115,32 +115,6 @@ private enum InitializedChatListKey: Hashable {
                 return groupId.rawValue
         }
     }
-    
-    var hashValue: Int {
-        switch self {
-            case .global:
-                return 0
-            case let .group(groupId):
-                return groupId.hashValue
-        }
-    }
-    
-    static func ==(lhs: InitializedChatListKey, rhs: InitializedChatListKey) -> Bool {
-        switch lhs {
-            case .global:
-                if case .global = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .group(groupId):
-                if case .group(groupId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 final class MessageHistoryMetadataTable: Table {
