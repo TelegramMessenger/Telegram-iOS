@@ -222,7 +222,7 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
     if view.lower == nil {
         var savedStickerIds = Set<Int64>()
         if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
-            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FavoriteStickers.uppercased(), shortName: "", hash: 0, count: 0)
+            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FavoriteStickers.uppercased(), shortName: "", thumbnail: nil, hash: 0, count: 0)
             for i in 0 ..< savedStickers.items.count {
                 if let item = savedStickers.items[i].contents as? SavedStickerItem {
                     savedStickerIds.insert(item.file.fileId.id)
@@ -234,7 +234,7 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
         }
         
         if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
-            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FrequentlyUsed.uppercased(), shortName: "", hash: 0, count: 0)
+            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FrequentlyUsed.uppercased(), shortName: "", thumbnail: nil, hash: 0, count: 0)
             var addedCount = 0
             for i in 0 ..< recentStickers.items.count {
                 if addedCount >= 20 {
@@ -262,7 +262,7 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers:
         
         if let peerSpecificPack = peerSpecificPack {
             for i in 0 ..< peerSpecificPack.items.count {
-                let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_GroupStickers, shortName: "", hash: 0, count: 0)
+                let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_GroupStickers, shortName: "", thumbnail: nil, hash: 0, count: 0)
                 
                 if let item = peerSpecificPack.items[i] as? StickerPackItem {
                     let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)

@@ -9,6 +9,7 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
     let account: Account
     let inputNodeInteraction: ChatMediaInputNodeInteraction
     let collectionId: ItemCollectionId
+    let collectionInfo: StickerPackCollectionInfo
     let stickerPackItem: StickerPackItem?
     let selectedItem: () -> Void
     let index: Int
@@ -18,10 +19,11 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
         return true
     }
     
-    init(account: Account, inputNodeInteraction: ChatMediaInputNodeInteraction, collectionId: ItemCollectionId, stickerPackItem: StickerPackItem?, index: Int, theme: PresentationTheme, selected: @escaping () -> Void) {
+    init(account: Account, inputNodeInteraction: ChatMediaInputNodeInteraction, collectionId: ItemCollectionId, collectionInfo: StickerPackCollectionInfo, stickerPackItem: StickerPackItem?, index: Int, theme: PresentationTheme, selected: @escaping () -> Void) {
         self.account = account
         self.inputNodeInteraction = inputNodeInteraction
         self.collectionId = collectionId
+        self.collectionInfo = collectionInfo
         self.stickerPackItem = stickerPackItem
         self.selectedItem = selected
         self.index = index
@@ -37,7 +39,7 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
             Queue.mainQueue().async {
                 completion(node, {
                     return (nil, { _ in
-                        node.updateStickerPackItem(account: self.account, item: self.stickerPackItem, collectionId: self.collectionId, theme: self.theme)
+                        node.updateStickerPackItem(account: self.account, info: self.collectionInfo, item: self.stickerPackItem, collectionId: self.collectionId, theme: self.theme)
                         node.updateAppearanceTransition(transition: .immediate)
                     })
                 })
@@ -48,7 +50,7 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             completion(ListViewItemNodeLayout(contentSize: node().contentSize, insets: ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)), { _ in
-                (node() as? ChatMediaInputStickerPackItemNode)?.updateStickerPackItem(account: self.account, item: self.stickerPackItem, collectionId: self.collectionId, theme: self.theme)
+                (node() as? ChatMediaInputStickerPackItemNode)?.updateStickerPackItem(account: self.account, info: self.collectionInfo, item: self.stickerPackItem, collectionId: self.collectionId, theme: self.theme)
             })
         }
     }
@@ -69,7 +71,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     
     var inputNodeInteraction: ChatMediaInputNodeInteraction?
     var currentCollectionId: ItemCollectionId?
-    private var currentItem: StickerPackItem?
+    private var currentThumbnailItem: TelegramMediaImageRepresentation?
     private var theme: PresentationTheme?
     
     private let stickerFetchedDisposable = MetaDisposable()
@@ -97,7 +99,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         self.stickerFetchedDisposable.dispose()
     }
     
-    func updateStickerPackItem(account: Account, item: StickerPackItem?, collectionId: ItemCollectionId, theme: PresentationTheme) {
+    func updateStickerPackItem(account: Account, info: StickerPackCollectionInfo, item: StickerPackItem?, collectionId: ItemCollectionId, theme: PresentationTheme) {
         self.currentCollectionId = collectionId
         
         if self.theme !== theme {
@@ -106,15 +108,27 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
             self.highlightNode.image = PresentationResourcesChat.chatMediaInputPanelHighlightedIconImage(theme)
         }
         
-        if self.currentItem != item {
-            self.currentItem = item
-            
-            if let item = item, let dimensions = item.file.dimensions {
-                let imageSize = dimensions.aspectFitted(boundingImageSize)
+        var thumbnailItem: TelegramMediaImageRepresentation?
+        var resourceReference: MediaResourceReference?
+        if let thumbnail = info.thumbnail {
+            thumbnailItem = thumbnail
+            resourceReference = MediaResourceReference.standalone(resource: thumbnail.resource)
+        } else if let item = item, let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
+            thumbnailItem = TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource)
+            resourceReference = MediaResourceReference.standalone(resource: resource)
+        }
+        
+        if self.currentThumbnailItem != thumbnailItem {
+            self.currentThumbnailItem = thumbnailItem
+            if let thumbnailItem = thumbnailItem {
+                let imageSize = thumbnailItem.dimensions.aspectFitted(boundingImageSize)
                 let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
                 imageApply()
-                self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true))
-                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).start())
+                self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, representation: thumbnailItem))
+               
+                if let resourceReference = resourceReference {
+                self.stickerFetchedDisposable.set(fetchedMediaResource(postbox: account.postbox, reference: resourceReference).start())
+                }
                 self.imageNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
             }
             

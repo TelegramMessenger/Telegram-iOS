@@ -270,7 +270,7 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                     inputNodeInteraction.navigateToCollectionId(collectionId)
                 })
             case let .stickerPack(index, info, topItem, theme):
-                return ChatMediaInputStickerPackItem(account: account, inputNodeInteraction: inputNodeInteraction, collectionId: info.id, stickerPackItem: topItem, index: index, theme: theme, selected: {
+                return ChatMediaInputStickerPackItem(account: account, inputNodeInteraction: inputNodeInteraction, collectionId: info.id, collectionInfo: info, stickerPackItem: topItem, index: index, theme: theme, selected: {
                     inputNodeInteraction.navigateToCollectionId(info.id)
                 })
         }

@@ -227,7 +227,13 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
         let reorderControlLayout = ItemListEditableReorderControlNode.asyncLayout(self.reorderControlNode)
-        let previousFile = self.layoutParams?.0.topItem?.file
+        
+        var previousThumbnailItem: TelegramMediaImageRepresentation?
+        if let thumbnail = self.layoutParams?.0.packInfo.thumbnail {
+            previousThumbnailItem = thumbnail
+        } else if let item = self.layoutParams?.0.topItem, let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
+            previousThumbnailItem = TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource)
+        }
         
         var currentDisabledOverlayNode = self.disabledOverlayNode
         
@@ -316,28 +322,34 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                 currentDisabledOverlayNode = nil
             }
             
-            let file = item.topItem?.file
-            var fileUpdated = false
-            if let file = file, let previousFile = previousFile {
-                fileUpdated = !file.isEqual(to: previousFile)
-            } else if (file != nil) != (previousFile != nil) {
-                fileUpdated = true
+            var thumbnailItem: TelegramMediaImageRepresentation?
+            var resourceReference: MediaResourceReference?
+            if let thumbnail = item.packInfo.thumbnail {
+                thumbnailItem = thumbnail
+                resourceReference = MediaResourceReference.standalone(resource: thumbnail.resource)
+            } else if let item = item.topItem, let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
+                thumbnailItem = TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource)
+                resourceReference = MediaResourceReference.standalone(resource: resource)
             }
+            
+            let fileUpdated = thumbnailItem != previousThumbnailItem
             
             var imageApply: (() -> Void)?
             var imageSize: CGSize = CGSize(width: 34.0, height: 34.0)
-            if let file = file, let dimensions = file.dimensions {
+            if let thumbnailItem = thumbnailItem {
                 let imageBoundingSize = CGSize(width: 34.0, height: 34.0)
-                imageSize = dimensions.aspectFitted(imageBoundingSize)
+                imageSize = thumbnailItem.dimensions.aspectFitted(imageBoundingSize)
                 imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
             }
             
             var updatedImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             var updatedFetchSignal: Signal<FetchResourceSourceType, FetchResourceError>?
             if fileUpdated {
-                if let file = file {
-                    updatedImageSignal = chatMessageSticker(account: item.account, file: file, small: false)
-                    updatedFetchSignal = fetchedMediaResource(postbox: item.account.postbox, reference: stickerPackFileReference(file).resourceReference(file.resource))
+                if let thumbnailItem = thumbnailItem {
+                    updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, representation: thumbnailItem)
+                    if let resourceReference = resourceReference {
+                        updatedFetchSignal = fetchedMediaResource(postbox: item.account.postbox, reference: resourceReference)
+                    }
                 } else {
                     updatedImageSignal = .single({ _ in return nil })
                     updatedFetchSignal = .complete()
