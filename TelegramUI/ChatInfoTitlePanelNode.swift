@@ -155,8 +155,8 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
                 } else {
                     updatedButtons = []
                 }
-            case .group:
-                updatedButtons = groupButtons()
+            /*case .group:
+                updatedButtons = groupButtons()*/
         }
         
         var buttonsUpdated = false

@@ -276,9 +276,9 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                     effectiveAuthor = content.firstMessage.author
                     displayAuthorInfo = incoming && peerId.isGroupOrChannel && effectiveAuthor != nil
                 }
-            case .group:
+            /*case .group:
                 effectiveAuthor = content.firstMessage.author
-                displayAuthorInfo = incoming && effectiveAuthor != nil
+                displayAuthorInfo = incoming && effectiveAuthor != nil*/
         }
         
         self.effectiveAuthorId = effectiveAuthor?.id

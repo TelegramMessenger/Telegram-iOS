@@ -25,8 +25,8 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
         switch chatLocation {
             case .peer:
                 placeholderText = strings.Conversation_SearchPlaceholder
-            case .group:
-                placeholderText = "Search this feed"
+            /*case .group:
+                placeholderText = "Search this feed"*/
         }
         self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor)
         
@@ -77,8 +77,8 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
                     switch self.chatLocation {
                         case .peer:
                             placeholderText = self.strings.Conversation_SearchPlaceholder
-                        case .group:
-                            placeholderText = "Search this feed"
+                        /*case .group:
+                            placeholderText = "Search this feed"*/
                     }
                     self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor)
                 case .members:

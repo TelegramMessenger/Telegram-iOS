@@ -69,8 +69,8 @@ struct ChatHistoryView {
 enum ChatHistoryViewTransitionReason {
     case Initial(fadeIn: Bool)
     case InteractiveChanges
-    case HoleChanges(filledHoleDirections: [MessageIndex: HoleFillDirection], removeHoleDirections: [MessageIndex: HoleFillDirection])
     case Reload
+    case HoleReload
 }
 
 struct ChatHistoryViewTransitionInsertEntry {
@@ -576,8 +576,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                         reason = ChatHistoryViewTransitionReason.InteractiveChanges
                                     case .UpdateVisible:
                                         reason = ChatHistoryViewTransitionReason.Reload
-                                    case let .FillHole(insertions, deletions):
-                                        reason = ChatHistoryViewTransitionReason.HoleChanges(filledHoleDirections: insertions, removeHoleDirections: deletions)
+                                    case .FillHole:
+                                        assertionFailure()
+                                        reason = ChatHistoryViewTransitionReason.Reload
                                 }
                         }
                     }
@@ -614,10 +615,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     switch chatLocation {
                         case .peer:
                             let _ = applyMaxReadIndexInteractively(postbox: context.account.postbox, stateManager: context.account.stateManager, index: messageIndex).start()
-                        case let .group(groupId):
+                        /*case let .group(groupId):
                             let _ = context.account.postbox.transaction({ transaction -> Void in
                                 transaction.applyGroupFeedInteractiveReadMaxIndex(groupId: groupId, index: messageIndex)
-                            }).start()
+                            }).start()*/
                     }
                 }
             }

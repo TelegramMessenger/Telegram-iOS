@@ -8,14 +8,14 @@ import TelegramCore
 
 enum ChatListItemContent {
     case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool)
-    case groupReference(groupId: PeerGroupId, message: Message?, topPeers: [Peer], counters: GroupReferenceUnreadCounters)
+    //case groupReference(groupId: PeerGroupId, message: Message?, topPeers: [Peer], counters: GroupReferenceUnreadCounters)
     
     var chatLocation: ChatLocation {
         switch self {
             case let .peer(_, peer, _, _, _, _, _, _, _):
                 return .peer(peer.peerId)
-            case let .groupReference(groupId, _, _, _):
-                return .group(groupId)
+            /*case let .groupReference(groupId, _, _, _):
+                return .group(groupId)*/
         }
     }
 }
@@ -107,8 +107,8 @@ class ChatListItem: ListViewItem {
                 } else if let peer = peer.peers[peer.peerId] {
                     self.interaction.peerSelected(peer)
                 }
-            case let .groupReference(groupId, _, _, _):
-                self.interaction.groupSelected(groupId)
+            /*case let .groupReference(groupId, _, _, _):
+                self.interaction.groupSelected(groupId)*/
         }
     }
     
@@ -275,8 +275,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 return nil
             }
             switch item.content {
-                case .groupReference:
-                    return nil
+                /*case .groupReference:
+                    return nil*/
                 case let .peer(peer):
                     guard let chatMainPeer = peer.peer.chatMainPeer else {
                         return nil
@@ -293,8 +293,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 return nil
             }
             switch item.content {
-                case .groupReference:
-                    return nil
+                /*case .groupReference:
+                    return nil*/
                 case let .peer(peer):
                     if let message = peer.message {
                         var result = ""
@@ -402,8 +402,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         switch item.content {
             case let .peer(_, peerValue, _, _, _, _, _, _, _):
                 peer = peerValue.chatMainPeer
-            case .groupReference:
-                break
+            /*case .groupReference:
+                break*/
         }
         
         if let peer = peer {
@@ -521,7 +521,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     inputActivities = inputActivitiesValue
                     isPeerGroup = false
                     isAd = isAdValue
-                case let .groupReference(_, messageValue, topPeersValue, counters):
+                /*case let .groupReference(_, messageValue, topPeersValue, counters):
                     if let messageValue = messageValue {
                         itemPeer = RenderedPeer(message: messageValue)
                     } else {
@@ -543,7 +543,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else{
                         unreadCount = (0, false, false)
                     }
-                    isAd = false
+                    isAd = false*/
             }
             
             let theme = item.presentationData.theme.chatList
@@ -612,11 +612,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     }
-                } else if case .groupReference = item.content {
+                }/* else if case .groupReference = item.content {
                     if let messagePeer = itemPeer.chatMainPeer {
                         peerText = messagePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     }
-                }
+                }*/
                 
                 if let peerText = peerText {
                     authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: theme.authorNameColor)
@@ -632,8 +632,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else if let displayTitle = peer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
                         titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat ? theme.secretTitleColor : theme.titleColor)
                     }
-                case .groupReference:
-                    titleAttributedString = NSAttributedString(string: "Feed", font: titleFont, textColor: theme.titleColor)
+                /*case .groupReference:
+                    titleAttributedString = NSAttributedString(string: "Feed", font: titleFont, textColor: theme.titleColor)*/
             }
             
             textAttributedString = attributedText
@@ -807,7 +807,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         peerRevealOptions = []
                         peerLeftRevealOptions = []
                     }
-                case .groupReference:
+                /*case .groupReference:
                     let isPinned = item.index.pinningIndex != nil
                     
                     if item.enableContextActions {
@@ -815,7 +815,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         peerRevealOptions = []
                     }
-                    peerLeftRevealOptions = []
+                    peerLeftRevealOptions = []*/
             }
             
             return (layout, { [weak self] synchronousLoads, animated in
@@ -1267,8 +1267,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     switch item.content {
                         case .peer:
                             itemId = .peer(item.index.messageIndex.id.peerId)
-                        case let .groupReference(groupId, _, _, _):
-                            itemId = .group(groupId)
+                        /*case let .groupReference(groupId, _, _, _):
+                            itemId = .group(groupId)*/
                     }
                     item.interaction.setItemPinned(itemId, true)
                 case RevealOptionKey.unpin.rawValue:
@@ -1276,8 +1276,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     switch item.content {
                         case .peer:
                             itemId = .peer(item.index.messageIndex.id.peerId)
-                        case let .groupReference(groupId, _, _, _):
-                            itemId = .group(groupId)
+                        /*case let .groupReference(groupId, _, _, _):
+                            itemId = .group(groupId)*/
                     }
                     item.interaction.setItemPinned(itemId, false)
                 case RevealOptionKey.mute.rawValue:

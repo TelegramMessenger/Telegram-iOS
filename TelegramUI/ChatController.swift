@@ -29,7 +29,7 @@ public final class ChatControllerOverlayPresentationData {
 
 private enum ChatLocationInfoData {
     case peer(Promise<PeerView>)
-    case group(Promise<ChatListTopPeersView>)
+    //case group(Promise<ChatListTopPeersView>)
 }
 
 private enum ChatRecordingActivity {
@@ -237,9 +237,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             case let .peer(peerId):
                 locationBroadcastPanelSource = .peer(peerId)
                 self.chatLocationInfoData = .peer(Promise())
-            case .group:
+            /*case .group:
                 locationBroadcastPanelSource = .none
-                self.chatLocationInfoData = .group(Promise())
+                self.chatLocationInfoData = .group(Promise())*/
         }
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -682,8 +682,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             if (peerId.namespace == Namespaces.Peer.CloudChannel || peerId.namespace == Namespaces.Peer.CloudGroup) {
                                 postAsReply = true
                             }
-                        case .group:
-                            postAsReply = true
+                        /*case .group:
+                            postAsReply = true*/
                     }
                 }
                 
@@ -1200,8 +1200,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 let avatarNode = ChatAvatarNavigationNode()
                 avatarNode.chatController = self
                 chatInfoButtonItem = UIBarButtonItem(customDisplayNode: avatarNode)!
-            case .group:
-                chatInfoButtonItem = UIBarButtonItem(customDisplayNode: ChatMultipleAvatarsNavigationNode())!
+            /*case .group:
+                chatInfoButtonItem = UIBarButtonItem(customDisplayNode: ChatMultipleAvatarsNavigationNode())!*/
         }
         chatInfoButtonItem.target = self
         chatInfoButtonItem.action = #selector(self.rightNavigationButtonAction)
@@ -1337,7 +1337,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         }
                     }))
                 }
-            case let .group(groupId):
+            /*case let .group(groupId):
                 if case let .group(topPeersView) = self.chatLocationInfoData {
                     let key: PostboxViewKey = .chatListTopPeers(groupId: groupId)
                     topPeersView.set(context.account.postbox.combinedView(keys: [key])
@@ -1359,7 +1359,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                 }
                             }
                         }))
-                }
+                }*/
         }
         
         self.botCallbackAlertMessageDisposable = (self.botCallbackAlertMessage.get()
@@ -2406,8 +2406,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     switch strongSelf.chatLocation {
                         case .peer:
                             strongSelf.navigateToMessage(from: nil, to: .index(navigateIndex), forceInCurrentChat: true)
-                        case .group:
-                            strongSelf.navigateToMessage(from: nil, to: .index(navigateIndex))
+                        /*case .group:
+                            strongSelf.navigateToMessage(from: nil, to: .index(navigateIndex))*/
                     }
                 }
             }
@@ -2899,9 +2899,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 strongSelf.chatDisplayNode.historyNode.scrollToNextMessage()
             }
         }, openGrouping: { [weak self] in
-            if let strongSelf = self, case let .group(groupId) = strongSelf.chatLocation {
+            /*if let strongSelf = self, case let .group(groupId) = strongSelf.chatLocation {
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(FeedGroupingController(context: strongSelf.context, groupId: groupId))
-            }
+            }*/
         }, toggleSilentPost: { [weak self] in
             if let strongSelf = self {
                 var value: Bool = false
@@ -3149,7 +3149,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: text, actions: actions), in: .window(.root))
                     }
                 }))
-            case let .group(groupId):
+            /*case let .group(groupId):
                 let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.group(groupId), .total(nil)])
                 self.chatUnreadCountDisposable = (self.context.account.postbox.combinedView(keys: [unreadCountsKey]) |> deliverOnMainQueue).start(next: { [weak self] views in
                     if let strongSelf = self {
@@ -3169,7 +3169,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         
                         strongSelf.chatDisplayNode.navigateButtons.unreadCount = unreadCount
                     }
-                })
+                })*/
         }
         
         self.interfaceInteraction = interfaceInteraction
@@ -3834,10 +3834,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                     }
                                 }
                         }))
-                    case .group:
+                    /*case .group:
                         if case let .group(groupId) = self.chatLocation {
                             (self.navigationController as? NavigationController)?.pushViewController(ChatListController(context: self.context, groupId: groupId, controlsHistoryPreload: false))
-                        }
+                        }*/
                 }
             case .search:
                 self.interfaceInteraction?.beginMessageSearch(.everything, "")
@@ -4705,8 +4705,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     switch self.chatLocation {
                         case let .peer(peerId):
                             derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
-                        case let .group(groupId):
-                            derivedSearchState = ChatSearchState(query: search.query, location: .group(groupId), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
+                        /*case let .group(groupId):
+                            derivedSearchState = ChatSearchState(query: search.query, location: .group(groupId), loadMoreState: loadMoreStateFromResultsState(search.resultsState))*/
                     }
                 case .members:
                     derivedSearchState = nil
@@ -4714,8 +4714,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     switch self.chatLocation {
                         case let .peer(peerId):
                             derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: peer.id, tags: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
-                        case .group:
-                            derivedSearchState = nil
+                        /*case .group:
+                            derivedSearchState = nil*/
                     }
             }
         }
@@ -4781,8 +4781,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                 switch strongSelf.chatLocation {
                                     case .peer:
                                         strongSelf.navigateToMessage(from: nil, to: .index(navigateIndex), forceInCurrentChat: true)
-                                    case .group:
-                                        strongSelf.navigateToMessage(from: nil, to: .index(navigateIndex))
+                                    /*case .group:
+                                        strongSelf.navigateToMessage(from: nil, to: .index(navigateIndex))*/
                                 }
                             }
                             strongSelf.updateItemNodesSearchTextHighlightStates()
@@ -5160,8 +5160,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             default:
                                 break
                         }
-                    case .group:
-                        (self.navigationController as? NavigationController)?.pushViewController(ChatController(context: self.context, chatLocation: .peer(peerId), messageId: fromMessage?.id, botStart: nil))
+                    /*case .group:
+                        (self.navigationController as? NavigationController)?.pushViewController(ChatController(context: self.context, chatLocation: .peer(peerId), messageId: fromMessage?.id, botStart: nil))*/
                 }
             } else {
                 switch navigation {
@@ -5649,8 +5649,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             switch chatLocation {
                 case let .peer(peerId):
                     let _ = data.swap(PreviewActionsData(notificationSettings: transaction.getPeerNotificationSettings(peerId), peer: transaction.getPeer(peerId)))
-                case .group:
-                    let _ = data.swap(PreviewActionsData(notificationSettings: nil, peer: nil))
+                /*case .group:
+                    let _ = data.swap(PreviewActionsData(notificationSettings: nil, peer: nil))*/
             }
             semaphore.signal()
         }).start()

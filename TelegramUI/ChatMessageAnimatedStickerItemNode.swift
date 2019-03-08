@@ -189,23 +189,23 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var hasAvatar = false
             
             switch item.chatLocation {
-            case let .peer(peerId):
-                if peerId != item.context.account.peerId {
-                    if peerId.isGroupOrChannel && item.message.author != nil {
-                        var isBroadcastChannel = false
-                        if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                            isBroadcastChannel = true
+                case let .peer(peerId):
+                    if peerId != item.context.account.peerId {
+                        if peerId.isGroupOrChannel && item.message.author != nil {
+                            var isBroadcastChannel = false
+                            if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                                isBroadcastChannel = true
+                            }
+                            
+                            if !isBroadcastChannel {
+                                hasAvatar = true
+                            }
                         }
-                        
-                        if !isBroadcastChannel {
-                            hasAvatar = true
-                        }
+                    } else if incoming {
+                        hasAvatar = true
                     }
-                } else if incoming {
-                    hasAvatar = true
-                }
-            case .group:
-                hasAvatar = true
+                /*case .group:
+                    hasAvatar = true*/
             }
             
             if hasAvatar {

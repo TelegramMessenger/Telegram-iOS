@@ -6,7 +6,7 @@ import Display
 
 import SafariServices
 
-private enum FeedGroupingControllerTransitionType {
+/*private enum FeedGroupingControllerTransitionType {
     case initial
     case initialLoad
     case generic
@@ -483,3 +483,4 @@ final class FeedGroupingControllerNode: ViewControllerTracingNode {
     }
 }
 
+*/

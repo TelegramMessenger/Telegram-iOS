@@ -300,8 +300,8 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                                     reason = ChatHistoryViewTransitionReason.InteractiveChanges
                                 case .UpdateVisible:
                                     reason = ChatHistoryViewTransitionReason.Reload
-                                case let .FillHole(insertions, deletions):
-                                    reason = ChatHistoryViewTransitionReason.HoleChanges(filledHoleDirections: insertions, removeHoleDirections: deletions)
+                                case .FillHole:
+                                    reason = ChatHistoryViewTransitionReason.Reload
                             }
                     }
                     

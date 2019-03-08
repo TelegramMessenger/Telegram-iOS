@@ -505,7 +505,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
-        self.chatListDisplayNode.chatListNode.groupSelected = { [weak self] groupId in
+        /*self.chatListDisplayNode.chatListNode.groupSelected = { [weak self] groupId in
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
                     var scrollToEndIfExists = false
@@ -522,7 +522,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             if let strongSelf = self {
                 let _ = updatePeerGroupIdInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, groupId: group ? Namespaces.PeerGroup.feed : nil).start()
             }
-        }
+        }*/
         
         self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, messageId in
             if let strongSelf = self {
@@ -973,10 +973,10 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     } else {
                         return nil
                     }
-                case let .groupReference(groupId, _, _, _):
+                /*case let .groupReference(groupId, _, _, _):
                     let chatListController = ChatListController(context: self.context, groupId: groupId, controlsHistoryPreload: false)
                     chatListController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
-                    return (chatListController, sourceRect)
+                    return (chatListController, sourceRect)*/
             }
         } else {
             return nil

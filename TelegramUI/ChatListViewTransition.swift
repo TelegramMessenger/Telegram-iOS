@@ -13,7 +13,7 @@ struct ChatListNodeView {
 enum ChatListNodeViewTransitionReason {
     case initial
     case interactiveChanges
-    case holeChanges(filledHoleDirections: [MessageIndex: HoleFillDirection], removeHoleDirections: [MessageIndex: HoleFillDirection])
+    case holeChanges
     case reload
 }
 
@@ -105,32 +105,8 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
                 }
             case .reload:
                 break
-            case let .holeChanges(filledHoleDirections, removeHoleDirections):
-                if let (_, removeDirection) = removeHoleDirections.first {
-                    switch removeDirection {
-                    case .LowerToUpper:
-                        var holeIndex: ChatListIndex?
-                        for (index, _) in filledHoleDirections {
-                            if holeIndex == nil || index < holeIndex!.messageIndex {
-                                holeIndex = ChatListIndex(pinningIndex: nil, messageIndex: index)
-                            }
-                        }
-                        
-                        if let holeIndex = holeIndex {
-                            for i in 0 ..< toView.filteredEntries.count {
-                                if toView.filteredEntries[i].index >= holeIndex {
-                                    let index = toView.filteredEntries.count - 1 - (i - 1)
-                                    stationaryItemRange = (index, Int.max)
-                                    break
-                                }
-                            }
-                        }
-                    case .UpperToLower:
-                        break
-                    case .AroundId, .AroundIndex:
-                        break
-                    }
-                }
+            case .holeChanges:
+                break
         }
         
         for (index, entry, previousIndex) in indicesAndItems {

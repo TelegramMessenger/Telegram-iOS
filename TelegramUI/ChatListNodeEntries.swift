@@ -45,7 +45,7 @@ enum ChatListNodeEntryId: Hashable {
 enum ChatListNodeEntry: Comparable, Identifiable {
     case PeerEntry(index: ChatListIndex, presentationData: ChatListPresentationData, message: Message?, readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, peer: RenderedPeer, summaryInfo: ChatListMessageTagSummaryInfo, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool)
     case HoleEntry(ChatListHole, theme: PresentationTheme)
-    case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, message: Message?, topPeers: [Peer], counters: GroupReferenceUnreadCounters, editing: Bool)
+    //case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, message: Message?, topPeers: [Peer], counters: GroupReferenceUnreadCounters, editing: Bool)
     
     var index: ChatListIndex {
         switch self {
@@ -53,8 +53,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 return index
             case let .HoleEntry(hole, _):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
-            case let .GroupReferenceEntry(index, _, _, _, _, _, _):
-                return index
+            /*case let .GroupReferenceEntry(index, _, _, _, _, _, _):
+                return index*/
         }
     }
     
@@ -64,8 +64,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 return .PeerId(index.messageIndex.id.peerId.toInt64())
             case let .HoleEntry(hole, _):
                 return .Hole(Int64(hole.index.id.id))
-            case let .GroupReferenceEntry(_, _, groupId, _, _, _, _):
-                return .GroupId(groupId)
+            /*case let .GroupReferenceEntry(_, _, groupId, _, _, _, _):
+                return .GroupId(groupId)*/
         }
     }
     
@@ -149,7 +149,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                     default:
                         return false
                 }
-            case let .GroupReferenceEntry(lhsIndex, lhsPresentationData, lhsGroupId, lhsMessage, lhsTopPeers, lhsCounters, lhsEditing):
+            /*case let .GroupReferenceEntry(lhsIndex, lhsPresentationData, lhsGroupId, lhsMessage, lhsTopPeers, lhsCounters, lhsEditing):
                 if case let .GroupReferenceEntry(rhsIndex, rhsPresentationData, rhsGroupId, rhsMessage, rhsTopPeers, rhsCounters, rhsEditing) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
@@ -184,7 +184,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                     return true
                 } else {
                     return false
-                }
+                }*/
         }
     }
 }
@@ -222,10 +222,10 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
                 result.append(.PeerEntry(index: offsetPinnedIndex(index, offset: pinnedIndexOffset), presentationData: state.presentationData, message: updatedMessage, readState: updatedCombinedReadState, notificationSettings: notificationSettings, embeddedInterfaceState: embeddedState, peer: peer, summaryInfo: summaryInfo, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, selected: state.selectedPeerIds.contains(index.messageIndex.id.peerId), inputActivities: state.peerInputActivities?.activities[index.messageIndex.id.peerId], isAd: false))
             case let .HoleEntry(hole):
                 result.append(.HoleEntry(hole, theme: state.presentationData.theme))
-            case let .GroupReferenceEntry(groupId, index, message, topPeers, counters):
+            /*case let .GroupReferenceEntry(groupId, index, message, topPeers, counters):
                 if case .chatList = mode {
                     result.append(.GroupReferenceEntry(index: index, presentationData: state.presentationData, groupId: groupId, message: message, topPeers: topPeers, counters: counters, editing: state.editing))
-                }
+                }*/
         }
     }
     if view.laterIndex == nil {

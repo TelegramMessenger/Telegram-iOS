@@ -119,8 +119,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     } else if incoming {
                         hasAvatar = true
                     }
-                case .group:
-                    hasAvatar = true
+                /*case .group:
+                    hasAvatar = true*/
             }
             
             if hasAvatar {

@@ -12,7 +12,6 @@ struct CallListNodeView {
 enum CallListNodeViewTransitionReason {
     case initial
     case interactiveChanges
-    case holeChanges(filledHoleDirections: [MessageIndex: HoleFillDirection], removeHoleDirections: [MessageIndex: HoleFillDirection])
     case reload
     case reloadAnimated
 }
@@ -90,32 +89,6 @@ func preparedCallListNodeViewTransition(from fromView: CallListNodeView?, to toV
                 let _ = options.insert(.LowLatency)
                 let _ = options.insert(.Synchronous)
                 let _ = options.insert(.AnimateCrossfade)
-            case let .holeChanges(filledHoleDirections, removeHoleDirections):
-                if let (_, removeDirection) = removeHoleDirections.first {
-                    switch removeDirection {
-                    case .LowerToUpper:
-                        var holeIndex: MessageIndex?
-                        for (index, _) in filledHoleDirections {
-                            if holeIndex == nil || index < holeIndex! {
-                                holeIndex = index
-                            }
-                        }
-                        
-                        if let holeIndex = holeIndex {
-                            for i in 0 ..< toView.filteredEntries.count {
-                                if toView.filteredEntries[i].index >= holeIndex {
-                                    let index = toView.filteredEntries.count - 1 - (i - 1)
-                                    stationaryItemRange = (index, Int.max)
-                                    break
-                                }
-                            }
-                        }
-                    case .UpperToLower:
-                        break
-                    case .AroundId, .AroundIndex:
-                        break
-                }
-            }
         }
         
         for (index, entry, previousIndex) in indicesAndItems {

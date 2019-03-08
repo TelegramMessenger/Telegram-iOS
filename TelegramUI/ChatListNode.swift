@@ -204,8 +204,8 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
                 }
             case let .HoleEntry(_, theme):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
-            case let .GroupReferenceEntry(index, presentationData, groupId, message, topPeers, counters, editing):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, message: message, topPeers: topPeers, counters: counters), editing: editing, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: true, interaction: nodeInteraction), directionHint: entry.directionHint)
+            /*case let .GroupReferenceEntry(index, presentationData, groupId, message, topPeers, counters, editing):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, message: message, topPeers: topPeers, counters: counters), editing: editing, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: true, interaction: nodeInteraction), directionHint: entry.directionHint)*/
         }
     }
 }
@@ -241,8 +241,8 @@ private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNode
                 }
             case let .HoleEntry(_, theme):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
-            case let .GroupReferenceEntry(index, presentationData, groupId, message, topPeers, counters, editing):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, message: message, topPeers: topPeers, counters: counters), editing: editing, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: true, interaction: nodeInteraction), directionHint: entry.directionHint)
+            /*case let .GroupReferenceEntry(index, presentationData, groupId, message, topPeers, counters, editing):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, message: message, topPeers: topPeers, counters: counters), editing: editing, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: true, interaction: nodeInteraction), directionHint: entry.directionHint)*/
         }
     }
 }
@@ -817,8 +817,8 @@ final class ChatListNode: ListView {
                             } else {
                                 referenceId = .peer(index.messageIndex.id.peerId)
                             }
-                        case let .GroupReferenceEntry(_, _, groupId, _, _, _, _):
-                            referenceId = .group(groupId)
+                        /*case let .GroupReferenceEntry(_, _, groupId, _, _, _, _):
+                            referenceId = .group(groupId)*/
                         default:
                             break
                     }
@@ -831,8 +831,8 @@ final class ChatListNode: ListView {
                             switch fromEntry {
                                 case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _):
                                     itemId = .peer(index.messageIndex.id.peerId)
-                                case let .GroupReferenceEntry(_, _, groupId, _, _, _, _):
-                                    itemId = .group(groupId)
+                                /*case let .GroupReferenceEntry(_, _, groupId, _, _, _, _):
+                                    itemId = .group(groupId)*/
                                 default:
                                     break
                             }

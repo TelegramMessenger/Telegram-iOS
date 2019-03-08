@@ -4,7 +4,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 
-final class FeedGroupingController: ViewController {
+/*final class FeedGroupingController: ViewController {
     private var controllerNode: FeedGroupingControllerNode {
         return self.displayNode as! FeedGroupingControllerNode
     }
@@ -51,3 +51,4 @@ final class FeedGroupingController: ViewController {
     }
 }
 
+*/

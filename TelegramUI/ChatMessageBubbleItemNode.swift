@@ -360,10 +360,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     } else if incoming {
                         hasAvatar = true
                     }
-                case .group:
+                /*case .group:
                     allowFullWidth = true
                     hasAvatar = true
-                    displayAuthorInfo = true
+                    displayAuthorInfo = true*/
             }
             
             if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.source == nil, forwardInfo.author.id.namespace == Namespaces.Peer.CloudUser {

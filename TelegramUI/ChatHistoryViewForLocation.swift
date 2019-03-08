@@ -204,8 +204,8 @@ private func extractAdditionalData(view: MessageHistoryView, chatLocation: ChatL
                                 readStateData[peerId] = ChatHistoryCombinedInitialReadStateData(unreadCount: readState.count, totalState: totalUnreadState, notificationSettings: notificationSettings)
                             }
                         }
-                    case .group:
-                        break
+                    /*case .group:
+                        break*/
                 }
             default:
                 break

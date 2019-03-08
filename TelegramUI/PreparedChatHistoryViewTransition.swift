@@ -55,8 +55,9 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                 }
             case .Reload:
                 stationaryItemRange = (0, Int.max)
-            case let .HoleChanges(filledHoleDirections, removeHoleDirections):
-                if let (_, removeDirection) = removeHoleDirections.first {
+            case .HoleReload:
+                stationaryItemRange = (0, Int.max)
+                /*if let (_, removeDirection) = removeHoleDirections.first {
                     switch removeDirection {
                         case .LowerToUpper:
                             var holeIndex: MessageIndex?
@@ -80,7 +81,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                         case .AroundId, .AroundIndex:
                             break
                     }
-                }
+                }*/
         }
         
         for (index, entry, previousIndex) in mergeResult.indicesAndItems {

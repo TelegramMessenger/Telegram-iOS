@@ -38,8 +38,8 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
             } else {
                 canReply = true
             }
-        case .group:
-            break
+        /*case .group:
+            break*/
     }
     return canReply
 }
@@ -223,8 +223,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                         canPin = true
                     }
                 }
-            case .group:
-                break
+            /*case .group:
+                break*/
         }
     } else {
         canReply = false
