@@ -7296,13 +7296,13 @@ extension Api {
     
     }
     enum StickerSet: TypeConstructorDescription {
-        case stickerSet(flags: Int32, installedDate: Int32?, id: Int64, accessHash: Int64, title: String, shortName: String, count: Int32, hash: Int32)
+        case stickerSet(flags: Int32, installedDate: Int32?, id: Int64, accessHash: Int64, title: String, shortName: String, thumb: Api.PhotoSize?, count: Int32, hash: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .stickerSet(let flags, let installedDate, let id, let accessHash, let title, let shortName, let count, let hash):
+                case .stickerSet(let flags, let installedDate, let id, let accessHash, let title, let shortName, let thumb, let count, let hash):
                     if boxed {
-                        buffer.appendInt32(1434820921)
+                        buffer.appendInt32(1787870391)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(installedDate!, buffer: buffer, boxed: false)}
@@ -7310,6 +7310,7 @@ extension Api {
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
                     serializeString(shortName, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 4) != 0 {thumb!.serialize(buffer, true)}
                     serializeInt32(count, buffer: buffer, boxed: false)
                     serializeInt32(hash, buffer: buffer, boxed: false)
                     break
@@ -7318,8 +7319,8 @@ extension Api {
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .stickerSet(let flags, let installedDate, let id, let accessHash, let title, let shortName, let count, let hash):
-                return ("stickerSet", [("flags", flags), ("installedDate", installedDate), ("id", id), ("accessHash", accessHash), ("title", title), ("shortName", shortName), ("count", count), ("hash", hash)])
+                case .stickerSet(let flags, let installedDate, let id, let accessHash, let title, let shortName, let thumb, let count, let hash):
+                return ("stickerSet", [("flags", flags), ("installedDate", installedDate), ("id", id), ("accessHash", accessHash), ("title", title), ("shortName", shortName), ("thumb", thumb), ("count", count), ("hash", hash)])
     }
     }
     
@@ -7336,20 +7337,25 @@ extension Api {
             _5 = parseString(reader)
             var _6: String?
             _6 = parseString(reader)
-            var _7: Int32?
-            _7 = reader.readInt32()
+            var _7: Api.PhotoSize?
+            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.PhotoSize
+            } }
             var _8: Int32?
             _8 = reader.readInt32()
+            var _9: Int32?
+            _9 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            let _c7 = _7 != nil
+            let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
             let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.StickerSet.stickerSet(flags: _1!, installedDate: _2, id: _3!, accessHash: _4!, title: _5!, shortName: _6!, count: _7!, hash: _8!)
+            let _c9 = _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.StickerSet.stickerSet(flags: _1!, installedDate: _2, id: _3!, accessHash: _4!, title: _5!, shortName: _6!, thumb: _7, count: _8!, hash: _9!)
             }
             else {
                 return nil
@@ -10254,6 +10260,54 @@ extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.ReplyMarkup.replyInlineMarkup(rows: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    enum EmojiKeywordsDifference: TypeConstructorDescription {
+        case emojiKeywordsDifference(fromVersion: Int32, version: Int32, keywords: [Api.EmojiKeyword])
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .emojiKeywordsDifference(let fromVersion, let version, let keywords):
+                    if boxed {
+                        buffer.appendInt32(2147310185)
+                    }
+                    serializeInt32(fromVersion, buffer: buffer, boxed: false)
+                    serializeInt32(version, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(keywords.count))
+                    for item in keywords {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .emojiKeywordsDifference(let fromVersion, let version, let keywords):
+                return ("emojiKeywordsDifference", [("fromVersion", fromVersion), ("version", version), ("keywords", keywords)])
+    }
+    }
+    
+        static func parse_emojiKeywordsDifference(_ reader: BufferReader) -> EmojiKeywordsDifference? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.EmojiKeyword]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.EmojiKeyword.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.EmojiKeywordsDifference.emojiKeywordsDifference(fromVersion: _1!, version: _2!, keywords: _3!)
             }
             else {
                 return nil
@@ -14824,6 +14878,80 @@ extension Api {
         }
         static func parse_inputMessagesFilterContacts(_ reader: BufferReader) -> MessagesFilter? {
             return Api.MessagesFilter.inputMessagesFilterContacts
+        }
+    
+    }
+    enum EmojiKeyword: TypeConstructorDescription {
+        case emojiKeyword(keyword: String, emoticons: [String])
+        case emojiKeywordDeleted(keyword: String, emoticons: [String])
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .emojiKeyword(let keyword, let emoticons):
+                    if boxed {
+                        buffer.appendInt32(-709641735)
+                    }
+                    serializeString(keyword, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(emoticons.count))
+                    for item in emoticons {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    break
+                case .emojiKeywordDeleted(let keyword, let emoticons):
+                    if boxed {
+                        buffer.appendInt32(594408994)
+                    }
+                    serializeString(keyword, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(emoticons.count))
+                    for item in emoticons {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .emojiKeyword(let keyword, let emoticons):
+                return ("emojiKeyword", [("keyword", keyword), ("emoticons", emoticons)])
+                case .emojiKeywordDeleted(let keyword, let emoticons):
+                return ("emojiKeywordDeleted", [("keyword", keyword), ("emoticons", emoticons)])
+    }
+    }
+    
+        static func parse_emojiKeyword(_ reader: BufferReader) -> EmojiKeyword? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: [String]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.EmojiKeyword.emojiKeyword(keyword: _1!, emoticons: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_emojiKeywordDeleted(_ reader: BufferReader) -> EmojiKeyword? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: [String]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.EmojiKeyword.emojiKeywordDeleted(keyword: _1!, emoticons: _2!)
+            }
+            else {
+                return nil
+            }
         }
     
     }
