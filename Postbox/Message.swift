@@ -220,6 +220,21 @@ public struct MessageTags: OptionSet, Sequence, Hashable {
     
     public static let All = MessageTags(rawValue: 0xffffffff)
     
+    public var containsSingleElement: Bool {
+        var hasOne = false
+        for i in 0 ..< 31 {
+            let tag = (self.rawValue >> UInt32(i)) & 1
+            if tag != 0 {
+                if hasOne {
+                    return false
+                } else {
+                    hasOne = true
+                }
+            }
+        }
+        return hasOne
+    }
+    
     public func makeIterator() -> AnyIterator<MessageTags> {
         var index = 0
         return AnyIterator { () -> MessageTags? in
