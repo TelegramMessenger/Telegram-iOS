@@ -7,17 +7,12 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-private struct HistoryPreloadHole: Hashable, Comparable {
-    let index: ChatListIndex
-    let hasUnread: Bool
-    let isMuted: Bool
-    let hole: MessageOfInterestHole
+public struct HistoryPreloadIndex: Comparable {
+    public let index: ChatListIndex
+    public let hasUnread: Bool
+    public let isMuted: Bool
     
-    static func ==(lhs: HistoryPreloadHole, rhs: HistoryPreloadHole) -> Bool {
-        return lhs.index == rhs.index && lhs.hasUnread == rhs.hasUnread && lhs.isMuted == rhs.isMuted && lhs.hole == rhs.hole
-    }
-    
-    static func <(lhs: HistoryPreloadHole, rhs: HistoryPreloadHole) -> Bool {
+    public static func <(lhs: HistoryPreloadIndex, rhs: HistoryPreloadIndex) -> Bool {
         if lhs.isMuted != rhs.isMuted {
             if lhs.isMuted {
                 return false
@@ -34,9 +29,22 @@ private struct HistoryPreloadHole: Hashable, Comparable {
         }
         return lhs.index > rhs.index
     }
+}
+
+private struct HistoryPreloadHole: Hashable, Comparable {
+    let preloadIndex: HistoryPreloadIndex
+    let hole: MessageOfInterestHole
+    
+    static func ==(lhs: HistoryPreloadHole, rhs: HistoryPreloadHole) -> Bool {
+        return lhs.preloadIndex == rhs.preloadIndex && lhs.hole == rhs.hole
+    }
+    
+    static func <(lhs: HistoryPreloadHole, rhs: HistoryPreloadHole) -> Bool {
+        return lhs.preloadIndex < rhs.preloadIndex
+    }
     
     var hashValue: Int {
-        return self.index.hashValue &* 31 &+ self.hole.hashValue
+        return self.preloadIndex.index.hashValue &* 31 &+ self.hole.hashValue
     }
 }
 
@@ -85,10 +93,15 @@ private final class HistoryPreloadViewContext {
     var isMuted: Bool
     let disposable = MetaDisposable()
     var hole: MessageOfInterestHole?
+    var media: [HolesViewMedia] = []
+    
+    var preloadIndex: HistoryPreloadIndex {
+        return HistoryPreloadIndex(index: self.index, hasUnread: self.hasUnread, isMuted: self.isMuted)
+    }
     
     var currentHole: HistoryPreloadHole? {
         if let hole = self.hole {
-            return HistoryPreloadHole(index: self.index, hasUnread: self.hasUnread, isMuted: self.isMuted, hole: hole)
+            return HistoryPreloadHole(preloadIndex: self.preloadIndex, hole: hole)
         } else {
             return nil
         }
@@ -141,6 +154,33 @@ private struct ChatHistoryPreloadIndex {
     let entity: ChatHistoryPreloadEntity
 }
 
+public final class ChatHistoryPreloadMediaItem: Comparable {
+    public let preloadIndex: HistoryPreloadIndex
+    public let media: HolesViewMedia
+    
+    init(preloadIndex: HistoryPreloadIndex, media: HolesViewMedia) {
+        self.preloadIndex = preloadIndex
+        self.media = media
+    }
+    
+    public static func ==(lhs: ChatHistoryPreloadMediaItem, rhs: ChatHistoryPreloadMediaItem) -> Bool {
+        if lhs.preloadIndex != rhs.preloadIndex {
+            return false
+        }
+        if lhs.media != rhs.media {
+            return false
+        }
+        return true
+    }
+    
+    public static func <(lhs: ChatHistoryPreloadMediaItem, rhs: ChatHistoryPreloadMediaItem) -> Bool {
+        if lhs.preloadIndex != rhs.preloadIndex {
+            return lhs.preloadIndex > rhs.preloadIndex
+        }
+        return lhs.media.index < rhs.media.index
+    }
+}
+
 final class ChatHistoryPreloadManager {
     private let queue = Queue()
     
@@ -157,6 +197,12 @@ final class ChatHistoryPreloadManager {
     private var views: [ChatHistoryPreloadEntity: HistoryPreloadViewContext] = [:]
     
     private var entries: [HistoryPreloadEntry] = []
+    
+    private var orderedMediaValue: [ChatHistoryPreloadMediaItem] = []
+    private let orderedMediaPromise = ValuePromise<[ChatHistoryPreloadMediaItem]>([])
+    var orderedMedia: Signal<[ChatHistoryPreloadMediaItem], NoError> {
+        return self.orderedMediaPromise.get()
+    }
     
     init(postbox: Postbox, network: Network, accountPeerId: PeerId, networkState: Signal<AccountNetworkState, NoError>) {
         self.postbox = postbox
@@ -252,11 +298,29 @@ final class ChatHistoryPreloadManager {
                         case let .group(groupId):
                             key = .messageOfInterestHole(location: .group(groupId), namespace: Namespaces.Message.Cloud, count: 60)
                     }
-                    view.disposable.set((self.postbox.combinedView(keys: [key]) |> deliverOn(self.queue)).start(next: { [weak self] next in
+                    view.disposable.set((self.postbox.combinedView(keys: [key])
+                    |> deliverOn(self.queue)).start(next: { [weak self] next in
                         if let strongSelf = self, let value = next.views[key] as? MessageOfInterestHolesView {
                             if let view = strongSelf.views[index.entity] {
                                 let previousHole = view.currentHole
                                 view.hole = value.closestHole
+                                
+                                var mediaUpdated = false
+                                if view.media.count != value.closestLaterMedia.count {
+                                    mediaUpdated = true
+                                } else {
+                                    for i in 0 ..< view.media.count {
+                                        if view.media[i] != value.closestLaterMedia[i] {
+                                            mediaUpdated = true
+                                            break
+                                        }
+                                    }
+                                }
+                                if mediaUpdated {
+                                    view.media = value.closestLaterMedia
+                                    strongSelf.updateMedia()
+                                }
+                                
                                 let updatedHole = view.currentHole
                                 if previousHole != updatedHole {
                                     strongSelf.update(from: previousHole, to: updatedHole)
@@ -266,6 +330,20 @@ final class ChatHistoryPreloadManager {
                     }))
                 }
             }
+        }
+    }
+    
+    private func updateMedia() {
+        var result: [ChatHistoryPreloadMediaItem] = []
+        for (_, view) in self.views {
+            for media in view.media {
+                result.append(ChatHistoryPreloadMediaItem(preloadIndex: view.preloadIndex, media: media))
+            }
+        }
+        result.sort()
+        if result != self.orderedMediaValue {
+            self.orderedMediaValue = result
+            self.orderedMediaPromise.set(result)
         }
     }
     
