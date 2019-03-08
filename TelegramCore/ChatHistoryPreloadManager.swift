@@ -120,33 +120,7 @@ private final class HistoryPreloadViewContext {
 
 private enum ChatHistoryPreloadEntity: Hashable {
     case peer(PeerId)
-    case group(PeerGroupId)
-    
-    static func ==(lhs: ChatHistoryPreloadEntity, rhs: ChatHistoryPreloadEntity) -> Bool {
-        switch lhs {
-            case let .peer(id):
-                if case .peer(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .group(id):
-                if case .group(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case let .peer(id):
-                return id.hashValue
-            case let .group(id):
-                return id.hashValue
-        }
-    }
+    //case group(PeerGroupId)
 }
 
 private struct ChatHistoryPreloadIndex {
@@ -226,11 +200,11 @@ final class ChatHistoryPreloadManager {
                             }
                         }
                         indices.append((ChatHistoryPreloadIndex(index: index, entity: .peer(index.messageIndex.id.peerId)), hasUnread, isMuted))
-                    } else if case let .GroupReferenceEntry(groupId, index, _, _, counters) = entry {
+                    }/* else if case let .GroupReferenceEntry(groupId, index, _, _, counters) = entry {
                         let hasUnread = counters.unreadCount != 0 || counters.unreadMutedCount != 0
                         let isMuted = counters.unreadCount != 0
                         indices.append((ChatHistoryPreloadIndex(index: index, entity: .group(groupId)), hasUnread, isMuted))
-                    }
+                    }*/
                 }
                 
                 strongSelf.update(indices: indices)
@@ -295,8 +269,8 @@ final class ChatHistoryPreloadManager {
                     switch index.entity {
                         case let .peer(peerId):
                             key = .messageOfInterestHole(location: .peer(peerId), namespace: Namespaces.Message.Cloud, count: 60)
-                        case let .group(groupId):
-                            key = .messageOfInterestHole(location: .group(groupId), namespace: Namespaces.Message.Cloud, count: 60)
+                        /*case let .group(groupId):
+                            key = .messageOfInterestHole(location: .group(groupId), namespace: Namespaces.Message.Cloud, count: 60)*/
                     }
                     view.disposable.set((self.postbox.combinedView(keys: [key])
                     |> deliverOn(self.queue)).start(next: { [weak self] next in

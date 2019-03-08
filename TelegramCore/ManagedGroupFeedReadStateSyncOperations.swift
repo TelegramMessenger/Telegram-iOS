@@ -9,7 +9,7 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-private final class ManagedGroupFeedReadStateSyncOperationsHelper {
+/*private final class ManagedGroupFeedReadStateSyncOperationsHelper {
     var operationDisposables: [PeerGroupId: (GroupFeedReadStateSyncOperation, Disposable)] = [:]
     
     func update(entries: [PeerGroupId: GroupFeedReadStateSyncOperation]) -> (disposeOperations: [Disposable], beginOperations: [(PeerGroupId, GroupFeedReadStateSyncOperation, MetaDisposable)]) {
@@ -210,3 +210,4 @@ private func performSyncOperation(postbox: Postbox, network: Network, accountPee
         }
     }
 }
+*/

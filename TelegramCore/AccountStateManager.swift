@@ -630,7 +630,8 @@ public final class AccountStateManager {
                     for id in events.addedIncomingMessageIds {
                         let (messages, notify, _, _) = messagesForNotification(transaction: transaction, id: id, alwaysReturnMessage: false)
                         if !messages.isEmpty {
-                            messageList.append((messages, transaction.getPeerGroupId(messages[0].id.peerId), notify))
+                            messageList.append((messages, nil, notify))
+                            //messageList.append((messages, transaction.getPeerGroupId(messages[0].id.peerId), notify))
                         }
                     }
                     return messageList

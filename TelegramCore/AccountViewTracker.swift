@@ -187,10 +187,10 @@ private func wrappedHistoryViewAdditionalData(chatLocation: ChatLocation, additi
                     result.append(.peerChatState(peerId))
                 }
             }
-        case let .group(groupId):
+        /*case let .group(groupId):
             if result.index(where: { if case .peerGroupState = $0 { return true } else { return false } }) == nil {
                 result.append(.peerGroupState(groupId))
-            }
+            }*/
     }
     return result
 }
@@ -850,9 +850,9 @@ public final class AccountViewTracker {
                     strongSelf.updatePolls(viewId: viewId, messageIds: pollMessageIds, messages: pollMessageDict)
                     if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
                         strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
-                    } else if case .group = chatLocation {
+                    }/* else if case .group = chatLocation {
                         strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
-                    }
+                    }*/
                 }
             }
         }, disposed: { [weak self] viewId in
@@ -865,8 +865,8 @@ public final class AccountViewTracker {
                             if peerId.namespace == Namespaces.Peer.CloudChannel {
                                 strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
                             }
-                        case .group:
-                            strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
+                        /*case .group:
+                            strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)*/
                     }
                 }
             }

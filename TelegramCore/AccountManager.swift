@@ -30,7 +30,6 @@ private var declaredEncodables: Void = {
     declareEncodable(CloudFileMediaResource.self, f: { CloudFileMediaResource(decoder: $0) })
     declareEncodable(ChannelState.self, f: { ChannelState(decoder: $0) })
     declareEncodable(RegularChatState.self, f: { RegularChatState(decoder: $0) })
-    declareEncodable(TelegramPeerGroupState.self, f: { TelegramPeerGroupState(decoder: $0) })
     declareEncodable(InlineBotMessageAttribute.self, f: { InlineBotMessageAttribute(decoder: $0) })
     declareEncodable(TextEntitiesMessageAttribute.self, f: { TextEntitiesMessageAttribute(decoder: $0) })
     declareEncodable(ReplyMessageAttribute.self, f: { ReplyMessageAttribute(decoder: $0) })

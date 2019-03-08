@@ -148,13 +148,9 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
         
         switch dialogs {
             case let .peerDialogs(dialogs, messages, chats, users, _):
-                var channelGroupIds: [PeerId: PeerGroupId] = [:]
                 for chat in chats {
                     if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                         peers.append(groupOrChannel)
-                        if let channel = groupOrChannel as? TelegramChannel, let peerGroupId = channel.peerGroupId {
-                            channelGroupIds[channel.id] = peerGroupId
-                        }
                     }
                 }
                 for user in users {
@@ -176,9 +172,6 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
                     let apiNotificationSettings: Api.PeerNotifySettings
                     switch dialog {
                         case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
-                            if channelGroupIds[peer.peerId] != nil {
-                                continue loop
-                            }
                             apiPeer = peer
                             apiTopMessage = topMessage
                             apiReadInboxMaxId = readInboxMaxId

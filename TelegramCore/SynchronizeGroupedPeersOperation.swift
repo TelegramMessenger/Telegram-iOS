@@ -29,7 +29,7 @@ final class SynchronizeGroupedPeersOperation: PostboxCoding {
     }
 }
 
-public func updatePeerGroupIdInteractively(postbox: Postbox, peerId: PeerId, groupId: PeerGroupId?) -> Signal<Void, NoError> {
+/*public func updatePeerGroupIdInteractively(postbox: Postbox, peerId: PeerId, groupId: PeerGroupId?) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         let previousGroupId = transaction.getPeerGroupId(peerId)
         
@@ -89,3 +89,4 @@ private func addSynchronizeGroupedPeersOperation(transaction: Transaction, group
     
     transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeGroupedPeersOperation(groupId: groupId, initialPeerIds: initialPeerIds))
 }
+*/

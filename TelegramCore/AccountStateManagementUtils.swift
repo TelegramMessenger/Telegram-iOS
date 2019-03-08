@@ -1921,8 +1921,6 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     return result
 }
 
-private var testAddInvalidation = false
-
 private func recordPeerActivityTimestamp(peerId: PeerId, timestamp: Int32, into timestamps: inout [PeerId: Int32]) {
     if let current = timestamps[peerId] {
         if current < timestamp {
@@ -1966,11 +1964,8 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 let peer: Peer? = finalState.state.peers[peerId] ?? transaction.getPeer(peerId)
                 if let peer = peer {
                     var groupId: PeerGroupId?
-                    if let channel = peer as? TelegramChannel {
-                        groupId = channel.peerGroupId
-                    }
                     if groupId == nil {
-                        groupId = transaction.getPeerGroupId(peerId)
+                        //groupId = transaction.getPeerGroupId(peerId)
                     }
                     if let groupId = groupId {
                         addHolesToGroupFeedIds.insert(groupId)
@@ -1982,18 +1977,11 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
         }
     }
     
-    for groupId in addHolesToGroupFeedIds {
+    /*for groupId in addHolesToGroupFeedIds {
         transaction.addFeedHoleFromLatestEntries(groupId: groupId)
         let groupState = (transaction.getPeerGroupState(groupId) as? TelegramPeerGroupState) ?? TelegramPeerGroupState()
         transaction.setPeerGroupState(groupId, state: groupState.withInvalidatedStateIndex())
-    }
-    
-    if !testAddInvalidation {
-        testAddInvalidation = true
-        let groupId = PeerGroupId(rawValue: 1)
-        let groupState = (transaction.getPeerGroupState(groupId) as? TelegramPeerGroupState) ?? TelegramPeerGroupState()
-        transaction.setPeerGroupState(groupId, state: groupState.withInvalidatedStateIndex())
-    }
+    }*/
     
     var addedOperationIncomingMessageIds: [MessageId] = []
     for operation in finalState.state.operations {
@@ -2054,7 +2042,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                                     switch action.action {
                                         case .groupCreated, .channelMigratedFromGroup:
                                             if let hole = transaction.getHole(messageId: MessageId(peerId: chatPeerId, namespace: Namespaces.Message.Cloud, id: id.id - 1)) {
-                                                transaction.fillHole(hole, fillType: HoleFill(complete: true, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), tagMask: nil, messages: [])
+                                                //transaction.fillHole(hole, fillType: HoleFill(complete: true, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), tagMask: nil, messages: [])
                                             }
                                         default:
                                             break
@@ -2149,7 +2137,8 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     recordPeerActivityTimestamp(peerId: messageId.peerId, timestamp: timestamp, into: &peerActivityTimestamps)
                 }
             case let .ReadGroupFeedInbox(groupId, index):
-                transaction.applyGroupFeedReadMaxIndex(groupId: groupId, index: index)
+                break
+                //transaction.applyGroupFeedReadMaxIndex(groupId: groupId, index: index)
             case let .ResetReadState(peerId, namespace, maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):
                 var markedUnreadValue: Bool = false
                 if let markedUnread = markedUnread {

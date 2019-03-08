@@ -31,14 +31,14 @@ private final class HistoryStateValidationContext {
 
 private enum HistoryState {
     case channel(PeerId, ChannelState)
-    case group(PeerGroupId, TelegramPeerGroupState)
+    //case group(PeerGroupId, TelegramPeerGroupState)
     
     var hasInvalidationIndex: Bool {
         switch self {
             case let .channel(_, state):
                 return state.invalidatedPts != nil
-            case let .group(_, state):
-                return state.invalidatedStateIndex != nil
+            /*case let .group(_, state):
+                return state.invalidatedStateIndex != nil*/
         }
     }
     
@@ -66,7 +66,7 @@ private enum HistoryState {
                 } else {
                     return true
                 }
-            case let .group(_, state):
+            /*case let .group(_, state):
                 if let invalidatedStateIndex = state.invalidatedStateIndex {
                     var messageStateIndex: Int32?
                     inner: for attribute in message.attributes {
@@ -86,7 +86,7 @@ private enum HistoryState {
                     return !requiresValidation
                 } else {
                     return true
-                }
+                }*/
         }
     }
     
@@ -94,8 +94,8 @@ private enum HistoryState {
         switch self {
             case let .channel(statePeerId, state):
                 return statePeerId == peerId
-            case .group:
-                return true
+            /*case .group:
+                return true*/
         }
     }
 }
@@ -141,12 +141,12 @@ final class HistoryViewStateValidationContexts {
                         historyState = .channel(peerId, chatState)
                     }
                     break
-                } else if case let .peerGroupState(groupId, groupState) = entry {
+                } /*else if case let .peerGroupState(groupId, groupState) = entry {
                     if let groupState = groupState as? TelegramPeerGroupState {
-                        //historyState = .group(groupId, groupState)
+                        historyState = .group(groupId, groupState)
                     }
                     break
-                }
+                }*/
             }
             
             if let historyState = historyState, historyState.hasInvalidationIndex {
@@ -359,10 +359,9 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                 } else {
                     return .complete()
                 }
-            case let .group(groupId, _):
-                /*feed*/
+            /*case let .group(groupId, _):
                 signal = .single(.notModified)
-                /*let hash = hashForMessages(previousMessages, withChannelIds: true)
+                let hash = hashForMessages(previousMessages, withChannelIds: true)
                 let upperIndex = MessageIndex(previousMessages[previousMessages.count - 1])
                 let minIndex = MessageIndex(previousMessages[0]).predecessor()
                 
@@ -413,19 +412,19 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                     switch historyState {
                                         case .channel:
                                             break
-                                        case let .group(_, groupState):
-                                            attributes.append(PeerGroupMessageStateVersionAttribute(stateIndex: groupState.stateIndex))
+                                        /*case let .group(_, groupState):
+                                            attributes.append(PeerGroupMessageStateVersionAttribute(stateIndex: groupState.stateIndex))*/
                                     }
                                     
                                     storeMessages.append(storeMessage.withUpdatedAttributes(attributes))
                                 }
                             }
                             
-                            if case .group = historyState {
+                            /*if case .group = historyState {
                                 let prevHash = hashForMessages(previousMessages, withChannelIds: true)
                                 let updatedHash = hashForMessages(storeMessages, withChannelIds: true)
                                 print("\(updatedHash) != \(prevHash)")
-                            }
+                            }*/
                             
                             var validMessageIds = Set<MessageId>()
                             for message in storeMessages {
@@ -475,19 +474,19 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                                 switch historyState {
                                                     case .channel:
                                                         break
-                                                    case let .group(_, groupState):
+                                                    /*case let .group(_, groupState):
                                                         for i in (0 ..< attributes.count).reversed() {
                                                             if let _ = attributes[i] as? PeerGroupMessageStateVersionAttribute {
                                                                 attributes.remove(at: i)
                                                             }
                                                         }
-                                                        attributes.append(PeerGroupMessageStateVersionAttribute(stateIndex: groupState.stateIndex))
+                                                        attributes.append(PeerGroupMessageStateVersionAttribute(stateIndex: groupState.stateIndex))*/
                                                 }
                                                 
                                                 var updatedFlags = StoreMessageFlags(currentMessage.flags)
-                                                if case .group = historyState {
+                                                /*if case .group = historyState {
                                                     updatedFlags.insert(.CanBeGroupedIntoFeed)
-                                                }
+                                                }*/
                                                 
                                                 return .update(StoreMessage(id: message.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: updatedFlags, tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                             }
@@ -495,9 +494,9 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                         
                                         if previous[id] == nil {
                                             print("\(id) missing")
-                                            if case let .group(groupId, _) = historyState {
+                                            /*if case let .group(groupId, _) = historyState {
                                                 let _ = transaction.addMessagesToGroupFeedIndex(groupId: groupId, ids: [id])
-                                            }
+                                            }*/
                                         }
                                     } else {
                                         let _ = transaction.addMessages([message], location: .Random)
@@ -510,8 +509,8 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                     switch historyState {
                                         case .channel:
                                             deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [id])
-                                        case let .group(groupId, _):
-                                            transaction.removeMessagesFromGroupFeedIndex(groupId: groupId, ids: [id])
+                                        /*case let .group(groupId, _):
+                                            transaction.removeMessagesFromGroupFeedIndex(groupId: groupId, ids: [id])*/
                                     }
                                 }
                             }
@@ -529,17 +528,17 @@ private func validateBatch(postbox: Postbox, network: Network, accountPeerId: Pe
                                                 if let _ = attributes[i] as? ChannelMessageStateVersionAttribute {
                                                     attributes.remove(at: i)
                                                 }
-                                            case .group:
+                                            /*case .group:
                                                 if let _ = attributes[i] as? PeerGroupMessageStateVersionAttribute {
                                                     attributes.remove(at: i)
-                                                }
+                                                }*/
                                         }
                                     }
                                     switch historyState {
                                         case let .channel(_, channelState):
                                             attributes.append(ChannelMessageStateVersionAttribute(pts: channelState.pts))
-                                        case let .group(_, groupState):
-                                            attributes.append(PeerGroupMessageStateVersionAttribute(stateIndex: groupState.stateIndex))
+                                        /*case let .group(_, groupState):
+                                            attributes.append(PeerGroupMessageStateVersionAttribute(stateIndex: groupState.stateIndex))*/
                                     }
                                     return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                 })

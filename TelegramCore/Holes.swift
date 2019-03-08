@@ -334,7 +334,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     }
                     
                     return withResolvedAssociatedMessages(postbox: postbox, source: source, peers: Dictionary(peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: storeMessages, { transaction, additionalPeers, additionalMessages in
-                        let fillDirection: HoleFillDirection
+                        /*let fillDirection: HoleFillDirection
                         switch direction {
                             case .UpperToLower:
                                 fillDirection = .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)
@@ -350,7 +350,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         if tagMask == .liveLocation {
                             completeFill = false
                         }
-                        transaction.fillMultipleHoles(hole, fillType: HoleFill(complete: completeFill, direction: fillDirection), tagMask: tagMask, messages: storeMessages)
+                        transaction.fillMultipleHoles(hole, fillType: HoleFill(complete: completeFill, direction: fillDirection), tagMask: tagMask, messages: storeMessages)*/
                         let _ = transaction.addMessages(additionalMessages, location: .Random)
                         
                         updatePeers(transaction: transaction, peers: peers + additionalPeers, update: { _, updated -> Peer in
