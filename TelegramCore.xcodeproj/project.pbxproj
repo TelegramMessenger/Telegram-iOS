@@ -30,6 +30,8 @@
 		9F4EEF9F21DCF6E7002C3B33 /* ManagedAppConfigurationUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66621B59BAA00245FD9 /* ManagedAppConfigurationUpdates.swift */; };
 		9F4EEFA021DCF6E7002C3B33 /* SynchronizeAppLogEventsOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66821B5A11100245FD9 /* SynchronizeAppLogEventsOperation.swift */; };
 		9F4EEFA121DCF6E7002C3B33 /* ManagedSynchronizeAppLogEventsOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66A21B5A41C00245FD9 /* ManagedSynchronizeAppLogEventsOperations.swift */; };
+		9F7D42262223FF49007B68BB /* AutodownloadSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD372213120C0012A50B /* AutodownloadSettings.swift */; };
+		9F7D42272223FF49007B68BB /* ManagedAutodownloadSettingsUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD3922131D010012A50B /* ManagedAutodownloadSettingsUpdates.swift */; };
 		9FAA268820D457A300D26CF3 /* RemoteStorageConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EA188120D3D2B1001AEE19 /* RemoteStorageConfiguration.swift */; };
 		9FC8ADA9206BBD000094F7B4 /* SaveSecureIdValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D805206539D000BC3599 /* SaveSecureIdValue.swift */; };
 		9FC8ADAB206BBFF10094F7B4 /* RecentWebSessions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FC8ADAA206BBFF10094F7B4 /* RecentWebSessions.swift */; };
@@ -186,7 +188,6 @@
 		D02ABC811E310E5D00CAE539 /* ManagedCloudChatRemoveMessagesOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02ABC801E310E5D00CAE539 /* ManagedCloudChatRemoveMessagesOperations.swift */; };
 		D02ABC821E310E5D00CAE539 /* ManagedCloudChatRemoveMessagesOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02ABC801E310E5D00CAE539 /* ManagedCloudChatRemoveMessagesOperations.swift */; };
 		D02B199021FB1D520094A764 /* RegisterNotificationToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02B198F21FB1D520094A764 /* RegisterNotificationToken.swift */; };
-		D02B199121FB1D520094A764 /* RegisterNotificationToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02B198F21FB1D520094A764 /* RegisterNotificationToken.swift */; };
 		D02D60A7206BA5F900FEFE1E /* SecureIdValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60A6206BA5F900FEFE1E /* SecureIdValue.swift */; };
 		D02D60A8206BA5F900FEFE1E /* SecureIdValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60A6206BA5F900FEFE1E /* SecureIdValue.swift */; };
 		D02D60AB206BA64100FEFE1E /* VerifySecureIdValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60AA206BA64100FEFE1E /* VerifySecureIdValue.swift */; };
@@ -2563,6 +2564,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9F7D42262223FF49007B68BB /* AutodownloadSettings.swift in Sources */,
+				9F7D42272223FF49007B68BB /* ManagedAutodownloadSettingsUpdates.swift in Sources */,
 				9F153D1021E8E0A200B95D82 /* Wallpaper.swift in Sources */,
 				9F4EEF9E21DCF6E7002C3B33 /* ManagedVoipConfigurationUpdates.swift in Sources */,
 				9F4EEF9F21DCF6E7002C3B33 /* ManagedAppConfigurationUpdates.swift in Sources */,
@@ -2731,7 +2734,6 @@
 				D0448C8F1E22993C005A61A7 /* ProcessSecretChatIncomingDecryptedOperations.swift in Sources */,
 				D093D7F620641A4900BC3599 /* SecureIdPhoneValue.swift in Sources */,
 				D0C26D6D1FE286C3004ABF18 /* FetchChatList.swift in Sources */,
-				D02B199121FB1D520094A764 /* RegisterNotificationToken.swift in Sources */,
 				D073CE6E1DCBCF17007511FD /* ForwardSourceInfoAttribute.swift in Sources */,
 				D093D7FA20641AA500BC3599 /* SecureIdEmailValue.swift in Sources */,
 				D05A32E21E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift in Sources */,
