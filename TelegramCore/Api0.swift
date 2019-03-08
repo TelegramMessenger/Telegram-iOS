@@ -286,7 +286,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1098628881] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageMediaVenue($0) }
     dict[-1494368259] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageMediaContact($0) }
     dict[2002815875] = { return Api.KeyboardButtonRow.parse_keyboardButtonRow($0) }
-    dict[1434820921] = { return Api.StickerSet.parse_stickerSet($0) }
+    dict[1787870391] = { return Api.StickerSet.parse_stickerSet($0) }
     dict[354925740] = { return Api.SecureSecretSettings.parse_secureSecretSettings($0) }
     dict[539045032] = { return Api.photos.Photo.parse_photo($0) }
     dict[-208488460] = { return Api.InputContact.parse_inputPhoneContact($0) }
@@ -418,6 +418,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-200242528] = { return Api.ReplyMarkup.parse_replyKeyboardForceReply($0) }
     dict[889353612] = { return Api.ReplyMarkup.parse_replyKeyboardMarkup($0) }
     dict[1218642516] = { return Api.ReplyMarkup.parse_replyInlineMarkup($0) }
+    dict[2147310185] = { return Api.EmojiKeywordsDifference.parse_emojiKeywordsDifference($0) }
     dict[1493171408] = { return Api.HighScore.parse_highScore($0) }
     dict[-305282981] = { return Api.TopPeer.parse_topPeer($0) }
     dict[986597452] = { return Api.contacts.Link.parse_link($0) }
@@ -587,6 +588,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[364538944] = { return Api.messages.Dialogs.parse_dialogs($0) }
     dict[1910543603] = { return Api.messages.Dialogs.parse_dialogsSlice($0) }
     dict[-253500010] = { return Api.messages.Dialogs.parse_dialogsNotModified($0) }
+    dict[-709641735] = { return Api.EmojiKeyword.parse_emojiKeyword($0) }
+    dict[594408994] = { return Api.EmojiKeyword.parse_emojiKeywordDeleted($0) }
     dict[-290921362] = { return Api.upload.CdnFile.parse_cdnFileReuploadNeeded($0) }
     dict[-1449145777] = { return Api.upload.CdnFile.parse_cdnFile($0) }
     dict[415997816] = { return Api.help.InviteText.parse_inviteText($0) }
@@ -1024,6 +1027,8 @@ struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ReplyMarkup:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.EmojiKeywordsDifference:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.HighScore:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.TopPeer:
@@ -1183,6 +1188,8 @@ struct Api {
             case let _1 as Api.MessagesFilter:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Dialogs:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.EmojiKeyword:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.upload.CdnFile:
                 _1.serialize(buffer, boxed)
