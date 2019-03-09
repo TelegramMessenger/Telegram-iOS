@@ -231,11 +231,11 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
     
     switch chatPresentationInterfaceState.inputMode {
         case .media:
-            if contextPlaceholder == nil && chatPresentationInterfaceState.interfaceState.editMessage == nil && chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0, case .media(.gif, _) = chatPresentationInterfaceState.inputMode {
-                let baseFontSize: CGFloat = max(17.0, chatPresentationInterfaceState.fontSize.baseDisplaySize)
-                
-                contextPlaceholder = NSAttributedString(string: "@gif", font: Font.regular(baseFontSize), textColor: chatPresentationInterfaceState.theme.chat.inputPanel.inputPlaceholderColor)
-            }
+//            if contextPlaceholder == nil && chatPresentationInterfaceState.interfaceState.editMessage == nil && chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0, case .media(.gif, _) = chatPresentationInterfaceState.inputMode {
+//                let baseFontSize: CGFloat = max(17.0, chatPresentationInterfaceState.fontSize.baseDisplaySize)
+//                
+//                contextPlaceholder = NSAttributedString(string: "@gif", font: Font.regular(baseFontSize), textColor: chatPresentationInterfaceState.theme.chat.inputPanel.inputPlaceholderColor)
+//            }
             accessoryItems.append(.keyboard)
             return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
         case .inputButtons:

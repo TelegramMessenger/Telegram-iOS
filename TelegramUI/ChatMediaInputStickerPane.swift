@@ -78,7 +78,7 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
             if isExpanded {
                 var scrollIndex: Int?
                 for i in 0 ..< self.gridNode.items.count {
-                    if let _ = self.gridNode.items[i] as? StickerPaneSearchBarPlaceholderItem {
+                    if let _ = self.gridNode.items[i] as? PaneSearchBarPlaceholderItem {
                         scrollIndex = i
                         break
                     }
@@ -100,10 +100,6 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
             }
         }
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: scrollToItem, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), preloadSize: isVisible ? 300.0 : 0.0, type: .fixed(itemSize: itemSize, fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
-        
-        if false, let scrollToItem = scrollToItem {
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
-        }
         
         transition.updateFrame(node: self.gridNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
         

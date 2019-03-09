@@ -1194,6 +1194,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         if let file = self.media as? TelegramMediaFile, file.isAnimated {
             isAnimated = true
         }
+
+        var actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd = .loopDisablingSound
+        if let message = self.message, message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
+            actionAtEnd = .loop
+        }
         
         if let videoNode = self.videoNode, let context = self.context, (self.automaticPlayback ?? false) && !isAnimated {
             var isHorizontal = false
@@ -1216,7 +1221,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         }
                     }
                     if canPlay {
-                        videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none)
+                        videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: actionAtEnd)
                     }
                 })
             }, (self.playerStatus?.soundEnabled ?? false) && isHorizontal, false, false, self.badgeNode)

@@ -552,7 +552,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     if let strongSelf = self {
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }.updatedInputMode { current in
-                                if case let .media(mode, maybeExpanded) = current, let expanded = maybeExpanded, case .content = expanded  {
+                                if case let .media(mode, maybeExpanded) = current, maybeExpanded != nil  {
                                     return .media(mode: mode, expanded: nil)
                                 }
                                 return current

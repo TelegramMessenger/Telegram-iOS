@@ -8,6 +8,7 @@ struct ChatMediaInputPaneScrollState {
 }
 
 class ChatMediaInputPane: ASDisplayNode {
+    var inputNodeInteraction: ChatMediaInputNodeInteraction?
     var collectionListPanelOffset: CGFloat = 0.0
     
     func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, isVisible: Bool, transition: ContainedViewLayoutTransition) {

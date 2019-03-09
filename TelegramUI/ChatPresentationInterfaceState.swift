@@ -152,9 +152,14 @@ enum ChatMediaInputMode {
     case other
 }
 
-enum ChatMediaInputExpanded {
+enum ChatMediaInputSearchMode {
+    case gif
+    case sticker
+}
+
+enum ChatMediaInputExpanded: Equatable {
     case content
-    case search
+    case search(ChatMediaInputSearchMode)
 }
 
 enum ChatInputMode: Equatable {
