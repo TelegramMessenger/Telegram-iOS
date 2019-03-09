@@ -268,7 +268,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         let media = WallpaperPreviewMedia(content: .file(file, patternColor))
                         mediaAndFlags = (media, [.preferMediaAspectFilled])
                         if let fileSize = file.size {
-                            badge = dataSizeString(fileSize)
+                            badge = dataSizeString(fileSize, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
                         }
                     } else {
                         mediaAndFlags = (file, [])

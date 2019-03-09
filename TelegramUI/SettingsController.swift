@@ -343,7 +343,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                         label = .badge("\(badgeCount)")
                     }
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: "."), nameDisplayOrder: .firstLast, account: account, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, sectionId: self.section, action: {
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: "."), nameDisplayOrder: .firstLast, account: account, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, sectionId: self.section, action: {
                     arguments.switchToAccount(account.id)
                 }, setPeerIdWithRevealedOptions: { lhs, rhs in
                     var lhsAccountId: AccountRecordId?

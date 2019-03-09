@@ -108,7 +108,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.scrubberNode.bufferingStatus = status
     }
     
-    func setFetchStatusSignal(_ fetchStatus: Signal<MediaResourceStatus, NoError>?, strings: PresentationStrings, fileSize: Int?) {
+    func setFetchStatusSignal(_ fetchStatus: Signal<MediaResourceStatus, NoError>?, strings: PresentationStrings, decimalSeparator: String, fileSize: Int?) {
         if let fileSize = fileSize {
             if let fetchStatus = fetchStatus {
                 self.fetchStatusDisposable.set((fetchStatus
@@ -117,9 +117,9 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                         var text: String
                         switch status {
                             case .Remote:
-                                text = dataSizeString(fileSize, forceDecimal: true)
+                                text = dataSizeString(fileSize, forceDecimal: true, decimalSeparator: decimalSeparator)
                             case let .Fetching(_, progress):
-                                text = strings.DownloadingStatus(dataSizeString(Int64(Float(fileSize) * progress), forceDecimal: true), dataSizeString(fileSize, forceDecimal: true)).0
+                                text = strings.DownloadingStatus(dataSizeString(Int64(Float(fileSize) * progress), forceDecimal: true), dataSizeString(fileSize, forceDecimal: true, decimalSeparator: decimalSeparator)).0
                             default:
                                 text = ""
                         }
@@ -128,7 +128,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                     }
                 }))
             } else {
-                self.fileSizeNode.attributedText = NSAttributedString(string: dataSizeString(fileSize, forceDecimal: true), font: textFont, textColor: .white)
+                self.fileSizeNode.attributedText = NSAttributedString(string: dataSizeString(fileSize, forceDecimal: true, decimalSeparator: decimalSeparator), font: textFont, textColor: .white)
             }
         } else {
             self.fileSizeNode.attributedText = nil

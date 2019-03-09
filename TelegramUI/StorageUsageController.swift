@@ -193,7 +193,7 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
     var addedHeader = false
     
     if let cacheStats = cacheStats, case let .result(stats) = cacheStats {
-        entries.append(.immutableSize(presentationData.theme, presentationData.strings.Cache_ServiceFiles, dataSizeString(stats.immutableSize)))
+        entries.append(.immutableSize(presentationData.theme, presentationData.strings.Cache_ServiceFiles, dataSizeString(stats.immutableSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
         
         var peerSizes: Int64 = 0
         var statsByPeerId: [(PeerId, Int64)] = []
@@ -220,7 +220,7 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
         
         let totalSize = Int64(peerSizes + stats.otherSize + stats.cacheSize + stats.tempSize)
         
-        entries.append(.clearAll(presentationData.theme, presentationData.strings.Cache_ClearCache, totalSize > 0 ? dataSizeString(totalSize) : presentationData.strings.Cache_ClearEmpty, totalSize > 0))
+        entries.append(.clearAll(presentationData.theme, presentationData.strings.Cache_ClearCache, totalSize > 0 ? dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) : presentationData.strings.Cache_ClearEmpty, totalSize > 0))
         
         var index: Int32 = 0
         for (peerId, size) in statsByPeerId.sorted(by: { $0.1 > $1.1 }) {
@@ -236,7 +236,7 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
                         chatPeer = mainPeer
                         mainPeer = associatedPeer
                     }
-                    entries.append(.peer(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, mainPeer, chatPeer, dataSizeString(size)))
+                    entries.append(.peer(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, mainPeer, chatPeer, dataSizeString(size, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
                     index += 1
                 }
             }
@@ -374,7 +374,7 @@ func storageUsageController(context: AccountContext, isModal: Bool = false) -> V
                         if filteredSize == 0 {
                             title = presentationData.strings.Cache_ClearNone
                         } else {
-                            title = presentationData.strings.Cache_Clear("\(dataSizeString(filteredSize))").0
+                            title = presentationData.strings.Cache_Clear("\(dataSizeString(filteredSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0
                         }
                         
                         if let item = item as? ActionSheetButtonItem {
@@ -411,7 +411,7 @@ func storageUsageController(context: AccountContext, isModal: Bool = false) -> V
                         let categorySize: Int64 = size
                         totalSize += categorySize
                         let index = itemIndex
-                        items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize), value: true, action: { value in
+                        items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), value: true, action: { value in
                             toggleCheck(categoryId, index)
                         }))
                         itemIndex += 1
@@ -421,14 +421,14 @@ func storageUsageController(context: AccountContext, isModal: Bool = false) -> V
                 if otherSize.1 != 0 {
                     totalSize += otherSize.1
                     let index = itemIndex
-                    items.append(ActionSheetCheckboxItem(title: presentationData.strings.Localization_LanguageOther, label: dataSizeString(otherSize.1), value: true, action: { value in
+                    items.append(ActionSheetCheckboxItem(title: presentationData.strings.Localization_LanguageOther, label: dataSizeString(otherSize.1, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), value: true, action: { value in
                         toggleCheck(nil, index)
                     }))
                     itemIndex += 1
                 }
                 
                 if !items.isEmpty {
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize))").0, action: {
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0, action: {
                         if let statsPromise = statsPromise {
                             let clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
                             
@@ -572,7 +572,7 @@ func storageUsageController(context: AccountContext, isModal: Bool = false) -> V
                             if filteredSize == 0 {
                                 title = presentationData.strings.Cache_ClearNone
                             } else {
-                                title = presentationData.strings.Cache_Clear("\(dataSizeString(filteredSize))").0
+                                title = presentationData.strings.Cache_Clear("\(dataSizeString(filteredSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0
                             }
                             
                             if let item = item as? ActionSheetButtonItem {
@@ -610,7 +610,7 @@ func storageUsageController(context: AccountContext, isModal: Bool = false) -> V
                             totalSize += categorySize
                             if categorySize > 1024 {
                                 let index = itemIndex
-                                items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize), value: true, action: { value in
+                                items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), value: true, action: { value in
                                     toggleCheck(categoryId, index)
                                 }))
                                 itemIndex += 1
@@ -619,7 +619,7 @@ func storageUsageController(context: AccountContext, isModal: Bool = false) -> V
                     }
                     
                     if !items.isEmpty {
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize))").0, action: {
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0, action: {
                             if let statsPromise = statsPromise {
                                 let clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
                                 var clearMediaIds = Set<MediaId>()

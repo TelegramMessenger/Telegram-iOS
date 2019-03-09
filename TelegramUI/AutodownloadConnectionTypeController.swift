@@ -183,13 +183,13 @@ private struct AutomaticDownloadPeers {
     }
 }
 
-private func stringForAutomaticDownloadPeers(strings: PresentationStrings, peers: AutomaticDownloadPeers, category: AutomaticDownloadCategory) -> String {
+private func stringForAutomaticDownloadPeers(strings: PresentationStrings, decimalSeparator: String, peers: AutomaticDownloadPeers, category: AutomaticDownloadCategory) -> String {
     var size: String?
     if var peersSize = peers.size, category == .video || category == .file {
         if peersSize == Int32.max {
             peersSize = 1536 * 1024 * 1024
         }
-        size = autodownloadDataSizeString(Int64(peersSize))
+        size = autodownloadDataSizeString(Int64(peersSize), decimalSeparator: decimalSeparator)
     }
     
     if peers.contacts && peers.otherPrivate && peers.groups && peers.channels {
@@ -261,9 +261,9 @@ private func autodownloadMediaConnectionTypeControllerEntries(presentationData: 
     entries.append(.dataUsageItem(presentationData.theme, presentationData.strings, AutomaticDownloadDataUsage(preset: connection.preset), customPosition, master))
     
     entries.append(.typesHeader(presentationData.theme, presentationData.strings.AutoDownloadSettings_MediaTypes))
-    entries.append(.photos(presentationData.theme, presentationData.strings.AutoDownloadSettings_Photos, stringForAutomaticDownloadPeers(strings: presentationData.strings, peers: photo, category: .photo), master))
-    entries.append(.videos(presentationData.theme, presentationData.strings.AutoDownloadSettings_Videos, stringForAutomaticDownloadPeers(strings: presentationData.strings, peers: video, category: .video), master))
-    entries.append(.files(presentationData.theme, presentationData.strings.AutoDownloadSettings_Files, stringForAutomaticDownloadPeers(strings: presentationData.strings, peers: file, category: .file), master))
+    entries.append(.photos(presentationData.theme, presentationData.strings.AutoDownloadSettings_Photos, stringForAutomaticDownloadPeers(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, peers: photo, category: .photo), master))
+    entries.append(.videos(presentationData.theme, presentationData.strings.AutoDownloadSettings_Videos, stringForAutomaticDownloadPeers(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, peers: video, category: .video), master))
+    entries.append(.files(presentationData.theme, presentationData.strings.AutoDownloadSettings_Files, stringForAutomaticDownloadPeers(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, peers: file, category: .file), master))
     entries.append(.voiceMessagesInfo(presentationData.theme, presentationData.strings.AutoDownloadSettings_VoiceMessagesInfo))
     
     return entries

@@ -9,6 +9,7 @@ public struct PresentationDateTimeFormat: Equatable {
     let timeFormat: PresentationTimeFormat
     let dateFormat: PresentationDateFormat
     let dateSeparator: String
+    let decimalSeparator: String
 }
 
 public struct PresentationVolumeControlStatusBarIcons: Equatable {
@@ -102,8 +103,8 @@ private func volumeControlStatusBarIcons() -> PresentationVolumeControlStatusBar
     return PresentationVolumeControlStatusBarIcons(offIcon: UIImage(bundleImageName: "Components/Volume/VolumeOff")!, halfIcon: UIImage(bundleImageName: "Components/Volume/VolumeHalf")!, fullIcon: UIImage(bundleImageName: "Components/Volume/VolumeFull")!)
 }
 
-private func currentDateTimeFormat() -> PresentationDateTimeFormat {
-    let locale = Locale.current
+private func currentDateTimeFormat(strings: PresentationStrings) -> PresentationDateTimeFormat {
+    let locale = Locale(identifier: strings.baseLanguageCode)
     let dateFormatter = DateFormatter()
     dateFormatter.locale = locale
     dateFormatter.dateStyle = .none
@@ -141,7 +142,9 @@ private func currentDateTimeFormat() -> PresentationDateTimeFormat {
         dateFormat = .dayFirst
     }
     
-    return PresentationDateTimeFormat(timeFormat: timeFormat, dateFormat: dateFormat, dateSeparator: dateSeparator)
+    let decimalSeparator = locale.decimalSeparator ?? "."
+    
+    return PresentationDateTimeFormat(timeFormat: timeFormat, dateFormat: dateFormat, dateSeparator: dateSeparator, decimalSeparator: decimalSeparator)
 }
 
 private func currentPersonNameSortOrder() -> PresentationPersonNameOrder {
@@ -270,7 +273,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager) -
         } else {
             stringsValue = defaultPresentationStrings
         }
-        let dateTimeFormat = currentDateTimeFormat()
+        let dateTimeFormat = currentDateTimeFormat(strings: stringsValue)
         let nameDisplayOrder = contactSettings.nameDisplayOrder
         let nameSortOrder = currentPersonNameSortOrder()
         return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations), automaticMediaDownloadSettings: automaticMediaDownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
@@ -426,7 +429,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationB
                             stringsValue = defaultPresentationStrings
                         }
                         
-                        let dateTimeFormat = currentDateTimeFormat()
+                        let dateTimeFormat = currentDateTimeFormat(strings: stringsValue)
                         let nameDisplayOrder = contactSettings.nameDisplayOrder
                         let nameSortOrder = currentPersonNameSortOrder()
                         
@@ -441,7 +444,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationB
 }
 
 public func defaultPresentationData() -> PresentationData {
-    let dateTimeFormat = currentDateTimeFormat()
+    let dateTimeFormat = currentDateTimeFormat(strings: defaultPresentationStrings)
     let nameDisplayOrder: PresentationPersonNameOrder = .firstLast
     let nameSortOrder = currentPersonNameSortOrder()
     

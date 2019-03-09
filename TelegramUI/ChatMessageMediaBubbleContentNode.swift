@@ -118,7 +118,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     sizeCalculation = .unconstrained
             }
             
-            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData.theme.theme, item.presentationData.strings, item.message, selectedMedia!, automaticDownload, item.associatedData.automaticDownloadPeerType, sizeCalculation, layoutConstants, contentMode)
+            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData.theme.theme, item.presentationData.strings, item.presentationData.dateTimeFormat, item.message, selectedMedia!, automaticDownload, item.associatedData.automaticDownloadPeerType, sizeCalculation, layoutConstants, contentMode)
             
             let forceFullCorners = false
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 7.0, hidesBackground: .emptyWallpaper, forceFullCorners: forceFullCorners, forceAlignment: .none)
