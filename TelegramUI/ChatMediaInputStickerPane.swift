@@ -5,6 +5,48 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
+private func fixGridScrolling(_ gridNode: GridNode) {
+    var searchItemNode: GridItemNode?
+    var nextItemNode: GridItemNode?
+    
+    gridNode.forEachItemNode { itemNode in
+        if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
+            searchItemNode = itemNode
+        } else if searchItemNode != nil && nextItemNode == nil, let itemNode = itemNode as? GridItemNode {
+            nextItemNode = itemNode
+        }
+    }
+    
+    if let searchItemNode = searchItemNode {
+        let contentInset = gridNode.scrollView.contentInset.top
+        let itemFrame = gridNode.convert(searchItemNode.frame, to: gridNode.supernode)
+        if itemFrame.contains(CGPoint(x: 0.0, y: contentInset)) {
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
+            
+            var scrollIndex: Int?
+            if itemFrame.minY + itemFrame.height * 0.6 < contentInset {
+                for i in 0 ..< gridNode.items.count {
+                    if let _ = gridNode.items[i] as? ChatMediaInputStickerGridItem {
+                        scrollIndex = i
+                        break
+                    }
+                }
+            } else {
+                for i in 0 ..< gridNode.items.count {
+                    if let _ = gridNode.items[i] as? PaneSearchBarPlaceholderItem {
+                        scrollIndex = i
+                        break
+                    }
+                }
+            }
+            
+            if let scrollIndex = scrollIndex {
+                gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: GridNodeScrollToItem(index: scrollIndex, position: .top(0.0), transition: transition, directionHint: .up, adjustForSection: true, adjustForTopInset: true), updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, updateOpaqueState: nil, synchronousLoads: false), completion: { _ in })
+            }
+        }
+    }
+}
+
 final class ChatMediaInputStickerPaneOpaqueState {
     let hasLower: Bool
     
@@ -52,8 +94,11 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
             }
         }
         self.gridNode.scrollingCompleted = { [weak self] in
-            if let strongSelf = self, let didScrollPreviousState = strongSelf.didScrollPreviousState {
-                strongSelf.fixPaneScroll(strongSelf, didScrollPreviousState)
+            if let strongSelf = self {
+                if let didScrollPreviousState = strongSelf.didScrollPreviousState {
+                    strongSelf.fixPaneScroll(strongSelf, didScrollPreviousState)
+                }
+                fixGridScrolling(strongSelf.gridNode)
             }
         }
         self.gridNode.scrollView.alwaysBounceVertical = true

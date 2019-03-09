@@ -6,38 +6,18 @@ import TelegramCore
 import SwiftSignalKit
 
 private func fixListScrolling(_ multiplexedNode: MultiplexedVideoNode) {
-    let searchBarHeight: CGFloat = 60.0
+    let searchBarHeight: CGFloat = 56.0
     
-    if multiplexedNode.contentOffset.y > searchBarHeight * 0.6 {
-        
-    } else {
-        
+    let contentOffset = multiplexedNode.contentOffset.y
+    let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
+    
+    if contentOffset < 60.0 {
+        if contentOffset < searchBarHeight * 0.6 {
+            transition.updateBounds(layer: multiplexedNode.layer, bounds: CGRect(origin: CGPoint(), size: multiplexedNode.bounds.size))
+        } else {
+            transition.updateBounds(layer: multiplexedNode.layer, bounds: CGRect(origin: CGPoint(x: 0.0, y: 60.0), size: multiplexedNode.bounds.size))
+        }
     }
-    
-    
-//    var searchItemNode: ListViewItemNode?
-//    var nextItemNode: ListViewItemNode?
-//
-//    listNode.forEachItemNode({ itemNode in
-//        if let itemNode = itemNode as? ChatListSearchItemNode {
-//            searchItemNode = itemNode
-//        } else if searchItemNode != nil && nextItemNode == nil {
-//            nextItemNode = itemNode as? ListViewItemNode
-//        }
-//    })
-//
-//    if let searchItemNode = searchItemNode {
-//        let itemFrame = searchItemNode.apparentFrame
-//        if itemFrame.contains(CGPoint(x: 0.0, y: listNode.insets.top)) {
-//            if itemFrame.minY + itemFrame.height * 0.6 < listNode.insets.top {
-//                if let nextItemNode = nextItemNode {
-//                    listNode.ensureItemNodeVisibleAtTopInset(nextItemNode)
-//                }
-//            } else {
-//                listNode.ensureItemNodeVisibleAtTopInset(searchItemNode)
-//            }
-//        }
-//    }
 }
 
 final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
@@ -203,7 +183,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
                 }
                 
                 if let multiplexedNode = strongSelf.multiplexedNode {
-                    fixListScrolling(strongSelf.multiplexedNode)
+                    fixListScrolling(multiplexedNode)
                 }
             }
         }
