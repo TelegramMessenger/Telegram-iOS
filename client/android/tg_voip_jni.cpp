@@ -160,7 +160,7 @@ namespace tgvoip {
 				fclose(f);
 			}
 		}
-		if(video::VideoRendererAndroid::availableDecoders.empty() || video::VideoSourceAndroid::availableEncoders.empty()){
+		/*if(video::VideoRendererAndroid::availableDecoders.empty() || video::VideoSourceAndroid::availableEncoders.empty()){
 			video::VideoRendererAndroid::availableDecoders.clear();
 			video::VideoSourceAndroid::availableEncoders.clear();
 			jmethodID getCodecsMethod=env->GetStaticMethodID(jniUtilitiesClass, "getSupportedVideoCodecs", "()[[Ljava/lang/String;");
@@ -181,7 +181,7 @@ namespace tgvoip {
 			}
 			jmethodID getMaxResolutionMethod=env->GetStaticMethodID(jniUtilitiesClass, "getMaxVideoResolution", "()I");
 			video::VideoRendererAndroid::maxResolution=env->CallStaticIntMethod(jniUtilitiesClass, getMaxResolutionMethod);
-		}
+		}*/
 		return (jlong)(intptr_t)cntrlr;
 	}
 
@@ -293,9 +293,6 @@ namespace tgvoip {
 		if(statsDumpPath){
 			cfg.statsDumpFilePath=jni::JavaStringToStdString(env, statsDumpPath);
 		}
-
-		// remove before push
-		cfg.enableVideoReceive=cfg.enableVideoSend=true;
 
 		((VoIPController*)(intptr_t)inst)->SetConfig(cfg);
 	}
@@ -615,8 +612,8 @@ extern "C" void tgvoipRegisterNatives(JNIEnv* env){
 			{"nativeRequestCallUpgrade", "(J)V", (void*)&tgvoip::VoIPController_nativeRequestCallUpgrade},
 			{"nativeNeedRate", "(J)Z", (void*)&tgvoip::VoIPController_nativeNeedRate},
 			{"getConnectionMaxLayer", "()I", (void*)&tgvoip::VoIPController_getConnectionMaxLayer},
-			{"nativeSetVideoSource", "(JJ)V", (void*)&tgvoip::VoIPController_nativeSetVideoSource},
-			{"nativeSetVideoRenderer", "(JJ)V", (void*)&tgvoip::VoIPController_nativeSetVideoRenderer}
+			//{"nativeSetVideoSource", "(JJ)V", (void*)&tgvoip::VoIPController_nativeSetVideoSource},
+			//{"nativeSetVideoRenderer", "(JJ)V", (void*)&tgvoip::VoIPController_nativeSetVideoRenderer}
 	};
 	env->RegisterNatives(controller, controllerMethods, sizeof(controllerMethods)/sizeof(JNINativeMethod));
 
