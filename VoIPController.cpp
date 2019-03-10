@@ -1308,10 +1308,20 @@ void VoIPController::WritePacketHeader(uint32_t pseq, BufferOutputStream *s, uns
 		s->WriteInt32(pseq);
 		s->WriteInt32(acks);
 		MutexGuard m(queuedPacketsMutex);
+		unsigned char flags;
 		if(currentExtras.empty()){
-			s->WriteByte(0);
+			flags=0;
 		}else{
-			s->WriteByte(XPFLAG_HAS_EXTRA);
+			flags=XPFLAG_HAS_EXTRA;
+		}
+
+		shared_ptr<Stream> videoStream=GetStreamByType(STREAM_TYPE_VIDEO, false);
+		if(videoStream && videoStream->enabled)
+			flags |= XPFLAG_HAS_RECV_TS;
+
+		s->WriteByte(flags);
+
+		if(!currentExtras.empty()){
 			s->WriteByte(static_cast<unsigned char>(currentExtras.size()));
 			for(vector<UnacknowledgedExtraData>::iterator x=currentExtras.begin(); x!=currentExtras.end(); ++x){
 				LOGV("Writing extra into header: type %u, length %lu", x->type, x->data.Length());
@@ -1322,6 +1332,9 @@ void VoIPController::WritePacketHeader(uint32_t pseq, BufferOutputStream *s, uns
 				if(x->firstContainingSeq==0)
 					x->firstContainingSeq=pseq;
 			}
+		}
+		if(videoStream && videoStream->enabled){
+			s->WriteInt32((uint32_t)((lastRecvPacketTime-connectionInitTime)*1000.0));
 		}
 	}else{
 		if(state==STATE_WAIT_INIT || state==STATE_WAIT_INIT_ACK){
@@ -1412,10 +1425,13 @@ void VoIPController::WritePacketHeader(uint32_t pseq, BufferOutputStream *s, uns
 			pseq,
 			0,
 			GetCurrentTime(),
-			0
+			0,
+			type,
+			length
 	});
-	while(recentOutgoingPackets.size()>MAX_RECENT_PACKETS)
+	while(recentOutgoingPackets.size()>MAX_RECENT_PACKETS){
 		recentOutgoingPackets.erase(recentOutgoingPackets.begin());
+	}
 	lastSentSeq=pseq;
 	//LOGI("packet header size %d", s->GetLength());
 }
@@ -1728,12 +1744,19 @@ void VoIPController::RunRecvThread(){
 }
 
 bool VoIPController::WasOutgoingPacketAcknowledged(uint32_t seq){
+	RecentOutgoingPacket* pkt=GetRecentOutgoingPacket(seq);
+	if(!pkt)
+		return false;
+	return pkt->ackTime!=0.0;
+}
+
+VoIPController::RecentOutgoingPacket *VoIPController::GetRecentOutgoingPacket(uint32_t seq){
 	for(RecentOutgoingPacket& opkt:recentOutgoingPackets){
-		if(opkt.seq==seq && opkt.ackTime!=0.0){
-			return true;
+		if(opkt.seq==seq){
+			return &opkt;
 		}
 	}
-	return false;
+	return NULL;
 }
 
 void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint& srcEndpoint){
@@ -2045,17 +2068,11 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 
 		return;
 	}
+	bool didAckNewPackets=false;
+	unsigned int newlyAckedVideoBytes=0;
 	if(seqgt(ackId, lastRemoteAckSeq)){
-		//uint32_t diff=ackId-lastRemoteAckSeq;
-		/*if(diff>31){
-			memset(remoteAcks, 0, 32*sizeof(double));
-		}else{
-			memmove(&remoteAcks[diff], remoteAcks, (32-diff)*sizeof(double));
-			if(diff>1){
-				memset(remoteAcks, 0, diff*sizeof(double));
-			}
-			remoteAcks[0]=GetCurrentTime();
-		}*/
+		didAckNewPackets=true;
+
 		MutexGuard _m(queuedPacketsMutex);
 		if(waitingForAcks && lastRemoteAckSeq>=firstSentPing){
 			rttHistory.Reset();
@@ -2128,8 +2145,10 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			MutexGuard m(sentVideoFramesMutex);
 			for(SentVideoFrame& f:sentVideoFrames){
 				for(vector<uint32_t>::iterator s=f.unacknowledgedPackets.begin(); s!=f.unacknowledgedPackets.end();){
-					if(WasOutgoingPacketAcknowledged(*s)){
+					RecentOutgoingPacket* opkt=GetRecentOutgoingPacket(*s);
+					if(opkt && opkt->ackTime!=0.0){
 						s=f.unacknowledgedPackets.erase(s);
+						newlyAckedVideoBytes+=opkt->size;
 					}else{
 						++s;
 					}
@@ -2137,13 +2156,14 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			}
 			bool first=true;
 			for(vector<SentVideoFrame>::iterator f=sentVideoFrames.begin();f!=sentVideoFrames.end();){
-				if(f->unacknowledgedPackets.empty()){
-					LOGV("Video frame %u was acknowledged", f->num);
+				if(f->unacknowledgedPackets.empty() && f->fragmentsInQueue==0){
+					//LOGV("Video frame %u was acknowledged", f->num);
 					if(first){
 						f=sentVideoFrames.erase(f);
 						continue;
 					}else{
-						LOGE("!!!!!!!!!!!!!!11 VIDEO FRAME LOSS DETECTED [1]");
+						LOGE("!!!!!!!!!!!!!!11 VIDEO FRAME LOSS DETECTED [1] %u of %u fragments", sentVideoFrames[0].unacknowledgedPackets.size(), sentVideoFrames[0].fragmentCount);
+						videoPacketLossCount++;
 						videoKeyframeRequested=true;
 						videoSource->RequestKeyFrame();
 						break;
@@ -2151,7 +2171,8 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 				}else if(first){
 					first=false;
 				}else if(!first && f->unacknowledgedPackets.size()<f->fragmentCount){
-					LOGE("!!!!!!!!!!!!!!11 VIDEO FRAME LOSS DETECTED [2]");
+					LOGE("!!!!!!!!!!!!!!11 VIDEO FRAME LOSS DETECTED [2] %u of %u fragments", f->unacknowledgedPackets.size(), f->fragmentCount);
+					videoPacketLossCount++;
 					videoKeyframeRequested=true;
 					videoSource->RequestKeyFrame();
 					break;
@@ -2179,6 +2200,23 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			Buffer xbuffer(extraLen);
 			in.ReadBytes(*xbuffer, extraLen);
 			ProcessExtraData(xbuffer);
+		}
+	}
+
+	if(pflags & XPFLAG_HAS_RECV_TS){
+		uint32_t recvTS=static_cast<uint32_t>(in.ReadInt32());
+		if(didAckNewPackets){
+			//LOGV("recv ts %u", recvTS);
+            for(RecentOutgoingPacket& opkt:recentOutgoingPackets){
+            	if(opkt.seq==lastRemoteAckSeq){
+                    float sendTime=(float)(opkt.sendTime-connectionInitTime);
+                    float recvTime=(float)recvTS/1000.0f;
+                    float oneWayDelay=recvTime-sendTime;
+                    //LOGV("one-way delay: %f", oneWayDelay);
+                    videoCongestionControl.ProcessAcks(oneWayDelay, newlyAckedVideoBytes, videoPacketLossCount, rttHistory.Average(5));
+            		break;
+            	}
+            }
 		}
 	}
 
@@ -2412,7 +2450,7 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 			streamID&=0x3F;
 			uint16_t sdlen=(uint16_t) (flags & STREAM_DATA_FLAG_LEN16 ? in.ReadInt16() : in.ReadByte());
 			uint32_t pts=(uint32_t) in.ReadInt32();
-			unsigned char fragmentCount=0;
+			unsigned char fragmentCount=1;
 			unsigned char fragmentIndex=0;
 			//LOGD("stream data, pts=%d, len=%d, rem=%d", pts, sdlen, in.Remaining());
 			audioTimestampIn=pts;
@@ -3233,6 +3271,35 @@ void VoIPController::ResetEndpointPingStats(){
 
 #pragma mark - Video
 
+int VoIPController::GetVideoResolutionForCurrentBitrate(){
+	shared_ptr<Stream> stm=GetStreamByType(STREAM_TYPE_VIDEO, true);
+	if(!stm)
+		return INIT_VIDEO_RES_NONE;
+
+	int resolutionFromBitrate=INIT_VIDEO_RES_1080;
+	// TODO: probably move this to server config
+	if(stm->codec==CODEC_AVC || stm->codec==CODEC_VP8){
+		if(currentVideoBitrate>400000){
+			resolutionFromBitrate=INIT_VIDEO_RES_720;
+		}else if(currentVideoBitrate>250000){
+			resolutionFromBitrate=INIT_VIDEO_RES_480;
+		}else{
+			resolutionFromBitrate=INIT_VIDEO_RES_360;
+		}
+	}else if(stm->codec==CODEC_HEVC || stm->codec==CODEC_VP9){
+		if(currentVideoBitrate>400000){
+			resolutionFromBitrate=INIT_VIDEO_RES_1080;
+		}else if(currentVideoBitrate>250000){
+			resolutionFromBitrate=INIT_VIDEO_RES_720;
+		}else if(currentVideoBitrate>100000){
+			resolutionFromBitrate=INIT_VIDEO_RES_480;
+		}else{
+			resolutionFromBitrate=INIT_VIDEO_RES_360;
+		}
+	}
+	return min(peerMaxVideoResolution, resolutionFromBitrate);
+}
+
 void VoIPController::SetVideoSource(video::VideoSource *source){
 	if(videoSource){
 		videoSource->Stop();
@@ -3240,14 +3307,22 @@ void VoIPController::SetVideoSource(video::VideoSource *source){
 	}
 	videoSource=source;
 	shared_ptr<Stream> stm=GetStreamByType(STREAM_TYPE_VIDEO, true);
+	if(!stm){
+		LOGE("Can't set video source when there is no outgoing video stream");
+		return;
+	}
 	if(videoSource){
 		if(!stm->enabled){
 			stm->enabled=true;
 			SendStreamFlags(*stm);
 		}
-		videoSource->Reset(stm->codec, min(peerMaxVideoResolution, INIT_VIDEO_RES_1080));
+		uint32_t bitrate=videoCongestionControl.GetBitrate();
+		currentVideoBitrate=bitrate;
+		videoSource->SetBitrate(bitrate);
+		videoSource->Reset(stm->codec, stm->resolution=GetVideoResolutionForCurrentBitrate());
 		videoSource->Start();
 		videoSource->SetCallback(bind(&VoIPController::SendVideoFrame, this, placeholders::_1, placeholders::_2));
+		lastVideoResolutionChangeTime=GetCurrentTime();
 	}else{
 		if(stm->enabled){
 			stm->enabled=false;
@@ -3269,15 +3344,45 @@ void VoIPController::SetVideoCodecSpecificData(const std::vector<Buffer>& data){
 }
 
 void VoIPController::SendVideoFrame(const Buffer &frame, uint32_t flags){
-	LOGI("Send video frame %u flags %u", (unsigned int)frame.Length(), flags);
+	//LOGI("Send video frame %u flags %u", (unsigned int)frame.Length(), flags);
 	shared_ptr<Stream> stm=GetStreamByType(STREAM_TYPE_VIDEO, true);
 	if(stm){
 		if(firstVideoFrameTime==0.0)
 			firstVideoFrameTime=GetCurrentTime();
 
+		videoCongestionControl.UpdateMediaRate(static_cast<uint32_t>(frame.Length()));
+		uint32_t bitrate=videoCongestionControl.GetBitrate();
+		if(bitrate!=currentVideoBitrate){
+			currentVideoBitrate=bitrate;
+			LOGD("Setting video bitrate to %u", bitrate);
+			videoSource->SetBitrate(bitrate);
+
+			int resolutionFromBitrate=GetVideoResolutionForCurrentBitrate();
+			if(resolutionFromBitrate!=stm->resolution && GetCurrentTime()-lastVideoResolutionChangeTime>3.0){
+				LOGI("Changing video resolution: %d -> %d", stm->resolution, resolutionFromBitrate);
+				stm->resolution=resolutionFromBitrate;
+				messageThread.Post([this, stm, resolutionFromBitrate]{
+    				videoSource->Reset(stm->codec, resolutionFromBitrate);
+    				stm->csdIsValid=false;
+				});
+				lastVideoResolutionChangeTime=GetCurrentTime();
+				return;
+			}
+		}
+
 		if(videoKeyframeRequested){
 			if(flags & VIDEO_FRAME_FLAG_KEYFRAME){
-					sentVideoFrames.clear();
+				for(SentVideoFrame& f:sentVideoFrames){
+					if(!f.unacknowledgedPackets.empty()){
+						for(uint32_t& pseq:f.unacknowledgedPackets){
+							RecentOutgoingPacket* opkt=GetRecentOutgoingPacket(pseq);
+							if(opkt){
+								videoCongestionControl.ProcessPacketLost(opkt->size);
+							}
+						}
+					}
+				}
+				sentVideoFrames.clear();
 				videoKeyframeRequested=false;
 			}else{
 				LOGV("Dropping input video frame waiting for key frame");
@@ -3304,6 +3409,7 @@ void VoIPController::SendVideoFrame(const Buffer &frame, uint32_t flags){
 		SentVideoFrame sentFrame;
 		sentFrame.num=pts;
 		sentFrame.fragmentCount=static_cast<uint32_t>(segmentCount);
+		sentFrame.fragmentsInQueue=0;//static_cast<uint32_t>(segmentCount);
 		for(size_t seg=0;seg<segmentCount;seg++){
 			BufferOutputStream pkt(1500);
 			size_t offset=seg*1024;
@@ -3325,7 +3431,6 @@ void VoIPController::SendVideoFrame(const Buffer &frame, uint32_t flags){
 			}
 			//LOGV("Sending segment %u of %u", (unsigned int)seg, (unsigned int)segmentCount);
 			pkt.WriteBytes(frame, offset, len);
-			unsentStreamPackets++;
 
 			uint32_t seq=GenerateOutSeq();
 			PendingOutgoingPacket p{
@@ -3335,7 +3440,9 @@ void VoIPController::SendVideoFrame(const Buffer &frame, uint32_t flags){
 					/*.data=*/Buffer(move(pkt)),
 					/*.endpoint=*/0,
 			};
+			unsentStreamPackets++;
 			SendOrEnqueuePacket(move(p));
+			videoCongestionControl.ProcessPacketSent(static_cast<unsigned int>(pkt.GetLength()));
 			sentFrame.unacknowledgedPackets.push_back(seq);
 		}
 		MutexGuard m(sentVideoFramesMutex);
@@ -3595,25 +3702,15 @@ void VoIPController::UpdateCongestion(){
 		}
 		
 		if(avgSendLossCount>0.08){
-			encoder->SetPacketLoss(40);
 			extraEcLevel=4;
-		}else if(avgSendLossCount>0.075){
-			encoder->SetPacketLoss(35);
-			extraEcLevel=3;
 		}else if(avgSendLossCount>0.05){
-			encoder->SetPacketLoss(30);
 			extraEcLevel=3;
-		}else if(avgSendLossCount>0.03){
-			encoder->SetPacketLoss(25);
-			extraEcLevel=2;
 		}else if(avgSendLossCount>0.02){
-			encoder->SetPacketLoss(20);
 			extraEcLevel=2;
-		}else if(avgSendLossCount>0.01){
-			encoder->SetPacketLoss(17);
 		}else{
-			encoder->SetPacketLoss(15);
+			extraEcLevel=0;
 		}
+		encoder->SetPacketLoss((int)(avgSendLossCount*100.0));
 		if(avgSendLossCount>rateMaxAcceptableSendLoss)
 			needRate=true;
 

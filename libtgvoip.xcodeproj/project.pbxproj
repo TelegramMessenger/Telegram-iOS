@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		69015D941E9D848700AC9763 /* NetworkSocket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69015D921E9D848700AC9763 /* NetworkSocket.cpp */; };
 		6915307B1E6B5BAB004F643F /* logging.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6915307A1E6B5BAB004F643F /* logging.cpp */; };
+		6929CD102233ED81009B7378 /* PrivateDefines.h in Headers */ = {isa = PBXBuildFile; fileRef = 6929CD0F2233ED81009B7378 /* PrivateDefines.h */; };
 		692AB8CB1E6759DD00706ACC /* AudioInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8881E6759DD00706ACC /* AudioInput.cpp */; };
 		692AB8CD1E6759DD00706ACC /* AudioOutput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB88A1E6759DD00706ACC /* AudioOutput.cpp */; };
 		692AB8CF1E6759DD00706ACC /* BlockingQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB88C1E6759DD00706ACC /* BlockingQueue.cpp */; };
@@ -310,6 +311,8 @@
 		69960A051EF85C2900F9D091 /* DarwinSpecific.mm in Sources */ = {isa = PBXBuildFile; fileRef = 69960A031EF85C2900F9D091 /* DarwinSpecific.mm */; };
 		69986177209526D400B68BEC /* Buffers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69986175209526D400B68BEC /* Buffers.cpp */; };
 		6998617B2095292A00B68BEC /* PacketReassembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 699861792095292900B68BEC /* PacketReassembler.cpp */; };
+		69B607D422318BBE00ED7D94 /* ScreamCongestionController.h in Headers */ = {isa = PBXBuildFile; fileRef = 69B607D222318BBD00ED7D94 /* ScreamCongestionController.h */; };
+		69B607D522318BBE00ED7D94 /* ScreamCongestionController.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69B607D322318BBD00ED7D94 /* ScreamCongestionController.cpp */; };
 		69DD8D02218CD401001E8140 /* VideoRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69DD8CFE218CD400001E8140 /* VideoRenderer.cpp */; };
 		69DD8D03218CD401001E8140 /* VideoSource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69DD8CFF218CD400001E8140 /* VideoSource.cpp */; };
 		69E357B020F88955002E163B /* AudioIO.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69E357A720F88954002E163B /* AudioIO.cpp */; };
@@ -318,9 +321,9 @@
 		69F7914D2220A41000FE53C4 /* TGVVideoSource.mm in Sources */ = {isa = PBXBuildFile; fileRef = 69F7914B2220A41000FE53C4 /* TGVVideoSource.mm */; };
 		69F791502220A76500FE53C4 /* TGVVideoRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = 69F7914E2220A76500FE53C4 /* TGVVideoRenderer.h */; };
 		69F791512220A76500FE53C4 /* TGVVideoRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 69F7914F2220A76500FE53C4 /* TGVVideoRenderer.mm */; };
-		69F791542221F16C00FE53C4 /* VideoToolboxEncoderSource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69F791522221F16C00FE53C4 /* VideoToolboxEncoderSource.cpp */; };
+		69F791542221F16C00FE53C4 /* VideoToolboxEncoderSource.mm in Sources */ = {isa = PBXBuildFile; fileRef = 69F791522221F16C00FE53C4 /* VideoToolboxEncoderSource.mm */; };
 		69F791552221F16C00FE53C4 /* VideoToolboxEncoderSource.h in Headers */ = {isa = PBXBuildFile; fileRef = 69F791532221F16C00FE53C4 /* VideoToolboxEncoderSource.h */; };
-		69F791582222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69F791562222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.cpp */; };
+		69F791582222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 69F791562222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.mm */; };
 		69F791592222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = 69F791572222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.h */; };
 		69FB0B2D20F6860E00827817 /* MessageThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69FB0B2420F6860D00827817 /* MessageThread.cpp */; };
 /* End PBXBuildFile section */
@@ -381,6 +384,7 @@
 		69015D921E9D848700AC9763 /* NetworkSocket.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkSocket.cpp; sourceTree = "<group>"; };
 		69015D931E9D848700AC9763 /* NetworkSocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetworkSocket.h; sourceTree = "<group>"; };
 		6915307A1E6B5BAB004F643F /* logging.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = logging.cpp; sourceTree = "<group>"; };
+		6929CD0F2233ED81009B7378 /* PrivateDefines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PrivateDefines.h; sourceTree = "<group>"; };
 		692AB8881E6759DD00706ACC /* AudioInput.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AudioInput.cpp; sourceTree = "<group>"; };
 		692AB8891E6759DD00706ACC /* AudioInput.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioInput.h; sourceTree = "<group>"; };
 		692AB88A1E6759DD00706ACC /* AudioOutput.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AudioOutput.cpp; sourceTree = "<group>"; };
@@ -1025,6 +1029,8 @@
 		69986176209526D400B68BEC /* Buffers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Buffers.h; sourceTree = "<group>"; };
 		699861792095292900B68BEC /* PacketReassembler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PacketReassembler.cpp; sourceTree = "<group>"; };
 		6998617A2095292A00B68BEC /* PacketReassembler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PacketReassembler.h; sourceTree = "<group>"; };
+		69B607D222318BBD00ED7D94 /* ScreamCongestionController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ScreamCongestionController.h; sourceTree = "<group>"; };
+		69B607D322318BBD00ED7D94 /* ScreamCongestionController.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ScreamCongestionController.cpp; sourceTree = "<group>"; };
 		69DD8CFD218CD400001E8140 /* VideoRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VideoRenderer.h; sourceTree = "<group>"; };
 		69DD8CFE218CD400001E8140 /* VideoRenderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VideoRenderer.cpp; sourceTree = "<group>"; };
 		69DD8CFF218CD400001E8140 /* VideoSource.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VideoSource.cpp; sourceTree = "<group>"; };
@@ -1036,9 +1042,9 @@
 		69F7914B2220A41000FE53C4 /* TGVVideoSource.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = TGVVideoSource.mm; sourceTree = "<group>"; };
 		69F7914E2220A76500FE53C4 /* TGVVideoRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGVVideoRenderer.h; sourceTree = "<group>"; };
 		69F7914F2220A76500FE53C4 /* TGVVideoRenderer.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = TGVVideoRenderer.mm; sourceTree = "<group>"; };
-		69F791522221F16C00FE53C4 /* VideoToolboxEncoderSource.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = VideoToolboxEncoderSource.cpp; sourceTree = "<group>"; };
+		69F791522221F16C00FE53C4 /* VideoToolboxEncoderSource.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = VideoToolboxEncoderSource.mm; sourceTree = "<group>"; };
 		69F791532221F16C00FE53C4 /* VideoToolboxEncoderSource.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VideoToolboxEncoderSource.h; sourceTree = "<group>"; };
-		69F791562222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SampleBufferDisplayLayerRenderer.cpp; sourceTree = "<group>"; };
+		69F791562222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = SampleBufferDisplayLayerRenderer.mm; sourceTree = "<group>"; };
 		69F791572222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SampleBufferDisplayLayerRenderer.h; sourceTree = "<group>"; };
 		69F842361E67540700C110F7 /* libtgvoip.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = libtgvoip.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		69FB0B2420F6860D00827817 /* MessageThread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MessageThread.cpp; sourceTree = "<group>"; };
@@ -1100,6 +1106,7 @@
 				692AB8B01E6759DD00706ACC /* OpusEncoder.h */,
 				699861792095292900B68BEC /* PacketReassembler.cpp */,
 				6998617A2095292A00B68BEC /* PacketReassembler.h */,
+				6929CD0F2233ED81009B7378 /* PrivateDefines.h */,
 				692AB8B11E6759DD00706ACC /* os */,
 				692AB8C61E6759DD00706ACC /* threading.h */,
 				692AB8C71E6759DD00706ACC /* VoIPController.cpp */,
@@ -1144,9 +1151,9 @@
 				69F7914B2220A41000FE53C4 /* TGVVideoSource.mm */,
 				69F7914E2220A76500FE53C4 /* TGVVideoRenderer.h */,
 				69F7914F2220A76500FE53C4 /* TGVVideoRenderer.mm */,
-				69F791562222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.cpp */,
+				69F791562222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.mm */,
 				69F791572222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.h */,
-				69F791522221F16C00FE53C4 /* VideoToolboxEncoderSource.cpp */,
+				69F791522221F16C00FE53C4 /* VideoToolboxEncoderSource.mm */,
 				69F791532221F16C00FE53C4 /* VideoToolboxEncoderSource.h */,
 				692AB8BF1E6759DD00706ACC /* AudioInputAudioUnit.h */,
 				692AB8C01E6759DD00706ACC /* AudioOutputAudioUnit.cpp */,
@@ -2322,6 +2329,8 @@
 		69DD8CFC218CD400001E8140 /* video */ = {
 			isa = PBXGroup;
 			children = (
+				69B607D322318BBD00ED7D94 /* ScreamCongestionController.cpp */,
+				69B607D222318BBD00ED7D94 /* ScreamCongestionController.h */,
 				69DD8CFD218CD400001E8140 /* VideoRenderer.h */,
 				69DD8CFE218CD400001E8140 /* VideoRenderer.cpp */,
 				69DD8CFF218CD400001E8140 /* VideoSource.cpp */,
@@ -2360,6 +2369,8 @@
 				692AB9031E6759DD00706ACC /* VoIPController.h in Headers */,
 				69F791592222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.h in Headers */,
 				69F791502220A76500FE53C4 /* TGVVideoRenderer.h in Headers */,
+				69B607D422318BBE00ED7D94 /* ScreamCongestionController.h in Headers */,
+				6929CD102233ED81009B7378 /* PrivateDefines.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2492,6 +2503,7 @@
 				697E9D1B21A4ED6D00E03846 /* echo_audibility.cc in Sources */,
 				697E9B9821A4ED6B00E03846 /* ascii.cc in Sources */,
 				697E9B3C21A4ED6B00E03846 /* sinc_resampler_neon.cc in Sources */,
+				69B607D522318BBE00ED7D94 /* ScreamCongestionController.cpp in Sources */,
 				697E9D0621A4ED6D00E03846 /* skew_estimator.cc in Sources */,
 				697E9C5321A4ED6C00E03846 /* audio_processing_statistics.cc in Sources */,
 				697E9BFD21A4ED6C00E03846 /* pitch_estimator.c in Sources */,
@@ -2612,7 +2624,7 @@
 				697E9D1521A4ED6D00E03846 /* render_signal_analyzer.cc in Sources */,
 				697E9B5E21A4ED6B00E03846 /* levinson_durbin.c in Sources */,
 				697E9D0321A4ED6D00E03846 /* adaptive_fir_filter.cc in Sources */,
-				69F791542221F16C00FE53C4 /* VideoToolboxEncoderSource.cpp in Sources */,
+				69F791542221F16C00FE53C4 /* VideoToolboxEncoderSource.mm in Sources */,
 				697E9B4A21A4ED6B00E03846 /* wav_file.cc in Sources */,
 				697E9CE721A4ED6D00E03846 /* render_delay_buffer2.cc in Sources */,
 				697E9C1121A4ED6C00E03846 /* lpc_gain_swb_tables.c in Sources */,
@@ -2743,7 +2755,7 @@
 				697E9D6321A4ED6E00E03846 /* gmm.cc in Sources */,
 				697E9CAA21A4ED6D00E03846 /* level_estimator_impl.cc in Sources */,
 				697E9D3021A4ED6D00E03846 /* echo_remover.cc in Sources */,
-				69F791582222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.cpp in Sources */,
+				69F791582222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.mm in Sources */,
 				697E9C8721A4ED6C00E03846 /* vad_with_level.cc in Sources */,
 				697E9B3721A4ED6B00E03846 /* fir_filter_neon.cc in Sources */,
 				697E9C4621A4ED6C00E03846 /* noise_suppression.c in Sources */,

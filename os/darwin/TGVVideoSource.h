@@ -20,8 +20,15 @@ typedef NS_ENUM(int, TGVVideoResolution){
 	TGVVideoResolution360
 };
 
+@protocol TGVVideoSourceDelegate <NSObject>
+
+- (void)setFrameRate: (unsigned int)frameRate;
+
+@end
+
 @interface TGVVideoSource : NSObject
 
+- (instancetype)initWithDelegate: (id<TGVVideoSourceDelegate>)delegate;
 - (void)sendVideoFrame: (CMSampleBufferRef)buffer;
 - (TGVVideoResolution)maximumSupportedVideoResolution;
 - (void)setVideoRotation: (int)rotation;

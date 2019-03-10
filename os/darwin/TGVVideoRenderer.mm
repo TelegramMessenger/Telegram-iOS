@@ -6,6 +6,7 @@
 
 #import "TGVVideoRenderer.h"
 #include "SampleBufferDisplayLayerRenderer.h"
+#include "../../logging.h"
 
 @implementation TGVVideoRenderer{
 	AVSampleBufferDisplayLayer* layer;
@@ -17,7 +18,8 @@
 	self=[super init];
 	self->layer=layer;
 	self->delegate=delegate;
-	nativeRenderer=new tgvoip::video::SampleBufferDisplayLayerRenderer();
+	nativeRenderer=new tgvoip::video::SampleBufferDisplayLayerRenderer(self);
+	layer.videoGravity=AVLayerVideoGravityResizeAspect;
 	return self;
 }
 
@@ -27,6 +29,19 @@
 
 - (tgvoip::video::VideoRenderer *)nativeVideoRenderer{
 	return nativeRenderer;
+}
+
+- (void)_enqueueBuffer: (CMSampleBufferRef)buffer reset: (BOOL)reset{
+	if(reset){
+		LOGV("Resetting layer");
+		[layer flush];
+	}
+	LOGV("Enqueue buffer");
+    [layer enqueueSampleBuffer:buffer];
+    NSError* error=[layer error];
+    if(error){
+    	LOGE("enqueueSampleBuffer failed: %s", [error.description cStringUsingEncoding:NSUTF8StringEncoding]);
+    }
 }
 
 @end

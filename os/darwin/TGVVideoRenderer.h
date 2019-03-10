@@ -38,4 +38,6 @@ typedef NS_ENUM(int, TGVStreamStopReason){
 - (instancetype)initWithDisplayLayer: (AVSampleBufferDisplayLayer *)layer delegate: (id<TGVVideoRendererDelegate>)delegate;
 - (tgvoip::video::VideoRenderer*)nativeVideoRenderer;
 
+- (void)_enqueueBuffer: (CMSampleBufferRef)buffer reset: (BOOL)reset;
+
 @end

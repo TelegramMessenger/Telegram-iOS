@@ -47,6 +47,7 @@ LOCAL_SRC_FILES := \
 ./audio/AudioIO.cpp \
 ./video/VideoRenderer.cpp \
 ./video/VideoSource.cpp \
+./video/ScreamCongestionController.cpp \
 ./os/android/VideoSourceAndroid.cpp \
 ./os/android/VideoRendererAndroid.cpp \
 ./client/android/tg_voip_jni.cpp

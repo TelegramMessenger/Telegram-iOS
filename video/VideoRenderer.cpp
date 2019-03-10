@@ -6,11 +6,15 @@
 
 #ifdef __ANDROID__
 #include "../os/android/VideoRendererAndroid.h"
+#elif defined(__APPLE__)
+#include "../os/darwin/SampleBufferDisplayLayerRenderer.h"
 #endif
 
 std::vector<uint32_t> tgvoip::video::VideoRenderer::GetAvailableDecoders(){
 #ifdef __ANDROID__
 	return VideoRendererAndroid::availableDecoders;
+#elif defined(__APPLE__)
+	return SampleBufferDisplayLayerRenderer::GetAvailableDecoders();
 #endif
 	return std::vector<uint32_t>();
 }
@@ -18,6 +22,8 @@ std::vector<uint32_t> tgvoip::video::VideoRenderer::GetAvailableDecoders(){
 int tgvoip::video::VideoRenderer::GetMaximumResolution(){
 #ifdef __ANDROID__
 	return VideoRendererAndroid::maxResolution;
+#elif defined(__APPLE__)
+	return SampleBufferDisplayLayerRenderer::GetMaximumResolution();
 #endif
 	return 0;
 }

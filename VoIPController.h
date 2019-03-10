@@ -24,6 +24,7 @@
 #include "video/VideoSource.h"
 #include "video/VideoRenderer.h"
 #include <atomic>
+#include "video/ScreamCongestionController.h"
 #include "audio/AudioInput.h"
 #include "BlockingQueue.h"
 #include "audio/AudioOutput.h"
@@ -418,6 +419,7 @@ namespace tgvoip{
 		float GetOutputLevel(){
 			return 0.0f;
 		};
+		int GetVideoResolutionForCurrentBitrate();
 		void SetVideoSource(video::VideoSource* source);
 		void SetVideoRenderer(video::VideoRenderer* renderer);
 		
@@ -437,6 +439,8 @@ namespace tgvoip{
 			uint16_t id; // for group calls only
 			double sendTime;
 			double ackTime;
+			uint8_t type;
+			uint32_t size;
 		};
 		struct PendingOutgoingPacket{
 			PendingOutgoingPacket(uint32_t seq, unsigned char type, size_t len, Buffer&& data, int64_t endpoint){
@@ -530,6 +534,7 @@ namespace tgvoip{
 			std::shared_ptr<CallbackWrapper> callbackWrapper;
 			std::vector<Buffer> codecSpecificData;
 			bool csdIsValid=false;
+			int resolution;
 			unsigned int width=0;
 			unsigned int height=0;
 			uint16_t rotation=0;
@@ -568,6 +573,11 @@ namespace tgvoip{
 			uint32_t num;
 			uint32_t fragmentCount;
 			std::vector<uint32_t> unacknowledgedPackets;
+            uint32_t fragmentsInQueue;
+		};
+		struct PendingVideoFrameFragment{
+			uint32_t pts;
+			Buffer data;
 		};
 
 		void RunRecvThread();
@@ -605,6 +615,7 @@ namespace tgvoip{
 		std::string GetPacketTypeString(unsigned char type);
 		void SetupOutgoingVideoStream();
 		bool WasOutgoingPacketAcknowledged(uint32_t seq);
+		RecentOutgoingPacket* GetRecentOutgoingPacket(uint32_t seq);
 
 		int state;
 		std::map<int64_t, Endpoint> endpoints;
@@ -751,6 +762,12 @@ namespace tgvoip{
 		std::vector<SentVideoFrame> sentVideoFrames;
 		Mutex sentVideoFramesMutex;
 		bool videoKeyframeRequested=false;
+		video::ScreamCongestionController videoCongestionControl;
+		std::vector<PendingVideoFrameFragment> videoPacingQueue;
+		uint32_t sendVideoPacketID=MessageThread::INVALID_ID;
+		uint32_t videoPacketLossCount=0;
+		uint32_t currentVideoBitrate=0;
+		double lastVideoResolutionChangeTime=0.0;
 
 		/*** debug report problems ***/
 		bool wasReconnecting=false;

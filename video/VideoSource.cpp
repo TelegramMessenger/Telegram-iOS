@@ -6,6 +6,8 @@
 
 #ifdef __ANDROID__
 #include "../os/android/VideoSourceAndroid.h"
+#elif defined(__APPLE__)
+#include "../os/darwin/VideoToolboxEncoderSource.h"
 #endif
 
 using namespace tgvoip;
@@ -35,6 +37,8 @@ std::string VideoSource::GetErrorDescription(){
 std::vector<uint32_t> VideoSource::GetAvailableEncoders(){
 #ifdef __ANDROID__
 	return VideoSourceAndroid::availableEncoders;
+#elif defined(__APPLE__)
+	return VideoToolboxEncoderSource::GetAvailableEncoders();
 #endif
 	return std::vector<uint32_t>();
 }

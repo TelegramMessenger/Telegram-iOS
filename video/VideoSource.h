@@ -23,6 +23,7 @@ namespace tgvoip{
 			virtual void Stop()=0;
 			virtual void Reset(uint32_t codec, int maxResolution)=0;
 			virtual void RequestKeyFrame()=0;
+			virtual void SetBitrate(uint32_t bitrate)=0;
 			bool Failed();
 			std::string GetErrorDescription();
 			std::vector<Buffer>& GetCodecSpecificData(){

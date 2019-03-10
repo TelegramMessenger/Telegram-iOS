@@ -27,13 +27,25 @@ namespace tgvoip{
 			static std::vector<uint32_t> availableDecoders;
 			static int maxResolution;
 		private:
+			struct Request{
+				enum Type{
+					DecodeFrame,
+					ResetDecoder,
+					UpdateStreamState,
+					Shutdown
+				};
+
+				Buffer buffer;
+				Type type;
+			};
 			void RunThread();
 			Thread* thread=NULL;
 			bool running=true;
-			BlockingQueue<Buffer> queue;
+			BlockingQueue<Request> queue;
 			std::vector<Buffer> csd;
 			int width;
 			int height;
+			bool streamEnabled=true;
 			uint32_t codec;
 			jobject jobj;
 		};

@@ -22,12 +22,48 @@ namespace tgvoip {
 		void SetCallback(std::function<void(Buffer packet, uint32_t pts, bool keyframe)> callback);
 
 	private:
-		uint32_t currentTimestamp;
-		unsigned int currentPacketPartCount=0;
-		std::array<Buffer, 255> parts;
+		struct Packet{
+			uint32_t timestamp;
+			uint32_t partCount;
+			uint32_t receivedPartCount;
+			bool isKeyframe;
+			Buffer* parts;
+
+			TGVOIP_DISALLOW_COPY_AND_ASSIGN(Packet);
+
+			Packet(Packet&& other) : timestamp(other.timestamp), partCount(other.partCount), receivedPartCount(other.receivedPartCount), isKeyframe(other.isKeyframe){
+				parts=other.parts;
+				other.parts=NULL;
+			}
+			Packet& operator=(Packet&& other){
+				if(&other!=this){
+					if(parts)
+						delete[] parts;
+					parts=other.parts;
+					other.parts=NULL;
+					timestamp=other.timestamp;
+					partCount=other.partCount;
+					receivedPartCount=other.receivedPartCount;
+					isKeyframe=other.isKeyframe;
+				}
+				return *this;
+			}
+
+			Packet(uint32_t partCount) : partCount(partCount){
+				parts=new Buffer[partCount];
+			}
+			~Packet(){
+				if(parts)
+					delete[] parts;
+			}
+
+
+			void AddFragment(Buffer pkt, uint32_t fragmentIndex);
+			Buffer Reassemble();
+		};
 		std::function<void(Buffer, uint32_t, bool)> callback;
-		bool currentIsKeyframe;
-		unsigned int receivedPartCount=0;
+		std::vector<Packet> packets;
+		uint32_t maxTimestamp=0;
 	};
 }
 

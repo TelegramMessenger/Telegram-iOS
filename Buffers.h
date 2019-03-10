@@ -265,6 +265,10 @@ namespace tgvoip{
 				_i=size+_i;
 			return data[_i];
 		}
+
+		size_t Size(){
+			return size;
+		}
 	private:
 		std::array<T, size> data;
 		ptrdiff_t offset=0;

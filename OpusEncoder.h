@@ -63,10 +63,6 @@ private:
 	bool running;
 	uint32_t frameDuration;
 	int packetLossPercent;
-	uint32_t mediumCorrectionBitrate;
-	uint32_t strongCorrectionBitrate;
-	double mediumCorrectionMultiplier;
-	double strongCorrectionMultiplier;
 	AudioLevelMeter* levelMeter;
 	bool secondaryEncoderEnabled;
 	bool vadMode=false;

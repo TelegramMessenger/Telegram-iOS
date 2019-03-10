@@ -21,6 +21,7 @@ VideoSourceAndroid::VideoSourceAndroid(jobject jobj) : javaObject(jobj){
 		stopMethod=env->GetMethodID(cls, "stop", "()V");
 		prepareEncoderMethod=env->GetMethodID(cls, "prepareEncoder", "(Ljava/lang/String;I)V");
 		requestKeyFrameMethod=env->GetMethodID(cls, "requestKeyFrame", "()V");
+		setBitrateMethod=env->GetMethodID(cls, "setBitrate", "(I)V");
 	});
 }
 
@@ -77,5 +78,11 @@ void VideoSourceAndroid::Reset(uint32_t codec, int maxResolution){
 void VideoSourceAndroid::RequestKeyFrame(){
 	jni::DoWithJNI([this](JNIEnv* env){
 		env->CallVoidMethod(javaObject, requestKeyFrameMethod);
+	});
+}
+
+void VideoSourceAndroid::SetBitrate(uint32_t bitrate){
+	jni::DoWithJNI([&](JNIEnv* env){
+		env->CallVoidMethod(javaObject, setBitrateMethod, (jint)bitrate);
 	});
 }

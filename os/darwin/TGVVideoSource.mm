@@ -9,11 +9,14 @@
 
 @implementation TGVVideoSource{
 	tgvoip::video::VideoToolboxEncoderSource* nativeSource;
+	id<TGVVideoSourceDelegate> delegate;
 }
 
-- (instancetype)init{
+
+- (instancetype)initWithDelegate: (id<TGVVideoSourceDelegate>)delegate{
 	self=[super init];
 	nativeSource=new tgvoip::video::VideoToolboxEncoderSource();
+	self->delegate=delegate;
 	return self;
 }
 

@@ -22,6 +22,7 @@ namespace tgvoip{
 			void SendFrame(Buffer frame, uint32_t flags);
 			void SetStreamParameters(std::vector<Buffer> csd, unsigned int width, unsigned int height);
 			virtual void RequestKeyFrame() override;
+			virtual void SetBitrate(uint32_t bitrate) override;
 
 			static std::vector<uint32_t> availableEncoders;
 		private:
@@ -30,6 +31,7 @@ namespace tgvoip{
 			jmethodID startMethod;
 			jmethodID stopMethod;
 			jmethodID requestKeyFrameMethod;
+			jmethodID setBitrateMethod;
 		};
 	}
 }
