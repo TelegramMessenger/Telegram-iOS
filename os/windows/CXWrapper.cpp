@@ -96,6 +96,10 @@ int64 VoIPControllerWrapper::GetPreferredRelayID(){
 	return controller->GetPreferredRelayID();
 }
 
+int32_t VoIPControllerWrapper::GetConnectionMaxLayer(){
+	return controller->GetConnectionMaxLayer();
+}
+
 void VoIPControllerWrapper::SetEncryptionKey(const Platform::Array<uint8>^ key, bool isOutgoing){
 	if(key->Length!=256)
 		throw ref new Platform::InvalidArgumentException("Encryption key must be exactly 256 bytes long");
