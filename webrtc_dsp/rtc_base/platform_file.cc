@@ -45,22 +45,38 @@ bool ClosePlatformFile(PlatformFile file) {
 }
 
 bool RemoveFile(const std::string& path) {
+#if defined(WEBRTC_UWP)
+	return kInvalidPlatformFileValue;
+#else // defined(WEBRTC_WIN)
   return ::DeleteFile(ToUtf16(path).c_str()) != 0;
+#endif
 }
 
 PlatformFile OpenPlatformFile(const std::string& path) {
+#if defined(WEBRTC_UWP)
+	return kInvalidPlatformFileValue;
+#else // defined(WEBRTC_WIN)
   return ::CreateFile(ToUtf16(path).c_str(), GENERIC_READ | GENERIC_WRITE, 0,
                       nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+#endif // defined(WEBRTC_WIN)
 }
 
 PlatformFile OpenPlatformFileReadOnly(const std::string& path) {
+#if defined(WEBRTC_UWP)
+	return kInvalidPlatformFileValue;
+#else // defined(WEBRTC_WIN)
   return ::CreateFile(ToUtf16(path).c_str(), GENERIC_READ, FILE_SHARE_READ,
                       nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+#endif // defined(WEBRTC_WIN)
 }
 
 PlatformFile CreatePlatformFile(const std::string& path) {
+#if defined(WEBRTC_UWP)
+	return kInvalidPlatformFileValue;
+#else // defined(WEBRTC_WIN)
   return ::CreateFile(ToUtf16(path).c_str(), GENERIC_READ | GENERIC_WRITE, 0,
                       nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+#endif // defined(WEBRTC_WIN)
 }
 
 #else  // defined(WEBRTC_WIN)

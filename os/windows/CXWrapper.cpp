@@ -206,23 +206,7 @@ void VoIPControllerWrapper::SetAudioOutputGainControlEnabled(bool enabled){
 }
 
 void VoIPControllerWrapper::UpdateServerConfig(Platform::String^ json){
-	JsonObject^ jconfig=JsonValue::Parse(json)->GetObject();
-	std::map<std::string, std::string> config;
-
-	for each (auto item in jconfig){
-		char _key[128];
-		char _value[256];
-		WideCharToMultiByte(CP_UTF8, 0, item->Key->Data(), -1, _key, sizeof(_key), NULL, NULL);
-		if(item->Value->ValueType==Windows::Data::Json::JsonValueType::String)
-			WideCharToMultiByte(CP_UTF8, 0, item->Value->GetString()->Data(), -1, _value, sizeof(_value), NULL, NULL);
-		else
-			WideCharToMultiByte(CP_UTF8, 0, item->Value->ToString()->Data(), -1, _value, sizeof(_value), NULL, NULL);
-		std::string key(_key);
-		std::string value(_value);
-
-		config[key]=value;
-	}
-
+	std::string config=ToUtf8(json->Data(), json->Length());
 	ServerConfig::GetSharedInstance()->Update(config);
 }
 
