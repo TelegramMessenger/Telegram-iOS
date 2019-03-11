@@ -1316,7 +1316,7 @@ void VoIPController::WritePacketHeader(uint32_t pseq, BufferOutputStream *s, uns
 		}
 
 		shared_ptr<Stream> videoStream=GetStreamByType(STREAM_TYPE_VIDEO, false);
-		if(videoStream && videoStream->enabled)
+		if(peerVersion>=9 && videoStream && videoStream->enabled)
 			flags |= XPFLAG_HAS_RECV_TS;
 
 		s->WriteByte(flags);
@@ -1333,7 +1333,7 @@ void VoIPController::WritePacketHeader(uint32_t pseq, BufferOutputStream *s, uns
 					x->firstContainingSeq=pseq;
 			}
 		}
-		if(videoStream && videoStream->enabled){
+		if(peerVersion>=9 && videoStream && videoStream->enabled){
 			s->WriteInt32((uint32_t)((lastRecvPacketTime-connectionInitTime)*1000.0));
 		}
 	}else{
@@ -2374,6 +2374,10 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 				in.ReadInt16();
 				stm->frameDuration=60;
 				stm->enabled=in.ReadByte()==1;
+				if(stm->type==STREAM_TYPE_VIDEO && peerVersion<9){
+					LOGV("Skipping video stream for old protocol version");
+					continue;
+				}
 				if(stm->type==STREAM_TYPE_AUDIO){
 					stm->jitterBuffer=make_shared<JitterBuffer>(nullptr, stm->frameDuration);
 					if(stm->frameDuration>50)
