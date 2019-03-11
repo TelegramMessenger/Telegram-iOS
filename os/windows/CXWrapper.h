@@ -107,6 +107,7 @@ namespace libtgvoip{
 		int GetSignalBarsCount();
 		CallState GetConnectionState();
 		TrafficStats^ GetStats();
+		int32_t GetConnectionMaxLayer();
 		Platform::String^ GetDebugString();
 		Platform::String^ GetDebugLog();
 		Error GetLastError();
