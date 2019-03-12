@@ -4059,3 +4059,18 @@ Unused sets are archived when you add more.";
 
 "Gif.Search" = "Search GIFs";
 "Gif.NoGifsFound" = "No GIFs Found";
+
+"SettingsSearch.FAQ" = "FAQ";
+
+"Privacy.ProfilePhoto" = "Profile Photo";
+"Privacy.Forwards" = "Forwards";
+
+"Privacy.ProfilePhoto.WhoCanSeeMyPhoto" = "WHO CAN SEE MY PROFILE PHOTO";
+"Privacy.ProfilePhoto.CustomHelp" = "You can restrict who can see your profile photo with granular precision.";
+"Privacy.ProfilePhoto.AlwaysShareWith.Title" = "Always Share With";
+"Privacy.ProfilePhoto.NeverShareWith.Title" = "Never Share With";
+
+"Privacy.Forwards.WhoCanForward" = "WHO CAN FORWARD MY MESSAGES";
+"Privacy.Forwards.CustomHelp" = "You can restrict who can forward your messages with granular precision.";
+"Privacy.Forwards.AlwaysAllow.Title" = "Always Allow";
+"Privacy.Forwards.NeverAllow.Title" = "Never Allow";
