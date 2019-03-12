@@ -332,6 +332,7 @@
 		69DF157B2237DFE100C1F8ED /* SampleBufferDisplayLayerRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 69DF157A2237DFE100C1F8ED /* SampleBufferDisplayLayerRenderer.mm */; };
 		69DF157C2237DFE100C1F8ED /* SampleBufferDisplayLayerRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 69DF157A2237DFE100C1F8ED /* SampleBufferDisplayLayerRenderer.mm */; };
 		69DF157E2237DFE700C1F8ED /* SampleBufferDisplayLayerRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = 69DF157D2237DFE700C1F8ED /* SampleBufferDisplayLayerRenderer.h */; };
+		69DF15802237E96E00C1F8ED /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 69DF157F2237E96E00C1F8ED /* VideoToolbox.framework */; };
 		69EBC7912136D220003CFE90 /* AudioInputAudioUnitOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C2A87DDC1F4B6A61002D3F73 /* AudioInputAudioUnitOSX.cpp */; };
 		69EBC7922136D220003CFE90 /* AudioOutputAudioUnitOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C2A87DDE1F4B6A61002D3F73 /* AudioOutputAudioUnitOSX.cpp */; };
 		69EBC7942136D277003CFE90 /* DarwinSpecific.mm in Sources */ = {isa = PBXBuildFile; fileRef = 69EBC7932136D277003CFE90 /* DarwinSpecific.mm */; };
@@ -1070,6 +1071,7 @@
 		69DF156C2237DEDC00C1F8ED /* VideoToolboxEncoderSource.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = VideoToolboxEncoderSource.mm; sourceTree = "<group>"; };
 		69DF157A2237DFE100C1F8ED /* SampleBufferDisplayLayerRenderer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = SampleBufferDisplayLayerRenderer.mm; sourceTree = "<group>"; };
 		69DF157D2237DFE700C1F8ED /* SampleBufferDisplayLayerRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SampleBufferDisplayLayerRenderer.h; sourceTree = "<group>"; };
+		69DF157F2237E96E00C1F8ED /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk/System/Library/Frameworks/VideoToolbox.framework; sourceTree = DEVELOPER_DIR; };
 		69EBC7932136D277003CFE90 /* DarwinSpecific.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = DarwinSpecific.mm; path = os/darwin/DarwinSpecific.mm; sourceTree = SOURCE_ROOT; };
 		69EBC7952136D2A9003CFE90 /* Resampler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Resampler.h; path = audio/Resampler.h; sourceTree = SOURCE_ROOT; };
 		69F842361E67540700C110F7 /* libtgvoip.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = libtgvoip.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1094,6 +1096,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				69DF15802237E96E00C1F8ED /* VideoToolbox.framework in Frameworks */,
 				692AB91F1E675F7000706ACC /* AudioToolbox.framework in Frameworks */,
 				692AB9201E675F7000706ACC /* AudioUnit.framework in Frameworks */,
 				692AB9211E675F7000706ACC /* CoreAudio.framework in Frameworks */,
@@ -2330,6 +2333,7 @@
 		692AB9061E675E8700706ACC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				69DF157F2237E96E00C1F8ED /* VideoToolbox.framework */,
 				692AB91C1E675F7000706ACC /* AudioToolbox.framework */,
 				692AB91D1E675F7000706ACC /* AudioUnit.framework */,
 				692AB91E1E675F7000706ACC /* CoreAudio.framework */,

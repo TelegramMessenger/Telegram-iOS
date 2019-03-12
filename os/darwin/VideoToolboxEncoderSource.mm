@@ -4,6 +4,7 @@
 // you should have received with this source code distribution.
 //
 
+#import <Foundation/Foundation.h>
 #include "VideoToolboxEncoderSource.h"
 #include "../../PrivateDefines.h"
 #include "../../logging.h"

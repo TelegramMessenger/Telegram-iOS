@@ -789,7 +789,12 @@
                     '<(DEPTH)/../../../Libraries/openssl/include',
                   ],
                 }]
-              ]
+              ],
+              'direct_dependent_settings': {
+                'linkflags': [
+                  '-framework VideoToolbox',
+                ],
+              },
             },
           ],
           [
