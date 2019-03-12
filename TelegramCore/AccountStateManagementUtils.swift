@@ -1958,7 +1958,11 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     
     for (peerId, namespaces) in finalState.state.namespacesWithHolesFromPreviousState {
         for namespace in namespaces {
-            transaction.addHole(MessageId(peerId: peerId, namespace: namespace, id: Int32.max))
+            if let id = transaction.getTopPeerMessageId(peerId: peerId, namespace: namespace) {
+                transaction.addHole(peerId: peerId, namespace: namespace, space: .everywhere, range: (id.id + 1) ... Int32.max)
+            } else {
+                transaction.addHole(peerId: peerId, namespace: namespace, space: .everywhere, range: 1 ... Int32.max)
+            }
             
             if namespace == Namespaces.Message.Cloud {
                 let peer: Peer? = finalState.state.peers[peerId] ?? transaction.getPeer(peerId)
@@ -2041,8 +2045,9 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                                     }
                                     switch action.action {
                                         case .groupCreated, .channelMigratedFromGroup:
-                                            if let hole = transaction.getHole(messageId: MessageId(peerId: chatPeerId, namespace: Namespaces.Message.Cloud, id: id.id - 1)) {
-                                                //transaction.fillHole(hole, fillType: HoleFill(complete: true, direction: .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: nil)), tagMask: nil, messages: [])
+                                            let holesAtHistoryStart = transaction.getHole(containing: MessageId(peerId: chatPeerId, namespace: Namespaces.Message.Cloud, id: id.id - 1))
+                                            for (space, hole) in holesAtHistoryStart {
+                                                transaction.removeHole(peerId: chatPeerId, namespace: Namespaces.Message.Cloud, space: space, range: 1 ... id.id)
                                             }
                                         default:
                                             break

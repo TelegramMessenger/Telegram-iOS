@@ -21,19 +21,13 @@ public func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Netw
 private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, locally: Bool) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
     return postbox.transaction { transaction -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
         var resultMessage: Message?
-        var resultHole: MessageHistoryHole?
-        transaction.scanMessages(peerId: peerId, tagMask: .unseenPersonalMessage, { entry in
-            switch entry {
-                case let .message(message):
-                    for attribute in message.attributes {
-                        if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
-                            resultMessage = message
-                            return false
-                        }
-                    }
-                case let .hole(hole):
-                    resultHole = hole
+        var resultHole: MessageHistoryViewPeerHole?
+        transaction.scanMessages(peerId: peerId, tagMask: .unseenPersonalMessage, { message in
+            for attribute in message.attributes {
+                if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
+                    resultMessage = message
                     return false
+                }
             }
             return true
         })
@@ -64,27 +58,32 @@ private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Net
             }
             
             if !locally, let _ = invalidateHistoryPts {
-                let validateSignal = fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, hole: MessageHistoryHole(stableId: UInt32.max, maxIndex: MessageIndex.upperBound(peerId: peerId), min: resultMessage.id.id - 1, tags: 0), direction: .LowerToUpper, tagMask: .unseenPersonalMessage)
-                    |> `catch` { _ -> Signal<Void, NoError> in
-                        return .complete()
-                    }
-                    |> mapToSignal { _ -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
-                        return .complete()
-                    }
-                    |> then(earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, locally: true))
-                return .single(.loading) |> then(validateSignal)
-            } else {
-                return .single(.result(resultMessage.id))
-            }
-        } else if let resultHole = resultHole, !locally {
-            let validateSignal = fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, hole: resultHole, direction: .LowerToUpper, tagMask: .unseenPersonalMessage)
-                |> `catch` { _ -> Signal<Void, NoError> in
+                let validateSignal = fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, peerId: peerId, namespace: Namespaces.Message.Cloud, range: (resultMessage.id.id - 1) ... Int32.max, direction: .LowerToUpper, space: .tag(.unseenPersonalMessage), limit: 100)
+                |> `catch` { _ -> Signal<Never, NoError> in
                     return .complete()
                 }
                 |> mapToSignal { _ -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
                     return .complete()
                 }
-                |> then(earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, locally: true))
+                |> then(
+                    earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, locally: true)
+                )
+                return .single(.loading) |> then(validateSignal)
+            } else {
+                return .single(.result(resultMessage.id))
+            }
+        } else if let resultHole = resultHole, !locally {
+            let holeRange = 1 ... Int32(resultHole.indices[resultHole.indices.endIndex] - 1)
+            let validateSignal = fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, peerId: peerId, namespace: Namespaces.Message.Cloud, range: holeRange, direction: .LowerToUpper, space: .tag(.unseenPersonalMessage))
+            |> `catch` { _ -> Signal<Never, NoError> in
+                return .complete()
+            }
+            |> mapToSignal { _ -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
+                return .complete()
+            }
+            |> then(
+                earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, locally: true)
+            )
             return .single(.loading) |> then(validateSignal)
         } else if let summary = transaction.getMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), summary.count > 0 {
             transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: 0, maxId: summary.range.maxId)

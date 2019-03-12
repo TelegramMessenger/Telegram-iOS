@@ -70,14 +70,30 @@ private final class HistoryPreloadEntry: Comparable {
             self.isStarted = true
             
             let hole = self.hole.hole
-            let signal: Signal<Void, NoError> = .complete() |> delay(0.3, queue: queue) |> then(download |> take(1) |> deliverOn(queue) |> mapToSignal { download -> Signal<Void, NoError> in
-                switch hole.hole {
-                    case let .peer(peerHole):
-                        return fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .download(download), postbox: postbox, hole: peerHole, direction: hole.direction, tagMask: nil, limit: 60)
-                    case let .groupFeed(groupId, lowerIndex, upperIndex):
-                        return fetchGroupFeedHole(source: .download(download), accountPeerId: accountPeerId, postbox: postbox, groupId: groupId, minIndex: lowerIndex, maxIndex: upperIndex, direction: hole.direction, limit: 60)
+            let signal: Signal<Never, NoError> = .complete()
+            |> delay(0.3, queue: queue)
+            |> then(
+                download
+                |> take(1)
+                |> deliverOn(queue)
+                |> mapToSignal { download -> Signal<Never, NoError> in
+                    switch hole.hole {
+                        case let .peer(peerHole):
+                            let range: ClosedRange<MessageId.Id>
+                            switch hole.direction {
+                                case .AroundId, .AroundIndex:
+                                    range = 1 ... Int32.max
+                                case .LowerToUpper:
+                                    range = 1 ... Int32(peerHole.indices[peerHole.indices.endIndex] - 1)
+                                case .UpperToLower:
+                                    range = Int32(peerHole.indices[peerHole.indices.startIndex]) ... Int32.max
+                            }
+                            return fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .download(download), postbox: postbox, peerId: peerHole.peerId, namespace: peerHole.namespace, range: range, direction: hole.direction, space: .everywhere, limit: 60)
+                        /*case let .groupFeed(groupId, lowerIndex, upperIndex):
+                            return fetchGroupFeedHole(source: .download(download), accountPeerId: accountPeerId, postbox: postbox, groupId: groupId, minIndex: lowerIndex, maxIndex: upperIndex, direction: hole.direction, limit: 60)*/
+                    }
                 }
-            })
+            )
             self.disposable.set(signal.start())
         }
     }

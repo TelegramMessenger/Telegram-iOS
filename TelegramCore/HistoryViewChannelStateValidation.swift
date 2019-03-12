@@ -166,21 +166,12 @@ final class HistoryViewStateValidationContexts {
                 }
                 
                 for entry in view.entries {
-                    switch entry {
-                        case let .MessageEntry(message, _, _, _, _):
-                            if historyState.matchesPeerId(message.id.peerId) && message.id.namespace == Namespaces.Message.Cloud {
-                                if !historyState.isMessageValid(message) {
-                                    addToRange(message.id, &rangesToInvalidate)
-                                } else {
-                                    addRangeBreak(&rangesToInvalidate)
-                                }
-                            }
-                        case let .HoleEntry(hole, _):
-                            if historyState.matchesPeerId(hole.maxIndex.id.peerId) {
-                                if hole.maxIndex.id.namespace == Namespaces.Message.Cloud {
-                                    addRangeBreak(&rangesToInvalidate)
-                                }
-                            }
+                    if historyState.matchesPeerId(entry.message.id.peerId) && entry.message.id.namespace == Namespaces.Message.Cloud {
+                        if !historyState.isMessageValid(entry.message) {
+                            addToRange(entry.message.id, &rangesToInvalidate)
+                        } else {
+                            addRangeBreak(&rangesToInvalidate)
+                        }
                     }
                 }
                 
@@ -267,7 +258,7 @@ final class HistoryViewStateValidationContexts {
 private func hashForMessages(_ messages: [Message], withChannelIds: Bool) -> Int32 {
     var acc: UInt32 = 0
     
-    let sorted = messages.sorted(by: { MessageIndex($0) > MessageIndex($1) })
+    let sorted = messages.sorted(by: { $0.index > $1.index })
     
     for message in sorted {
         if withChannelIds {

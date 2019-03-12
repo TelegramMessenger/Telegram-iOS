@@ -989,7 +989,7 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
     var foundReadState = false
     var isUnread = true
     if let readState = transaction.getCombinedPeerReadState(id.peerId) {
-        if readState.isIncomingMessageIndexRead(MessageIndex(message)) {
+        if readState.isIncomingMessageIndexRead(message.index) {
             isUnread = false
         }
         foundReadState = true

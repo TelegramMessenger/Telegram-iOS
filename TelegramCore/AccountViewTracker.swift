@@ -34,13 +34,13 @@ public final class CallListView {
 private func pendingWebpages(entries: [MessageHistoryEntry]) -> (Set<MessageId>, [MessageId: (MediaId, String)]) {
     var messageIds = Set<MessageId>()
     var localWebpages: [MessageId: (MediaId, String)] = [:]
-    for case let .MessageEntry(message, _, _, _, _) in entries {
-        for media in message.media {
+    for entry in entries {
+        for media in entry.message.media {
             if let media = media as? TelegramMediaWebpage {
                 if case let .Pending(_, url) = media.content {
-                    messageIds.insert(message.id)
+                    messageIds.insert(entry.message.id)
                     if let url = url, media.webpageId.namespace == Namespaces.Media.LocalWebpage {
-                        localWebpages[message.id] = (media.webpageId, url)
+                        localWebpages[entry.message.id] = (media.webpageId, url)
                     }
                 }
                 break
@@ -53,11 +53,11 @@ private func pendingWebpages(entries: [MessageHistoryEntry]) -> (Set<MessageId>,
 private func pollMessages(entries: [MessageHistoryEntry]) -> (Set<MessageId>, [MessageId: Message]) {
     var messageIds = Set<MessageId>()
     var messages: [MessageId: Message] = [:]
-    for case let .MessageEntry(message, _, _, _, _) in entries {
-        for media in message.media {
-            if let poll = media as? TelegramMediaPoll, poll.pollId.namespace == Namespaces.Media.CloudPoll, message.id.namespace == Namespaces.Message.Cloud, !poll.isClosed {
-                messageIds.insert(message.id)
-                messages[message.id] = message
+    for entry in entries {
+        for media in entry.message.media {
+            if let poll = media as? TelegramMediaPoll, poll.pollId.namespace == Namespaces.Media.CloudPoll, entry.message.id.namespace == Namespaces.Message.Cloud, !poll.isClosed {
+                messageIds.insert(entry.message.id)
+                messages[entry.message.id] = entry.message
                 break
             }
         }

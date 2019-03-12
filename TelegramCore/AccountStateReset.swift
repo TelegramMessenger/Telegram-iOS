@@ -240,7 +240,7 @@ func accountStateReset(postbox: Postbox, network: Network, accountPeerId: PeerId
                                 }
                             }
                             if !skipHole {
-                                transaction.addHole(MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: messageId.id - 1))
+                                //transaction.addHole(MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: messageId.id - 1))
                             }
                         }
                     }
@@ -273,7 +273,7 @@ func accountStateReset(postbox: Postbox, network: Network, accountPeerId: PeerId
                     for peerId in previousPeerIds {
                         if !allPeersWithMessages.contains(peerId), let namespaces = namespacesWithHoles[peerId.namespace] {
                             for namespace in namespaces {
-                                transaction.addHole(MessageId(peerId: peerId, namespace: namespace, id: Int32.max - 1))
+                                //transaction.addHole(MessageId(peerId: peerId, namespace: namespace, id: Int32.max - 1))
                             }
                         }
                     }
