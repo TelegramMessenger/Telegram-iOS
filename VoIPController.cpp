@@ -3929,7 +3929,7 @@ void VoIPController::TickJitterBufferAngCongestionControl(){
 
 #pragma mark - Endpoint
 
-Endpoint::Endpoint(int64_t id, uint16_t port, IPv4Address& _address, IPv6Address& _v6address, Type type, unsigned char peerTag[16]) : address(_address), v6address(_v6address){
+Endpoint::Endpoint(int64_t id, uint16_t port, const IPv4Address& _address, const IPv6Address& _v6address, Type type, unsigned char peerTag[16]) : address(_address), v6address(_v6address){
 	this->id=id;
 	this->port=port;
 	this->type=type;

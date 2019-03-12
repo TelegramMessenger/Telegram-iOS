@@ -126,7 +126,7 @@ namespace tgvoip{
 			TCP_RELAY
 		};
 
-		Endpoint(int64_t id, uint16_t port, IPv4Address& address, IPv6Address& v6address, Type type, unsigned char* peerTag);
+		Endpoint(int64_t id, uint16_t port, const IPv4Address& address, const IPv6Address& v6address, Type type, unsigned char* peerTag);
 		Endpoint();
 		~Endpoint();
 		const NetworkAddress& GetAddress() const;
