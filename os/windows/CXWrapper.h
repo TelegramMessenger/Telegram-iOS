@@ -8,6 +8,40 @@
 #include "../../VoIPController.h"
 #include "../../VoIPServerConfig.h"
 
+using namespace Platform;
+
+#define STACK_ARRAY(TYPE, LEN) \
+  static_cast<TYPE*>(::alloca((LEN) * sizeof(TYPE)))
+
+inline std::wstring ToUtf16(const char* utf8, size_t len) {
+	int len16 = ::MultiByteToWideChar(CP_UTF8, 0, utf8, static_cast<int>(len),
+		nullptr, 0);
+	wchar_t* ws = STACK_ARRAY(wchar_t, len16);
+	::MultiByteToWideChar(CP_UTF8, 0, utf8, static_cast<int>(len), ws, len16);
+	return std::wstring(ws, len16);
+}
+
+inline std::wstring ToUtf16(const std::string& str) {
+	return ToUtf16(str.data(), str.length());
+}
+
+inline std::string ToUtf8(const wchar_t* wide, size_t len) {
+	int len8 = ::WideCharToMultiByte(CP_UTF8, 0, wide, static_cast<int>(len),
+		nullptr, 0, nullptr, nullptr);
+	char* ns = STACK_ARRAY(char, len8);
+	::WideCharToMultiByte(CP_UTF8, 0, wide, static_cast<int>(len), ns, len8,
+		nullptr, nullptr);
+	return std::string(ns, len8);
+}
+
+inline std::string ToUtf8(const wchar_t* wide) {
+	return ToUtf8(wide, wcslen(wide));
+}
+
+inline std::string ToUtf8(const std::wstring& wstr) {
+	return ToUtf8(wstr.data(), wstr.length());
+}
+
 namespace libtgvoip{
 	public ref class Endpoint sealed{
 	public:
@@ -66,6 +100,34 @@ namespace libtgvoip{
 		SOCKS5
 	};
 
+	public ref class VoIPConfig sealed {
+	public:
+		VoIPConfig() {
+			logPacketStats = false;
+			enableVolumeControl = false;
+			enableVideoSend = false;
+			enableVideoReceive = false;
+		}
+
+		property double initTimeout;
+		property double recvTimeout;
+		property DataSavingMode dataSaving;
+		property String^ logFilePath;
+		property String^ statsDumpFilePath;
+
+		property bool enableAEC;
+		property bool enableNS;
+		property bool enableAGC;
+
+		property bool enableCallUpgrade;
+
+		property bool logPacketStats;
+		property bool enableVolumeControl;
+
+		property bool enableVideoSend;
+		property bool enableVideoReceive;
+	};
+
 	ref class VoIPControllerWrapper;
 	public delegate void CallStateChangedEventHandler(VoIPControllerWrapper^ sender, CallState newState);
 
@@ -82,7 +144,7 @@ namespace libtgvoip{
 		void SetNetworkType(NetworkType type);
 		void SetMicMute(bool mute);
 		void SetEncryptionKey(const Platform::Array<uint8>^ key, bool isOutgoing);
-		void SetConfig(double initTimeout, double recvTimeout, DataSavingMode dataSavingMode, bool enableAEC, bool enableNS, bool enableAGC, Platform::String^ logFilePath, Platform::String^ statsDumpFilePath);
+		void SetConfig(VoIPConfig^ config);
 		void SetProxy(ProxyProtocol protocol, Platform::String^ address, uint16_t port, Platform::String^ username, Platform::String^ password);
 		int GetSignalBarsCount();
 		CallState GetConnectionState();
@@ -93,6 +155,35 @@ namespace libtgvoip{
 		static Platform::String^ GetVersion();
 		int64 GetPreferredRelayID();
 		void SetAudioOutputGainControlEnabled(bool enabled);
+
+		void SetInputVolume(float level);
+		void SetOutputVolume(float level);
+
+		property String^ CurrentAudioInput
+		{
+			String^ get()
+			{
+				return ref new String(ToUtf16(controller->GetCurrentAudioInputID()).data());
+			}
+			void set(String^ value)
+			{
+				controller->SetCurrentAudioInput(ToUtf8(value->Data()));
+			}
+		}
+
+		property String^ CurrentAudioOutput
+		{
+			String^ get()
+			{
+				return ref new String(ToUtf16(controller->GetCurrentAudioOutputID()).data());
+			}
+			void set(String^ value)
+			{
+				controller->SetCurrentAudioOutput(ToUtf8(value->Data()));
+			}
+		}
+
+		static int32_t GetConnectionMaxLayer();
 		static void UpdateServerConfig(Platform::String^ json);
 		static void SwitchSpeaker(bool external);
 		//static Platform::String^ TestAesIge();

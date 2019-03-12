@@ -71,6 +71,25 @@ int64_t SystemTimeNanos() {
   clock_gettime(CLOCK_MONOTONIC, &ts);
   ticks = kNumNanosecsPerSec * static_cast<int64_t>(ts.tv_sec) +
           static_cast<int64_t>(ts.tv_nsec);
+#elif defined(WEBRTC_UWP)
+  static volatile ULONGLONG last_timegettime = 0;
+  static volatile int64_t num_wrap_timegettime = 0;
+  volatile ULONGLONG* last_timegettime_ptr = &last_timegettime;
+  ULONGLONG now = GetTickCount64();
+  // Atomically update the last gotten time
+  ULONGLONG old = InterlockedExchange(last_timegettime_ptr, now);
+  if (now < old) {
+	  // If now is earlier than old, there may have been a race between threads.
+	  // 0x0fffffff ~3.1 days, the code will not take that long to execute
+	  // so it must have been a wrap around.
+	  if (old > 0xf0000000 && now < 0x0fffffff) {
+		  num_wrap_timegettime++;
+	  }
+  }
+  ticks = now + (num_wrap_timegettime << 32);
+  // TODO(deadbeef): Calculate with nanosecond precision. Otherwise, we're
+  // just wasting a multiply and divide when doing Time() on Windows.
+  ticks = ticks * kNumNanosecsPerMillisec;
 #elif defined(WEBRTC_WIN)
   static volatile LONG last_timegettime = 0;
   static volatile int64_t num_wrap_timegettime = 0;

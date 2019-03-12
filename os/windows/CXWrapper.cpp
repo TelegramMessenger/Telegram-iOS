@@ -96,6 +96,10 @@ int64 VoIPControllerWrapper::GetPreferredRelayID(){
 	return controller->GetPreferredRelayID();
 }
 
+int32_t VoIPControllerWrapper::GetConnectionMaxLayer(){
+	return tgvoip::VoIPController::GetConnectionMaxLayer();
+}
+
 void VoIPControllerWrapper::SetEncryptionKey(const Platform::Array<uint8>^ key, bool isOutgoing){
 	if(key->Length!=256)
 		throw ref new Platform::InvalidArgumentException("Encryption key must be exactly 256 bytes long");
@@ -170,22 +174,33 @@ void VoIPControllerWrapper::OnSignalBarsChangedInternal(int count){
 	SignalBarsChanged(this, count);
 }
 
-void VoIPControllerWrapper::SetConfig(double initTimeout, double recvTimeout, DataSavingMode dataSavingMode, bool enableAEC, bool enableNS, bool enableAGC, Platform::String^ logFilePath, Platform::String^ statsDumpFilePath){
+void VoIPControllerWrapper::SetConfig(VoIPConfig^ wrapper){
 	VoIPController::Config config{0};
-	config.initTimeout=initTimeout;
-	config.recvTimeout=recvTimeout;
-	config.dataSaving=(int)dataSavingMode;
-	config.enableAEC=enableAEC;
-	config.enableAGC=enableAGC;
-	config.enableNS=enableNS;
-	if(logFilePath!=nullptr&&!logFilePath->IsEmpty()){
-		config.logFilePath = wstring(logFilePath->Data());
-		//WideCharToMultiByte(CP_UTF8, 0, logFilePath->Data(), -1, config.logFilePath, sizeof(config.logFilePath), NULL, NULL);
+	config.initTimeout=wrapper->initTimeout;
+	config.recvTimeout=wrapper->recvTimeout;
+	config.dataSaving=(int)wrapper->dataSaving;
+	config.logFilePath;
+	config.statsDumpFilePath;
+
+	config.enableAEC=wrapper->enableAEC;
+	config.enableNS=wrapper->enableNS;
+	config.enableAGC=wrapper->enableAGC;
+
+	config.enableCallUpgrade=wrapper->enableCallUpgrade;
+
+	config.logPacketStats=wrapper->logPacketStats;
+	config.enableVolumeControl=wrapper->enableVolumeControl;
+
+	config.enableVideoSend=wrapper->enableVideoSend;
+	config.enableVideoReceive=wrapper->enableVideoReceive;
+
+	if(wrapper->logFilePath!=nullptr&&!wrapper->logFilePath->IsEmpty()){
+		config.logFilePath = wstring(wrapper->logFilePath->Data());
 	}
-	if (statsDumpFilePath != nullptr&&!statsDumpFilePath->IsEmpty()){
-		config.statsDumpFilePath = wstring(statsDumpFilePath->Data());
-		//WideCharToMultiByte(CP_UTF8, 0, statsDumpFilePath->Data(), -1, config.statsDumpFilePath, sizeof(config.statsDumpFilePath), NULL, NULL);
+	if (wrapper->statsDumpFilePath != nullptr&&!wrapper->statsDumpFilePath->IsEmpty()){
+		config.statsDumpFilePath = wstring(wrapper->statsDumpFilePath->Data());
 	}
+
 	controller->SetConfig(config);
 }
 
@@ -205,24 +220,16 @@ void VoIPControllerWrapper::SetAudioOutputGainControlEnabled(bool enabled){
 	controller->SetAudioOutputGainControlEnabled(enabled);
 }
 
+void VoIPControllerWrapper::SetInputVolume(float level){
+	controller->SetInputVolume(level);
+}
+
+void VoIPControllerWrapper::SetOutputVolume(float level){
+	controller->SetOutputVolume(level);
+}
+
 void VoIPControllerWrapper::UpdateServerConfig(Platform::String^ json){
-	JsonObject^ jconfig=JsonValue::Parse(json)->GetObject();
-	std::map<std::string, std::string> config;
-
-	for each (auto item in jconfig){
-		char _key[128];
-		char _value[256];
-		WideCharToMultiByte(CP_UTF8, 0, item->Key->Data(), -1, _key, sizeof(_key), NULL, NULL);
-		if(item->Value->ValueType==Windows::Data::Json::JsonValueType::String)
-			WideCharToMultiByte(CP_UTF8, 0, item->Value->GetString()->Data(), -1, _value, sizeof(_value), NULL, NULL);
-		else
-			WideCharToMultiByte(CP_UTF8, 0, item->Value->ToString()->Data(), -1, _value, sizeof(_value), NULL, NULL);
-		std::string key(_key);
-		std::string value(_value);
-
-		config[key]=value;
-	}
-
+	std::string config=ToUtf8(json->Data(), json->Length());
 	ServerConfig::GetSharedInstance()->Update(config);
 }
 
