@@ -66,6 +66,8 @@
           '<(tgvoip_src_loc)/MessageThread.h',
           '<(tgvoip_src_loc)/audio/AudioIO.cpp',
           '<(tgvoip_src_loc)/audio/AudioIO.h',
+          '<(tgvoip_src_loc)/video/ScreamCongestionController.cpp',
+          '<(tgvoip_src_loc)/video/ScreamCongestionController.h',
           '<(tgvoip_src_loc)/video/VideoSource.cpp',
           '<(tgvoip_src_loc)/video/VideoSource.h',
           '<(tgvoip_src_loc)/video/VideoRenderer.cpp',
@@ -100,6 +102,14 @@
           '<(tgvoip_src_loc)/os/darwin/AudioUnitIO.h',
           '<(tgvoip_src_loc)/os/darwin/DarwinSpecific.mm',
           '<(tgvoip_src_loc)/os/darwin/DarwinSpecific.h',
+          '<(tgvoip_src_loc)/os/darwin/TGVVideoRenderer.mm',
+          '<(tgvoip_src_loc)/os/darwin/TGVVideoRenderer.h',
+          '<(tgvoip_src_loc)/os/darwin/TGVVideoSource.mm',
+          '<(tgvoip_src_loc)/os/darwin/TGVVideoSource.h',
+          '<(tgvoip_src_loc)/os/darwin/VideoToolboxEncoderSource.mm',
+          '<(tgvoip_src_loc)/os/darwin/VideoToolboxEncoderSource.h',
+          '<(tgvoip_src_loc)/os/darwin/SampleBufferDisplayLayerRenderer.mm',
+          '<(tgvoip_src_loc)/os/darwin/SampleBufferDisplayLayerRenderer.h',
 
           # Linux
           '<(tgvoip_src_loc)/os/linux/AudioInputALSA.cpp',

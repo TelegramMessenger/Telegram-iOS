@@ -25,6 +25,7 @@ audio/Resampler.cpp \
 os/posix/NetworkSocketPosix.cpp \
 video/VideoSource.cpp \
 video/VideoRenderer.cpp \
+video/ScreamCongestionController.cpp \
 json11.cpp
 
 TGVOIP_HDRS = \
@@ -51,6 +52,7 @@ audio/Resampler.h \
 os/posix/NetworkSocketPosix.h \
 video/VideoSource.h \
 video/VideoRenderer.h \
+video/ScreamCongestionController.h \
 json11.hpp \
 utils.h
 
@@ -62,7 +64,11 @@ os/darwin/AudioOutputAudioUnit.cpp \
 os/darwin/AudioUnitIO.cpp \
 os/darwin/AudioInputAudioUnitOSX.cpp \
 os/darwin/AudioOutputAudioUnitOSX.cpp \
-os/darwin/DarwinSpecific.mm
+os/darwin/DarwinSpecific.mm \
+os/darwin/SampleBufferDisplayLayerRenderer.mm \
+os/darwin/TGVVideoRenderer.mm \
+os/darwin/TGVVideoSource.mm \
+os/darwin/VideoToolboxEncoderSource.mm
 
 TGVOIP_HDRS += \
 os/darwin/AudioInputAudioUnit.h \
@@ -70,12 +76,17 @@ os/darwin/AudioOutputAudioUnit.h \
 os/darwin/AudioUnitIO.h \
 os/darwin/AudioInputAudioUnitOSX.h \
 os/darwin/AudioOutputAudioUnitOSX.h \
-os/darwin/DarwinSpecific.h
+os/darwin/DarwinSpecific.h \
+os/darwin/SampleBufferDisplayLayerRenderer.h \
+os/darwin/TGVVideoRenderer.h \
+os/darwin/TGVVideoSource.h \
+os/darwin/VideoToolboxEncoderSource.h
 
-LDFLAGS += -framework Foundation -framework CoreFoundation -framework CoreAudio -framework AudioToolbox
+LDFLAGS += -framework Foundation -framework CoreFoundation -framework CoreAudio -framework AudioToolbox -framework VideoToolbox -framework CoreMedia -framework CoreVideo
 
 else
 # Linux-specific
+
 if WITH_ALSA
 SRC += \
 os/linux/AudioInputALSA.cpp \
@@ -743,3 +754,7 @@ tgvoipincludedir = $(includedir)/tgvoip
 nobase_tgvoipinclude_HEADERS = $(TGVOIP_HDRS)
 
 CXXFLAGS += -std=gnu++0x $(CFLAGS)
+if TARGET_OS_OSX
+OBJCFLAGS = $(CFLAGS)
+OBJCXXFLAGS += -std=gnu++0x $(CFLAGS)
+endif

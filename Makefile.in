@@ -95,7 +95,11 @@ host_triplet = @host@
 @TARGET_OS_OSX_TRUE@os/darwin/AudioUnitIO.cpp \
 @TARGET_OS_OSX_TRUE@os/darwin/AudioInputAudioUnitOSX.cpp \
 @TARGET_OS_OSX_TRUE@os/darwin/AudioOutputAudioUnitOSX.cpp \
-@TARGET_OS_OSX_TRUE@os/darwin/DarwinSpecific.mm
+@TARGET_OS_OSX_TRUE@os/darwin/DarwinSpecific.mm \
+@TARGET_OS_OSX_TRUE@os/darwin/SampleBufferDisplayLayerRenderer.mm \
+@TARGET_OS_OSX_TRUE@os/darwin/TGVVideoRenderer.mm \
+@TARGET_OS_OSX_TRUE@os/darwin/TGVVideoSource.mm \
+@TARGET_OS_OSX_TRUE@os/darwin/VideoToolboxEncoderSource.mm
 
 @TARGET_OS_OSX_TRUE@am__append_2 = \
 @TARGET_OS_OSX_TRUE@os/darwin/AudioInputAudioUnit.h \
@@ -103,9 +107,13 @@ host_triplet = @host@
 @TARGET_OS_OSX_TRUE@os/darwin/AudioUnitIO.h \
 @TARGET_OS_OSX_TRUE@os/darwin/AudioInputAudioUnitOSX.h \
 @TARGET_OS_OSX_TRUE@os/darwin/AudioOutputAudioUnitOSX.h \
-@TARGET_OS_OSX_TRUE@os/darwin/DarwinSpecific.h
+@TARGET_OS_OSX_TRUE@os/darwin/DarwinSpecific.h \
+@TARGET_OS_OSX_TRUE@os/darwin/SampleBufferDisplayLayerRenderer.h \
+@TARGET_OS_OSX_TRUE@os/darwin/TGVVideoRenderer.h \
+@TARGET_OS_OSX_TRUE@os/darwin/TGVVideoSource.h \
+@TARGET_OS_OSX_TRUE@os/darwin/VideoToolboxEncoderSource.h
 
-@TARGET_OS_OSX_TRUE@am__append_3 = -framework Foundation -framework CoreFoundation -framework CoreAudio -framework AudioToolbox
+@TARGET_OS_OSX_TRUE@am__append_3 = -framework Foundation -framework CoreFoundation -framework CoreAudio -framework AudioToolbox -framework VideoToolbox -framework CoreMedia -framework CoreVideo
 
 # Linux-specific
 @TARGET_OS_OSX_FALSE@@WITH_ALSA_TRUE@am__append_4 = \
@@ -754,6 +762,7 @@ host_triplet = @host@
 @ENABLE_DSP_TRUE@webrtc_dsp/common_audio/vad/vad_filterbank.h
 
 @ENABLE_DSP_FALSE@am__append_24 = -DTGVOIP_NO_DSP
+@TARGET_OS_OSX_TRUE@am__append_25 = -std=gnu++0x $(CFLAGS)
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -807,14 +816,18 @@ am__libtgvoip_la_SOURCES_DIST = VoIPController.cpp Buffers.cpp \
 	VoIPServerConfig.cpp audio/AudioIO.cpp audio/AudioInput.cpp \
 	audio/AudioOutput.cpp audio/Resampler.cpp \
 	os/posix/NetworkSocketPosix.cpp video/VideoSource.cpp \
-	video/VideoRenderer.cpp json11.cpp \
-	os/darwin/AudioInputAudioUnit.cpp \
+	video/VideoRenderer.cpp video/ScreamCongestionController.cpp \
+	json11.cpp os/darwin/AudioInputAudioUnit.cpp \
 	os/darwin/AudioOutputAudioUnit.cpp os/darwin/AudioUnitIO.cpp \
 	os/darwin/AudioInputAudioUnitOSX.cpp \
 	os/darwin/AudioOutputAudioUnitOSX.cpp \
-	os/darwin/DarwinSpecific.mm os/linux/AudioInputALSA.cpp \
-	os/linux/AudioOutputALSA.cpp os/linux/AudioOutputPulse.cpp \
-	os/linux/AudioInputPulse.cpp os/linux/AudioPulse.cpp \
+	os/darwin/DarwinSpecific.mm \
+	os/darwin/SampleBufferDisplayLayerRenderer.mm \
+	os/darwin/TGVVideoRenderer.mm os/darwin/TGVVideoSource.mm \
+	os/darwin/VideoToolboxEncoderSource.mm \
+	os/linux/AudioInputALSA.cpp os/linux/AudioOutputALSA.cpp \
+	os/linux/AudioOutputPulse.cpp os/linux/AudioInputPulse.cpp \
+	os/linux/AudioPulse.cpp \
 	./webrtc_dsp/system_wrappers/source/field_trial.cc \
 	./webrtc_dsp/system_wrappers/source/metrics.cc \
 	./webrtc_dsp/system_wrappers/source/cpu_features.cc \
@@ -1415,11 +1428,15 @@ am__libtgvoip_la_SOURCES_DIST = VoIPController.cpp Buffers.cpp \
 	OpusEncoder.h PacketReassembler.h VoIPServerConfig.h \
 	audio/AudioIO.h audio/AudioInput.h audio/AudioOutput.h \
 	audio/Resampler.h os/posix/NetworkSocketPosix.h \
-	video/VideoSource.h video/VideoRenderer.h json11.hpp utils.h \
+	video/VideoSource.h video/VideoRenderer.h \
+	video/ScreamCongestionController.h json11.hpp utils.h \
 	os/darwin/AudioInputAudioUnit.h \
 	os/darwin/AudioOutputAudioUnit.h os/darwin/AudioUnitIO.h \
 	os/darwin/AudioInputAudioUnitOSX.h \
 	os/darwin/AudioOutputAudioUnitOSX.h os/darwin/DarwinSpecific.h \
+	os/darwin/SampleBufferDisplayLayerRenderer.h \
+	os/darwin/TGVVideoRenderer.h os/darwin/TGVVideoSource.h \
+	os/darwin/VideoToolboxEncoderSource.h \
 	os/linux/AudioInputALSA.h os/linux/AudioOutputALSA.h \
 	os/linux/AudioOutputPulse.h os/linux/AudioInputPulse.h \
 	os/linux/AudioPulse.h os/linux/PulseFunctions.h \
@@ -1430,7 +1447,11 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @TARGET_OS_OSX_TRUE@	os/darwin/AudioUnitIO.lo \
 @TARGET_OS_OSX_TRUE@	os/darwin/AudioInputAudioUnitOSX.lo \
 @TARGET_OS_OSX_TRUE@	os/darwin/AudioOutputAudioUnitOSX.lo \
-@TARGET_OS_OSX_TRUE@	os/darwin/DarwinSpecific.lo
+@TARGET_OS_OSX_TRUE@	os/darwin/DarwinSpecific.lo \
+@TARGET_OS_OSX_TRUE@	os/darwin/SampleBufferDisplayLayerRenderer.lo \
+@TARGET_OS_OSX_TRUE@	os/darwin/TGVVideoRenderer.lo \
+@TARGET_OS_OSX_TRUE@	os/darwin/TGVVideoSource.lo \
+@TARGET_OS_OSX_TRUE@	os/darwin/VideoToolboxEncoderSource.lo
 @TARGET_OS_OSX_FALSE@@WITH_ALSA_TRUE@am__objects_2 = os/linux/AudioInputALSA.lo \
 @TARGET_OS_OSX_FALSE@@WITH_ALSA_TRUE@	os/linux/AudioOutputALSA.lo
 @TARGET_OS_OSX_FALSE@@WITH_PULSE_TRUE@am__objects_3 = os/linux/AudioOutputPulse.lo \
@@ -1722,11 +1743,11 @@ am__objects_12 = VoIPController.lo Buffers.lo CongestionControl.lo \
 	VoIPServerConfig.lo audio/AudioIO.lo audio/AudioInput.lo \
 	audio/AudioOutput.lo audio/Resampler.lo \
 	os/posix/NetworkSocketPosix.lo video/VideoSource.lo \
-	video/VideoRenderer.lo json11.lo $(am__objects_1) \
-	$(am__objects_2) $(am__objects_3) $(am__objects_4) \
-	$(am__objects_5) $(am__objects_6) $(am__objects_7) \
-	$(am__objects_8) $(am__objects_9) $(am__objects_10) \
-	$(am__objects_11)
+	video/VideoRenderer.lo video/ScreamCongestionController.lo \
+	json11.lo $(am__objects_1) $(am__objects_2) $(am__objects_3) \
+	$(am__objects_4) $(am__objects_5) $(am__objects_6) \
+	$(am__objects_7) $(am__objects_8) $(am__objects_9) \
+	$(am__objects_10) $(am__objects_11)
 am__objects_13 = $(am__objects_11) $(am__objects_11) $(am__objects_11) \
 	$(am__objects_11)
 am_libtgvoip_la_OBJECTS = $(am__objects_12) $(am__objects_13)
@@ -2033,12 +2054,17 @@ am__depfiles_remade = ./$(DEPDIR)/Buffers.Plo \
 	os/darwin/$(DEPDIR)/AudioOutputAudioUnitOSX.Plo \
 	os/darwin/$(DEPDIR)/AudioUnitIO.Plo \
 	os/darwin/$(DEPDIR)/DarwinSpecific.Plo \
+	os/darwin/$(DEPDIR)/SampleBufferDisplayLayerRenderer.Plo \
+	os/darwin/$(DEPDIR)/TGVVideoRenderer.Plo \
+	os/darwin/$(DEPDIR)/TGVVideoSource.Plo \
+	os/darwin/$(DEPDIR)/VideoToolboxEncoderSource.Plo \
 	os/linux/$(DEPDIR)/AudioInputALSA.Plo \
 	os/linux/$(DEPDIR)/AudioInputPulse.Plo \
 	os/linux/$(DEPDIR)/AudioOutputALSA.Plo \
 	os/linux/$(DEPDIR)/AudioOutputPulse.Plo \
 	os/linux/$(DEPDIR)/AudioPulse.Plo \
 	os/posix/$(DEPDIR)/NetworkSocketPosix.Plo \
+	video/$(DEPDIR)/ScreamCongestionController.Plo \
 	video/$(DEPDIR)/VideoRenderer.Plo \
 	video/$(DEPDIR)/VideoSource.Plo \
 	webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/complex_bit_reverse.Plo \
@@ -2134,11 +2160,15 @@ am__nobase_tgvoipinclude_HEADERS_DIST = VoIPController.h Buffers.h \
 	OpusEncoder.h PacketReassembler.h VoIPServerConfig.h \
 	audio/AudioIO.h audio/AudioInput.h audio/AudioOutput.h \
 	audio/Resampler.h os/posix/NetworkSocketPosix.h \
-	video/VideoSource.h video/VideoRenderer.h json11.hpp utils.h \
+	video/VideoSource.h video/VideoRenderer.h \
+	video/ScreamCongestionController.h json11.hpp utils.h \
 	os/darwin/AudioInputAudioUnit.h \
 	os/darwin/AudioOutputAudioUnit.h os/darwin/AudioUnitIO.h \
 	os/darwin/AudioInputAudioUnitOSX.h \
 	os/darwin/AudioOutputAudioUnitOSX.h os/darwin/DarwinSpecific.h \
+	os/darwin/SampleBufferDisplayLayerRenderer.h \
+	os/darwin/TGVVideoRenderer.h os/darwin/TGVVideoSource.h \
+	os/darwin/VideoToolboxEncoderSource.h \
 	os/linux/AudioInputALSA.h os/linux/AudioOutputALSA.h \
 	os/linux/AudioOutputPulse.h os/linux/AudioInputPulse.h \
 	os/linux/AudioPulse.h os/linux/PulseFunctions.h \
@@ -2242,7 +2272,7 @@ NM = @NM@
 NMEDIT = @NMEDIT@
 OBJCXX = @OBJCXX@
 OBJCXXDEPMODE = @OBJCXXDEPMODE@
-OBJCXXFLAGS = @OBJCXXFLAGS@
+OBJCXXFLAGS = @OBJCXXFLAGS@ $(am__append_25)
 OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
 OTOOL = @OTOOL@
@@ -2324,11 +2354,11 @@ SRC = VoIPController.cpp Buffers.cpp CongestionControl.cpp \
 	VoIPGroupController.cpp VoIPServerConfig.cpp audio/AudioIO.cpp \
 	audio/AudioInput.cpp audio/AudioOutput.cpp audio/Resampler.cpp \
 	os/posix/NetworkSocketPosix.cpp video/VideoSource.cpp \
-	video/VideoRenderer.cpp json11.cpp $(am__append_1) \
-	$(am__append_4) $(am__append_6) $(am__append_10) \
-	$(am__append_12) $(am__append_14) $(am__append_16) \
-	$(am__append_18) $(am__append_21) $(am__append_22) \
-	$(am__append_23)
+	video/VideoRenderer.cpp video/ScreamCongestionController.cpp \
+	json11.cpp $(am__append_1) $(am__append_4) $(am__append_6) \
+	$(am__append_10) $(am__append_12) $(am__append_14) \
+	$(am__append_16) $(am__append_18) $(am__append_21) \
+	$(am__append_22) $(am__append_23)
 TGVOIP_HDRS = VoIPController.h Buffers.h BlockingQueue.h \
 	PrivateDefines.h CongestionControl.h EchoCanceller.h \
 	JitterBuffer.h logging.h threading.h MediaStreamItf.h \
@@ -2336,11 +2366,13 @@ TGVOIP_HDRS = VoIPController.h Buffers.h BlockingQueue.h \
 	PacketReassembler.h VoIPServerConfig.h audio/AudioIO.h \
 	audio/AudioInput.h audio/AudioOutput.h audio/Resampler.h \
 	os/posix/NetworkSocketPosix.h video/VideoSource.h \
-	video/VideoRenderer.h json11.hpp utils.h $(am__append_2) \
-	$(am__append_5) $(am__append_7) $(am__append_17)
+	video/VideoRenderer.h video/ScreamCongestionController.h \
+	json11.hpp utils.h $(am__append_2) $(am__append_5) \
+	$(am__append_7) $(am__append_17)
 libtgvoip_la_SOURCES = $(SRC) $(TGVOIP_HDRS)
 tgvoipincludedir = $(includedir)/tgvoip
 nobase_tgvoipinclude_HEADERS = $(TGVOIP_HDRS)
+@TARGET_OS_OSX_TRUE@OBJCFLAGS = $(CFLAGS)
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -2461,6 +2493,8 @@ video/VideoSource.lo: video/$(am__dirstamp) \
 	video/$(DEPDIR)/$(am__dirstamp)
 video/VideoRenderer.lo: video/$(am__dirstamp) \
 	video/$(DEPDIR)/$(am__dirstamp)
+video/ScreamCongestionController.lo: video/$(am__dirstamp) \
+	video/$(DEPDIR)/$(am__dirstamp)
 os/darwin/$(am__dirstamp):
 	@$(MKDIR_P) os/darwin
 	@: > os/darwin/$(am__dirstamp)
@@ -2478,6 +2512,14 @@ os/darwin/AudioInputAudioUnitOSX.lo: os/darwin/$(am__dirstamp) \
 os/darwin/AudioOutputAudioUnitOSX.lo: os/darwin/$(am__dirstamp) \
 	os/darwin/$(DEPDIR)/$(am__dirstamp)
 os/darwin/DarwinSpecific.lo: os/darwin/$(am__dirstamp) \
+	os/darwin/$(DEPDIR)/$(am__dirstamp)
+os/darwin/SampleBufferDisplayLayerRenderer.lo:  \
+	os/darwin/$(am__dirstamp) os/darwin/$(DEPDIR)/$(am__dirstamp)
+os/darwin/TGVVideoRenderer.lo: os/darwin/$(am__dirstamp) \
+	os/darwin/$(DEPDIR)/$(am__dirstamp)
+os/darwin/TGVVideoSource.lo: os/darwin/$(am__dirstamp) \
+	os/darwin/$(DEPDIR)/$(am__dirstamp)
+os/darwin/VideoToolboxEncoderSource.lo: os/darwin/$(am__dirstamp) \
 	os/darwin/$(DEPDIR)/$(am__dirstamp)
 os/linux/$(am__dirstamp):
 	@$(MKDIR_P) os/linux
@@ -3875,12 +3917,17 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/AudioOutputAudioUnitOSX.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/AudioUnitIO.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/DarwinSpecific.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/SampleBufferDisplayLayerRenderer.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/TGVVideoRenderer.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/TGVVideoSource.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/VideoToolboxEncoderSource.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/linux/$(DEPDIR)/AudioInputALSA.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/linux/$(DEPDIR)/AudioInputPulse.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/linux/$(DEPDIR)/AudioOutputALSA.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/linux/$(DEPDIR)/AudioOutputPulse.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/linux/$(DEPDIR)/AudioPulse.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/posix/$(DEPDIR)/NetworkSocketPosix.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@video/$(DEPDIR)/ScreamCongestionController.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@video/$(DEPDIR)/VideoRenderer.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@video/$(DEPDIR)/VideoSource.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/complex_bit_reverse.Plo@am__quote@ # am--include-marker
@@ -4738,12 +4785,17 @@ distclean: distclean-am
 	-rm -f os/darwin/$(DEPDIR)/AudioOutputAudioUnitOSX.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioUnitIO.Plo
 	-rm -f os/darwin/$(DEPDIR)/DarwinSpecific.Plo
+	-rm -f os/darwin/$(DEPDIR)/SampleBufferDisplayLayerRenderer.Plo
+	-rm -f os/darwin/$(DEPDIR)/TGVVideoRenderer.Plo
+	-rm -f os/darwin/$(DEPDIR)/TGVVideoSource.Plo
+	-rm -f os/darwin/$(DEPDIR)/VideoToolboxEncoderSource.Plo
 	-rm -f os/linux/$(DEPDIR)/AudioInputALSA.Plo
 	-rm -f os/linux/$(DEPDIR)/AudioInputPulse.Plo
 	-rm -f os/linux/$(DEPDIR)/AudioOutputALSA.Plo
 	-rm -f os/linux/$(DEPDIR)/AudioOutputPulse.Plo
 	-rm -f os/linux/$(DEPDIR)/AudioPulse.Plo
 	-rm -f os/posix/$(DEPDIR)/NetworkSocketPosix.Plo
+	-rm -f video/$(DEPDIR)/ScreamCongestionController.Plo
 	-rm -f video/$(DEPDIR)/VideoRenderer.Plo
 	-rm -f video/$(DEPDIR)/VideoSource.Plo
 	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/complex_bit_reverse.Plo
@@ -5096,12 +5148,17 @@ maintainer-clean: maintainer-clean-am
 	-rm -f os/darwin/$(DEPDIR)/AudioOutputAudioUnitOSX.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioUnitIO.Plo
 	-rm -f os/darwin/$(DEPDIR)/DarwinSpecific.Plo
+	-rm -f os/darwin/$(DEPDIR)/SampleBufferDisplayLayerRenderer.Plo
+	-rm -f os/darwin/$(DEPDIR)/TGVVideoRenderer.Plo
+	-rm -f os/darwin/$(DEPDIR)/TGVVideoSource.Plo
+	-rm -f os/darwin/$(DEPDIR)/VideoToolboxEncoderSource.Plo
 	-rm -f os/linux/$(DEPDIR)/AudioInputALSA.Plo
 	-rm -f os/linux/$(DEPDIR)/AudioInputPulse.Plo
 	-rm -f os/linux/$(DEPDIR)/AudioOutputALSA.Plo
 	-rm -f os/linux/$(DEPDIR)/AudioOutputPulse.Plo
 	-rm -f os/linux/$(DEPDIR)/AudioPulse.Plo
 	-rm -f os/posix/$(DEPDIR)/NetworkSocketPosix.Plo
+	-rm -f video/$(DEPDIR)/ScreamCongestionController.Plo
 	-rm -f video/$(DEPDIR)/VideoRenderer.Plo
 	-rm -f video/$(DEPDIR)/VideoSource.Plo
 	-rm -f webrtc_dsp/common_audio/signal_processing/$(DEPDIR)/complex_bit_reverse.Plo

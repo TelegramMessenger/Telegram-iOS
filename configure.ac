@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([libtgvoip], [2.4.2], [https://github.com/grishka/libtgvoip/issues])
+AC_INIT([libtgvoip], [2.4.4], [https://github.com/grishka/libtgvoip/issues])
 AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([subdir-objects])
