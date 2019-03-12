@@ -148,7 +148,7 @@ public final class StickerPackItem: ItemCollectionItem, Equatable {
 extension StickerPackCollectionInfo {
     convenience init(apiSet: Api.StickerSet, namespace: ItemCollectionId.Namespace) {
         switch apiSet {
-            case let .stickerSet(flags, _, id, accessHash, title, shortName, count, nHash):
+            case let .stickerSet(flags, _, id, accessHash, title, shortName, thumb, count, nHash):
                 var setFlags: StickerPackCollectionInfoFlags = StickerPackCollectionInfoFlags()
                 if (flags & (1 << 2)) != 0 {
                     setFlags.insert(.official)

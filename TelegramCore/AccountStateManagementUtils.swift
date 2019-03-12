@@ -2442,7 +2442,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                                 }
                                 
                                 switch set {
-                                    case let .stickerSet(flags, _, _, _, _, _, _, _):
+                                    case let .stickerSet(flags, _, _, _, _, _, _, _, _):
                                         if (flags & (1 << 3)) != 0 {
                                             namespace = Namespaces.ItemCollection.CloudMaskPacks
                                         } else {
