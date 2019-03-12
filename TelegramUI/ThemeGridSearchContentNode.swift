@@ -177,10 +177,10 @@ private enum ThemeGridRecentEntry: Comparable, Identifiable {
     
     var stableId: ThemeGridRecentEntryStableId {
         switch self {
-        case .colors:
-            return .colors
-        case let .query(_, query):
-            return .query(query)
+            case .colors:
+                return .colors
+            case let .query(_, query):
+                return .query(query)
         }
     }
     

@@ -7,7 +7,7 @@ import TelegramCore
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []
     var skipText = false
-    var addFinalText = false
+    var messageWithCaptionToAdd: Message?
     var isUnsupportedMedia = false
     
     outer: for message in item.content {
@@ -58,14 +58,14 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
         if !message.text.isEmpty || isUnsupportedMedia {
             if !skipText {
                 if case .group = item.content {
-                    addFinalText = true
+                    messageWithCaptionToAdd = message
                     skipText = true
                 } else {
                     result.append((message, ChatMessageTextBubbleContentNode.self))
                 }
             } else {
                 if case .group = item.content {
-                    addFinalText = false
+                    messageWithCaptionToAdd = nil
                 }
             }
         }
@@ -84,8 +84,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
         }
     }
     
-    if addFinalText && !item.content.firstMessage.text.isEmpty {
-        result.append((item.content.firstMessage, ChatMessageTextBubbleContentNode.self))
+    if let messageWithCaptionToAdd = messageWithCaptionToAdd {
+        result.append((messageWithCaptionToAdd, ChatMessageTextBubbleContentNode.self))
     }
     
     if let additionalContent = item.additionalContent {

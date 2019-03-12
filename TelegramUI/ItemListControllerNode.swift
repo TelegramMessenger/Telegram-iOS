@@ -176,6 +176,9 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
     
     var visibleEntriesUpdated: ((ItemListNodeVisibleEntries<Entry>) -> Void)?
     var visibleBottomContentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
+    var contentOffsetChanged: ((ListViewVisibleContentOffset, Bool) -> Void)?
+    var contentScrollingEnded: ((ListView) -> Bool)?
+    var searchActivated: ((Bool) -> Void)?
     var reorderEntry: ((Int, Int, [Entry]) -> Void)?
     
     var enableInteractiveDismiss = false {
@@ -230,6 +233,20 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
         
         self.listNode.visibleBottomContentOffsetChanged = { [weak self] offset in
             self?.visibleBottomContentOffsetChanged?(offset)
+        }
+        
+        self.listNode.visibleContentOffsetChanged = { [weak self] offset in
+            var inVoiceOver = false
+            if let validLayout = self?.validLayout {
+                inVoiceOver = validLayout.0.inVoiceOver
+            }
+            self?.contentOffsetChanged?(offset, inVoiceOver)
+        }
+        
+        self.listNode.didEndScrolling = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.contentScrollingEnded?(strongSelf.listNode)
+            }
         }
         
         let previousState = Atomic<ItemListNodeState<Entry>?>(value: nil)
@@ -413,6 +430,57 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
                     }
                 }
             }
+            
+            var updateSearchItem = false
+            if let searchItem = self.searchItem, let updatedSearchItem = transition.searchItem {
+                updateSearchItem = !searchItem.isEqual(to: updatedSearchItem)
+            } else if (self.searchItem != nil) != (transition.searchItem != nil) {
+                updateSearchItem = true
+            }
+            if updateSearchItem {
+                self.searchItem = transition.searchItem
+                if let searchItem = transition.searchItem {
+                    let updatedTitleContentNode = searchItem.titleContentNode(current: self.navigationBar.contentNode as? (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode))
+                    if updatedTitleContentNode !== self.navigationBar.contentNode {
+                        if let titleContentNode = self.navigationBar.contentNode as? ItemListControllerSearchNavigationContentNode {
+                            titleContentNode.deactivate()
+                        }
+                        updatedTitleContentNode.setQueryUpdated { [weak self] query in
+                            if let strongSelf = self {
+                                strongSelf.searchNode?.queryUpdated(query)
+                            }
+                        }
+                        self.navigationBar.setContentNode(updatedTitleContentNode, animated: true)
+                        updatedTitleContentNode.activate()
+                    }
+                    
+                    let updatedNode = searchItem.node(current: self.searchNode, titleContentNode: updatedTitleContentNode)
+                    if let searchNode = self.searchNode, updatedNode !== searchNode {
+                        searchNode.removeFromSupernode()
+                    }
+                    if self.searchNode !== updatedNode {
+                        self.searchNode = updatedNode
+                        if let validLayout = self.validLayout {
+                            updatedNode.updateLayout(layout: validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
+                        }
+                        self.insertSubnode(updatedNode, belowSubnode: self.navigationBar)
+                        updatedNode.activate()
+                    }
+                } else {
+                    if let searchNode = self.searchNode {
+                        self.searchNode = nil
+                        searchNode.deactivate()
+                    }
+                    
+                    if let titleContentNode = self.navigationBar.contentNode {
+                        if let titleContentNode = titleContentNode as? ItemListControllerSearchNavigationContentNode {
+                            titleContentNode.deactivate()
+                        }
+                        self.navigationBar.setContentNode(nil, animated: true)
+                    }
+                }
+            }
+            
             self.listNode.transaction(deleteIndices: transition.entries.deletions, insertIndicesAndItems: transition.entries.insertions, updateIndicesAndItems: transition.entries.updates, options: options, scrollToItem: scrollToItem, updateOpaqueState: ItemListNodeOpaqueState(mergedEntries: transition.mergedEntries), completion: { [weak self] _ in
                 if let strongSelf = self {
                     if !strongSelf.didSetReady {
@@ -499,57 +567,6 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
                     })
                     self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     self.emptyStateNode = nil
-                }
-            }
-            
-            var updateSearchItem = false
-            if let searchItem = self.searchItem, let updatedSearchItem = transition.searchItem {
-                updateSearchItem = !searchItem.isEqual(to: updatedSearchItem)
-            } else if (self.searchItem != nil) != (transition.searchItem != nil) {
-                updateSearchItem = true
-            }
-            if updateSearchItem {
-                self.searchItem = transition.searchItem
-                if let searchItem = transition.searchItem {
-                    let updatedNode = searchItem.node(current: self.searchNode)
-                    if let searchNode = self.searchNode, updatedNode !== searchNode {
-                        searchNode.removeFromSupernode()
-                    }
-                    if self.searchNode !== updatedNode {
-                        self.searchNode = updatedNode
-                        if let validLayout = self.validLayout {
-                            updatedNode.updateLayout(layout: validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
-                        }
-                        self.insertSubnode(updatedNode, belowSubnode: self.navigationBar)
-                        updatedNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut)
-                    }
-                    let updatedTitleContentNode = searchItem.titleContentNode(current: self.navigationBar.contentNode as? (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode))
-                    if updatedTitleContentNode !== self.navigationBar.contentNode {
-                        if let titleContentNode = self.navigationBar.contentNode as? ItemListControllerSearchNavigationContentNode {
-                            titleContentNode.deactivate()
-                        }
-                        updatedTitleContentNode.setQueryUpdated { [weak self] query in
-                            if let strongSelf = self {
-                                strongSelf.searchNode?.queryUpdated(query)
-                            }
-                        }
-                        self.navigationBar.setContentNode(updatedTitleContentNode, animated: true)
-                        updatedTitleContentNode.activate()
-                    }
-                } else {
-                    if let searchNode = self.searchNode {
-                        self.searchNode = nil
-                        searchNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { [weak searchNode]_ in
-                            searchNode?.removeFromSupernode()
-                        })
-                    }
-                    
-                    if let titleContentNode = self.navigationBar.contentNode {
-                        if let titleContentNode = titleContentNode as? ItemListControllerSearchNavigationContentNode {
-                            titleContentNode.deactivate()
-                        }
-                        self.navigationBar.setContentNode(nil, animated: true)
-                    }
                 }
             }
         }

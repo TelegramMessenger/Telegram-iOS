@@ -9,6 +9,8 @@ import Display
 private let textFont = Font.regular(13.0)
 
 final class ChatVideoGalleryItemScrubberView: UIView {
+    private var containerLayout: (CGSize, CGFloat, CGFloat)?
+    
     private let leftTimestampNode: MediaPlayerTimeTextNode
     private let rightTimestampNode: MediaPlayerTimeTextNode
     private let fileSizeNode: ASTextNode
@@ -41,7 +43,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     var seek: (Double) -> Void = { _ in }
     
     override init(frame: CGRect) {
-        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 4.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: UIColor(white: 1.0, alpha: 0.42), foregroundColor: .white))
+        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 5.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: UIColor(white: 1.0, alpha: 0.42), foregroundColor: .white))
         
         self.leftTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
         self.rightTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
@@ -124,7 +126,10 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                                 text = ""
                         }
                         strongSelf.fileSizeNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: .white)
-                        strongSelf.layoutSubviews()
+                        
+                        if let (size, leftInset, rightInset) = strongSelf.containerLayout {
+                            strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
+                        }
                     }
                 }))
             } else {
@@ -135,21 +140,27 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         }
     }
     
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        
-        let size = self.bounds.size
-        guard !size.equalTo(CGSize.zero) else {
-            return
-        }
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+        self.containerLayout = (size, leftInset, rightInset)
         
         let scrubberHeight: CGFloat = 14.0
+        let scrubberInset: CGFloat
+        let timestampOffset: CGFloat
+        if size.width > size.height {
+            scrubberInset = 58.0
+            timestampOffset = 4.0
+        } else {
+            scrubberInset = 13.0
+            timestampOffset = 22.0
+        }
         
-        self.leftTimestampNode.frame = CGRect(origin: CGPoint(x: 6.0, y: 22.0), size: CGSize(width: 60.0, height: 20.0))
-        self.rightTimestampNode.frame = CGRect(origin: CGPoint(x: size.width - 60.0 - 6.0, y: 22.0), size: CGSize(width: 60.0, height: 20.0))
+        self.leftTimestampNode.frame = CGRect(origin: CGPoint(x: 12.0, y: timestampOffset), size: CGSize(width: 60.0, height: 20.0))
+        self.rightTimestampNode.frame = CGRect(origin: CGPoint(x: size.width - leftInset - rightInset - 60.0 - 12.0, y: timestampOffset), size: CGSize(width: 60.0, height: 20.0))
         
         let fileSize = self.fileSizeNode.measure(size)
         self.fileSizeNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - fileSize.width) / 2.0), y: 22.0), size: fileSize)
-        self.scrubberNode.frame = CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: size.width - 6.0 * 2.0, height: scrubberHeight))
+        self.fileSizeNode.alpha = size.width < size.height ? 1.0 : 0.0
+        
+        self.scrubberNode.frame = CGRect(origin: CGPoint(x: scrubberInset, y: 6.0), size: CGSize(width: size.width - leftInset - rightInset - scrubberInset * 2.0, height: scrubberHeight))
     }
 }

@@ -120,30 +120,23 @@ private func currentDateTimeFormat(strings: PresentationStrings) -> Presentation
     }
     
     let dateFormat: PresentationDateFormat
-    let dateSeparator: String
+    var dateSeparator = "/"
     if let dateString = DateFormatter.dateFormat(fromTemplate: "MdY", options: 0, locale: locale) {
-        if dateString.contains(".") {
-            dateSeparator = "."
-        } else if dateString.contains("/") {
-            dateSeparator = "/"
-        } else if dateString.contains("-") {
-            dateSeparator = "-"
-        } else {
-            dateSeparator = "/"
+        for separator in [".", "/", "-", "/"] {
+            if dateString.contains(separator) {
+                dateSeparator = separator
+                break
+            }
         }
-        
-        if dateString.contains("M\(dateSeparator)d") {
-            dateFormat = .monthFirst
-        } else {
-            dateFormat = .dayFirst
-        }
+    }
+    
+    if dateString.contains("M\(dateSeparator)d") {
+        dateFormat = .monthFirst
     } else {
-        dateSeparator = "/"
         dateFormat = .dayFirst
     }
     
     let decimalSeparator = locale.decimalSeparator ?? "."
-    
     return PresentationDateTimeFormat(timeFormat: timeFormat, dateFormat: dateFormat, dateSeparator: dateSeparator, decimalSeparator: decimalSeparator)
 }
 

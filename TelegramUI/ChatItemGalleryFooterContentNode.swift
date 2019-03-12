@@ -442,32 +442,52 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.currentWebPageAndMedia = (webPage, media)
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        let width = size.width
+        var bottomInset = bottomInset
+        if bottomInset < 30.0 {
+            bottomInset -= 7.0
+        }
         var panelHeight: CGFloat = 44.0 + bottomInset
         panelHeight += contentInset
+        
+        let isLandscape = size.width > size.height
+        let displayCaption = !self.textNode.isHidden && !isLandscape
+        
         var textFrame = CGRect()
         if !self.textNode.isHidden {
             let sideInset: CGFloat = 8.0 + leftInset
             let topInset: CGFloat = 8.0
             let textBottomInset: CGFloat = 8.0
             let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
-            panelHeight += textSize.height + topInset + textBottomInset
+            if displayCaption {
+                panelHeight += textSize.height + topInset + textBottomInset
+            }
             textFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize)
         }
         
         if let scrubberView = self.scrubberView, scrubberView.superview == self.view {
-            let sideInset: CGFloat = 8.0 + leftInset
-            let topInset: CGFloat = 8.0
+            var topInset: CGFloat = 8.0
             let bottomInset: CGFloat = 2.0
-            panelHeight += 34.0 + topInset + bottomInset
-            if self.textNode.isHidden {
+            panelHeight += topInset + bottomInset
+            if isLandscape {
+                panelHeight += 14.0
+            } else {
+                panelHeight += 34.0
+            }
+            if self.textNode.isHidden || !displayCaption {
                 panelHeight += 8.0
+            } else {
+                topInset += textFrame.maxY
             }
             
-            scrubberView.frame = CGRect(origin: CGPoint(x: sideInset, y: topInset + textFrame.maxY), size: CGSize(width: width - sideInset * 2.0, height: 34.0))
+            let scrubberFrame = CGRect(origin: CGPoint(x: leftInset, y: topInset), size: CGSize(width: width - leftInset - rightInset, height: 34.0))
+            scrubberView.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
+            transition.updateFrame(layer: scrubberView.layer, frame: scrubberFrame)
         }
         
         self.textNode.frame = textFrame
+        transition.updateAlpha(node: self.textNode, alpha: displayCaption ? 1.0 : 0.0)
         
         self.actionButton.frame = CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         self.deleteButton.frame = CGRect(origin: CGPoint(x: width - 44.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))

@@ -122,6 +122,10 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
         self.pager.centralItemIndexOffsetUpdated = { [weak self] itemsIndexAndProgress in
             if let strongSelf = self {
                 var node: GalleryThumbnailContainerNode?
+                var thumbnailContainerVisible = false
+                if let layout = strongSelf.containerLayout?.1, layout.size.width < layout.size.height {
+                    thumbnailContainerVisible = !strongSelf.areControlsHidden
+                }
                 if let (updatedItems, index, progress) = itemsIndexAndProgress {
                     if let (centralId, centralItem) = strongSelf.pager.items[index].thumbnailItem() {
                         var items: [GalleryThumbnailItem]
@@ -168,7 +172,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
                             } else {
                                 node = strongSelf.currentThumbnailContainerNode
                             }
-                            node?.alpha = strongSelf.areControlsHidden ? 0.0 : 1.0
+                            node?.alpha = thumbnailContainerVisible ? 1.0 : 0.0
                             node?.updateItems(items, indexes: indexes, centralIndex: convertedIndex, progress: progress)
                             node?.itemChanged = { [weak self] index in
                                 if let strongSelf = self {
@@ -189,7 +193,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
                         fromLeft = true
                     }
                     if let current = strongSelf.currentThumbnailContainerNode {
-                        if !strongSelf.areControlsHidden {
+                        if thumbnailContainerVisible {
                             current.animateOut(toRight: fromLeft)
                             current.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak current] _ in
                                 current?.removeFromSupernode()
@@ -199,7 +203,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
                     strongSelf.currentThumbnailContainerNode = node
                     if let node = node {
                         strongSelf.insertSubnode(node, aboveSubnode: strongSelf.footerNode)
-                        if let (navigationHeight, layout) = strongSelf.containerLayout, !strongSelf.areControlsHidden {
+                        if let (navigationHeight, layout) = strongSelf.containerLayout, thumbnailContainerVisible {
                             strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
                             node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             node.animateIn(fromLeft: fromLeft)
@@ -225,12 +229,18 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
         
         transition.updateFrame(node: self.footerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
+        let displayThumbnailPanel = layout.size.width < layout.size.height
         var thumbnailPanelHeight: CGFloat = 0.0
         if let currentThumbnailContainerNode = self.currentThumbnailContainerNode {
-            thumbnailPanelHeight = 52.0
-            let thumbnailsFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 40.0 - thumbnailPanelHeight + 4.0 - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: thumbnailPanelHeight - 4.0))
+            let panelHeight: CGFloat = 52.0
+            if displayThumbnailPanel {
+                thumbnailPanelHeight = 52.0
+            }
+            let thumbnailsFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 40.0 - panelHeight + 4.0 - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: panelHeight - 4.0))
             transition.updateFrame(node: currentThumbnailContainerNode, frame: thumbnailsFrame)
             currentThumbnailContainerNode.updateLayout(size: thumbnailsFrame.size, transition: transition)
+            
+            self.updateThumbnailContainerNodeAlpha(transition)
         }
         
         self.footerNode.updateLayout(layout, footerContentNode: self.presentationState.footerContentNode, thumbnailPanelHeight: thumbnailPanelHeight, transition: transition)
@@ -259,14 +269,21 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
                 self.navigationBar?.alpha = alpha
                 self.statusBar?.alpha = alpha
                 self.footerNode.alpha = alpha
-                self.currentThumbnailContainerNode?.alpha = alpha
+                self.updateThumbnailContainerNodeAlpha(.immediate)
             })
         } else {
             let alpha: CGFloat = self.areControlsHidden ? 0.0 : 1.0
             self.navigationBar?.alpha = alpha
             self.statusBar?.alpha = alpha
             self.footerNode.alpha = alpha
-            self.currentThumbnailContainerNode?.alpha = alpha
+            self.updateThumbnailContainerNodeAlpha(.immediate)
+        }
+    }
+
+    func updateThumbnailContainerNodeAlpha(_ transition: ContainedViewLayoutTransition) {
+        if let currentThumbnailContainerNode = self.currentThumbnailContainerNode, let layout = self.containerLayout?.1 {
+            let visible = layout.size.width < layout.size.height && !self.areControlsHidden
+            transition.updateAlpha(node: currentThumbnailContainerNode, alpha: visible ? 1.0 : 0.0)
         }
     }
     
@@ -281,7 +298,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
             self.statusBar?.alpha = 1.0
             self.navigationBar?.alpha = 1.0
             self.footerNode.alpha = 1.0
-            self.currentThumbnailContainerNode?.alpha = 1.0
+            self.updateThumbnailContainerNodeAlpha(.immediate)
         })
         
         if animateContent {
@@ -309,7 +326,6 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
             self.backgroundNode.layer.animate(from: backgroundColor.cgColor, to: updatedColor.cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionLinear, duration: 0.15)
         }
         UIView.animate(withDuration: 0.25, animations: {
-            
             self.statusBar?.alpha = 0.0
             self.navigationBar?.alpha = 0.0
             self.footerNode.alpha = 0.0
@@ -344,11 +360,16 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
         let backgroundTransition = 1.0 - min(1.0, max(0.0, abs(distanceFromEquilibrium) / 80.0))
         self.backgroundNode.backgroundColor = self.backgroundNode.backgroundColor?.withAlphaComponent(backgroundTransition)
         
+        self.updateThumbnailContainerNodeAlpha(.immediate)
+        
         if !self.areControlsHidden {
             self.statusBar?.alpha = transition
             self.navigationBar?.alpha = transition
             self.footerNode.alpha = transition
-            self.currentThumbnailContainerNode?.alpha = transition
+            
+            if let currentThumbnailContainerNode = self.currentThumbnailContainerNode, let layout = self.containerLayout?.1, layout.size.width < layout.size.height {
+                currentThumbnailContainerNode.alpha = transition
+            }
         }
         
         self.updateDismissTransition(transition)

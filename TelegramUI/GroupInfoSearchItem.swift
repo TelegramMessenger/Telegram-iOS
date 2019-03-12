@@ -64,7 +64,7 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
         }
     }
     
-    func node(current: ItemListControllerSearchNode?) -> ItemListControllerSearchNode {
+    func node(current: ItemListControllerSearchNode?, titleContentNode: (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode)?) -> ItemListControllerSearchNode {
         return ChannelMembersSearchItemNode(context: self.context, peerId: self.peerId, searchMode: self.searchMode, openPeer: self.openPeer, cancel: self.cancel, updateActivity: { [weak self] value in
             self?.activity.set(value)
         }, present: { [weak self] c, a in

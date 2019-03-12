@@ -40,7 +40,8 @@ final class WebSearchGalleryFooterContentNode: GalleryFooterContentNode {
         
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        let width = size.width
         let panelSize: CGFloat = 49.0
         var panelHeight: CGFloat = panelSize + bottomInset
         panelHeight += contentInset

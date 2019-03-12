@@ -99,7 +99,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
 
 @implementation RMIntroViewController
 
-- (instancetype)initWithBackroundColor:(UIColor *)backgroundColor primaryColor:(UIColor *)primaryColor buttonColor:(UIColor *)buttonColor accentColor:(UIColor *)accentColor regularDotColor:(UIColor *)regularDotColor highlightedDotColor:(UIColor *)highlightedDotColor suggestedLocalizationSignal:(SSignal *)suggestedLocalizationSignal
+- (instancetype)initWithBackgroundColor:(UIColor *)backgroundColor primaryColor:(UIColor *)primaryColor buttonColor:(UIColor *)buttonColor accentColor:(UIColor *)accentColor regularDotColor:(UIColor *)regularDotColor highlightedDotColor:(UIColor *)highlightedDotColor suggestedLocalizationSignal:(SSignal *)suggestedLocalizationSignal
 {
     self = [super init];
     if (self != nil)
@@ -240,26 +240,13 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
             height += 138 / 2;
         
         _glkView = [[GLKView alloc] initWithFrame:CGRectMake(self.view.bounds.size.width / 2 - size / 2, height, size, size) context:context];
-        //_glkView.backgroundColor = _backgroundColor;
+        _glkView.backgroundColor = _backgroundColor;
         _glkView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
         _glkView.drawableDepthFormat = GLKViewDrawableDepthFormat24;
         _glkView.drawableMultisample = GLKViewDrawableMultisample4X;
         _glkView.enableSetNeedsDisplay = false;
         _glkView.userInteractionEnabled = false;
         _glkView.delegate = self;
-        
-        int patchHalfWidth = 1;
-        UIView *v1 = [[UIView alloc] initWithFrame:CGRectMake(-patchHalfWidth, -patchHalfWidth, _glkView.frame.size.width + patchHalfWidth * 2, patchHalfWidth * 2)];
-        UIView *v2 = [[UIView alloc] initWithFrame:CGRectMake(-patchHalfWidth, -patchHalfWidth, patchHalfWidth * 2, _glkView.frame.size.height + patchHalfWidth * 2)];
-        UIView *v3 = [[UIView alloc] initWithFrame:CGRectMake(-patchHalfWidth, -patchHalfWidth + _glkView.frame.size.height, _glkView.frame.size.width + patchHalfWidth * 2, patchHalfWidth * 2)];
-        UIView *v4 = [[UIView alloc] initWithFrame:CGRectMake(-patchHalfWidth + _glkView.frame.size.width, -patchHalfWidth, patchHalfWidth * 2, _glkView.frame.size.height + patchHalfWidth * 2)];
-        
-        v1.backgroundColor = v2.backgroundColor = v3.backgroundColor = v4.backgroundColor = _backgroundColor;
-        
-        //[_glkView addSubview:v1];
-        //[_glkView addSubview:v2];
-        //[_glkView addSubview:v3];
-        //[_glkView addSubview:v4];
         
         [self setupGL];
         [self.view addSubview:_glkView];
@@ -567,18 +554,29 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
 {
     [EAGLContext setCurrentContext:_glkView.context];
     
+    UIColor *color = _backgroundColor;
     
-    set_telegram_textures(setup_texture(@"telegram_sphere.png"), setup_texture(@"telegram_plane1.png"));
+    CGFloat red = 0.0f;
+    CGFloat green = 0.0f;
+    CGFloat blue = 0.0f;
+    if ([color getRed:&red green:&green blue:&blue alpha:NULL]) {
+    } else if ([color getWhite:&red alpha:NULL]) {
+        green = red;
+        blue = red;
+    }
+    set_intro_background_color(red, green, blue);
     
-    set_ic_textures(setup_texture(@"ic_bubble_dot.png"), setup_texture(@"ic_bubble.png"), setup_texture(@"ic_cam_lens.png"), setup_texture(@"ic_cam.png"), setup_texture(@"ic_pencil.png"), setup_texture(@"ic_pin.png"), setup_texture(@"ic_smile_eye.png"), setup_texture(@"ic_smile.png"), setup_texture(@"ic_videocam.png"));
+    set_telegram_textures(setup_texture(@"telegram_sphere.png", color), setup_texture(@"telegram_plane1.png", color));
     
-    set_fast_textures(setup_texture(@"fast_body.png"), setup_texture(@"fast_spiral.png"), setup_texture(@"fast_arrow.png"), setup_texture(@"fast_arrow_shadow.png"));
+    set_ic_textures(setup_texture(@"ic_bubble_dot.png", color), setup_texture(@"ic_bubble.png", color), setup_texture(@"ic_cam_lens.png", color), setup_texture(@"ic_cam.png", color), setup_texture(@"ic_pencil.png", color), setup_texture(@"ic_pin.png", color), setup_texture(@"ic_smile_eye.png", color), setup_texture(@"ic_smile.png", color), setup_texture(@"ic_videocam.png", color));
     
-    set_free_textures(setup_texture(@"knot_up1.png"), setup_texture(@"knot_down.png"));
+    set_fast_textures(setup_texture(@"fast_body.png", color), setup_texture(@"fast_spiral.png", color), setup_texture(@"fast_arrow.png", color), setup_texture(@"fast_arrow_shadow.png", color));
     
-    set_powerful_textures(setup_texture(@"powerful_mask.png"), setup_texture(@"powerful_star.png"), setup_texture(@"powerful_infinity.png"), setup_texture(@"powerful_infinity_white.png"));
+    set_free_textures(setup_texture(@"knot_up1.png", color), setup_texture(@"knot_down.png", color));
     
-     set_private_textures(setup_texture(@"private_door.png"), setup_texture(@"private_screw.png"));
+    set_powerful_textures(setup_texture(@"powerful_mask.png", color), setup_texture(@"powerful_star.png", color), setup_texture(@"powerful_infinity.png", color), setup_texture(@"powerful_infinity_white.png", color));
+    
+     set_private_textures(setup_texture(@"private_door.png", color), setup_texture(@"private_screw.png", color));
     
     
     set_need_pages(0);
