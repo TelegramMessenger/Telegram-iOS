@@ -116,7 +116,7 @@ final class MessageHistoryIndexTable: Table {
     
     func updateMessage(_ id: MessageId, message: InternalStoreMessage, operations: inout [MessageHistoryIndexOperation]) {
         if let previousIndex = self.getIndex(id) {
-            if previousIndex != MessageIndex(message) {
+            if previousIndex != message.index {
                 var intermediateOperations: [MessageHistoryIndexOperation] = []
                 self.removeMessage(id, operations: &intermediateOperations)
                 self.addMessages([message], operations: &intermediateOperations)
@@ -125,7 +125,7 @@ final class MessageHistoryIndexTable: Table {
                     switch operation {
                         case let .Remove(index) where index == previousIndex:
                             operations.append(.Update(previousIndex, message))
-                        case let .InsertMessage(insertMessage) where MessageIndex(insertMessage) == MessageIndex(message):
+                        case let .InsertMessage(insertMessage) where insertMessage.index == message.index:
                             break
                         default:
                             operations.append(operation)

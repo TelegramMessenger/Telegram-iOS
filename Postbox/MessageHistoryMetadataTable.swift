@@ -2,13 +2,13 @@ import Foundation
 
 private enum MetadataPrefix: Int8 {
     case ChatListInitialized = 0
-    case PeerHistoryInitialized = 1
     case PeerNextMessageIdByNamespace = 2
     case NextStableMessageId = 3
     case ChatListTotalUnreadState = 4
     case NextPeerOperationLogIndex = 5
     case ChatListGroupInitialized = 6
     case GroupFeedIndexInitialized = 7
+    case PeerHistoryInitialized = 8
 }
 
 public struct ChatListTotalUnreadCounters: PostboxCoding, Equatable {

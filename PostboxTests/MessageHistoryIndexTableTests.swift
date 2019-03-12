@@ -17,94 +17,321 @@ private extension MessageIndex {
     }
 }
 
-private enum Item: Equatable, CustomStringConvertible {
-    case Message(Int32, Int32)
-    case Hole(Int32, Int32, Int32)
-    
-    init(_ item: HistoryIndexEntry) {
-        switch item {
-            case let .Message(index):
-                self = .Message(index.id.id, index.timestamp)
-            case let .Hole(hole):
-                self = .Hole(hole.min, hole.maxIndex.id.id, hole.maxIndex.timestamp)
-        }
-    }
-    
-    var description: String {
-        switch self {
-            case let .Message(id, timestamp):
-                return "Message(\(id), \(timestamp))"
-            case let .Hole(minId, maxId, maxTimestamp):
-                return "Hole(\(minId), \(maxId), \(maxTimestamp))"
-        }
-    }
+private extension MessageTags {
+    static let media = MessageTags(rawValue: 1 << 0)
 }
-
-private func ==(lhs: Item, rhs: Item) -> Bool {
-    switch lhs {
-        case let .Message(id, timestamp):
-            switch rhs {
-                case let .Message(rId, rTimestamp):
-                    return id == rId && timestamp == rTimestamp
-                default:
-                    return false
-            }
-        case let .Hole(minId, maxId, maxTimestamp):
-            switch rhs {
-                case let .Hole(rMinId, rMaxId, rMaxTimestamp):
-                    return minId == rMinId && maxId == rMaxId && maxTimestamp == rMaxTimestamp
-                default:
-                    return false
-            }
-    }
-}
-
-@testable import Postbox
 
 class MessageHistoryIndexTableTests: XCTestCase {
     var valueBox: ValueBox?
     var path: String?
     
-    var indexTable: MessageHistoryIndexTable?
-    var globalMessageIdsTable: GlobalMessageIdsTable?
-    var historyMetadataTable: MessageHistoryMetadataTable?
+    var postbox: Postbox?
     
     override func setUp() {
         super.setUp()
+        
+        self.continueAfterFailure = false
         
         var randomId: Int64 = 0
         arc4random_buf(&randomId, 8)
         path = NSTemporaryDirectory() + "\(randomId)"
         self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue())
         
-        let seedConfiguration = SeedConfiguration(initializeChatListWithHole: (topLevel: nil, groups: nil), initializeMessageNamespacesWithHoles: [], existingMessageTags: [], messageTagsWithSummary: [], existingGlobalMessageTags: [], peerNamespacesRequiringMessageTextIndex: [], additionalChatListIndexNamespace: nil)
+        let messageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]] = [
+            peerId.namespace: [
+                namespace: Set([.media])
+            ]
+        ]
         
-        self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox!, table: GlobalMessageIdsTable.tableSpec(2), namespace: namespace)
-        self.historyMetadataTable = MessageHistoryMetadataTable(valueBox: self.valueBox!, table: MessageHistoryMetadataTable.tableSpec(8))
-        self.indexTable = MessageHistoryIndexTable(valueBox: self.valueBox!, table: MessageHistoryIndexTable.tableSpec(1), globalMessageIdsTable: self.globalMessageIdsTable!, metadataTable: self.historyMetadataTable!, seedConfiguration: seedConfiguration)
+        let seedConfiguration = SeedConfiguration(initializeChatListWithHole: (topLevel: nil, groups: nil), messageHoles: messageHoles, messageTagsWithSummary: [], existingGlobalMessageTags: [], peerNamespacesRequiringMessageTextIndex: [], peerSummaryCounterTags: { _ in PeerSummaryCounterTags(rawValue: 0) }, additionalChatListIndexNamespace: nil)
+        
+        self.postbox = Postbox(queue: Queue.mainQueue(), basePath: path!, globalMessageIdsNamespace: namespace, seedConfiguration: seedConfiguration, valueBox: self.valueBox!)
     }
     
     override func tearDown() {
         super.tearDown()
         
-        self.indexTable = nil
-        
-        self.valueBox = nil
+        self.postbox = nil
         let _ = try? FileManager.default.removeItem(atPath: path!)
         self.path = nil
     }
     
-    func addHole(_ id: Int32) {
-        var operations: [MessageHistoryIndexOperation] = []
-        self.indexTable!.addHole(MessageId(peerId: peerId, namespace: namespace, id: id), operations: &operations)
+    func addHole(_ range: ClosedRange<Int32>, space: MessageHistoryHoleSpace) {
+        var operations: [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]] = [:]
+        self.postbox!.messageHistoryHoleIndexTable.add(peerId: peerId, namespace: namespace, space: space, range: range, operations: &operations)
+    }
+    
+    func removeHole(_ range: ClosedRange<Int32>, space: MessageHistoryHoleSpace) {
+        var operations: [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]] = [:]
+        self.postbox!.messageHistoryHoleIndexTable.remove(peerId: peerId, namespace: namespace, space: space, range: range, operations: &operations)
     }
     
     func addMessage(_ id: Int32, _ timestamp: Int32, _ groupingKey: Int64? = nil) {
         var operations: [MessageHistoryIndexOperation] = []
-        self.indexTable!.addMessages([InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, globallyUniqueId: nil, groupingKey: groupingKey, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])], location: .Random, operations: &operations)
+        self.postbox!.messageHistoryIndexTable.addMessages([InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, globallyUniqueId: nil, groupingKey: groupingKey, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])], operations: &operations)
     }
     
-    func addMessagesUpperBlock(_ messages: [(Int32, Int32)]) {
+    func removeMessage(_ id: Int32) {
+        var operations: [MessageHistoryIndexOperation] = []
+        self.postbox!.messageHistoryIndexTable.removeMessage(MessageId(peerId: peerId, namespace: namespace, id: id), operations: &operations)
+    }
+    
+    private func expectMessages(_ items: [MessageIndex]) {
+        let actualList = self.postbox!.messageHistoryIndexTable.debugList(peerId, namespace: namespace)
+        if items != actualList {
+            XCTFail("Expected\n\(items)\nGot\n\(actualList)")
+        }
+    }
+    
+    private func expectHoles(space: MessageHistoryHoleSpace, _ ranges: [ClosedRange<Int32>], failure: () -> Void = {}) {
+        let actualList = self.postbox!.messageHistoryHoleIndexTable.debugList(peerId: peerId, namespace: namespace, space: space)
+        if ranges != actualList {
+            failure()
+            XCTFail("Expected\n\(ranges)\nGot\n\(actualList)")
+        }
+    }
+    
+    func testEmpty() {
+        expectMessages([])
+        expectHoles(space: .everywhere, [])
+        expectHoles(space: .tag(.media), [])
+    }
+    
+    func testSimpleMessages() {
+        addMessage(10, 10)
+        expectMessages([.init(id: 10, timestamp: 10)])
+        addMessage(11, 11)
+        expectMessages([.init(id: 10, timestamp: 10), .init(id: 11, timestamp: 11)])
+        expectHoles(space: .everywhere, [])
+        expectHoles(space: .tag(.media), [])
+    }
+    
+    func testSimpleHoles() {
+        addHole(3 ... 10, space: .everywhere)
+        expectHoles(space: .everywhere, [3 ... 10])
+        
+        addHole(3 ... 10, space: .everywhere)
+        expectHoles(space: .everywhere, [3 ... 10])
+        
+        addHole(5 ... 20, space: .everywhere)
+        expectHoles(space: .everywhere, [3 ... 20])
+        
+        addHole(25 ... 30, space: .everywhere)
+        expectHoles(space: .everywhere, [3 ... 20, 25 ... 30])
+        
+        addHole(21 ... 23, space: .everywhere)
+        expectHoles(space: .everywhere, [3 ... 23, 25 ... 30])
+        
+        addHole(5 ... 25, space: .everywhere)
+        expectHoles(space: .everywhere, [3 ... 30])
+        
+        addHole(2 ... 35, space: .everywhere)
+        expectHoles(space: .everywhere, [2 ... 35])
+        
+        removeHole(1 ... 5, space: .everywhere)
+        expectHoles(space: .everywhere, [6 ... 35])
+        
+        removeHole(11 ... 11, space: .everywhere)
+        expectHoles(space: .everywhere, [6 ... 10, 12 ... 35])
+        
+        removeHole(8 ... 15, space: .everywhere)
+        expectHoles(space: .everywhere, [6 ... 7, 16 ... 35])
+        
+        removeHole(1 ... 16, space: .everywhere)
+        expectHoles(space: .everywhere, [17 ... 35])
+    }
+    
+    func testHoleVectors() {
+        struct Operation: Codable {
+            struct Key: CodingKey {
+                var stringValue: String
+                
+                init?(stringValue: String) {
+                    self.stringValue = stringValue
+                }
+                
+                let intValue: Int? = nil
+                init?(intValue: Int) {
+                    return nil
+                }
+            }
+            
+            let add: Bool
+            let range: ClosedRange<Int32>
+            
+            init(add: Bool, range: ClosedRange<Int32>) {
+                self.add = add
+                self.range = range
+            }
+            
+            init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: Key.self)
+                self.add = try container.decode(Bool.self, forKey: Key(stringValue: "a")!)
+                self.range = (try container.decode(Int32.self, forKey: Key(stringValue: "l")!)) ... (try container.decode(Int32.self, forKey: Key(stringValue: "u")!))
+            }
+            
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: Key.self)
+                try container.encode(self.add, forKey: Key(stringValue: "a")!)
+                try container.encode(self.range.lowerBound, forKey: Key(stringValue: "l")!)
+                try container.encode(self.range.upperBound, forKey: Key(stringValue: "u")!)
+            }
+        }
+        
+        let bundle = Bundle(for: type(of: self))
+        let path = bundle.path(forResource: "HoleOperationsVector1", ofType: "json")!
+        let jsonData = try! Data(contentsOf: URL(fileURLWithPath: path))
+        
+        var operations: [Operation] = (try? JSONDecoder().decode(Array<Operation>.self, from: jsonData)) ?? []
+        
+        if operations.isEmpty {
+            for _ in 0 ..< 10000 {
+                let bound1 = Int(max(1, arc4random_uniform(1000)))
+                let bound2 = Int(max(1, arc4random_uniform(1000)))
+                let range: ClosedRange<Int> = min(bound1, bound2) ... max(bound1, bound2)
+                let int32Range = Int32(range.lowerBound) ... Int32(range.upperBound)
+                let operation = arc4random_uniform(10)
+                if operation < 5 {
+                    operations.append(Operation(add: true, range: int32Range))
+                } else {
+                    operations.append(Operation(add: false, range: int32Range))
+                }
+            }
+            let data = try! JSONEncoder().encode(operations)
+            print(String(data: data, encoding: .utf8)!)
+        }
+        
+        var verificationSet = IndexSet()
+        for i in 0 ..< operations.count {
+            let operation = operations[i]
+            if operation.add {
+                verificationSet.insert(integersIn: Int(operation.range.lowerBound) ... Int(operation.range.upperBound))
+                addHole(operation.range, space: .everywhere)
+            } else {
+                verificationSet.remove(integersIn: Int(operation.range.lowerBound) ... Int(operation.range.upperBound))
+                removeHole(operation.range, space: .everywhere)
+            }
+            let testRanges = verificationSet.rangeView.map({ ClosedRange(Int32($0.lowerBound) ..< Int32($0.upperBound)) })
+            expectHoles(space: .everywhere, testRanges)
+            expectHoles(space: .tag(.media), testRanges)
+        }
+    }
+    
+    func testHoleTagVectors() {
+        struct Operation: Codable {
+            struct Key: CodingKey {
+                var stringValue: String
+                
+                init?(stringValue: String) {
+                    self.stringValue = stringValue
+                }
+                
+                let intValue: Int? = nil
+                init?(intValue: Int) {
+                    return nil
+                }
+            }
+            
+            let add: Bool
+            let range: ClosedRange<Int32>
+            let space: MessageHistoryHoleSpace
+            
+            init(add: Bool, range: ClosedRange<Int32>, space: MessageHistoryHoleSpace) {
+                self.add = add
+                self.range = range
+                self.space = space
+            }
+            
+            init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: Key.self)
+                self.add = try container.decode(Bool.self, forKey: Key(stringValue: "a")!)
+                self.range = (try container.decode(Int32.self, forKey: Key(stringValue: "l")!)) ... (try container.decode(Int32.self, forKey: Key(stringValue: "u")!))
+                let spaceValue = try container.decode(Int32.self, forKey: Key(stringValue: "s")!)
+                if spaceValue == 0 {
+                    self.space = .everywhere
+                } else {
+                    self.space = .tag(MessageTags(rawValue: UInt32(spaceValue)))
+                }
+            }
+            
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: Key.self)
+                try container.encode(self.add, forKey: Key(stringValue: "a")!)
+                try container.encode(self.range.lowerBound, forKey: Key(stringValue: "l")!)
+                try container.encode(self.range.upperBound, forKey: Key(stringValue: "u")!)
+                switch self.space {
+                    case .everywhere:
+                        try container.encode(0, forKey: Key(stringValue: "s")!)
+                    case let .tag(tag):
+                        try container.encode(Int32(tag.rawValue), forKey: Key(stringValue: "s")!)
+                }
+            }
+        }
+        
+        var operations: [Operation] = []
+        let bundle = Bundle(for: type(of: self))
+        if let path = bundle.path(forResource: "HoleOperationsVector2", ofType: "json"), let jsonData = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+            if let value = try? JSONDecoder().decode(Array<Operation>.self, from: jsonData) {
+                operations = value
+            }
+        }
+        
+        if operations.isEmpty {
+            for _ in 0 ..< 10000 {
+                let bound1 = Int(max(1, arc4random_uniform(1000)))
+                let bound2 = Int(max(1, arc4random_uniform(1000)))
+                let range: ClosedRange<Int> = min(bound1, bound2) ... max(bound1, bound2)
+                let int32Range = Int32(range.lowerBound) ... Int32(range.upperBound)
+                let operation = arc4random_uniform(10)
+                let spaceValue = arc4random_uniform(2)
+                let space: MessageHistoryHoleSpace
+                if spaceValue == 0 {
+                    space = .everywhere
+                } else {
+                    space = .tag(.media)
+                }
+                if operation < 5 {
+                    operations.append(Operation(add: true, range: int32Range, space: space))
+                } else {
+                    operations.append(Operation(add: false, range: int32Range, space: space))
+                }
+            }
+            let data = try! JSONEncoder().encode(operations)
+            print(String(data: data, encoding: .utf8)!)
+        }
+        
+        var everywhereVerificationSet = IndexSet()
+        var mediaVerificationSet = IndexSet()
+        for i in 0 ..< operations.count {
+            let operation = operations[i]
+            let intRange = Int(operation.range.lowerBound) ... Int(operation.range.upperBound)
+            if operation.add {
+                switch operation.space {
+                    case .everywhere:
+                        everywhereVerificationSet.insert(integersIn: intRange)
+                        mediaVerificationSet.insert(integersIn: intRange)
+                    case .tag:
+                        mediaVerificationSet.insert(integersIn: intRange)
+                }
+                addHole(operation.range, space: operation.space)
+            } else {
+                switch operation.space {
+                    case .everywhere:
+                        everywhereVerificationSet.remove(integersIn: intRange)
+                        mediaVerificationSet.remove(integersIn: intRange)
+                    case .tag:
+                        mediaVerificationSet.remove(integersIn: intRange)
+                }
+                removeHole(operation.range, space: operation.space)
+            }
+            let everywhereTestRanges = everywhereVerificationSet.rangeView.map({ ClosedRange(Int32($0.lowerBound) ..< Int32($0.upperBound)) })
+            let mediaTestRanges = mediaVerificationSet.rangeView.map({ ClosedRange(Int32($0.lowerBound) ..< Int32($0.upperBound)) })
+            expectHoles(space: .everywhere, everywhereTestRanges)
+            expectHoles(space: .tag(.media), mediaTestRanges)
+        }
+    }
+    
+    /*func addMessagesUpperBlock(_ messages: [(Int32, Int32)]) {
         var operations: [MessageHistoryIndexOperation] = []
         self.indexTable!.addMessages(messages.map { (id, timestamp) in
             return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, globallyUniqueId: nil, groupingKey: nil, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
@@ -124,11 +351,6 @@ class MessageHistoryIndexTableTests: XCTestCase {
         self.indexTable!.fillMultipleHoles(mainHoleId: MessageId(peerId: peerId, namespace: namespace, id: mainId), fillType: fillType, tagMask: tagMask, messages: messages.map({
             return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), timestamp: $0.1, globallyUniqueId: nil, groupingKey: nil, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
         }), operations: &operations)
-    }
-    
-    func removeMessage(_ id: Int32) {
-        var operations: [MessageHistoryIndexOperation] = []
-        self.indexTable!.removeMessage(MessageId(peerId: peerId, namespace: namespace, id: id), operations: &operations)
     }
     
     private func expect(_ items: [Item]) {
@@ -637,5 +859,5 @@ class MessageHistoryIndexTableTests: XCTestCase {
         expect([.Message(1000, 1000), .Message(1001, 1001), .Hole(1002, 1004, 1005), .Message(1005, 1005)])
         addMessage(1003, 1003)
         expect([.Message(1000, 1000), .Message(1001, 1001), .Hole(1002, 1002, 1003), .Message(1003, 1003), .Hole(1004, 1004, 1005), .Message(1005, 1005)])
-    }
+    }*/
 }

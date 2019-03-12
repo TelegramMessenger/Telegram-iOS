@@ -15,11 +15,6 @@ public enum PostboxUpdateMessage {
     case skip
 }
 
-public enum ScanMessageEntry {
-    case message(Message)
-    case hole(MessageHistoryHole)
-}
-
 public final class Transaction {
     private weak var postbox: Postbox?
     var disposed = false
@@ -47,23 +42,19 @@ public final class Transaction {
         }
     }
     
-    public func addHole(_ messageId: MessageId) {
+    public func addHole(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>) {
         assert(!self.disposed)
-        self.postbox?.addHole(messageId)
+        self.postbox?.addHole(peerId: peerId, namespace: namespace, space: space, range: range)
     }
     
-    public func removeHole(peerId: PeerId, namespace: MessageId.Namespace, tags: MessageTags, range: ClosedRange<MessageId.Id>) {
-        
+    public func removeHole(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>) {
+        assert(!self.disposed)
+        self.postbox?.removeHole(peerId: peerId, namespace: namespace, space: space, range: range)
     }
     
-    public func getHole(messageId: MessageId) -> MessageHistoryHole? {
+    public func getHole(containing id: MessageId) -> [MessageHistoryHoleSpace: ClosedRange<MessageId.Id>] {
         assert(!self.disposed)
-        /*if let entry = self.postbox?.messageHistoryIndexTable.getMaybeUninitialized(messageId) {
-            if case let .Hole(hole) = entry {
-                return hole
-            }
-        }*/
-        return nil
+        return self.postbox?.messageHistoryHoleIndexTable.containing(id: id) ?? [:]
     }
     
     /*public func fillHole(_ hole: MessageHistoryHole, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage]) {
@@ -885,7 +876,7 @@ public final class Transaction {
         return postbox.messageHistoryTagsTable.earlierIndices(tag, peerId: peerId, index: nil, count: 10000)
     }
     
-    public func scanMessages(peerId: PeerId, tagMask: MessageTags, _ f: (ScanMessageEntry) -> Bool) {
+    public func scanMessages(peerId: PeerId, tagMask: MessageTags, _ f: (Message) -> Bool) {
         assert(!self.disposed)
         self.postbox?.scanMessages(peerId: peerId, tagMask: tagMask, f)
     }
@@ -1170,14 +1161,14 @@ public final class Postbox {
     let pendingMessageActionsTable: PendingMessageActionsTable
     let pendingMessageActionsMetadataTable: PendingMessageActionsMetadataTable
     let deviceContactImportInfoTable: DeviceContactImportInfoTable
-    let messageHistoryIndexHoleTable: MessageHistoryIndexHoleTable
+    let messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable
     
     //temporary
     let peerRatingTable: RatingTable<PeerId>
     
     var installedMessageActionsByPeerId: [PeerId: Bag<([StoreMessage], Transaction) -> Void>] = [:]
     
-    fileprivate init(queue: Queue, basePath: String, globalMessageIdsNamespace: MessageId.Namespace, seedConfiguration: SeedConfiguration, valueBox: ValueBox) {
+    init(queue: Queue, basePath: String, globalMessageIdsNamespace: MessageId.Namespace, seedConfiguration: SeedConfiguration, valueBox: ValueBox) {
         assert(queue.isCurrent())
         
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -1255,7 +1246,7 @@ public final class Postbox {
         self.unorderedItemListTable = UnorderedItemListTable(valueBox: self.valueBox, table: UnorderedItemListTable.tableSpec(42))
         self.noticeTable = NoticeTable(valueBox: self.valueBox, table: NoticeTable.tableSpec(43))
         self.deviceContactImportInfoTable = DeviceContactImportInfoTable(valueBox: self.valueBox, table: DeviceContactImportInfoTable.tableSpec(54))
-        self.messageHistoryIndexHoleTable = MessageHistoryIndexHoleTable(valueBox: self.valueBox, table: MessageHistoryIndexHoleTable.tableSpec(56), metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
+        self.messageHistoryHoleIndexTable = MessageHistoryHoleIndexTable(valueBox: self.valueBox, table: MessageHistoryHoleIndexTable.tableSpec(56), metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
         
         var tables: [Table] = []
         tables.append(self.metadataTable)
@@ -1307,7 +1298,7 @@ public final class Postbox {
         tables.append(self.pendingMessageActionsTable)
         tables.append(self.pendingMessageActionsMetadataTable)
         tables.append(self.deviceContactImportInfoTable)
-        tables.append(self.messageHistoryIndexHoleTable)
+        tables.append(self.messageHistoryHoleIndexTable)
         
         self.tables = tables
         
@@ -1462,91 +1453,15 @@ public final class Postbox {
         let _ = self.messageHistoryTable.addMessagesInternal(messages: [message], location: .Random, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations)
     }
     
-    fileprivate func addHole(_ id: MessageId) {
-        /*self.messageHistoryTable.addHoles([id], operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations)*/
+    fileprivate func addHole(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>) {
+        self.messageHistoryHoleIndexTable.add(peerId: peerId, namespace: namespace, space: space, range: range, operations: &self.currentPeerHoleOperations)
     }
     
-    /*fileprivate func fillHole(_ hole: MessageHistoryHole, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage]) {
-        var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
-        self.messageHistoryTable.fillHole(hole.id, fillType: fillType, tagMask: tagMask, messages: messages, operationsByPeerId: &operationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations)
-        for (peerId, operations) in operationsByPeerId {
-            if self.currentOperationsByPeerId[peerId] == nil {
-                self.currentOperationsByPeerId[peerId] = operations
-            } else {
-                self.currentOperationsByPeerId[peerId]!.append(contentsOf: operations)
-            }
-            
-            var filledMessageIndices: [MessageIndex: HoleFillDirection] = [:]
-            for operation in operations {
-                switch operation {
-                    case let .InsertHole(hole):
-                        filledMessageIndices[hole.maxIndex] = fillType.direction
-                    case let .InsertMessage(message):
-                        filledMessageIndices[MessageIndex(message)] = fillType.direction
-                    default:
-                        break
-                }
-            }
-            
-            if !filledMessageIndices.isEmpty {
-                if self.currentFilledHolesByPeerId[peerId] == nil {
-                    self.currentFilledHolesByPeerId[peerId] = filledMessageIndices
-                } else {
-                    for (messageIndex, direction) in filledMessageIndices {
-                        self.currentFilledHolesByPeerId[peerId]![messageIndex] = direction
-                    }
-                }
-            }
-            
-            if self.currentRemovedHolesByPeerId[peerId] == nil {
-                self.currentRemovedHolesByPeerId[peerId] = [hole.maxIndex: fillType.direction]
-            } else {
-                self.currentRemovedHolesByPeerId[peerId]![hole.maxIndex] = fillType.direction
-            }
-        }
+    fileprivate func removeHole(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>) {
+        self.messageHistoryHoleIndexTable.remove(peerId: peerId, namespace: namespace, space: space, range: range, operations: &self.currentPeerHoleOperations)
     }
     
-    fileprivate func fillMultipleHoles(_ hole: MessageHistoryHole, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage]) {
-        var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
-        self.messageHistoryTable.fillMultipleHoles(mainHoleId: hole.id, fillType: fillType, tagMask: tagMask, messages: messages, operationsByPeerId: &operationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations)
-        for (peerId, operations) in operationsByPeerId {
-            if self.currentOperationsByPeerId[peerId] == nil {
-                self.currentOperationsByPeerId[peerId] = operations
-            } else {
-                self.currentOperationsByPeerId[peerId]!.append(contentsOf: operations)
-            }
-            
-            var filledMessageIndices: [MessageIndex: HoleFillDirection] = [:]
-            for operation in operations {
-                switch operation {
-                case let .InsertHole(hole):
-                    filledMessageIndices[hole.maxIndex] = fillType.direction
-                case let .InsertMessage(message):
-                    filledMessageIndices[MessageIndex(message)] = fillType.direction
-                default:
-                    break
-                }
-            }
-            
-            if !filledMessageIndices.isEmpty {
-                if self.currentFilledHolesByPeerId[peerId] == nil {
-                    self.currentFilledHolesByPeerId[peerId] = filledMessageIndices
-                } else {
-                    for (messageIndex, direction) in filledMessageIndices {
-                        self.currentFilledHolesByPeerId[peerId]![messageIndex] = direction
-                    }
-                }
-            }
-            
-            if self.currentRemovedHolesByPeerId[peerId] == nil {
-                self.currentRemovedHolesByPeerId[peerId] = [hole.maxIndex: fillType.direction]
-            } else {
-                self.currentRemovedHolesByPeerId[peerId]![hole.maxIndex] = fillType.direction
-            }
-        }
-    }
-    
-    fileprivate func fillMultipleGroupFeedHoles(groupId: PeerGroupId, mainHoleMaxIndex: MessageIndex, fillType: HoleFill, messages: [StoreMessage]) {
+    /*fileprivate func fillMultipleGroupFeedHoles(groupId: PeerGroupId, mainHoleMaxIndex: MessageIndex, fillType: HoleFill, messages: [StoreMessage]) {
         let initialGroupFeedOperationsCount = self.currentGroupFeedOperations[groupId]?.count ?? 0
         self.groupFeedIndexTable.fillMultipleHoles(insertMessage: { message in
             self.insertMessageInternal(message: message)
@@ -1621,12 +1536,13 @@ public final class Postbox {
     }
     
     fileprivate func withAllMessages(peerId: PeerId, _ f: (Message) -> Bool) {
-        let indices = self.messageHistoryTable.allIndices(peerId).messages
-        for index in indices {
+        for index in self.messageHistoryTable.allMessageIndices(peerId) {
             if let message = self.messageHistoryTable.getMessage(index) {
                 if !f(self.renderIntermediateMessage(message)) {
                     break
                 }
+            } else {
+                assertionFailure()
             }
         }
     }
@@ -1662,7 +1578,7 @@ public final class Postbox {
             case let .associated(_, messageId):
                 if let messageId = messageId, let readState = self.readStateTable.getCombinedState(messageId.peerId), readState.count != 0 {
                     if let topMessage = self.messageHistoryTable.topMessage(messageId.peerId) {
-                        let _ = self.messageHistoryTable.applyInteractiveMaxReadIndex(MessageIndex(topMessage), operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
+                        let _ = self.messageHistoryTable.applyInteractiveMaxReadIndex(topMessage.index, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
                     }
                 }
             default:
@@ -1706,12 +1622,7 @@ public final class Postbox {
         }
         var entries: [MutableMessageHistoryEntry] = []
         for entry in intermediateEntries {
-            switch entry {
-                case let .Message(message):
-                    entries.append(.IntermediateMessageEntry(message, nil, nil))
-                case let .Hole(index, lowerIndex):
-                    entries.append(.HoleEntry(index, nil, lowerIndex: lowerIndex))
-            }
+            entries.append(.IntermediateMessageEntry(entry.message, nil, nil))
         }
         return entries
     }
@@ -1730,32 +1641,17 @@ public final class Postbox {
         
         var entries: [MutableMessageHistoryEntry] = []
         for entry in intermediateEntries {
-            switch entry {
-                case let .Message(message):
-                    entries.append(.IntermediateMessageEntry(message, nil, nil))
-                case let .Hole(index, lowerIndex):
-                    entries.append(.HoleEntry(index, nil, lowerIndex: lowerIndex))
-            }
+            entries.append(.IntermediateMessageEntry(entry.message, nil, nil))
         }
         
         var lower: MutableMessageHistoryEntry?
         if let intermediateLower = intermediateLower {
-            switch intermediateLower {
-                case let .Message(message):
-                    lower = .IntermediateMessageEntry(message, nil, nil)
-                case let .Hole(index, lowerIndex):
-                    lower = .HoleEntry(index, nil, lowerIndex: lowerIndex)
-            }
+            lower = .IntermediateMessageEntry(intermediateLower.message, nil, nil)
         }
         
         var upper: MutableMessageHistoryEntry?
         if let intermediateUpper = intermediateUpper {
-            switch intermediateUpper {
-                case let .Message(message):
-                    upper = .IntermediateMessageEntry(message, nil, nil)
-                case let .Hole(index, lowerIndex):
-                    upper = .HoleEntry(index, nil, lowerIndex: lowerIndex)
-            }
+            upper = .IntermediateMessageEntry(intermediateUpper.message, nil, nil)
         }
         
         return (entries: entries, lower: lower, upper: upper)
@@ -1770,12 +1666,7 @@ public final class Postbox {
         }
         var entries: [MutableMessageHistoryEntry] = []
         for entry in intermediateEntries {
-            switch entry {
-            case let .Message(message):
-                entries.append(.IntermediateMessageEntry(message, nil, nil))
-            case let .Hole(index, lowerIndex):
-                entries.append(.HoleEntry(index, nil, lowerIndex: lowerIndex))
-            }
+            entries.append(.IntermediateMessageEntry(entry.message, nil, nil))
         }
         return entries
     }
@@ -3000,12 +2891,6 @@ public final class Postbox {
         }
     }
     
-    public func updateMessageHistoryViewVisibleRange(_ id: MessageHistoryViewId, earliestVisibleIndex: MessageIndex, latestVisibleIndex: MessageIndex) {
-        let _ = self.transaction({ transaction -> Void in
-            self.viewTracker.updateMessageHistoryViewVisibleRange(postbox: self, id: id, earliestVisibleIndex: earliestVisibleIndex, latestVisibleIndex: latestVisibleIndex)
-        }).start()
-    }
-    
     public func recentPeers() -> Signal<[Peer], NoError> {
         return self.transaction { transaction -> Signal<[Peer], NoError> in
             let peerIds = self.peerRatingTable.get()
@@ -3329,17 +3214,15 @@ public final class Postbox {
         return disposable
     }
     
-    fileprivate func scanMessages(peerId: PeerId, tagMask: MessageTags, _ f: (ScanMessageEntry) -> Bool) {
+    fileprivate func scanMessages(peerId: PeerId, tagMask: MessageTags, _ f: (Message) -> Bool) {
         var index = MessageIndex.lowerBound(peerId: peerId)
         outer: while true {
             let entries = self.fetchLaterHistoryEntries([peerId], index: index, count: 10, tagMask: tagMask)
             for entry in entries {
                 var shouldContinue = false
                 switch entry {
-                    case let .HoleEntry(hole, _, _):
-                        shouldContinue = f(.hole(hole))
                     case let .IntermediateMessageEntry(message, _, _):
-                        shouldContinue = f(.message(self.renderIntermediateMessage(message)))
+                        shouldContinue = f(self.renderIntermediateMessage(message))
                     case .MessageEntry:
                         assertionFailure()
                         break

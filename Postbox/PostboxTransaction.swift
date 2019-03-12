@@ -2,7 +2,7 @@ import Foundation
 
 final class PostboxTransaction {
     let currentUpdatedState: PostboxCoding?
-    let currentPeerHoleOperations: [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]] = [:]
+    let currentPeerHoleOperations: [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]]
     let currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]]
     let chatListOperations: [WrappedPeerGroupId: [ChatListOperation]]
     let currentUpdatedChatListInclusions: [PeerId: PeerChatListInclusion]

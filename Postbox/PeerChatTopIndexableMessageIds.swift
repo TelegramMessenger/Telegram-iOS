@@ -72,7 +72,7 @@ final class PeerChatTopTaggedMessageIdsTable: Table {
                             }
                         }
                     case let .Remove(indices):
-                        for (index, _, _) in indices {
+                        for (index, _) in indices {
                             if let messageId = self.get(peerId: index.id.peerId, namespace: index.id.namespace), index.id == messageId {
                                 self.set(peerId: index.id.peerId, namespace: index.id.namespace, id: nil)
                             }

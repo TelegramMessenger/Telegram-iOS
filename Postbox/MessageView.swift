@@ -17,8 +17,8 @@ final class MutableMessageView {
             switch operation {
                 case let .Remove(indices):
                     if let message = self.message {
-                        let messageIndex = MessageIndex(message)
-                        for (index, _, _) in indices {
+                        let messageIndex = message.index
+                        for (index, _) in indices {
                             if index == messageIndex {
                                 self.message = nil
                                 updated = true

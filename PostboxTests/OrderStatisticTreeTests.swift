@@ -85,8 +85,6 @@ class OrderStatisticTreeTests: XCTestCase {
     var invalidatedMessageHistoryTagsSummaryTable: InvalidatedMessageHistoryTagsSummaryTable?
     var pendingMessageActionsTable: PendingMessageActionsTable?
     var pendingMessageActionsMetadataTable: PendingMessageActionsMetadataTable?
-    var groupAssociationTable: PeerGroupAssociationTable?
-    var groupFeedIndexTable: GroupFeedIndexTable?
     
     override func setUp() {
         super.setUp()
@@ -96,7 +94,7 @@ class OrderStatisticTreeTests: XCTestCase {
         path = NSTemporaryDirectory() + "\(randomId)"
         self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue())
         
-        let seedConfiguration = SeedConfiguration(initializeChatListWithHole: (topLevel: nil, groups: nil), initializeMessageNamespacesWithHoles: [], existingMessageTags: [.First, .Second], messageTagsWithSummary: [], existingGlobalMessageTags: [], peerNamespacesRequiringMessageTextIndex: [], additionalChatListIndexNamespace: nil)
+        let seedConfiguration = SeedConfiguration(initializeChatListWithHole: (topLevel: nil, groups: nil), initializeMessageNamespacesWithHoles: [], existingMessageTags: [.First, .Second], messageTagsWithSummary: [], existingGlobalMessageTags: [], peerNamespacesRequiringMessageTextIndex: [], peerSummaryCounterTags: { _ in PeerSummaryCounterTags(rawValue: 0) }, additionalChatListIndexNamespace: nil)
         
         self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox!, table: GlobalMessageIdsTable.tableSpec(5), namespace: namespace)
         self.historyMetadataTable = MessageHistoryMetadataTable(valueBox: self.valueBox!, table: MessageHistoryMetadataTable.tableSpec(7))
@@ -114,10 +112,8 @@ class OrderStatisticTreeTests: XCTestCase {
         self.globalTagsTable = GlobalMessageHistoryTagsTable(valueBox: self.valueBox!, table: GlobalMessageHistoryTagsTable.tableSpec(13))
         self.localTagsTable = LocalMessageHistoryTagsTable(valueBox: self.valueBox!, table: GlobalMessageHistoryTagsTable.tableSpec(20))
         self.textIndexTable = MessageHistoryTextIndexTable(valueBox: self.valueBox!, table: MessageHistoryTextIndexTable.tableSpec(14))
-        self.groupAssociationTable = PeerGroupAssociationTable(valueBox: self.valueBox!, table: PeerGroupAssociationTable.tableSpec(19))
-        self.groupFeedIndexTable = GroupFeedIndexTable(valueBox: self.valueBox!, table: GroupFeedIndexTable.tableSpec(20), metadataTable: self.historyMetadataTable!)
         
-        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, globalTagsTable: self.globalTagsTable!, localTagsTable: self.localTagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!, textIndexTable: self.textIndexTable!, summaryTable: messageHistoryTagsSummaryTable!, pendingActionsTable: self.pendingMessageActionsTable!, groupAssociationTable: self.groupAssociationTable!, groupFeedIndexTable: self.groupFeedIndexTable!)
+        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, globallyUniqueMessageIdsTable: self.globallyUniqueMessageIdsTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, globalTagsTable: self.globalTagsTable!, localTagsTable: self.localTagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!, textIndexTable: self.textIndexTable!, summaryTable: messageHistoryTagsSummaryTable!, pendingActionsTable: self.pendingMessageActionsTable!)
     }
     
     override func tearDown() {

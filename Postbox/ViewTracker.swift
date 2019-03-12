@@ -142,32 +142,6 @@ final class ViewTracker {
         self.contactPeersViews.remove(index)
     }
     
-    func updateMessageHistoryViewVisibleRange(postbox: Postbox, id: MessageHistoryViewId, earliestVisibleIndex: MessageIndex, latestVisibleIndex: MessageIndex) {
-        for (mutableView, pipe) in self.messageHistoryViews.copyItems() {
-            if mutableView.id == id {
-                let context = MutableMessageHistoryViewReplayContext()
-                var updated = false
-                
-                let updateType: ViewUpdateType = .UpdateVisible
-                
-                if mutableView.updateVisibleRange(earliestVisibleIndex: earliestVisibleIndex, latestVisibleIndex: latestVisibleIndex, context: context) {
-                    mutableView.complete(postbox: postbox, context: context)
-                    mutableView.incrementVersion()
-                    updated = true
-                }
-                
-                if updated {
-                    mutableView.render(self.renderMessage, postbox: postbox)
-                    pipe.putNext((MessageHistoryView(mutableView), updateType))
-                    
-                    self.updateTrackedHoles()
-                }
-                
-                break
-            }
-        }
-    }
-    
     func addPeerView(_ view: MutablePeerView) -> (Bag<(MutablePeerView, ValuePipe<PeerView>)>.Index, Signal<PeerView, NoError>) {
         let record = (view, ValuePipe<PeerView>())
         let index = self.peerViews.add(record)
@@ -332,18 +306,16 @@ final class ViewTracker {
                 updated = true
             }
             
-            var updateType: ViewUpdateType
+            var updateType: ViewUpdateType = .Generic
             switch mutableView.peerIds {
                 case let .single(peerId):
-                    /*if let filledIndices = transaction.peerIdsWithFilledHoles[peerId] {
-                        updateType = .FillHole(insertions: filledIndices, deletions: transaction.removedHolesByPeerId[peerId] ?? [:])
-                    } else {*/
-                        updateType = .Generic
-                    //}
-                case .associated://, .group:
-                    /*var holeFillDirections: [MessageIndex: HoleFillDirection] = [:]
-                    var removedHolesByPeerId: [MessageIndex: HoleFillDirection] = [:]*/
-                    
+                    for key in transaction.currentPeerHoleOperations.keys {
+                        if key.peerId == peerId {
+                            updateType = .FillHole
+                            break
+                        }
+                    }
+                case .associated:
                     var ids = Set<PeerId>()
                     switch mutableView.peerIds {
                         case .single:
@@ -363,28 +335,13 @@ final class ViewTracker {
                     }
                     
                     if !ids.isEmpty {
-                        /*for (peerId, value) in transaction.peerIdsWithFilledHoles {
-                            if ids.contains(peerId) {
-                                for (k, v) in value {
-                                    holeFillDirections[k] = v
-                                }
+                        for key in transaction.currentPeerHoleOperations.keys {
+                            if ids.contains(key.peerId) {
+                                updateType = .FillHole
+                                break
                             }
                         }
-                        
-                        for (peerId, value) in transaction.removedHolesByPeerId {
-                            if ids.contains(peerId) {
-                                for (k, v) in value {
-                                    removedHolesByPeerId[k] = v
-                                }
-                            }
-                        }*/
                     }
-                    
-                    /*if !holeFillDirections.isEmpty {
-                        updateType = .FillHole(insertions: holeFillDirections, deletions: removedHolesByPeerId)
-                    } else {*/
-                        updateType = .Generic
-                    //}
             }
         
             if mutableView.updateAnchorIndex(self.fetchAnchorIndex) {
@@ -530,8 +487,13 @@ final class ViewTracker {
         var firstHolesAndTags = Set<MessageHistoryHolesViewEntry>()
         for (view, _) in self.messageHistoryViews.copyItems() {
             if let (hole, direction) = view.firstHole() {
-                
-                firstHolesAndTags.insert(MessageHistoryHolesViewEntry(hole: hole, direction: direction, tags: view.tagMask))
+                let space: MessageHistoryHoleSpace
+                if let tagMask = view.tagMask {
+                    space = .tag(tagMask)
+                } else {
+                    space = .everywhere
+                }
+                firstHolesAndTags.insert(MessageHistoryHolesViewEntry(hole: hole, direction: direction, space: space))
             }
         }
         

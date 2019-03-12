@@ -40,8 +40,7 @@ private func getAnchorId(postbox: Postbox, location: MessageOfInterestViewLocati
 }
 
 private struct HolesViewEntryHole {
-    let hole: MessageHistoryHole
-    let lowerIndex: MessageIndex?
+    let hole: MessageHistoryViewHole
 }
 
 private enum HolesViewEntryMedia {
@@ -66,26 +65,16 @@ public struct HolesViewMedia: Comparable {
 
 private struct HolesViewEntry {
     let index: MessageIndex
-    let hole: HolesViewEntryHole?
     var media: HolesViewEntryMedia?
     
-    init(index: MessageIndex, hole: HolesViewEntryHole?, media: HolesViewEntryMedia?) {
+    init(index: MessageIndex, media: HolesViewEntryMedia?) {
         self.index = index
-        self.hole = hole
         self.media = media
     }
     
     init(_ entry: IntermediateMessageHistoryEntry) {
-        switch entry {
-            case let .Message(message):
-                self.index = MessageIndex(message)
-                self.hole = nil
-                self.media = .intermediate(authorId: message.authorId, message.referencedMedia, message.embeddedMediaData)
-            case let .Hole(hole, lowerIndex):
-                self.index = hole.maxIndex
-                self.hole = HolesViewEntryHole(hole: hole, lowerIndex: lowerIndex)
-                self.media = nil
-        }
+        self.index = entry.message.index
+        self.media = .intermediate(authorId: entry.message.authorId, entry.message.referencedMedia, entry.message.embeddedMediaData)
     }
 }
 
@@ -94,7 +83,7 @@ private func entriesFromIndexEntries(entries: [MessageIndex], postbox: Postbox) 
         guard let message = postbox.messageHistoryTable.getMessage(index) else {
             return nil
         }
-        return HolesViewEntry(index: index, hole: nil, media: .intermediate(authorId: message.authorId, message.referencedMedia, message.embeddedMediaData))
+        return HolesViewEntry(index: index, media: .intermediate(authorId: message.authorId, message.referencedMedia, message.embeddedMediaData))
     }
 }
 
@@ -154,14 +143,6 @@ private func fetchEarlier(postbox: Postbox, location: MessageOfInterestViewLocat
 public struct MessageOfInterestHole: Hashable, Equatable {
     public let hole: MessageHistoryViewHole
     public let direction: MessageHistoryViewRelativeHoleDirection
-    
-    public static func ==(lhs: MessageOfInterestHole, rhs: MessageOfInterestHole) -> Bool {
-        return lhs.hole == rhs.hole && lhs.direction == rhs.direction
-    }
-    
-    public var hashValue: Int {
-        return self.hole.hashValue
-    }
 }
 
 public enum MessageOfInterestViewLocation: Hashable {
@@ -262,15 +243,9 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                     if let operations = transaction.currentOperationsByPeerId[peerId] {
                         for operation in operations {
                             switch operation {
-                                case let .InsertHole(hole):
-                                    if hole.id.namespace == self.namespace {
-                                        if self.add(HolesViewEntry(index: hole.maxIndex, hole: HolesViewEntryHole(hole: hole, lowerIndex: nil), media: nil)) {
-                                            hasChanges = true
-                                        }
-                                    }
                                 case let .InsertMessage(intermediateMessage):
                                     if intermediateMessage.id.namespace == self.namespace {
-                                        if self.add(HolesViewEntry(index: MessageIndex(intermediateMessage), hole: nil, media: .intermediate(authorId: intermediateMessage.authorId, intermediateMessage.referencedMedia, intermediateMessage.embeddedMediaData))) {
+                                        if self.add(HolesViewEntry(index: intermediateMessage.index, media: .intermediate(authorId: intermediateMessage.authorId, intermediateMessage.referencedMedia, intermediateMessage.embeddedMediaData))) {
                                             hasChanges = true
                                         }
                                     }
@@ -526,7 +501,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
         return updated
     }
     
-    private func remove(_ indicesAndFlags: [(MessageIndex, Bool, MessageTags)], invalidEarlier: inout Bool, invalidLater: inout Bool, removedEntries: inout Bool) -> Bool {
+    private func remove(_ indicesAndFlags: [(MessageIndex, MessageTags)], invalidEarlier: inout Bool, invalidLater: inout Bool, removedEntries: inout Bool) -> Bool {
         let indices = Set(indicesAndFlags.map { $0.0 })
         var hasChanges = false
         if let earlier = self.earlier, indices.contains(earlier) {
@@ -577,7 +552,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
         let lowerI = max(0, referenceIndex - 50)
         let upperJ = min(referenceIndex + 50, self.entries.count)
         
-        switch self.location {
+        /*switch self.location {
             case .peer:
                 let anchorId: MessageId
                 switch anchorLocation {
@@ -610,7 +585,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                     i -= 1
                     j += 1
                 }
-        }
+        }*/
         
         return nil
     }

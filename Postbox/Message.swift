@@ -85,21 +85,6 @@ public struct MessageIndex: Comparable, Hashable {
     public let id: MessageId
     public let timestamp: Int32
     
-    public init(_ message: Message) {
-        self.id = message.id
-        self.timestamp = message.timestamp
-    }
-    
-    init(_ message: InternalStoreMessage) {
-        self.id = message.id
-        self.timestamp = message.timestamp
-    }
-    
-    init (_ message: IntermediateMessage) {
-        self.id = message.id
-        self.timestamp = message.timestamp
-    }
-    
     public init(id: MessageId, timestamp: Int32) {
         self.id = id
         self.timestamp = timestamp
@@ -478,6 +463,10 @@ public final class Message {
     public let associatedMessages: SimpleDictionary<MessageId, Message>
     public let associatedMessageIds: [MessageId]
     
+    public var index: MessageIndex {
+        return MessageIndex(id: self.id, timestamp: self.timestamp)
+    }
+    
     public init(stableId: UInt32, stableVersion: UInt32, id: MessageId, globallyUniqueId: Int64?, groupingKey: Int64?, groupInfo: MessageGroupInfo?, timestamp: Int32, flags: MessageFlags, tags: MessageTags, globalTags: GlobalMessageTags, localTags: LocalMessageTags, forwardInfo: MessageForwardInfo?, author: Peer?, text: String, attributes: [MessageAttribute], media: [Media], peers: SimpleDictionary<PeerId, Peer>, associatedMessages: SimpleDictionary<MessageId, Message>, associatedMessageIds: [MessageId]) {
         self.stableId = stableId
         self.stableVersion = stableVersion
@@ -682,6 +671,10 @@ final class InternalStoreMessage {
     let text: String
     let attributes: [MessageAttribute]
     let media: [Media]
+    
+    var index: MessageIndex {
+        return MessageIndex(id: self.id, timestamp: self.timestamp)
+    }
     
     init(id: MessageId, timestamp: Int32, globallyUniqueId: Int64?, groupingKey: Int64?, flags: StoreMessageFlags, tags: MessageTags, globalTags: GlobalMessageTags, localTags: LocalMessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
         self.id = id

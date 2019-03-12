@@ -7,7 +7,7 @@ enum IntermediateGlobalMessageTagsEntry {
     var index: MessageIndex {
         switch self {
             case let .message(message):
-                return MessageIndex(message)
+                return message.index
             case let .hole(index):
                 return index
         }

@@ -43,6 +43,10 @@ class IntermediateMessage {
     let embeddedMediaData: ReadBuffer
     let referencedMedia: [MediaId]
     
+    var index: MessageIndex {
+        return MessageIndex(id: self.id, timestamp: self.timestamp)
+    }
+    
     init(stableId: UInt32, stableVersion: UInt32, id: MessageId, globallyUniqueId: Int64?, groupingKey: Int64?, groupInfo: MessageGroupInfo?, timestamp: Int32, flags: MessageFlags, tags: MessageTags, globalTags: GlobalMessageTags, localTags: LocalMessageTags, forwardInfo: IntermediateMessageForwardInfo?, authorId: PeerId?, text: String, attributesData: ReadBuffer, embeddedMediaData: ReadBuffer, referencedMedia: [MediaId]) {
         self.stableId = stableId
         self.stableVersion = stableVersion

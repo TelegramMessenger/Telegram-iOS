@@ -40,26 +40,20 @@ class MessageHistoryTagsTable: Table {
         return key.successor
     }
     
-    func add(_ tagMask: MessageTags, index: MessageIndex, isHole: Bool, updatedSummaries: inout[MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
-        if !isHole && tagMask.contains(MessageTags(rawValue: 8)) && index.id.namespace == 0 && index.id.peerId.id == 1097505041 {
-            assert(true)
-        }
+    func add(_ tagMask: MessageTags, index: MessageIndex, updatedSummaries: inout[MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
         for tag in tagMask {
             self.valueBox.set(self.table, key: self.key(tag, index: index, key: self.sharedKey), value: MemoryBuffer())
-            if !isHole && self.summaryTags.contains(tag) {
+            if self.summaryTags.contains(tag) {
                 self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: index.id.peerId, namespace: index.id.namespace), id: index.id.id, updatedSummaries: &updatedSummaries, invalidateSummaries: &invalidateSummaries)
             }
         }
     }
     
-    func remove(_ tagMask: MessageTags, index: MessageIndex, isHole: Bool, updatedSummaries: inout[MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
-        if !isHole && tagMask.contains(MessageTags(rawValue: 8)) && index.id.namespace == 0 && index.id.peerId.id == 1097505041 {
-            assert(true)
-        }
+    func remove(_ tagMask: MessageTags, index: MessageIndex, updatedSummaries: inout[MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
         for tag in tagMask {
             self.valueBox.remove(self.table, key: self.key(tag, index: index, key: self.sharedKey))
             
-            if !isHole && self.summaryTags.contains(tag) {
+            if self.summaryTags.contains(tag) {
                 self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: index.id.peerId, namespace: index.id.namespace), id: index.id.id, updatedSummaries: &updatedSummaries, invalidateSummaries: &invalidateSummaries)
             }
         }
