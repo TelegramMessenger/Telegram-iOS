@@ -97,7 +97,7 @@ int64 VoIPControllerWrapper::GetPreferredRelayID(){
 }
 
 int32_t VoIPControllerWrapper::GetConnectionMaxLayer(){
-	return controller->GetConnectionMaxLayer();
+	return tgvoip::VoIPController::GetConnectionMaxLayer();
 }
 
 void VoIPControllerWrapper::SetEncryptionKey(const Platform::Array<uint8>^ key, bool isOutgoing){
@@ -174,22 +174,33 @@ void VoIPControllerWrapper::OnSignalBarsChangedInternal(int count){
 	SignalBarsChanged(this, count);
 }
 
-void VoIPControllerWrapper::SetConfig(double initTimeout, double recvTimeout, DataSavingMode dataSavingMode, bool enableAEC, bool enableNS, bool enableAGC, Platform::String^ logFilePath, Platform::String^ statsDumpFilePath){
+void VoIPControllerWrapper::SetConfig(VoIPConfig^ wrapper){
 	VoIPController::Config config{0};
-	config.initTimeout=initTimeout;
-	config.recvTimeout=recvTimeout;
-	config.dataSaving=(int)dataSavingMode;
-	config.enableAEC=enableAEC;
-	config.enableAGC=enableAGC;
-	config.enableNS=enableNS;
-	if(logFilePath!=nullptr&&!logFilePath->IsEmpty()){
-		config.logFilePath = wstring(logFilePath->Data());
-		//WideCharToMultiByte(CP_UTF8, 0, logFilePath->Data(), -1, config.logFilePath, sizeof(config.logFilePath), NULL, NULL);
+	config.initTimeout=wrapper->initTimeout;
+	config.recvTimeout=wrapper->recvTimeout;
+	config.dataSaving=(int)wrapper->dataSaving;
+	config.logFilePath;
+	config.statsDumpFilePath;
+
+	config.enableAEC=wrapper->enableAEC;
+	config.enableNS=wrapper->enableNS;
+	config.enableAGC=wrapper->enableAGC;
+
+	config.enableCallUpgrade=wrapper->enableCallUpgrade;
+
+	config.logPacketStats=wrapper->logPacketStats;
+	config.enableVolumeControl=wrapper->enableVolumeControl;
+
+	config.enableVideoSend=wrapper->enableVideoSend;
+	config.enableVideoReceive=wrapper->enableVideoReceive;
+
+	if(wrapper->logFilePath!=nullptr&&!wrapper->logFilePath->IsEmpty()){
+		config.logFilePath = wstring(wrapper->logFilePath->Data());
 	}
-	if (statsDumpFilePath != nullptr&&!statsDumpFilePath->IsEmpty()){
-		config.statsDumpFilePath = wstring(statsDumpFilePath->Data());
-		//WideCharToMultiByte(CP_UTF8, 0, statsDumpFilePath->Data(), -1, config.statsDumpFilePath, sizeof(config.statsDumpFilePath), NULL, NULL);
+	if (wrapper->statsDumpFilePath != nullptr&&!wrapper->statsDumpFilePath->IsEmpty()){
+		config.statsDumpFilePath = wstring(wrapper->statsDumpFilePath->Data());
 	}
+
 	controller->SetConfig(config);
 }
 
@@ -207,6 +218,14 @@ void VoIPControllerWrapper::SetProxy(ProxyProtocol protocol, Platform::String^ a
 
 void VoIPControllerWrapper::SetAudioOutputGainControlEnabled(bool enabled){
 	controller->SetAudioOutputGainControlEnabled(enabled);
+}
+
+void VoIPControllerWrapper::SetInputVolume(float level){
+	controller->SetInputVolume(level);
+}
+
+void VoIPControllerWrapper::SetOutputVolume(float level){
+	controller->SetOutputVolume(level);
 }
 
 void VoIPControllerWrapper::UpdateServerConfig(Platform::String^ json){
