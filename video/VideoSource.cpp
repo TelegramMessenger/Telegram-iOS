@@ -6,7 +6,7 @@
 
 #ifdef __ANDROID__
 #include "../os/android/VideoSourceAndroid.h"
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) && !defined(TARGET_OSX32)
 #include "../os/darwin/VideoToolboxEncoderSource.h"
 #endif
 
@@ -37,7 +37,7 @@ std::string VideoSource::GetErrorDescription(){
 std::vector<uint32_t> VideoSource::GetAvailableEncoders(){
 #ifdef __ANDROID__
 	return VideoSourceAndroid::availableEncoders;
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) && !defined(TARGET_OSX32)
 	return VideoToolboxEncoderSource::GetAvailableEncoders();
 #endif
 	return std::vector<uint32_t>();

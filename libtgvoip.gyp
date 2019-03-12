@@ -102,14 +102,6 @@
           '<(tgvoip_src_loc)/os/darwin/AudioUnitIO.h',
           '<(tgvoip_src_loc)/os/darwin/DarwinSpecific.mm',
           '<(tgvoip_src_loc)/os/darwin/DarwinSpecific.h',
-          '<(tgvoip_src_loc)/os/darwin/TGVVideoRenderer.mm',
-          '<(tgvoip_src_loc)/os/darwin/TGVVideoRenderer.h',
-          '<(tgvoip_src_loc)/os/darwin/TGVVideoSource.mm',
-          '<(tgvoip_src_loc)/os/darwin/TGVVideoSource.h',
-          '<(tgvoip_src_loc)/os/darwin/VideoToolboxEncoderSource.mm',
-          '<(tgvoip_src_loc)/os/darwin/VideoToolboxEncoderSource.h',
-          '<(tgvoip_src_loc)/os/darwin/SampleBufferDisplayLayerRenderer.mm',
-          '<(tgvoip_src_loc)/os/darwin/SampleBufferDisplayLayerRenderer.h',
 
           # Linux
           '<(tgvoip_src_loc)/os/linux/AudioInputALSA.cpp',
@@ -780,6 +772,9 @@
                     '/usr/local/macold/include/c++/v1',
                     '<(DEPTH)/../../../Libraries/macold/openssl/include',
                   ],
+                  'defines': [
+                    'TARGET_OSX32',
+                  ],
                 }, {
                   'xcode_settings': {
                     'MACOSX_DEPLOYMENT_TARGET': '10.8',
@@ -788,13 +783,23 @@
                   'include_dirs': [
                     '<(DEPTH)/../../../Libraries/openssl/include',
                   ],
+                  'direct_dependent_settings': {
+                    'linkflags': [
+                      '-framework VideoToolbox',
+                    ],
+                  },
+                  'sources': [
+                   '<(tgvoip_src_loc)/os/darwin/TGVVideoRenderer.mm',
+                   '<(tgvoip_src_loc)/os/darwin/TGVVideoRenderer.h',
+                   '<(tgvoip_src_loc)/os/darwin/TGVVideoSource.mm',
+                   '<(tgvoip_src_loc)/os/darwin/TGVVideoSource.h',
+                   '<(tgvoip_src_loc)/os/darwin/VideoToolboxEncoderSource.mm',
+                   '<(tgvoip_src_loc)/os/darwin/VideoToolboxEncoderSource.h',
+                   '<(tgvoip_src_loc)/os/darwin/SampleBufferDisplayLayerRenderer.mm',
+                   '<(tgvoip_src_loc)/os/darwin/SampleBufferDisplayLayerRenderer.h',
+                  ],
                 }]
               ],
-              'direct_dependent_settings': {
-                'linkflags': [
-                  '-framework VideoToolbox',
-                ],
-              },
             },
           ],
           [
