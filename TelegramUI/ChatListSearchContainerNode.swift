@@ -332,7 +332,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                 }
             case let .message(lhsMessage, _, _):
                 if case let .message(rhsMessage, _, _) = rhs {
-                    return MessageIndex(lhsMessage) < MessageIndex(rhsMessage)
+                    return lhsMessage.index < rhsMessage.index
                 } else if case .addContact = rhs {
                     return true
                 } else {
@@ -445,7 +445,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     interaction.peerSelected(peer.peer)
                 })
             case let .message(message, readState, presentationData):
-                return ChatListItem(presentationData: presentationData, account: context.account, peerGroupId: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(message)), content: .peer(message: message, peer: RenderedPeer(message: message), combinedReadState: readState, notificationSettings: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: true), editing: false, hasActiveRevealControls: false, selected: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, interaction: interaction)
+                return ChatListItem(presentationData: presentationData, account: context.account, peerGroupId: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(message: message, peer: RenderedPeer(message: message), combinedReadState: readState, notificationSettings: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: true), editing: false, hasActiveRevealControls: false, selected: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, interaction: interaction)
             case let .addContact(phoneNumber, theme, strings):
                 return ContactsAddItem(theme: theme, strings: strings, phoneNumber: phoneNumber, header: ChatListSearchItemHeader(type: .phoneNumber, theme: theme, strings: strings, actionTitle: nil, action: nil), action: {
                     interaction.addContact(phoneNumber)
@@ -625,7 +625,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                 guard let last = previous.result.messages.last else {
                     return (previous, false)
                 }
-                return (ChatListSearchMessagesContext(result: previous.result, loadMoreIndex: MessageIndex(last)), true)
+                return (ChatListSearchMessagesContext(result: previous.result, loadMoreIndex: last.index), true)
             }
         }
         self.recentListNode.isHidden = filter.contains(.excludeRecent)
@@ -692,7 +692,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             } else {
                 let searchSignal = searchMessages(account: context.account, location: location, query: query, state: nil, limit: 50)
                 |> map { result, updatedState -> ChatListSearchMessagesResult in
-                    return ChatListSearchMessagesResult(query: query, messages: result.messages.sorted(by: { MessageIndex($0) > MessageIndex($1) }), readStates: result.readStates, hasMore: !result.completed, state: updatedState)
+                    return ChatListSearchMessagesResult(query: query, messages: result.messages.sorted(by: { $0.index > $1.index }), readStates: result.readStates, hasMore: !result.completed, state: updatedState)
                 }
                 
                 let loadMore = searchContext.get()
@@ -701,7 +701,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                         if let _ = searchContext.loadMoreIndex {
                             return searchMessages(account: context.account, location: location, query: query, state: searchContext.result.state, limit: 80)
                             |> map { result, updatedState -> ChatListSearchMessagesResult in
-                                return ChatListSearchMessagesResult(query: query, messages: result.messages.sorted(by: { MessageIndex($0) > MessageIndex($1) }), readStates: result.readStates, hasMore: !result.completed, state: updatedState)
+                                return ChatListSearchMessagesResult(query: query, messages: result.messages.sorted(by: { $0.index > $1.index }), readStates: result.readStates, hasMore: !result.completed, state: updatedState)
                             }
                             |> mapToSignal { foundMessages -> Signal<(([Message], [PeerId: CombinedPeerReadState], Int32), Bool), NoError> in
                                 updateSearchContext { previous in

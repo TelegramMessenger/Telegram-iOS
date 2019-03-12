@@ -307,7 +307,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, author is TelegramUser {
                             result += "\nFrom: \(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder))"
                         }
-                        if !message.flags.contains(.Incoming), let combinedReadState = peer.combinedReadState, combinedReadState.isOutgoingMessageIndexRead(MessageIndex(message)) {
+                        if !message.flags.contains(.Incoming), let combinedReadState = peer.combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
                             result += "\nRead"
                         }
                         result += "\n\(messageText)"
@@ -655,7 +655,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 if message.flags.isSending && !message.isSentOrAcknowledged {
                     statusImage = PresentationResourcesChatList.pendingImage(item.presentationData.theme)
                 } else {
-                    if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(MessageIndex(message)) {
+                    if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
                         statusImage = PresentationResourcesChatList.doubleCheckImage(item.presentationData.theme)
                     } else {
                         statusImage = PresentationResourcesChatList.singleCheckImage(item.presentationData.theme)

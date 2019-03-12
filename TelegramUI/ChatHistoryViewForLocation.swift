@@ -43,41 +43,26 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                         
                         let maxIndex = min(view.entries.count, targetIndex + count / 2)
                         if maxIndex >= targetIndex {
-                            for i in targetIndex ..< maxIndex {
-                                if case let .HoleEntry(hole) = view.entries[i] {
-                                    var incomingCount: Int32 = 0
-                                    inner: for entry in view.entries.reversed() {
-                                        switch entry {
-                                            case .HoleEntry:
-                                                break inner
-                                            case let .MessageEntry(message, _, _, _, _):
-                                                if message.flags.contains(.Incoming) {
-                                                    incomingCount += 1
-                                                }
-                                        }
+                            if view.holeEarlier {
+                                var incomingCount: Int32 = 0
+                                inner: for entry in view.entries.reversed() {
+                                    if entry.message.flags.contains(.Incoming) {
+                                        incomingCount += 1
                                     }
-                                    if let combinedReadStates = view.fixedReadStates, case let .peer(readStates) = combinedReadStates, let readState = readStates[hole.0.maxIndex.id.peerId], readState.count == incomingCount {
-                                    } else {
-                                        fadeIn = true
-                                        return .Loading(initialData: combinedInitialData)
-                                    }
+                                }
+                                if case let .peer(peerId) = chatLocation, let combinedReadStates = view.fixedReadStates, case let .peer(readStates) = combinedReadStates, let readState = readStates[peerId], readState.count == incomingCount {
+                                } else {
+                                    fadeIn = true
+                                    return .Loading(initialData: combinedInitialData)
                                 }
                             }
                         }
                     } else if let historyScrollState = (initialData?.chatInterfaceState as? ChatInterfaceState)?.historyScrollState, tagMask == nil {
                         scrollPosition = .positionRestoration(index: historyScrollState.messageIndex, relativeOffset: CGFloat(historyScrollState.relativeOffset))
                     } else {
-                        var messageCount = 0
-                        for entry in view.entries.reversed() {
-                            if case .HoleEntry = entry {
-                                fadeIn = true
-                                return .Loading(initialData: combinedInitialData)
-                            } else {
-                                messageCount += 1
-                            }
-                            if messageCount >= 1 {
-                                break
-                            }
+                        if view.entries.isEmpty && (view.holeEarlier || view.holeLater) {
+                            fadeIn = true
+                            return .Loading(initialData: combinedInitialData)
                         }
                     }
                     
@@ -118,11 +103,13 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                     if !view.entries.isEmpty {
                         let minIndex = max(0, targetIndex - count / 2)
                         let maxIndex = min(view.entries.count, targetIndex + count / 2)
-                        for i in minIndex ..< maxIndex {
-                            if case .HoleEntry = view.entries[i] {
-                                fadeIn = true
-                                return .Loading(initialData: combinedInitialData)
-                            }
+                        if minIndex == 0 && view.holeEarlier {
+                            fadeIn = true
+                            return .Loading(initialData: combinedInitialData)
+                        }
+                        if maxIndex == view.entries.count && view.holeLater {
+                            fadeIn = true
+                            return .Loading(initialData: combinedInitialData)
                         }
                     }
                     

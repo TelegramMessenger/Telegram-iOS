@@ -29,7 +29,6 @@ public struct ChatMessageEntryAttributes: Equatable {
 }
 
 enum ChatHistoryEntry: Identifiable, Comparable {
-    case HoleEntry(MessageHistoryHole, ChatPresentationData)
     case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryMonthLocation?, ChatHistoryMessageSelection, ChatMessageEntryAttributes)
     case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)], ChatPresentationData)
     case UnreadEntry(MessageIndex, ChatPresentationData)
@@ -38,8 +37,6 @@ enum ChatHistoryEntry: Identifiable, Comparable {
     
     var stableId: UInt64 {
         switch self {
-            case let .HoleEntry(hole, _):
-                return UInt64(hole.stableId) | ((UInt64(1) << 40))
             case let .MessageEntry(message, _, _, _, _, _):
                 return UInt64(message.stableId) | ((UInt64(2) << 40))
             case let .MessageGroupEntry(groupInfo, _, _):
@@ -55,12 +52,10 @@ enum ChatHistoryEntry: Identifiable, Comparable {
     
     var index: MessageIndex {
         switch self {
-            case let .HoleEntry(hole, _):
-                return hole.maxIndex
             case let .MessageEntry(message, _, _, _, _, _):
-                return MessageIndex(message)
+                return message.index
             case let .MessageGroupEntry(_, messages, _):
-                return MessageIndex(messages[messages.count - 1].0)
+                return messages[messages.count - 1].0.index
             case let .UnreadEntry(index, _):
                 return index
             case .ChatInfoEntry:
@@ -72,15 +67,9 @@ enum ChatHistoryEntry: Identifiable, Comparable {
 
     static func ==(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
         switch lhs {
-            case let .HoleEntry(lhsHole, lhsPresentationData):
-                if case let .HoleEntry(rhsHole, rhsPresentationData) = rhs, lhsHole == rhsHole, lhsPresentationData === rhsPresentationData {
-                    return true
-                } else {
-                    return false
-                }
             case let .MessageEntry(lhsMessage, lhsPresentationData, lhsRead, _, lhsSelection, lhsAttributes):
                 switch rhs {
-                    case let .MessageEntry(rhsMessage, rhsPresentationData, rhsRead, _, rhsSelection, rhsAttributes) where MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags && lhsRead == rhsRead:
+                    case let .MessageEntry(rhsMessage, rhsPresentationData, rhsRead, _, rhsSelection, rhsAttributes) where lhsMessage.index == rhsMessage.index && lhsMessage.flags == rhsMessage.flags && lhsRead == rhsRead:
                         if lhsPresentationData !== rhsPresentationData {
                             return false
                         }

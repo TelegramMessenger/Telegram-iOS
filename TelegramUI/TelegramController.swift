@@ -183,7 +183,7 @@ public class TelegramController: ViewController {
                                         return (nil, nil)
                                     } else {
                                         var peers: [Peer] = []
-                                        for message in messages.values.sorted(by: { MessageIndex($0) < MessageIndex($1) }) {
+                                        for message in messages.values.sorted(by: { $0.index < $1.index }) {
                                             if let peer = message.peers[message.id.peerId] {
                                                 peers.append(peer)
                                             }
@@ -276,7 +276,7 @@ public class TelegramController: ViewController {
                                 break
                             case .summary:
                                 if let locationBroadcastMessages = strongSelf.locationBroadcastMessages {
-                                    let messages = locationBroadcastMessages.values.sorted(by: { MessageIndex($0) > MessageIndex($1) })
+                                    let messages = locationBroadcastMessages.values.sorted(by: { $0.index > $1.index })
                                     
                                     if messages.count == 1 {
                                         presentLiveLocationController(context: strongSelf.context, peerId: messages[0].id.peerId, controller: strongSelf)
@@ -511,10 +511,8 @@ public class TelegramController: ViewController {
                                         return .single((nil, true))
                                     case let .HistoryView(view, _, _, _, _, _):
                                         for entry in view.entries {
-                                            if case let .MessageEntry(message, _, _, _, _) = entry {
-                                                if message.id == id.messageId {
-                                                    return .single((MessageIndex(message), false))
-                                                }
+                                            if entry.message.id == id.messageId {
+                                                return .single((entry.message.index, false))
                                             }
                                         }
                                         return .single((nil, false))

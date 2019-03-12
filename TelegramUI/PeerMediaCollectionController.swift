@@ -153,7 +153,7 @@ public class PeerMediaCollectionController: TelegramController {
                         var fromIndex: MessageIndex?
                         
                         if let message = strongSelf.mediaCollectionDisplayNode.historyNode.messageInCurrentHistoryView(fromId) {
-                            fromIndex = MessageIndex(message)
+                            fromIndex = message.index
                         }
                         
                         /*if let fromIndex = fromIndex {
@@ -299,7 +299,7 @@ public class PeerMediaCollectionController: TelegramController {
                             })
                             
                             let shareController = ShareController(context: strongSelf.context, subject: .messages(messages.sorted(by: { lhs, rhs in
-                                return MessageIndex(lhs) < MessageIndex(rhs)
+                                return lhs.index < rhs.index
                             })), externalShare: true, immediateExternalShare: true)
                             strongSelf.present(shareController, in: .window(.root))
                         }

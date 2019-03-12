@@ -65,7 +65,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
             case .displayTabInfo:
                 return MessageIndex.absoluteUpperBound().predecessor()
             case let .messageEntry(message, _, _, _, _, _, _):
-                return MessageIndex(message)
+                return message.index
             case let .holeEntry(index, _):
                 return index
         }
@@ -78,7 +78,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
             case .displayTabInfo:
                 return .setting(1)
             case let .messageEntry(message, _, _, _, _, _, _):
-                return .message(MessageIndex(message))
+                return .message(message.index)
             case let .holeEntry(index, _):
                 return .hole(index)
         }
@@ -100,17 +100,17 @@ enum CallListNodeEntry: Comparable, Identifiable {
                     case let .holeEntry(rhsIndex, _):
                         return lhsIndex < rhsIndex
                     case let .messageEntry(topMessage, _, _, _, _, _, _):
-                        return lhsIndex < MessageIndex(topMessage)
+                        return lhsIndex < topMessage.index
                     default:
                         return true
                 }
             case let .messageEntry(lhsTopMessage, _, _, _, _, _, _):
-                let lhsIndex = MessageIndex(lhsTopMessage)
+                let lhsIndex = lhsTopMessage.index
                 switch rhs {
                     case let .holeEntry(rhsIndex, _):
                         return lhsIndex < rhsIndex
                     case let .messageEntry(topMessage, _, _, _, _, _, _):
-                        return lhsIndex < MessageIndex(topMessage)
+                        return lhsIndex < topMessage.index
                     default:
                         return true
                 }

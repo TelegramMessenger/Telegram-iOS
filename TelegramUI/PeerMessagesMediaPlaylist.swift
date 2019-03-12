@@ -147,18 +147,14 @@ private func aroundMessagesFromView(view: MessageHistoryView, centralIndex: Mess
     var result: [Message] = []
     if index != 0 {
         for i in (0 ..< index).reversed() {
-            if case let .MessageEntry(message, _, _, _, _) = view.entries[i] {
-                result.append(message)
-                break
-            }
+            result.append(view.entries[i].message)
+            break
         }
     }
     if index != view.entries.count - 1 {
         for i in index + 1 ..< view.entries.count {
-            if case let .MessageEntry(message, _, _, _, _) = view.entries[i] {
-                result.append(message)
-                break
-            }
+            result.append(view.entries[i].message)
+            break
         }
     }
     return result
@@ -170,31 +166,18 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
         if entry.index.id == anchorIndex.id {
             switch position {
                 case .exact:
-                    switch entry {
-                        case let .MessageEntry(message, _, _, _, _):
-                            return (message, aroundMessagesFromView(view: view, centralIndex: entry.index), true)
-                        default:
-                            return nil
-                    }
+                    return (entry.message, aroundMessagesFromView(view: view, centralIndex: entry.index), true)
                 case .later:
                     if index + 1 < view.entries.count {
-                        switch view.entries[index + 1] {
-                            case let .MessageEntry(message, _, _, _, _):
-                                return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index + 1].index), true)
-                            default:
-                                return nil
-                        }
+                        let message = view.entries[index + 1].message
+                        return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index + 1].index), true)
                     } else {
                         return nil
                     }
                 case .earlier:
                     if index != 0 {
-                        switch view.entries[index - 1] {
-                            case let .MessageEntry(message, _, _, _, _):
-                                return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index - 1].index), true)
-                            default:
-                                return nil
-                        }
+                        let message = view.entries[index - 1].message
+                        return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index - 1].index), true)
                     } else {
                         return nil
                     }
@@ -205,19 +188,11 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
     if !view.entries.isEmpty {
         switch position {
             case .later, .exact:
-                switch view.entries[view.entries.count - 1] {
-                    case let .MessageEntry(message, _, _, _, _):
-                        return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[view.entries.count - 1].index), false)
-                    default:
-                        return nil
-                }
+                let message = view.entries[view.entries.count - 1].message
+                return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[view.entries.count - 1].index), false)
             case .earlier:
-                switch view.entries[0] {
-                    case let .MessageEntry(message, _, _, _, _):
-                        return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[0].index), false)
-                    default:
-                        return nil
-                }
+                let message = view.entries[0].message
+                return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[0].index), false)
         }
     } else {
         return nil
@@ -446,7 +421,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                             self.currentItem = nil
                             self.updateState()
                         } else {
-                             self.loadItem(anchor: .index(MessageIndex(currentItem.current)), navigation: navigation)
+                             self.loadItem(anchor: .index(currentItem.current.index), navigation: navigation)
                         }
                     }
                 }
@@ -478,7 +453,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         if let (message, aroundMessages) = self.currentItem {
             item = MessageMediaPlaylistItem(message: message)
             for around in aroundMessages {
-                if MessageIndex(around) < MessageIndex(message) {
+                if around.index < message.index {
                     previousItem = MessageMediaPlaylistItem(message: around)
                 } else {
                     nextItem = MessageMediaPlaylistItem(message: around)
@@ -521,9 +496,9 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                         guard let message = message else {
                             return .single(nil)
                         }
-                        return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), index: .message(MessageIndex(message)), anchorIndex: .message(MessageIndex(message)), count: 10, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: [])
+                        return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), index: .message(message.index), anchorIndex: .message(message.index), count: 10, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: [])
                         |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
-                            if let (message, aroundMessages, _) = navigatedMessageFromView(view.0, anchorIndex: MessageIndex(message), position: .exact) {
+                            if let (message, aroundMessages, _) = navigatedMessageFromView(view.0, anchorIndex: message.index, position: .exact) {
                                 return .single((message, aroundMessages))
                             } else {
                                 return .single((message, []))
@@ -583,7 +558,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                         while true {
                                             if let id = playbackStack.pop() {
                                                 if let message = transaction.getMessage(id) {
-                                                    return MessageIndex(message)
+                                                    return message.index
                                                 }
                                             } else {
                                                 break

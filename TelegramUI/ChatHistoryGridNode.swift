@@ -77,8 +77,6 @@ private func mappedInsertEntries(context: AccountContext, peerId: PeerId, contro
                 return GridNodeInsertItem(index: entry.index, item: GridMessageItem(theme: theme, strings: strings, context: context, message: message, controllerInteraction: controllerInteraction), previousIndex: entry.previousIndex)
             case .MessageGroupEntry:
                 return GridNodeInsertItem(index: entry.index, item: GridHoleItem(), previousIndex: entry.previousIndex)
-            case .HoleEntry:
-                return GridNodeInsertItem(index: entry.index, item: GridHoleItem(), previousIndex: entry.previousIndex)
             case .UnreadEntry:
                 assertionFailure()
                 return GridNodeInsertItem(index: entry.index, item: GridHoleItem(), previousIndex: entry.previousIndex)
@@ -95,8 +93,6 @@ private func mappedUpdateEntries(context: AccountContext, peerId: PeerId, contro
             case let .MessageEntry(message, _, _, _, _, _):
                 return GridNodeUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: GridMessageItem(theme: theme, strings: strings, context: context, message: message, controllerInteraction: controllerInteraction))
             case .MessageGroupEntry:
-                return GridNodeUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: GridHoleItem())
-            case .HoleEntry:
                 return GridNodeUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: GridHoleItem())
             case .UnreadEntry:
                 assertionFailure()
@@ -452,10 +448,6 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
             let completion: (GridNodeDisplayedItemRange) -> Void = { [weak self] visibleRange in
                 if let strongSelf = self {
                     strongSelf.historyView = transition.historyView
-                    
-                    if let range = visibleRange.loadedRange {
-                        strongSelf.context.account.postbox.updateMessageHistoryViewVisibleRange(transition.historyView.originalView.id, earliestVisibleIndex: transition.historyView.filteredEntries[transition.historyView.filteredEntries.count - 1 - range.upperBound].index, latestVisibleIndex: transition.historyView.filteredEntries[transition.historyView.filteredEntries.count - 1 - range.lowerBound].index)
-                    }
                     
                     let loadState: ChatHistoryNodeLoadState
                     if let historyView = strongSelf.historyView {

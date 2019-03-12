@@ -68,7 +68,7 @@ private enum ChatHistorySearchEntry: Comparable, Identifiable {
         switch lhs {
             case let .message(lhsMessage, _, _, _):
                 if case let .message(rhsMessage, _, _, _) = rhs {
-                    return MessageIndex(lhsMessage) < MessageIndex(rhsMessage)
+                    return lhsMessage.index < rhsMessage.index
                 } else {
                     return false
                 }

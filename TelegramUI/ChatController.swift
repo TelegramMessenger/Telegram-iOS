@@ -1966,7 +1966,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             stationaryItemRange = (maxInsertedItem + 1, Int.max)
                         }
                         
-                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false), updateSizeAndInsets)
+                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false, reason: transition.reason), updateSizeAndInsets)
                     })
                     
                     if let mappedTransition = mappedTransition {
@@ -2248,7 +2248,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                         
                         let shareController = ShareController(context: strongSelf.context, subject: .messages(messages.sorted(by: { lhs, rhs in
-                            return MessageIndex(lhs) < MessageIndex(rhs)
+                            return lhs.index < rhs.index
                         })), externalShare: true, immediateExternalShare: true)
                         strongSelf.chatDisplayNode.dismissInput()
                         strongSelf.present(shareController, in: .window(.root))
@@ -4761,7 +4761,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             var navigateIndex: MessageIndex?
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search {
-                                    let messageIndices = results.messages.map({ MessageIndex($0) }).sorted()
+                                    let messageIndices = results.messages.map({ $0.index }).sorted()
                                     var currentIndex = messageIndices.last
                                     if let previousResultId = data.resultsState?.currentId {
                                         for index in messageIndices {
@@ -4811,7 +4811,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             let complete = results.completed
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search, let previousResultsState = data.resultsState {
-                                    let messageIndices = results.messages.map({ MessageIndex($0) }).sorted()
+                                    let messageIndices = results.messages.map({ $0.index }).sorted()
                                     return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: previousResultsState.currentId, state: updatedState, totalCount: results.totalCount, completed: results.completed)))
                                 } else {
                                     return current
@@ -4853,10 +4853,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             var fromIndex: MessageIndex?
             
             if let fromId = fromId, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(fromId) {
-                fromIndex = MessageIndex(message)
+                fromIndex = message.index
             } else {
                 if let message = self.chatDisplayNode.historyNode.anchorMessageInCurrentHistoryView() {
-                    fromIndex = MessageIndex(message)
+                    fromIndex = message.index
                 }
             }
             
@@ -4873,7 +4873,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     if let messageId = messageLocation.messageId, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
                         self.loadingMessage.set(false)
                         self.messageIndexDisposable.set(nil)
-                        self.chatDisplayNode.historyNode.scrollToMessage(from: fromIndex, to: MessageIndex(message), animated: animated, scrollPosition: scrollPosition)
+                        self.chatDisplayNode.historyNode.scrollToMessage(from: fromIndex, to: message.index, animated: animated, scrollPosition: scrollPosition)
                         completion?()
                     } else {
                         self.loadingMessage.set(true)
@@ -4894,10 +4894,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                     return .single((nil, true))
                                 case let .HistoryView(view, _, _, _, _, _):
                                     for entry in view.entries {
-                                        if case let .MessageEntry(message, _, _, _, _) = entry {
-                                            if message.id == messageLocation.messageId {
-                                                return .single((MessageIndex(message), false))
-                                            }
+                                        if entry.message.id == messageLocation.messageId {
+                                            return .single((entry.message.index, false))
                                         }
                                     }
                                     if case let .index(index) = searchLocation {
@@ -4985,10 +4983,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                     return .complete()
                                 case let .HistoryView(view, _, _, _, _, _):
                                     for entry in view.entries {
-                                        if case let .MessageEntry(message, _, _, _, _) = entry {
-                                            if message.id == messageLocation.messageId {
-                                                return .single(MessageIndex(message))
-                                            }
+                                        if entry.message.id == messageLocation.messageId {
+                                            return .single(entry.message.index)
                                         }
                                     }
                                     return .single(nil)

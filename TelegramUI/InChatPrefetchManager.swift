@@ -97,7 +97,7 @@ final class InChatPrefetchManager {
                 context = PrefetchMediaContext()
                 self.contexts[id] = context
                 
-                let priority: FetchManagerPriority = .foregroundPrefetch(direction: self.directionIsToLater ? .toLater : .toEarlier, localOrder: MessageIndex(message))
+                let priority: FetchManagerPriority = .foregroundPrefetch(direction: self.directionIsToLater ? .toLater : .toEarlier, localOrder: message.index)
                 
                 if case .full = automaticDownload {
                     if let image = media as? TelegramMediaImage {

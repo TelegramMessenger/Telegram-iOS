@@ -21,65 +21,54 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
     
     var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)] = []
     loop: for entry in view.entries {
-        switch entry {
-            case let .HoleEntry(hole, _):
-                if !groupBucket.isEmpty {
-                    entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
-                    groupBucket.removeAll()
-                }
-                if view.tagMask == nil {
-                    entries.append(.HoleEntry(hole, presentationData))
-                }
-            case let .MessageEntry(message, read, _, monthLocation, attributes):
-                if message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
-                    for media in message.media {
-                        if let action = media as? TelegramMediaAction {
-                            switch action.action {
-                                case .channelMigratedFromGroup, .groupMigratedToChannel:
-                                    continue loop
-                                default:
-                                    break
-                            }
-                        }
+        if entry.message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
+            for media in entry.message.media {
+                if let action = media as? TelegramMediaAction {
+                    switch action.action {
+                        case .channelMigratedFromGroup, .groupMigratedToChannel:
+                            continue loop
+                        default:
+                            break
                     }
                 }
-                
-                var isAdmin = false
-                if let author = message.author {
-                    isAdmin = adminIds.contains(author.id)
-                }
-                
-                if groupMessages {
-                    if !groupBucket.isEmpty && message.groupInfo != groupBucket[0].0.groupInfo {
-                        entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
-                        groupBucket.removeAll()
-                    }
-                    if let _ = message.groupInfo {
-                        let selection: ChatHistoryMessageSelection
-                        if let selectedMessages = selectedMessages {
-                            selection = .selectable(selected: selectedMessages.contains(message.id))
-                        } else {
-                            selection = .none
-                        }
-                        groupBucket.append((message, read, selection, ChatMessageEntryAttributes(isAdmin: isAdmin, isContact: attributes.authorIsContact)))
-                    } else {
-                        let selection: ChatHistoryMessageSelection
-                        if let selectedMessages = selectedMessages {
-                            selection = .selectable(selected: selectedMessages.contains(message.id))
-                        } else {
-                            selection = .none
-                        }
-                        entries.append(.MessageEntry(message, presentationData, read, monthLocation, selection, ChatMessageEntryAttributes(isAdmin: isAdmin, isContact: attributes.authorIsContact)))
-                    }
+            }
+        }
+        
+        var isAdmin = false
+        if let author = entry.message.author {
+            isAdmin = adminIds.contains(author.id)
+        }
+        
+        if groupMessages {
+            if !groupBucket.isEmpty && entry.message.groupInfo != groupBucket[0].0.groupInfo {
+                entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+                groupBucket.removeAll()
+            }
+            if let _ = entry.message.groupInfo {
+                let selection: ChatHistoryMessageSelection
+                if let selectedMessages = selectedMessages {
+                    selection = .selectable(selected: selectedMessages.contains(entry.message.id))
                 } else {
-                    let selection: ChatHistoryMessageSelection
-                    if let selectedMessages = selectedMessages {
-                        selection = .selectable(selected: selectedMessages.contains(message.id))
-                    } else {
-                        selection = .none
-                    }
-                    entries.append(.MessageEntry(message, presentationData, read, monthLocation, selection, ChatMessageEntryAttributes(isAdmin: isAdmin, isContact: attributes.authorIsContact)))
+                    selection = .none
                 }
+                groupBucket.append((entry.message, entry.isRead, selection, ChatMessageEntryAttributes(isAdmin: isAdmin, isContact: entry.attributes.authorIsContact)))
+            } else {
+                let selection: ChatHistoryMessageSelection
+                if let selectedMessages = selectedMessages {
+                    selection = .selectable(selected: selectedMessages.contains(entry.message.id))
+                } else {
+                    selection = .none
+                }
+                entries.append(.MessageEntry(entry.message, presentationData, entry.isRead, entry.monthLocation, selection, ChatMessageEntryAttributes(isAdmin: isAdmin, isContact: entry.attributes.authorIsContact)))
+            }
+        } else {
+            let selection: ChatHistoryMessageSelection
+            if let selectedMessages = selectedMessages {
+                selection = .selectable(selected: selectedMessages.contains(entry.message.id))
+            } else {
+                selection = .none
+            }
+            entries.append(.MessageEntry(entry.message, presentationData, entry.isRead, entry.monthLocation, selection, ChatMessageEntryAttributes(isAdmin: isAdmin, isContact: entry.attributes.authorIsContact)))
         }
     }
     
@@ -93,10 +82,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
         let unreadEntry: ChatHistoryEntry = .UnreadEntry(maxReadIndex, presentationData)
         for entry in entries {
             if entry > unreadEntry {
-                if i == 0, case .HoleEntry = entry {
-                } else {
-                    entries.insert(unreadEntry, at: i)
-                }
+                entries.insert(unreadEntry, at: i)
                 break
             }
             i += 1
@@ -118,33 +104,27 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
             var isEmpty = true
             if entries.count <= 3 {
                 loop: for entry in view.entries {
-                    switch entry {
-                        case let .MessageEntry(entry):
-                            var isEmptyMedia = false
-                            for media in entry.0.media {
-                                if let action = media as? TelegramMediaAction {
-                                    switch action.action {
-                                        case .groupCreated, .photoUpdated, .channelMigratedFromGroup, .groupMigratedToChannel:
-                                            isEmptyMedia = true
-                                        default:
-                                            break
-                                    }
-                                }
+                    var isEmptyMedia = false
+                    for media in entry.message.media {
+                        if let action = media as? TelegramMediaAction {
+                            switch action.action {
+                                case .groupCreated, .photoUpdated, .channelMigratedFromGroup, .groupMigratedToChannel:
+                                    isEmptyMedia = true
+                                default:
+                                    break
                             }
-                            var isCreator = false
-                            if let peer = entry.0.peers[entry.0.id.peerId] as? TelegramGroup, case .creator = peer.role {
-                                isCreator = true
-                            } else if let peer = entry.0.peers[entry.0.id.peerId] as? TelegramChannel, case .group = peer.info, peer.flags.contains(.isCreator) {
-                                isCreator = true
-                            }
-                            if isEmptyMedia && isCreator {
-                            } else {
-                                isEmpty = false
-                                break loop
-                            }
-                        default:
-                            isEmpty = false
-                            break loop
+                        }
+                    }
+                    var isCreator = false
+                    if let peer = entry.message.peers[entry.message.id.peerId] as? TelegramGroup, case .creator = peer.role {
+                        isCreator = true
+                    } else if let peer = entry.message.peers[entry.message.id.peerId] as? TelegramChannel, case .group = peer.info, peer.flags.contains(.isCreator) {
+                        isCreator = true
+                    }
+                    if isEmptyMedia && isCreator {
+                    } else {
+                        isEmpty = false
+                        break loop
                     }
                 }
             } else {
@@ -156,14 +136,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
         }
     } else if includeSearchEntry {
         if view.laterId == nil {
-            var hasMessages = false
-            loop: for entry in view.entries {
-                if case .MessageEntry = entry {
-                    hasMessages = true
-                    break loop
-                }
-            }
-            if hasMessages {
+            if !view.entries.isEmpty {
                 entries.append(.SearchEntry(presentationData.theme.theme, presentationData.strings))
             }
         }

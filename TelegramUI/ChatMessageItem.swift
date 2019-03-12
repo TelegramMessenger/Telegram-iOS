@@ -22,9 +22,9 @@ public enum ChatMessageItemContent: Sequence {
     var index: MessageIndex {
         switch self {
             case let .message(message, _, _, _):
-                return MessageIndex(message)
+                return message.index
             case let .group(messages):
-                return MessageIndex(messages[0].0)
+                return messages[0].0.index
         }
     }
     
