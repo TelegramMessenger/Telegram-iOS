@@ -60,6 +60,34 @@ namespace libtgvoip{
 		property uint64_t bytesRecvdMobile;
 	};
 
+	public ref class VoIPConfig sealed{
+	public:
+		VoIPConfig(){
+			logPacketStats=false;
+			enableVolumeControl=false;
+			enableVideoSend=false;
+			enableVideoReceive=false;
+		}
+
+		property double initTimeout;
+		property double recvTimeout;
+		property DataSavingMode dataSaving;
+		property String^ logFilePath;
+		property String^ statsDumpFilePath;
+
+		property bool enableAEC;
+		property bool enableNS;
+		property bool enableAGC;
+
+		property bool enableCallUpgrade;
+
+		property bool logPacketStats;
+		property bool enableVolumeControl;
+
+		property bool enableVideoSend;
+		property bool enableVideoReceive;
+	};
+
 	public enum class CallState : int{
 		WaitInit=1,
 		WaitInitAck,
