@@ -137,6 +137,7 @@ LOT_EXPORT double lottie_animation_get_framerate(const Lottie_Animation *animati
  *         at frame = @c frame_num, the content of the animation in that frame number.
  *
  *  @param[in] animation Animation object.
+ *  @param[in] frame_num Content corresponds to the @p frame_num needs to be drawn
  *  @param[in] width requested snapshot viewport width.
  *  @param[in] height requested snapshot viewport height.
  *
