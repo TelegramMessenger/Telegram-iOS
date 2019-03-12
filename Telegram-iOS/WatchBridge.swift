@@ -465,26 +465,26 @@ func makeBridgePeers(_ message: Message) -> [Int64 : Any] {
 }
 
 func makeBridgeMessage(_ entry: MessageHistoryEntry, strings: PresentationStrings) -> (TGBridgeMessage, [Int64 : TGBridgeUser])? {
-    if case let .MessageEntry(message, read, _, _, _) = entry, let bridgeMessage = makeBridgeMessage(message, strings: strings) {
-        if message.id.namespace == Namespaces.Message.Local && !message.flags.contains(.Failed) {
-            return nil
-        }
-        
-        bridgeMessage.unread = !read
-        
-        var bridgeUsers: [Int64 : TGBridgeUser] = [:]
-        if let bridgeUser = makeBridgeUser(message.author, presence: nil) {
+    guard let bridgeMessage = makeBridgeMessage(entry.message, strings: strings) else {
+        return nil
+    }
+    if entry.message.id.namespace == Namespaces.Message.Local && !entry.message.flags.contains(.Failed) {
+        return nil
+    }
+    
+    bridgeMessage.unread = !entry.isRead
+    
+    var bridgeUsers: [Int64 : TGBridgeUser] = [:]
+    if let bridgeUser = makeBridgeUser(entry.message.author, presence: nil) {
+        bridgeUsers[bridgeUser.identifier] = bridgeUser
+    }
+    for (_, peer) in entry.message.peers {
+        if let bridgeUser = makeBridgeUser(peer, presence: nil) {
             bridgeUsers[bridgeUser.identifier] = bridgeUser
         }
-        for (_, peer) in message.peers {
-            if let bridgeUser = makeBridgeUser(peer, presence: nil) {
-                bridgeUsers[bridgeUser.identifier] = bridgeUser
-            }
-        }
-        
-        return (bridgeMessage, bridgeUsers)
     }
-    return nil
+    
+    return (bridgeMessage, bridgeUsers)
 }
 
 func makeBridgeMessage(_ message: Message, strings: PresentationStrings, chatPeer: Peer? = nil) -> TGBridgeMessage? {

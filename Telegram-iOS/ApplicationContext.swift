@@ -415,9 +415,9 @@ final class AuthorizedApplicationContext {
                     if let topController = strongSelf.rootController.topViewController as? ChatController, topController.traceVisibility() {
                         if case .peer(firstMessage.id.peerId) = topController.chatLocation {
                             chatIsVisible = true
-                        } else if case let .group(topGroupId) = topController.chatLocation, topGroupId == groupId {
+                        }/* else if case let .group(topGroupId) = topController.chatLocation, topGroupId == groupId {
                             chatIsVisible = true
-                        }
+                        }*/
                     }
                     
                     if !notify {
