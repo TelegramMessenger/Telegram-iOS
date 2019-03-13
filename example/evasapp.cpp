@@ -18,6 +18,7 @@
 
 #include "evasapp.h"
 #include <dirent.h>
+#include <algorithm>
 
 static void
 _on_resize(Ecore_Evas *ee)
@@ -132,6 +133,9 @@ EvasApp::jsonFiles(const std::string &dirName, bool recurse)
       }
       closedir(d);
     }
+
+    std::sort(result.begin(), result.end(), [](auto & a, auto &b){return a < b;});
+
     return result;
 }
 

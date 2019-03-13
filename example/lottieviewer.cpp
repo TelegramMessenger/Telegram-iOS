@@ -18,6 +18,7 @@
 
 #include <Elementary.h>
 #include "lottieview.h"
+#include "evasapp.h"
 #include<iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -147,10 +148,7 @@ create_layout(Evas_Object *parent, const char *file)
 
    //LOTTIEVIEW
    LottieView *view = new LottieView(evas_object_evas_get(layout), renderMode);
-   std::string filePath = DEMO_DIR;
-   filePath +=file;
-
-   view->setFilePath(filePath.c_str());
+   view->setFilePath(file);
    view->setSize(500, 500);
 
    //IMAGE from LOTTIEVIEW
@@ -205,7 +203,9 @@ static char *
 _gl_text_get(void *data, Evas_Object *obj, const char *part)
 {
    ItemData *id = (ItemData *) data;
-   return strdup(jsonFiles[id->index].c_str());
+   const char *ptr = strrchr(jsonFiles[id->index].c_str(), '/');
+   int len = int(ptr + 1 - jsonFiles[id->index].c_str()); // +1 to include '/'
+   return strdup(jsonFiles[id->index].substr(len).c_str());
 }
 
 static void
@@ -219,8 +219,7 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
    Evas_Object *win, *nf, *genlist;
    Elm_Genlist_Item_Class *itc = elm_genlist_item_class_new();
    ItemData *itemData;
-   DIR *dir;
-   struct dirent *ent;
+
 
    if (argc > 1) {
       if (!strcmp(argv[1], "--disable-render"))
@@ -249,17 +248,7 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
    itc->func.text_get = _gl_text_get;
    itc->func.del = _gl_del;
 
-   std::string rscPath = DEMO_DIR;
-
-   dir = opendir(rscPath.c_str());
-   while ((ent = readdir(dir)) != NULL) {
-      if (!strncmp(ent->d_name + (strlen(ent->d_name) - 4), "json", 4)) {
-         jsonFiles.push_back(ent->d_name);
-      }
-   }
-   closedir(dir);
-
-   std::sort(jsonFiles.begin(), jsonFiles.end(), [](auto & a, auto &b){return a < b;});
+   jsonFiles = EvasApp::jsonFiles(DEMO_DIR);
 
    for (uint i = 0; i < jsonFiles.size(); i++) {
       itemData = (ItemData *)calloc(sizeof(ItemData), 1);
