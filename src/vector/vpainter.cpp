@@ -168,6 +168,9 @@ void  VPainter::drawBitmap(const VRect &target, const VBitmap &bitmap, const VRe
 {
     if (!bitmap.valid()) return;
 
+    // clear any existing brush data.
+    setBrush(VBrush());
+
     if (target.size() == source.size()) {
         mImpl->drawBitmapUntransform(target, bitmap, source);
     } else {
