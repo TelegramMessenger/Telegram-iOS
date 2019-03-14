@@ -1172,6 +1172,7 @@ LOTGFillItem::LOTGFillItem(LOTGFillData *data)
 
 void LOTGFillItem::updateContent(int frameNo)
 {
+    mAlpha = mData->opacity(frameNo);
     mData->update(mGradient, frameNo);
     mGradient->mMatrix = static_cast<LOTContentGroupItem *>(parent())->matrix();
     mFillRule = mData->fillRule();
@@ -1179,7 +1180,7 @@ void LOTGFillItem::updateContent(int frameNo)
 
 void LOTGFillItem::updateRenderNode()
 {
-    mGradient->setAlpha(parentAlpha());
+    mGradient->setAlpha(mAlpha * parentAlpha());
     mDrawable->setBrush(VBrush(mGradient.get()));
     mDrawable->setFillRule(mFillRule);
 }
@@ -1245,6 +1246,7 @@ LOTGStrokeItem::LOTGStrokeItem(LOTGStrokeData *data)
 
 void LOTGStrokeItem::updateContent(int frameNo)
 {
+    mAlpha = mData->opacity(frameNo);
     mData->update(mGradient, frameNo);
     mGradient->mMatrix = static_cast<LOTContentGroupItem *>(parent())->matrix();
     mCap = mData->capStyle();
@@ -1259,7 +1261,7 @@ void LOTGStrokeItem::updateContent(int frameNo)
 void LOTGStrokeItem::updateRenderNode()
 {
     float scale = getScale(mGradient->mMatrix);
-    mGradient->setAlpha(parentAlpha());
+    mGradient->setAlpha(mAlpha * parentAlpha());
     mDrawable->setBrush(VBrush(mGradient.get()));
     mDrawable->setStrokeInfo(mCap, mJoin, mMiterLimit,
                             mWidth * scale);

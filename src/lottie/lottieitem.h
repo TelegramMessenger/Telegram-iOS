@@ -413,6 +413,7 @@ protected:
 private:
    LOTGFillData                 *mData;
    std::unique_ptr<VGradient>    mGradient;
+   float                         mAlpha{1.0};
    FillRule                      mFillRule{FillRule::Winding};
 };
 
@@ -448,6 +449,7 @@ private:
    JoinStyle                     mJoin{JoinStyle::Miter};
    float                         mMiterLimit{0};
    VColor                        mColor;
+   float                         mAlpha{1.0};
    float                         mWidth{0};
    float                         mDashArray[6];
    int                           mDashArraySize{0};
