@@ -33,17 +33,3 @@ beta_testflight:
     - fastlane testflight_llc
   environment:
     name: testflight_llc
-
-beta_hockeyapp:
-  tags:
-    - ios
-  stage: build
-  only:
-    - beta
-  except:
-    - tags
-  script:
-    - sh ~/ios-prepare-build.sh $CI_PROJECT_DIR/..
-    - fastlane hockeyapp
-  environment:
-    name: hockeyapp

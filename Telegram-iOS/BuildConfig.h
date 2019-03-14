@@ -4,7 +4,7 @@
 
 + (instancetype _Nonnull)sharedBuildConfig;
 
-@property (nonatomic, strong, readonly) NSString * _Nonnull hockeyAppId;
+@property (nonatomic, strong, readonly) NSString * _Nullable hockeyAppId;
 @property (nonatomic, readonly) int32_t apiId;
 @property (nonatomic, strong, readonly) NSString * _Nonnull apiHash;
 @property (nonatomic, readonly) bool isInternalBuild;

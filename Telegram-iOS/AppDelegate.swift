@@ -1076,8 +1076,8 @@ private final class SharedApplicationContext {
             }
         })
         
-        if !BuildConfig.shared().hockeyAppId.isEmpty {
-            BITHockeyManager.shared().configure(withIdentifier: BuildConfig.shared().hockeyAppId, delegate: self)
+        if let hockeyAppId = BuildConfig.shared().hockeyAppId, !hockeyAppId.isEmpty {
+            BITHockeyManager.shared().configure(withIdentifier: hockeyAppId, delegate: self)
             BITHockeyManager.shared().crashManager.crashManagerStatus = .alwaysAsk
             BITHockeyManager.shared().start()
             BITHockeyManager.shared().authenticator.authenticateInstallation()
