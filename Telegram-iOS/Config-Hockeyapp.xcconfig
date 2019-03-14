@@ -1,1 +1,1 @@
-#include "../../Telegram-iOS-Shared/Config-Hockeyapp.xcconfig"
+#include "../../Telegram-iOS-Shared/Config/Hockeyapp/Config.xcconfig"

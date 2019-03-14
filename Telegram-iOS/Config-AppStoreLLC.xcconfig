@@ -1,1 +1,1 @@
-#include "../../Telegram-iOS-Shared/Config-AppStoreLLC.xcconfig"
+#include "../../Telegram-iOS-Shared/Config/AppStoreLLC/Config.xcconfig"
