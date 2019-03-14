@@ -1,13 +1,13 @@
 import Foundation
 
 struct IntermediateMessageForwardInfo {
-    let authorId: PeerId
+    let authorId: PeerId?
     let sourceId: PeerId?
     let sourceMessageId: MessageId?
     let date: Int32
     let authorSignature: String?
     
-    init(authorId: PeerId, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?) {
+    init(authorId: PeerId?, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?) {
         self.authorId = authorId
         self.sourceId = sourceId
         self.sourceMessageId = sourceMessageId

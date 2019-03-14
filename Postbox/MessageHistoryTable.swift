@@ -1380,7 +1380,7 @@ final class MessageHistoryTable: Table {
                 forwardInfoFlags |= 1 << 3
             }
             sharedBuffer.write(&forwardInfoFlags, offset: 0, length: 1)
-            var forwardAuthorId: Int64 = forwardInfo.authorId.toInt64()
+            var forwardAuthorId: Int64 = forwardInfo.authorId?.toInt64() ?? 0
             var forwardDate: Int32 = forwardInfo.date
             sharedBuffer.write(&forwardAuthorId, offset: 0, length: 8)
             sharedBuffer.write(&forwardDate, offset: 0, length: 4)
@@ -1953,7 +1953,7 @@ final class MessageHistoryTable: Table {
                     forwardInfoFlags |= 8
                 }
                 sharedBuffer.write(&forwardInfoFlags, offset: 0, length: 1)
-                var forwardAuthorId: Int64 = forwardInfo.authorId.toInt64()
+                var forwardAuthorId: Int64 = forwardInfo.authorId?.toInt64() ?? 0
                 var forwardDate: Int32 = forwardInfo.date
                 sharedBuffer.write(&forwardAuthorId, offset: 0, length: 8)
                 sharedBuffer.write(&forwardDate, offset: 0, length: 4)
@@ -2325,7 +2325,7 @@ final class MessageHistoryTable: Table {
                 forwardInfoFlags |= 8
             }
             sharedBuffer.write(&forwardInfoFlags, offset: 0, length: 1)
-            var forwardAuthorId: Int64 = forwardInfo.authorId.toInt64()
+            var forwardAuthorId: Int64 = forwardInfo.authorId?.toInt64() ?? 0
             var forwardDate: Int32 = forwardInfo.date
             sharedBuffer.write(&forwardAuthorId, offset: 0, length: 8)
             sharedBuffer.write(&forwardDate, offset: 0, length: 4)
@@ -2542,7 +2542,7 @@ final class MessageHistoryTable: Table {
                     value.skip(Int(signatureLength))
                 }
                 
-                forwardInfo = IntermediateMessageForwardInfo(authorId: PeerId(forwardAuthorId), sourceId: forwardSourceId, sourceMessageId: forwardSourceMessageId, date: forwardDate, authorSignature: authorSignature)
+                forwardInfo = IntermediateMessageForwardInfo(authorId: forwardAuthorId == 0 ? nil : PeerId(forwardAuthorId), sourceId: forwardSourceId, sourceMessageId: forwardSourceMessageId, date: forwardDate, authorSignature: authorSignature)
             }
             
             var hasAuthor: Int8 = 0
@@ -2699,7 +2699,8 @@ final class MessageHistoryTable: Table {
         }
         
         var forwardInfo: MessageForwardInfo?
-        if let internalForwardInfo = message.forwardInfo, let forwardAuthor = peerTable.get(internalForwardInfo.authorId) {
+        if let internalForwardInfo = message.forwardInfo {
+            let forwardAuthor = internalForwardInfo.authorId.flatMap({ peerTable.get($0) })
             var source: Peer?
             
             if let sourceId = internalForwardInfo.sourceId {
