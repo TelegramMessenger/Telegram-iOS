@@ -14666,16 +14666,17 @@ extension Api {
     
     }
     enum MessageFwdHeader: TypeConstructorDescription {
-        case messageFwdHeader(flags: Int32, fromId: Int32?, date: Int32, channelId: Int32?, channelPost: Int32?, postAuthor: String?, savedFromPeer: Api.Peer?, savedFromMsgId: Int32?)
+        case messageFwdHeader(flags: Int32, fromId: Int32?, fromName: String?, date: Int32, channelId: Int32?, channelPost: Int32?, postAuthor: String?, savedFromPeer: Api.Peer?, savedFromMsgId: Int32?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .messageFwdHeader(let flags, let fromId, let date, let channelId, let channelPost, let postAuthor, let savedFromPeer, let savedFromMsgId):
+                case .messageFwdHeader(let flags, let fromId, let fromName, let date, let channelId, let channelPost, let postAuthor, let savedFromPeer, let savedFromMsgId):
                     if boxed {
-                        buffer.appendInt32(1436466797)
+                        buffer.appendInt32(-332168592)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(fromId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 5) != 0 {serializeString(fromName!, buffer: buffer, boxed: false)}
                     serializeInt32(date, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(channelId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(channelPost!, buffer: buffer, boxed: false)}
@@ -14688,8 +14689,8 @@ extension Api {
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .messageFwdHeader(let flags, let fromId, let date, let channelId, let channelPost, let postAuthor, let savedFromPeer, let savedFromMsgId):
-                return ("messageFwdHeader", [("flags", flags), ("fromId", fromId), ("date", date), ("channelId", channelId), ("channelPost", channelPost), ("postAuthor", postAuthor), ("savedFromPeer", savedFromPeer), ("savedFromMsgId", savedFromMsgId)])
+                case .messageFwdHeader(let flags, let fromId, let fromName, let date, let channelId, let channelPost, let postAuthor, let savedFromPeer, let savedFromMsgId):
+                return ("messageFwdHeader", [("flags", flags), ("fromId", fromId), ("fromName", fromName), ("date", date), ("channelId", channelId), ("channelPost", channelPost), ("postAuthor", postAuthor), ("savedFromPeer", savedFromPeer), ("savedFromMsgId", savedFromMsgId)])
     }
     }
     
@@ -14698,30 +14699,33 @@ extension Api {
             _1 = reader.readInt32()
             var _2: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _3: String?
+            if Int(_1!) & Int(1 << 5) != 0 {_3 = parseString(reader) }
             var _4: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_4 = reader.readInt32() }
+            _4 = reader.readInt32()
             var _5: Int32?
-            if Int(_1!) & Int(1 << 2) != 0 {_5 = reader.readInt32() }
-            var _6: String?
-            if Int(_1!) & Int(1 << 3) != 0 {_6 = parseString(reader) }
-            var _7: Api.Peer?
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt32() }
+            var _6: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_6 = reader.readInt32() }
+            var _7: String?
+            if Int(_1!) & Int(1 << 3) != 0 {_7 = parseString(reader) }
+            var _8: Api.Peer?
             if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.Peer
+                _8 = Api.parse(reader, signature: signature) as? Api.Peer
             } }
-            var _8: Int32?
-            if Int(_1!) & Int(1 << 4) != 0 {_8 = reader.readInt32() }
+            var _9: Int32?
+            if Int(_1!) & Int(1 << 4) != 0 {_9 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
+            let _c3 = (Int(_1!) & Int(1 << 5) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 3) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 4) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.MessageFwdHeader.messageFwdHeader(flags: _1!, fromId: _2, date: _3!, channelId: _4, channelPost: _5, postAuthor: _6, savedFromPeer: _7, savedFromMsgId: _8)
+            let _c9 = (Int(_1!) & Int(1 << 4) == 0) || _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.MessageFwdHeader.messageFwdHeader(flags: _1!, fromId: _2, fromName: _3, date: _4!, channelId: _5, channelPost: _6, postAuthor: _7, savedFromPeer: _8, savedFromMsgId: _9)
             }
             else {
                 return nil

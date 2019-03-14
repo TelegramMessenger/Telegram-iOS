@@ -339,7 +339,7 @@ public final class AccountViewTracker {
                                         transaction.updateMessage(messageId, update: { currentMessage in
                                             var storeForwardInfo: StoreMessageForwardInfo?
                                             if let forwardInfo = currentMessage.forwardInfo {
-                                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
                                             }
                                             var media = currentMessage.media
                                             for i in 0 ..< media.count {
@@ -528,7 +528,7 @@ public final class AccountViewTracker {
                                                         transaction.updateMessage(messageIds[i], update: { currentMessage in
                                                             var storeForwardInfo: StoreMessageForwardInfo?
                                                             if let forwardInfo = currentMessage.forwardInfo {
-                                                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                                                                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
                                                             }
                                                             var attributes = currentMessage.attributes
                                                             loop: for j in 0 ..< attributes.count {
