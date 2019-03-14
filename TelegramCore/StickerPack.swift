@@ -41,15 +41,17 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
     public let accessHash: Int64
     public let title: String
     public let shortName: String
+    public let thumbnail: TelegramMediaImageRepresentation?
     public let hash: Int32
     public let count: Int32
     
-    public init(id: ItemCollectionId, flags: StickerPackCollectionInfoFlags, accessHash: Int64, title: String, shortName: String, hash: Int32, count: Int32) {
+    public init(id: ItemCollectionId, flags: StickerPackCollectionInfoFlags, accessHash: Int64, title: String, shortName: String, thumbnail: TelegramMediaImageRepresentation?, hash: Int32, count: Int32) {
         self.id = id
         self.flags = flags
         self.accessHash = accessHash
         self.title = title
         self.shortName = shortName
+        self.thumbnail = thumbnail
         self.hash = hash
         self.count = count
     }
@@ -59,6 +61,7 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
         self.accessHash = decoder.decodeInt64ForKey("a", orElse: 0)
         self.title = decoder.decodeStringForKey("t", orElse: "")
         self.shortName = decoder.decodeStringForKey("s", orElse: "")
+        self.thumbnail = decoder.decodeObjectForKey("th", decoder: { TelegramMediaImageRepresentation(decoder: $0) }) as? TelegramMediaImageRepresentation
         self.hash = decoder.decodeInt32ForKey("h", orElse: 0)
         self.flags = StickerPackCollectionInfoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
         self.count = decoder.decodeInt32ForKey("n", orElse: 0)
@@ -70,6 +73,11 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
         encoder.encodeInt64(self.accessHash, forKey: "a")
         encoder.encodeString(self.title, forKey: "t")
         encoder.encodeString(self.shortName, forKey: "s")
+        if let thumbnail = self.thumbnail {
+            encoder.encodeObject(thumbnail, forKey: "th")
+        } else {
+            encoder.encodeNil(forKey: "th")
+        }
         encoder.encodeInt32(self.hash, forKey: "h")
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
         encoder.encodeInt32(self.count, forKey: "n")
@@ -148,7 +156,7 @@ public final class StickerPackItem: ItemCollectionItem, Equatable {
 extension StickerPackCollectionInfo {
     convenience init(apiSet: Api.StickerSet, namespace: ItemCollectionId.Namespace) {
         switch apiSet {
-            case let .stickerSet(flags, _, id, accessHash, title, shortName, count, nHash):
+            case let .stickerSet(flags, _, id, accessHash, title, shortName, thumb, count, nHash):
                 var setFlags: StickerPackCollectionInfoFlags = StickerPackCollectionInfoFlags()
                 if (flags & (1 << 2)) != 0 {
                     setFlags.insert(.official)
@@ -156,7 +164,9 @@ extension StickerPackCollectionInfo {
                 if (flags & (1 << 3)) != 0 {
                     setFlags.insert(.masks)
                 }
-                self.init(id: ItemCollectionId(namespace: namespace, id: id), flags: setFlags, accessHash: accessHash, title: title, shortName: shortName, hash: nHash, count: count)
+                self.init(id: ItemCollectionId(namespace: namespace, id: id), flags: setFlags, accessHash: accessHash, title: title, shortName: shortName, thumbnail: thumb.flatMap({ thumb in
+                    return telegramMediaImageRepresentationsFromApiSizes([thumb]).representations.first
+                }), hash: nHash, count: count)
         }
     }
 }
