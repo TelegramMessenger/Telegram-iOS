@@ -366,7 +366,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     displayAuthorInfo = true
             }
             
-            if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.source == nil, forwardInfo.author.id.namespace == Namespaces.Peer.CloudUser {
+            if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.source == nil, forwardInfo.author?.id.namespace == Namespaces.Peer.CloudUser {
                 for media in item.content.firstMessage.media {
                     if let file = media as? TelegramMediaFile, file.isMusic {
                         ignoreForward = true
@@ -795,21 +795,21 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     if headerSize.height.isZero {
                         headerSize.height += 5.0
                     }
-                    let forwardSource: Peer
+                    let forwardSource: Peer?
                     let forwardAuthorSignature: String?
                     
                     if let source = forwardInfo.source {
                         forwardSource = source
                         if let authorSignature = forwardInfo.authorSignature {
                             forwardAuthorSignature = authorSignature
-                        } else if forwardInfo.author.id != source.id {
-                            forwardAuthorSignature = forwardInfo.author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                        } else if let forwardInfoAuthor = forwardInfo.author, forwardInfoAuthor.id != source.id {
+                            forwardAuthorSignature = forwardInfoAuthor.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                         } else {
                             forwardAuthorSignature = nil
                         }
                     } else {
                         forwardSource = forwardInfo.author
-                        forwardAuthorSignature = nil
+                        forwardAuthorSignature = forwardInfo.authorSignature
                     }
                     let sizeAndApply = forwardInfoLayout(item.presentationData, item.presentationData.strings, .bubble(incoming: incoming), forwardSource, forwardAuthorSignature, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
                     forwardInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
@@ -1595,8 +1595,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                 if let item = self.item, let forwardInfo = item.message.forwardInfo {
                                     if let sourceMessageId = forwardInfo.sourceMessageId {
                                         item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
-                                    } else {
-                                        item.controllerInteraction.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .info, nil)
+                                    } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
+                                        item.controllerInteraction.openPeer(id, .info, nil)
                                     }
                                     return
                                 }

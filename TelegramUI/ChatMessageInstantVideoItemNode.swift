@@ -272,21 +272,21 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             var updatedForwardBackgroundNode: ASImageNode?
             var forwardBackgroundImage: UIImage?
             if let forwardInfo = item.message.forwardInfo {
-                let forwardSource: Peer
+                let forwardSource: Peer?
                 let forwardAuthorSignature: String?
                 
                 if let source = forwardInfo.source {
                     forwardSource = source
                     if let authorSignature = forwardInfo.authorSignature {
                         forwardAuthorSignature = authorSignature
-                    } else if forwardInfo.author.id != source.id {
-                        forwardAuthorSignature = forwardInfo.author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                    } else if let forwardInfoAuthor = forwardInfo.author, forwardInfoAuthor.id != source.id {
+                        forwardAuthorSignature = forwardInfoAuthor.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     } else {
                         forwardAuthorSignature = nil
                     }
                 } else {
                     forwardSource = forwardInfo.author
-                    forwardAuthorSignature = nil
+                    forwardAuthorSignature = forwardInfo.authorSignature
                 }
                 let availableWidth = max(60.0, availableContentWidth - videoLayout.contentSize.width + 6.0)
                 forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
@@ -506,8 +506,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                             if let item = self.item, let forwardInfo = item.message.forwardInfo {
                                 if let sourceMessageId = forwardInfo.sourceMessageId {
                                     item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
-                                } else {
-                                    item.controllerInteraction.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .chat(textInputState: nil, messageId: nil), nil)
+                                } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
+                                    item.controllerInteraction.openPeer(id, .chat(textInputState: nil, messageId: nil), nil)
                                 }
                                 return
                             }
