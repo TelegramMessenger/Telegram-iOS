@@ -89,17 +89,17 @@ struct FetchManagerPriorityKey: Comparable {
             }
         } else if (lhs.userInitiatedPriority != nil) != (rhs.userInitiatedPriority != nil) {
             if lhs.userInitiatedPriority != nil {
-                return false
-            } else {
                 return true
+            } else {
+                return false
             }
         }
         
         if lhs.hasElevatedPriority != rhs.hasElevatedPriority {
             if lhs.hasElevatedPriority {
-                return false
-            } else {
                 return true
+            } else {
+                return false
             }
         }
         
@@ -107,9 +107,9 @@ struct FetchManagerPriorityKey: Comparable {
             if let lhsTopReference = lhs.topReference, let rhsTopReference = rhs.topReference {
                 return lhsTopReference < rhsTopReference
             } else if lhs.topReference != nil {
-                return false
-            } else {
                 return true
+            } else {
+                return false
             }
         }
         
