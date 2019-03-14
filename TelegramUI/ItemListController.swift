@@ -191,6 +191,31 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         }
     }
     
+    var contentOffsetChanged: ((ListViewVisibleContentOffset, Bool) -> Void)? {
+        didSet {
+            if self.isNodeLoaded {
+                (self.displayNode as! ItemListControllerNode<Entry>).contentOffsetChanged = self.contentOffsetChanged
+            }
+        }
+    }
+    var contentScrollingEnded: ((ListView) -> Bool)? {
+        didSet {
+            if self.isNodeLoaded {
+                (self.displayNode as! ItemListControllerNode<Entry>).contentScrollingEnded = self.contentScrollingEnded
+            }
+        }
+    }
+    
+    var searchActivated: ((Bool) -> Void)? {
+        didSet {
+            if self.isNodeLoaded {
+                (self.displayNode as! ItemListControllerNode<Entry>).searchActivated = self.searchActivated
+            }
+        }
+    }
+    
+    var willScrollToTop: (() -> Void)?
+    
     var reorderEntry: ((Int, Int, [Entry]) -> Void)? {
         didSet {
             if self.isNodeLoaded {
@@ -228,6 +253,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
         
         self.scrollToTop = { [weak self] in
+            self?.willScrollToTop?()
             (self?.displayNode as! ItemListControllerNode<Entry>).scrollToTop()
         }
         
@@ -257,7 +283,9 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     
     override func loadDisplayNode() {
         let previousControllerState = Atomic<ItemListControllerState?>(value: nil)
-        let nodeState = self.state |> deliverOnMainQueue |> afterNext { [weak self] controllerState, state in
+        let nodeState = self.state
+        |> deliverOnMainQueue
+        |> afterNext { [weak self] controllerState, state in
             Queue.mainQueue().async {
                 if let strongSelf = self {
                     let previousState = previousControllerState.swap(controllerState)
@@ -414,6 +442,9 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         displayNode.enableInteractiveDismiss = self.enableInteractiveDismiss
         displayNode.visibleEntriesUpdated = self.visibleEntriesUpdated
         displayNode.visibleBottomContentOffsetChanged = self.visibleBottomContentOffsetChanged
+        displayNode.contentOffsetChanged = self.contentOffsetChanged
+        displayNode.contentScrollingEnded = self.contentScrollingEnded
+        displayNode.searchActivated = self.searchActivated
         displayNode.reorderEntry = self.reorderEntry
         displayNode.listNode.experimentalSnapScrollToItem = self.experimentalSnapScrollToItem
         self.displayNode = displayNode
@@ -426,7 +457,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         
         self.validLayout = layout
         
-        (self.displayNode as! ItemListControllerNode<Entry>).containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        (self.displayNode as! ItemListControllerNode<Entry>).containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
     }
 
     @objc func leftNavigationButtonPressed() {

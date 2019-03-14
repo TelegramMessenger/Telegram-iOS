@@ -99,7 +99,8 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        let width = size.width
         var panelHeight: CGFloat = 44.0 + bottomInset
         panelHeight += contentInset
         

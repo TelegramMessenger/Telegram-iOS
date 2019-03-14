@@ -269,6 +269,8 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
             }
         }
         switch actionAtEnd {
+            case .loop:
+                self.player.actionAtEnd = .loop({})
             case .loopDisablingSound:
                 self.player.actionAtEnd = .loopDisablingSound(action)
             case .stop:
@@ -294,6 +296,8 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
             }
         }
         switch actionAtEnd {
+            case .loop:
+                self.player.actionAtEnd = .loop({})
             case .loopDisablingSound:
                 self.player.actionAtEnd = .loopDisablingSound(action)
             case .stop:

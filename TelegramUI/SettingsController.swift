@@ -10,25 +10,6 @@ private let maximumNumberOfAccounts = 3
 
 private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 13.0)!
 
-private final class SettingsItemIcons {
-    static let proxy = UIImage(bundleImageName: "Settings/MenuIcons/Proxy")?.precomposed()
-    static let savedMessages = UIImage(bundleImageName: "Settings/MenuIcons/SavedMessages")?.precomposed()
-    static let recentCalls = UIImage(bundleImageName: "Settings/MenuIcons/RecentCalls")?.precomposed()
-    static let stickers = UIImage(bundleImageName: "Settings/MenuIcons/Stickers")?.precomposed()
-    
-    static let notifications = UIImage(bundleImageName: "Settings/MenuIcons/Notifications")?.precomposed()
-    static let security = UIImage(bundleImageName: "Settings/MenuIcons/Security")?.precomposed()
-    static let dataAndStorage = UIImage(bundleImageName: "Settings/MenuIcons/DataAndStorage")?.precomposed()
-    static let appearance = UIImage(bundleImageName: "Settings/MenuIcons/Appearance")?.precomposed()
-    static let language = UIImage(bundleImageName: "Settings/MenuIcons/Language")?.precomposed()
-    
-    static let passport = UIImage(bundleImageName: "Settings/MenuIcons/Passport")?.precomposed()
-    static let watch = UIImage(bundleImageName: "Settings/MenuIcons/Watch")?.precomposed()
-    
-    static let support = UIImage(bundleImageName: "Settings/MenuIcons/Support")?.precomposed()
-    static let faq = UIImage(bundleImageName: "Settings/MenuIcons/Faq")?.precomposed()
-}
-
 private enum SettingsEntryTag: Equatable, ItemListItemTag {
     case account(AccountRecordId)
     
@@ -343,7 +324,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                         label = .badge("\(badgeCount)")
                     }
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: "."), nameDisplayOrder: .firstLast, account: account, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, sectionId: self.section, action: {
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: "."), nameDisplayOrder: .firstLast, account: account, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, sectionId: self.section, action: {
                     arguments.switchToAccount(account.id)
                 }, setPeerIdWithRevealedOptions: { lhs, rhs in
                     var lhsAccountId: AccountRecordId?
@@ -421,6 +402,7 @@ private enum SettingsEntry: ItemListNodeEntry {
 private struct SettingsState: Equatable {
     var updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?
     var accountIdWithRevealedOptions: AccountRecordId?
+    var isSearching: Bool
 }
 
 private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)], inAppNotificationSettings: InAppNotificationSettings) -> [SettingsEntry] {
@@ -459,30 +441,30 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
             } else {
                 valueString = presentationData.strings.Settings_ProxyDisabled
             }
-            entries.append(.proxy(presentationData.theme, SettingsItemIcons.proxy, presentationData.strings.Settings_Proxy, valueString))
+            entries.append(.proxy(presentationData.theme, PresentationResourcesSettings.proxy, presentationData.strings.Settings_Proxy, valueString))
         }
         
-        entries.append(.savedMessages(presentationData.theme, SettingsItemIcons.savedMessages, presentationData.strings.Settings_SavedMessages))
-        entries.append(.recentCalls(presentationData.theme, SettingsItemIcons.recentCalls, presentationData.strings.CallSettings_RecentCalls))
-        entries.append(.stickers(presentationData.theme, SettingsItemIcons.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
+        entries.append(.savedMessages(presentationData.theme, PresentationResourcesSettings.savedMessages, presentationData.strings.Settings_SavedMessages))
+        entries.append(.recentCalls(presentationData.theme, PresentationResourcesSettings.recentCalls, presentationData.strings.CallSettings_RecentCalls))
+        entries.append(.stickers(presentationData.theme, PresentationResourcesSettings.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
         
         let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
-        entries.append(.notificationsAndSounds(presentationData.theme, SettingsItemIcons.notifications, presentationData.strings.Settings_NotificationsAndSounds, notifyExceptions, notificationsWarning))
-        entries.append(.privacyAndSecurity(presentationData.theme, SettingsItemIcons.security, presentationData.strings.Settings_PrivacySettings))
-        entries.append(.dataAndStorage(presentationData.theme, SettingsItemIcons.dataAndStorage, presentationData.strings.Settings_ChatSettings))
-        entries.append(.themes(presentationData.theme, SettingsItemIcons.appearance, presentationData.strings.Settings_Appearance))
+        entries.append(.notificationsAndSounds(presentationData.theme, PresentationResourcesSettings.notifications, presentationData.strings.Settings_NotificationsAndSounds, notifyExceptions, notificationsWarning))
+        entries.append(.privacyAndSecurity(presentationData.theme, PresentationResourcesSettings.security, presentationData.strings.Settings_PrivacySettings))
+        entries.append(.dataAndStorage(presentationData.theme, PresentationResourcesSettings.dataAndStorage, presentationData.strings.Settings_ChatSettings))
+        entries.append(.themes(presentationData.theme, PresentationResourcesSettings.appearance, presentationData.strings.Settings_Appearance))
         let languageName = presentationData.strings.primaryComponent.localizedName
-        entries.append(.language(presentationData.theme, SettingsItemIcons.language, presentationData.strings.Settings_AppLanguage, languageName.isEmpty ? presentationData.strings.Localization_LanguageName : languageName))
+        entries.append(.language(presentationData.theme, PresentationResourcesSettings.language, presentationData.strings.Settings_AppLanguage, languageName.isEmpty ? presentationData.strings.Localization_LanguageName : languageName))
         
         if hasPassport {
-            entries.append(.passport(presentationData.theme, SettingsItemIcons.passport, presentationData.strings.Settings_Passport, ""))
+            entries.append(.passport(presentationData.theme, PresentationResourcesSettings.passport, presentationData.strings.Settings_Passport, ""))
         }
         if hasWatchApp {
-            entries.append(.watch(presentationData.theme, SettingsItemIcons.watch, presentationData.strings.Settings_AppleWatch, ""))
+            entries.append(.watch(presentationData.theme, PresentationResourcesSettings.watch, presentationData.strings.Settings_AppleWatch, ""))
         }
         
-        entries.append(.askAQuestion(presentationData.theme, SettingsItemIcons.support, presentationData.strings.Settings_Support))
-        entries.append(.faq(presentationData.theme, SettingsItemIcons.faq, presentationData.strings.Settings_FAQ))
+        entries.append(.askAQuestion(presentationData.theme, PresentationResourcesSettings.support, presentationData.strings.Settings_Support))
+        entries.append(.faq(presentationData.theme, PresentationResourcesSettings.faq, presentationData.strings.Settings_FAQ))
     }
     
     return entries
@@ -565,14 +547,16 @@ private final class SettingsControllerImpl: ItemListController<SettingsEntry>, S
 }
 
 public func settingsController(context: AccountContext, accountManager: AccountManager) -> SettingsController & ViewController {
-    let statePromise = ValuePromise(SettingsState(), ignoreRepeated: true)
-    let stateValue = Atomic(value: SettingsState())
+    let initialState = SettingsState(updatingAvatar: nil, accountIdWithRevealedOptions: nil, isSearching: false)
+    let statePromise = ValuePromise(initialState, ignoreRepeated: true)
+    let stateValue = Atomic(value: initialState)
     let updateState: ((SettingsState) -> SettingsState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
     
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var setDisplayNavigationBarImpl: ((Bool) -> Void)?
     var getNavigationControllerImpl: (() -> NavigationController?)?
     
     let actionsDisposable = DisposableSet()
@@ -669,11 +653,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     let resolvedUrl = contextValue.get()
     |> deliverOnMainQueue
     |> mapToSignal { context -> Signal<ResolvedUrl, NoError> in
-        var faqUrl = context.sharedContext.currentPresentationData.with { $0 }.strings.Settings_FAQ_URL
-        if faqUrl == "Settings.FAQ_URL" || faqUrl.isEmpty {
-            faqUrl = "https://telegram.org/faq#general"
-        }
-        return resolveInstantViewUrl(account: context.account, url: faqUrl)
+        return cachedFaqInstantPage(context: context)
     }
     
     var switchToAccountImpl: ((AccountRecordId) -> Void)?
@@ -777,15 +757,13 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            let controller = SecureIdAuthController(context: context, mode: .list)
-            presentControllerImpl?(controller, nil)
+            presentControllerImpl?(SecureIdAuthController(context: context, mode: .list), nil)
         })
     }, openWatch: {
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            let controller = watchSettingsController(context: context)
-            pushControllerImpl?(controller)
+            pushControllerImpl?(watchSettingsController(context: context))
         })
     }, openSupport: {
         let _ = (contextValue.get()
@@ -1151,8 +1129,21 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             }
         }
         
+        let searchItem = SettingsSearchItem(context: context, theme: presentationData.theme, placeholder: presentationData.strings.Common_Search, activated: state.isSearching, updateActivated: { value in
+            setDisplayNavigationBarImpl?(!value)
+            updateState { state in
+                var state = state
+                state.isSearching = value
+                return state
+            }
+        }, presentController: { v, a in
+            presentControllerImpl?(v, a)
+        }, pushController: { v in
+            pushControllerImpl?(v)
+        })
+        
         let (hasPassport, hasWatchApp) = hasPassportAndWatch
-        let listState = ItemListNodeState(entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings), style: .blocks)
+        let listState = ItemListNodeState(entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings), style: .blocks, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up))
         
         return (controllerState, (listState, arguments))
     }
@@ -1251,7 +1242,8 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)
     }
     presentControllerImpl = { [weak controller] value, arguments in
-        controller?.present(value, in: .window(.root), with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        controller?.present(value, in: .window(.root), with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet), blockInteraction: true)
+        
     }
     getNavigationControllerImpl = { [weak controller] in
         return (controller?.navigationController as? NavigationController)
@@ -1399,6 +1391,42 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> deliverOnMainQueue).start(next: { context in
             context.sharedContext.beginNewAuth(testingEnvironment: false)
         })
+    }
+    
+    controller.contentOffsetChanged = { [weak controller] offset, inVoiceOver in
+        if let controller = controller, let navigationBar = controller.navigationBar, let searchContentNode = navigationBar.contentNode as? NavigationBarSearchContentNode {
+            var offset = offset
+            if inVoiceOver {
+                offset = .known(0.0)
+            }
+            searchContentNode.updateListVisibleContentOffset(offset)
+        }
+    }
+    
+    controller.contentScrollingEnded = { [weak controller] listNode in
+        if let controller = controller, let navigationBar = controller.navigationBar, let searchContentNode = navigationBar.contentNode as? NavigationBarSearchContentNode {
+            return fixNavigationSearchableListNodeScrolling(listNode, searchNode: searchContentNode)
+        }
+        return false
+    }
+    
+    controller.willScrollToTop = { [weak controller] in
+         if let controller = controller, let navigationBar = controller.navigationBar, let searchContentNode = navigationBar.contentNode as? NavigationBarSearchContentNode {
+            searchContentNode.updateExpansionProgress(1.0, animated: true)
+        }
+    }
+    
+    controller.didDisappear = { _ in
+        setDisplayNavigationBarImpl?(true)
+        updateState { state in
+            var state = state
+            state.isSearching = false
+            return state
+        }
+    }
+    
+    setDisplayNavigationBarImpl = { [weak controller] display in
+        controller?.setDisplayNavigationBar(display, transition: .animated(duration: 0.5, curve: .spring))
     }
     return controller
 }

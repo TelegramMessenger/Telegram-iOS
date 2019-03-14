@@ -139,7 +139,7 @@ private struct FetchControls {
 
 final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let context: AccountContext
-    private let strings: PresentationStrings
+    private let presentationData: PresentationData
     
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
@@ -178,7 +178,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.context = context
-        self.strings = presentationData.strings
+        self.presentationData = presentationData
         self.scrubberView = ChatVideoGalleryItemScrubberView()
         
         self.footerContentNode = ChatItemGalleryFooterContentNode(context: context, presentationData: presentationData)
@@ -363,7 +363,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if let file = file {
                     let status = messageMediaFileStatus(context: item.context, messageId: message.id, file: file)
                     if !isWebpage {
-                        self.scrubberView.setFetchStatusSignal(status, strings: self.strings, fileSize: file.size)
+                        self.scrubberView.setFetchStatusSignal(status, strings: self.presentationData.strings, decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator, fileSize: file.size)
                     }
                     
                     self.requiresDownload = !isMediaStreamable(message: message, media: file)
@@ -511,7 +511,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private func updateDisplayPlaceholder(_ displayPlaceholder: Bool) {
         if displayPlaceholder {
             if self.pictureInPictureNode == nil {
-                let pictureInPictureNode = UniversalVideoGalleryItemPictureInPictureNode(strings: self.strings)
+                let pictureInPictureNode = UniversalVideoGalleryItemPictureInPictureNode(strings: self.presentationData.strings)
                 pictureInPictureNode.isUserInteractionEnabled = false
                 self.pictureInPictureNode = pictureInPictureNode
                 self.insertSubnode(pictureInPictureNode, aboveSubnode: self.scrollNode)

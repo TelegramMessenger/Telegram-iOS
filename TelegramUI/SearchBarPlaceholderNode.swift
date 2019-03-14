@@ -115,7 +115,7 @@ class SearchBarPlaceholderNode: ASDisplayNode {
                     strongSelf.fillBackgroundColor = backgroundColor
                     strongSelf.foregroundColor = foregroundColor
                     strongSelf.iconColor = iconColor
-                    strongSelf.backgroundNode.isUserInteractionEnabled = expansionProgress > 1.0 - CGFloat.ulpOfOne
+                    strongSelf.backgroundNode.isUserInteractionEnabled = expansionProgress > 0.9999
                     
                     if let updatedColor = updatedColor {
                         strongSelf.backgroundNode.backgroundColor = updatedColor

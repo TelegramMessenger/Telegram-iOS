@@ -182,7 +182,7 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
     }
     
     private func enqueueTransition(_ transition: LocalizationListSearchContainerTransition) {
-        enqueuedTransitions.append(transition)
+        self.enqueuedTransitions.append(transition)
         
         if self.hasValidLayout {
             while !self.enqueuedTransitions.isEmpty {
@@ -237,8 +237,8 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
         self.listNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: navigationBarHeight, left: 0.0, bottom: layout.insets(options: [.input]).bottom, right: 0.0), duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
-        if !hasValidLayout {
-            hasValidLayout = true
+        if !self.hasValidLayout {
+            self.hasValidLayout = true
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }

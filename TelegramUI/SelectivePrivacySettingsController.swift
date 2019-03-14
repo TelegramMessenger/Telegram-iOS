@@ -8,6 +8,8 @@ enum SelectivePrivacySettingsKind {
     case presence
     case groupInvitations
     case voiceCalls
+    case profilePhoto
+    case forwards
 }
 
 private enum SelectivePrivacySettingType {
@@ -444,6 +446,16 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
             settingInfoText = presentationData.strings.Privacy_Calls_CustomHelp
             disableForText = presentationData.strings.Privacy_GroupsAndChannels_NeverAllow
             enableForText = presentationData.strings.Privacy_GroupsAndChannels_AlwaysAllow
+        case .profilePhoto:
+            settingTitle = presentationData.strings.Privacy_ProfilePhoto_WhoCanSeeMyPhoto
+            settingInfoText = presentationData.strings.Privacy_ProfilePhoto_CustomHelp
+            disableForText = presentationData.strings.PrivacyLastSeenSettings_NeverShareWith
+            enableForText = presentationData.strings.PrivacyLastSeenSettings_AlwaysShareWith
+        case .forwards:
+            settingTitle = presentationData.strings.Privacy_Forwards_WhoCanForward
+            settingInfoText = presentationData.strings.Privacy_Forwards_CustomHelp
+            disableForText = presentationData.strings.Privacy_GroupsAndChannels_NeverAllow
+            enableForText = presentationData.strings.Privacy_GroupsAndChannels_AlwaysAllow
     }
     
     entries.append(.settingHeader(presentationData.theme, settingTitle))
@@ -451,9 +463,9 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     entries.append(.everybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.setting == .everybody))
     entries.append(.contacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.setting == .contacts))
     switch kind {
-        case .presence, .voiceCalls:
+        case .presence, .voiceCalls, .forwards:
             entries.append(.nobody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenNobody, state.setting == .nobody))
-        case .groupInvitations:
+        case .groupInvitations, .profilePhoto:
             break
     }
     entries.append(.settingInfo(presentationData.theme, settingInfoText))
@@ -558,6 +570,10 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                 title = strings.Privacy_GroupsAndChannels_AlwaysAllow_Title
             case .voiceCalls:
                 title = strings.Privacy_Calls_AlwaysAllow_Title
+            case .profilePhoto:
+                title = strings.Privacy_ProfilePhoto_AlwaysShareWith_Title
+            case .forwards:
+                title = strings.Privacy_Forwards_AlwaysAllow_Title
         }
         var peerIds = Set<PeerId>()
         updateState { state in
@@ -591,6 +607,10 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                 title = strings.Privacy_GroupsAndChannels_NeverAllow_Title
             case .voiceCalls:
                 title = strings.Privacy_Calls_NeverAllow_Title
+            case .profilePhoto:
+                title = strings.Privacy_ProfilePhoto_NeverShareWith_Title
+            case .forwards:
+                title = strings.Privacy_Forwards_NeverAllow_Title
         }
         var peerIds = Set<PeerId>()
         updateState { state in
@@ -679,6 +699,10 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                                 type = .groupInvitations
                             case .voiceCalls:
                                 type = .voiceCalls
+                            case .profilePhoto:
+                                type = .profilePhoto
+                            case .forwards:
+                                type = .forwards
                         }
                         
                         let updateSettingsSignal = updateSelectiveAccountPrivacySettings(account: context.account, type: type, settings: settings)
@@ -710,6 +734,10 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                     title = presentationData.strings.Privacy_GroupsAndChannels
                 case .voiceCalls:
                     title = presentationData.strings.Settings_CallSettings
+                case .profilePhoto:
+                    title = presentationData.strings.Privacy_ProfilePhoto
+                case .forwards:
+                    title = presentationData.strings.Privacy_Forwards
             }
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
             let listState = ItemListNodeState(entries: selectivePrivacySettingsControllerEntries(presentationData: presentationData, kind: kind, state: state), style: .blocks, animateChanges: false)

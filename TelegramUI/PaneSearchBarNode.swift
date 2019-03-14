@@ -22,7 +22,7 @@ private func generateBackground(backgroundColor: UIColor, foregroundColor: UICol
     }, opaque: true)?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
 }
 
-private class StickerPaneSearchBarTextField: UITextField {
+private class PaneSearchBarTextField: UITextField {
     public var didDeleteBackwardWhileEmpty: (() -> Void)?
     
     let placeholderLabel: ImmediateTextNode
@@ -119,7 +119,7 @@ private class StickerPaneSearchBarTextField: UITextField {
     }
 }
 
-class StickerPaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
+class PaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
     var cancel: (() -> Void)?
     var textUpdated: ((String) -> Void)?
     var clearPrefix: (() -> Void)?
@@ -129,7 +129,7 @@ class StickerPaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
     private let textBackgroundNode: ASImageNode
     private var activityIndicator: ActivityIndicator?
     private let iconNode: ASImageNode
-    private let textField: StickerPaneSearchBarTextField
+    private let textField: PaneSearchBarTextField
     private let clearButton: HighlightableButtonNode
     private let cancelButton: ASButtonNode
     
@@ -212,7 +212,7 @@ class StickerPaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
         
-        self.textField = StickerPaneSearchBarTextField()
+        self.textField = PaneSearchBarTextField()
         self.textField.autocorrectionType = .no
         self.textField.returnKeyType = .done
         self.textField.font = Font.regular(17.0)
@@ -321,8 +321,8 @@ class StickerPaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textField.becomeFirstResponder()
     }
     
-    func animateIn(from node: StickerPaneSearchBarPlaceholderNode, duration: Double, timingFunction: String) {
-        let initialTextBackgroundFrame = node.convert(node.backgroundNode.frame, to: self)
+    func animateIn(from node: PaneSearchBarPlaceholderNode, duration: Double, timingFunction: String) {
+        let initialTextBackgroundFrame = node.view.convert(node.backgroundNode.frame, to: self.view)
         
         let initialBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: self.bounds.size.width, height: max(0.0, initialTextBackgroundFrame.maxY + 8.0)))
         if let fromBackgroundColor = node.backgroundColor, let toBackgroundColor = self.backgroundNode.backgroundColor {
@@ -359,7 +359,7 @@ class StickerPaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    func transitionOut(to node: StickerPaneSearchBarPlaceholderNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+    func transitionOut(to node: PaneSearchBarPlaceholderNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         let targetTextBackgroundFrame = node.view.convert(node.backgroundNode.view.frame, to: self.view)
         
         let duration: Double = 0.5

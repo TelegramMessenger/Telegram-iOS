@@ -73,19 +73,14 @@ final class StickerPaneSearchStickerItem: GridItem {
         self.stickerItem = stickerItem
         self.inputNodeInteraction = inputNodeInteraction
         self.selected = selected
-        if let code = code {
-            self.code = code
-            self.section = StickerPaneSearchStickerSection(code: code, theme: theme)
-        } else {
-            self.code = nil
-            self.section = nil
-        }
+        self.code = code
+        self.section = nil
     }
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPaneSearchStickerItemNode()
         node.inputNodeInteraction = self.inputNodeInteraction
-        node.setup(account: self.account, stickerItem: self.stickerItem)
+        node.setup(account: self.account, stickerItem: self.stickerItem, code: self.code)
         node.selected = self.selected
         return node
     }
@@ -96,14 +91,17 @@ final class StickerPaneSearchStickerItem: GridItem {
             return
         }
         node.inputNodeInteraction = self.inputNodeInteraction
-        node.setup(account: self.account, stickerItem: self.stickerItem)
+        node.setup(account: self.account, stickerItem: self.stickerItem, code: self.code)
         node.selected = self.selected
     }
 }
 
+private let textFont = Font.regular(20.0)
+
 final class StickerPaneSearchStickerItemNode: GridItemNode {
     private var currentState: (Account, FoundStickerItem, CGSize)?
     private let imageNode: TransformImageNode
+    private let textNode: ASTextNode
     
     private let stickerFetchedDisposable = MetaDisposable()
     
@@ -118,14 +116,18 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
     
     override init() {
         self.imageNode = TransformImageNode()
+        self.textNode = ASTextNode()
+        self.textNode.isUserInteractionEnabled = false
         
         super.init()
         
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.textNode)
+        self.textNode.maximumNumberOfLines = 1
     }
     
     deinit {
-        stickerFetchedDisposable.dispose()
+        self.stickerFetchedDisposable.dispose()
     }
     
     override func didLoad() {
@@ -134,8 +136,10 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
         self.imageNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(account: Account, stickerItem: FoundStickerItem) {
+    func setup(account: Account, stickerItem: FoundStickerItem, code: String?) {
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem {
+            self.textNode.attributedText = NSAttributedString(string: code ?? "", font: textFont, textColor: .black)
+            
             if let dimensions = stickerItem.file.dimensions {
                 self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
                 self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
@@ -155,7 +159,12 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
         if let (_, _, mediaDimensions) = self.currentState {
             let imageSize = mediaDimensions.aspectFitted(boundingSize)
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-            self.imageNode.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
+            
+            let imageFrame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
+            self.imageNode.frame = imageFrame
+            
+            let textSize = self.textNode.measure(CGSize(width: bounds.size.width - 24.0, height: CGFloat.greatestFiniteMagnitude))
+            self.textNode.frame = CGRect(origin: CGPoint(x: bounds.size.width - textSize.width, y: bounds.size.height - textSize.height), size: textSize)
         }
     }
     

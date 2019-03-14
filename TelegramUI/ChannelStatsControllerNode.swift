@@ -58,7 +58,7 @@ final class ChannelStatsControllerNode: ViewControllerTracingNode, WKNavigationD
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         if let webView = self.webView {
-            webView.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: max(1.0, layout.size.height - navigationBarHeight)))
+            webView.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight)))
         }
     }
     
@@ -110,14 +110,14 @@ final class ChannelStatsControllerNode: ViewControllerTracingNode, WKNavigationD
     }
     
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        updateActivityIndicator(show: false)
+        self.updateActivityIndicator(show: false)
     }
     
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-        updateActivityIndicator(show: true)
+        self.updateActivityIndicator(show: true)
     }
     
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        updateActivityIndicator(show: false)
+        self.updateActivityIndicator(show: false)
     }
 }

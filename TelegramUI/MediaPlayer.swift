@@ -49,6 +49,7 @@ enum MediaPlayerActionAtEnd {
 }
 
 enum MediaPlayerPlayOnceWithSoundActionAtEnd {
+    case loop
     case loopDisablingSound
     case stop
 }

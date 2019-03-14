@@ -47,13 +47,15 @@ private func sizeValue(for sliderValue: CGFloat) -> Int32 {
 
 class AutodownloadSizeLimitItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
+    let decimalSeparator: String
     let text: String
     let value: Int32
     let sectionId: ItemListSectionId
     let updated: (Int32) -> Void
     
-    init(theme: PresentationTheme, text: String, value: Int32, sectionId: ItemListSectionId, updated: @escaping (Int32) -> Void) {
+    init(theme: PresentationTheme, decimalSeparator: String, text: String, value: Int32, sectionId: ItemListSectionId, updated: @escaping (Int32) -> Void) {
         self.theme = theme
+        self.decimalSeparator = decimalSeparator
         self.text = text
         self.value = value
         self.sectionId = sectionId
@@ -192,9 +194,9 @@ class AutodownloadSizeLimitItemNode: ListViewItemNode {
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
             
-            let (minTextLayout, minTextApply) = makeMinTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dataSizeString(512 * 1024), font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+            let (minTextLayout, minTextApply) = makeMinTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dataSizeString(512 * 1024, decimalSeparator: item.decimalSeparator), font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
             
-            let (maxTextLayout, maxTextApply) = makeMaxTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dataSizeString(1536 * 1024 * 1024), font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+            let (maxTextLayout, maxTextApply) = makeMaxTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dataSizeString(1536 * 1024 * 1024, decimalSeparator: item.decimalSeparator), font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
             
             contentSize = CGSize(width: params.width, height: 88.0)
             insets = itemListNeighborsGroupedInsets(neighbors)
@@ -230,7 +232,7 @@ class AutodownloadSizeLimitItemNode: ListViewItemNode {
                     let bottomStripeOffset: CGFloat
                     switch neighbors.bottom {
                         case .sameSection(false):
-                            bottomStripeInset = 0.0 //params.leftInset + 16.0
+                            bottomStripeInset = 0.0
                             bottomStripeOffset = -separatorHeight
                         default:
                             bottomStripeInset = 0.0

@@ -1271,11 +1271,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
         var activateGifInput = false
-        if let presentationInterfaceState = self.presentationInterfaceState {
-            if case .media(.gif, _) = presentationInterfaceState.inputMode {
-                activateGifInput = true
-            }
-        }
+//        if let presentationInterfaceState = self.presentationInterfaceState {
+//            if case .media(.gif, _) = presentationInterfaceState.inputMode {
+//                activateGifInput = true
+//            }
+//        }
         self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
             return (.text, state.keyboardButtonsMessage?.id)
         })

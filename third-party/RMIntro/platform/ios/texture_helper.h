@@ -9,5 +9,6 @@
 #include "platform_gl.h"
 
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
-GLuint setup_texture(NSString *fileName);
+GLuint setup_texture(NSString *fileName, UIColor *color);

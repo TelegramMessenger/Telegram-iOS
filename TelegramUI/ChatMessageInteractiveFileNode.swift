@@ -58,7 +58,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     
     private var context: AccountContext?
     private var message: Message?
-    private var themeAndStrings: (ChatPresentationThemeData, PresentationStrings)?
+    private var themeAndStrings: (ChatPresentationThemeData, PresentationStrings, String)?
     private var file: TelegramMediaFile?
     private var progressFrame: CGRect?
     private var streamingCacheStatusFrame: CGRect?
@@ -317,7 +317,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             if let performer = performer {
                                 descriptionText = performer
                             } else if let size = file.size {
-                                descriptionText = dataSizeString(size)
+                                descriptionText = dataSizeString(size, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
                             } else {
                                 descriptionText = ""
                             }
@@ -341,7 +341,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 } else if !isVoice {
                     let descriptionText: String
                     if let size = file.size {
-                        descriptionText = dataSizeString(size)
+                        descriptionText = dataSizeString(size, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
                     } else {
                         descriptionText = ""
                     }
@@ -485,7 +485,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     return (fittedLayoutSize, { [weak self] in
                         if let strongSelf = self {
                             strongSelf.context = context
-                            strongSelf.themeAndStrings = (presentationData.theme, presentationData.strings)
+                            strongSelf.themeAndStrings = (presentationData.theme, presentationData.strings, presentationData.dateTimeFormat.decimalSeparator)
                             strongSelf.message = message
                             strongSelf.file = file
                             
@@ -643,7 +643,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         guard let context = self.context else {
             return
         }
-        guard let presentationData = self.themeAndStrings?.0 else {
+        guard let (presentationData, _, decimalSeparator) = self.themeAndStrings else {
             return
         }
         guard let progressFrame = self.progressFrame, let streamingCacheStatusFrame = self.streamingCacheStatusFrame else {
@@ -681,8 +681,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     switch fetchStatus {
                         case let .Fetching(_, progress):
                             if let size = file.size {
-                                let compactString = dataSizeString(Int(Float(size) * progress), forceDecimal: true)
-                                downloadingStrings = ("\(compactString) / \(dataSizeString(size, forceDecimal: true))", compactString)
+                                let compactString = dataSizeString(Int(Float(size) * progress), forceDecimal: true, decimalSeparator: decimalSeparator)
+                                downloadingStrings = ("\(compactString) / \(dataSizeString(size, forceDecimal: true, decimalSeparator: decimalSeparator))", compactString)
                             }
                         default:
                             break
