@@ -210,34 +210,34 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         
         self.interaction = StickerPaneSearchInteraction(open: { [weak self] info in
             if let strongSelf = self {
-                strongSelf.view.endEditing(true)
+                strongSelf.view.window?.endEditing(true)
                 strongSelf.controllerInteraction.presentController(StickerPackPreviewController(context: strongSelf.context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController()), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
-            }, install: { [weak self] info in
-                if let strongSelf = self {
-                    let _ = (loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
-                        |> mapToSignal { result -> Signal<Void, NoError> in
-                            switch result {
-                            case let .result(info, items, installed):
-                                if installed {
-                                    return .complete()
-                                } else {
-                                    return addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
-                                }
-                            case .fetching:
-                                break
-                            case .none:
-                                break
-                            }
+        }, install: { [weak self] info in
+            if let strongSelf = self {
+                let _ = (loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    switch result {
+                    case let .result(info, items, installed):
+                        if installed {
                             return .complete()
-                        }).start()
-                }
-            }, sendSticker: { [weak self] file in
-                if let strongSelf = self {
-                    strongSelf.controllerInteraction.sendSticker(file, false)
-                }
-            }, getItemIsPreviewed: { item in
-                return inputNodeInteraction.previewedStickerPackItem == .pack(item)
+                        } else {
+                            return addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
+                        }
+                    case .fetching:
+                        break
+                    case .none:
+                        break
+                    }
+                    return .complete()
+                }).start()
+            }
+        }, sendSticker: { [weak self] file in
+            if let strongSelf = self {
+                strongSelf.controllerInteraction.sendSticker(file, false)
+            }
+        }, getItemIsPreviewed: { item in
+            return inputNodeInteraction.previewedStickerPackItem == .pack(item)
         })
         
         self._ready.set(self.trendingPane.ready)
@@ -256,7 +256,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
             let stickers: Signal<[(String?, FoundStickerItem)], NoError> = Signal { subscriber in
                 var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
                 
-                if text.isSingleEmoji {
+                if text.trimmingCharacters(in: .whitespacesAndNewlines).isSingleEmoji {
                     signals.append(searchStickers(account: self.context.account, query: text.firstEmoji)
                     |> take(1)
                     |> map { (nil, $0) })

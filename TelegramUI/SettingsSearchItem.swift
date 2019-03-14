@@ -118,6 +118,7 @@ final class SettingsSearchItem: ItemListControllerSearch {
         let pushController: (ViewController) -> Void = self.pushController
         
         if let current = current as? SettingsSearchItemNode, let titleContentNode = titleContentNode as? NavigationBarSearchContentNode {
+            current.updatePresentationData(self.context.sharedContext.currentPresentationData.with { $0 })
             if current.isSearching != self.activated {
                 if self.activated {
                     current.activateSearch(placeholderNode: titleContentNode.placeholderNode)
@@ -405,6 +406,10 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
         self.cancel = cancel
         
         super.init()
+    }
+    
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
     }
     
     func activateSearch(placeholderNode: SearchBarPlaceholderNode) {

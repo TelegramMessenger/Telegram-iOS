@@ -199,41 +199,27 @@ private func privacySearchableItems(context: AccountContext) -> [SettingsSearcha
 
         let _ = (combineLatest(privacySignal, callsSignal)
         |> deliverOnMainQueue).start(next: { info, callSettings in
-//            if let info = info {
-                let current: SelectivePrivacySettings
-                switch kind {
-                    case .presence:
-                        current = info.presence
-                    case .groupInvitations:
-                        current = info.groupInvitations
-                    case .voiceCalls:
-                        current = info.voiceCalls
-                    case .profilePhoto:
-                        current = info.voiceCalls
-                    case .forwards:
-                        current = info.voiceCalls
-                }
+            let current: SelectivePrivacySettings
+            switch kind {
+                case .presence:
+                    current = info.presence
+                case .groupInvitations:
+                    current = info.groupInvitations
+                case .voiceCalls:
+                    current = info.voiceCalls
+                case .profilePhoto:
+                    current = info.voiceCalls
+                case .forwards:
+                    current = info.voiceCalls
+            }
 
             present(.push, selectivePrivacySettingsController(context: context, kind: kind, current: current, callSettings: callSettings != nil ? (info.voiceCallsP2P, callSettings!.0) : nil, voipConfiguration: callSettings?.1, callIntegrationAvailable: CallKitIntegration.isAvailable, updated: { updated, updatedCallSettings in
-                    if let (updatedCallsPrivacy, updatedCallSettings) = updatedCallSettings  {
+                    if let (_, updatedCallSettings) = updatedCallSettings  {
                         let _ = updateVoiceCallSettingsSettingsInteractively(accountManager: context.sharedContext.accountManager, { _ in
                             return updatedCallSettings
                         }).start()
-                        
-//                        let applySettings: Signal<Void, NoError> = privacySettingsPromise.get()
-//                        |> filter { $0 != nil }
-//                        |> take(1)
-//                        |> deliverOnMainQueue
-//                        |> mapToSignal { value -> Signal<Void, NoError> in
-//                            if let value = value {
-//                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: updated, voiceCallsP2P: updatedCallsPrivacy, accountRemovalTimeout: value.accountRemovalTimeout)))
-//                            }
-//                            return .complete()
-//                        }
-//                        let _ = applySettings.start()
                     }
                 }))
-//            }
         })
     }
     
@@ -473,7 +459,7 @@ func settingsSearchableItems(context: AccountContext) -> Signal<[SettingsSearcha
 }
 
 private func stringTokens(_ string: String) -> [ValueBoxKey] {
-    let nsString = string.lowercased() as NSString
+    let nsString = string.folding(options: .diacriticInsensitive, locale: .current).lowercased() as NSString
     
     let flag = UInt(kCFStringTokenizerUnitWord)
     let tokenizer = CFStringTokenizerCreate(kCFAllocatorDefault, nsString, CFRangeMake(0, nsString.length), flag, CFLocaleCopyCurrent())
@@ -535,6 +521,9 @@ func searchSettingsItems(items: [SettingsSearchableItem], query: String) -> [Set
         var string = item.title
         if !item.alternate.isEmpty {
             string += " \(item.alternate.joined(separator: " "))"
+        }
+        if item.breadcrumbs.count > 1 {
+            string += " \(item.breadcrumbs.suffix(from: 1).joined(separator: " "))"
         }
         
         let tokens = stringTokens(string)
