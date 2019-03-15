@@ -25,6 +25,20 @@ public indirect enum JSON: PostboxCoding, Equatable {
     private init?(_ object: Any) {
         if let object = object as? JSONValue {
             self = object.jsonValue
+        } else if let dict = object as? [String: Any] {
+            var values: [String: JSON] = [:]
+            for (key, value) in dict {
+                if let v = JSON(value) {
+                    values[key] = v
+                } else {
+                    return nil
+                }
+            }
+            self = .dictionary(values)
+        } else if let value = object as? String {
+            self = .string(value)
+        } else if let value = object as? Int {
+            self = .number(Double(value))
         } else {
             return nil
         }

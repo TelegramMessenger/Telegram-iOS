@@ -376,12 +376,14 @@ public struct NetworkInitializationArguments {
     public let languagesCategory: String
     public let appVersion: String
     public let voipMaxLayer: Int32
+    public let appData: Data?
     
-    public init(apiId: Int32, languagesCategory: String, appVersion: String, voipMaxLayer: Int32) {
+    public init(apiId: Int32, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, appData: Data?) {
         self.apiId = apiId
         self.languagesCategory = languagesCategory
         self.appVersion = appVersion
         self.voipMaxLayer = voipMaxLayer
+        self.appData = appData
     }
 }
 
@@ -393,6 +395,16 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             let serialization = Serialization()
             
             var apiEnvironment = MTApiEnvironment()
+            
+            if let appData = arguments.appData {
+                if let jsonData = JSON(data: appData) {
+                    if let value = apiJson(jsonData) {
+                        let buffer = Buffer()
+                        value.serialize(buffer, true)
+                        apiEnvironment = apiEnvironment.withUpdatedSystemCode(buffer.makeData())
+                    }
+                }
+            }
             
             apiEnvironment.apiId = arguments.apiId
             apiEnvironment.langPack = arguments.languagesCategory

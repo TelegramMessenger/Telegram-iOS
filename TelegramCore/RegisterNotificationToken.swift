@@ -1,6 +1,11 @@
 import Foundation
-import Postbox
+#if os(macOS)
+import SwiftSignalKitMac
+import PostboxMac
+#else
 import SwiftSignalKit
+import Postbox
+#endif
 
 public enum NotificationTokenType {
     case aps(encrypt: Bool)

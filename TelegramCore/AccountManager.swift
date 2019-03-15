@@ -131,6 +131,7 @@ private var declaredEncodables: Void = {
     declareEncodable(AutodownloadSettings.self, f: { AutodownloadSettings(decoder: $0 )})
     declareEncodable(TelegramMediaPoll.self, f: { TelegramMediaPoll(decoder: $0) })
     declareEncodable(TelegramMediaUnsupported.self, f: { TelegramMediaUnsupported(decoder: $0) })
+    declareEncodable(ContactsSettings.self, f: { ContactsSettings(decoder: $0) })
     
     return
 }()

@@ -198,6 +198,10 @@
 		D03229F51E6B39700000AF9C /* ImportAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03229F31E6B39700000AF9C /* ImportAccount.swift */; };
 		D032F5BC20EF84FD00037B6C /* FetchedMediaResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D032F5BB20EF84FD00037B6C /* FetchedMediaResource.swift */; };
 		D032F5BD20EF84FD00037B6C /* FetchedMediaResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D032F5BB20EF84FD00037B6C /* FetchedMediaResource.swift */; };
+		D0338740223BD48B007A2CE4 /* ContactsSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033873F223BD48B007A2CE4 /* ContactsSettings.swift */; };
+		D0338741223BD48B007A2CE4 /* ContactsSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033873F223BD48B007A2CE4 /* ContactsSettings.swift */; };
+		D0338743223BD532007A2CE4 /* InitializeAccountAfterLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0338742223BD532007A2CE4 /* InitializeAccountAfterLogin.swift */; };
+		D0338744223BD532007A2CE4 /* InitializeAccountAfterLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0338742223BD532007A2CE4 /* InitializeAccountAfterLogin.swift */; };
 		D033FEB01E61EB0200644997 /* PeerReportStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033FEAF1E61EB0200644997 /* PeerReportStatus.swift */; };
 		D033FEB11E61EB0200644997 /* PeerReportStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033FEAF1E61EB0200644997 /* PeerReportStatus.swift */; };
 		D033FEB31E61F3C000644997 /* ReportPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033FEB21E61F3C000644997 /* ReportPeer.swift */; };
@@ -897,6 +901,8 @@
 		D03121011DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramPeerNotificationSettings.swift; sourceTree = "<group>"; };
 		D03229F31E6B39700000AF9C /* ImportAccount.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImportAccount.swift; sourceTree = "<group>"; };
 		D032F5BB20EF84FD00037B6C /* FetchedMediaResource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchedMediaResource.swift; sourceTree = "<group>"; };
+		D033873F223BD48B007A2CE4 /* ContactsSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsSettings.swift; sourceTree = "<group>"; };
+		D0338742223BD532007A2CE4 /* InitializeAccountAfterLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitializeAccountAfterLogin.swift; sourceTree = "<group>"; };
 		D033FEAF1E61EB0200644997 /* PeerReportStatus.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerReportStatus.swift; sourceTree = "<group>"; };
 		D033FEB21E61F3C000644997 /* ReportPeer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReportPeer.swift; sourceTree = "<group>"; };
 		D033FEB51E61F3F900644997 /* BlockedPeers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BlockedPeers.swift; sourceTree = "<group>"; };
@@ -1629,6 +1635,7 @@
 				D051DB16215ECC4D00F30F92 /* AppChangelog.swift */,
 				D01843A72190C28100278AFF /* ConfirmTwoStepRecoveryEmail.swift */,
 				D02B198F21FB1D520094A764 /* RegisterNotificationToken.swift */,
+				D0338742223BD532007A2CE4 /* InitializeAccountAfterLogin.swift */,
 			);
 			name = Account;
 			sourceTree = "<group>";
@@ -1710,6 +1717,7 @@
 				D07E413E208A769D00FCA8F0 /* ProxyServersStatuses.swift */,
 				D08984F12114B97400918162 /* ClearCloudDrafts.swift */,
 				D04554A521B43440007A6DD9 /* CancelAccountReset.swift */,
+				D033873F223BD48B007A2CE4 /* ContactsSettings.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -2203,6 +2211,7 @@
 				D03B0CB91D62233400955575 /* Either.swift in Sources */,
 				D0D748021E7AE98B00F4B1F6 /* StickerPackInteractiveOperations.swift in Sources */,
 				0962E66D21B5C56F00245FD9 /* JSON.swift in Sources */,
+				D0338740223BD48B007A2CE4 /* ContactsSettings.swift in Sources */,
 				D03B0CBD1D62234300955575 /* Regex.swift in Sources */,
 				D00BDA191EE593D600C64C5E /* TelegramChannelAdminRights.swift in Sources */,
 				D0B843B91DA7FF30005F29E1 /* NBMetadataCoreTest.m in Sources */,
@@ -2267,6 +2276,7 @@
 				D0A472B61F4CBE8B00E0EEDA /* LoadedPeer.swift in Sources */,
 				D0AAD1B81E326FE200D5B9DE /* ManagedAutoremoveMessageOperations.swift in Sources */,
 				D01A21A91F38CDDC00DDA104 /* ManagedSynchronizeSavedStickersOperations.swift in Sources */,
+				D0338743223BD532007A2CE4 /* InitializeAccountAfterLogin.swift in Sources */,
 				D099EA1C1DE72867001AF5A8 /* PeerCommands.swift in Sources */,
 				D03B0CCE1D62239600955575 /* PhoneNumbers.swift in Sources */,
 				D00DBBDA1E64E67E00DB5485 /* UpdateSecretChat.swift in Sources */,
@@ -2647,6 +2657,7 @@
 				D0223A9C1EA5654D00211D94 /* TelegramMediaResource.swift in Sources */,
 				D0AAD1B91E326FE200D5B9DE /* ManagedAutoremoveMessageOperations.swift in Sources */,
 				D001F3F21E128A1C007A8C60 /* UpdateGroup.swift in Sources */,
+				D0338744223BD532007A2CE4 /* InitializeAccountAfterLogin.swift in Sources */,
 				D0F7B1EB1E045C87007EB8A5 /* ResolvePeerByName.swift in Sources */,
 				D018D3381E648ACF00C5E089 /* ChannelCreation.swift in Sources */,
 				D0F53BEA1E784A4800117362 /* ChangeAccountPhoneNumber.swift in Sources */,
@@ -2804,6 +2815,7 @@
 				D00C7CCD1E3620C30080C3D5 /* CachedChannelParticipants.swift in Sources */,
 				D0A472B71F4CBE8B00E0EEDA /* LoadedPeer.swift in Sources */,
 				D03C536E1DAD5CA9004C17B3 /* PhoneNumber.swift in Sources */,
+				D0338741223BD48B007A2CE4 /* ContactsSettings.swift in Sources */,
 				D0BC387C1E40D2880044D6FE /* TogglePeerChatPinned.swift in Sources */,
 				D0528E6B1E65DD2100E2FEF5 /* WebpagePreview.swift in Sources */,
 				D0E8B8B42044706300605593 /* ForwardGame.swift in Sources */,
