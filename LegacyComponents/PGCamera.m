@@ -143,6 +143,9 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
     TGLegacyLog(@"WARNING: Camera was interrupted with reason %d", reason);
     if (self.captureInterrupted != nil)
         self.captureInterrupted(reason);
+    
+    if (self.isRecordingVideo)
+        [self stopVideoRecording];
 }
 
 - (void)_subscribeForCameraChanges
