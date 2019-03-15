@@ -119,11 +119,14 @@ public class ContactsController: ViewController {
         })
         
         if #available(iOSApplicationExtension 10.0, *) {
-            self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(context: context, subject: .contacts), combineLatest(context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.contactsPermissionWarningKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]))
-            |> map { noticeView, sharedData -> (Bool, ContactsSortOrder) in
-                let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings
-                let synchronizeDeviceContacts: Bool = settings?.synchronizeDeviceContacts ?? true
-                let sortOrder: ContactsSortOrder = settings?.sortOrder ?? .presence
+            self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(context: context, subject: .contacts), combineLatest(context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.contactsPermissionWarningKey()), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]))
+            |> map { noticeView, preferences, sharedData -> (Bool, ContactsSortOrder) in
+                let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings] as? ContactsSettings ?? ContactsSettings.defaultSettings
+                let synchronizeDeviceContacts: Bool = settings.synchronizeContacts
+                
+                let contactsSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings
+                
+                let sortOrder: ContactsSortOrder = contactsSettings?.sortOrder ?? .presence
                 if !synchronizeDeviceContacts {
                     return (true, sortOrder)
                 }

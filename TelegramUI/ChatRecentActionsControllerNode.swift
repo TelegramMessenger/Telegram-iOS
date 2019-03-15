@@ -364,7 +364,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
-        }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
+        }, displayForwardDisabledNotice: { _, _, _ in }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
            pollActionState: ChatInterfacePollActionState())
         self.controllerInteraction = controllerInteraction
         

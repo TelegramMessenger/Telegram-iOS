@@ -1597,6 +1597,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                         item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                                     } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
                                         item.controllerInteraction.openPeer(id, .info, nil)
+                                    } else if let authorSignature = forwardInfo.authorSignature {
+                                        item.controllerInteraction.displayForwardDisabledNotice(forwardInfoNode, forwardInfoNode.bounds, authorSignature)
                                     }
                                     return
                                 }

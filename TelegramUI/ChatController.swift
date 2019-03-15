@@ -209,6 +209,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     private weak var silentPostTooltipController: TooltipController?
     private weak var mediaRecordingModeTooltipController: TooltipController?
     private weak var mediaRestrictedTooltipController: TooltipController?
+    private var forwardDisabledNoticeTooltipController: TooltipController?
     private var mediaRestrictedTooltipControllerMode = true
     
     private var screenCaptureEventsDisposable: Disposable?
@@ -1158,6 +1159,24 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }, cancelInteractiveKeyboardGestures: { [weak self] in
             (self?.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
             self?.chatDisplayNode.cancelInteractiveKeyboardGestures()
+        }, displayForwardDisabledNotice: { [weak self] sourceNode, sourceRect, name in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.forwardDisabledNoticeTooltipController?.dismiss()
+            let tooltipController = TooltipController(content: .text(strongSelf.presentationInterfaceState.strings.Chat_ForwardHiddenAccount(name).0), timeout: 2.0, dismissByTapOutside: true)
+            strongSelf.forwardDisabledNoticeTooltipController = tooltipController
+            tooltipController.dismissed = { [weak tooltipController] in
+                if let strongSelf = self, let tooltipController = tooltipController, strongSelf.forwardDisabledNoticeTooltipController === tooltipController {
+                    strongSelf.forwardDisabledNoticeTooltipController = nil
+                }
+            }
+            strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                if let strongSelf = self {
+                    return (sourceNode, sourceRect)
+                }
+                return nil
+            }))
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
            pollActionState: ChatInterfacePollActionState())
         

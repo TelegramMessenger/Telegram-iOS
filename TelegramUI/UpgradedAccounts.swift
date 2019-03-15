@@ -241,6 +241,37 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String) -
                 signal = signal |> then(upgradeAccessChallengeData)
             }
         }
+        if version < 4 {
+            let updatedContactSynchronizationSettings = accountManager.transaction { transaction -> (ContactSynchronizationSettings, [AccountRecordId]) in
+                return (transaction.getSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings) as? ContactSynchronizationSettings ?? ContactSynchronizationSettings.defaultSettings, transaction.getRecords().map({ $0.id }))
+            }
+            |> mapToSignal { globalSettings, ids -> Signal<Never, NoError> in
+                var importSignal: Signal<Never, NoError> = .complete()
+                for id in ids {
+                    let importInfoAccounttSignal = accountTransaction(rootPath: rootPath, id: id, transaction: { transaction -> Void in
+                        transaction.updatePreferencesEntry(key: PreferencesKeys.contactsSettings, { current in
+                            var settings = current as? ContactsSettings ?? ContactsSettings.defaultSettings
+                            settings.synchronizeContacts = globalSettings._legacySynchronizeDeviceContacts
+                            return settings
+                        })
+                    })
+                    |> ignoreValues
+                    importSignal = importSignal |> then(importInfoAccounttSignal)
+                }
+                return importSignal
+            }
+            
+            let applyVersion = accountManager.transaction { transaction -> Void in
+                transaction.setVersion(4)
+            }
+            |> ignoreValues
+            signal = signal |> then(
+                updatedContactSynchronizationSettings
+                |> then(
+                    applyVersion
+                )
+            )
+        }
         return signal
     }
 }

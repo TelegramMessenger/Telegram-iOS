@@ -394,11 +394,13 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                     return
                 }
                 
-                let _ = updateContactSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
-                    var settings = settings
-                    settings.synchronizeDeviceContacts = false
-                    return settings
-                })
+                let _ = context.account.postbox.transaction({ transaction in
+                    transaction.updatePreferencesEntry(key: PreferencesKeys.contactsSettings, { current in
+                        var settings = current as? ContactsSettings ?? ContactsSettings.defaultSettings
+                        settings.synchronizeContacts = false
+                        return settings
+                    })
+                }).start()
                 
                 actionsDisposable.add(((deleteAllContacts(postbox: context.account.postbox, network: context.account.network) |> then(resetSavedContacts(network: context.account.network)))
                 |> deliverOnMainQueue).start(completed: {
@@ -413,10 +415,12 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {})]))
         }
     }, updateSyncContacts: { value in
-        let _ = updateContactSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
-            var settings = settings
-            settings.synchronizeDeviceContacts = value
-            return settings
+        let _ = context.account.postbox.transaction({ transaction in
+            transaction.updatePreferencesEntry(key: PreferencesKeys.contactsSettings, { current in
+                var settings = current as? ContactsSettings ?? ContactsSettings.defaultSettings
+                settings.synchronizeContacts = value
+                return settings
+            })
         }).start()
     }, updateSuggestFrequentContacts: { value in
         let apply: () -> Void = {
@@ -477,11 +481,13 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
     
     actionsDisposable.add(managedUpdatedRecentPeers(accountPeerId: context.account.peerId, postbox: context.account.postbox, network: context.account.network).start())
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), recentPeers(account: context.account))
-    |> map { presentationData, state, noticeView, sharedData, recentPeers -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]), recentPeers(account: context.account))
+    |> map { presentationData, state, noticeView, sharedData, preferences, recentPeers -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in
         let secretChatLinkPreviews = noticeView.value.flatMap({ ApplicationSpecificNotice.getSecretChatLinkPreviews($0) })
         
-        let synchronizeDeviceContacts: Bool = (sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings)?.synchronizeDeviceContacts ?? true
+        let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings] as? ContactsSettings ?? ContactsSettings.defaultSettings
+        
+        let synchronizeDeviceContacts: Bool = settings.synchronizeContacts
         
         let suggestRecentPeers: Bool
         if let updatedSuggestFrequentContacts = state.updatedSuggestFrequentContacts {

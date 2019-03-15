@@ -255,7 +255,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, openAppStorePage: {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
-        }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
+        }, displayForwardDisabledNotice: { _, _, _ in }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
            pollActionState: ChatInterfacePollActionState())
         
         self.controllerInteraction = controllerInteraction
