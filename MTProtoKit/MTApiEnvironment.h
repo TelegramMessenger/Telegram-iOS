@@ -32,6 +32,7 @@
 @property (nonatomic, strong) NSString *appVersion;
 @property (nonatomic, strong, readonly) NSString *systemLangCode;
 @property (nonatomic, strong) NSNumber *layer;
+@property (nonatomic, strong, readonly) NSData *systemCode;
     
 @property (nonatomic, strong) NSString *langPack;
 @property (nonatomic, strong, readonly) NSString *langPackCode;
@@ -45,10 +46,11 @@
 @property (nonatomic, strong, readonly) MTSocksProxySettings *socksProxySettings;
 @property (nonatomic, strong, readonly) MTNetworkSettings *networkSettings;
 
-@property (nonatomic, copy) void (^passwordInputHandler)();
+@property (nonatomic, copy) void (^passwordInputHandler)(void);
 
 - (MTApiEnvironment *)withUpdatedLangPackCode:(NSString *)langPackCode;
 - (MTApiEnvironment *)withUpdatedSocksProxySettings:(MTSocksProxySettings *)socksProxySettings;
 - (MTApiEnvironment *)withUpdatedNetworkSettings:(MTNetworkSettings *)networkSettings;
+- (MTApiEnvironment *)withUpdatedSystemCode:(NSData *)systemCode;
 
 @end

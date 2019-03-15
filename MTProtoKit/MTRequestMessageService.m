@@ -305,6 +305,9 @@
         if (_apiEnvironment.socksProxySettings.secret != nil) {
             flags |= (1 << 0);
         }
+        if (_apiEnvironment.systemCode != nil) {
+            flags |= (1 << 1);
+        }
         
         [buffer appendInt32:(int32_t)0x785188b8];
         [buffer appendInt32:flags];
@@ -321,6 +324,10 @@
             [buffer appendInt32:(int32_t)0x75588b3f];
             [buffer appendTLString:_apiEnvironment.socksProxySettings.ip];
             [buffer appendInt32:_apiEnvironment.socksProxySettings.port];
+        }
+        
+        if (_apiEnvironment.systemCode != nil) {
+            [buffer appendBytes:_apiEnvironment.systemCode.bytes length:_apiEnvironment.systemCode.length];
         }
         
         [buffer appendBytes:currentData.bytes length:currentData.length];
