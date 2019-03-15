@@ -3052,7 +3052,7 @@ Unused sets are archived when you add more.";
 "Appearance.ThemeNight" = "Night";
 "Appearance.ThemeNightBlue" = "Night Blue";
 "Appearance.PreviewReplyAuthor" = "Lucio";
-"Appearance.PreviewReplyText" = "Reinhart, we need to find you some...";
+"Appearance.PreviewReplyText" = "Reinhardt, we need to find you some...";
 "Appearance.PreviewIncomingText" = "Ah you kids today with techno music! Enjoy the classics, like Hasselhoff!";
 "Appearance.PreviewOutgoingText" = "I can't take you seriously right now. Sorry..";
 "Appearance.AccentColor" = "Accent Color";
@@ -4059,20 +4059,30 @@ Unused sets are archived when you add more.";
 
 "Gif.Search" = "Search GIFs";
 "Gif.NoGifsFound" = "No GIFs Found";
+"Gif.NoGifsPlaceholder" = "You have no saved GIFs yet.";
 
 "SettingsSearch.FAQ" = "FAQ";
 
 "Privacy.ProfilePhoto" = "Profile Photo";
-"Privacy.Forwards" = "Forwards";
+"Privacy.Forwards" = "Forwarded Messages";
 
 "Privacy.ProfilePhoto.WhoCanSeeMyPhoto" = "WHO CAN SEE MY PROFILE PHOTO";
 "Privacy.ProfilePhoto.CustomHelp" = "You can restrict who can see your profile photo with granular precision.";
 "Privacy.ProfilePhoto.AlwaysShareWith.Title" = "Always Share With";
 "Privacy.ProfilePhoto.NeverShareWith.Title" = "Never Share With";
 
-"Privacy.Forwards.WhoCanForward" = "WHO CAN FORWARD MY MESSAGES";
-"Privacy.Forwards.CustomHelp" = "You can restrict who can forward your messages with granular precision.";
+"Privacy.Forwards.WhoCanForward" = "WHO CAN ADD LINK TO MY ACCOUNT WHEN FORWARDING MY MESSAGES";
+"Privacy.Forwards.CustomHelp" = "When forwarded to other chats, messages you send will not link back to your account.";
 "Privacy.Forwards.AlwaysAllow.Title" = "Always Allow";
 "Privacy.Forwards.NeverAllow.Title" = "Never Allow";
 
-"Chat.ForwardHiddenAccount" = "%@ hid their account.";
+"Conversation.ContextMenuCancelSending" = "Cancel Sending";
+
+"Conversation.ForwardAuthorHiddenTooltip" = "The account was hidden by the user";
+
+"Privacy.Forwards.Preview" = "PREVIEW";
+"Privacy.Forwards.PreviewForwardAuthor" = "Lucio";
+"Privacy.Forwards.PreviewMessageText" = "Reinhardt, we need to find you some new music.";
+"Privacy.Forwards.AlwaysLink" = "Link to your account";
+"Privacy.Forwards.LinkIfAllowed" = "Link if allowed by settings below";
+"Privacy.Forwards.NeverLink" = "Not a link to your account";
