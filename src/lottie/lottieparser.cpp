@@ -215,7 +215,7 @@ public:
     void                         parseAssets(LOTCompositionData *comp);
     std::shared_ptr<LOTAsset>    parseAsset();
     void                         parseLayers(LOTCompositionData *comp);
-    std::shared_ptr<LOTData>     parseLayer();
+    std::shared_ptr<LOTData>     parseLayer(bool record = false);
     void                         parseMaskProperty(LOTLayerData *layer);
     void                         parseShapesAttr(LOTLayerData *layer);
     void                         parseObject(LOTGroupData *parent);
@@ -273,6 +273,7 @@ protected:
     LOTLayerData *                             curLayerRef{nullptr};
     std::vector<std::shared_ptr<LOTLayerData>> mLayersToUpdate;
     std::string                                mDirPath;
+    std::vector<LayerInfo>                     mLayerInfoList;
     void                                       SkipOut(int depth);
 };
 
@@ -612,6 +613,8 @@ void LottieParserImpl::parseComposition()
     comp->mRootLayer->mInFrame = comp->mStartFrame;
     comp->mRootLayer->mOutFrame = comp->mEndFrame;
 
+    comp->mLayerInfoList = std::move(mLayerInfoList);
+
     mComposition = sharedComposition;
 }
 
@@ -749,7 +752,7 @@ void LottieParserImpl::parseLayers(LOTCompositionData *comp)
     RAPIDJSON_ASSERT(PeekType() == kArrayType);
     EnterArray();
     while (NextArrayValue()) {
-        std::shared_ptr<LOTData> layer = parseLayer();
+        std::shared_ptr<LOTData> layer = parseLayer(true);
         staticFlag &= layer->isStatic();
         comp->mRootLayer->mChildren.push_back(layer);
     }
@@ -838,7 +841,7 @@ LayerType LottieParserImpl::getLayerType()
  * https://github.com/airbnb/lottie-web/blob/master/docs/json/layers/shape.json
  *
  */
-std::shared_ptr<LOTData> LottieParserImpl::parseLayer()
+std::shared_ptr<LOTData> LottieParserImpl::parseLayer(bool record)
 {
     RAPIDJSON_ASSERT(PeekType() == kObjectType);
     std::shared_ptr<LOTLayerData> sharedLayer =
@@ -847,10 +850,14 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer()
     curLayerRef = layer;
     bool hasLayerRef = false;
     bool ddd = true;
+    std::string layerName;
     EnterObject();
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "ty")) { /* Type of layer*/
             layer->mLayerType = getLayerType();
+        } else if (0 == strcmp(key, "nm")) { /*Layer name*/
+            RAPIDJSON_ASSERT(PeekType() == kStringType);
+            layerName = GetString();
         } else if (0 == strcmp(key, "ind")) { /*Layer index in AE. Used for
                                                  parenting and expressions.*/
             RAPIDJSON_ASSERT(PeekType() == kNumberType);
@@ -930,6 +937,10 @@ std::shared_ptr<LOTData> LottieParserImpl::parseLayer()
     layer->setStatic(staticFlag && layer->mTransform->isStatic() &&
                      !hasLayerRef);
     layer->mCompRef = compRef;
+
+    if (record) {
+        mLayerInfoList.push_back(LayerInfo(layerName, layer->mInFrame, layer->mOutFrame));
+    }
     return sharedLayer;
 }
 

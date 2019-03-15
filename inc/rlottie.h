@@ -184,6 +184,8 @@ private:
     }mDrawArea;
 };
 
+using LayerInfoList = std::vector<std::tuple<std::string, int , int>>;
+
 class LOT_EXPORT Animation {
 public:
 
@@ -322,6 +324,17 @@ public:
      *  @internal
      */
     const LOTLayerNode * renderTree(size_t frameNo, size_t width, size_t height) const;
+
+    /**
+     *  @brief Returns Layer information{name, inFrame, outFrame} of all the child layers  of the composition.
+     *
+     *
+     *  @return List of Layer Information of the Composition.
+     *
+     *  @see LayerInfoList
+     *  @internal
+     */
+    const LayerInfoList& layers() const;
 
     /**
      *  @brief default destructor

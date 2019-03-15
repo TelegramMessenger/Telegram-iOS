@@ -407,10 +407,13 @@ public:
     std::shared_ptr<LOTAsset> mAsset;
 };
 
+using LayerInfo = std::tuple<std::string, int , int>;
+
 class LOTCompositionData : public LOTData
 {
 public:
     LOTCompositionData():LOTData(LOTData::Type::Composition){}
+    const std::vector<LayerInfo> &layerInfoList() const { return  mLayerInfoList;}
     double duration() const {
         return isStatic() ? startFrame() :
                             frameDuration() / frameRate(); // in second
@@ -442,6 +445,8 @@ public:
                        std::shared_ptr<VInterpolator>> mInterpolatorCache;
     std::unordered_map<std::string,
                        std::shared_ptr<LOTAsset>>    mAssets;
+
+    std::vector<LayerInfo>  mLayerInfoList;
 
 };
 
@@ -805,6 +810,7 @@ public:
    size_t startFrame() const {return mRoot->startFrame();}
    size_t endFrame() const {return mRoot->endFrame();}
    size_t frameAtPos(double pos) const {return mRoot->frameAtPos(pos);}
+   const std::vector<LayerInfo> &layerInfoList() const { return mRoot->layerInfoList();}
 public:
     std::shared_ptr<LOTCompositionData> mRoot;
 };

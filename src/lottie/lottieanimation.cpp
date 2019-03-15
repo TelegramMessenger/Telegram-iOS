@@ -49,6 +49,8 @@ public:
     std::future<Surface> renderAsync(size_t frameNo, Surface &&surface);
     const LOTLayerNode *
                  renderTree(size_t frameNo, const VSize &size);
+
+    const LayerInfoList& layerInfoList() const { return mModel->layerInfoList();}
 private:
     std::string                  mFilePath;
     std::shared_ptr<LOTModel>    mModel;
@@ -274,6 +276,11 @@ std::future<Surface> Animation::render(size_t frameNo, Surface surface)
 void Animation::renderSync(size_t frameNo, Surface surface)
 {
     d->render(frameNo, surface);
+}
+
+const LayerInfoList& Animation::layers() const
+{
+    return d->layerInfoList();
 }
 
 Animation::Animation(): d(std::make_unique<AnimationImpl>()) {}
