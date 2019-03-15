@@ -401,7 +401,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let display = !notice && hasVisiblePlayableItemNodes && !isInteractivelyScrolling
             if display {
                 return .complete()
-                |> delay(2.0, queue: Queue.mainQueue())
+                |> delay(2.5, queue: Queue.mainQueue())
                 |> then(
                     .single(display)
                 )
@@ -1512,12 +1512,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
         }
-        if let (message, itemNode) = result {
+        if let (message, _) = result {
             if let message = message {
                 let _ = self.controllerInteraction.openMessage(message, .landscape)
             }
-            
-            self.historyNode.ensureItemNodeVisibleAtTopInset(itemNode)
         }
     }
     

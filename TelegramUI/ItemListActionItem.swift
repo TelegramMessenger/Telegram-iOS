@@ -81,7 +81,7 @@ class ItemListActionItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(17.0)
 
-class ItemListActionItemNode: ListViewItemNode {
+class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -91,7 +91,7 @@ class ItemListActionItemNode: ListViewItemNode {
     
     private var item: ItemListActionItem?
     
-    var tag: Any? {
+    var tag: ItemListItemTag? {
         return self.item?.tag
     }
     

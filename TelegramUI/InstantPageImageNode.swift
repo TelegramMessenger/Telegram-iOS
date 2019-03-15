@@ -254,28 +254,42 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     @objc private func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
             case .ended:
-                if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation, let fetchStatus = self.fetchStatus {
-                    switch fetchStatus {
-                        case .Local:
-                            switch gesture {
-                                case .tap:
-                                    if self.media.media is TelegramMediaImage && self.media.index == -1 {
-                                        return
-                                    }
-                                    self.openMedia(self.media)
-                                case .longTap:
-                                    self.longPressMedia(self.media)
-                                default:
-                                    break
-                            }
-                        case .Remote:
-                            if case .tap = gesture {
-                                self.fetchControls?.fetch(true)
-                            }
-                        case .Fetching:
-                            if case .tap = gesture {
-                                self.fetchControls?.cancel()
-                            }
+                if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
+                    if let fetchStatus = self.fetchStatus {
+                        switch fetchStatus {
+                            case .Local:
+                                switch gesture {
+                                    case .tap:
+                                        if self.media.media is TelegramMediaImage && self.media.index == -1 {
+                                            return
+                                        }
+                                        self.openMedia(self.media)
+                                    case .longTap:
+                                        self.longPressMedia(self.media)
+                                    default:
+                                        break
+                                }
+                            case .Remote:
+                                if case .tap = gesture {
+                                    self.fetchControls?.fetch(true)
+                                }
+                            case .Fetching:
+                                if case .tap = gesture {
+                                    self.fetchControls?.cancel()
+                                }
+                        }
+                    } else {
+                        switch gesture {
+                            case .tap:
+                                if self.media.media is TelegramMediaImage && self.media.index == -1 {
+                                    return
+                                }
+                                self.openMedia(self.media)
+                            case .longTap:
+                                self.longPressMedia(self.media)
+                            default:
+                                break
+                        }
                     }
                 }
             default:

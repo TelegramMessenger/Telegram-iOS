@@ -48,7 +48,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         
         self.emptyNode = ImmediateTextNode()
         self.emptyNode.isUserInteractionEnabled = false
-        self.emptyNode.attributedText = NSAttributedString(string: strings.Conversation_EmptyGifPanelPlaceholder, font: Font.regular(15.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
+        self.emptyNode.attributedText = NSAttributedString(string: strings.Gif_NoGifsPlaceholder, font: Font.regular(15.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
         self.emptyNode.textAlignment = .center
         self.emptyNode.maximumNumberOfLines = 3
         
@@ -68,7 +68,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     }
     
     override func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        self.emptyNode.attributedText = NSAttributedString(string: strings.Conversation_EmptyGifPanelPlaceholder, font: Font.regular(15.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
+        self.emptyNode.attributedText = NSAttributedString(string: strings.Gif_NoGifsPlaceholder, font: Font.regular(15.0), textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
         
         self.searchPlaceholderNode.setup(theme: theme, strings: strings, type: .gifs)
         
@@ -97,7 +97,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     
             var targetBounds = CGRect(origin: previousBounds.origin, size: nodeFrame.size)
             if changedIsExpanded {
-                targetBounds.origin.y = isExpanded ? 0.0 : 60.0
+                targetBounds.origin.y = isExpanded || multiplexedNode.files.isEmpty ? 0.0 : 60.0
             }
             
             transition.updateBounds(layer: multiplexedNode.layer, bounds: targetBounds)
@@ -149,7 +149,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
                     let previousFiles = strongSelf.multiplexedNode?.files
                     strongSelf.multiplexedNode?.files = gifs
                     strongSelf.emptyNode.isHidden = !gifs.isEmpty
-                    if (previousFiles ?? []).isEmpty {
+                    if (previousFiles ?? []).isEmpty && !gifs.isEmpty {
                         strongSelf.multiplexedNode?.contentOffset = CGPoint(x: 0.0, y: 60.0)
                     }
                 }

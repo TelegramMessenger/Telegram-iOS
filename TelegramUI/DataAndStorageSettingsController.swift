@@ -42,6 +42,22 @@ private enum DataAndStorageSection: Int32 {
     case connection
 }
 
+enum DataAndStorageEntryTag: ItemListItemTag {
+    case automaticDownloadReset
+    case autoplayGifs
+    case autoplayVideos
+    case saveEditedPhotos
+    case downloadInBackground
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? DataAndStorageEntryTag, self == other {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 private enum DataAndStorageEntry: ItemListNodeEntry {
     case storageUsage(PresentationTheme, String)
     case networkUsage(PresentationTheme, String)
@@ -262,17 +278,17 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                     if enabled {
                         arguments.resetAutomaticDownload()
                     }
-                })
+                }, tag: DataAndStorageEntryTag.automaticDownloadReset)
             case let .autoplayHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .autoplayGifs(theme, text, value):
                 return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAutoplayGifs(value)
-                })
+                }, tag: DataAndStorageEntryTag.autoplayGifs)
             case let .autoplayVideos(theme, text, value):
                 return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleAutoplayVideos(value)
-                })
+                }, tag: DataAndStorageEntryTag.autoplayVideos)
             case let .voiceCallsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .useLessVoiceData(theme, text, value):
@@ -288,11 +304,11 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
             case let .saveEditedPhotos(theme, text, value):
                 return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleSaveEditedPhotos(value)
-                })
+                }, tag: DataAndStorageEntryTag.saveEditedPhotos)
             case let .downloadInBackground(theme, text, value):
                 return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleDownloadInBackground(value)
-                })
+                }, tag: DataAndStorageEntryTag.downloadInBackground)
             case let .downloadInBackgroundInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .connectionHeader(theme, text):
@@ -435,7 +451,7 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     return entries
 }
 
-func dataAndStorageController(context: AccountContext) -> ViewController {
+func dataAndStorageController(context: AccountContext, focusOnItemTag: DataAndStorageEntryTag? = nil) -> ViewController {
     let initialState = DataAndStorageControllerState()
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     
@@ -541,16 +557,16 @@ func dataAndStorageController(context: AccountContext) -> ViewController {
             return settings
         }).start()
     })
-    
+
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), dataAndStorageDataPromise.get()) |> deliverOnMainQueue
-        |> map { presentationData, state, dataAndStorageData -> (ItemListControllerState, (ItemListNodeState<DataAndStorageEntry>, DataAndStorageEntry.ItemGenerationArguments)) in
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ChatSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData), style: .blocks, emptyStateItem: nil, animateChanges: false)
-            
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+    |> map { presentationData, state, dataAndStorageData -> (ItemListControllerState, (ItemListNodeState<DataAndStorageEntry>, DataAndStorageEntry.ItemGenerationArguments)) in
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ChatSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let listState = ItemListNodeState(entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData), style: .blocks, ensureVisibleItemTag: focusOnItemTag, emptyStateItem: nil, animateChanges: false)
+        
+        return (controllerState, (listState, arguments))
+    } |> afterDisposed {
+        actionsDisposable.dispose()
     }
     
     let controller = ItemListController(context: context, state: signal)

@@ -717,7 +717,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            pushControllerImpl?(privacyAndSecurityController(context: context, initialSettings: .single(nil) |> then(requestAccountPrivacySettings(account: context.account) |> map(Optional.init))))
+            pushControllerImpl?(privacyAndSecurityController(context: context))
         })
     }, openDataAndStorage: {
         let _ = (contextValue.get()

@@ -809,60 +809,76 @@ final class ChatMediaInputNode: ChatInputNode {
                 let panes: [ASDisplayNode]
                 if let searchContainerNode = strongSelf.searchContainerNode {
                     panes = []
-//                    if let (itemNode, item) = searchContainerNode.itemAt(point: point.offsetBy(dx: -searchContainerNode.frame.minX, dy: -searchContainerNode.frame.minY)) {
-//                        return strongSelf.context.account.postbox.transaction { transaction -> Bool in
-//                            return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
-//                            }
-//                            |> deliverOnMainQueue
-//                            |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
-//                                if let strongSelf = self {
-//                                    var menuItems: [PeekControllerMenuItem] = []
-//                                    menuItems = [
-//                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
-//                                            if let strongSelf = self {
-//                                                strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false)
-//                                            }
-//                                        }),
-//                                        PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
-//                                            if let strongSelf = self {
-//                                                if isStarred {
-//                                                    let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
-//                                                } else {
-//                                                    let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
-//                                                }
-//                                            }
-//                                        }),
-//                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: {
-//                                            if let strongSelf = self {
-//                                                loop: for attribute in item.file.attributes {
-//                                                    switch attribute {
-//                                                    case let .Sticker(_, packReference, _):
-//                                                        if let packReference = packReference {
-//                                                            let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
-//                                                            controller.sendSticker = { file in
-//                                                                if let strongSelf = self {
-//                                                                    strongSelf.controllerInteraction.sendSticker(file, false)
-//                                                                }
-//                                                            }
-//
-//                                                            strongSelf.controllerInteraction.navigationController()?.view.window?.endEditing(true)
-//                                                            strongSelf.controllerInteraction.presentController(controller, nil)
-//                                                        }
-//                                                        break loop
-//                                                    default:
-//                                                        break
-//                                                    }
-//                                                }
-//                                            }
-//                                        }),
-//                                        PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: {})
-//                                    ]
-//                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems))
-//                                } else {
-//                                    return nil
-//                                }
-//                        }
-//                    }
+                    
+                    if let (itemNode, item) = searchContainerNode.itemAt(point: point.offsetBy(dx: -searchContainerNode.frame.minX, dy: -searchContainerNode.frame.minY)) {
+                        if let item = item as? StickerPreviewPeekItem {
+                            return strongSelf.context.account.postbox.transaction { transaction -> Bool in
+                                return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
+                                }
+                            |> deliverOnMainQueue
+                            |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                                if let strongSelf = self {
+                                    var menuItems: [PeekControllerMenuItem] = []
+                                    menuItems = [
+                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
+                                            if let strongSelf = self {
+                                                strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false)
+                                            }
+                                        }),
+                                        PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
+                                            if let strongSelf = self {
+                                                if isStarred {
+                                                    let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
+                                                } else {
+                                                    let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
+                                                }
+                                            }
+                                        }),
+                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: {
+                                            if let strongSelf = self {
+                                                loop: for attribute in item.file.attributes {
+                                                    switch attribute {
+                                                    case let .Sticker(_, packReference, _):
+                                                        if let packReference = packReference {
+                                                            let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
+                                                            controller.sendSticker = { file in
+                                                                if let strongSelf = self {
+                                                                    strongSelf.controllerInteraction.sendSticker(file, false)
+                                                                }
+                                                            }
+                                                            
+                                                            strongSelf.controllerInteraction.navigationController()?.view.window?.endEditing(true)
+                                                            strongSelf.controllerInteraction.presentController(controller, nil)
+                                                        }
+                                                        break loop
+                                                    default:
+                                                        break
+                                                    }
+                                                }
+                                            }
+                                        }),
+                                        PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: {})
+                                    ]
+                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems))
+                                } else {
+                                    return nil
+                                }
+                            }
+                        } else if let file = item as? FileMediaReference {
+                            return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.context.account, contextResult: .internalReference(queryId: 0, id: "", type: "gif", title: nil, description: nil, image: nil, file: file.media, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
+                                PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
+                                    if let strongSelf = self {
+                                        strongSelf.controllerInteraction.sendGif(file)
+                                    }
+                                }),
+                                PeekControllerMenuItem(title: strongSelf.strings.Common_Delete, color: .destructive, action: {
+                                    if let strongSelf = self {
+                                        let _ = removeSavedGif(postbox: strongSelf.context.account.postbox, mediaId: file.media.fileId).start()
+                                    }
+                                })
+                            ])))
+                        }
+                    }
                 } else {
                     panes = [strongSelf.gifPane, strongSelf.stickerPane, strongSelf.trendingPane]
                 }

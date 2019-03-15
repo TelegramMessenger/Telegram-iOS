@@ -19,8 +19,9 @@ class ItemListSwitchItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     let updated: (Bool) -> Void
+    let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, title: String, value: Bool, type: ItemListSwitchItemNodeType = .regular, enableInteractiveChanges: Bool = true, enabled: Bool = true, maximumNumberOfLines: Int = 1, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void) {
+    init(theme: PresentationTheme, title: String, value: Bool, type: ItemListSwitchItemNodeType = .regular, enableInteractiveChanges: Bool = true, enabled: Bool = true, maximumNumberOfLines: Int = 1, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.title = title
         self.value = value
@@ -31,6 +32,7 @@ class ItemListSwitchItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.style = style
         self.updated = updated
+        self.tag = tag
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -101,10 +103,11 @@ extension SwitchNode: ItemListSwitchNodeImpl {
 extension IconSwitchNode: ItemListSwitchNodeImpl {
 }
 
-class ItemListSwitchItemNode: ListViewItemNode {
+class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
+    private let highlightedBackgroundNode: ASDisplayNode
     
     private let titleNode: TextNode
     private var switchNode: ASDisplayNode & ItemListSwitchNodeImpl
@@ -112,6 +115,10 @@ class ItemListSwitchItemNode: ListViewItemNode {
     private var disabledOverlayNode: ASDisplayNode?
     
     private var item: ItemListSwitchItem?
+    
+    var tag: ItemListItemTag? {
+        return self.item?.tag
+    }
     
     init(type: ItemListSwitchItemNodeType) {
         self.backgroundNode = ASDisplayNode()
@@ -132,6 +139,9 @@ class ItemListSwitchItemNode: ListViewItemNode {
             case .icon:
                 self.switchNode = IconSwitchNode()
         }
+        
+        self.highlightedBackgroundNode = ASDisplayNode()
+        self.highlightedBackgroundNode.isLayerBacked = true
         
         self.switchGestureNode = ASDisplayNode()
         
@@ -246,6 +256,8 @@ class ItemListSwitchItemNode: ListViewItemNode {
                         strongSelf.switchNode.handleColor = item.theme.list.itemSwitchColors.handleColor
                         strongSelf.switchNode.positiveContentColor = item.theme.list.itemSwitchColors.positiveColor
                         strongSelf.switchNode.negativeContentColor = item.theme.list.itemSwitchColors.negativeColor
+                        
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                     }
                     
                     let _ = titleApply()
@@ -309,8 +321,48 @@ class ItemListSwitchItemNode: ListViewItemNode {
                         switchView.isUserInteractionEnabled = item.enableInteractiveChanges
                     }
                     strongSelf.switchGestureNode.isHidden = item.enableInteractiveChanges
+                    
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 44.0 + UIScreenPixel + UIScreenPixel))
                 }
             })
+        }
+    }
+    
+    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+        super.setHighlighted(highlighted, at: point, animated: animated)
+        
+        if highlighted {
+            self.highlightedBackgroundNode.alpha = 1.0
+            if self.highlightedBackgroundNode.supernode == nil {
+                var anchorNode: ASDisplayNode?
+                if self.bottomStripeNode.supernode != nil {
+                    anchorNode = self.bottomStripeNode
+                } else if self.topStripeNode.supernode != nil {
+                    anchorNode = self.topStripeNode
+                } else if self.backgroundNode.supernode != nil {
+                    anchorNode = self.backgroundNode
+                }
+                if let anchorNode = anchorNode {
+                    self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: anchorNode)
+                } else {
+                    self.addSubnode(self.highlightedBackgroundNode)
+                }
+            }
+        } else {
+            if self.highlightedBackgroundNode.supernode != nil {
+                if animated {
+                    self.highlightedBackgroundNode.layer.animateAlpha(from: self.highlightedBackgroundNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
+                        if let strongSelf = self {
+                            if completed {
+                                strongSelf.highlightedBackgroundNode.removeFromSupernode()
+                            }
+                        }
+                    })
+                    self.highlightedBackgroundNode.alpha = 0.0
+                } else {
+                    self.highlightedBackgroundNode.removeFromSupernode()
+                }
+            }
         }
     }
     

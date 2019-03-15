@@ -299,12 +299,12 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 switch titleContent {
                     case let .peer(peerView, onlineMemberCount):
                         if let peer = peerViewMainPeer(peerView) {
-                            let isServicePeer = (peer.id.namespace == Namespaces.Peer.CloudUser && (peer.id.id == 777000 || peer.id.id == 333000))
+                            let servicePeer = isServicePeer(peer)
                             if peer.id == self.account.peerId {
                                 let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                                 state = .info(string, .generic)
                             } else if let user = peer as? TelegramUser {
-                                if isServicePeer {
+                                if servicePeer {
                                     let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                                     state = .info(string, .generic)
                                 } else if user.flags.contains(.isSupport) {

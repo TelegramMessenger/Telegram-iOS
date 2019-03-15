@@ -71,9 +71,10 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         }, rateCall: { _, _ in
         }, requestSelectMessagePollOption: { _, _ in
         }, openAppStorePage: {
+        }, displayMessageTooltip: { _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
-        }, displayForwardDisabledNotice: { _, _, _ in }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
+        }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
            pollActionState: ChatInterfacePollActionState())
         
         self.dimNode = ASDisplayNode()

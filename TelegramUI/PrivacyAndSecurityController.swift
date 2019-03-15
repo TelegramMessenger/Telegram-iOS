@@ -41,13 +41,25 @@ private enum PrivacyAndSecuritySection: Int32 {
     case dataSettings
 }
 
+public enum PrivacyAndSecurityEntryTag: ItemListItemTag {
+    case accountTimeout
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? PrivacyAndSecurityEntryTag, self == other {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     case privacyHeader(PresentationTheme, String)
     case blockedPeers(PresentationTheme, String)
     case lastSeenPrivacy(PresentationTheme, String, String)
     case profilePhotoPrivacy(PresentationTheme, String, String)
-    case forwardPrivacy(PresentationTheme, String, String)
     case voiceCallPrivacy(PresentationTheme, String, String)
+    case forwardPrivacy(PresentationTheme, String, String)
     case groupPrivacy(PresentationTheme, String, String)
     case selectivePrivacyInfo(PresentationTheme, String)
     case securityHeader(PresentationTheme, String)
@@ -83,9 +95,9 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return 2
             case .profilePhotoPrivacy:
                 return 3
-            case .forwardPrivacy:
-                return 4
             case .voiceCallPrivacy:
+                return 4
+            case .forwardPrivacy:
                 return 5
             case .groupPrivacy:
                 return 6
@@ -324,16 +336,16 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
     if let privacySettings = privacySettings {
         entries.append(.lastSeenPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_LastSeen, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.presence)))
         entries.append(.profilePhotoPrivacy(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.profilePhoto)))
-        entries.append(.forwardPrivacy(presentationData.theme, presentationData.strings.Privacy_Forwards, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.forwards)))
         entries.append(.voiceCallPrivacy(presentationData.theme, presentationData.strings.Privacy_Calls, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.voiceCalls)))
+        entries.append(.forwardPrivacy(presentationData.theme, presentationData.strings.Privacy_Forwards, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.forwards)))
         entries.append(.groupPrivacy(presentationData.theme, presentationData.strings.Privacy_GroupsAndChannels, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.groupInvitations)))
         
         entries.append(.selectivePrivacyInfo(presentationData.theme, presentationData.strings.PrivacyLastSeenSettings_GroupsAndChannelsHelp))
     } else {
         entries.append(.lastSeenPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_LastSeen, presentationData.strings.Channel_NotificationLoading))
         entries.append(.profilePhotoPrivacy(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto, presentationData.strings.Channel_NotificationLoading))
-        entries.append(.forwardPrivacy(presentationData.theme, presentationData.strings.Privacy_Forwards, presentationData.strings.Channel_NotificationLoading))
         entries.append(.voiceCallPrivacy(presentationData.theme, presentationData.strings.Privacy_Calls, presentationData.strings.Channel_NotificationLoading))
+        entries.append(.forwardPrivacy(presentationData.theme, presentationData.strings.Privacy_Forwards, presentationData.strings.Channel_NotificationLoading))
         entries.append(.groupPrivacy(presentationData.theme, presentationData.strings.Privacy_GroupsAndChannels, presentationData.strings.Channel_NotificationLoading))
         entries.append(.selectivePrivacyInfo(presentationData.theme, presentationData.strings.PrivacyLastSeenSettings_GroupsAndChannelsHelp))
     }
@@ -371,7 +383,7 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
     return entries
 }
 
-public func privacyAndSecurityController(context: AccountContext, initialSettings: Signal<AccountPrivacySettings?, NoError>) -> ViewController {
+public func privacyAndSecurityController(context: AccountContext) -> ViewController {
     let statePromise = ValuePromise(PrivacyAndSecurityControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PrivacyAndSecurityControllerState())
     let updateState: ((PrivacyAndSecurityControllerState) -> PrivacyAndSecurityControllerState) -> Void = { f in
@@ -391,7 +403,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     actionsDisposable.add(updateAccountTimeoutDisposable)
     
     let privacySettingsPromise = Promise<AccountPrivacySettings?>()
-    privacySettingsPromise.set(initialSettings)
+    privacySettingsPromise.set(.single(nil) |> then(requestAccountPrivacySettings(account: context.account) |> map(Optional.init)))
     
     let arguments = PrivacyAndSecurityControllerArguments(account: context.account, openBlockedUsers: {
         pushControllerImpl?(blockedPeersController(context: context))

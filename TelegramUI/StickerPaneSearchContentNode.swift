@@ -211,7 +211,14 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         self.interaction = StickerPaneSearchInteraction(open: { [weak self] info in
             if let strongSelf = self {
                 strongSelf.view.window?.endEditing(true)
-                strongSelf.controllerInteraction.presentController(StickerPackPreviewController(context: strongSelf.context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController()), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                
+                let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController())
+                controller.sendSticker = { [weak self] fileReference in
+                    if let strongSelf = self {
+                        strongSelf.controllerInteraction.sendSticker(fileReference, false)
+                    }
+                }
+                strongSelf.controllerInteraction.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
         }, install: { [weak self] info in
             if let strongSelf = self {
@@ -406,18 +413,18 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         self.trendingPane.updatePreviewing(animated: animated)
     }
     
-    func itemAt(point: CGPoint) -> (ASDisplayNode, StickerPreviewPeekItem)? {
+    func itemAt(point: CGPoint) -> (ASDisplayNode, Any)? {
         if !self.trendingPane.isHidden {
             if let (itemNode, item) = self.trendingPane.itemAt(point: self.view.convert(point, to: self.trendingPane.view)) {
-                return (itemNode, .pack(item))
+                return (itemNode, StickerPreviewPeekItem.pack(item))
             }
         } else {
             if let itemNode = self.gridNode.itemNodeAtPoint(self.view.convert(point, to: self.gridNode.view)) {
                 if let itemNode = itemNode as? StickerPaneSearchStickerItemNode, let stickerItem = itemNode.stickerItem {
-                    return (itemNode, .found(stickerItem))
+                    return (itemNode, StickerPreviewPeekItem.found(stickerItem))
                 } else if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
                     if let (node, item) = itemNode.itemAt(point: self.view.convert(point, to: itemNode.view)) {
-                        return (node, .pack(item))
+                        return (node, StickerPreviewPeekItem.pack(item))
                     }
                 }
             }

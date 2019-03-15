@@ -144,12 +144,12 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 
                 let status: ContactsPeerItemStatus
                 if let user = primaryPeer as? TelegramUser {
-                    let isServicePeer = (user.id.namespace == Namespaces.Peer.CloudUser && (user.id.id == 777000 || user.id.id == 333000))
-                    if user.flags.contains(.isSupport) && !isServicePeer {
+                    let servicePeer = isServicePeer(primaryPeer)
+                    if user.flags.contains(.isSupport) && !servicePeer {
                         status = .custom(strings.Bot_GenericSupportStatus)
                     } else if let _ = user.botInfo {
                         status = .custom(strings.Bot_GenericBotStatus)
-                    } else if user.id != context.account.peerId && !isServicePeer {
+                    } else if user.id != context.account.peerId && !servicePeer {
                         let presence = peer.presence ?? TelegramUserPresence(status: .none, lastActivity: 0)
                         status = .presence(presence, timeFormat)
                     } else {

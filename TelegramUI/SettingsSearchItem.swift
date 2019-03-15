@@ -103,12 +103,9 @@ final class SettingsSearchItem: ItemListControllerSearch {
             return current
         } else {
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-            return NavigationBarSearchContentNode(theme: presentationData.theme, placeholder: presentationData.strings.Common_Search, activate: { [weak self] in
+            return NavigationBarSearchContentNode(theme: presentationData.theme, placeholder: presentationData.strings.Common_Search, activate: {
                 updateActivated(true)
             })
-//            return GroupInfoSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, mode: self.searchMode, cancel: self.cancel, updateActivity: { [weak self] value in
-//                self?.updateActivity = value
-//            })
         }
     }
     
@@ -236,14 +233,14 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
         self.addSubnode(self.dimNode)
         self.addSubnode(self.listNode)
         
-        let foundItems = combineLatest(settingsSearchableItems(context: context), faqSearchableItems(context: context))
-        |> mapToSignal { searchableItems, faqSearchableItems -> Signal<[SettingsSearchableItem]?, NoError> in
+        let queryAndFoundItems = combineLatest(settingsSearchableItems(context: context), faqSearchableItems(context: context))
+        |> mapToSignal { searchableItems, faqSearchableItems -> Signal<(String, [SettingsSearchableItem])?, NoError> in
             return self.searchQuery.get()
-            |> mapToSignal { query -> Signal<[SettingsSearchableItem]?, NoError> in
+            |> mapToSignal { query -> Signal<(String, [SettingsSearchableItem])?, NoError> in
                 if let query = query, !query.isEmpty {
                     let result = searchSettingsItems(items: searchableItems, query: query)
                     let faqResults = searchSettingsItems(items: faqSearchableItems, query: query)
-                    return .single(result + faqResults)
+                    return .single((query, result + faqResults))
                 } else {
                     return .single(nil)
                 }
@@ -251,12 +248,14 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
         }
         
         let previousEntriesHolder = Atomic<([SettingsSearchEntry], PresentationTheme, PresentationStrings)?>(value: nil)
-        self.searchDisposable.set(combineLatest(queue: .mainQueue(), foundItems, self.themeAndStringsPromise.get()).start(next: { [weak self] items, themeAndStrings in
+        self.searchDisposable.set(combineLatest(queue: .mainQueue(), queryAndFoundItems, self.themeAndStringsPromise.get()).start(next: { [weak self] queryAndFoundItems, themeAndStrings in
             guard let strongSelf = self else {
                 return
             }
+            var currentQuery: String?
             var entries: [SettingsSearchEntry] = []
-            if let items = items {
+            if let (query, items) = queryAndFoundItems {
+                currentQuery = query
                 var previousIcon: SettingsSearchableItemIcon?
                 for item in items {
                     var image: UIImage?
@@ -267,9 +266,12 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
                     previousIcon = item.icon
                 }
             }
-            let previousEntriesAndPresentationData = previousEntriesHolder.swap((entries, themeAndStrings.0, themeAndStrings.1))
-            let transition = preparedSettingsSearchContainerTransition(theme: themeAndStrings.0, strings: themeAndStrings.1, from: previousEntriesAndPresentationData?.0 ?? [], to: entries, openResult: openResult, isSearching: items != nil, forceUpdate: previousEntriesAndPresentationData?.1 !== themeAndStrings.0 || previousEntriesAndPresentationData?.2 !== themeAndStrings.1)
-            strongSelf.enqueueTransition(transition)
+            
+            if !entries.isEmpty || currentQuery == nil {
+                let previousEntriesAndPresentationData = previousEntriesHolder.swap((entries, themeAndStrings.0, themeAndStrings.1))
+                let transition = preparedSettingsSearchContainerTransition(theme: themeAndStrings.0, strings: themeAndStrings.1, from: previousEntriesAndPresentationData?.0 ?? [], to: entries, openResult: openResult, isSearching: queryAndFoundItems != nil, forceUpdate: previousEntriesAndPresentationData?.1 !== themeAndStrings.0 || previousEntriesAndPresentationData?.2 !== themeAndStrings.1)
+                strongSelf.enqueueTransition(transition)
+            }
         }))
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
@@ -349,16 +351,16 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
         var duration: Double = 0.0
         var curve: UInt = 0
         switch transition {
-        case .immediate:
-            break
-        case let .animated(animationDuration, animationCurve):
-            duration = animationDuration
-            switch animationCurve {
-            case .easeInOut:
+            case .immediate:
                 break
-            case .spring:
-                curve = 7
-            }
+            case let .animated(animationDuration, animationCurve):
+                duration = animationDuration
+                switch animationCurve {
+                    case .easeInOut:
+                        break
+                    case .spring:
+                        curve = 7
+                }
         }
         
         let listViewCurve: ListViewAnimationCurve
@@ -368,8 +370,13 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
             listViewCurve = .Default(duration: nil)
         }
         
+        var insets = layout.insets(options: [.input])
+        insets.top += navigationBarHeight
+        insets.left += layout.safeInsets.left
+        insets.right += layout.safeInsets.right
+        
         self.listNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: navigationBarHeight, left: 0.0, bottom: layout.insets(options: [.input]).bottom, right: 0.0), duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         if !self.hasValidLayout {
             self.hasValidLayout = true

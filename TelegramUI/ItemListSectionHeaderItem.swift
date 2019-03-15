@@ -16,14 +16,16 @@ struct ItemListSectionHeaderAccessoryText: Equatable {
 class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
+    let multiline: Bool
     let accessoryText: ItemListSectionHeaderAccessoryText?
     let sectionId: ItemListSectionId
     
     let isAlwaysPlain: Bool = true
     
-    init(theme: PresentationTheme, text: String, accessoryText: ItemListSectionHeaderAccessoryText? = nil, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, text: String, multiline: Bool = false, accessoryText: ItemListSectionHeaderAccessoryText? = nil, sectionId: ItemListSectionId) {
         self.theme = theme
         self.text = text
+        self.multiline = multiline
         self.accessoryText = accessoryText
         self.sectionId = sectionId
     }
@@ -95,7 +97,7 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
         return { item, params, neighbors in
             let leftInset: CGFloat = 15.0 + params.leftInset
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text, font: titleFont, textColor: item.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text, font: titleFont, textColor: item.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: item.multiline ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             var accessoryTextString: NSAttributedString?
             if let accessoryText = item.accessoryText {
                 let color: UIColor
@@ -112,7 +114,7 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
             let contentSize: CGSize
             var insets = UIEdgeInsets()
             
-            contentSize = CGSize(width: params.width, height: 30.0)
+            contentSize = CGSize(width: params.width, height: titleLayout.size.height + 13.0)
             switch neighbors.top {
                 case .none:
                     insets.top += 24.0

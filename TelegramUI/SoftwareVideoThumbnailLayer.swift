@@ -28,7 +28,8 @@ final class SoftwareVideoThumbnailLayer: CALayer {
         self.masksToBounds = true
         
         if let dimensions = fileReference.media.dimensions {
-            self.disposable = (mediaGridMessageVideo(postbox: account.postbox, videoReference: fileReference) |> deliverOn(Queue.concurrentDefaultQueue())).start(next: { [weak self] transform in
+            self.disposable = (mediaGridMessageVideo(postbox: account.postbox, videoReference: fileReference)
+            |> deliverOn(Queue.concurrentDefaultQueue())).start(next: { [weak self] transform in
                 var boundingSize = dimensions.aspectFilled(CGSize(width: 93.0, height: 93.0))
                 let imageSize = boundingSize
                 boundingSize.width = min(200.0, boundingSize.width)

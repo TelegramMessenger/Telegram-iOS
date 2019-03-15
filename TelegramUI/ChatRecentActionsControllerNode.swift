@@ -349,11 +349,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     strongSelf.presentController(actionSheet, nil)
                 }
             }
-        }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
+        }, openCheckoutOrReceipt: { _ in
+        }, openSearch: {
+        }, setupReply: { _ in
         }, canSetupReply: { _ in
             return false
         }, navigateToFirstDateMessage: { _ in
-            
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in
         }, rateCall: { _, _ in
@@ -362,9 +363,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             if let strongSelf = self {
                 strongSelf.context.sharedContext.applicationBindings.openAppStorePage()
             }
+        }, displayMessageTooltip: { _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
-        }, displayForwardDisabledNotice: { _, _, _ in }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
+        }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
            pollActionState: ChatInterfacePollActionState())
         self.controllerInteraction = controllerInteraction
         

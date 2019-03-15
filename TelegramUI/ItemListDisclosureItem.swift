@@ -33,8 +33,9 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let style: ItemListStyle
     let disclosureStyle: ItemListDisclosureStyle
     let action: (() -> Void)?
+    let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, icon: UIImage? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?) {
+    init(theme: PresentationTheme, icon: UIImage? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.icon = icon
         self.title = title
@@ -46,6 +47,7 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
         self.style = style
         self.disclosureStyle = disclosureStyle
         self.action = action
+        self.tag = tag
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -95,7 +97,7 @@ private let titleFont = Font.regular(17.0)
 private let badgeFont = Font.regular(15.0)
 private let detailFont = Font.regular(13.0)
 
-class ItemListDisclosureItemNode: ListViewItemNode {
+class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -116,6 +118,10 @@ class ItemListDisclosureItemNode: ListViewItemNode {
         } else {
             return false
         }
+    }
+    
+    var tag: ItemListItemTag? {
+        return self.item?.tag
     }
     
     init() {

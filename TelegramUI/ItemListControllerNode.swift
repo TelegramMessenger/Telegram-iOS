@@ -53,6 +53,7 @@ private struct ItemListNodeTransition<Entry: ItemListNodeEntry> {
     let animateAlpha: Bool
     let crossfade: Bool
     let mergedEntries: [Entry]
+    let userInteractionEnabled: Bool
 }
 
 struct ItemListNodeState<Entry: ItemListNodeEntry> {
@@ -62,11 +63,12 @@ struct ItemListNodeState<Entry: ItemListNodeEntry> {
     let searchItem: ItemListControllerSearch?
     let animateChanges: Bool
     let crossfadeState: Bool
+    let userInteractionEnabled: Bool
     let focusItemTag: ItemListItemTag?
     let ensureVisibleItemTag: ItemListItemTag?
     let initialScrollToItem: ListViewScrollToItem?
     
-    init(entries: [Entry], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, ensureVisibleItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, initialScrollToItem: ListViewScrollToItem? = nil, crossfadeState: Bool = false, animateChanges: Bool = true) {
+    init(entries: [Entry], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, ensureVisibleItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, initialScrollToItem: ListViewScrollToItem? = nil, crossfadeState: Bool = false, animateChanges: Bool = true, userInteractionEnabled: Bool = true) {
         self.entries = entries
         self.style = style
         self.emptyStateItem = emptyStateItem
@@ -76,6 +78,7 @@ struct ItemListNodeState<Entry: ItemListNodeEntry> {
         self.focusItemTag = focusItemTag
         self.ensureVisibleItemTag = ensureVisibleItemTag
         self.initialScrollToItem = initialScrollToItem
+        self.userInteractionEnabled = userInteractionEnabled
     }
 }
 
@@ -248,7 +251,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
         
         self.listNode.didEndScrolling = { [weak self] in
             if let strongSelf = self {
-                strongSelf.contentScrollingEnded?(strongSelf.listNode)
+                let _ = strongSelf.contentScrollingEnded?(strongSelf.listNode)
             }
         }
         
@@ -268,7 +271,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
                 scrollToItem = state.initialScrollToItem
             }
             
-            return ItemListNodeTransition(theme: theme, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, focusItemTag: state.focusItemTag, ensureVisibleItemTag: state.ensureVisibleItemTag, scrollToItem: scrollToItem, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, crossfade: state.crossfadeState, mergedEntries: state.entries)
+            return ItemListNodeTransition(theme: theme, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, focusItemTag: state.focusItemTag, ensureVisibleItemTag: state.ensureVisibleItemTag, scrollToItem: scrollToItem, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, crossfade: state.crossfadeState, mergedEntries: state.entries, userInteractionEnabled: state.userInteractionEnabled)
         }) |> deliverOnMainQueue).start(next: { [weak self] transition in
             if let strongSelf = self {
                 strongSelf.enqueueTransition(transition)
@@ -539,6 +542,10 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
                                         if itemTag.isEqual(to: ensureVisibleItemTag) {
                                             if let itemNode = itemNode as? ListViewItemNode {
                                                 strongSelf.listNode.ensureItemNodeVisible(itemNode)
+                                                itemNode.setHighlighted(true, at: CGPoint(), animated: false)
+                                                Queue.mainQueue().after(1.0, {
+                                                    itemNode.setHighlighted(false, at: CGPoint(), animated: true)
+                                                })
                                                 applied = true
                                             }
                                         }
@@ -580,6 +587,7 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
                     self.emptyStateNode = nil
                 }
             }
+            self.listNode.isUserInteractionEnabled = transition.userInteractionEnabled
         }
     }
     

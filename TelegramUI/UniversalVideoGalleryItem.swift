@@ -284,7 +284,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         if dismiss {
-            self.keepSoundOnDismiss = true
             self.dismiss()
         }
     }
