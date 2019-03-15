@@ -344,7 +344,7 @@ private final class SharedApplicationContext {
         
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         
-        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManager.voipMaxLayer)
+        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManager.voipMaxLayer, appData: BuildConfig.shared().bundleData)
         
         let appGroupName = "group.\(Bundle.main.bundleIdentifier!)"
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
@@ -1612,81 +1612,84 @@ private final class SharedApplicationContext {
     
     @available(iOS 10.0, *)
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
-            if let peerId = peerIdFromNotification(response.notification) {
-                var messageId: MessageId? = nil
-                if response.notification.request.content.categoryIdentifier == "watch" {
-                    messageId = messageIdFromNotification(peerId: peerId, notification: response.notification)
-                }
-                self.openChatWhenReady(accountId: accountIdFromNotification(response.notification), peerId: peerId, messageId: messageId)
-            }
-            completionHandler()
-        } else if response.actionIdentifier == "reply", let peerId = peerIdFromNotification(response.notification), let accountId = accountIdFromNotification(response.notification) {
-            guard let response = response as? UNTextInputNotificationResponse, !response.userText.isEmpty else {
-                completionHandler()
-                return
-            }
-            let text = response.userText
-            let signal = self.sharedContextPromise.get()
-            |> take(1)
-            |> deliverOnMainQueue
-            |> mapToSignal { sharedContext -> Signal<Void, NoError> in
-                sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0)
-                return sharedContext.sharedContext.activeAccounts
-                |> mapToSignal { _, accounts, _ -> Signal<Account, NoError> in
-                    for account in accounts {
-                        if account.1.id == accountId {
-                            return .single(account.1)
-                        }
+        let _ = (accountIdFromNotification(response.notification, sharedContext: self.sharedContextPromise.get())
+        |> deliverOnMainQueue).start(next: { accountId in
+            if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+                if let peerId = peerIdFromNotification(response.notification) {
+                    var messageId: MessageId? = nil
+                    if response.notification.request.content.categoryIdentifier == "watch" {
+                        messageId = messageIdFromNotification(peerId: peerId, notification: response.notification)
                     }
-                    return .complete()
+                    self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
                 }
+                completionHandler()
+            } else if response.actionIdentifier == "reply", let peerId = peerIdFromNotification(response.notification), let accountId = accountId {
+                guard let response = response as? UNTextInputNotificationResponse, !response.userText.isEmpty else {
+                    completionHandler()
+                    return
+                }
+                let text = response.userText
+                let signal = self.sharedContextPromise.get()
                 |> take(1)
                 |> deliverOnMainQueue
-                |> mapToSignal { account -> Signal<Void, NoError> in
-                    if let messageId = messageIdFromNotification(peerId: peerId, notification: response.notification) {
-                        let _ = applyMaxReadIndexInteractively(postbox: account.postbox, stateManager: account.stateManager, index: MessageIndex(id: messageId, timestamp: 0)).start()
-                    }
-                    return enqueueMessages(account: account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)])
-                    |> map { messageIds -> MessageId? in
-                        if messageIds.isEmpty {
-                            return nil
-                        } else {
-                            return messageIds[0]
-                        }
-                    }
-                    |> mapToSignal { messageId -> Signal<Void, NoError> in
-                        if let messageId = messageId {
-                            return account.postbox.unsentMessageIdsView()
-                            |> filter { view in
-                                return !view.ids.contains(messageId)
+                |> mapToSignal { sharedContext -> Signal<Void, NoError> in
+                    sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0)
+                    return sharedContext.sharedContext.activeAccounts
+                    |> mapToSignal { _, accounts, _ -> Signal<Account, NoError> in
+                        for account in accounts {
+                            if account.1.id == accountId {
+                                return .single(account.1)
                             }
-                            |> take(1)
-                            |> mapToSignal { _ -> Signal<Void, NoError> in
+                        }
+                        return .complete()
+                    }
+                    |> take(1)
+                    |> deliverOnMainQueue
+                    |> mapToSignal { account -> Signal<Void, NoError> in
+                        if let messageId = messageIdFromNotification(peerId: peerId, notification: response.notification) {
+                            let _ = applyMaxReadIndexInteractively(postbox: account.postbox, stateManager: account.stateManager, index: MessageIndex(id: messageId, timestamp: 0)).start()
+                        }
+                        return enqueueMessages(account: account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil)])
+                        |> map { messageIds -> MessageId? in
+                            if messageIds.isEmpty {
+                                return nil
+                            } else {
+                                return messageIds[0]
+                            }
+                        }
+                        |> mapToSignal { messageId -> Signal<Void, NoError> in
+                            if let messageId = messageId {
+                                return account.postbox.unsentMessageIdsView()
+                                |> filter { view in
+                                    return !view.ids.contains(messageId)
+                                }
+                                |> take(1)
+                                |> mapToSignal { _ -> Signal<Void, NoError> in
+                                    return .complete()
+                                }
+                            } else {
                                 return .complete()
                             }
-                        } else {
-                            return .complete()
                         }
                     }
                 }
-            }
-            |> deliverOnMainQueue
-            
-            let disposable = MetaDisposable()
-            disposable.set((signal
-            |> afterDisposed { [weak disposable] in
-                Queue.mainQueue().async {
-                    if let disposable = disposable {
-                        self.replyFromNotificationsDisposables.remove(disposable)
+                |> deliverOnMainQueue
+                
+                let disposable = MetaDisposable()
+                disposable.set((signal
+                |> afterDisposed { [weak disposable] in
+                    Queue.mainQueue().async {
+                        if let disposable = disposable {
+                            self.replyFromNotificationsDisposables.remove(disposable)
+                        }
+                        completionHandler()
                     }
-                    completionHandler()
-                }
-            }).start())
-            self.replyFromNotificationsDisposables.add(disposable)
-        } else {
-            completionHandler()
-        }
+                }).start())
+                self.replyFromNotificationsDisposables.add(disposable)
+            } else {
+                completionHandler()
+            }
+        })
     }
     
     private func registerForNotifications(context: AccountContext, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
@@ -1884,11 +1887,14 @@ private final class SharedApplicationContext {
     
     @available(iOS 10.0, *)
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        if let context = self.contextValue {
-            if let accountId = accountIdFromNotification(notification), context.context.account.id != accountId {
-                completionHandler([.alert])
+        let _ = (accountIdFromNotification(notification, sharedContext: self.sharedContextPromise.get())
+        |> deliverOnMainQueue).start(next: { accountId in
+            if let context = self.contextValue {
+                if let accountId = accountId, context.context.account.id != accountId {
+                    completionHandler([.alert])
+                }
             }
-        }
+        })
     }
     
     override var next: UIResponder? {
@@ -1913,12 +1919,69 @@ private final class SharedApplicationContext {
     }
 }
 
-@available(iOS 10.0, *)
-private func accountIdFromNotification(_ notification: UNNotification) -> AccountRecordId? {
-    if let id = notification.request.content.userInfo["accountId"] as? Int64 {
-        return AccountRecordId(rawValue: id)
-    } else {
+private func notificationPayloadKey(data: Data) -> Data? {
+    if data.count < 8 {
         return nil
+    }
+    return data.subdata(in: 0 ..< 8)
+}
+
+@available(iOS 10.0, *)
+private func accountIdFromNotification(_ notification: UNNotification, sharedContext: Signal<SharedApplicationContext, NoError>) -> Signal<AccountRecordId?, NoError> {
+    if let id = notification.request.content.userInfo["accountId"] as? Int64 {
+        return .single(AccountRecordId(rawValue: id))
+    } else {
+        var encryptedData: Data?
+        if var encryptedPayload = notification.request.content.userInfo["p"] as? String {
+            encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
+            encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
+            while encryptedPayload.count % 4 != 0 {
+                encryptedPayload.append("=")
+            }
+            encryptedData = Data(base64Encoded: encryptedPayload)
+        }
+        if let encryptedData = encryptedData, let notificationKeyId = notificationPayloadKey(data: encryptedData) {
+            return sharedContext
+            |> take(1)
+            |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in
+                return sharedContext.sharedContext.activeAccounts
+                |> take(1)
+                |> mapToSignal { _, accounts, _ -> Signal<AccountRecordId?, NoError> in
+                    let keys = accounts.map { _, account, _ -> Signal<(AccountRecordId, MasterNotificationKey)?, NoError> in
+                        return masterNotificationsKey(account: account, ignoreDisabled: true)
+                        |> map { key in
+                            return (account.id, key)
+                        }
+                    }
+                    return combineLatest(keys)
+                    |> map { keys -> AccountRecordId? in
+                        for idAndKey in keys {
+                            if let (id, key) = idAndKey, key.id == notificationKeyId {
+                                return id
+                            }
+                        }
+                        return nil
+                    }
+                }
+            }
+        } else if let userId = notification.request.content.userInfo["userId"] as? Int {
+            return sharedContext
+            |> take(1)
+            |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in
+                return sharedContext.sharedContext.activeAccounts
+                |> take(1)
+                |> map { _, accounts, _ -> AccountRecordId? in
+                    for (_, account, _) in accounts {
+                        if Int(account.peerId.id) == userId {
+                            return account.id
+                        }
+                    }
+                    return nil
+                }
+            }
+        } else {
+            return .single(nil)
+        }
     }
 }
 

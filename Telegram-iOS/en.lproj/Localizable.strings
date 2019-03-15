@@ -4074,3 +4074,5 @@ Unused sets are archived when you add more.";
 "Privacy.Forwards.CustomHelp" = "You can restrict who can forward your messages with granular precision.";
 "Privacy.Forwards.AlwaysAllow.Title" = "Always Allow";
 "Privacy.Forwards.NeverAllow.Title" = "Never Allow";
+
+"Chat.ForwardHiddenAccount" = "%@ hid their account.";

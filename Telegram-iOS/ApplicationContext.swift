@@ -712,10 +712,10 @@ final class AuthorizedApplicationContext {
         })
        
         let importableContacts = self.context.sharedContext.contactDataManager?.importable() ?? .single([:])
-        self.context.account.importableContacts.set(self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings])
-        |> mapToSignal { sharedData -> Signal<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData], NoError> in
-            let settings: ContactSynchronizationSettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings) ?? .defaultSettings
-            if settings.synchronizeDeviceContacts {
+        self.context.account.importableContacts.set(self.context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings])
+        |> mapToSignal { preferences -> Signal<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData], NoError> in
+            let settings: ContactsSettings = (preferences.values[PreferencesKeys.contactsSettings] as? ContactsSettings) ?? .defaultSettings
+            if settings.synchronizeContacts {
                 return importableContacts
             } else {
                 return .single([:])
