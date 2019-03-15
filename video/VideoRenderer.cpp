@@ -13,7 +13,7 @@
 std::vector<uint32_t> tgvoip::video::VideoRenderer::GetAvailableDecoders(){
 #ifdef __ANDROID__
 	return VideoRendererAndroid::availableDecoders;
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) && !defined(TARGET_OSX32)
 	return SampleBufferDisplayLayerRenderer::GetAvailableDecoders();
 #endif
 	return std::vector<uint32_t>();
