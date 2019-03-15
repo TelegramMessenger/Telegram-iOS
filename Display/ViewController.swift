@@ -327,6 +327,10 @@ open class ViewControllerPresentationArguments {
         }
     }
     
+    open func updateToInterfaceOrientation(_ orientation: UIInterfaceOrientation) {
+        
+    }
+    
     public func setDisplayNavigationBar(_ displayNavigationBar: Bool, transition: ContainedViewLayoutTransition = .immediate) {
         if displayNavigationBar != self.displayNavigationBar {
             self.displayNavigationBar = displayNavigationBar

@@ -14,6 +14,7 @@ public protocol ContainableController: class {
     var deferScreenEdgeGestures: UIRectEdge { get }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition)
+    func updateToInterfaceOrientation(_ orientation: UIInterfaceOrientation)
     
     func viewWillAppear(_ animated: Bool)
     func viewWillDisappear(_ animated: Bool)

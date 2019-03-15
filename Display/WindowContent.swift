@@ -220,7 +220,7 @@ public final class WindowHostView {
     var presentNative: ((UIViewController) -> Void)?
     var updateSize: ((CGSize, Double) -> Void)?
     var layoutSubviews: (() -> Void)?
-    var updateToInterfaceOrientation: (() -> Void)?
+    var updateToInterfaceOrientation: ((UIInterfaceOrientation) -> Void)?
     var isUpdatingOrientationLayout = false
     var hitTest: ((CGPoint, UIEvent?) -> UIView?)?
     var invalidateDeferScreenEdgeGesture: (() -> Void)?
@@ -398,8 +398,8 @@ public class Window1 {
             self?.layoutSubviews()
         }
         
-        self.hostView.updateToInterfaceOrientation = { [weak self] in
-            self?.updateToInterfaceOrientation()
+        self.hostView.updateToInterfaceOrientation = { [weak self] orientation in
+            self?.updateToInterfaceOrientation(orientation)
         }
         
         self.hostView.hitTest = { [weak self] point, event in
@@ -844,11 +844,18 @@ public class Window1 {
     
     var postUpdateToInterfaceOrientationBlocks: [() -> Void] = []
     
-    private func updateToInterfaceOrientation() {
+    private func updateToInterfaceOrientation(_ orientation: UIInterfaceOrientation) {
         let blocks = self.postUpdateToInterfaceOrientationBlocks
         self.postUpdateToInterfaceOrientationBlocks = []
         for f in blocks {
             f()
+        }
+        self._rootController?.updateToInterfaceOrientation(orientation)
+        self.presentationContext.updateToInterfaceOrientation(orientation)
+        self.overlayPresentationContext.updateToInterfaceOrientation(orientation)
+        
+        for controller in self.topLevelOverlayControllers {
+            controller.updateToInterfaceOrientation(orientation)
         }
     }
     

@@ -286,6 +286,14 @@ final class PresentationContext {
         return nil
     }
     
+    func updateToInterfaceOrientation(_ orientation: UIInterfaceOrientation) {
+        if self.ready {
+            for (controller, _) in self.controllers {
+                controller.updateToInterfaceOrientation(orientation)
+            }
+        }
+    }
+    
     func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
         var mask = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
         

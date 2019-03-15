@@ -13,15 +13,15 @@ private final class ContextMenuContainerMaskView: UIView {
     }
 }
 
-final class ContextMenuContainerNode: ASDisplayNode {
+public final class ContextMenuContainerNode: ASDisplayNode {
     private var cachedMaskParams: CachedMaskParams?
     private let maskView = ContextMenuContainerMaskView()
     
-    var relativeArrowPosition: (CGFloat, Bool)?
+    public var relativeArrowPosition: (CGFloat, Bool)?
     
     //private let effectView: UIVisualEffectView
     
-    override init() {
+    override public init() {
         //self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
         
         super.init()
@@ -32,19 +32,19 @@ final class ContextMenuContainerNode: ASDisplayNode {
         self.view.mask = self.maskView
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.layer.allowsGroupOpacity = true
     }
     
-    override func layout() {
+    override public func layout() {
         super.layout()
         
         self.updateLayout(transition: .immediate)
     }
     
-    func updateLayout(transition: ContainedViewLayoutTransition) {
+    public func updateLayout(transition: ContainedViewLayoutTransition) {
         //self.effectView.frame = self.bounds
         
         let maskParams = CachedMaskParams(size: self.bounds.size, relativeArrowPosition: self.relativeArrowPosition?.0 ?? self.bounds.size.width / 2.0, arrowOnBottom: self.relativeArrowPosition?.1 ?? true)
@@ -58,23 +58,23 @@ final class ContextMenuContainerNode: ASDisplayNode {
             let arrowOnBottom = maskParams.arrowOnBottom
             
             path.move(to: CGPoint(x: 0.0, y: verticalInset + cornerRadius))
-            path.addArc(withCenter: CGPoint(x: cornerRadius, y: verticalInset + cornerRadius), radius: cornerRadius, startAngle: CGFloat.pi, endAngle: CGFloat(3 * M_PI / 2), clockwise: true)
+            path.addArc(withCenter: CGPoint(x: cornerRadius, y: verticalInset + cornerRadius), radius: cornerRadius, startAngle: CGFloat.pi, endAngle: CGFloat(3.0 * CGFloat.pi / 2.0), clockwise: true)
             if !arrowOnBottom {
                 path.addLine(to: CGPoint(x: arrowPosition - arrowWidth / 2.0, y: verticalInset))
                 path.addLine(to: CGPoint(x: arrowPosition, y: 0.0))
                 path.addLine(to: CGPoint(x: arrowPosition + arrowWidth / 2.0, y: verticalInset))
             }
             path.addLine(to: CGPoint(x: maskParams.size.width - cornerRadius, y: verticalInset))
-            path.addArc(withCenter: CGPoint(x: maskParams.size.width - cornerRadius, y: verticalInset + cornerRadius), radius: cornerRadius, startAngle: CGFloat(3 * M_PI / 2), endAngle: 0.0, clockwise: true)
+            path.addArc(withCenter: CGPoint(x: maskParams.size.width - cornerRadius, y: verticalInset + cornerRadius), radius: cornerRadius, startAngle: CGFloat(3.0 * CGFloat.pi / 2.0), endAngle: 0.0, clockwise: true)
             path.addLine(to: CGPoint(x: maskParams.size.width, y: maskParams.size.height - cornerRadius - verticalInset))
-            path.addArc(withCenter: CGPoint(x: maskParams.size.width - cornerRadius, y: maskParams.size.height - cornerRadius - verticalInset), radius: cornerRadius, startAngle: 0.0, endAngle: CGFloat(M_PI / 2.0), clockwise: true)
+            path.addArc(withCenter: CGPoint(x: maskParams.size.width - cornerRadius, y: maskParams.size.height - cornerRadius - verticalInset), radius: cornerRadius, startAngle: 0.0, endAngle: CGFloat(CGFloat.pi / 2.0), clockwise: true)
             if arrowOnBottom {
                 path.addLine(to: CGPoint(x: arrowPosition + arrowWidth / 2.0, y: maskParams.size.height - verticalInset))
                 path.addLine(to: CGPoint(x: arrowPosition, y: maskParams.size.height))
                 path.addLine(to: CGPoint(x: arrowPosition - arrowWidth / 2.0, y: maskParams.size.height - verticalInset))
             }
             path.addLine(to: CGPoint(x: cornerRadius, y: maskParams.size.height - verticalInset))
-            path.addArc(withCenter: CGPoint(x: cornerRadius, y: maskParams.size.height - cornerRadius - verticalInset), radius: cornerRadius, startAngle: CGFloat(M_PI / 2.0), endAngle: CGFloat(M_PI), clockwise: true)
+            path.addArc(withCenter: CGPoint(x: cornerRadius, y: maskParams.size.height - cornerRadius - verticalInset), radius: cornerRadius, startAngle: CGFloat(CGFloat.pi / 2.0), endAngle: CGFloat(M_PI), clockwise: true)
             path.close()
             
             self.cachedMaskParams = maskParams
