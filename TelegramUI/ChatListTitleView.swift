@@ -12,7 +12,7 @@ struct NetworkStatusTitle: Equatable {
     let isManuallyLocked: Bool
 }
 
-final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBarTitleTransitionNode {
+final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitleTransitionNode {
     private let titleNode: ImmediateTextNode
     private let lockView: ChatListTitleLockView
     private let activityIndicator: ActivityIndicator
@@ -26,7 +26,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
         didSet {
             if self.title != oldValue {
                 self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
-                self.accessibilityLabel = self.title.text
+                self.buttonView.accessibilityLabel = self.title.text
                 self.activityIndicator.isHidden = !self.title.activity
                 if self.title.connectsViaProxy {
                     self.proxyNode.status = self.title.activity ? .connecting : .connected
@@ -93,13 +93,18 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
         self.proxyNode.isHidden = true
         
         self.buttonView = HighlightTrackingButton()
+        self.buttonView.isAccessibilityElement = true
+        self.buttonView.accessibilityTraits = UIAccessibilityTraitHeader
+        
         self.proxyButton = HighlightTrackingButton()
         self.proxyButton.isHidden = true
+        self.proxyButton.isAccessibilityElement = true
+        self.proxyButton.accessibilityLabel = "Proxy Settings"
+        self.proxyButton.accessibilityTraits = UIAccessibilityTraitButton
         
         super.init(frame: CGRect())
         
-        self.isAccessibilityElement = true
-        self.accessibilityTraits = UIAccessibilityTraitHeader
+        self.isAccessibilityElement = false
         
         self.addSubnode(self.activityIndicator)
         self.addSubnode(self.titleNode)
@@ -195,7 +200,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
         self.proxyButton.frame = proxyFrame.insetBy(dx: -2.0, dy: -2.0)
         
         let buttonX = max(0.0, titleFrame.minX - 10.0)
-        self.buttonView.frame = CGRect(origin: CGPoint(x: buttonX, y: 0.0), size: CGSize(width: min(titleFrame.maxX + 28.0, size.width) - buttonX, height: titleFrame.maxY))
+        self.buttonView.frame = CGRect(origin: CGPoint(x: buttonX, y: 0.0), size: CGSize(width: min(titleFrame.maxX + 28.0, size.width) - buttonX, height: size.height))
         
         self.lockView.frame = CGRect(x: titleFrame.maxX + 6.0, y: titleFrame.minY + 3.0, width: 2.0, height: 2.0)
         
@@ -211,7 +216,7 @@ final class NetworkStatusTitleView: UIView, NavigationBarTitleView, NavigationBa
     }
     
     func makeTransitionMirrorNode() -> ASDisplayNode {
-        let view = NetworkStatusTitleView(theme: self.theme)
+        let view = ChatListTitleView(theme: self.theme)
         view.title = self.title
         
         return ASDisplayNode(viewBlock: {

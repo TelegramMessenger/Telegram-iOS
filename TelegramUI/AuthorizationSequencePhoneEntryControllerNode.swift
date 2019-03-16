@@ -171,6 +171,11 @@ private final class ContactSyncNode: ASDisplayNode {
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.attributedText = NSAttributedString(string: strings.Privacy_ContactsSync, font: Font.regular(17.0), textColor: theme.list.itemPrimaryTextColor)
         self.switchNode = SwitchNode()
+        self.switchNode.frameColor = theme.list.itemSwitchColors.frameColor
+        self.switchNode.contentColor = theme.list.itemSwitchColors.contentColor
+        self.switchNode.handleColor = theme.list.itemSwitchColors.handleColor
+        self.switchNode.positiveContentColor = theme.list.itemSwitchColors.positiveColor
+        self.switchNode.negativeContentColor = theme.list.itemSwitchColors.negativeColor
         self.switchNode.isOn = true
         
         super.init()

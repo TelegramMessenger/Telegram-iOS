@@ -84,6 +84,8 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
+        self.isAccessibilityElement = true
+        
         self.addSubnode(self.titleNode)
         self.addSubnode(self.accessoryTextNode)
     }
@@ -128,6 +130,8 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     let _ = titleApply()
                     let _ = accessoryApply()
+                    
+                    strongSelf.accessibilityLabel = item.text
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 7.0), size: titleLayout.size)
                     strongSelf.accessoryTextNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - accessoryLayout.size.width, y: 7.0), size: accessoryLayout.size)

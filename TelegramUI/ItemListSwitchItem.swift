@@ -314,6 +314,23 @@ class ItemListSwitchItemNode: ListViewItemNode {
         }
     }
     
+    override func accessibilityActivate() -> Bool {
+        guard let item = self.item else {
+            return false
+        }
+        if !item.enabled {
+            return false
+        }
+        if let switchNode = self.switchNode as? IconSwitchNode {
+            switchNode.isOn = !switchNode.isOn
+            item.updated(switchNode.isOn)
+        } else if let switchNode = self.switchNode as? SwitchNode {
+            switchNode.isOn = !switchNode.isOn
+            item.updated(switchNode.isOn)
+        }
+        return true
+    }
+    
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }

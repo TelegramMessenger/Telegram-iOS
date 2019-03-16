@@ -855,7 +855,7 @@
 		D0EC6D751EB9F58800EBF1C3 /* TelegramRootController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05174C21EAE583800A1BF36 /* TelegramRootController.swift */; };
 		D0EC6D761EB9F58800EBF1C3 /* ChatListController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DF81D6B8A880046BCD6 /* ChatListController.swift */; };
 		D0EC6D771EB9F58800EBF1C3 /* ChatListControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69DF91D6B8A880046BCD6 /* ChatListControllerNode.swift */; };
-		D0EC6D781EB9F58800EBF1C3 /* NetworkStatusTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01749611E11DB240057C89A /* NetworkStatusTitleView.swift */; };
+		D0EC6D781EB9F58800EBF1C3 /* ChatListTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01749611E11DB240057C89A /* ChatListTitleView.swift */; };
 		D0EC6D791EB9F58800EBF1C3 /* ChatListTitleLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0575AEA1E9FD579006F2541 /* ChatListTitleLockView.swift */; };
 		D0EC6D7A1EB9F58800EBF1C3 /* ChatListSearchContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E071D6B8A9C0046BCD6 /* ChatListSearchContainerNode.swift */; };
 		D0EC6D7B1EB9F58800EBF1C3 /* ChatListRecentPeersListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAED1E44BB3200A2CD3A /* ChatListRecentPeersListItem.swift */; };
@@ -1378,7 +1378,7 @@
 		D01749521E1068820057C89A /* HashtagSearchControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HashtagSearchControllerNode.swift; sourceTree = "<group>"; };
 		D01749541E1082770057C89A /* StoredMessageFromSearchPeer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StoredMessageFromSearchPeer.swift; sourceTree = "<group>"; };
 		D01749561E1087CC0057C89A /* ChatBotStartInputPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatBotStartInputPanelNode.swift; sourceTree = "<group>"; };
-		D01749611E11DB240057C89A /* NetworkStatusTitleView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkStatusTitleView.swift; sourceTree = "<group>"; };
+		D01749611E11DB240057C89A /* ChatListTitleView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListTitleView.swift; sourceTree = "<group>"; };
 		D017734B22049BF800DA06A7 /* UpgradedAccounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpgradedAccounts.swift; sourceTree = "<group>"; };
 		D01776B21F1D69A80044446D /* RadialStatusNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RadialStatusNode.swift; sourceTree = "<group>"; };
 		D01776B41F1D6CCC0044446D /* RadialStatusContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RadialStatusContentNode.swift; sourceTree = "<group>"; };
@@ -4493,7 +4493,7 @@
 			children = (
 				D0F69DF81D6B8A880046BCD6 /* ChatListController.swift */,
 				D0F69DF91D6B8A880046BCD6 /* ChatListControllerNode.swift */,
-				D01749611E11DB240057C89A /* NetworkStatusTitleView.swift */,
+				D01749611E11DB240057C89A /* ChatListTitleView.swift */,
 				D0575AEA1E9FD579006F2541 /* ChatListTitleLockView.swift */,
 				D07E413A208A432100FCA8F0 /* ChatListTitleProxyNode.swift */,
 				D06E4C302134910400088087 /* ChatListEmptyNode.swift */,
@@ -5628,7 +5628,7 @@
 				D0EC6D751EB9F58800EBF1C3 /* TelegramRootController.swift in Sources */,
 				D0EC6D761EB9F58800EBF1C3 /* ChatListController.swift in Sources */,
 				D0EC6D771EB9F58800EBF1C3 /* ChatListControllerNode.swift in Sources */,
-				D0EC6D781EB9F58800EBF1C3 /* NetworkStatusTitleView.swift in Sources */,
+				D0EC6D781EB9F58800EBF1C3 /* ChatListTitleView.swift in Sources */,
 				D048EA8D1F4F299A00188713 /* InstantPageSettingsSwitchItemNode.swift in Sources */,
 				D0E9B9F41F018A6700F079A4 /* BotCheckoutPaymentMethodSheet.swift in Sources */,
 				D0F6800A1EE750EE000E5906 /* ChannelBannedMemberController.swift in Sources */,

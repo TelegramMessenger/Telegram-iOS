@@ -23,7 +23,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         return super.displayNode as! ChatListControllerNode
     }
     
-    private let titleView: NetworkStatusTitleView
+    private let titleView: ChatListTitleView
     private var proxyUnavailableTooltipController: TooltipController?
     private var didShowProxyUnavailableTooltipController = false
     
@@ -59,7 +59,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         self.presentationData = (context.sharedContext.currentPresentationData.with { $0 })
         self.presentationDataValue.set(.single(self.presentationData))
         
-        self.titleView = NetworkStatusTitleView(theme: self.presentationData.theme)
+        self.titleView = ChatListTitleView(theme: self.presentationData.theme)
         
         super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary)
         
