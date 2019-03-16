@@ -169,7 +169,7 @@ private final class NativeWindow: UIWindow, WindowHost {
     var updateSize: ((CGSize) -> Void)?
     var layoutSubviewsEvent: (() -> Void)?
     var updateIsUpdatingOrientationLayout: ((Bool) -> Void)?
-    var updateToInterfaceOrientation: (() -> Void)?
+    var updateToInterfaceOrientation: ((UIInterfaceOrientation) -> Void)?
     var presentController: ((ContainableController, PresentationSurfaceLevel, Bool, @escaping () -> Void) -> Void)?
     var presentControllerInGlobalOverlay: ((_ controller: ContainableController) -> Void)?
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
@@ -246,7 +246,8 @@ private final class NativeWindow: UIWindow, WindowHost {
         super._update(toInterfaceOrientation: arg1, duration: arg2, force: arg3)
         self.updateIsUpdatingOrientationLayout?(false)
         
-        self.updateToInterfaceOrientation?()
+        let orientation = UIInterfaceOrientation(rawValue: Int(arg1)) ?? .unknown
+        self.updateToInterfaceOrientation?(orientation)
     }
     
     func present(_ controller: ContainableController, on level: PresentationSurfaceLevel, blockInteraction: Bool, completion: @escaping () -> Void) {
@@ -316,8 +317,8 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
         hostView?.isUpdatingOrientationLayout = value
     }
     
-    window.updateToInterfaceOrientation = { [weak hostView] in
-        hostView?.updateToInterfaceOrientation?()
+    window.updateToInterfaceOrientation = { [weak hostView] orientation in
+        hostView?.updateToInterfaceOrientation?(orientation)
     }
     
     window.presentController = { [weak hostView] controller, level, blockInteraction, completion in

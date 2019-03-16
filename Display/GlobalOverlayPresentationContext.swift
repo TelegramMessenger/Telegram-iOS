@@ -158,6 +158,14 @@ final class GlobalOverlayPresentationContext {
         return nil
     }
     
+    func updateToInterfaceOrientation(_ orientation: UIInterfaceOrientation) {
+        if self.ready {
+            for controller in self.controllers {
+                controller.updateToInterfaceOrientation(orientation)
+            }
+        }
+    }
+    
     func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
         var mask = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
         

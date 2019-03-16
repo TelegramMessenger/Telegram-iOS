@@ -74,16 +74,18 @@ public final class TooltipController: ViewController {
     
     private let timeout: Double
     private let dismissByTapOutside: Bool
+    private let dismissImmediatelyOnLayoutUpdate: Bool
     private var timeoutTimer: SwiftSignalKit.Timer?
     
     private var layout: ContainerViewLayout?
     
     public var dismissed: (() -> Void)?
     
-    public init(content: TooltipControllerContent, timeout: Double = 2.0, dismissByTapOutside: Bool = false) {
+    public init(content: TooltipControllerContent, timeout: Double = 2.0, dismissByTapOutside: Bool = false, dismissImmediatelyOnLayoutUpdate: Bool = false) {
         self.content = content
         self.timeout = timeout
         self.dismissByTapOutside = dismissByTapOutside
+        self.dismissImmediatelyOnLayoutUpdate = dismissImmediatelyOnLayoutUpdate
         
         super.init(navigationBarPresentationData: nil)
     }
@@ -114,9 +116,10 @@ public final class TooltipController: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         if self.layout != nil && self.layout! != layout {
-            self.dismissed?()
-            self.controllerNode.animateOut { [weak self] in
-                self?.presentingViewController?.dismiss(animated: false)
+            if self.dismissImmediatelyOnLayoutUpdate {
+                self.dismissImmediately()
+            } else {
+                self.dismiss()
             }
         } else {
             self.layout = layout
@@ -159,5 +162,10 @@ public final class TooltipController: ViewController {
             self?.presentingViewController?.dismiss(animated: false)
             completion?()
         }
+    }
+    
+    public func dismissImmediately() {
+        self.dismissed?()
+        self.presentingViewController?.dismiss(animated: false)
     }
 }

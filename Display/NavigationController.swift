@@ -599,6 +599,14 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
     }
     
+    public func updateToInterfaceOrientation(_ orientation: UIInterfaceOrientation) {
+        for record in self._viewControllers {
+            if let controller = record.controller as? ContainableController {
+                controller.updateToInterfaceOrientation(orientation)
+            }
+        }
+    }
+    
     open override func loadView() {
         self._displayNode = ASDisplayNode(viewBlock: {
             return NavigationControllerView()
