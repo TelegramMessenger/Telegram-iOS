@@ -293,12 +293,15 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecog
         self.navigationBar?.alpha = 0.0
         self.footerNode.alpha = 0.0
         self.currentThumbnailContainerNode?.alpha = 0.0
+        
         UIView.animate(withDuration: 0.2, animations: {
             self.backgroundNode.backgroundColor = self.backgroundNode.backgroundColor?.withAlphaComponent(1.0)
-            self.statusBar?.alpha = 1.0
-            self.navigationBar?.alpha = 1.0
-            self.footerNode.alpha = 1.0
-            self.updateThumbnailContainerNodeAlpha(.immediate)
+            if !self.areControlsHidden {
+                self.statusBar?.alpha = 1.0
+                self.navigationBar?.alpha = 1.0
+                self.footerNode.alpha = 1.0
+                self.updateThumbnailContainerNodeAlpha(.immediate)
+            }
         })
         
         if animateContent {

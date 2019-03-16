@@ -542,7 +542,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && !isAction {
-            actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .destructive, title: chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete, action: {
+            let title = message.flags.isSending ? chatPresentationInterfaceState.strings.Conversation_ContextMenuCancelSending : chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete
+            actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .destructive, title: title, action: {
                 interfaceInteraction.deleteMessages(selectAll ? messages : [message])
             })))
         }
@@ -568,6 +569,7 @@ struct ChatAvailableMessageActionOptions: OptionSet {
     static let report = ChatAvailableMessageActionOptions(rawValue: 1 << 3)
     static let viewStickerPack = ChatAvailableMessageActionOptions(rawValue: 1 << 4)
     static let rateCall = ChatAvailableMessageActionOptions(rawValue: 1 << 5)
+    static let cancelSending = ChatAvailableMessageActionOptions(rawValue: 1 << 6)
 }
 
 struct ChatAvailableMessageActions {

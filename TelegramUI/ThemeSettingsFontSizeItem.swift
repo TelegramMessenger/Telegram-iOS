@@ -11,12 +11,14 @@ class ThemeSettingsFontSizeItem: ListViewItem, ItemListItem {
     let fontSize: PresentationFontSize
     let sectionId: ItemListSectionId
     let updated: (PresentationFontSize) -> Void
+    let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, fontSize: PresentationFontSize, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void) {
+    init(theme: PresentationTheme, fontSize: PresentationFontSize, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.fontSize = fontSize
         self.sectionId = sectionId
         self.updated = updated
+        self.tag = tag
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -73,6 +75,10 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode {
     
     private var item: ThemeSettingsFontSizeItem?
     private var layoutParams: ListViewItemLayoutParams?
+    
+    var tag: Any? {
+        return self.item?.tag
+    }
     
     init() {
         self.backgroundNode = ASDisplayNode()

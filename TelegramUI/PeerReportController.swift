@@ -255,7 +255,7 @@ private func peerReportController(context: AccountContext, subject: PeerReportSu
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ReportPeer_ReasonOther_Title), leftNavigationButton: ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
             }), rightNavigationButton: rightButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: peerReportControllerEntries(presentationData: presentationData, state: state), style: .blocks,  focusItemTag: PeerReportControllerEntryTag.text)
+            let listState = ItemListNodeState(entries: peerReportControllerEntries(presentationData: presentationData, state: state), style: .blocks, focusItemTag: PeerReportControllerEntryTag.text)
             
             return (controllerState, (listState, arguments))
     }

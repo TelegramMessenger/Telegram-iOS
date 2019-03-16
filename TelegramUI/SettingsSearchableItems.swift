@@ -73,17 +73,17 @@ private func stickerSearchableItems(context: AccountContext) -> [SettingsSearcha
     let icon: SettingsSearchableItemIcon = .stickers
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
-    let presentStickerSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void) -> Void = { context, present in
+    let presentStickerSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void, InstalledStickerPacksEntryTag?) -> Void = { context, present, itemTag in
         present(.push, installedStickerPacksController(context: context, mode: .general, archivedPacks: nil, updatedPacks: { _ in
-        }))
+        }, focusOnItemTag: itemTag))
     }
     
     return [
         SettingsSearchableItem(id: .stickers(0), title: strings.ChatSettings_Stickers, alternate: [], icon: icon, breadcrumbs: [], present: { context, present in
-            presentStickerSettings(context, present)
+            presentStickerSettings(context, present, nil)
         }),
         SettingsSearchableItem(id: .stickers(1), title: strings.Stickers_SuggestStickers, alternate: [], icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, present in
-            presentStickerSettings(context, present)
+            presentStickerSettings(context, present, .suggestOptions)
         }),
         SettingsSearchableItem(id: .stickers(2), title: strings.StickerPacksSettings_FeaturedPacks, alternate: [], icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, present in
             present(.push, featuredStickerPacksController(context: context))
@@ -106,70 +106,70 @@ private func notificationSearchableItems(context: AccountContext, notifyExceptio
     let icon: SettingsSearchableItemIcon = .notifications
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
-    let presentNotificationSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void) -> Void = { context, present in
-        present(.push, notificationsAndSoundsController(context: context, exceptionsList: nil))
+    let presentNotificationSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void, NotificationsAndSoundsEntryTag?) -> Void = { context, present, itemTag in
+        present(.push, notificationsAndSoundsController(context: context, exceptionsList: nil, focusOnItemTag: itemTag))
     }
     
     return [
         SettingsSearchableItem(id: .notifications(0), title: strings.Settings_NotificationsAndSounds, alternate: [], icon: icon, breadcrumbs: [], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, nil)
         }),
         SettingsSearchableItem(id: .notifications(1), title: strings.Notifications_MessageNotificationsAlert, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_MessageNotifications.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .messageAlerts)
         }),
         SettingsSearchableItem(id: .notifications(2), title: strings.Notifications_MessageNotificationsPreview, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_MessageNotifications.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .messagePreviews)
         }),
         SettingsSearchableItem(id: .notifications(3), title: strings.Notifications_MessageNotificationsSound, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_MessageNotifications.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, nil)
         }),
         SettingsSearchableItem(id: .notifications(4), title: strings.Notifications_GroupNotificationsAlert, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_GroupNotifications.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .groupAlerts)
         }),
         SettingsSearchableItem(id: .notifications(5), title: strings.Notifications_GroupNotificationsPreview, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_GroupNotifications.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .groupPreviews)
         }),
         SettingsSearchableItem(id: .notifications(6), title: strings.Notifications_GroupNotificationsSound, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_GroupNotifications.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, nil)
         }),
         SettingsSearchableItem(id: .notifications(7), title: strings.Notifications_ChannelNotificationsAlert, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_ChannelNotifications.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .channelAlerts)
         }),
         SettingsSearchableItem(id: .notifications(8), title: strings.Notifications_ChannelNotificationsPreview, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_ChannelNotifications.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .channelPreviews)
         }),
         SettingsSearchableItem(id: .notifications(9), title: strings.Notifications_ChannelNotificationsSound, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_ChannelNotifications.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, nil)
         }),
         SettingsSearchableItem(id: .notifications(10), title: strings.Notifications_InAppNotificationsSounds, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_InAppNotifications.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .inAppSounds)
         }),
         SettingsSearchableItem(id: .notifications(11), title: strings.Notifications_InAppNotificationsVibrate, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_InAppNotifications.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .inAppVibrate)
         }),
         SettingsSearchableItem(id: .notifications(12), title: strings.Notifications_InAppNotificationsPreview, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_InAppNotifications.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .inAppPreviews)
         }),
         SettingsSearchableItem(id: .notifications(13), title: strings.Notifications_DisplayNamesOnLockScreen, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .displayNamesOnLockscreen)
         }),
         SettingsSearchableItem(id: .notifications(14), title: strings.Notifications_Badge_IncludeMutedChats, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_Badge.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .unreadCountStyle)
         }),
         SettingsSearchableItem(id: .notifications(15), title: strings.Notifications_Badge_IncludePublicGroups, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_Badge.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .includePublicGroups)
         }),
         SettingsSearchableItem(id: .notifications(16), title: strings.Notifications_Badge_IncludeChannels, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_Badge.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .includeChannels)
         }),
         SettingsSearchableItem(id: .notifications(17), title: strings.Notifications_Badge_CountUnreadMessages, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_Badge.capitalized], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .unreadCountCategory)
         }),
         SettingsSearchableItem(id: .notifications(18), title: strings.NotificationSettings_ContactJoined, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .joinedNotifications)
         }),
         SettingsSearchableItem(id: .notifications(19), title: strings.Notifications_ResetAllNotifications, alternate: [], icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds], present: { context, present in
-            presentNotificationSettings(context, present)
+            presentNotificationSettings(context, present, .reset)
         })
     ]
 }
@@ -179,7 +179,7 @@ private func privacySearchableItems(context: AccountContext) -> [SettingsSearcha
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
     let presentPrivacySettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void) -> Void = { context, present in
-        present(.push, privacyAndSecurityController(context: context, initialSettings: .single(nil) |> then(requestAccountPrivacySettings(account: context.account) |> map(Optional.init))))
+        present(.push, privacyAndSecurityController(context: context))
     }
     
     let presentSelectivePrivacySettings: (AccountContext, SelectivePrivacySettingsKind, @escaping (SettingsSearchableItemPresentation, ViewController) -> Void) -> Void = { context, kind, present in
@@ -199,42 +199,32 @@ private func privacySearchableItems(context: AccountContext) -> [SettingsSearcha
 
         let _ = (combineLatest(privacySignal, callsSignal)
         |> deliverOnMainQueue).start(next: { info, callSettings in
-//            if let info = info {
-                let current: SelectivePrivacySettings
-                switch kind {
-                    case .presence:
-                        current = info.presence
-                    case .groupInvitations:
-                        current = info.groupInvitations
-                    case .voiceCalls:
-                        current = info.voiceCalls
-                    case .profilePhoto:
-                        current = info.voiceCalls
-                    case .forwards:
-                        current = info.voiceCalls
-                }
+            let current: SelectivePrivacySettings
+            switch kind {
+                case .presence:
+                    current = info.presence
+                case .groupInvitations:
+                    current = info.groupInvitations
+                case .voiceCalls:
+                    current = info.voiceCalls
+                case .profilePhoto:
+                    current = info.voiceCalls
+                case .forwards:
+                    current = info.voiceCalls
+            }
 
             present(.push, selectivePrivacySettingsController(context: context, kind: kind, current: current, callSettings: callSettings != nil ? (info.voiceCallsP2P, callSettings!.0) : nil, voipConfiguration: callSettings?.1, callIntegrationAvailable: CallKitIntegration.isAvailable, updated: { updated, updatedCallSettings in
-                    if let (updatedCallsPrivacy, updatedCallSettings) = updatedCallSettings  {
+                    if let (_, updatedCallSettings) = updatedCallSettings  {
                         let _ = updateVoiceCallSettingsSettingsInteractively(accountManager: context.sharedContext.accountManager, { _ in
                             return updatedCallSettings
                         }).start()
-                        
-//                        let applySettings: Signal<Void, NoError> = privacySettingsPromise.get()
-//                        |> filter { $0 != nil }
-//                        |> take(1)
-//                        |> deliverOnMainQueue
-//                        |> mapToSignal { value -> Signal<Void, NoError> in
-//                            if let value = value {
-//                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: updated, voiceCallsP2P: updatedCallsPrivacy, accountRemovalTimeout: value.accountRemovalTimeout)))
-//                            }
-//                            return .complete()
-//                        }
-//                        let _ = applySettings.start()
                     }
                 }))
-//            }
         })
+    }
+    
+    let presentDataPrivacySettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void) -> Void = { context, present in
+        present(.push, dataPrivacyController(context: context))
     }
     
     let passcodeTitle: String
@@ -295,7 +285,26 @@ private func privacySearchableItems(context: AccountContext) -> [SettingsSearcha
             presentPrivacySettings(context, present)
         }),
         SettingsSearchableItem(id: .privacy(11), title: strings.PrivacySettings_DataSettings, alternate: [], icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, present in
-            present(.push, dataPrivacyController(context: context))
+            presentDataPrivacySettings(context, present)
+        }),
+        
+        SettingsSearchableItem(id: .privacy(12), title: strings.Privacy_ContactsReset, alternate: [], icon: icon, breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings], present: { context, present in
+            presentDataPrivacySettings(context, present)
+        }),
+        SettingsSearchableItem(id: .privacy(13), title: strings.Privacy_ContactsSync, alternate: [], icon: icon, breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings], present: { context, present in
+            presentDataPrivacySettings(context, present)
+        }),
+        SettingsSearchableItem(id: .privacy(14), title: strings.Privacy_TopPeers, alternate: [], icon: icon, breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings], present: { context, present in
+            presentDataPrivacySettings(context, present)
+        }),
+        SettingsSearchableItem(id: .privacy(15), title: strings.Privacy_DeleteDrafts, alternate: [], icon: icon, breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings], present: { context, present in
+            presentDataPrivacySettings(context, present)
+        }),
+        SettingsSearchableItem(id: .privacy(16), title: strings.Privacy_PaymentsClearInfo, alternate: [], icon: icon, breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings], present: { context, present in
+            presentDataPrivacySettings(context, present)
+        }),
+        SettingsSearchableItem(id: .privacy(17), title: strings.Privacy_SecretChatsLinkPreviews, alternate: [], icon: icon, breadcrumbs: [strings.Settings_PrivacySettings, strings.PrivacySettings_DataSettings, strings.Privacy_SecretChatsTitle], present: { context, present in
+            presentDataPrivacySettings(context, present)
         })
     ]
 }
@@ -304,13 +313,13 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
     let icon: SettingsSearchableItemIcon = .data
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
-    let presentDataSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void) -> Void = { context, present in
-        present(.push, dataAndStorageController(context: context))
+    let presentDataSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void, DataAndStorageEntryTag?) -> Void = { context, present, itemTag in
+        present(.push, dataAndStorageController(context: context, focusOnItemTag: itemTag))
     }
     
     return [
         SettingsSearchableItem(id: .data(0), title: strings.Settings_ChatSettings, alternate: [], icon: icon, breadcrumbs: [], present: { context, present in
-            presentDataSettings(context, present)
+            presentDataSettings(context, present, nil)
         }),
         SettingsSearchableItem(id: .data(1), title: strings.ChatSettings_Cache, alternate: [], icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, present in
             present(.push, storageUsageController(context: context))
@@ -331,13 +340,13 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
             present(.push, autodownloadMediaConnectionTypeController(context: context, connectionType: .wifi))
         }),
         SettingsSearchableItem(id: .data(7), title: strings.ChatSettings_AutoDownloadReset, alternate: [], icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, present in
-            presentDataSettings(context, present)
+            presentDataSettings(context, present, .automaticDownloadReset)
         }),
-        SettingsSearchableItem(id: .data(8), title: strings.ChatSettings_AutoPlayGifs, alternate: [], icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, present in
-            presentDataSettings(context, present)
+        SettingsSearchableItem(id: .data(8), title: strings.ChatSettings_AutoPlayGifs, alternate: [], icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoPlayTitle], present: { context, present in
+            presentDataSettings(context, present, .autoplayGifs)
         }),
-        SettingsSearchableItem(id: .data(9), title: strings.ChatSettings_AutoPlayVideos, alternate: [], icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, present in
-            presentDataSettings(context, present)
+        SettingsSearchableItem(id: .data(9), title: strings.ChatSettings_AutoPlayVideos, alternate: [], icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoPlayTitle], present: { context, present in
+            presentDataSettings(context, present, .autoplayVideos)
         }),
         SettingsSearchableItem(id: .data(10), title: strings.CallSettings_UseLessData, alternate: [], icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.Settings_CallSettings], present: { context, present in
             present(.push, voiceCallDataSavingController(context: context))
@@ -346,10 +355,10 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
             present(.push, saveIncomingMediaController(context: context))
         }),
         SettingsSearchableItem(id: .data(12), title: strings.Settings_SaveEditedPhotos, alternate: [], icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, present in
-            presentDataSettings(context, present)
+            presentDataSettings(context, present, .saveEditedPhotos)
         }),
         SettingsSearchableItem(id: .data(13), title: strings.ChatSettings_DownloadInBackground, alternate: [], icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, present in
-            presentDataSettings(context, present)
+            presentDataSettings(context, present, .downloadInBackground)
         })
     ]
 }
@@ -379,16 +388,16 @@ private func appearanceSearchableItems(context: AccountContext) -> [SettingsSear
     let icon: SettingsSearchableItemIcon = .appearance
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
-    let presentAppearanceSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void) -> Void = { context, present in
-        present(.push, themeSettingsController(context: context))
+    let presentAppearanceSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void, ThemeSettingsEntryTag?) -> Void = { context, present, itemTag in
+        present(.push, themeSettingsController(context: context, focusOnItemTag: itemTag))
     }
     
     return [
         SettingsSearchableItem(id: .appearance(0), title: strings.Settings_Appearance, alternate: [], icon: icon, breadcrumbs: [], present: { context, present in
-            presentAppearanceSettings(context, present)
+            presentAppearanceSettings(context, present, nil)
         }),
         SettingsSearchableItem(id: .appearance(1), title: strings.Appearance_TextSize.capitalized, alternate: [], icon: icon, breadcrumbs: [strings.Settings_Appearance], present: { context, present in
-            presentAppearanceSettings(context, present)
+            presentAppearanceSettings(context, present, .fontSize)
         }),
         SettingsSearchableItem(id: .appearance(2), title: strings.Settings_ChatBackground, alternate: ["Wallpaper"], icon: icon, breadcrumbs: [strings.Settings_Appearance], present: { context, present in
             present(.push, ThemeGridController(context: context))
@@ -405,10 +414,10 @@ private func appearanceSearchableItems(context: AccountContext) -> [SettingsSear
             present(.push, themeAutoNightSettingsController(context: context))
         }),
         SettingsSearchableItem(id: .appearance(6), title: strings.Appearance_ColorTheme.capitalized, alternate: [], icon: icon, breadcrumbs: [strings.Settings_Appearance], present: { context, present in
-            presentAppearanceSettings(context, present)
+            presentAppearanceSettings(context, present, .accentColor)
         }),
         SettingsSearchableItem(id: .appearance(7), title: strings.Appearance_ReduceMotion, alternate: ["Animations"], icon: icon, breadcrumbs: [strings.Settings_Appearance, strings.Appearance_Animations.capitalized], present: { context, present in
-            presentAppearanceSettings(context, present)
+            presentAppearanceSettings(context, present, .animations)
         }),
     ]
 }
@@ -473,7 +482,7 @@ func settingsSearchableItems(context: AccountContext) -> Signal<[SettingsSearcha
 }
 
 private func stringTokens(_ string: String) -> [ValueBoxKey] {
-    let nsString = string.lowercased() as NSString
+    let nsString = string.folding(options: .diacriticInsensitive, locale: .current).lowercased() as NSString
     
     let flag = UInt(kCFStringTokenizerUnitWord)
     let tokenizer = CFStringTokenizerCreate(kCFAllocatorDefault, nsString, CFRangeMake(0, nsString.length), flag, CFLocaleCopyCurrent())
@@ -535,6 +544,9 @@ func searchSettingsItems(items: [SettingsSearchableItem], query: String) -> [Set
         var string = item.title
         if !item.alternate.isEmpty {
             string += " \(item.alternate.joined(separator: " "))"
+        }
+        if item.breadcrumbs.count > 1 {
+            string += " \(item.breadcrumbs.suffix(from: 1).joined(separator: " "))"
         }
         
         let tokens = stringTokens(string)

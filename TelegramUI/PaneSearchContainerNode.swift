@@ -5,6 +5,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
+private let searchBarHeight: CGFloat = 52.0
+
 protocol PaneSearchContentNode {
     var ready: Signal<Void, NoError> { get }
     var deactivateSearchBar: (() -> Void)? { get set }
@@ -18,7 +20,7 @@ protocol PaneSearchContentNode {
     func animateOut(transition: ContainedViewLayoutTransition)
     
     func updatePreviewing(animated: Bool)
-    func itemAt(point: CGPoint) -> (ASDisplayNode, StickerPreviewPeekItem)?
+    func itemAt(point: CGPoint) -> (ASDisplayNode, Any)?
 }
 
 final class PaneSearchContainerNode: ASDisplayNode {
@@ -92,11 +94,14 @@ final class PaneSearchContainerNode: ASDisplayNode {
         self.searchBar.placeholderString = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: theme.chat.inputMediaPanel.stickersSearchPlaceholderColor)
     }
     
+    func itemAt(point: CGPoint) -> (ASDisplayNode, Any)? {
+        return self.contentNode.itemAt(point: CGPoint(x: point.x, y: point.y - searchBarHeight))
+    }
+    
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         
-        let searchBarHeight: CGFloat = 52.0
         transition.updateFrame(node: self.searchBar, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: searchBarHeight)))
         self.searchBar.updateLayout(boundingSize: CGSize(width: size.width, height: searchBarHeight), leftInset: leftInset, rightInset: rightInset, transition: transition)
         
@@ -138,8 +143,6 @@ final class PaneSearchContainerNode: ASDisplayNode {
         }
         self.searchBar.transitionOut(to: placeholder, transition: transition, completion: {
             completion()
-        })
-        transition.updateAlpha(node: self.searchBar, alpha: 0.0, completion: { _ in
         })
         transition.updateAlpha(node: self.backgroundNode, alpha: 0.0, completion: { _ in
         })

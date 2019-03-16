@@ -508,6 +508,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                     item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                                 } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
                                     item.controllerInteraction.openPeer(id, .chat(textInputState: nil, messageId: nil), nil)
+                                } else if let authorSignature = forwardInfo.authorSignature {
+                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode)
                                 }
                                 return
                             }

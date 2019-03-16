@@ -268,7 +268,7 @@ private func dataPrivacyControllerEntries(presentationData: PresentationData, st
     entries.append(.clearPaymentInfo(presentationData.theme, presentationData.strings.Privacy_PaymentsClearInfo, !state.clearingPaymentInfo))
     entries.append(.paymentInfo(presentationData.theme, presentationData.strings.Privacy_PaymentsClearInfoHelp))
     
-   entries.append(.secretChatLinkPreviewsHeader(presentationData.theme, presentationData.strings.Privacy_SecretChatsTitle))
+    entries.append(.secretChatLinkPreviewsHeader(presentationData.theme, presentationData.strings.Privacy_SecretChatsTitle))
     entries.append(.secretChatLinkPreviews(presentationData.theme, presentationData.strings.Privacy_SecretChatsLinkPreviews, secretChatLinkPreviews ?? true))
     entries.append(.secretChatLinkPreviewsInfo(presentationData.theme, presentationData.strings.Privacy_SecretChatsLinkPreviewsHelp))
     

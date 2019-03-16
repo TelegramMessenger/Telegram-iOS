@@ -134,11 +134,13 @@ private final class MediaPlayerContext {
                         }
                     case .paused:
                         if value {
-                            if strongSelf.enableSound {
-                                strongSelf.continuePlayingWithoutSound()
-                            } else {
-                                strongSelf.play()
-                            }
+                            strongSelf.play()
+//                            if strongSelf.enableSound {
+//                                strongSelf.play()
+//                                //strongSelf.continuePlayingWithoutSound()
+//                            } else {
+//                                strongSelf.play()
+//                            }
                         }
                     case .playing:
                         if !value {
@@ -148,11 +150,12 @@ private final class MediaPlayerContext {
                         switch action {
                             case .pause:
                                 if value {
-                                    if strongSelf.enableSound {
-                                        strongSelf.continuePlayingWithoutSound()
-                                    } else {
-                                        strongSelf.play()
-                                    }
+                                    strongSelf.play()
+//                                    if strongSelf.enableSound {
+//                                        strongSelf.continuePlayingWithoutSound()
+//                                    } else {
+//                                        strongSelf.play()
+//                                    }
                                 }
                             case .play:
                                 if !value {
@@ -489,9 +492,14 @@ private final class MediaPlayerContext {
                     self.seek(timestamp: timestamp, action: action)
             }
             
-            let timestamp: Double
+            var timestamp: Double
             if let loadedState = loadedState, seekToStart == .none {
                 timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
+                if let duration = currentDuration() {
+                    if timestamp > duration - 2.0 {
+                        timestamp = 0.0
+                    }
+                }
             } else {
                 timestamp = 0.0
             }
@@ -626,6 +634,32 @@ private final class MediaPlayerContext {
             case .playing:
                 self.pause(lostAudioSession: false)
         }
+    }
+    
+    private func currentDuration() -> Double? {
+        var maybeLoadedState: MediaPlayerLoadedState?
+        switch self.state {
+            case let .paused(state):
+                maybeLoadedState = state
+            case let .playing(state):
+                maybeLoadedState = state
+            default:
+                break
+        }
+        
+        guard let loadedState = maybeLoadedState else {
+            return nil
+        }
+        
+        var duration: Double = 0.0
+        if let videoTrackFrameBuffer = loadedState.mediaBuffers.videoBuffer {
+            duration = max(duration, CMTimeGetSeconds(videoTrackFrameBuffer.duration))
+        }
+
+        if let audioTrackFrameBuffer = loadedState.mediaBuffers.audioBuffer {
+            duration = max(duration, CMTimeGetSeconds(audioTrackFrameBuffer.duration))
+        }
+        return duration
     }
     
     private func tick() {

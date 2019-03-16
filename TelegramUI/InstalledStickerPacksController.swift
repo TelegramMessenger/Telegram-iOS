@@ -34,6 +34,18 @@ private enum InstalledStickerPacksSection: Int32 {
     case stickers
 }
 
+public enum InstalledStickerPacksEntryTag: ItemListItemTag {
+    case suggestOptions
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? InstalledStickerPacksEntryTag, self == other {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 private enum InstalledStickerPacksEntryId: Hashable {
     case index(Int32)
     case pack(ItemCollectionId)
@@ -234,7 +246,7 @@ private enum InstalledStickerPacksEntry: ItemListNodeEntry {
             case let .suggestOptions(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openSuggestOptions()
-                })
+                }, tag: InstalledStickerPacksEntryTag.suggestOptions)
             case let .trending(theme, text, count):
                 return ItemListDisclosureItem(theme: theme, title: text, label: count == 0 ? "" : "\(count)", labelStyle: .badge(theme.list.itemAccentColor), sectionId: self.section, style: .blocks, action: {
                     arguments.openFeatured()
@@ -380,7 +392,7 @@ public enum InstalledStickerPacksControllerMode {
     case masks
 }
 
-public func installedStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, archivedPacks: [ArchivedStickerPackItem]? = nil, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void = { _ in }) -> ViewController {
+public func installedStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, archivedPacks: [ArchivedStickerPackItem]? = nil, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void = { _ in }, focusOnItemTag: InstalledStickerPacksEntryTag? = nil) -> ViewController {
     let initialState = InstalledStickerPacksControllerState().withUpdatedEditing(mode == .modal)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -577,7 +589,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         
-        let listState = ItemListNodeState(entries: installedStickerPacksControllerEntries(presentationData: presentationData, state: state, mode: mode, view: view, featured: featuredAndArchived.0, archived: featuredAndArchived.1, stickerSettings: stickerSettings), style: .blocks, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
+        let listState = ItemListNodeState(entries: installedStickerPacksControllerEntries(presentationData: presentationData, state: state, mode: mode, view: view, featured: featuredAndArchived.0, archived: featuredAndArchived.1, stickerSettings: stickerSettings), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: previous != nil && packCount != nil && (previous! != 0 && previous! >= packCount! - 10))
         return (controllerState, (listState, arguments))
     }
     |> afterDisposed {

@@ -133,7 +133,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     
     private var nameNode: TextNode?
     private var adminBadgeNode: TextNode?
-    private var forwardInfoNode: ChatMessageForwardInfoNode?
+    var forwardInfoNode: ChatMessageForwardInfoNode?
     private var replyInfoNode: ChatMessageReplyInfoNode?
     
     private var contentNodes: [ChatMessageBubbleContentNode] = []
@@ -1598,7 +1598,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
                                         item.controllerInteraction.openPeer(id, .info, nil)
                                     } else if let authorSignature = forwardInfo.authorSignature {
-                                        item.controllerInteraction.displayForwardDisabledNotice(forwardInfoNode, forwardInfoNode.bounds, authorSignature)
+                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode)
                                     }
                                     return
                                 }

@@ -104,7 +104,7 @@ private func volumeControlStatusBarIcons() -> PresentationVolumeControlStatusBar
 }
 
 private func currentDateTimeFormat(strings: PresentationStrings) -> PresentationDateTimeFormat {
-    let locale = Locale(identifier: strings.baseLanguageCode)
+    let locale = Locale.current
     let dateFormatter = DateFormatter()
     dateFormatter.locale = locale
     dateFormatter.dateStyle = .none

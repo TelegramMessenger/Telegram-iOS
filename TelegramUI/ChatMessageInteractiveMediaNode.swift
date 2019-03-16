@@ -814,6 +814,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         progressRequired = true
                     }
             }
+            
+            if message.flags.isSending && message.forwardInfo != nil {
+                progressRequired = false
+            }
         }
         
         let radialStatusSize: CGFloat = wideLayout ? 50.0 : 32.0
@@ -1201,10 +1205,6 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
         
         if let videoNode = self.videoNode, let context = self.context, (self.automaticPlayback ?? false) && !isAnimated {
-            var isHorizontal = false
-            if let file = self.media as? TelegramMediaFile, let dimensions = file.dimensions {
-                isHorizontal = dimensions.width >= dimensions.height
-            }
             return ({
                 let _ = (context.sharedContext.mediaManager.globalMediaPlayerState
                 |> take(1)
@@ -1224,7 +1224,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: actionAtEnd)
                     }
                 })
-            }, (self.playerStatus?.soundEnabled ?? false) && isHorizontal, false, false, self.badgeNode)
+            }, (self.playerStatus?.soundEnabled ?? false), false, false, self.badgeNode)
         } else {
             return nil
         }

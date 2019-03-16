@@ -8,7 +8,7 @@ private let maxVolume: Float = 0.9999
 
 private let delay = 0.4
 
-class VolumeChangeDetector: NSObject {
+class VolumeButtonsListener: NSObject {
     private weak var superview: UIView?
     
     private let control: MPVolumeView

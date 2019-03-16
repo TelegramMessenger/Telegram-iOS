@@ -31,6 +31,20 @@ private enum ThemeSettingsControllerSection: Int32 {
     case animations
 }
 
+public enum ThemeSettingsEntryTag: ItemListItemTag {
+    case fontSize
+    case accentColor
+    case animations
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? ThemeSettingsEntryTag, self == other {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case fontSizeHeader(PresentationTheme, String)
     case fontSize(PresentationTheme, PresentationFontSize)
@@ -42,7 +56,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case themeListHeader(PresentationTheme, String)
     case themeItem(PresentationTheme, String, Bool, Int32)
     case animationsHeader(PresentationTheme, String)
-    case animationsItem(PresentationTheme, String, Bool)
+    case animations(PresentationTheme, String, Bool)
     case animationsInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -53,7 +67,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ThemeSettingsControllerSection.themeList.rawValue
             case .fontSizeHeader, .fontSize:
                 return ThemeSettingsControllerSection.fontSize.rawValue
-            case .animationsHeader, .animationsItem, .animationsInfo:
+            case .animationsHeader, .animations, .animationsInfo:
                 return ThemeSettingsControllerSection.animations.rawValue
         }
     }
@@ -80,7 +94,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return 8 + index
             case .animationsHeader:
                 return 100
-            case .animationsItem:
+            case .animations:
                 return 101
             case .animationsInfo:
                 return 102
@@ -149,8 +163,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .animationsItem(lhsTheme, lhsTitle, lhsValue):
-                if case let .animationsItem(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
+            case let .animations(lhsTheme, lhsTitle, lhsValue):
+                if case let .animations(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -200,7 +214,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 })
             case let .animationsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .animationsItem(theme, title, value):
+            case let .animations(theme, title, value):
                 return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.disableAnimations(value)
                 })
@@ -241,13 +255,13 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeNightBlue, theme.name == .builtin(.nightAccent), 3))
     
     entries.append(.animationsHeader(presentationData.theme, strings.Appearance_Animations))
-    entries.append(.animationsItem(presentationData.theme, strings.Appearance_ReduceMotion, disableAnimations))
+    entries.append(.animations(presentationData.theme, strings.Appearance_ReduceMotion, disableAnimations))
     entries.append(.animationsInfo(presentationData.theme, strings.Appearance_ReduceMotionInfo))
     
     return entries
 }
 
-public func themeSettingsController(context: AccountContext) -> ViewController {
+public func themeSettingsController(context: AccountContext, focusOnItemTag: ThemeSettingsEntryTag? = nil) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     
@@ -323,7 +337,6 @@ public func themeSettingsController(context: AccountContext) -> ViewController {
         let theme: PresentationTheme
         let fontSize: PresentationFontSize
         let wallpaper: TelegramWallpaper
-        let strings: PresentationStrings
         let dateTimeFormat: PresentationDateTimeFormat
         let disableAnimations: Bool
         
@@ -348,7 +361,7 @@ public func themeSettingsController(context: AccountContext) -> ViewController {
         disableAnimations = settings.disableAnimations
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeAccentColor: settings.themeAccentColor, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, disableAnimations: disableAnimations), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeAccentColor: settings.themeAccentColor, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, disableAnimations: disableAnimations), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
         
         if previousTheme.swap(theme)?.name != theme.name {
             presentControllerImpl?(ThemeSettingsCrossfadeController())

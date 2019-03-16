@@ -210,34 +210,41 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         
         self.interaction = StickerPaneSearchInteraction(open: { [weak self] info in
             if let strongSelf = self {
-                strongSelf.view.endEditing(true)
-                strongSelf.controllerInteraction.presentController(StickerPackPreviewController(context: strongSelf.context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController()), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                strongSelf.view.window?.endEditing(true)
+                
+                let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: .id(id: info.id.id, accessHash: info.accessHash), parentNavigationController: strongSelf.controllerInteraction.navigationController())
+                controller.sendSticker = { [weak self] fileReference in
+                    if let strongSelf = self {
+                        strongSelf.controllerInteraction.sendSticker(fileReference, false)
+                    }
+                }
+                strongSelf.controllerInteraction.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
-            }, install: { [weak self] info in
-                if let strongSelf = self {
-                    let _ = (loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
-                        |> mapToSignal { result -> Signal<Void, NoError> in
-                            switch result {
-                            case let .result(info, items, installed):
-                                if installed {
-                                    return .complete()
-                                } else {
-                                    return addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
-                                }
-                            case .fetching:
-                                break
-                            case .none:
-                                break
-                            }
+        }, install: { [weak self] info in
+            if let strongSelf = self {
+                let _ = (loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    switch result {
+                    case let .result(info, items, installed):
+                        if installed {
                             return .complete()
-                        }).start()
-                }
-            }, sendSticker: { [weak self] file in
-                if let strongSelf = self {
-                    strongSelf.controllerInteraction.sendSticker(file, false)
-                }
-            }, getItemIsPreviewed: { item in
-                return inputNodeInteraction.previewedStickerPackItem == .pack(item)
+                        } else {
+                            return addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
+                        }
+                    case .fetching:
+                        break
+                    case .none:
+                        break
+                    }
+                    return .complete()
+                }).start()
+            }
+        }, sendSticker: { [weak self] file in
+            if let strongSelf = self {
+                strongSelf.controllerInteraction.sendSticker(file, false)
+            }
+        }, getItemIsPreviewed: { item in
+            return inputNodeInteraction.previewedStickerPackItem == .pack(item)
         })
         
         self._ready.set(self.trendingPane.ready)
@@ -256,7 +263,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
             let stickers: Signal<[(String?, FoundStickerItem)], NoError> = Signal { subscriber in
                 var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
                 
-                if text.isSingleEmoji {
+                if text.trimmingCharacters(in: .whitespacesAndNewlines).isSingleEmoji {
                     signals.append(searchStickers(account: self.context.account, query: text.firstEmoji)
                     |> take(1)
                     |> map { (nil, $0) })
@@ -406,18 +413,18 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         self.trendingPane.updatePreviewing(animated: animated)
     }
     
-    func itemAt(point: CGPoint) -> (ASDisplayNode, StickerPreviewPeekItem)? {
+    func itemAt(point: CGPoint) -> (ASDisplayNode, Any)? {
         if !self.trendingPane.isHidden {
             if let (itemNode, item) = self.trendingPane.itemAt(point: self.view.convert(point, to: self.trendingPane.view)) {
-                return (itemNode, .pack(item))
+                return (itemNode, StickerPreviewPeekItem.pack(item))
             }
         } else {
             if let itemNode = self.gridNode.itemNodeAtPoint(self.view.convert(point, to: self.gridNode.view)) {
                 if let itemNode = itemNode as? StickerPaneSearchStickerItemNode, let stickerItem = itemNode.stickerItem {
-                    return (itemNode, .found(stickerItem))
+                    return (itemNode, StickerPreviewPeekItem.found(stickerItem))
                 } else if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
                     if let (node, item) = itemNode.itemAt(point: self.view.convert(point, to: itemNode.view)) {
-                        return (node, .pack(item))
+                        return (node, StickerPreviewPeekItem.pack(item))
                     }
                 }
             }

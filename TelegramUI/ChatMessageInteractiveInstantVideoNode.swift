@@ -353,6 +353,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }
                         durationNode.defaultDuration = telegramFile.duration.flatMap(Double.init)
                         
+                        let streamVideo = isMediaStreamable(message: item.message, media: telegramFile)
                         if let videoNode = strongSelf.videoNode {
                             videoNode.layer.allowsGroupOpacity = true
                             videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.5, delay: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
@@ -370,7 +371,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                     }
                                 }
                             }
-                        }), content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, telegramFile.fileId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), streamVideo: true, enableSound: false, fetchAutomatically: false), priority: .embedded, autoplay: true)
+                        }), content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, telegramFile.fileId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), streamVideo: streamVideo, enableSound: false, fetchAutomatically: false), priority: .embedded, autoplay: true)
                         let previousVideoNode = strongSelf.videoNode
                         strongSelf.videoNode = videoNode
                         strongSelf.insertSubnode(videoNode, belowSubnode: previousVideoNode ?? strongSelf.dateAndStatusNode)
@@ -483,7 +484,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
         }
         
-        if self.automaticDownload ?? false {
+        if item.message.flags.isSending && item.message.forwardInfo != nil {
             progressRequired = false
         }
         

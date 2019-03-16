@@ -205,17 +205,17 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     private var raiseToListen: RaiseToListenManager?
     private var voicePlaylistDidEndTimestamp: Double = 0.0
     
+    private weak var messageTooltipController: TooltipController?
     private weak var videoUnmuteTooltipController: TooltipController?
     private weak var silentPostTooltipController: TooltipController?
     private weak var mediaRecordingModeTooltipController: TooltipController?
     private weak var mediaRestrictedTooltipController: TooltipController?
-    private var forwardDisabledNoticeTooltipController: TooltipController?
     private var mediaRestrictedTooltipControllerMode = true
     
     private var screenCaptureEventsDisposable: Disposable?
     private let chatAdditionalDataDisposable = MetaDisposable()
     
-    private var volumeChangeDetector: VolumeChangeDetector?
+    private var volumeButtonsListener: VolumeButtonsListener?
     
     private var beginMediaRecordingRequestId: Int = 0
     private var lockMediaRecordingRequestId: Int?
@@ -1152,6 +1152,26 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             if let strongSelf = self {
                 strongSelf.context.sharedContext.applicationBindings.openAppStorePage()
             }
+        }, displayMessageTooltip: { [weak self] messageId, text, sourceNode in
+            if let strongSelf = self {
+                if let sourceNode = sourceNode {
+                    strongSelf.messageTooltipController?.dismiss()
+                    let tooltipController = TooltipController(content: .text(text), dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+                    strongSelf.messageTooltipController = tooltipController
+                    tooltipController.dismissed = { [weak tooltipController] in
+                        if let strongSelf = self, let tooltipController = tooltipController, strongSelf.messageTooltipController === tooltipController {
+                            strongSelf.messageTooltipController = nil
+                        }
+                    }
+                    strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                        if let strongSelf = self {
+                            let rect = sourceNode.view.convert(sourceNode.view.bounds, to: strongSelf.chatDisplayNode.view)
+                            return (strongSelf.chatDisplayNode, rect)
+                        }
+                        return nil
+                    }))
+                }
+            }
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -1159,26 +1179,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }, cancelInteractiveKeyboardGestures: { [weak self] in
             (self?.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
             self?.chatDisplayNode.cancelInteractiveKeyboardGestures()
-        }, displayForwardDisabledNotice: { [weak self] sourceNode, sourceRect, name in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.forwardDisabledNoticeTooltipController?.dismiss()
-            let tooltipController = TooltipController(content: .text(strongSelf.presentationInterfaceState.strings.Chat_ForwardHiddenAccount(name).0), timeout: 2.0, dismissByTapOutside: true)
-            strongSelf.forwardDisabledNoticeTooltipController = tooltipController
-            tooltipController.dismissed = { [weak tooltipController] in
-                if let strongSelf = self, let tooltipController = tooltipController, strongSelf.forwardDisabledNoticeTooltipController === tooltipController {
-                    strongSelf.forwardDisabledNoticeTooltipController = nil
-                }
-            }
-            strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
-                if let strongSelf = self {
-                    return (sourceNode, sourceRect)
-                }
-                return nil
-            }))
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
-           pollActionState: ChatInterfacePollActionState())
+        pollActionState: ChatInterfacePollActionState())
         
         self.controllerInteraction = controllerInteraction
         
@@ -2231,7 +2233,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             if isAction && (actions.options == .deleteGlobally || actions.options == .deleteLocally) {
                                 let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: actions.options == .deleteLocally ? .forLocalPeer : .forEveryone).start()
                             } else {
-                                strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: actions.options)
+                                var options = actions.options
+                                if messages.first?.flags.isSending ?? false {
+                                    options = .cancelSending
+                                }
+                                strongSelf.presentDeleteMessageOptions(messageIds: messageIds, options: options)
                             }
                         }
                     }
@@ -2681,12 +2687,19 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }
             }
         }, displayVideoUnmuteTip: { [weak self] location in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, let layout = strongSelf.validLayout else {
                 return
             }
-            if let location = location, let icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIconX") {
+            let deviceMetrics = DeviceMetrics.forScreenSize(layout.size)
+            let icon: UIImage?
+            if deviceMetrics == .iPhoneX || deviceMetrics == .iPhoneXSMax {
+                icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIconX")
+            } else {
+                icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIcon")
+            }
+            if let location = location, let icon = icon {
                 strongSelf.mediaRestrictedTooltipController?.dismiss()
-                let tooltipController = TooltipController(content: .iconAndText(icon, strongSelf.presentationInterfaceState.strings.Conversation_PressVolumeButtonForSound), timeout: 3.5)
+                let tooltipController = TooltipController(content: .iconAndText(icon, strongSelf.presentationInterfaceState.strings.Conversation_PressVolumeButtonForSound), timeout: 3.5, dismissImmediatelyOnLayoutUpdate: true)
                 strongSelf.videoUnmuteTooltipController = tooltipController
                 tooltipController.dismissed = { [weak tooltipController] in
                     if let strongSelf = self, let tooltipController = tooltipController, strongSelf.videoUnmuteTooltipController === tooltipController {
@@ -2702,7 +2715,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     return nil
                 }))
             } else if let tooltipController = strongSelf.videoUnmuteTooltipController {
-                tooltipController.dismiss()
+                tooltipController.dismissImmediately()
             }
         }, switchMediaRecordingMode: { [weak self] in
             if let strongSelf = self {
@@ -2873,7 +2886,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }, reportPeer: { [weak self] in
             self?.reportPeer()
-            }, presentPeerContact: { [weak self] in
+        }, presentPeerContact: { [weak self] in
             self?.addPeerContact()
         }, dismissReportPeer: { [weak self] in
             self?.dismissReportPeer()
@@ -3223,11 +3236,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }
         
-        self.volumeChangeDetector = VolumeChangeDetector(view: self.chatDisplayNode.view, shouldBeActive: self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes, valueChanged: { [weak self] in
+        self.volumeButtonsListener = VolumeButtonsListener(view: self.chatDisplayNode.view, shouldBeActive: self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes, valueChanged: { [weak self] in
             guard let strongSelf = self, strongSelf.traceVisibility() && isTopmostChatController(strongSelf) else {
                 return
             }
             ApplicationSpecificNotice.setVolumeButtonToUnmute(accountManager: strongSelf.context.sharedContext.accountManager)
+            strongSelf.videoUnmuteTooltipController?.dismiss()
             strongSelf.chatDisplayNode.playFirstMediaWithSound()
         })
         
@@ -3386,6 +3400,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         self.chatDisplayNode.historyNode.canReadHistory.set(.single(false))
         self.saveInterfaceState()
         
+        self.messageTooltipController?.dismiss()
         self.videoUnmuteTooltipController?.dismiss()
         self.silentPostTooltipController?.dismiss()
         self.mediaRecordingModeTooltipController?.dismiss()
@@ -3437,19 +3452,17 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        var shouldOpenCurrentlyActiveVideo = false
-        if let previousLayout = self.validLayout, previousLayout.size.width < previousLayout.size.height && previousLayout.size.height == layout.size.width && self.traceVisibility() && isTopmostChatController(self) {
-            shouldOpenCurrentlyActiveVideo = true
-        }
-        
         self.validLayout = layout
         self.chatTitleView?.layout = layout
         
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop)
         })
-        
-        if shouldOpenCurrentlyActiveVideo {
+    }
+    
+    override public func updateToInterfaceOrientation(_ orientation: UIInterfaceOrientation) {
+        let hasOverlayNodes = self.context.sharedContext.mediaManager.overlayMediaManager.controller?.hasNodes ?? false
+        if self.validLayout != nil && orientation.isLandscape && !hasOverlayNodes && self.traceVisibility() && isTopmostChatController(self) {
             self.chatDisplayNode.openCurrentPlayingWithSoundMedia()
         }
     }
@@ -5866,6 +5879,15 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             isChannel = true
         }
         
+        if options.contains(.cancelSending) {
+            items.append(ActionSheetButtonItem(title: self.presentationData.strings.Conversation_ContextMenuCancelSending, color: .destructive, action: { [weak self, weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                if let strongSelf = self {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                    let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
+                }
+            }))
+        }
         if options.contains(.deleteGlobally) {
             let globalTitle: String
             if isChannel {

@@ -16,6 +16,8 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     private var strings: PresentationStrings
     
     private var multiplexedNode: MultiplexedVideoNode?
+    private let notFoundNode: ASImageNode
+    private let notFoundLabel: ImmediateTextNode
     
     private var validLayout: CGSize?
     
@@ -37,7 +39,19 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
         self.theme = theme
         self.strings = strings
         
+        self.notFoundNode = ASImageNode()
+        self.notFoundNode.displayWithoutProcessing = true
+        self.notFoundNode.displaysAsynchronously = false
+        self.notFoundNode.clipsToBounds = false
+        
+        self.notFoundLabel = ImmediateTextNode()
+        self.notFoundLabel.displaysAsynchronously = false
+        self.notFoundLabel.isUserInteractionEnabled = false
+        self.notFoundNode.addSubnode(self.notFoundLabel)
+        
         super.init()
+        
+        self.notFoundNode.isHidden = true
         
         let _ = (trendingGifsPromise.get()
         |> take(1)
@@ -48,6 +62,8 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
         })
         
         self._ready.set(.single(Void()))
+        
+        self.addSubnode(self.notFoundNode)
         
         self.updateThemeAndStrings(theme: theme, strings: strings)
     }
@@ -74,33 +90,38 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
             
             strongSelf.multiplexedNode?.files = result
             strongSelf.updateActivity?(false)
+            strongSelf.notFoundNode.isHidden = text.isEmpty || !result.isEmpty
         }))
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        self.notFoundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GifsNotFoundIcon"), color: theme.list.freeMonoIcon)
+        self.notFoundLabel.attributedText = NSAttributedString(string: strings.Gif_NoGifsFound, font: Font.medium(14.0), textColor: theme.list.freeTextColor)
     }
     
     func updatePreviewing(animated: Bool) {
     }
     
-    func itemAt(point: CGPoint) -> (ASDisplayNode, StickerPreviewPeekItem)? {
-        return nil
+    func itemAt(point: CGPoint) -> (ASDisplayNode, Any)? {
+        if let multiplexedNode = self.multiplexedNode, let file = multiplexedNode.fileAt(point: point.offsetBy(dx: -multiplexedNode.frame.minX, dy: -multiplexedNode.frame.minY)) {
+            return (self, file)
+        } else {
+            return nil
+        }
     }
     
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let firstLayout = self.validLayout == nil
         self.validLayout = size
         
-//        if let image = self.notFoundNode.image {
-//            let areaHeight = size.height - inputHeight
-//
-//            let labelSize = self.notFoundLabel.updateLayout(CGSize(width: size.width, height: CGFloat.greatestFiniteMagnitude))
-//
-//            transition.updateFrame(node: self.notFoundNode, frame: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((areaHeight - image.size.height - labelSize.height) / 2.0)), size: image.size))
-//            transition.updateFrame(node: self.notFoundLabel, frame: CGRect(origin: CGPoint(x: floor((image.size.width - labelSize.width) / 2.0), y: image.size.height + 8.0), size: labelSize))
-//        }
-        
-        let contentFrame = CGRect(origin: CGPoint(), size: size)
+        if let image = self.notFoundNode.image {
+            let areaHeight = size.height - inputHeight
+
+            let labelSize = self.notFoundLabel.updateLayout(CGSize(width: size.width, height: CGFloat.greatestFiniteMagnitude))
+
+            transition.updateFrame(node: self.notFoundNode, frame: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((areaHeight - image.size.height - labelSize.height) / 2.0)), size: image.size))
+            transition.updateFrame(node: self.notFoundLabel, frame: CGRect(origin: CGPoint(x: floor((image.size.width - labelSize.width) / 2.0), y: image.size.height + 8.0), size: labelSize))
+        }
         
         if let multiplexedNode = self.multiplexedNode {
             multiplexedNode.topInset = 0.0
@@ -127,31 +148,6 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
             }
             
             self.view.addSubview(multiplexedNode)
-            
-            let gifs = self.context.account.postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentGifs)])
-                |> map { view -> [FileMediaReference] in
-                    var recentGifs: OrderedItemListView?
-                    if let orderedView = view.views[.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentGifs)] {
-                        recentGifs = orderedView as? OrderedItemListView
-                    }
-                    if let recentGifs = recentGifs {
-                        return recentGifs.items.map { item in
-                            let file = (item.contents as! RecentMediaItem).media as! TelegramMediaFile
-                            return .savedGif(media: file)
-                        }
-                    } else {
-                        return []
-                    }
-            }
-            self.searchDisposable.set((gifs |> deliverOnMainQueue).start(next: { [weak self] gifs in
-                if let strongSelf = self {
-                    let previousFiles = strongSelf.multiplexedNode?.files
-                    strongSelf.multiplexedNode?.files = gifs
-                    if (previousFiles ?? []).isEmpty {
-                        strongSelf.multiplexedNode?.contentOffset = CGPoint(x: 0.0, y: 60.0)
-                    }
-                }
-            }))
             
             multiplexedNode.fileSelected = { [weak self] fileReference in
                 self?.controllerInteraction.sendGif(fileReference)
@@ -241,12 +237,26 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
                 var references: [FileMediaReference] = []
                 for result in results {
                     switch result {
+                        case let .externalReference(_, _, type, _, _, _, content, thumbnail, _):
+                            var imageResource: TelegramMediaResource?
+                            var uniqueId: Int64?
+                            if let content = content {
+                                imageResource = content.resource
+                                if let resource = content.resource as? WebFileReferenceMediaResource {
+                                    uniqueId = Int64(murMurHashString32(resource.url))
+                                }
+                            } else if let thumbnail = thumbnail {
+                                imageResource = thumbnail.resource
+                            }
+                            
+                            if type == "gif", let thumbnailResource = imageResource, let content = content, let dimensions = content.dimensions {
+                                let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: uniqueId ?? 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
+                                references.append(FileMediaReference.standalone(media: file))
+                            }
                         case let .internalReference(_, _, _, _, _, _, file, _):
                             if let file = file {
                                 references.append(FileMediaReference.standalone(media: file))
                             }
-                        default:
-                            break
                     }
                 }
                 return .single(references)
