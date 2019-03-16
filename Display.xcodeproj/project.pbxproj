@@ -56,6 +56,7 @@
 		D02958001D6F096000360E5E /* ContextMenuContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02957FF1D6F096000360E5E /* ContextMenuContainerNode.swift */; };
 		D02BDB021B6AC703008AFAD2 /* RuntimeUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */; };
 		D03310B3213F232600FC83CD /* ListViewTapGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03310B2213F232600FC83CD /* ListViewTapGestureRecognizer.swift */; };
+		D033874E223D3E86007A2CE4 /* AccessibilityAreaNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033874D223D3E86007A2CE4 /* AccessibilityAreaNode.swift */; };
 		D036574B1E71C44D00BB1EE4 /* MinimizeKeyboardGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D036574A1E71C44D00BB1EE4 /* MinimizeKeyboardGestureRecognizer.swift */; };
 		D03725C11D6DF594007FC290 /* ContextMenuNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03725C01D6DF594007FC290 /* ContextMenuNode.swift */; };
 		D03725C31D6DF7A6007FC290 /* ContextMenuAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03725C21D6DF7A6007FC290 /* ContextMenuAction.swift */; };
@@ -237,6 +238,7 @@
 		D02957FF1D6F096000360E5E /* ContextMenuContainerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuContainerNode.swift; sourceTree = "<group>"; };
 		D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RuntimeUtils.swift; sourceTree = "<group>"; };
 		D03310B2213F232600FC83CD /* ListViewTapGestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListViewTapGestureRecognizer.swift; sourceTree = "<group>"; };
+		D033874D223D3E86007A2CE4 /* AccessibilityAreaNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityAreaNode.swift; sourceTree = "<group>"; };
 		D036574A1E71C44D00BB1EE4 /* MinimizeKeyboardGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MinimizeKeyboardGestureRecognizer.swift; sourceTree = "<group>"; };
 		D03725C01D6DF594007FC290 /* ContextMenuNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuNode.swift; sourceTree = "<group>"; };
 		D03725C21D6DF7A6007FC290 /* ContextMenuAction.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuAction.swift; sourceTree = "<group>"; };
@@ -565,6 +567,7 @@
 				D06B76DA20592A97006E9EEA /* LayoutSizes.swift */,
 				D0CA3F8B2073F8240042D2B6 /* TapLongTapOrDoubleTapGestureRecognizer.swift */,
 				09E12475214D0978009FC9C3 /* DeviceMetrics.swift */,
+				D033874D223D3E86007A2CE4 /* AccessibilityAreaNode.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -1072,6 +1075,7 @@
 				D03AA4D7202C79600056C405 /* PeekControllerNode.swift in Sources */,
 				D03725C51D6DF8B9007FC290 /* ContextMenuController.swift in Sources */,
 				D03725C31D6DF7A6007FC290 /* ContextMenuAction.swift in Sources */,
+				D033874E223D3E86007A2CE4 /* AccessibilityAreaNode.swift in Sources */,
 				D015F75A1D1B46B600E269B5 /* ActionSheetControllerNode.swift in Sources */,
 				D01847661FFA72E000075256 /* ContainedViewLayoutTransition.swift in Sources */,
 				D03725C11D6DF594007FC290 /* ContextMenuNode.swift in Sources */,
