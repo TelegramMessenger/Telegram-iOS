@@ -302,6 +302,6 @@ final class UniversalVideoContentManager {
                     }
                 }
             }
-            } |> runOn(Queue.mainQueue())
+        } |> runOn(Queue.mainQueue())
     }
 }

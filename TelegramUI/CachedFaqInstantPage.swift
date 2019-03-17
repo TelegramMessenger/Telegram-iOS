@@ -21,6 +21,8 @@ private func extractAnchor(string: String) -> (String, String?) {
     return (trimmedUrl, anchorValue)
 }
 
+private let refreshTimeout: Int32 = 60 * 60 * 12
+
 func cachedFaqInstantPage(context: AccountContext) -> Signal<ResolvedUrl, NoError> {
     var faqUrl = context.sharedContext.currentPresentationData.with { $0 }.strings.Settings_FAQ_URL
     if faqUrl == "Settings.FAQ_URL" || faqUrl.isEmpty {
@@ -31,26 +33,35 @@ func cachedFaqInstantPage(context: AccountContext) -> Signal<ResolvedUrl, NoErro
 
     return cachedInstantPage(postbox: context.account.postbox, url: cachedUrl)
     |> mapToSignal { cachedInstantPage -> Signal<ResolvedUrl, NoError> in
-        if let webPage = cachedInstantPage?.webPage, case let .Loaded(content) = webPage.content, let instantPage = content.instantPage, instantPage.isComplete {
-            return .single(.instantView(webPage, anchor))
-        } else {
-            return resolveInstantViewUrl(account: context.account, url: faqUrl)
-            |> afterNext { result in
-                if case let .instantView(webPage, _) = result, case let .Loaded(content) = webPage.content, let instantPage = content.instantPage {
-                    if instantPage.isComplete {
-                        let _ = updateCachedInstantPage(postbox: context.account.postbox, url: cachedUrl, webPage: webPage).start()
-                    } else {
-                        let _ = (actualizedWebpage(postbox: context.account.postbox, network: context.account.network, webpage: webPage)
-                        |> mapToSignal { webPage -> Signal<Void, NoError> in
-                            if case let .Loaded(content) = webPage.content, let instantPage = content.instantPage, instantPage.isComplete {
-                                return updateCachedInstantPage(postbox: context.account.postbox, url: cachedUrl, webPage: webPage)
-                            } else {
-                                return .complete()
-                            }
-                        }).start()
-                    }
+        let updated = resolveInstantViewUrl(account: context.account, url: faqUrl)
+        |> afterNext { result in
+            if case let .instantView(webPage, _) = result, case let .Loaded(content) = webPage.content, let instantPage = content.instantPage {
+                if instantPage.isComplete {
+                    let _ = updateCachedInstantPage(postbox: context.account.postbox, url: cachedUrl, webPage: webPage).start()
+                } else {
+                    let _ = (actualizedWebpage(postbox: context.account.postbox, network: context.account.network, webpage: webPage)
+                    |> mapToSignal { webPage -> Signal<Void, NoError> in
+                        if case let .Loaded(content) = webPage.content, let instantPage = content.instantPage, instantPage.isComplete {
+                            return updateCachedInstantPage(postbox: context.account.postbox, url: cachedUrl, webPage: webPage)
+                        } else {
+                            return .complete()
+                        }
+                    }).start()
                 }
             }
+        }
+        
+        let now = Int32(CFAbsoluteTimeGetCurrent())
+        if let cachedInstantPage = cachedInstantPage, case let .Loaded(content) = cachedInstantPage.webPage.content, let instantPage = content.instantPage, instantPage.isComplete {
+            let current: Signal<ResolvedUrl, NoError> = .single(.instantView(cachedInstantPage.webPage, anchor))
+            if now > cachedInstantPage.timestamp + refreshTimeout {
+                return current
+                |> then(updated)
+            } else {
+                return current
+            }
+        } else {
+            return updated
         }
     }
 }
@@ -76,7 +87,7 @@ func faqSearchableItems(context: AccountContext) -> Signal<[SettingsSearchableIt
                                 currentAnchor = anchor
                             case let .header(text):
                                 if let anchor = currentAnchor {
-                                    results.append(SettingsSearchableItem(id: .faq(results.count + 1), title: text.plainText, alternate: [], icon: .faq, breadcrumbs: [strings.SettingsSearch_FAQ], present: { context, present in
+                                    results.append(SettingsSearchableItem(id: .faq(results.count + 1), title: text.plainText, alternate: [], icon: .faq, breadcrumbs: [strings.SettingsSearch_FAQ], present: { context, _, present in
                                         present(.push, InstantPageController(context: context, webPage: webPage, sourcePeerType: .channel, anchor: anchor))
                                     }))
                                 }
@@ -96,7 +107,7 @@ func faqSearchableItems(context: AccountContext) -> Signal<[SettingsSearchableIt
                                     for item in items {
                                         if case let .text(itemText, _) = item, case let .url(text, url, _) = itemText {
                                             let (_, anchor) = extractAnchor(string: url)
-                                            results.append(SettingsSearchableItem(id: .faq(results.count + 1), title: text.plainText, alternate: [], icon: .faq, breadcrumbs: [strings.SettingsSearch_FAQ, currentSection], present: { context, present in
+                                            results.append(SettingsSearchableItem(id: .faq(results.count + 1), title: text.plainText, alternate: [], icon: .faq, breadcrumbs: [strings.SettingsSearch_FAQ, currentSection], present: { context, _, present in
                                                 present(.push, InstantPageController(context: context, webPage: webPage, sourcePeerType: .channel, anchor: anchor))
                                             }))
                                         }

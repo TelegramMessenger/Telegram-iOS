@@ -597,6 +597,8 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 strongSelf.view.endEditing(true)
                 openAddContact(context: strongSelf.context, phoneNumber: phoneNumber, present: { [weak self] controller, arguments in
                     self?.present(controller, in: .window(.root), with: arguments)
+                }, pushController: { [weak self] controller in
+                    (self?.navigationController as? NavigationController)?.pushViewController(controller)
                 }, completed: {
                     self?.deactivateSearch(animated: false)
                 })

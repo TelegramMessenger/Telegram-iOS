@@ -111,7 +111,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                 }
                 if let context = self.context {
                     let mediaManager = context.sharedContext.mediaManager
-                    let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: context.account.postbox, resourceReference: .standalone(resource: recordedMediaPreview.resource), streamable: false, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
+                    let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: context.account.postbox, resourceReference: .standalone(resource: recordedMediaPreview.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
                     self.mediaPlayer = mediaPlayer
                     self.durationLabel.defaultDuration = Double(recordedMediaPreview.duration)
                     self.durationLabel.status = mediaPlayer.status

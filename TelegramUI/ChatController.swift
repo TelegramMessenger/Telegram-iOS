@@ -296,6 +296,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 return false
             }
             strongSelf.commitPurposefulAction()
+            strongSelf.videoUnmuteTooltipController?.dismiss()
             
             var openMessageByAction: Bool = false
 
@@ -1101,6 +1102,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             if let strongSelf = self {
                 openAddContact(context: strongSelf.context, phoneNumber: phoneNumber, present: { [weak self] controller, arguments in
                     self?.present(controller, in: .window(.root), with: arguments)
+                }, pushController: { [weak self] controller in
+                    if let strongSelf = self {
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+                    }
                 })
             }
         }, rateCall: { [weak self] message, callId in
@@ -2232,6 +2237,8 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             }
                             if isAction && (actions.options == .deleteGlobally || actions.options == .deleteLocally) {
                                 let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: actions.options == .deleteLocally ? .forLocalPeer : .forEveryone).start()
+                            } else if actions.options == .cancelSending {
+                                let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forEveryone).start()
                             } else {
                                 var options = actions.options
                                 if messages.first?.flags.isSending ?? false {
@@ -2699,7 +2706,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
             if let location = location, let icon = icon {
                 strongSelf.mediaRestrictedTooltipController?.dismiss()
-                let tooltipController = TooltipController(content: .iconAndText(icon, strongSelf.presentationInterfaceState.strings.Conversation_PressVolumeButtonForSound), timeout: 3.5, dismissImmediatelyOnLayoutUpdate: true)
+                let tooltipController = TooltipController(content: .iconAndText(icon, strongSelf.presentationInterfaceState.strings.Conversation_PressVolumeButtonForSound), timeout: 3.5, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
                 strongSelf.videoUnmuteTooltipController = tooltipController
                 tooltipController.dismissed = { [weak tooltipController] in
                     if let strongSelf = self, let tooltipController = tooltipController, strongSelf.videoUnmuteTooltipController === tooltipController {
@@ -3240,8 +3247,6 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             guard let strongSelf = self, strongSelf.traceVisibility() && isTopmostChatController(strongSelf) else {
                 return
             }
-            ApplicationSpecificNotice.setVolumeButtonToUnmute(accountManager: strongSelf.context.sharedContext.accountManager)
-            strongSelf.videoUnmuteTooltipController?.dismiss()
             strongSelf.chatDisplayNode.playFirstMediaWithSound()
         })
         
@@ -6112,9 +6117,6 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     })
                 }
             }),
-            KeyShortcut(input: "W", modifiers: [.command], action: { [weak self] in
-
-            })
         ]
         
         return inputShortcuts + otherShortcuts

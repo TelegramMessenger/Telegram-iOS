@@ -19,32 +19,32 @@ extension NavigationBarSearchContentNode: ItemListControllerSearchNavigationCont
 extension SettingsSearchableItemIcon {
     func image() -> UIImage? {
         switch self {
-        case .proxy:
-            return PresentationResourcesSettings.proxy
-        case .savedMessages:
-            return PresentationResourcesSettings.savedMessages
-        case .calls:
-            return PresentationResourcesSettings.recentCalls
-        case .stickers:
-            return PresentationResourcesSettings.stickers
-        case .notifications:
-            return PresentationResourcesSettings.notifications
-        case .privacy:
-            return PresentationResourcesSettings.security
-        case .data:
-            return PresentationResourcesSettings.dataAndStorage
-        case .appearance:
-            return PresentationResourcesSettings.appearance
-        case .language:
-            return PresentationResourcesSettings.language
-        case .watch:
-            return PresentationResourcesSettings.watch
-        case .passport:
-            return PresentationResourcesSettings.passport
-        case .support:
-            return PresentationResourcesSettings.support
-        case .faq:
-            return PresentationResourcesSettings.faq
+            case .proxy:
+                return PresentationResourcesSettings.proxy
+            case .savedMessages:
+                return PresentationResourcesSettings.savedMessages
+            case .calls:
+                return PresentationResourcesSettings.recentCalls
+            case .stickers:
+                return PresentationResourcesSettings.stickers
+            case .notifications:
+                return PresentationResourcesSettings.notifications
+            case .privacy:
+                return PresentationResourcesSettings.security
+            case .data:
+                return PresentationResourcesSettings.dataAndStorage
+            case .appearance:
+                return PresentationResourcesSettings.appearance
+            case .language:
+                return PresentationResourcesSettings.language
+            case .watch:
+                return PresentationResourcesSettings.watch
+            case .passport:
+                return PresentationResourcesSettings.passport
+            case .support:
+                return PresentationResourcesSettings.support
+            case .faq:
+                return PresentationResourcesSettings.faq
         }
     }
 }
@@ -57,12 +57,13 @@ final class SettingsSearchItem: ItemListControllerSearch {
     let updateActivated: (Bool) -> Void
     let presentController: (ViewController, Any?) -> Void
     let pushController: (ViewController) -> Void
+    let getNavigationController: (() -> NavigationController?)?
     
     private var updateActivity: ((Bool) -> Void)?
     private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
     private let activityDisposable = MetaDisposable()
     
-    init(context: AccountContext, theme: PresentationTheme, placeholder: String, activated: Bool, updateActivated: @escaping (Bool) -> Void, presentController: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, placeholder: String, activated: Bool, updateActivated: @escaping (Bool) -> Void, presentController: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, getNavigationController: (() -> NavigationController?)?) {
         self.context = context
         self.theme = theme
         self.placeholder = placeholder
@@ -70,6 +71,7 @@ final class SettingsSearchItem: ItemListControllerSearch {
         self.updateActivated = updateActivated
         self.presentController = presentController
         self.pushController = pushController
+        self.getNavigationController = getNavigationController
         self.activityDisposable.set((activity.get() |> mapToSignal { value -> Signal<Bool, NoError> in
             if value {
                 return .single(value) |> delay(0.2, queue: Queue.mainQueue())
@@ -133,7 +135,7 @@ final class SettingsSearchItem: ItemListControllerSearch {
                 pushController(c)
             }, presentController: { c, a in
                 presentController(c, a)
-            })
+            }, getNavigationController: self.getNavigationController)
         }
     }
 }
@@ -401,15 +403,16 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
     
     let pushController: (ViewController) -> Void
     let presentController: (ViewController, Any?) -> Void
+    let getNavigationController: (() -> NavigationController?)?
     
     var cancel: () -> Void
     
-    init(context: AccountContext, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: (() -> NavigationController?)?) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.pushController = pushController
         self.presentController = presentController
-    
+        self.getNavigationController = getNavigationController
         self.cancel = cancel
         
         super.init()
@@ -417,6 +420,7 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
     
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
+        self.searchDisplayController?.updatePresentationData(presentationData)
     }
     
     func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
@@ -426,13 +430,15 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
         
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: SettingsSearchContainerNode(context: self.context, listState: LocalizationListState.defaultSettings, openResult: { [weak self] result in
             if let strongSelf = self {
-                result.present(strongSelf.context, { [weak self] mode, controller in
+                result.present(strongSelf.context, strongSelf.getNavigationController?(), { [weak self] mode, controller in
                     if let strongSelf = self {
                         switch mode {
                             case .push:
                                 strongSelf.pushController(controller)
                             case .modal:
-                                strongSelf.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                strongSelf.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet, completion: { [weak self] in
+                                    self?.cancel()
+                                }))
                             case .immediate:
                                 strongSelf.presentController(controller, nil)
                         }

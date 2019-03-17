@@ -5,17 +5,21 @@ import TelegramCore
 
 final class CachedInstantPage: PostboxCoding {
     let webPage: TelegramMediaWebpage
+    let timestamp: Int32
     
-    init(webPage: TelegramMediaWebpage) {
+    init(webPage: TelegramMediaWebpage, timestamp: Int32) {
         self.webPage = webPage
+        self.timestamp = timestamp
     }
     
     init(decoder: PostboxDecoder) {
         self.webPage = decoder.decodeObjectForKey("webpage", decoder: { TelegramMediaWebpage(decoder: $0) }) as! TelegramMediaWebpage
+        self.timestamp = decoder.decodeInt32ForKey("timestamp", orElse: 0)
     }
     
     func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.webPage, forKey: "webpage")
+        encoder.encodeInt32(self.timestamp, forKey: "timestamp")
     }
 }
 
@@ -39,7 +43,7 @@ func updateCachedInstantPage(postbox: Postbox, url: String, webPage: TelegramMed
         key.setInt64(0, value: Int64(url.hashValue))
         let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedInstantPages, key: key)
         if let webPage = webPage {
-            transaction.putItemCacheEntry(id: id, entry: CachedInstantPage(webPage: webPage), collectionSpec: collectionSpec)
+            transaction.putItemCacheEntry(id: id, entry: CachedInstantPage(webPage: webPage, timestamp: Int32(CFAbsoluteTimeGetCurrent())), collectionSpec: collectionSpec)
         } else {
             transaction.removeItemCacheEntry(id: id)
         }

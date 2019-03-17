@@ -27,7 +27,7 @@ private let rootNavigationBar = PresentationThemeRootNavigationBar(
     disabledButtonColor: UIColor(rgb: 0x525252),
     primaryTextColor: accentColor,
     secondaryTextColor: UIColor(rgb: 0xffffff, alpha: 0.5),
-    controlColor: accentColor,
+    controlColor: UIColor(rgb: 0x767677),
     accentTextColor: accentColor,
     backgroundColor: UIColor(rgb: 0x1c1c1d),
     separatorColor: UIColor(rgb: 0x000000),

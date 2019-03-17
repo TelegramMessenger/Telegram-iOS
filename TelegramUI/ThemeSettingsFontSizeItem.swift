@@ -64,7 +64,7 @@ private func generateKnobImage() -> UIImage? {
     })
 }
 
-class ThemeSettingsFontSizeItemNode: ListViewItemNode {
+class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -76,7 +76,7 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode {
     private var item: ThemeSettingsFontSizeItem?
     private var layoutParams: ListViewItemLayoutParams?
     
-    var tag: Any? {
+    var tag: ItemListItemTag? {
         return self.item?.tag
     }
     

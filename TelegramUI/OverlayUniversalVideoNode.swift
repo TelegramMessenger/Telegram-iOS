@@ -53,6 +53,9 @@ final class OverlayUniversalVideoNode: OverlayMediaItemNode {
         }
         closeImpl = { [weak self] in
             if let strongSelf = self {
+                if strongSelf.videoNode.hasAttachedContext {
+                    strongSelf.videoNode.continuePlayingWithoutSound()
+                }
                 strongSelf.layer.animateScale(from: 1.0, to: 0.1, duration: 0.25, removeOnCompletion: false, completion: { _ in
                     self?.dismiss()
                     close()

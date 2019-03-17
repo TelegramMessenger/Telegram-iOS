@@ -20,6 +20,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     private var swipeToReplyFeedback: HapticFeedback?
     
     private var appliedItem: ChatMessageItem?
+    private var appliedForwardInfo: (Peer?, String?)?
     
     private var forwardInfoNode: ChatMessageForwardInfoNode?
     private var forwardBackgroundNode: ASImageNode?
@@ -95,9 +96,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
         
         let currentItem = self.appliedItem
+        let currentForwardInfo = self.appliedForwardInfo
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
-            let baseWidth = params.width - params.leftInset - params.rightInset
             let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             
             let avatarInset: CGFloat
@@ -268,13 +269,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             
             let availableContentWidth = params.width - params.leftInset - params.rightInset - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left
             
+            var forwardSource: Peer?
+            var forwardAuthorSignature: String?
+            
             var forwardInfoSizeApply: (CGSize, () -> ChatMessageForwardInfoNode)?
             var updatedForwardBackgroundNode: ASImageNode?
             var forwardBackgroundImage: UIImage?
             if let forwardInfo = item.message.forwardInfo {
-                let forwardSource: Peer?
-                let forwardAuthorSignature: String?
-                
                 if let source = forwardInfo.source {
                     forwardSource = source
                     if let authorSignature = forwardInfo.authorSignature {
@@ -285,8 +286,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         forwardAuthorSignature = nil
                     }
                 } else {
-                    forwardSource = forwardInfo.author
-                    forwardAuthorSignature = forwardInfo.authorSignature
+                    if let currentForwardInfo = currentForwardInfo, forwardInfo.author == nil && currentForwardInfo.0 != nil {
+                        forwardSource = currentForwardInfo.0
+                        forwardAuthorSignature = currentForwardInfo.1
+                    } else {
+                        forwardSource = forwardInfo.author
+                        forwardAuthorSignature = forwardInfo.authorSignature
+                    }
                 }
                 let availableWidth = max(60.0, availableContentWidth - videoLayout.contentSize.width + 6.0)
                 forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
@@ -322,7 +328,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
                     strongSelf.appliedItem = item
-                
+                    strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
+                    
                     let transition: ContainedViewLayoutTransition
                     if animation.isAnimated {
                         transition = .animated(duration: 0.2, curve: .spring)
@@ -508,7 +515,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                     item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                                 } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
                                     item.controllerInteraction.openPeer(id, .chat(textInputState: nil, messageId: nil), nil)
-                                } else if let authorSignature = forwardInfo.authorSignature {
+                                } else if let _ = forwardInfo.authorSignature {
                                     item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode)
                                 }
                                 return

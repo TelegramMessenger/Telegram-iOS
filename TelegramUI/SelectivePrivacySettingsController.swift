@@ -74,7 +74,7 @@ private func stringForUserCount(_ count: Int, strings: PresentationStrings) -> S
 
 private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     case forwardsPreviewHeader(PresentationTheme, String)
-    case forwardsPreview(PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Bool, String)
+    case forwardsPreview(PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, String, Bool, String)
     case settingHeader(PresentationTheme, String)
     case everybody(PresentationTheme, String, Bool)
     case contacts(PresentationTheme, String, Bool)
@@ -164,8 +164,8 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .forwardsPreview(lhsTheme, lhsWallpaper, lhsFontSize, lhsStrings, lhsTimeFormat, lhsNameOrder, lhsLinkEnabled, lhsTooltipText):
-                if case let .forwardsPreview(rhsTheme, rhsWallpaper, rhsFontSize, rhsStrings, rhsTimeFormat, rhsNameOrder, rhsLinkEnabled, rhsTooltipText) = rhs, lhsTheme === rhsTheme, lhsWallpaper == rhsWallpaper, lhsFontSize == rhsFontSize, lhsStrings === rhsStrings, lhsTimeFormat == rhsTimeFormat, lhsNameOrder == rhsNameOrder, lhsLinkEnabled == rhsLinkEnabled, lhsTooltipText == rhsTooltipText {
+            case let .forwardsPreview(lhsTheme, lhsWallpaper, lhsFontSize, lhsStrings, lhsTimeFormat, lhsNameOrder, lhsPeerName, lhsLinkEnabled, lhsTooltipText):
+                if case let .forwardsPreview(rhsTheme, rhsWallpaper, rhsFontSize, rhsStrings, rhsTimeFormat, rhsNameOrder, rhsPeerName, rhsLinkEnabled, rhsTooltipText) = rhs, lhsTheme === rhsTheme, lhsWallpaper == rhsWallpaper, lhsFontSize == rhsFontSize, lhsStrings === rhsStrings, lhsTimeFormat == rhsTimeFormat, lhsNameOrder == rhsNameOrder, lhsPeerName == rhsPeerName, lhsLinkEnabled == rhsLinkEnabled, lhsTooltipText == rhsTooltipText {
                     return true
                 } else {
                     return false
@@ -289,8 +289,8 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
         switch self {
             case let .forwardsPreviewHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, multiline: true, sectionId: self.section)
-            case let .forwardsPreview(theme, wallpaper, fontSize, strings, dateTimeFormat, nameDisplayOrder, linkEnabled, tooltipText):
-                return ForwardPrivacyChatPreviewItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, fontSize: fontSize, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, linkEnabled: linkEnabled, tooltipText: tooltipText)
+            case let .forwardsPreview(theme, wallpaper, fontSize, strings, dateTimeFormat, nameDisplayOrder, peerName, linkEnabled, tooltipText):
+                return ForwardPrivacyChatPreviewItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, fontSize: fontSize, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, peerName: peerName, linkEnabled: linkEnabled, tooltipText: tooltipText)
             case let .settingHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, multiline: true, sectionId: self.section)
             case let .everybody(theme, text, value):
@@ -448,7 +448,7 @@ private struct SelectivePrivacySettingsControllerState: Equatable {
     }
 }
 
-private func selectivePrivacySettingsControllerEntries(presentationData: PresentationData, kind: SelectivePrivacySettingsKind, state: SelectivePrivacySettingsControllerState) -> [SelectivePrivacySettingsEntry] {
+private func selectivePrivacySettingsControllerEntries(presentationData: PresentationData, kind: SelectivePrivacySettingsKind, state: SelectivePrivacySettingsControllerState, peerName: String) -> [SelectivePrivacySettingsEntry] {
     var entries: [SelectivePrivacySettingsEntry] = []
     
     let settingTitle: String
@@ -498,7 +498,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
                 linkEnabled = false
         }
         entries.append(.forwardsPreviewHeader(presentationData.theme, presentationData.strings.Privacy_Forwards_Preview))
-        entries.append(.forwardsPreview(presentationData.theme, presentationData.chatWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, linkEnabled, tootipText))
+        entries.append(.forwardsPreview(presentationData.theme, presentationData.chatWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peerName, linkEnabled, tootipText))
     }
     
     entries.append(.settingHeader(presentationData.theme, settingTitle))
@@ -693,8 +693,12 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
         }).start()
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get()) |> deliverOnMainQueue
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<SelectivePrivacySettingsEntry>, SelectivePrivacySettingsEntry.ItemGenerationArguments)) in
+    let peerName = context.account.postbox.transaction { transaction -> String in
+        return (transaction.getPeer(context.account.peerId) as? TelegramUser)?.displayTitle ?? ""
+    }
+    
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peerName) |> deliverOnMainQueue
+    |> map { presentationData, state, peerName -> (ItemListControllerState, (ItemListNodeState<SelectivePrivacySettingsEntry>, SelectivePrivacySettingsEntry.ItemGenerationArguments)) in
         
         let title: String
         switch kind {
@@ -710,7 +714,7 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                 title = presentationData.strings.Privacy_Forwards
         }
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: selectivePrivacySettingsControllerEntries(presentationData: presentationData, kind: kind, state: state), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(entries: selectivePrivacySettingsControllerEntries(presentationData: presentationData, kind: kind, state: state, peerName: peerName), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {

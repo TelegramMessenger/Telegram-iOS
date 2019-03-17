@@ -480,7 +480,7 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments, !self.didPlayPresentationAnimation {
             self.didPlayPresentationAnimation = true
             if case .modalSheet = presentationArguments.presentationAnimation {
-                (self.displayNode as! ItemListControllerNode<Entry>).animateIn()
+                (self.displayNode as! ItemListControllerNode<Entry>).animateIn(completion: presentationArguments.completion)
             }
         }
         

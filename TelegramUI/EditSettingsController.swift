@@ -29,6 +29,19 @@ private enum SettingsSection: Int32 {
     case logOut
 }
 
+public enum EditSettingsEntryTag: ItemListItemTag {
+    case bio
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? EditSettingsEntryTag, self == other {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
+
 private enum SettingsEntry: ItemListNodeEntry {
     case userInfo(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer?, CachedPeerData?, ItemListAvatarAndNameInfoItemState, ItemListAvatarAndNameInfoItemUpdatingAvatar?)
     case userInfoNotice(PresentationTheme, String)
@@ -177,8 +190,7 @@ private enum SettingsEntry: ItemListNodeEntry {
             case let .bioText(theme, currentText, placeholder):
                 return ItemListMultilineInputItem(theme: theme, text: currentText, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 70, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateBioText(currentText, updatedText)
-                }, action: {
-                    
+                }, tag: EditSettingsEntryTag.bio, action: {
                 })
             case let .bioInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
@@ -282,7 +294,7 @@ private func editSettingsEntries(presentationData: PresentationData, state: Edit
     return entries
 }
 
-func editSettingsController(context: AccountContext, currentName: ItemListAvatarAndNameInfoItemName, currentBioText: String, accountManager: AccountManager, canAddAccounts: Bool) -> ViewController {
+func editSettingsController(context: AccountContext, currentName: ItemListAvatarAndNameInfoItemName, currentBioText: String, accountManager: AccountManager, canAddAccounts: Bool, focusOnItemTag: EditSettingsEntryTag? = nil) -> ViewController {
     let initialState = EditSettingsState(editingName: currentName, editingBioText: currentBioText)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -399,7 +411,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
             }
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.EditProfile_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: editSettingsEntries(presentationData: presentationData, state: state, view: view, canAddAccounts: canAddAccounts), style: .blocks)
+            let listState = ItemListNodeState(entries: editSettingsEntries(presentationData: presentationData, state: state, view: view, canAddAccounts: canAddAccounts), style: .blocks, ensureVisibleItemTag: focusOnItemTag)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

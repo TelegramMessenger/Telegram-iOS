@@ -418,7 +418,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     }
                                 }
                             default:
-                                if let content = item.content as? NativeVideoContent, !content.streamVideo {
+                                if let content = item.content as? NativeVideoContent, !content.streamVideo.enabled {
                                     if !content.enableSound {
                                         isPaused = false
                                     }
@@ -557,10 +557,21 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             if let videoNode = self.videoNode {
                 if isCentral {
+                    var isAnimated = false
+                    if let item = self.item, let content = item.content as? NativeVideoContent {
+                        isAnimated = content.fileReference.media.isAnimated
+                    }
+                    
                     self.hideStatusNodeUntilCentrality = false
-                    if self.shouldAutoplayOnCentrality()  {
-                        self.initiallyActivated = true
-                        videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+                    if videoNode.ownsContentNode {
+                        if isAnimated {
+                            videoNode.seek(0.0)
+                            videoNode.play()
+                        }
+                        else if self.shouldAutoplayOnCentrality()  {
+                            self.initiallyActivated = true
+                            videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+                        }
                     }
                 } else {
                     self.dismissOnOrientationChange = false
@@ -604,7 +615,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     override func activateAsInitial() {
         if let videoNode = self.videoNode, self.isCentral {
             self.initiallyActivated = true
-            
+
             var isAnimated = false
             if let item = self.item, let content = item.content as? NativeVideoContent {
                 isAnimated = content.fileReference.media.isAnimated
@@ -708,9 +719,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             videoNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: videoNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
             
-            Queue.mainQueue().after(0.001) {
-                videoNode.canAttachContent = true
-                self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
+            if self.item?.fromPlayingVideo ?? false {
+                Queue.mainQueue().after(0.001) {
+                    videoNode.canAttachContent = true
+                    self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
+                }
             }
             
             if let pictureInPictureNode = self.pictureInPictureNode {
