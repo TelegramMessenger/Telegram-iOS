@@ -47,9 +47,11 @@ public struct ViewControllerSupportedOrientations {
 
 open class ViewControllerPresentationArguments {
     public let presentationAnimation: ViewControllerPresentationAnimation
+    public let completion: (() -> Void)?
     
-    public init(presentationAnimation: ViewControllerPresentationAnimation) {
+    public init(presentationAnimation: ViewControllerPresentationAnimation, completion: (() -> Void)? = nil) {
         self.presentationAnimation = presentationAnimation
+        self.completion = completion
     }
 }
 
