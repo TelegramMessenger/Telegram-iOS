@@ -5888,7 +5888,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }
             }))
         }
-        if options.contains(.deleteGlobally) {
+        var unsendPersonalMessages = false
+        if options.contains(.unsendPersonal) {
+            items.append(ActionSheetTextItem(title: self.presentationData.strings.Chat_UnsendMyMessagesAlertTitle(personalPeerName ?? "").0))
+            items.append(ActionSheetSwitchItem(title: self.presentationData.strings.Chat_UnsendMyMessages, isOn: false, action: { value in
+                unsendPersonalMessages = value
+            }))
+        } else if options.contains(.deleteGlobally) {
             let globalTitle: String
             if isChannel {
                 globalTitle = self.presentationData.strings.Conversation_DeleteMessagesForEveryone
@@ -5907,7 +5913,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
         if options.contains(.deleteLocally) {
             var localOptionText = self.presentationData.strings.Conversation_DeleteMessagesForMe
-            if case .peer(self.context.account.peerId) = self.chatLocation {
+            if options.contains(.unsendPersonal) {
+                localOptionText = self.presentationData.strings.Chat_DeleteMessagesConfirmation(Int32(messageIds.count))
+            } else if case .peer(self.context.account.peerId) = self.chatLocation {
                 if messageIds.count == 1 {
                     localOptionText = self.presentationData.strings.Conversation_Moderate_Delete
                 } else {
@@ -5918,7 +5926,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 actionSheet?.dismissAnimated()
                 if let strongSelf = self {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                    let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                    let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).start()
                 }
             }))
         }

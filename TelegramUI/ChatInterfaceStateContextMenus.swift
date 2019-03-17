@@ -570,6 +570,7 @@ struct ChatAvailableMessageActionOptions: OptionSet {
     static let viewStickerPack = ChatAvailableMessageActionOptions(rawValue: 1 << 4)
     static let rateCall = ChatAvailableMessageActionOptions(rawValue: 1 << 5)
     static let cancelSending = ChatAvailableMessageActionOptions(rawValue: 1 << 6)
+    static let unsendPersonal = ChatAvailableMessageActionOptions(rawValue: 1 << 7)
 }
 
 struct ChatAvailableMessageActions {
@@ -590,11 +591,34 @@ private func canPerformEditingActions(limits: LimitsConfiguration, accountPeerId
     return false
 }
 
+private func canPerformDeleteActions(limits: LimitsConfiguration, accountPeerId: PeerId, message: Message) -> Bool {
+    if message.id.peerId == accountPeerId {
+        return true
+    }
+    if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+        return true
+    }
+    
+    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+    if message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+        if message.timestamp + limits.maxMessageRevokeIntervalInPrivateChats > timestamp {
+            return true
+        }
+    } else {
+        if message.timestamp + limits.maxMessageRevokeInterval > timestamp {
+            return true
+        }
+    }
+    
+    return false
+}
+
 func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError> {
     return postbox.transaction { transaction -> ChatAvailableMessageActions in
         let limitsConfiguration: LimitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
         var optionsMap: [MessageId: ChatAvailableMessageActionOptions] = [:]
         var banPeer: Peer?
+        var hadPersonalIncoming = false
         var hadBanPeerId = false
         for id in messageIds {
             if optionsMap[id] == nil {
@@ -699,9 +723,16 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                             }
                         }
                         optionsMap[id]!.insert(.deleteLocally)
-                        if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message) && !message.flags.contains(.Incoming) {
-                            optionsMap[id]!.insert(.deleteGlobally)
+                        var canDeleteGlobally = false
+                        if canPerformDeleteActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message) {
+                            canDeleteGlobally = true
                         } else if limitsConfiguration.canRemoveIncomingMessagesInPrivateChats {
+                            canDeleteGlobally = true
+                        }
+                        if message.flags.contains(.Incoming) {
+                            hadPersonalIncoming = true
+                        }
+                        if canDeleteGlobally {
                             optionsMap[id]!.insert(.deleteGlobally)
                         }
                         if user.botInfo != nil {
@@ -736,6 +767,9 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
             var reducedOptions = optionsMap.values.first!
             for value in optionsMap.values {
                 reducedOptions.formIntersection(value)
+            }
+            if hadPersonalIncoming && optionsMap.values.contains(where: { $0.contains(.deleteGlobally) }) && !reducedOptions.contains(.deleteGlobally) {
+                reducedOptions.insert(.unsendPersonal)
             }
             return ChatAvailableMessageActions(options: reducedOptions, banAuthor: banPeer)
         } else {
