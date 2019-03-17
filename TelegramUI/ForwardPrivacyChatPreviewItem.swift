@@ -5,7 +5,6 @@ import SwiftSignalKit
 import TelegramCore
 import Postbox
 
-
 class ForwardPrivacyChatPreviewItem: ListViewItem, ItemListItem {
     let context: AccountContext
     let theme: PresentationTheme
@@ -15,10 +14,11 @@ class ForwardPrivacyChatPreviewItem: ListViewItem, ItemListItem {
     let wallpaper: TelegramWallpaper
     let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
+    let peerName: String
     let linkEnabled: Bool
     let tooltipText: String
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, linkEnabled: Bool, tooltipText: String) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, peerName: String, linkEnabled: Bool, tooltipText: String) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -27,6 +27,7 @@ class ForwardPrivacyChatPreviewItem: ListViewItem, ItemListItem {
         self.wallpaper = wallpaper
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
+        self.peerName = peerName
         self.linkEnabled = linkEnabled
         self.tooltipText = tooltipText
     }
@@ -140,9 +141,9 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
             var peers = SimpleDictionary<PeerId, Peer>()
             let messages = SimpleDictionary<MessageId, Message>()
             
-            peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: item.strings.Privacy_Forwards_PreviewForwardAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+            peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: item.peerName, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
             
-            let forwardInfo = MessageForwardInfo(author: item.linkEnabled ? peers[peerId] : nil, source: nil, sourceMessageId: nil, date: 0, authorSignature: item.linkEnabled ? nil : item.strings.Privacy_Forwards_PreviewForwardAuthor)
+            let forwardInfo = MessageForwardInfo(author: item.linkEnabled ? peers[peerId] : nil, source: nil, sourceMessageId: nil, date: 0, authorSignature: item.linkEnabled ? nil : item.peerName)
             
             let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: item.theme, wallpaper: item.wallpaper), fontSize: item.fontSize, strings: item.strings, dateTimeFormat: item.dateTimeFormat, nameDisplayOrder: item.nameDisplayOrder, disableAnimations: false)
             
@@ -186,7 +187,7 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
                     fromString = String(from)
                 }
             }
-            let authorString = item.strings.Privacy_Forwards_PreviewForwardAuthor
+            let authorString = item.peerName
             
             if let fromString = fromString {
                 var attributedMeasureText = NSAttributedString(string: fromString, font: Font.regular(13.0), textColor: .black)

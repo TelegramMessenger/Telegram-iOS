@@ -383,7 +383,7 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
     return entries
 }
 
-public func privacyAndSecurityController(context: AccountContext) -> ViewController {
+public func privacyAndSecurityController(context: AccountContext, initialSettings: AccountPrivacySettings? = nil, updatedSettings: ((AccountPrivacySettings?) -> Void)? = nil) -> ViewController {
     let statePromise = ValuePromise(PrivacyAndSecurityControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PrivacyAndSecurityControllerState())
     let updateState: ((PrivacyAndSecurityControllerState) -> PrivacyAndSecurityControllerState) -> Void = { f in
@@ -403,7 +403,7 @@ public func privacyAndSecurityController(context: AccountContext) -> ViewControl
     actionsDisposable.add(updateAccountTimeoutDisposable)
     
     let privacySettingsPromise = Promise<AccountPrivacySettings?>()
-    privacySettingsPromise.set(.single(nil) |> then(requestAccountPrivacySettings(account: context.account) |> map(Optional.init)))
+    privacySettingsPromise.set(.single(initialSettings) |> then(requestAccountPrivacySettings(account: context.account) |> map(Optional.init)))
     
     let arguments = PrivacyAndSecurityControllerArguments(account: context.account, openBlockedUsers: {
         pushControllerImpl?(blockedPeersController(context: context))
@@ -615,6 +615,11 @@ public func privacyAndSecurityController(context: AccountContext) -> ViewControl
     })
     
     actionsDisposable.add(managedUpdatedRecentPeers(accountPeerId: context.account.peerId, postbox: context.account.postbox, network: context.account.network).start())
+
+    actionsDisposable.add((privacySettingsPromise.get()
+    |> deliverOnMainQueue).start(next: { settings in
+        updatedSettings?(settings)
+    }))
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), recentPeers(account: context.account))
     |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers -> (ItemListControllerState, (ItemListNodeState<PrivacyAndSecurityEntry>, PrivacyAndSecurityEntry.ItemGenerationArguments)) in

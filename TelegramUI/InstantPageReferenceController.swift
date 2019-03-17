@@ -15,16 +15,16 @@ final class InstantPageReferenceController: ViewController {
     private let context: AccountContext
     private let theme: InstantPageTheme
     private let webPage: TelegramMediaWebpage
-    private let item: InstantPageTextItem
+    private let anchorText: NSAttributedString
     private let openUrl: (InstantPageUrlItem) -> Void
     private let openUrlIn: (InstantPageUrlItem) -> Void
     private let present: (ViewController, Any?) -> Void
     
-    init(context: AccountContext, theme: InstantPageTheme, webPage: TelegramMediaWebpage, item: InstantPageTextItem, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlIn: @escaping (InstantPageUrlItem) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, theme: InstantPageTheme, webPage: TelegramMediaWebpage, anchorText: NSAttributedString, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlIn: @escaping (InstantPageUrlItem) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.theme = theme
         self.webPage = webPage
-        self.item = item
+        self.anchorText = anchorText
         self.openUrl = openUrl
         self.openUrlIn = openUrlIn
         self.present = present
@@ -39,7 +39,7 @@ final class InstantPageReferenceController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = InstantPageReferenceControllerNode(context: self.context, theme: self.theme, webPage: self.webPage, item: self.item, openUrl: self.openUrl, openUrlIn: self.openUrlIn, present: self.present)
+        self.displayNode = InstantPageReferenceControllerNode(context: self.context, theme: self.theme, webPage: self.webPage, anchorText: self.anchorText, openUrl: self.openUrl, openUrlIn: self.openUrlIn, present: self.present)
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }

@@ -871,9 +871,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                         strongSelf.controllerInteraction.sendGif(file)
                                     }
                                 }),
-                                PeekControllerMenuItem(title: strongSelf.strings.Common_Delete, color: .destructive, action: {
+                                PeekControllerMenuItem(title: strongSelf.strings.Preview_SaveGif, color: .accent, action: {
                                     if let strongSelf = self {
-                                        let _ = removeSavedGif(postbox: strongSelf.context.account.postbox, mediaId: file.media.fileId).start()
+                                        let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: file).start()
                                     }
                                 })
                             ])))
@@ -1375,11 +1375,13 @@ final class ChatMediaInputNode: ChatInputNode {
             self.searchContainerNode = nil
             self.searchContainerNodeLoadedDisposable.set(nil)
             
+            var paneIsEmpty = false
             var placeholderNode: PaneSearchBarPlaceholderNode?
             if let searchMode = searchMode {
                 switch searchMode {
                     case .gif:
                         placeholderNode = self.gifPane.searchPlaceholderNode
+                        paneIsEmpty = self.gifPane.isEmpty
                     case .sticker:
                         self.stickerPane.gridNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? PaneSearchBarPlaceholderNode {
@@ -1389,7 +1391,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 }
             }
             if let placeholderNode = placeholderNode {
-                searchContainerNode.animateOut(to: placeholderNode, transition: transition, completion: { [weak searchContainerNode] in
+                searchContainerNode.animateOut(to: placeholderNode, animateOutSearchBar: !paneIsEmpty, transition: transition, completion: { [weak searchContainerNode] in
                     searchContainerNode?.removeFromSupernode()
                 })
             } else {

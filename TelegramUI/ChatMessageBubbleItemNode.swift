@@ -150,6 +150,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
     private var appliedItem: ChatMessageItem?
+    private var appliedForwardInfo: (Peer?, String?)?
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -314,6 +315,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         let layoutConstants = self.layoutConstants
         
         let currentItem = self.appliedItem
+        let currentForwardInfo = self.appliedForwardInfo
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
             let accessibilityData = ChatMessageAccessibilityData(item: item)
@@ -746,6 +748,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             var forwardInfoOriginY: CGFloat = 0.0
             var forwardInfoSizeApply: (CGSize, () -> ChatMessageForwardInfoNode?) = (CGSize(), { nil })
             
+            var forwardSource: Peer?
+            var forwardAuthorSignature: String?
+            
             if displayHeader {
                 if authorNameString != nil || inlineBotNameString != nil {
                     if headerSize.height.isZero {
@@ -790,13 +795,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     headerSize.width = max(headerSize.width, nameNodeSizeApply.0.width + adminBadgeSizeAndApply.0.size.width + layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right)
                     headerSize.height += nameNodeSizeApply.0.height
                 }
-                
+
                 if !ignoreForward, let forwardInfo = firstMessage.forwardInfo {
                     if headerSize.height.isZero {
                         headerSize.height += 5.0
                     }
-                    let forwardSource: Peer?
-                    let forwardAuthorSignature: String?
                     
                     if let source = forwardInfo.source {
                         forwardSource = source
@@ -808,8 +811,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             forwardAuthorSignature = nil
                         }
                     } else {
-                        forwardSource = forwardInfo.author
-                        forwardAuthorSignature = forwardInfo.authorSignature
+                        if let currentForwardInfo = currentForwardInfo, forwardInfo.author == nil && currentForwardInfo.0 != nil {
+                            forwardSource = currentForwardInfo.0
+                            forwardAuthorSignature = currentForwardInfo.1
+                        } else {
+                            forwardSource = forwardInfo.author
+                            forwardAuthorSignature = forwardInfo.authorSignature
+                        }
                     }
                     let sizeAndApply = forwardInfoLayout(item.presentationData, item.presentationData.strings, .bubble(incoming: incoming), forwardSource, forwardAuthorSignature, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
                     forwardInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
@@ -1148,6 +1156,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             return (layout, { [weak self] animation, synchronousLoads in
                 if let strongSelf = self {
                     strongSelf.appliedItem = item
+                    strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
                     strongSelf.accessibilityLabel = accessibilityData.label
                     strongSelf.accessibilityValue = accessibilityData.value
                     
@@ -1597,7 +1606,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                         item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                                     } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
                                         item.controllerInteraction.openPeer(id, .info, nil)
-                                    } else if let authorSignature = forwardInfo.authorSignature {
+                                    } else if let _ = forwardInfo.authorSignature {
                                         item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode)
                                     }
                                     return

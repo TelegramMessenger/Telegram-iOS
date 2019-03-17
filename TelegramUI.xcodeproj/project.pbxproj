@@ -130,6 +130,8 @@
 		09DD88FA21BFD70B000766BC /* ThemedTextAlertController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */; };
 		09E4A801223AE1B30038140F /* PeerType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A800223AE1B30038140F /* PeerType.swift */; };
 		09E4A803223B833B0038140F /* ForwardPrivacyChatPreviewItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A802223B833B0038140F /* ForwardPrivacyChatPreviewItem.swift */; };
+		09E4A805223D4A5A0038140F /* OpenSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A804223D4A5A0038140F /* OpenSettings.swift */; };
+		09E4A807223D4B860038140F /* AccountUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A806223D4B860038140F /* AccountUtils.swift */; };
 		09EDAD26220D30980012A50B /* AutodownloadConnectionTypeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD25220D30980012A50B /* AutodownloadConnectionTypeController.swift */; };
 		09EDAD2A220DA6A40012A50B /* VolumeButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD29220DA6A40012A50B /* VolumeButtons.swift */; };
 		09EDAD2C2211552F0012A50B /* AutodownloadMediaCategoryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD2B2211552F0012A50B /* AutodownloadMediaCategoryController.swift */; };
@@ -1289,6 +1291,8 @@
 		09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedTextAlertController.swift; sourceTree = "<group>"; };
 		09E4A800223AE1B30038140F /* PeerType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerType.swift; sourceTree = "<group>"; };
 		09E4A802223B833B0038140F /* ForwardPrivacyChatPreviewItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForwardPrivacyChatPreviewItem.swift; sourceTree = "<group>"; };
+		09E4A804223D4A5A0038140F /* OpenSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenSettings.swift; sourceTree = "<group>"; };
+		09E4A806223D4B860038140F /* AccountUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountUtils.swift; sourceTree = "<group>"; };
 		09EDAD25220D30980012A50B /* AutodownloadConnectionTypeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadConnectionTypeController.swift; sourceTree = "<group>"; };
 		09EDAD29220DA6A40012A50B /* VolumeButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeButtons.swift; sourceTree = "<group>"; };
 		09EDAD2B2211552F0012A50B /* AutodownloadMediaCategoryController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadMediaCategoryController.swift; sourceTree = "<group>"; };
@@ -2640,6 +2644,7 @@
 				D04ECD711FFBF22B00DE9029 /* OpenUrl.swift */,
 				D0FC194C201F82A000FEDBB2 /* OpenResolvedUrl.swift */,
 				D023836F1DDF0462004018B6 /* UrlHandling.swift */,
+				09E4A804223D4A5A0038140F /* OpenSettings.swift */,
 			);
 			name = Routing;
 			sourceTree = "<group>";
@@ -4861,6 +4866,7 @@
 				090B48C72200BCA8005083FA /* WallpaperUploadManager.swift */,
 				09D96898221DE92600B1458A /* ID3ArtworkReader.swift */,
 				09E4A800223AE1B30038140F /* PeerType.swift */,
+				09E4A806223D4B860038140F /* AccountUtils.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -5415,6 +5421,7 @@
 				D093D7DF2062F3F000BC3599 /* SecureIdDocumentFormController.swift in Sources */,
 				D0E9BA371F05585000F079A4 /* STPPhoneNumberValidator.m in Sources */,
 				0910B0EF21FA532D00F8F87D /* WallpaperResources.swift in Sources */,
+				09E4A807223D4B860038140F /* AccountUtils.swift in Sources */,
 				D069F5D0212700B90000565A /* StickerPanePeerSpecificSetupGridItem.swift in Sources */,
 				D0EC6D041EB9F58800EBF1C3 /* opusenc.m in Sources */,
 				D0A8998D217A294100759EE6 /* SaveIncomingMediaController.swift in Sources */,
@@ -5634,6 +5641,7 @@
 				D0EC6D681EB9F58800EBF1C3 /* AuthorizationSequenceController.swift in Sources */,
 				09F664C021EAAFAF00AB7E26 /* ThemeColorsGridController.swift in Sources */,
 				D0EC6D691EB9F58800EBF1C3 /* AuthorizationSequenceSplashController.swift in Sources */,
+				09E4A805223D4A5A0038140F /* OpenSettings.swift in Sources */,
 				D0EC6D6A1EB9F58800EBF1C3 /* AuthorizationSequenceSplashControllerNode.swift in Sources */,
 				D0C683FC21AD797F00A6CAD5 /* ChatListSelection.swift in Sources */,
 				D0EC6D6B1EB9F58800EBF1C3 /* AuthorizationSequenceCountrySelectionController.swift in Sources */,

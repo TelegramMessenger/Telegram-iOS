@@ -16,7 +16,7 @@ enum InstantPageTextStyle {
     case superscript
     case markerColor(UIColor)
     case marker
-    case anchor(String, Bool)
+    case anchor(String, NSAttributedString?, Bool)
     case linkColor(UIColor)
     case linkMarkerColor(UIColor)
     case link(Bool)
@@ -32,12 +32,12 @@ final class InstantPageTextStyleStack {
     private var items: [InstantPageTextStyle] = []
     
     func push(_ item: InstantPageTextStyle) {
-        items.append(item)
+        self.items.append(item)
     }
     
     func pop() {
-        if !items.isEmpty {
-            items.removeLast()
+        if !self.items.isEmpty {
+            self.items.removeLast()
         }
     }
     
@@ -114,9 +114,13 @@ final class InstantPageTextStyleStack {
                     if marker == nil {
                         marker = true
                     }
-                case let .anchor(name, empty):
+                case let .anchor(name, anchorText, empty):
                     if anchor == nil {
-                        anchor = ["name": name, "empty": empty]
+                        if let anchorText = anchorText {
+                            anchor = ["name": name, "text": anchorText, "empty": empty]
+                        } else {
+                            anchor = ["name": name, "empty": empty]
+                        }
                     }
                 case let .linkColor(color):
                     if linkColor == nil {

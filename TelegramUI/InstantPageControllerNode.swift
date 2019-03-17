@@ -1021,11 +1021,29 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return nil
     }
     
-    private func presentReferenceView(item: InstantPageTextItem) {
+    private func presentReferenceView(item: InstantPageTextItem, referenceAnchor: String) {
         guard let theme = self.theme, let webPage = self.webPage else {
             return
         }
-        let controller = InstantPageReferenceController(context: self.context, theme: theme, webPage: webPage, item: item, openUrl: { [weak self] url in
+        
+        var targetAnchor: InstantPageTextAnchorItem?
+        for (name, (line, _)) in item.anchors {
+            if name == referenceAnchor {
+                let anchors = item.lines[line].anchorItems
+                for anchor in anchors {
+                    if anchor.name == referenceAnchor {
+                        targetAnchor = anchor
+                        break
+                    }
+                }
+            }
+        }
+        
+        guard let anchorText = targetAnchor?.anchorText else {
+            return
+        }
+        
+        let controller = InstantPageReferenceController(context: self.context, theme: theme, webPage: webPage, anchorText: anchorText, openUrl: { [weak self] url in
             self?.openUrl(url)
         }, openUrlIn: { [weak self] url in
             self?.openUrlIn(url)
@@ -1043,7 +1061,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if !anchor.isEmpty {
             if let (item, lineOffset, reference, detailsItems) = findAnchorItem(String(anchor), items: items) {
                 if let item = item as? InstantPageTextItem, reference {
-                    self.presentReferenceView(item: item)
+                    self.presentReferenceView(item: item, referenceAnchor: anchor)
                 } else {
                     var previousDetailsNode: InstantPageDetailsNode?
                     var containerOffset: CGFloat = 0.0

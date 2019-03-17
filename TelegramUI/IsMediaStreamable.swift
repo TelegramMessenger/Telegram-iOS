@@ -12,7 +12,7 @@ func isMediaStreamable(message: Message, media: TelegramMediaFile) -> Bool {
     guard let size = media.size else {
         return false
     }
-    if size < 1 * 1024 * 1024 {
+    if size < 256 * 1024 {
         return false
     }
     for attribute in media.attributes {

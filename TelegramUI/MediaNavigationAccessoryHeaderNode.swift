@@ -207,6 +207,18 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.actionPauseNode.image = PresentationResourcesRootController.navigationPlayerPauseIcon(self.theme)
         self.separatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
         self.scrubbingNode.updateContent(.standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor))
+        
+        if let voiceBaseRate = self.voiceBaseRate {
+            switch voiceBaseRate {
+                case .x1:
+                    self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateInactiveIcon(self.theme), for: [])
+                case .x2:
+                    self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateActiveIcon(self.theme), for: [])
+            }
+        }
+        if let (size, leftInset, rightInset) = self.validLayout {
+            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+        }
     }
     
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {

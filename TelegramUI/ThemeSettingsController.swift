@@ -189,7 +189,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
             case let .fontSize(theme, fontSize):
                 return ThemeSettingsFontSizeItem(theme: theme, fontSize: fontSize, sectionId: self.section, updated: { value in
                     arguments.selectFontSize(value)
-                })
+                }, tag: ThemeSettingsEntryTag.fontSize)
             case let .chatPreviewHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .chatPreview(theme, componentTheme, wallpaper, fontSize, strings, dateTimeFormat, nameDisplayOrder):
@@ -201,7 +201,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
             case let .accentColor(theme, text, color):
                 return ItemListDisclosureItem(theme: theme, icon: nil, title: text, label: "", labelStyle: .color(UIColor(rgb: UInt32(bitPattern: color))), sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openAccentColor(color)
-                })
+                }, tag: ThemeSettingsEntryTag.accentColor)
             case let .autoNightTheme(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, icon: nil, title: text, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openAutoNightTheme()
@@ -217,7 +217,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
             case let .animations(theme, title, value):
                 return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.disableAnimations(value)
-                })
+                }, tag: ThemeSettingsEntryTag.animations)
             case let .animationsInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }

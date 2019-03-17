@@ -82,7 +82,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
         return self.measureNode.measure(CGSize(width: 240.0, height: 160.0)).width
     }
     
-    func update(theme: PresentationTheme, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, alignment: NSTextAlignment = .left, animated: Bool) {
+    func update(theme: PresentationTheme, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, alignment: NSTextAlignment = .left, animated: Bool, badgeAnimated: Bool = true) {
         var transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
         
         let previousContentSize = self.previousContentSize
@@ -285,9 +285,9 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                     mediaStatusFrame = CGRect(origin: CGPoint(x: 7.0 + originX, y: originY), size: CGSize(width: 28.0, height: 28.0))
                 }
                 mediaDownloadStatusNode.frame = mediaStatusFrame
-                mediaDownloadStatusNode.transitionToState(state, animated: true, completion: {})
+                mediaDownloadStatusNode.transitionToState(state, animated: badgeAnimated, completion: {})
             } else if let mediaDownloadStatusNode = self.mediaDownloadStatusNode {
-                mediaDownloadStatusNode.transitionToState(.none, animated: true, completion: {})
+                mediaDownloadStatusNode.transitionToState(.none, animated: badgeAnimated, completion: {})
             }
         }
     }

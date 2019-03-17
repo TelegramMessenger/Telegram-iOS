@@ -143,7 +143,7 @@ public final class RadialStatusNode: ASControlNode {
         super.init()
     }
     
-    public func transitionToState(_ state: RadialStatusNodeState, animated: Bool = true, completion: @escaping () -> Void) {
+    public func transitionToState(_ state: RadialStatusNodeState, animated: Bool = true, completion: @escaping () -> Void = {}) {
         if self.state != state {
             let fromState = self.state
             self.state = state

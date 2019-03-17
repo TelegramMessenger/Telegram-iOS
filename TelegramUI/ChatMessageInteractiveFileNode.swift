@@ -747,7 +747,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             statusForegroundColor = presentationData.wallpaper.isEmpty ? bubbleTheme.outgoing.withoutWallpaper.fill : bubbleTheme.outgoing.withWallpaper.fill
         }
         switch resourceStatus.mediaStatus {
-            case let .fetchStatus(fetchStatus):
+            case var .fetchStatus(fetchStatus):
+                if self.message?.forwardInfo != nil {
+                    fetchStatus = resourceStatus.fetchStatus
+                }
                 self.waveformScrubbingNode?.enableScrubbing = false
                 switch fetchStatus {
                     case let .Fetching(_, progress):
@@ -822,8 +825,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                 })
             } else {
-                streamingStatusNode.transitionToState(streamingState, completion: {
-                })
+                streamingStatusNode.transitionToState(streamingState)
             }
         }
         

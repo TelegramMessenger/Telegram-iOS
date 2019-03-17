@@ -116,6 +116,10 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         }
     }
     
+    override var isEmpty: Bool {
+        return self.multiplexedNode?.files.isEmpty ?? true
+    }
+    
     override func willEnterHierarchy() {
         super.willEnterHierarchy()
         

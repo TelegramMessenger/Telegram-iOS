@@ -556,6 +556,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var dismissInputImpl: (() -> Void)?
     var setDisplayNavigationBarImpl: ((Bool) -> Void)?
     var getNavigationControllerImpl: (() -> NavigationController?)?
     
@@ -588,47 +589,10 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     let archivedPacks = Promise<[ArchivedStickerPackItem]?>()
     
     let contextValue = Promise<AccountContext>()
-    
-    let networkArguments = context.account.networkArguments
-    let auxiliaryMethods = context.account.auxiliaryMethods
-    let rootPath = rootPathForBasePath(context.sharedContext.applicationBindings.containerPath)
-    
-    let sharedContext = context.sharedContext
-    let accountsAndPeersSignal: Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> = context.sharedContext.activeAccounts
-    |> mapToSignal { primary, activeAccounts, _ -> Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> in
-        var accounts: [Signal<(Account, Peer, Int32)?, NoError>] = []
-        func accountWithPeer(_ account: Account) -> Signal<(Account, Peer, Int32)?, NoError> {
-            return combineLatest(account.postbox.peerView(id: account.peerId), renderedTotalUnreadCount(accountManager: sharedContext.accountManager, postbox: account.postbox))
-            |> map { view, totalUnreadCount -> (Peer?, Int32) in
-                return (view.peers[view.peerId], totalUnreadCount.0)
-            }
-            |> distinctUntilChanged { lhs, rhs in
-                return arePeersEqual(lhs.0, rhs.0) && lhs.1 == rhs.1
-            }
-            |> map { peer, totalUnreadCount -> (Account, Peer, Int32)? in
-                if let peer = peer {
-                    return (account, peer, totalUnreadCount)
-                } else {
-                    return nil
-                }
-            }
-        }
-        for (_, account, _) in activeAccounts {
-            accounts.append(accountWithPeer(account))
-        }
-        
-        return combineLatest(accounts)
-        |> map { accounts -> ((Account, Peer)?, [(Account, Peer, Int32)]) in
-            var primaryRecord: (Account, Peer)?
-            if let first = accounts.filter({ $0?.0.id == primary?.id }).first, let (account, peer, _) = first {
-                primaryRecord = (account, peer)
-            }
-            return (primaryRecord, accounts.filter({ $0?.0.id != primary?.id }).compactMap({ $0 }))
-        }
-    }
-    
     let accountsAndPeers = Promise<((Account, Peer)?, [(Account, Peer, Int32)])>()
-    accountsAndPeers.set(accountsAndPeersSignal)
+    accountsAndPeers.set(activeAccountsAndPeers(context: context))
+    
+    let privacySettings = Promise<[PeerId: AccountPrivacySettings]>([:])
 
     let openFaq: (Promise<ResolvedUrl>) -> Void = { resolvedUrl in
         let _ = (contextValue.get()
@@ -717,7 +681,19 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            pushControllerImpl?(privacyAndSecurityController(context: context))
+            let _ = (privacySettings.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { settings in
+                pushControllerImpl?(privacyAndSecurityController(context: context, initialSettings: settings[context.account.peerId], updatedSettings: { settings in
+                    let _ = ((privacySettings.get()
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { currentPrivacySettings in
+                        var updatedPrivacySettings = currentPrivacySettings
+                        updatedPrivacySettings[context.account.peerId] = settings
+                        privacySettings.set(.single(updatedPrivacySettings))
+                    }))
+                }))
+            })
         })
     }, openDataAndStorage: {
         let _ = (contextValue.get()
@@ -798,48 +774,9 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            var cancelImpl: (() -> Void)?
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let progressSignal = Signal<Never, NoError> { subscriber in
-                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
-                    cancelImpl?()
-                }))
-                presentControllerImpl?(controller, nil)
-                return ActionDisposable { [weak controller] in
-                    Queue.mainQueue().async() {
-                        controller?.dismiss()
-                    }
-                }
+            if let presentControllerImpl = presentControllerImpl, let pushControllerImpl = pushControllerImpl {
+                openEditingDisposable.set(openEditSettings(context: context, accountsAndPeers: accountsAndPeers.get(), presentController: presentControllerImpl, pushController: pushControllerImpl))
             }
-            |> runOn(Queue.mainQueue())
-            |> delay(0.15, queue: Queue.mainQueue())
-            let progressDisposable = progressSignal.start()
-            
-            let peerKey: PostboxViewKey = .peer(peerId: context.account.peerId, components: [])
-            let cachedDataKey: PostboxViewKey = .cachedPeerData(peerId: context.account.peerId)
-            let signal = (combineLatest(accountsAndPeers.get() |> take(1), context.account.postbox.combinedView(keys: [peerKey, cachedDataKey]))
-            |> mapToSignal { accountsAndPeers, view -> Signal<(TelegramUser, CachedUserData, Bool), NoError> in
-                guard let cachedDataView = view.views[cachedDataKey] as? CachedPeerDataView, let cachedData = cachedDataView.cachedPeerData as? CachedUserData else {
-                    return .complete()
-                }
-                guard let peerView = view.views[peerKey] as? PeerView, let peer = peerView.peers[context.account.peerId] as? TelegramUser else {
-                    return .complete()
-                }
-                return .single((peer, cachedData, accountsAndPeers.1.count + 1 < maximumNumberOfAccounts))
-            }
-            |> take(1))
-            |> afterDisposed {
-                Queue.mainQueue().async {
-                    progressDisposable.dispose()
-                }
-            }
-            cancelImpl = {
-                openEditingDisposable.set(nil)
-            }
-            openEditingDisposable.set((signal
-            |> deliverOnMainQueue).start(next: { peer, cachedData, canAddAccounts in
-                pushControllerImpl?(editSettingsController(context: context, currentName: .personName(firstName: peer.firstName ?? "", lastName: peer.lastName ?? ""), currentBioText: cachedData.about ?? "", accountManager: accountManager, canAddAccounts: canAddAccounts))
-            }))
         })
     }, displayCopyContextMenu: {
         let _ = (contextValue.get()
@@ -1137,10 +1074,11 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 return state
             }
         }, presentController: { v, a in
+            dismissInputImpl?()
             presentControllerImpl?(v, a)
         }, pushController: { v in
             pushControllerImpl?(v)
-        })
+        }, getNavigationController: getNavigationControllerImpl)
         
         let (hasPassport, hasWatchApp) = hasPassportAndWatch
         let listState = ItemListNodeState(entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings), style: .blocks, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up))
@@ -1243,7 +1181,9 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     }
     presentControllerImpl = { [weak controller] value, arguments in
         controller?.present(value, in: .window(.root), with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet), blockInteraction: true)
-        
+    }
+    dismissInputImpl = { [weak controller] in
+        controller?.view.window?.endEditing(true)
     }
     getNavigationControllerImpl = { [weak controller] in
         return (controller?.navigationController as? NavigationController)
@@ -1285,7 +1225,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { accountContext in
-            pushControllerImpl?(debugController(sharedContext: sharedContext, context: accountContext))
+            pushControllerImpl?(debugController(sharedContext: accountContext.sharedContext, context: accountContext))
         })
     }
     

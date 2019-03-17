@@ -60,6 +60,29 @@ enum MediaPlayerPlayOnceWithSoundSeek {
     case automatic
 }
 
+enum MediaPlayerStreaming {
+    case none
+    case conservative
+    case earlierStart
+    
+    var enabled: Bool {
+        if case .none = self {
+            return false
+        } else {
+            return true
+        }
+    }
+    
+    var parameters: (Double, Double, Double) {
+        switch self {
+            case .none, .conservative:
+                return (1.0, 2.0, 3.0)
+            case .earlierStart:
+                return (0.5, 0.5, 1.0)
+        }
+    }
+}
+
 private final class MediaPlayerAudioRendererContext {
     let renderer: MediaPlayerAudioRenderer
     var requestedFrames = false
@@ -76,7 +99,7 @@ private final class MediaPlayerContext {
     private let postbox: Postbox
     private let resourceReference: MediaResourceReference
     private let tempFilePath: String?
-    private let streamable: Bool
+    private let streamable: MediaPlayerStreaming
     private let video: Bool
     private let preferSoftwareDecoding: Bool
     private var enableSound: Bool
@@ -102,7 +125,7 @@ private final class MediaPlayerContext {
     
     private var stoppedAtEnd = false
     
-    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: Promise<MediaPlayerStatus>, postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, playAndRecord: Bool, keepAudioSessionWhilePaused: Bool, continuePlayingWithoutSoundOnLostAudioSession: Bool) {
+    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: Promise<MediaPlayerStatus>, postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: MediaPlayerStreaming, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, playAndRecord: Bool, keepAudioSessionWhilePaused: Bool, continuePlayingWithoutSoundOnLostAudioSession: Bool) {
         assert(queue.isCurrent())
         
         self.queue = queue
@@ -135,12 +158,6 @@ private final class MediaPlayerContext {
                     case .paused:
                         if value {
                             strongSelf.play()
-//                            if strongSelf.enableSound {
-//                                strongSelf.play()
-//                                //strongSelf.continuePlayingWithoutSound()
-//                            } else {
-//                                strongSelf.play()
-//                            }
                         }
                     case .playing:
                         if !value {
@@ -151,11 +168,6 @@ private final class MediaPlayerContext {
                             case .pause:
                                 if value {
                                     strongSelf.play()
-//                                    if strongSelf.enableSound {
-//                                        strongSelf.continuePlayingWithoutSound()
-//                                    } else {
-//                                        strongSelf.play()
-//                                    }
                                 }
                             case .play:
                                 if !value {
@@ -280,7 +292,7 @@ private final class MediaPlayerContext {
             self.playerStatus.set(.single(status))
         }
         
-        let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, resourceReference: self.resourceReference, tempFilePath: self.tempFilePath, streamable: self.streamable, video: self.video, preferSoftwareDecoding: self.preferSoftwareDecoding, fetchAutomatically: self.fetchAutomatically)
+        let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, resourceReference: self.resourceReference, tempFilePath: self.tempFilePath, streamable: self.streamable.enabled, video: self.video, preferSoftwareDecoding: self.preferSoftwareDecoding, fetchAutomatically: self.fetchAutomatically, stallDuration: self.streamable.parameters.0, lowWaterDuration: self.streamable.parameters.1, highWaterDuration: self.streamable.parameters.2)
         let disposable = MetaDisposable()
         let updatedSeekState: MediaPlayerSeekState?
         if let loadedDuration = loadedDuration {
@@ -930,7 +942,7 @@ final class MediaPlayer {
         }
     }
     
-    init(audioSessionManager: ManagedAudioSession, postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String? = nil, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool = false, enableSound: Bool, baseRate: Double = 1.0, fetchAutomatically: Bool, playAndRecord: Bool = false, keepAudioSessionWhilePaused: Bool = true, continuePlayingWithoutSoundOnLostAudioSession: Bool = false) {
+    init(audioSessionManager: ManagedAudioSession, postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String? = nil, streamable: MediaPlayerStreaming, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool = false, enableSound: Bool, baseRate: Double = 1.0, fetchAutomatically: Bool, playAndRecord: Bool = false, keepAudioSessionWhilePaused: Bool = true, continuePlayingWithoutSoundOnLostAudioSession: Bool = false) {
         self.queue.async {
             let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, playerStatus: self.statusValue, postbox: postbox, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, playAutomatically: playAutomatically, enableSound: enableSound, baseRate: baseRate, fetchAutomatically: fetchAutomatically, playAndRecord: playAndRecord, keepAudioSessionWhilePaused: keepAudioSessionWhilePaused, continuePlayingWithoutSoundOnLostAudioSession: continuePlayingWithoutSoundOnLostAudioSession)
             self.contextRef = Unmanaged.passRetained(context)
