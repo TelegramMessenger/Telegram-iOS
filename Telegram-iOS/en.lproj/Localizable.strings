@@ -4081,7 +4081,6 @@ Unused sets are archived when you add more.";
 "Conversation.ForwardAuthorHiddenTooltip" = "The account was hidden by the user";
 
 "Privacy.Forwards.Preview" = "PREVIEW";
-"Privacy.Forwards.PreviewForwardAuthor" = "Lucio";
 "Privacy.Forwards.PreviewMessageText" = "Reinhardt, we need to find you some new music.";
 "Privacy.Forwards.AlwaysLink" = "Link to your account";
 "Privacy.Forwards.LinkIfAllowed" = "Link if allowed by settings below";
