@@ -4086,3 +4086,9 @@ Unused sets are archived when you add more.";
 "Privacy.Forwards.AlwaysLink" = "Link to your account";
 "Privacy.Forwards.LinkIfAllowed" = "Link if allowed by settings below";
 "Privacy.Forwards.NeverLink" = "Not a link to your account";
+
+"Chat.UnsendMyMessagesAlertTitle" = "Unsending will also delete messages you sent on %@'s side.";
+"Chat.UnsendMyMessages" = "Unsend My Messages";
+
+"Chat.DeleteMessagesConfirmation_1" = "Delete message";
+"Chat.DeleteMessagesConfirmation_any" = "Delete %@ messages";
