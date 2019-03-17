@@ -57,6 +57,7 @@
 		D02BDB021B6AC703008AFAD2 /* RuntimeUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */; };
 		D03310B3213F232600FC83CD /* ListViewTapGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03310B2213F232600FC83CD /* ListViewTapGestureRecognizer.swift */; };
 		D033874E223D3E86007A2CE4 /* AccessibilityAreaNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033874D223D3E86007A2CE4 /* AccessibilityAreaNode.swift */; };
+		D0338750223EE5A4007A2CE4 /* ActionSheetSwitchItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033874F223EE5A4007A2CE4 /* ActionSheetSwitchItem.swift */; };
 		D036574B1E71C44D00BB1EE4 /* MinimizeKeyboardGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D036574A1E71C44D00BB1EE4 /* MinimizeKeyboardGestureRecognizer.swift */; };
 		D03725C11D6DF594007FC290 /* ContextMenuNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03725C01D6DF594007FC290 /* ContextMenuNode.swift */; };
 		D03725C31D6DF7A6007FC290 /* ContextMenuAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03725C21D6DF7A6007FC290 /* ContextMenuAction.swift */; };
@@ -177,7 +178,6 @@
 		D0DC485F1BF949FB00F672FD /* TabBarContollerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DC485E1BF949FB00F672FD /* TabBarContollerNode.swift */; };
 		D0E1D6721CBC201E00B04029 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E1D6711CBC201E00B04029 /* AsyncDisplayKit.framework */; };
 		D0E35A031DE473B900BC6096 /* HighlightableButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E35A021DE473B900BC6096 /* HighlightableButton.swift */; };
-		D0E49C881B83A3580099E553 /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E49C871B83A3580099E553 /* ImageCache.swift */; };
 		D0E8175E2014ED7D00B82BBB /* CADisplayLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E8175C2014ED7D00B82BBB /* CADisplayLink.swift */; };
 		D0E8175F2014F18F00B82BBB /* ListViewTransactionQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFC21CC4431D0044FF83 /* ListViewTransactionQueue.swift */; };
 		D0F1132F1D6F3C20008C3597 /* ContextMenuActionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F1132E1D6F3C20008C3597 /* ContextMenuActionNode.swift */; };
@@ -239,6 +239,7 @@
 		D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RuntimeUtils.swift; sourceTree = "<group>"; };
 		D03310B2213F232600FC83CD /* ListViewTapGestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListViewTapGestureRecognizer.swift; sourceTree = "<group>"; };
 		D033874D223D3E86007A2CE4 /* AccessibilityAreaNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityAreaNode.swift; sourceTree = "<group>"; };
+		D033874F223EE5A4007A2CE4 /* ActionSheetSwitchItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionSheetSwitchItem.swift; sourceTree = "<group>"; };
 		D036574A1E71C44D00BB1EE4 /* MinimizeKeyboardGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MinimizeKeyboardGestureRecognizer.swift; sourceTree = "<group>"; };
 		D03725C01D6DF594007FC290 /* ContextMenuNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuNode.swift; sourceTree = "<group>"; };
 		D03725C21D6DF7A6007FC290 /* ContextMenuAction.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuAction.swift; sourceTree = "<group>"; };
@@ -364,7 +365,6 @@
 		D0E1D6351CBC159C00B04029 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		D0E1D6711CBC201E00B04029 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E35A021DE473B900BC6096 /* HighlightableButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HighlightableButton.swift; sourceTree = "<group>"; };
-		D0E49C871B83A3580099E553 /* ImageCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageCache.swift; sourceTree = "<group>"; };
 		D0E8175C2014ED7D00B82BBB /* CADisplayLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CADisplayLink.swift; sourceTree = "<group>"; };
 		D0F1132E1D6F3C20008C3597 /* ContextMenuActionNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuActionNode.swift; sourceTree = "<group>"; };
 		D0F7AB361DCFF6F8009AD9A1 /* ListViewItemHeader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewItemHeader.swift; sourceTree = "<group>"; };
@@ -480,6 +480,7 @@
 				D096A44F1EA64F580000A7AE /* ActionSheetCheckboxItem.swift */,
 				D0C0B5981EDF3BC9000F4D2C /* ActionSheetTextItem.swift */,
 				D0CE67911F7DA11700FFB557 /* ActionSheetTheme.swift */,
+				D033874F223EE5A4007A2CE4 /* ActionSheetSwitchItem.swift */,
 			);
 			name = "Action Sheet";
 			sourceTree = "<group>";
@@ -604,7 +605,6 @@
 				D0FF9B2E1E7196E2000C66DB /* Keyboard */,
 				D05CC3211B695AA600E235A3 /* Navigation */,
 				D02BDAEC1B6A7053008AFAD2 /* Nodes */,
-				D0E49C861B83A1680099E553 /* Image Cache */,
 				D05CC2E11B69534100E235A3 /* Supporting Files */,
 			);
 			path = Display;
@@ -785,14 +785,6 @@
 				D0DA44511E4DCC11005FDCA7 /* TextAlertController.swift */,
 			);
 			name = Alert;
-			sourceTree = "<group>";
-		};
-		D0E49C861B83A1680099E553 /* Image Cache */ = {
-			isa = PBXGroup;
-			children = (
-				D0E49C871B83A3580099E553 /* ImageCache.swift */,
-			);
-			name = "Image Cache";
 			sourceTree = "<group>";
 		};
 		D0FF9B2E1E7196E2000C66DB /* Keyboard */ = {
@@ -1005,7 +997,6 @@
 				D03AA5162030C5F80056C405 /* ListViewTempItemNode.swift in Sources */,
 				D087BFB51F75181D003FD209 /* ChildWindowHostView.swift in Sources */,
 				D0FA08C6204880C900DD23FC /* ImmediateTextNode.swift in Sources */,
-				D0E49C881B83A3580099E553 /* ImageCache.swift in Sources */,
 				D0078A681C92B21400DF6D92 /* StatusBar.swift in Sources */,
 				D05CC2F81B6955D000E235A3 /* UIViewController+Navigation.m in Sources */,
 				D03310B3213F232600FC83CD /* ListViewTapGestureRecognizer.swift in Sources */,
@@ -1047,6 +1038,7 @@
 				D015F7581D1B467200E269B5 /* ActionSheetController.swift in Sources */,
 				D0DA444C1E4DCA4A005FDCA7 /* AlertController.swift in Sources */,
 				D03E7DF91C96C5F200C07816 /* NSWeakReference.m in Sources */,
+				D0338750223EE5A4007A2CE4 /* ActionSheetSwitchItem.swift in Sources */,
 				D0DC48541BF93D8B00F672FD /* TabBarController.swift in Sources */,
 				D03E7E011C974AB300C07816 /* DisplayLinkDispatcher.swift in Sources */,
 				D05CC3191B695A9600E235A3 /* NavigationBackButtonNode.swift in Sources */,

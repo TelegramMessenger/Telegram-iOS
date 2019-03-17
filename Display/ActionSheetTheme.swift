@@ -18,8 +18,11 @@ public final class ActionSheetControllerTheme: Equatable {
     public let secondaryTextColor: UIColor
     public let controlAccentColor: UIColor
     public let controlColor: UIColor
+    public let switchFrameColor: UIColor
+    public let switchContentColor: UIColor
+    public let switchHandleColor: UIColor
     
-    public init(dimColor: UIColor, backgroundType: ActionSheetControllerThemeBackgroundType, itemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, standardActionTextColor: UIColor, destructiveActionTextColor: UIColor, disabledActionTextColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlAccentColor: UIColor, controlColor: UIColor) {
+    public init(dimColor: UIColor, backgroundType: ActionSheetControllerThemeBackgroundType, itemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, standardActionTextColor: UIColor, destructiveActionTextColor: UIColor, disabledActionTextColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlAccentColor: UIColor, controlColor: UIColor, switchFrameColor: UIColor, switchContentColor: UIColor, switchHandleColor: UIColor) {
         self.dimColor = dimColor
         self.backgroundType = backgroundType
         self.itemBackgroundColor = itemBackgroundColor
@@ -31,6 +34,9 @@ public final class ActionSheetControllerTheme: Equatable {
         self.secondaryTextColor = secondaryTextColor
         self.controlAccentColor = controlAccentColor
         self.controlColor = controlColor
+        self.switchFrameColor = switchFrameColor
+        self.switchContentColor = switchContentColor
+        self.switchHandleColor = switchHandleColor
     }
     
     public static func ==(lhs: ActionSheetControllerTheme, rhs: ActionSheetControllerTheme) -> Bool {
@@ -65,6 +71,15 @@ public final class ActionSheetControllerTheme: Equatable {
             return false
         }
         if lhs.controlColor != rhs.controlColor {
+            return false
+        }
+        if lhs.switchFrameColor != rhs.switchFrameColor {
+            return false
+        }
+        if lhs.switchContentColor != rhs.switchContentColor {
+            return false
+        }
+        if lhs.switchHandleColor != rhs.switchHandleColor {
             return false
         }
         return true
