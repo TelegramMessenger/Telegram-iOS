@@ -338,23 +338,29 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             shouldUpdateVisibleItems = true
             self.updateNavigationBar()
         }
+        var didSetScrollOffset = false
         if resetOffset {
             var contentOffset = CGPoint(x: 0.0, y: -self.scrollNode.view.contentInset.top)
             if let state = self.initialState {
-                self.setupScrollOffsetOnLayout = false
+                didSetScrollOffset = true
                 contentOffset = CGPoint(x: 0.0, y: CGFloat(state.contentOffset))
             }
             else if let anchor = self.initialAnchor, !anchor.isEmpty {
                 if let items = self.currentLayout?.items {
-                    self.setupScrollOffsetOnLayout = false
+                    didSetScrollOffset = true
                     if let (item, lineOffset, _, _) = self.findAnchorItem(anchor, items: items) {
                         contentOffset = CGPoint(x: 0.0, y: item.frame.minY + lineOffset - self.scrollNode.view.contentInset.top)
                     }
                 }
             } else {
-                self.setupScrollOffsetOnLayout = false
+                didSetScrollOffset = true
             }
             self.scrollNode.view.contentOffset = contentOffset
+            if didSetScrollOffset {
+                self.previousContentOffset = contentOffset
+                self.updateNavigationBar()
+                self.setupScrollOffsetOnLayout = false
+            }
         }
         if shouldUpdateVisibleItems {
             self.updateVisibleItems(visibleBounds: self.scrollNode.view.bounds)
@@ -668,7 +674,9 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         let delta: CGFloat
-        if let previousContentOffset = self.previousContentOffset {
+        if self.setupScrollOffsetOnLayout {
+            delta = 0.0
+        } else if let previousContentOffset = self.previousContentOffset {
             delta = contentOffset.y - previousContentOffset.y
         } else {
             delta = 0.0
@@ -698,6 +706,10 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 navigationBarFrame.size.height -= delta
             }
             navigationBarFrame.size.height = max(minBarHeight, min(maxBarHeight, navigationBarFrame.size.height))
+        }
+        
+        if self.setupScrollOffsetOnLayout {
+            navigationBarFrame.size.height = maxBarHeight
         }
         
         let transitionFactor = (navigationBarFrame.size.height - minBarHeight) / (maxBarHeight - minBarHeight)

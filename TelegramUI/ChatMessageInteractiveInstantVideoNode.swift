@@ -352,7 +352,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }
                         durationNode.defaultDuration = telegramFile.duration.flatMap(Double.init)
                         
-                        let streamVideo = automaticDownload && isMediaStreamable(message: item.message, media: telegramFile)
+                        let streamVideo = automaticDownload && isMediaStreamable(message: item.message, media: telegramFile) && telegramFile.id?.namespace != Namespaces.Media.LocalFile
                         if let videoNode = strongSelf.videoNode {
                             videoNode.layer.allowsGroupOpacity = true
                             videoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.5, delay: 0.2, removeOnCompletion: false, completion: { [weak videoNode] _ in
@@ -500,6 +500,15 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
         }
         
+        var isBuffering: Bool?
+        if let message = self.item?.message, let media = self.media, let size = media.size, (isMediaStreamable(message: message, media: media) || size <= 256 * 1024) && (self.automaticDownload ?? false) {
+            if let playerStatus = self.playerStatus, case .buffering = playerStatus.status {
+                isBuffering = true
+            } else {
+                isBuffering = false
+            }
+        }
+        
         var progressRequired = false
         if case let .fetchStatus(fetchStatus) = status.mediaStatus {
             if case .Local = fetchStatus {
@@ -511,6 +520,8 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             } else {
                 progressRequired = true
             }
+        } else if isBuffering ?? false {
+            progressRequired = true
         }
         
         if progressRequired {
@@ -530,15 +541,6 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
         }
         
-        var isBuffering: Bool?
-        if let message = self.item?.message, let media = self.media, let size = media.size, (isMediaStreamable(message: message, media: media) || size <= 256 * 1024) && (self.automaticDownload ?? false) {
-            if let playerStatus = self.playerStatus, case .buffering = playerStatus.status {
-                isBuffering = true
-            } else {
-                isBuffering = false
-            }
-        }
-        
         var state: RadialStatusNodeState
         switch status.mediaStatus {
             case var .fetchStatus(fetchStatus):
@@ -550,7 +552,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     case let .Fetching(_, progress):
                         if let isBuffering = isBuffering {
                             if isBuffering {
-                                state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, lineWidth: nil, value: nil, cancelEnabled: false)
+                                state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, lineWidth: nil, value: nil, cancelEnabled: true)
                             } else {
                                 state = .none
                             }
@@ -573,7 +575,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 }
             default:
                 if isBuffering ?? false {
-                    state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, lineWidth: nil, value: nil, cancelEnabled: false)
+                    state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, lineWidth: nil, value: nil, cancelEnabled: true)
                 } else {
                     state = .none
                 }

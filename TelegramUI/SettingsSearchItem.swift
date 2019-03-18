@@ -19,6 +19,8 @@ extension NavigationBarSearchContentNode: ItemListControllerSearchNavigationCont
 extension SettingsSearchableItemIcon {
     func image() -> UIImage? {
         switch self {
+            case .profile:
+                return PresentationResourcesSettings.editProfile
             case .proxy:
                 return PresentationResourcesSettings.proxy
             case .savedMessages:
@@ -58,12 +60,13 @@ final class SettingsSearchItem: ItemListControllerSearch {
     let presentController: (ViewController, Any?) -> Void
     let pushController: (ViewController) -> Void
     let getNavigationController: (() -> NavigationController?)?
+    let exceptionsList: Signal<NotificationExceptionsList?, NoError>
     
     private var updateActivity: ((Bool) -> Void)?
     private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
     private let activityDisposable = MetaDisposable()
     
-    init(context: AccountContext, theme: PresentationTheme, placeholder: String, activated: Bool, updateActivated: @escaping (Bool) -> Void, presentController: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, getNavigationController: (() -> NavigationController?)?) {
+    init(context: AccountContext, theme: PresentationTheme, placeholder: String, activated: Bool, updateActivated: @escaping (Bool) -> Void, presentController: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, getNavigationController: (() -> NavigationController?)?, exceptionsList: Signal<NotificationExceptionsList?, NoError>) {
         self.context = context
         self.theme = theme
         self.placeholder = placeholder
@@ -72,6 +75,7 @@ final class SettingsSearchItem: ItemListControllerSearch {
         self.presentController = presentController
         self.pushController = pushController
         self.getNavigationController = getNavigationController
+        self.exceptionsList = exceptionsList
         self.activityDisposable.set((activity.get() |> mapToSignal { value -> Signal<Bool, NoError> in
             if value {
                 return .single(value) |> delay(0.2, queue: Queue.mainQueue())
@@ -135,7 +139,7 @@ final class SettingsSearchItem: ItemListControllerSearch {
                 pushController(c)
             }, presentController: { c, a in
                 presentController(c, a)
-            }, getNavigationController: self.getNavigationController)
+            }, getNavigationController: self.getNavigationController, exceptionsList: self.exceptionsList)
         }
     }
 }
@@ -217,7 +221,7 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
     
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
-    init(context: AccountContext, listState: LocalizationListState, openResult: @escaping (SettingsSearchableItem) -> Void) {
+    init(context: AccountContext, openResult: @escaping (SettingsSearchableItem) -> Void, exceptionsList: Signal<NotificationExceptionsList?, NoError>) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
@@ -235,14 +239,20 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
         self.addSubnode(self.dimNode)
         self.addSubnode(self.listNode)
         
-        let queryAndFoundItems = combineLatest(settingsSearchableItems(context: context), faqSearchableItems(context: context))
+        let queryAndFoundItems = combineLatest(settingsSearchableItems(context: context, exceptionsList: exceptionsList), faqSearchableItems(context: context))
         |> mapToSignal { searchableItems, faqSearchableItems -> Signal<(String, [SettingsSearchableItem])?, NoError> in
             return self.searchQuery.get()
             |> mapToSignal { query -> Signal<(String, [SettingsSearchableItem])?, NoError> in
                 if let query = query, !query.isEmpty {
-                    let result = searchSettingsItems(items: searchableItems, query: query)
+                    let results = searchSettingsItems(items: searchableItems, query: query)
                     let faqResults = searchSettingsItems(items: faqSearchableItems, query: query)
-                    return .single((query, result + faqResults))
+                    let finalResults: [SettingsSearchableItem]
+                    if faqResults.first?.id == .faq(0) {
+                        finalResults = faqResults + results
+                    } else {
+                        finalResults = results + faqResults
+                    }
+                    return .single((query, finalResults))
                 } else {
                     return .single(nil)
                 }
@@ -404,16 +414,18 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
     let pushController: (ViewController) -> Void
     let presentController: (ViewController, Any?) -> Void
     let getNavigationController: (() -> NavigationController?)?
+    let exceptionsList: Signal<NotificationExceptionsList?, NoError>
     
     var cancel: () -> Void
     
-    init(context: AccountContext, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: (() -> NavigationController?)?) {
+    init(context: AccountContext, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: (() -> NavigationController?)?, exceptionsList: Signal<NotificationExceptionsList?, NoError>) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.cancel = cancel
         self.pushController = pushController
         self.presentController = presentController
         self.getNavigationController = getNavigationController
-        self.cancel = cancel
+        self.exceptionsList = exceptionsList
         
         super.init()
     }
@@ -428,7 +440,7 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: SettingsSearchContainerNode(context: self.context, listState: LocalizationListState.defaultSettings, openResult: { [weak self] result in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: SettingsSearchContainerNode(context: self.context, openResult: { [weak self] result in
             if let strongSelf = self {
                 result.present(strongSelf.context, strongSelf.getNavigationController?(), { [weak self] mode, controller in
                     if let strongSelf = self {
@@ -445,7 +457,7 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
                     }
                 })
             }
-        }), cancel: { [weak self] in
+        }, exceptionsList: self.exceptionsList), cancel: { [weak self] in
             self?.cancel()
         })
         

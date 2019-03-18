@@ -598,7 +598,6 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
     let actionsDisposable = DisposableSet()
     
     let updateSettingsDisposable = MetaDisposable()
-    actionsDisposable.add(updateSettingsDisposable)
     
     let arguments = SelectivePrivacySettingsControllerArguments(context: context, updateType: { type in
         updateState {
@@ -721,71 +720,81 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(context: context, state: signal)
-    controller.didDisappear = { [weak controller] _ in
-        if let controller = controller, controller.navigationController?.viewControllers.firstIndex(of: controller) == nil {
-            var wasSaving = false
-            var settings: SelectivePrivacySettings?
-            var callP2PSettings: SelectivePrivacySettings?
-            var callDataSaving: VoiceCallDataSaving?
-            var callIntegrationEnabled: Bool?
-            updateState { state in
-                wasSaving = state.saving
-                callDataSaving = state.callDataSaving
-                callIntegrationEnabled = state.callIntegrationEnabled
-                switch state.setting {
-                    case .everybody:
-                        settings = SelectivePrivacySettings.enableEveryone(disableFor: state.disableFor)
-                    case .contacts:
-                        settings = SelectivePrivacySettings.enableContacts(enableFor: state.enableFor, disableFor: state.disableFor)
-                    case .nobody:
-                        settings = SelectivePrivacySettings.disableEveryone(enableFor: state.enableFor)
-                }
-                
-                if case .voiceCalls = kind, let callP2PMode = state.callP2PMode, let disableFor = state.callP2PDisableFor, let enableFor = state.callP2PEnableFor {
-                    switch callP2PMode {
-                        case .everybody:
-                            callP2PSettings = SelectivePrivacySettings.enableEveryone(disableFor: disableFor)
-                        case .contacts:
-                            callP2PSettings = SelectivePrivacySettings.enableContacts(enableFor: enableFor, disableFor: disableFor)
-                        case .nobody:
-                            callP2PSettings = SelectivePrivacySettings.disableEveryone(enableFor: enableFor)
-                    }
-                }
-                
-                return state.withUpdatedSaving(true)
+    
+    let update: (Bool) -> Void = { save in
+        var wasSaving = false
+        var settings: SelectivePrivacySettings?
+        var callP2PSettings: SelectivePrivacySettings?
+        var callDataSaving: VoiceCallDataSaving?
+        var callIntegrationEnabled: Bool?
+        updateState { state in
+            wasSaving = state.saving
+            callDataSaving = state.callDataSaving
+            callIntegrationEnabled = state.callIntegrationEnabled
+            switch state.setting {
+            case .everybody:
+                settings = SelectivePrivacySettings.enableEveryone(disableFor: state.disableFor)
+            case .contacts:
+                settings = SelectivePrivacySettings.enableContacts(enableFor: state.enableFor, disableFor: state.disableFor)
+            case .nobody:
+                settings = SelectivePrivacySettings.disableEveryone(enableFor: state.enableFor)
             }
             
-            if let settings = settings, !wasSaving {
-                let type: UpdateSelectiveAccountPrivacySettingsType
-                switch kind {
-                    case .presence:
-                        type = .presence
-                    case .groupInvitations:
-                        type = .groupInvitations
-                    case .voiceCalls:
-                        type = .voiceCalls
-                    case .profilePhoto:
-                        type = .profilePhoto
-                    case .forwards:
-                        type = .forwards
-                }
-                
-                let updateSettingsSignal = updateSelectiveAccountPrivacySettings(account: context.account, type: type, settings: settings)
-                var updateCallP2PSettingsSignal: Signal<Void, NoError> = Signal.complete()
-                if let callP2PSettings = callP2PSettings {
-                    updateCallP2PSettingsSignal = updateSelectiveAccountPrivacySettings(account: context.account, type: .voiceCallsP2P, settings: callP2PSettings)
-                }
-                
-                updateSettingsDisposable.set((combineLatest(updateSettingsSignal, updateCallP2PSettingsSignal) |> deliverOnMainQueue).start(completed: {
-                }))
-                
-                if case .voiceCalls = kind, let dataSaving = callDataSaving, let callP2PSettings = callP2PSettings, let systemIntegrationEnabled = callIntegrationEnabled {
-                    updated(settings, (callP2PSettings, VoiceCallSettings(dataSaving: dataSaving, enableSystemIntegration: systemIntegrationEnabled)))
-                } else {
-                    updated(settings, nil)
+            if case .voiceCalls = kind, let callP2PMode = state.callP2PMode, let disableFor = state.callP2PDisableFor, let enableFor = state.callP2PEnableFor {
+                switch callP2PMode {
+                case .everybody:
+                    callP2PSettings = SelectivePrivacySettings.enableEveryone(disableFor: disableFor)
+                case .contacts:
+                    callP2PSettings = SelectivePrivacySettings.enableContacts(enableFor: enableFor, disableFor: disableFor)
+                case .nobody:
+                    callP2PSettings = SelectivePrivacySettings.disableEveryone(enableFor: enableFor)
                 }
             }
+            
+            return state.withUpdatedSaving(true)
+        }
+        
+        if let settings = settings, !wasSaving {
+            let type: UpdateSelectiveAccountPrivacySettingsType
+            switch kind {
+            case .presence:
+                type = .presence
+            case .groupInvitations:
+                type = .groupInvitations
+            case .voiceCalls:
+                type = .voiceCalls
+            case .profilePhoto:
+                type = .profilePhoto
+            case .forwards:
+                type = .forwards
+            }
+            
+            let updateSettingsSignal = updateSelectiveAccountPrivacySettings(account: context.account, type: type, settings: settings)
+            var updateCallP2PSettingsSignal: Signal<Void, NoError> = Signal.complete()
+            if let callP2PSettings = callP2PSettings {
+                updateCallP2PSettingsSignal = updateSelectiveAccountPrivacySettings(account: context.account, type: .voiceCallsP2P, settings: callP2PSettings)
+            }
+            
+            updateSettingsDisposable.set((combineLatest(updateSettingsSignal, updateCallP2PSettingsSignal) |> deliverOnMainQueue).start(completed: {
+            }))
+            
+            if case .voiceCalls = kind, let dataSaving = callDataSaving, let callP2PSettings = callP2PSettings, let systemIntegrationEnabled = callIntegrationEnabled {
+                updated(settings, (callP2PSettings, VoiceCallSettings(dataSaving: dataSaving, enableSystemIntegration: systemIntegrationEnabled)))
+            } else {
+                updated(settings, nil)
+            }
+        }
+    }
+    
+    let controller = ItemListController(context: context, state: signal)
+    controller.willDisappear = { [weak controller] _ in
+        if let controller = controller, controller.navigationController?.viewControllers.firstIndex(of: controller) == nil {
+            update(false)
+        }
+    }
+    controller.didDisappear = { [weak controller] _ in
+        if let controller = controller, controller.navigationController?.viewControllers.firstIndex(of: controller) == nil {
+            update(true)
         }
     }
     

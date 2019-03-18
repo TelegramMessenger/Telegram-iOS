@@ -400,22 +400,22 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
     let peerView = context.account.viewTracker.peerView(context.account.peerId)
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peerView)
-        |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
-            let rightNavigationButton: ItemListNavigationButton
-            if state.updatingName != nil || state.updatingBioText {
-                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
-            } else {
-                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                    arguments.saveEditingState()
-                })
-            }
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.EditProfile_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: editSettingsEntries(presentationData: presentationData, state: state, view: view, canAddAccounts: canAddAccounts), style: .blocks, ensureVisibleItemTag: focusOnItemTag)
-            
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+    |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
+        let rightNavigationButton: ItemListNavigationButton
+        if state.updatingName != nil || state.updatingBioText {
+            rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
+        } else {
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+                arguments.saveEditingState()
+            })
+        }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.EditProfile_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(entries: editSettingsEntries(presentationData: presentationData, state: state, view: view, canAddAccounts: canAddAccounts), style: .blocks, ensureVisibleItemTag: focusOnItemTag)
+        
+        return (controllerState, (listState, arguments))
+    } |> afterDisposed {
+        actionsDisposable.dispose()
     }
     
     let controller = ItemListController(context: context, state: signal, tabBarItem: nil)
@@ -527,12 +527,12 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                     return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                 }) |> deliverOnMainQueue).start(next: { result in
                     switch result {
-                    case .complete:
-                        updateState {
-                            $0.withUpdatedUpdatingAvatar(nil)
-                        }
-                    case .progress:
-                        break
+                        case .complete:
+                            updateState {
+                                $0.withUpdatedUpdatingAvatar(nil)
+                            }
+                        case .progress:
+                            break
                     }
                 }))
             }

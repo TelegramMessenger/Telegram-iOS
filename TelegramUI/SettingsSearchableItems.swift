@@ -7,6 +7,7 @@ import TelegramCore
 private let maximumNumberOfAccounts = 3
 
 enum SettingsSearchableItemIcon {
+    case profile
     case proxy
     case savedMessages
     case calls
@@ -55,7 +56,7 @@ struct SettingsSearchableItem {
 }
 
 private func profileSearchableItems(context: AccountContext, canAddAccount: Bool) -> [SettingsSearchableItem] {
-    let icon: SettingsSearchableItemIcon = .calls
+    let icon: SettingsSearchableItemIcon = .profile
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
     let presentProfileSettings: (AccountContext, @escaping  (SettingsSearchableItemPresentation, ViewController) -> Void, EditSettingsEntryTag?) -> Void = { context, present, itemTag in
@@ -87,7 +88,7 @@ private func profileSearchableItems(context: AccountContext, canAddAccount: Bool
     }))
     if canAddAccount {
         items.append(SettingsSearchableItem(id: .profile(4), title: strings.Settings_AddAccount, alternate: [], icon: icon, breadcrumbs: [strings.EditProfile_Title], present: { context, _, present in
-                let isTestingEnvironment = context.account.testingEnvironment
+            let isTestingEnvironment = context.account.testingEnvironment
             context.sharedContext.beginNewAuth(testingEnvironment: isTestingEnvironment)
         }))
     }
@@ -155,12 +156,12 @@ private func stickerSearchableItems(context: AccountContext) -> [SettingsSearcha
     ]
 }
 
-private func notificationSearchableItems(context: AccountContext, notifyExceptions: Signal<NotificationExceptionsList?, NoError>) -> [SettingsSearchableItem] {
+private func notificationSearchableItems(context: AccountContext, exceptionsList: NotificationExceptionsList?) -> [SettingsSearchableItem] {
     let icon: SettingsSearchableItemIcon = .notifications
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
     let presentNotificationSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void, NotificationsAndSoundsEntryTag?) -> Void = { context, present, itemTag in
-        present(.push, notificationsAndSoundsController(context: context, exceptionsList: nil, focusOnItemTag: itemTag))
+        present(.push, notificationsAndSoundsController(context: context, exceptionsList: exceptionsList, focusOnItemTag: itemTag))
     }
     
     return [
@@ -475,7 +476,7 @@ private func appearanceSearchableItems(context: AccountContext) -> [SettingsSear
     ]
 }
 
-func settingsSearchableItems(context: AccountContext) -> Signal<[SettingsSearchableItem], NoError> {
+func settingsSearchableItems(context: AccountContext, exceptionsList: Signal<NotificationExceptionsList?, NoError>) -> Signal<[SettingsSearchableItem], NoError> {
     let watchAppInstalled = (context.watchManager?.watchAppInstalled ?? .single(false))
     |> take(1)
     let canAddAccount = activeAccountsAndPeers(context: context)
@@ -483,8 +484,8 @@ func settingsSearchableItems(context: AccountContext) -> Signal<[SettingsSearcha
     |> map { accountsAndPeers -> Bool in
         return accountsAndPeers.1.count + 1 < maximumNumberOfAccounts
     }
-    return combineLatest(watchAppInstalled, canAddAccount)
-    |> map { watchAppInstalled, canAddAccount in
+    return combineLatest(watchAppInstalled, canAddAccount, exceptionsList)
+    |> map { watchAppInstalled, canAddAccount, exceptionsList in
         let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
         
         var allItems: [SettingsSearchableItem] = []
@@ -503,7 +504,7 @@ func settingsSearchableItems(context: AccountContext) -> Signal<[SettingsSearcha
         let stickerItems = stickerSearchableItems(context: context)
         allItems.append(contentsOf: stickerItems)
 
-        let notificationItems = notificationSearchableItems(context: context, notifyExceptions: .complete())
+        let notificationItems = notificationSearchableItems(context: context, exceptionsList: exceptionsList)
         allItems.append(contentsOf: notificationItems)
         
         let privacyItems = privacySearchableItems(context: context)
@@ -535,13 +536,25 @@ func settingsSearchableItems(context: AccountContext) -> Signal<[SettingsSearcha
         })
         allItems.append(passport)
         
-        let support = SettingsSearchableItem(id: .support(0), title: strings.Settings_Support, alternate: ["Support"], icon: .support, breadcrumbs: [], present: { context, _, present in
-            //return .push(ChatController(context: context, chatLocation: .peer(context.account.peerId)))
+        let support = SettingsSearchableItem(id: .support(0), title: strings.Settings_Support, alternate: [], icon: .support, breadcrumbs: [], present: { context, _, present in
+            let _ = (supportPeerId(account: context.account)
+            |> deliverOnMainQueue).start(next: { peerId in
+                if let peerId = peerId {
+                    present(.push, ChatController(context: context, chatLocation: .peer(peerId)))
+                }
+            })
         })
         allItems.append(support)
         
-        let faq = SettingsSearchableItem(id: .faq(0), title: strings.Settings_FAQ, alternate: [], icon: .faq, breadcrumbs: [], present: { context, _, present in
-            //return .push(ChatController(context: context, chatLocation: .peer(context.account.peerId)))
+        let faq = SettingsSearchableItem(id: .faq(0), title: strings.Settings_FAQ, alternate: [], icon: .faq, breadcrumbs: [], present: { context, navigationController, present in
+            
+            let _ = (cachedFaqInstantPage(context: context)
+            |> deliverOnMainQueue).start(next: { resolvedUrl in
+                openResolvedUrl(resolvedUrl, context: context, navigationController: navigationController, openPeer: { peer, navigation in
+                }, present: { controller, arguments in
+                    present(.push, controller)
+                }, dismissInput: {})
+            })
         })
         allItems.append(faq)
     
