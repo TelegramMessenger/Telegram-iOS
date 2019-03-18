@@ -258,7 +258,6 @@ private func downloadEmojiKeywordsDifference(network: Network, languageCode: Str
 
 public func emojiKeywords(accountManager: AccountManager, network: Network, inputLanguageCode: String) -> Signal<EmojiKeywords?, NoError> {
     return accountManager.sharedData(keys: [SharedDataKeys.emojiKeywords])
-    |> take(1)
     |> map { sharedData in
         return sharedData.entries[SharedDataKeys.emojiKeywords] as? EmojiKeywordsMap ?? .defaultValue
     }
@@ -285,35 +284,38 @@ public func emojiKeywords(accountManager: AccountManager, network: Network, inpu
             if emojiKeywords.timestamp + refreshTimeout > timestamp {
                 return .single(emojiKeywords)
             } else {
-                return downloadEmojiKeywordsDifference(network: network, languageCode: emojiKeywords.languageCode, inputLanguageCode: inputLanguageCode, fromVersion: emojiKeywords.version)
-                |> map(Optional.init)
-                |> `catch` { _ -> Signal<EmojiKeywords?, NoError> in
-                    return .single(nil)
-                }
-                |> mapToSignal { differenceKeywords -> Signal<EmojiKeywords?, NoError> in
-                    if let differenceKeywords = differenceKeywords {
-                        var updatedKeywords = emojiKeywords
-                        var updatedKeywordEntries: [String: EmojiKeyword] = emojiKeywords.entries
-                        for differenceKeywordEntry in differenceKeywords.entries.values {
-                            let name = differenceKeywordEntry.name
-                            if let existingKeyword = updatedKeywordEntries[name] {
-                                updatedKeywordEntries[name] = existingKeyword.union(differenceKeywordEntry)
-                            } else if case .keyword = differenceKeywordEntry {
-                                updatedKeywordEntries[name] = differenceKeywordEntry
-                            }
-                        }
-                        updatedKeywords = EmojiKeywords(languageCode: differenceKeywords.languageCode, inputLanguageCode: inputLanguageCode, version: differenceKeywords.version, timestamp: Int32(CFAbsoluteTimeGetCurrent()), entries: updatedKeywordEntries)
-                        
-                        updateEmojiKeywordsList(accountManager: accountManager, { keywordsMap -> EmojiKeywordsMap in
-                            var entries = keywordsMap.entries
-                            entries[inputLanguageCode] = updatedKeywords
-                            return EmojiKeywordsMap(entries: entries)
-                        })
-                        return .complete()
-                    } else {
-                        return downloadEmojiKeywordsSignal
+                return .single(emojiKeywords)
+                |> then(
+                    downloadEmojiKeywordsDifference(network: network, languageCode: emojiKeywords.languageCode, inputLanguageCode: inputLanguageCode, fromVersion: emojiKeywords.version)
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<EmojiKeywords?, NoError> in
+                        return .single(nil)
                     }
-                }
+                    |> mapToSignal { differenceKeywords -> Signal<EmojiKeywords?, NoError> in
+                        if let differenceKeywords = differenceKeywords {
+                            var updatedKeywords = emojiKeywords
+                            var updatedKeywordEntries: [String: EmojiKeyword] = emojiKeywords.entries
+                            for differenceKeywordEntry in differenceKeywords.entries.values {
+                                let name = differenceKeywordEntry.name
+                                if let existingKeyword = updatedKeywordEntries[name] {
+                                    updatedKeywordEntries[name] = existingKeyword.union(differenceKeywordEntry)
+                                } else if case .keyword = differenceKeywordEntry {
+                                    updatedKeywordEntries[name] = differenceKeywordEntry
+                                }
+                            }
+                            updatedKeywords = EmojiKeywords(languageCode: differenceKeywords.languageCode, inputLanguageCode: inputLanguageCode, version: differenceKeywords.version, timestamp: differenceKeywords.timestamp, entries: updatedKeywordEntries)
+                            
+                            updateEmojiKeywordsList(accountManager: accountManager, { keywordsMap -> EmojiKeywordsMap in
+                                var entries = keywordsMap.entries
+                                entries[inputLanguageCode] = updatedKeywords
+                                return EmojiKeywordsMap(entries: entries)
+                            })
+                            return .complete()
+                        } else {
+                            return downloadEmojiKeywordsSignal
+                        }
+                    }
+                )
             }
         } else {
             return downloadEmojiKeywordsSignal
