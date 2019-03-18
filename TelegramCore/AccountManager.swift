@@ -132,6 +132,7 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramMediaPoll.self, f: { TelegramMediaPoll(decoder: $0) })
     declareEncodable(TelegramMediaUnsupported.self, f: { TelegramMediaUnsupported(decoder: $0) })
     declareEncodable(ContactsSettings.self, f: { ContactsSettings(decoder: $0) })
+    declareEncodable(EmojiKeywordsMap.self, f: { EmojiKeywordsMap(decoder: $0) })
     
     return
 }()
