@@ -101,7 +101,7 @@ ASDISPLAYNODE_INLINE void _ASUnlockScopeCleanup(id<NSLocking> __strong *lockPtr)
 #define ASAssertLocked(m) m.AssertHeld()
 #define ASAssertUnlocked(m) m.AssertNotHeld()
 
-namespace ASDN {
+namespace AS {
   
   // Set once in Mutex constructor. Linker fails if this is a member variable. ??
   static bool gMutex_unfair;
@@ -290,6 +290,6 @@ namespace ASDN {
   typedef std::lock_guard<Mutex> MutexLocker;
   typedef std::unique_lock<Mutex> UniqueLock;
 
-} // namespace ASDN
+} // namespace AS
 
 #endif /* __cplusplus */

@@ -207,7 +207,7 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
     return nil;
   }
   
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   
   ASGraphicsBeginImageContextWithOptions(size, NO, 1);
   [self.placeholderColor setFill];
@@ -234,7 +234,7 @@ typedef void (^ASImageNodeDrawParametersBlock)(ASWeakMapEntry *entry);
 
 - (void)setImage:(UIImage *)image
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   [self _locked_setImage:image];
 }
 
@@ -444,13 +444,13 @@ static ASWeakMap<ASImageNodeContentsKey *, UIImage *> *cache = nil;
 + (ASWeakMapEntry *)contentsForkey:(ASImageNodeContentsKey *)key drawParameters:(id)drawParameters isCancelled:(asdisplaynode_iscancelled_block_t)isCancelled
 {
   static dispatch_once_t onceToken;
-  static ASDN::Mutex *cacheLock = nil;
+  static AS::Mutex *cacheLock = nil;
   dispatch_once(&onceToken, ^{
-    cacheLock = new ASDN::Mutex();
+    cacheLock = new AS::Mutex();
   });
   
   {
-    ASDN::MutexLocker l(*cacheLock);
+    AS::MutexLocker l(*cacheLock);
     if (!cache) {
       cache = [[ASWeakMap alloc] init];
     }
@@ -467,7 +467,7 @@ static ASWeakMap<ASImageNodeContentsKey *, UIImage *> *cache = nil;
   }
 
   {
-    ASDN::MutexLocker l(*cacheLock);
+    AS::MutexLocker l(*cacheLock);
     return [cache setObject:contents forKey:key];
   }
 }
@@ -589,7 +589,7 @@ static ASWeakMap<ASImageNodeContentsKey *, UIImage *> *cache = nil;
 
   // Stash the block and call-site queue. We'll invoke it in -displayDidFinish.
   {
-    ASDN::MutexLocker l(__instanceLock__);
+    AS::MutexLocker l(__instanceLock__);
     if (_displayCompletionBlock != displayCompletionBlock) {
       _displayCompletionBlock = displayCompletionBlock;
     }
@@ -604,7 +604,7 @@ static ASWeakMap<ASImageNodeContentsKey *, UIImage *> *cache = nil;
 {
   [super clearContents];
   
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   _weakCacheEntry = nil;  // release contents from the cache.
 }
 
@@ -612,7 +612,7 @@ static ASWeakMap<ASImageNodeContentsKey *, UIImage *> *cache = nil;
 
 - (BOOL)isCropEnabled
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   return _cropEnabled;
 }
 
@@ -648,14 +648,14 @@ static ASWeakMap<ASImageNodeContentsKey *, UIImage *> *cache = nil;
 
 - (CGRect)cropRect
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   return _cropRect;
 }
 
 - (void)setCropRect:(CGRect)cropRect
 {
   {
-    ASDN::MutexLocker l(__instanceLock__);
+    AS::MutexLocker l(__instanceLock__);
     if (CGRectEqualToRect(_cropRect, cropRect)) {
       return;
     }
@@ -678,37 +678,37 @@ static ASWeakMap<ASImageNodeContentsKey *, UIImage *> *cache = nil;
 
 - (BOOL)forceUpscaling
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   return _forceUpscaling;
 }
 
 - (void)setForceUpscaling:(BOOL)forceUpscaling
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   _forceUpscaling = forceUpscaling;
 }
 
 - (CGSize)forcedSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   return _forcedSize;
 }
 
 - (void)setForcedSize:(CGSize)forcedSize
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   _forcedSize = forcedSize;
 }
 
 - (asimagenode_modification_block_t)imageModificationBlock
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   return _imageModificationBlock;
 }
 
 - (void)setImageModificationBlock:(asimagenode_modification_block_t)imageModificationBlock
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   _imageModificationBlock = imageModificationBlock;
 }
 

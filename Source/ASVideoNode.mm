@@ -327,7 +327,7 @@ static NSString * const kRate = @"rate";
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
-  ASDN::UniqueLock l(__instanceLock__);
+  AS::UniqueLock l(__instanceLock__);
 
   if (object == _currentPlayerItem) {
     if ([keyPath isEqualToString:kStatus]) {

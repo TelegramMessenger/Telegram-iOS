@@ -281,7 +281,7 @@ static UIApplicationState __ApplicationState = UIApplicationStateActive;
   } else {
     if (emptyDisplayRange == YES) {
       displayElements = [NSHashTable hashTableWithOptions:NSHashTableObjectPointerPersonality];
-    } if (equalDisplayVisible == YES) {
+    } else if (equalDisplayVisible == YES) {
       displayElements = visibleElements;
     } else {
       // Calculating only the Display range means the Preload range is either the same as Display or Visible.

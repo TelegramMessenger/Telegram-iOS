@@ -52,6 +52,7 @@
 #import <AsyncDisplayKit/ASSectionContext.h>
 
 #import <AsyncDisplayKit/ASElementMap.h>
+#import <AsyncDisplayKit/ASCollectionElement.h>
 #import <AsyncDisplayKit/ASCollectionLayoutContext.h>
 #import <AsyncDisplayKit/ASCollectionLayoutState.h>
 #import <AsyncDisplayKit/ASCollectionFlowLayoutDelegate.h>

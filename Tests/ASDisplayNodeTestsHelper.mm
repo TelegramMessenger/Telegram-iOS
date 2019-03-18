@@ -58,7 +58,7 @@ void ASDisplayNodeSizeToFitSizeRange(ASDisplayNode *node, ASSizeRange sizeRange)
 
 void ASCATransactionQueueWait(ASCATransactionQueue *q)
 {
-  if (!q) { q = ASCATransactionQueue.sharedQueue; }
+  if (!q) { q = ASCATransactionQueueGet(); }
   NSDate *date = [NSDate dateWithTimeIntervalSinceNow:1];
   BOOL whileResult = YES;
   while ([date timeIntervalSinceNow] > 0 &&

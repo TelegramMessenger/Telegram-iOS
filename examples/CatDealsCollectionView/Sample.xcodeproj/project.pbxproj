@@ -19,6 +19,7 @@
 		AC3C4A671A11F47200143C57 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = AC3C4A661A11F47200143C57 /* AppDelegate.m */; };
 		AC3C4A6A1A11F47200143C57 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = AC3C4A691A11F47200143C57 /* ViewController.m */; };
 		AC3C4A8E1A11F80C00143C57 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AC3C4A8D1A11F80C00143C57 /* Images.xcassets */; };
+		CC142599219742CA009851B7 /* ASDisplayNode+CatDeals.mm in Sources */ = {isa = PBXBuildFile; fileRef = CC142598219742CA009851B7 /* ASDisplayNode+CatDeals.mm */; };
 		FC3FCA801C2B1564009F6D6D /* PresentingViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = FC3FCA7F1C2B1564009F6D6D /* PresentingViewController.m */; };
 /* End PBXBuildFile section */
 
@@ -45,6 +46,8 @@
 		AC3C4A681A11F47200143C57 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
 		AC3C4A691A11F47200143C57 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
 		AC3C4A8D1A11F80C00143C57 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
+		CC142598219742CA009851B7 /* ASDisplayNode+CatDeals.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = "ASDisplayNode+CatDeals.mm"; sourceTree = "<group>"; };
+		CC14259A219746C2009851B7 /* ASDisplayNode+CatDeals.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ASDisplayNode+CatDeals.h"; sourceTree = "<group>"; };
 		F1E539014E1F516F00A8F167 /* libPods-Sample.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Sample.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F3A72D578C378357FF56486A /* Pods-Sample.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Sample.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Sample/Pods-Sample.debug.xcconfig"; sourceTree = "<group>"; };
 		FC3FCA7E1C2B1564009F6D6D /* PresentingViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PresentingViewController.h; sourceTree = "<group>"; };
@@ -97,6 +100,8 @@
 				AC3C4A661A11F47200143C57 /* AppDelegate.m */,
 				AC3C4A681A11F47200143C57 /* ViewController.h */,
 				AC3C4A691A11F47200143C57 /* ViewController.m */,
+				CC14259A219746C2009851B7 /* ASDisplayNode+CatDeals.h */,
+				CC142598219742CA009851B7 /* ASDisplayNode+CatDeals.mm */,
 				7ACD5F941C4847C000E7BE16 /* PlaceholderNetworkImageNode.h */,
 				7ACD5F951C4847C000E7BE16 /* PlaceholderNetworkImageNode.m */,
 				FC3FCA7E1C2B1564009F6D6D /* PresentingViewController.h */,
@@ -261,6 +266,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CC142599219742CA009851B7 /* ASDisplayNode+CatDeals.mm in Sources */,
 				25FDEC921BF31EE700CEB123 /* ItemNode.m in Sources */,
 				7ACD5F891C415B7500E7BE16 /* LoadingNode.m in Sources */,
 				AC3C4A6A1A11F47200143C57 /* ViewController.m in Sources */,

@@ -230,6 +230,7 @@ static NSString * const kReuseIdentifier = @"_ASCollectionReuseIdentifier";
     unsigned int interopAlwaysDequeue:1;
     // Whether this interop data source implements viewForSupplementaryElementOfKind:
     unsigned int interopViewForSupplementaryElement:1;
+    unsigned int modelIdentifierMethods:1; // if both modelIdentifierForElementAtIndexPath and indexPathForElementWithModelIdentifier are implemented
   } _asyncDataSourceFlags;
   
   struct {
@@ -316,12 +317,6 @@ static NSString * const kReuseIdentifier = @"_ASCollectionReuseIdentifier";
   [self registerClass:[_ASCollectionViewCell class] forCellWithReuseIdentifier:kReuseIdentifier];
   
   [self _configureCollectionViewLayout:layout];
-  
-  if (ASActivateExperimentalFeature(ASExperimentalNewDefaultCellLayoutMode)) {
-    _cellLayoutMode = ASCellLayoutModeSyncForSmallContent;
-  } else {
-    _cellLayoutMode = ASCellLayoutModeNone;
-  }
   
   return self;
 }
@@ -485,6 +480,9 @@ static NSString * const kReuseIdentifier = @"_ASCollectionReuseIdentifier";
       _asyncDataSourceFlags.interopAlwaysDequeue = [[interopDataSource class] respondsToSelector:@selector(dequeuesCellsForNodeBackedItems)] && [[interopDataSource class] dequeuesCellsForNodeBackedItems];
       _asyncDataSourceFlags.interopViewForSupplementaryElement = [interopDataSource respondsToSelector:@selector(collectionView:viewForSupplementaryElementOfKind:atIndexPath:)];
     }
+
+    _asyncDataSourceFlags.modelIdentifierMethods = [_asyncDataSource respondsToSelector:@selector(modelIdentifierForElementAtIndexPath:inNode:)] && [_asyncDataSource respondsToSelector:@selector(indexPathForElementWithModelIdentifier:inNode:)];
+
 
     ASDisplayNodeAssert(_asyncDataSourceFlags.collectionNodeNumberOfItemsInSection || _asyncDataSourceFlags.collectionViewNumberOfItemsInSection, @"Data source must implement collectionNode:numberOfItemsInSection:");
     ASDisplayNodeAssert(_asyncDataSourceFlags.collectionNodeNodeBlockForItem
@@ -803,6 +801,29 @@ static NSString * const kReuseIdentifier = @"_ASCollectionReuseIdentifier";
 - (void)invalidateFlowLayoutDelegateMetrics
 {
   // Subclass hook
+}
+
+- (nullable NSString *)modelIdentifierForElementAtIndexPath:(NSIndexPath *)indexPath inView:(UIView *)view {
+    if (_asyncDataSourceFlags.modelIdentifierMethods) {
+        GET_COLLECTIONNODE_OR_RETURN(collectionNode, nil);
+        NSIndexPath *convertedPath = [self convertIndexPathToCollectionNode:indexPath];
+        if (convertedPath == nil) {
+            return nil;
+        } else {
+            return [_asyncDataSource modelIdentifierForElementAtIndexPath:convertedPath inNode:collectionNode];
+        }
+    } else {
+        return nil;
+    }
+}
+
+- (nullable NSIndexPath *)indexPathForElementWithModelIdentifier:(NSString *)identifier inView:(UIView *)view {
+    if (_asyncDataSourceFlags.modelIdentifierMethods) {
+        GET_COLLECTIONNODE_OR_RETURN(collectionNode, nil);
+        return [_asyncDataSource indexPathForElementWithModelIdentifier:identifier inNode:collectionNode];
+    } else {
+        return nil;
+    }
 }
 
 #pragma mark Internal
@@ -1229,6 +1250,7 @@ static NSString * const kReuseIdentifier = @"_ASCollectionReuseIdentifier";
   // Update the selected background view in collectionView:willDisplayCell:forItemAtIndexPath: otherwise it could be too
   // early e.g. if the selectedBackgroundView was set in didLoad()
   cell.selectedBackgroundView = cellNode.selectedBackgroundView;
+  cell.backgroundView = cellNode.backgroundView;
   
   // Under iOS 10+, cells may be removed/re-added to the collection view without
   // receiving prepareForReuse/applyLayoutAttributes, as an optimization for e.g.
@@ -1684,7 +1706,8 @@ static NSString * const kReuseIdentifier = @"_ASCollectionReuseIdentifier";
 {
   if (_leadingScreensForBatching != leadingScreensForBatching) {
     _leadingScreensForBatching = leadingScreensForBatching;
-    ASPerformBlockOnMainThread(^{
+    // Push this to the next runloop to be sure the scroll view has the right content size
+    dispatch_async(dispatch_get_main_queue(), ^{
       [self _checkForBatchFetching];
     });
   }
@@ -1883,20 +1906,18 @@ static NSString * const kReuseIdentifier = @"_ASCollectionReuseIdentifier";
   if (ASCellLayoutModeIncludes(ASCellLayoutModeAlwaysAsync)) {
     return NO;
   }
-  if (ASCellLayoutModeIncludes(ASCellLayoutModeSyncForSmallContent)) {
-    // Reload data is expensive, don't block main while doing so.
-    if (changeSet.includesReloadData) {
-      return NO;
-    }
-    // If we have very few ASCellNodes (besides UIKit passthrough ones), match UIKit by blocking.
-    if (changeSet.countForAsyncLayout < 2) {
-      return YES;
-    }
-    CGSize contentSize = self.contentSize;
-    CGSize boundsSize = self.bounds.size;
-    if (contentSize.height <= boundsSize.height && contentSize.width <= boundsSize.width) {
-      return YES;
-    }
+  // Reload data is expensive, don't block main while doing so.
+  if (changeSet.includesReloadData) {
+    return NO;
+  }
+  // If we have very few ASCellNodes (besides UIKit passthrough ones), match UIKit by blocking.
+  if (changeSet.countForAsyncLayout < 2) {
+    return YES;
+  }
+  CGSize contentSize = self.contentSize;
+  CGSize boundsSize = self.bounds.size;
+  if (contentSize.height <= boundsSize.height && contentSize.width <= boundsSize.width) {
+    return YES;
   }
   return NO; // ASCellLayoutModeNone
 }
@@ -2015,7 +2036,13 @@ static NSString * const kReuseIdentifier = @"_ASCollectionReuseIdentifier";
     ASDisplayNodeFailAssert(@"Data controller should not ask for presented size for element that is not presented.");
     return YES;
   }
-  UICollectionViewLayoutAttributes *attributes = [self layoutAttributesForItemAtIndexPath:indexPath];
+
+  UICollectionViewLayoutAttributes *attributes;
+  if (element.supplementaryElementKind == nil) {
+    attributes = [self layoutAttributesForItemAtIndexPath:indexPath];
+  } else {
+    attributes = [self layoutAttributesForSupplementaryElementOfKind:element.supplementaryElementKind atIndexPath:indexPath];
+  }
   return CGSizeEqualToSizeWithIn(attributes.size, size, FLT_EPSILON);
 }
 
@@ -2485,9 +2512,7 @@ static NSString * const kReuseIdentifier = @"_ASCollectionReuseIdentifier";
 
 - (NSArray *)accessibilityElements
 {
-  if (!ASActivateExperimentalFeature(ASExperimentalSkipAccessibilityWait)) {
-    [self waitUntilAllUpdatesAreCommitted];
-  }
+  [self waitUntilAllUpdatesAreCommitted];
   return [super accessibilityElements];
 }
 

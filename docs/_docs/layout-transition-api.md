@@ -8,7 +8,7 @@ nextPage: hit-test-slop.html
 
 The Layout Transition API was designed to make all animations with Texture easy - even transforming an entire set of views into a completely different set of views!
 
-With this system, you simply specify the desired layout and Texture will do the work to figure out differences from the current layout. It will automatically add new elements, remove unneeded elements after the transiton, and update the position of any existing elements. 
+With this system, you simply specify the desired layout and Texture will do the work to figure out differences from the current layout. It will automatically add new elements, remove unneeded elements after the transition, and update the position of any existing elements. 
 
 There are also easy to use APIs that allow you to fully customize the starting position of newly introduced elements, as well as the ending position of removed elements. 
 

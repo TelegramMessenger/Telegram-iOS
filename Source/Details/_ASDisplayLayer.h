@@ -112,7 +112,7 @@ NS_ASSUME_NONNULL_BEGIN
  @summary Delegate override to provide new layer contents as a UIImage.
  @param parameters An object describing all of the properties you need to draw. Return this from -drawParametersForAsyncLayer:
  @param isCancelledBlock Execute this block to check whether the current drawing operation has been cancelled to avoid unnecessary work. A return value of YES means cancel drawing and return.
- @return A UIImage with contents that are ready to display on the main thread. Make sure that the image is already decoded before returning it here.
+ @return A UIImage (backed by a CGImage) with contents that are ready to display on the main thread. Make sure that the image is already decoded before returning it here.
  */
 + (UIImage *)displayWithParameters:(nullable id<NSObject>)parameters
                        isCancelled:(AS_NOESCAPE asdisplaynode_iscancelled_block_t)isCancelledBlock;

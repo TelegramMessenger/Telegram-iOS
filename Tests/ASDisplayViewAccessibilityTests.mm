@@ -17,6 +17,7 @@
 #import <AsyncDisplayKit/ASTextNode.h>
 #import <AsyncDisplayKit/ASConfiguration.h>
 #import <AsyncDisplayKit/ASConfigurationInternal.h>
+#import <OCMock/OCMock.h>
 
 @interface ASDisplayViewAccessibilityTests : XCTestCase
 @end
@@ -267,6 +268,36 @@
   NSArray<UIAccessibilityElement *> *elements2 = contianer.view.accessibilityElements;
   XCTAssertTrue(elements2.count == 1);
   XCTAssertTrue([[elements2.firstObject accessibilityLabel] isEqualToString:@"greeting"]);
+}
+
+#pragma mark -
+#pragma mark UIAccessibilityAction Forwarding
+
+- (void)testActionForwarding {
+  ASDisplayNode *node = [ASDisplayNode new];
+  UIView *view = node.view;
+  
+  id mockNode = OCMPartialMock(node);
+  
+  OCMExpect([mockNode accessibilityActivate]);
+  [view accessibilityActivate];
+  
+  OCMExpect([mockNode accessibilityIncrement]);
+  [view accessibilityIncrement];
+
+  OCMExpect([mockNode accessibilityDecrement]);
+  [view accessibilityDecrement];
+
+  OCMExpect([mockNode accessibilityScroll:UIAccessibilityScrollDirectionDown]);
+  [view accessibilityScroll:UIAccessibilityScrollDirectionDown];
+
+  OCMExpect([mockNode accessibilityPerformEscape]);
+  [view accessibilityPerformEscape];
+
+  OCMExpect([mockNode accessibilityPerformMagicTap]);
+  [view accessibilityPerformMagicTap];
+
+  OCMVerifyAll(mockNode);
 }
 
 @end

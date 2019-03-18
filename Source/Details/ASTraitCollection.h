@@ -119,7 +119,7 @@ AS_EXTERN void ASTraitCollectionPropagateDown(id<ASLayoutElement> element, ASPri
 #define ASLayoutElementCollectionTableSetTraitCollection(lock) \
 - (void)setPrimitiveTraitCollection:(ASPrimitiveTraitCollection)traitCollection\
 {\
-  ASDN::MutexLocker l(lock);\
+  AS::MutexLocker l(lock);\
 \
   ASPrimitiveTraitCollection oldTraits = self.primitiveTraitCollection;\
   [super setPrimitiveTraitCollection:traitCollection];\

@@ -21,6 +21,8 @@
 #import <AsyncDisplayKit/ASInternalHelpers.h>
 #import <AsyncDisplayKit/ASObjectDescriptionHelpers.h>
 
+NSString *const ASThreadDictMaxConstraintSizeKey = @"kASThreadDictMaxConstraintSizeKey";
+
 CGPoint const ASPointNull = {NAN, NAN};
 
 BOOL ASPointIsNull(CGPoint point)

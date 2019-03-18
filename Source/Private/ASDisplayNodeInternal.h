@@ -79,7 +79,7 @@ AS_EXTERN NSString * const ASRenderingEngineDidDisplayNodesScheduledBeforeTimest
 @interface ASDisplayNode () <_ASTransitionContextCompletionDelegate>
 {
 @package
-  ASDN::RecursiveMutex __instanceLock__;
+  AS::RecursiveMutex __instanceLock__;
 
   _ASPendingState *_pendingViewState;
   ASInterfaceState _pendingInterfaceState;

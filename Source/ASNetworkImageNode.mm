@@ -69,6 +69,7 @@
     unsigned int downloaderImplementsSetPriority:1;
     unsigned int downloaderImplementsAnimatedImage:1;
     unsigned int downloaderImplementsCancelWithResume:1;
+    unsigned int downloaderImplementsDownloadWithPriority:1;
   } _downloaderFlags;
 
   // Immutable and set on init only. We don't need to lock in this case.
@@ -99,6 +100,7 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
   _downloaderFlags.downloaderImplementsSetPriority = [downloader respondsToSelector:@selector(setPriority:withDownloadIdentifier:)];
   _downloaderFlags.downloaderImplementsAnimatedImage = [downloader respondsToSelector:@selector(animatedImageWithData:)];
   _downloaderFlags.downloaderImplementsCancelWithResume = [downloader respondsToSelector:@selector(cancelImageDownloadWithResumePossibilityForIdentifier:)];
+  _downloaderFlags.downloaderImplementsDownloadWithPriority = [downloader respondsToSelector:@selector(downloadImageWithURL:priority:callbackQueue:downloadProgress:completion:)];
 
   _cacheFlags.cacheSupportsClearing = [cache respondsToSelector:@selector(clearFetchedImageFromCacheWithURL:)];
   _cacheFlags.cacheSupportsSynchronousFetch = [cache respondsToSelector:@selector(synchronouslyFetchedCachedImageWithURL:)];
@@ -126,16 +128,7 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
 
 - (dispatch_queue_t)callbackQueue
 {
-    static dispatch_once_t onceToken;
-    static dispatch_queue_t callbackQueue;
-    dispatch_once(&onceToken, ^{
-        if (ASActivateExperimentalFeature(ASExperimentalNetworkImageQueue)) {
-            callbackQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-        } else {
-            callbackQueue = dispatch_get_main_queue();
-        }
-    });
-    return callbackQueue;
+  return dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
 }
 
 #pragma mark - Public methods -- must lock
@@ -379,11 +372,8 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
     }
   }
 
-  if (self.image == nil && _downloaderFlags.downloaderImplementsSetPriority) {
-    id downloadIdentifier = ASLockedSelf(_downloadIdentifier);
-    if (downloadIdentifier != nil) {
-      [_downloader setPriority:ASImageDownloaderPriorityImminent withDownloadIdentifier:downloadIdentifier];
-    }
+  if (self.image == nil) {
+    [self _updatePriorityOnDownloaderIfNeededWithDefaultPriority:ASImageDownloaderPriorityImminent];
   }
 }
 
@@ -392,33 +382,23 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
 - (void)didEnterVisibleState
 {
   [super didEnterVisibleState];
-  
-  id downloadIdentifier = ({
-    ASLockScopeSelf();
-    _downloaderFlags.downloaderImplementsSetPriority ? _downloadIdentifier : nil;
-  });
-  
-  if (downloadIdentifier != nil) {
-    [_downloader setPriority:ASImageDownloaderPriorityVisible withDownloadIdentifier:downloadIdentifier];
-  }
-  
+  [self _updatePriorityOnDownloaderIfNeededWithDefaultPriority:ASImageDownloaderPriorityVisible];
   [self _updateProgressImageBlockOnDownloaderIfNeeded];
 }
 
 - (void)didExitVisibleState
 {
   [super didExitVisibleState];
-
-  id downloadIdentifier = ({
-    ASLockScopeSelf();
-    _downloaderFlags.downloaderImplementsSetPriority ? _downloadIdentifier : nil;
-  });
-  
-  if (downloadIdentifier != nil) {
-    [_downloader setPriority:ASImageDownloaderPriorityPreload withDownloadIdentifier:downloadIdentifier];
-  }
-  
+  [self _updatePriorityOnDownloaderIfNeededWithDefaultPriority:ASImageDownloaderPriorityPreload];
   [self _updateProgressImageBlockOnDownloaderIfNeeded];
+}
+
+- (void)didExitDisplayState
+{
+  [super didExitDisplayState];
+  if (ASActivateExperimentalFeature(ASExperimentalImageDownloaderPriority)) {
+    [self _updatePriorityOnDownloaderIfNeededWithDefaultPriority:ASImageDownloaderPriorityPreload];
+  }
 }
 
 - (void)didExitPreloadState
@@ -465,6 +445,22 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
   as_log_verbose(ASImageLoadingLog(), "Received progress image for %@ q: %.2g id: %@", self, progress, progressImage);
   [self _setCurrentImageQuality:progress];
   [self _locked__setImage:progressImage];
+}
+
+- (void)_updatePriorityOnDownloaderIfNeededWithDefaultPriority:(ASImageDownloaderPriority)defaultPriority
+{
+  if (_downloaderFlags.downloaderImplementsSetPriority) {
+    ASLockScopeSelf();
+
+    if (_downloadIdentifier != nil) {
+      ASImageDownloaderPriority priority = defaultPriority;
+      if (ASActivateExperimentalFeature(ASExperimentalImageDownloaderPriority)) {
+        priority = ASImageDownloaderPriorityWithInterfaceState(_interfaceState);
+      }
+
+      [_downloader setPriority:priority withDownloadIdentifier:_downloadIdentifier];
+    }
+  }
 }
 
 - (void)_updateProgressImageBlockOnDownloaderIfNeeded
@@ -584,24 +580,55 @@ static std::atomic_bool _useMainThreadDelegateCallbacks(true);
     NSURL *url;
     id downloadIdentifier;
     BOOL cancelAndReattempt = NO;
-    
+    ASInterfaceState interfaceState;
+
     // Below, to avoid performance issues, we're calling downloadImageWithURL without holding the lock. This is a bit ugly because
     // We need to reobtain the lock after and ensure that the task we've kicked off still matches our URL. If not, we need to cancel
     // it and try again.
     {
       ASLockScopeSelf();
       url = self->_URL;
+      interfaceState = self->_interfaceState;
     }
 
+    dispatch_queue_t callbackQueue = [self callbackQueue];
+    ASImageDownloaderProgress downloadProgress = NULL;
+    ASImageDownloaderCompletion completion = ^(id <ASImageContainerProtocol> _Nullable imageContainer, NSError * _Nullable error, id  _Nullable downloadIdentifier, id _Nullable userInfo) {
+      if (finished != NULL) {
+        finished(imageContainer, error, downloadIdentifier, userInfo);
+      }
+    };
 
-    downloadIdentifier = [self->_downloader downloadImageWithURL:url
-                                             callbackQueue:[self callbackQueue]
-                                          downloadProgress:NULL
-                                                completion:^(id <ASImageContainerProtocol> _Nullable imageContainer, NSError * _Nullable error, id  _Nullable downloadIdentifier, id _Nullable userInfo) {
-                                                  if (finished != NULL) {
-                                                    finished(imageContainer, error, downloadIdentifier, userInfo);
-                                                  }
-                                                }];
+    if (self->_downloaderFlags.downloaderImplementsDownloadWithPriority
+        && ASActivateExperimentalFeature(ASExperimentalImageDownloaderPriority)) {
+      /*
+        Decide a priority based on the current interface state of this node.
+        It can happen that this method was called when the node entered preload state
+        but the interface state, at this point, tells us that the node is (going to be) visible.
+        If that's the case, we jump to a higher priority directly.
+       */
+      ASImageDownloaderPriority priority = ASImageDownloaderPriorityWithInterfaceState(interfaceState);
+
+      downloadIdentifier = [self->_downloader downloadImageWithURL:url
+                                                          priority:priority
+                                                     callbackQueue:callbackQueue
+                                                  downloadProgress:downloadProgress
+                                                        completion:completion];
+    } else {
+      /*
+        Kick off a download with default priority.
+        The actual "default" value is decided by the downloader.
+        ASBasicImageDownloader and ASPINRemoteImageDownloader both use ASImageDownloaderPriorityImminent
+        which is mapped to NSURLSessionTaskPriorityDefault.
+
+       This means that preload and display nodes use the same priority
+        and their requests are put into the same pool.
+      */
+      downloadIdentifier = [self->_downloader downloadImageWithURL:url
+                                                     callbackQueue:callbackQueue
+                                                  downloadProgress:downloadProgress
+                                                        completion:completion];
+    }
     as_log_verbose(ASImageLoadingLog(), "Downloading image for %@ url: %@", self, url);
   
     {

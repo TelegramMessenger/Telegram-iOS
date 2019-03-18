@@ -49,4 +49,4 @@ Example code and specific sample projects are highlighted in the documentation f
 
 A node container automatically manages the <a href = "intelligent-preloading.html">intelligent preloading</a> of its nodes. This means that all of the node's layout measurement, data fetching, decoding and rendering will be done asynchronously. Among other conveniences, this is why it is recommended to use nodes within a container node.
 
-Note that while it _is_ possible to use nodes directly (without an Texture node container), unless you add additional calls, they will only start displaying once they come onscreen (as UIKit does). This can lead to performance degredation and flashing of content.
+Note that while it _is_ possible to use nodes directly (without a Texture node container), unless you add additional calls, they will only start displaying once they come onscreen (as UIKit does). This can lead to performance degradation and flashing of content.

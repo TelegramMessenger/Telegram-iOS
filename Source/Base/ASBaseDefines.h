@@ -24,6 +24,12 @@
 #define AS_BUILD_UIUSERINTERFACESTYLE 0
 #endif
 
+/**
+ * Decorates methods that clients can implement in categories on our base class. These methods
+ * will be stubbed with an empty implementation if no implementation is provided.
+ */
+#define AS_CATEGORY_IMPLEMENTABLE
+
 #ifdef __GNUC__
 # define ASDISPLAYNODE_GNUC(major, minor) \
 (__GNUC__ > (major) || (__GNUC__ == (major) && __GNUC_MINOR__ >= (minor)))
@@ -140,6 +146,8 @@
 #else
 #define AS_SUBCLASSING_RESTRICTED
 #endif
+
+#define AS_ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 
 #define ASCreateOnce(expr) ({ \
   static dispatch_once_t onceToken; \

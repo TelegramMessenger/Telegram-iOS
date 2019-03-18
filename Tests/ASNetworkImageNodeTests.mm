@@ -109,7 +109,6 @@
 
 - (void)cachedImageWithURL:(NSURL *)URL callbackQueue:(dispatch_queue_t)callbackQueue completion:(ASImageCacherCompletion)completion
 {
-  ASDisplayNodeAssert(callbackQueue == dispatch_get_main_queue(), @"ASTestImageCache expects main queue for callback.");
   completion(nil);
 }
 

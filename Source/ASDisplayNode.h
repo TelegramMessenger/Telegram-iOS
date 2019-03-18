@@ -95,7 +95,15 @@ AS_EXTERN NSInteger const ASDefaultDrawingPriority;
  *
  */
 
-@interface ASDisplayNode : NSObject <ASLocking>
+@interface ASDisplayNode : NSObject <ASLocking> {
+@public
+  /**
+   * The _displayNodeContext ivar is unused by Texture, but provided to enable advanced clients to make powerful extensions to base class functionality.
+   * For example, _displayNodeContext can be used to implement category methods on ASDisplayNode that add functionality to all node subclass types.
+   * Code demonstrating this technique can be found in the CatDealsCollectionView example.
+   */
+  void *_displayNodeContext;
+}
 
 + (void)drawRect:(CGRect)bounds withParameters:(nullable id)parameters
      isCancelled:(AS_NOESCAPE asdisplaynode_iscancelled_block_t)isCancelledBlock
@@ -647,7 +655,7 @@ AS_EXTERN NSInteger const ASDefaultDrawingPriority;
  * more efficient than CALayer. The only limitation of this approach is that it cannot clip children, and
  * thus works best for ASImageNodes or containers showing a background around their children.
  *
- * - ASCornerRoundingTypeClipping: overlays 4 seperate opaque corners on top of the content that needs
+ * - ASCornerRoundingTypeClipping: overlays 4 separate opaque corners on top of the content that needs
  * corner rounding. Requires .backgroundColor and .cornerRadius to be set. Use clip corners in situations 
  * in which is movement through the corner, with an opaque background (no movement underneath the corner).
  * Clipped corners are ideal for animating / resizing views, and still outperform CALayer.

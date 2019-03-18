@@ -8,7 +8,10 @@
 //
 
 #import <XCTest/XCTest.h>
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdocumentation"
 #import <JGMethodSwizzler/JGMethodSwizzler.h>
+#pragma clang diagnostic pop
 
 #import <AsyncDisplayKit/AsyncDisplayKit.h>
 #import <AsyncDisplayKit/ASTableView.h>

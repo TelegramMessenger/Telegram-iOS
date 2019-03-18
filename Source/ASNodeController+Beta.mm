@@ -18,27 +18,22 @@
 {
   ASDisplayNode *_strongNode;
   __weak ASDisplayNode *_weakNode;
-  ASDN::Mutex _nodeLock;
+  AS::RecursiveMutex __instanceLock__;
 }
 
-- (ASDisplayNode *)createNode
+- (void)loadNode
 {
-  return [[ASDisplayNode alloc] init];
+  ASLockScopeSelf();
+  self.node = [[ASDisplayNode alloc] init];
 }
 
 - (ASDisplayNode *)node
 {
-  ASDN::MutexLocker l(_nodeLock);
-  ASDisplayNode *node = _node;
-  if (!node) {
-    node = [self createNode];
-    if (!node) {
-      ASDisplayNodeCFailAssert(@"Returned nil from -createNode.");
-      node = [[ASDisplayNode alloc] init];
-    }
-    [self setupReferencesWithNode:node];
+  ASLockScopeSelf();
+  if (_node == nil) {
+    [self loadNode];
   }
-  return node;
+  return _node;
 }
 
 - (void)setupReferencesWithNode:(ASDisplayNode *)node
@@ -55,6 +50,15 @@
   }
 
   [node __setNodeController:self];
+}
+
+- (void)setNode:(ASDisplayNode *)node
+{
+  ASLockScopeSelf();
+  if (node == _node) {
+    return;
+  }
+  [self setupReferencesWithNode:node];
   [node addInterfaceStateDelegate:self];
 }
 
@@ -88,23 +92,35 @@
 
 - (void)hierarchyDisplayDidFinish {}
 
+- (ASLockSet)lockPair {
+  ASLockSet lockSet = ASLockSequence(^BOOL(ASAddLockBlock addLock) {
+    if (!addLock(_node)) {
+      return NO;
+    }
+    if (!addLock(self)) {
+      return NO;
+    }
+    return YES;
+  });
+
+  return lockSet;
+}
+
 #pragma mark NSLocking
 
 - (void)lock
 {
-  [self.node lock];
+  __instanceLock__.lock();
 }
 
 - (void)unlock
 {
-  // Since the node was already locked on this thread, we don't need to call our accessor or take our lock.
-  ASDisplayNodeAssertNotNil(_node, @"Node deallocated while locked.");
-  [_node unlock];
+  __instanceLock__.unlock();
 }
 
 - (BOOL)tryLock
 {
-  return [self.node tryLock];
+  return __instanceLock__.try_lock();
 }
 
 @end

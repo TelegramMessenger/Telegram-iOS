@@ -107,7 +107,7 @@
 
 @interface ASCollectionNode ()
 {
-  ASDN::RecursiveMutex _environmentStateLock;
+  AS::RecursiveMutex _environmentStateLock;
   Class _collectionViewClass;
   id<ASBatchFetchingDelegate> _batchFetchingDelegate;
 }

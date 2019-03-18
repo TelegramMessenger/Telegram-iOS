@@ -14,7 +14,7 @@
 
 @interface ASMainSerialQueue ()
 {
-  ASDN::Mutex _serialQueueLock;
+  AS::Mutex _serialQueueLock;
   NSMutableArray *_blocks;
 }
 
@@ -34,14 +34,14 @@
 
 - (NSUInteger)numberOfScheduledBlocks
 {
-  ASDN::MutexLocker l(_serialQueueLock);
+  AS::MutexLocker l(_serialQueueLock);
   return _blocks.count;
 }
 
 - (void)performBlockOnMainThread:(dispatch_block_t)block
 {
 
-  ASDN::UniqueLock l(_serialQueueLock);
+  AS::UniqueLock l(_serialQueueLock);
   [_blocks addObject:block];
   {
     l.unlock();
@@ -53,7 +53,7 @@
 - (void)runBlocks
 {
   dispatch_block_t mainThread = ^{
-    ASDN::UniqueLock l(self->_serialQueueLock);
+    AS::UniqueLock l(self->_serialQueueLock);
     do {
       dispatch_block_t block;
       if (self->_blocks.count > 0) {

@@ -236,14 +236,14 @@
   BOOL _delegateDidUpdateEnqueued;
 
   // TextKit.
-  ASDN::RecursiveMutex _textKitLock;
+  AS::RecursiveMutex _textKitLock;
   ASTextKitComponents *_textKitComponents;
   ASTextKitComponents *_placeholderTextKitComponents;
   // Forwards NSLayoutManagerDelegate methods related to word kerning
   ASTextNodeWordKerner *_wordKerner;
   
   // UITextInputTraits
-  ASDN::RecursiveMutex _textInputTraitsLock;
+  AS::RecursiveMutex _textInputTraitsLock;
   _ASTextInputTraitsPendingState *_textInputTraits;
 
   // Misc. State.
@@ -308,7 +308,7 @@
     
     // Configure textView with UITextInputTraits
     {
-      ASDN::MutexLocker l(_textInputTraitsLock);
+      AS::MutexLocker l(_textInputTraitsLock);
       if (_textInputTraits) {
         textView.autocapitalizationType         = _textInputTraits.autocapitalizationType;
         textView.autocorrectionType             = _textInputTraits.autocorrectionType;
@@ -324,7 +324,7 @@
     [self.view addSubview:textView];
   };
 
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
 
   // Create and configure the placeholder text view.
   _placeholderTextKitComponents.textView = [[ASTextKitComponentsTextView alloc] initWithFrame:CGRectZero textContainer:_placeholderTextKitComponents.textContainer];
@@ -443,7 +443,7 @@
 {
   [super setBackgroundColor:backgroundColor];
 
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
 
   // If showing the placeholder, don't propagate backgroundColor/opaque to the editable textView.  It is positioned over the placeholder to accept taps to begin editing, and if it's opaque/colored then it'll obscure the placeholder.
   // The backgroundColor/opaque will be propagated to the editable textView when editing begins.
@@ -455,7 +455,7 @@
 
 - (void)setTextContainerInset:(UIEdgeInsets)textContainerInset
 {
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
 
   _textContainerInset = textContainerInset;
   _textKitComponents.textView.textContainerInset = textContainerInset;
@@ -466,7 +466,7 @@
 {
   [super setOpaque:opaque];
 
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
 
   // If showing the placeholder, don't propagate backgroundColor/opaque to the editable textView.  It is positioned over the placeholder to accept taps to begin editing, and if it's opaque/colored then it'll obscure the placeholder.
   // The backgroundColor/opaque will be propagated to the editable textView when editing begins.
@@ -492,7 +492,7 @@
 
 - (void)setScrollEnabled:(BOOL)scrollEnabled
 {
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
   _scrollEnabled = scrollEnabled;
   [_textKitComponents.textView setScrollEnabled:_scrollEnabled];
 }
@@ -526,7 +526,7 @@
 
   _typingAttributes = [typingAttributes copy];
 
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
 
   _textKitComponents.textView.typingAttributes = _typingAttributes;
 }
@@ -536,13 +536,13 @@
 
 - (NSRange)selectedRange
 {
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
   return _textKitComponents.textView.selectedRange;
 }
 
 - (void)setSelectedRange:(NSRange)selectedRange
 {
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
   _textKitComponents.textView.selectedRange = selectedRange;
 }
 
@@ -556,14 +556,14 @@
 @dynamic attributedPlaceholderText;
 - (NSAttributedString *)attributedPlaceholderText
 {
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
 
   return [_placeholderTextKitComponents.textStorage copy];
 }
 
 - (void)setAttributedPlaceholderText:(NSAttributedString *)attributedPlaceholderText
 {
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
 
   if (ASObjectIsEqual(_placeholderTextKitComponents.textStorage, attributedPlaceholderText))
     return;
@@ -580,14 +580,14 @@
   if ([self isDisplayingPlaceholder])
     return nil;
 
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
 
   return [_textKitComponents.textStorage copy];
 }
 
 - (void)setAttributedText:(NSAttributedString *)attributedText
 {
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
 
   // If we (_cmd) are called while the text view itself is updating (-textViewDidUpdate:), you cannot update the text storage and expect perfect propagation to the text view.
   // Thus, we always update the textview directly if it's been created already.
@@ -651,7 +651,7 @@
 #pragma mark - Core
 - (void)_updateDisplayingPlaceholder
 {
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
 
   // Show the placeholder if necessary.
   _displayingPlaceholder = (_textKitComponents.textStorage.length == 0);
@@ -669,7 +669,7 @@
 
 - (void)_layoutTextView
 {
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
 
   // Layout filling our bounds.
   _textKitComponents.textView.frame = self.bounds;
@@ -695,35 +695,35 @@
 @dynamic textInputMode;
 - (UITextInputMode *)textInputMode
 {
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
   return [_textKitComponents.textView textInputMode];
 }
 
 - (BOOL)isFirstResponder
 {
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
   return [_textKitComponents.textView isFirstResponder];
 }
 
 - (BOOL)canBecomeFirstResponder {
-    ASDN::MutexLocker l(_textKitLock);
+    AS::MutexLocker l(_textKitLock);
     return [_textKitComponents.textView canBecomeFirstResponder];
 }
 
 - (BOOL)becomeFirstResponder
 {
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
   return [_textKitComponents.textView becomeFirstResponder];
 }
 
 - (BOOL)canResignFirstResponder {
-    ASDN::MutexLocker l(_textKitLock);
+    AS::MutexLocker l(_textKitLock);
     return [_textKitComponents.textView canResignFirstResponder];
 }
 
 - (BOOL)resignFirstResponder
 {
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
   return [_textKitComponents.textView resignFirstResponder];
 }
 
@@ -739,7 +739,7 @@
 
 - (void)setAutocapitalizationType:(UITextAutocapitalizationType)autocapitalizationType
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     [self.textView setAutocapitalizationType:autocapitalizationType];
   } else {
@@ -749,7 +749,7 @@
 
 - (UITextAutocapitalizationType)autocapitalizationType
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     return [self.textView autocapitalizationType];
   } else {
@@ -759,7 +759,7 @@
 
 - (void)setAutocorrectionType:(UITextAutocorrectionType)autocorrectionType
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     [self.textView setAutocorrectionType:autocorrectionType];
   } else {
@@ -769,7 +769,7 @@
 
 - (UITextAutocorrectionType)autocorrectionType
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     return [self.textView autocorrectionType];
   } else {
@@ -779,7 +779,7 @@
 
 - (void)setSpellCheckingType:(UITextSpellCheckingType)spellCheckingType
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     [self.textView setSpellCheckingType:spellCheckingType];
   } else {
@@ -789,7 +789,7 @@
 
 - (UITextSpellCheckingType)spellCheckingType
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     return [self.textView spellCheckingType];
   } else {
@@ -799,7 +799,7 @@
 
 - (void)setEnablesReturnKeyAutomatically:(BOOL)enablesReturnKeyAutomatically
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     [self.textView setEnablesReturnKeyAutomatically:enablesReturnKeyAutomatically];
   } else {
@@ -809,7 +809,7 @@
 
 - (BOOL)enablesReturnKeyAutomatically
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     return [self.textView enablesReturnKeyAutomatically];
   } else {
@@ -819,7 +819,7 @@
 
 - (void)setKeyboardAppearance:(UIKeyboardAppearance)setKeyboardAppearance
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     [self.textView setKeyboardAppearance:setKeyboardAppearance];
   } else {
@@ -829,7 +829,7 @@
 
 - (UIKeyboardAppearance)keyboardAppearance
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     return [self.textView keyboardAppearance];
   } else {
@@ -839,7 +839,7 @@
 
 - (void)setKeyboardType:(UIKeyboardType)keyboardType
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     [self.textView setKeyboardType:keyboardType];
   } else {
@@ -849,7 +849,7 @@
 
 - (UIKeyboardType)keyboardType
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     return [self.textView keyboardType];
   } else {
@@ -859,7 +859,7 @@
 
 - (void)setReturnKeyType:(UIReturnKeyType)returnKeyType
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     [self.textView setReturnKeyType:returnKeyType];
   } else {
@@ -869,7 +869,7 @@
 
 - (UIReturnKeyType)returnKeyType
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     return [self.textView returnKeyType];
   } else {
@@ -879,7 +879,7 @@
 
 - (void)setSecureTextEntry:(BOOL)secureTextEntry
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     [self.textView setSecureTextEntry:secureTextEntry];
   } else {
@@ -889,7 +889,7 @@
 
 - (BOOL)isSecureTextEntry
 {
-  ASDN::MutexLocker l(_textInputTraitsLock);
+  AS::MutexLocker l(_textInputTraitsLock);
   if (self.isNodeLoaded) {
     return [self.textView isSecureTextEntry];
   } else {
@@ -921,7 +921,7 @@
 
 - (void)textViewDidChange:(UITextView *)textView
 {
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
 
   // Note we received a text changed event.
   // This is used by _delegateDidChangeSelectionFromSelectedRange:toSelectedRange: to distinguish between selection changes that happen because of editing or pure selection changes.
@@ -1013,7 +1013,7 @@
 #pragma mark - Geometry
 - (CGRect)frameForTextRange:(NSRange)textRange
 {
-  ASDN::MutexLocker l(_textKitLock);
+  AS::MutexLocker l(_textKitLock);
 
   // Bail on invalid range.
   if (NSMaxRange(textRange) > [_textKitComponents.textStorage length]) {

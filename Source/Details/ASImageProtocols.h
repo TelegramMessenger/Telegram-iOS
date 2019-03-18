@@ -102,7 +102,7 @@ typedef NS_ENUM(NSUInteger, ASImageDownloaderPriority) {
 /**
   @abstract Cancels an image download.
   @param downloadIdentifier The opaque download identifier object returned from 
-      `downloadImageWithURL:callbackQueue:downloadProgressBlock:completion:`.
+      `downloadImageWithURL:callbackQueue:downloadProgress:completion:`.
   @discussion This method has no effect if `downloadIdentifier` is nil.
  */
 - (void)cancelImageDownloadForIdentifier:(id)downloadIdentifier;
@@ -110,9 +110,27 @@ typedef NS_ENUM(NSUInteger, ASImageDownloaderPriority) {
 @optional
 
 /**
+ @abstract Downloads an image with the given URL.
+ @param URL The URL of the image to download.
+ @param priority The priority at which the image should be downloaded.
+ @param callbackQueue The queue to call `downloadProgressBlock` and `completion` on.
+ @param downloadProgress The block to be invoked when the download of `URL` progresses.
+ @param completion The block to be invoked when the download has completed, or has failed.
+ @discussion This method is likely to be called on the main thread, so any custom implementations should make sure to background any expensive download operations.
+ @note If this method is implemented, it will be called instead of the required method (`downloadImageWithURL:callbackQueue:downloadProgress:completion:`).
+ @result An opaque identifier to be used in canceling the download, via `cancelImageDownloadForIdentifier:`. You must
+ retain the identifier if you wish to use it later.
+ */
+- (nullable id)downloadImageWithURL:(NSURL *)URL
+                           priority:(ASImageDownloaderPriority)priority
+                      callbackQueue:(dispatch_queue_t)callbackQueue
+                   downloadProgress:(nullable ASImageDownloaderProgress)downloadProgress
+                         completion:(ASImageDownloaderCompletion)completion;
+
+/**
  @abstract Cancels an image download, however indicating resume data should be stored in case of redownload.
  @param downloadIdentifier The opaque download identifier object returned from
- `downloadImageWithURL:callbackQueue:downloadProgressBlock:completion:`.
+ `downloadImageWithURL:callbackQueue:downloadProgress:completion:`.
  @discussion This method has no effect if `downloadIdentifier` is nil. If implemented, this method
  may be called instead of `cancelImageDownloadForIdentifier:` in cases where ASDK believes there's a chance
  the image download will be resumed (currently when an image exits preload range). You can use this to store
@@ -130,7 +148,7 @@ typedef NS_ENUM(NSUInteger, ASImageDownloaderPriority) {
 /**
  @abstract Sets block to be called when a progress image is available.
  @param progressBlock The block to be invoked when the download has a progressive render of an image available.
- @param callbackQueue The queue to call `progressBlock` on.
+ @param callbackQueue The queue to call `progressImageBlock` on.
  @param downloadIdentifier The opaque download identifier object returned from
  `downloadImageWithURL:callbackQueue:downloadProgressBlock:completion:`.
  */

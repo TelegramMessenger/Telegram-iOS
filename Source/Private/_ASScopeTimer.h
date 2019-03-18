@@ -18,14 +18,14 @@
 
  {
    // some scope
-   ASDisplayNode::ScopeTimer t(placeToStoreTiming);
+   AS::ScopeTimer t(placeToStoreTiming);
    DoPotentiallySlowWork();
    MorePotentiallySlowWork();
  }
 
  */
 
-namespace ASDN {
+namespace AS {
   struct ScopeTimer {
     NSTimeInterval begin;
     NSTimeInterval &outT;

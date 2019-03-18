@@ -18,6 +18,8 @@ AS_EXTERN CGPoint const ASPointNull; // {NAN, NAN}
 
 AS_EXTERN BOOL ASPointIsNull(CGPoint point);
 
+AS_EXTERN NSString *const ASThreadDictMaxConstraintSizeKey;
+
 /**
  * Safely calculates the layout of the given root layoutElement by guarding against nil nodes.
  * @param rootLayoutElement The root node to calculate the layout for.

@@ -14,7 +14,7 @@
 
 @interface ASPendingStateController()
 {
-  ASDN::Mutex _lock;
+  AS::Mutex _lock;
 
   struct ASPendingStateControllerFlags {
     unsigned pendingFlush:1;
@@ -52,7 +52,7 @@
 - (void)registerNode:(ASDisplayNode *)node
 {
   ASDisplayNodeAssert(node.nodeLoaded, @"Expected display node to be loaded before it was registered with ASPendingStateController. Node: %@", node);
-  ASDN::MutexLocker l(_lock);
+  AS::MutexLocker l(_lock);
   [_dirtyNodes addObject:node];
 
   [self scheduleFlushIfNeeded];

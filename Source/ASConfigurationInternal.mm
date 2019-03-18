@@ -12,24 +12,21 @@
 #import <AsyncDisplayKit/ASConfigurationDelegate.h>
 #import <stdatomic.h>
 
-#define ASGetSharedConfigMgr() (__bridge ASConfigurationManager *)ASConfigurationManager.sharedInstance
+static ASConfigurationManager *ASSharedConfigurationManager;
+static dispatch_once_t ASSharedConfigurationManagerOnceToken;
+
+NS_INLINE ASConfigurationManager *ASConfigurationManagerGet() {
+  dispatch_once(&ASSharedConfigurationManagerOnceToken, ^{
+    ASSharedConfigurationManager = [[ASConfigurationManager alloc] init];
+  });
+  return ASSharedConfigurationManager;
+}
 
 @implementation ASConfigurationManager {
   ASConfiguration *_config;
   dispatch_queue_t _delegateQueue;
   BOOL _frameworkInitialized;
   _Atomic(ASExperimentalFeatures) _activatedExperiments;
-}
-
-/// Return CFTypeRef to avoid retain/release on this singleton.
-+ (CFTypeRef)sharedInstance
-{
-  static CFTypeRef inst;
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-    inst = (__bridge_retained CFTypeRef)[[ASConfigurationManager alloc] init];
-  });
-  return inst;
 }
 
 + (ASConfiguration *)defaultConfiguration NS_RETURNS_RETAINED
@@ -96,19 +93,19 @@
 // Define this even when !DEBUG, since we may run our tests in release mode.
 + (void)test_resetWithConfiguration:(ASConfiguration *)configuration
 {
-  ASConfigurationManager *inst = ASGetSharedConfigMgr();
+  ASConfigurationManager *inst = ASConfigurationManagerGet();
   inst->_config = configuration ?: [self defaultConfiguration];
   atomic_store(&inst->_activatedExperiments, 0);
 }
 
 @end
 
-BOOL ASActivateExperimentalFeature(ASExperimentalFeatures feature)
+BOOL _ASActivateExperimentalFeature(ASExperimentalFeatures feature)
 {
-  return [ASGetSharedConfigMgr() activateExperimentalFeature:feature];
+  return [ASConfigurationManagerGet() activateExperimentalFeature:feature];
 }
 
 void ASNotifyInitialized()
 {
-  [ASGetSharedConfigMgr() frameworkDidInitialize];
+  [ASConfigurationManagerGet() frameworkDidInitialize];
 }

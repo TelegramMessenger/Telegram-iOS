@@ -17,12 +17,13 @@ NS_ASSUME_NONNULL_BEGIN
 @class ASBatchContext;
 
 /**
- * A protocol that your section controllers should conform to,
- * in order to be used with AsyncDisplayKit.
+ * A protocol that your section controllers should conform to, in order to be used with Texture.
  *
  * @note Your supplementary view source should conform to @c ASSupplementaryNodeSource.
  */
 @protocol ASSectionController <NSObject>
+
+@optional
 
 /**
  * A method to provide the node block for the item at the given index.
@@ -48,8 +49,6 @@ NS_ASSUME_NONNULL_BEGIN
  *   this method is not called when the item is about to display.
  */
 - (ASCellNode *)nodeForItemAtIndex:(NSInteger)index;
-
-@optional
 
 /**
  * Asks the section controller whether it should batch fetch because the user is

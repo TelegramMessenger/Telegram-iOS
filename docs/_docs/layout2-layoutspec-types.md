@@ -84,7 +84,7 @@ they will be resolved again, causing justifyContent and alignItems to be updated
 - `verticalAlignment`. Specifies how children are aligned vertically. Depends on the stack direction, setting the alignment causes either
  justifyContent or alignItems to be updated. The alignment will remain valid after future direction changes.
  Thus, it is preferred to those properties.
-- `justifyContent`. The amount of space between each child.
+- `justifyContent`. It defines the alignment along the main axis.
 - `alignItems`. Orientation of children along cross axis.
 - `flexWrap`. Whether children are stacked into a single or multiple lines. Defaults to single line.
 - `alignContent`. Orientation of lines along cross axis if there are multiple lines.

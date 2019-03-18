@@ -62,7 +62,7 @@
 
 - (ASLayoutElementStyle *)style
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   if (_style == nil) {
     _style = [[ASLayoutElementStyle alloc] init];
   }
@@ -142,7 +142,7 @@ ASLayoutElementLayoutCalculationDefaults
 
 - (ASTraitCollection *)asyncTraitCollection
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   return [ASTraitCollection traitCollectionWithASPrimitiveTraitCollection:self.primitiveTraitCollection];
 }
 
@@ -221,13 +221,13 @@ ASLayoutElementStyleExtensibilityForwarding
 
 - (NSString *)debugName
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   return _debugName;
 }
 
 - (void)setDebugName:(NSString *)debugName
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   if (!ASObjectIsEqual(_debugName, debugName)) {
     _debugName = [debugName copy];
   }

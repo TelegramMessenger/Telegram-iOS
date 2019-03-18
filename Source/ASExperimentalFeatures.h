@@ -17,20 +17,20 @@ NS_ASSUME_NONNULL_BEGIN
  */
 typedef NS_OPTIONS(NSUInteger, ASExperimentalFeatures) {
   ASExperimentalGraphicsContexts = 1 << 0,                  // exp_graphics_contexts
-#if AS_ENABLE_TEXTNODE
+  // If AS_ENABLE_TEXTNODE=0 or TextNode2 subspec is used this setting is a no op and ASTextNode2
+  // will be used in all cases
   ASExperimentalTextNode = 1 << 1,                          // exp_text_node
-#endif
   ASExperimentalInterfaceStateCoalescing = 1 << 2,          // exp_interface_state_coalesce
   ASExperimentalUnfairLock = 1 << 3,                        // exp_unfair_lock
   ASExperimentalLayerDefaults = 1 << 4,                     // exp_infer_layer_defaults
-  ASExperimentalNetworkImageQueue = 1 << 5,                 // exp_network_image_queue
-  ASExperimentalCollectionTeardown = 1 << 6,                // exp_collection_teardown
-  ASExperimentalFramesetterCache = 1 << 7,                  // exp_framesetter_cache
-  ASExperimentalSkipClearData = 1 << 8,                     // exp_skip_clear_data
-  ASExperimentalDidEnterPreloadSkipASMLayout = 1 << 9,      // exp_did_enter_preload_skip_asm_layout
-  ASExperimentalDisableAccessibilityCache = 1 << 10,        // exp_disable_a11y_cache
-  ASExperimentalSkipAccessibilityWait = 1 << 11,            // exp_skip_a11y_wait
-  ASExperimentalNewDefaultCellLayoutMode = 1 << 12,         // exp_new_default_cell_layout_mode
+  ASExperimentalCollectionTeardown = 1 << 5,                // exp_collection_teardown
+  ASExperimentalFramesetterCache = 1 << 6,                  // exp_framesetter_cache
+  ASExperimentalSkipClearData = 1 << 7,                     // exp_skip_clear_data
+  ASExperimentalDidEnterPreloadSkipASMLayout = 1 << 8,      // exp_did_enter_preload_skip_asm_layout
+  ASExperimentalDisableAccessibilityCache = 1 << 9,         // exp_disable_a11y_cache
+  ASExperimentalDispatchApply = 1 << 10,                    // exp_dispatch_apply
+  ASExperimentalImageDownloaderPriority = 1 << 11,          // exp_image_downloader_priority
+  ASExperimentalTextDrawing = 1 << 12,                      // exp_text_drawing
   ASExperimentalFeatureAll = 0xFFFFFFFF
 };
 

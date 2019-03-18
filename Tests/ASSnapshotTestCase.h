@@ -7,7 +7,11 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdocumentation"
 #import <FBSnapshotTestCase/FBSnapshotTestCase.h>
+#pragma clang diagnostic pop
+
 #import "ASDisplayNodeTestsHelper.h"
 
 @class ASDisplayNode;
@@ -27,7 +31,7 @@ NSOrderedSet *ASSnapshotTestCaseDefaultSuffixes(void);
 	FBSnapshotVerifyViewWithOptions(view__, identifier__, ASSnapshotTestCaseDefaultSuffixes(), 0);
 
 #define ASSnapshotVerifyViewWithTolerance(view__, identifier__, tolerance__) \
-    FBSnapshotVerifyLayerWithOptions(view__, identifier__, ASSnapshotTestCaseDefaultSuffixes(), tolerance__);
+    FBSnapshotVerifyViewWithOptions(view__, identifier__, ASSnapshotTestCaseDefaultSuffixes(), tolerance__);
 
 @interface ASSnapshotTestCase : FBSnapshotTestCase
 

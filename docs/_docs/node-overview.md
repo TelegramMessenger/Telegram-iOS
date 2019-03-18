@@ -40,7 +40,7 @@ A key advantage of using nodes over UIKit components is that **all nodes perform
     <td><a href = "image-node.html"><code>ASImageNode</code></a><br>
         <a href = "network-image-node.html"><code>ASNetworkImageNode</code></a><br>
         <a href = "multiplex-image-node.html"><code>ASMultiplexImageNode</code></a></td>
-    <td>in place of UIKit's <code>UIImage</code></td> 
+    <td>in place of UIKit's <code>UIImageView</code></td> 
   </tr>
   <tr>
     <td><a href = "video-node.html"><code>ASVideoNode</code></a><br>

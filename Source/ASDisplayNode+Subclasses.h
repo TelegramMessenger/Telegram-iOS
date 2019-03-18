@@ -69,8 +69,22 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @discussion This is the best time to add gesture recognizers to the view.
  */
+AS_CATEGORY_IMPLEMENTABLE
 - (void)didLoad ASDISPLAYNODE_REQUIRES_SUPER;
 
+/**
+ * An empty method that you can implement in a category to add global
+ * node initialization behavior. This method will be called by [ASDisplayNode init].
+ */
+AS_CATEGORY_IMPLEMENTABLE
+- (void)baseDidInit;
+
+/**
+ * An empty method that you can implement in a category to add global
+ * node deallocation behavior. This method will be called by [ASDisplayNode dealloc].
+ */
+AS_CATEGORY_IMPLEMENTABLE
+- (void)baseWillDealloc;
 
 #pragma mark - Layout
 /** @name Layout */
@@ -88,6 +102,7 @@ NS_ASSUME_NONNULL_BEGIN
  * @discussion Gives a chance for subclasses to perform actions after the subclass and superclass have finished laying
  * out.
  */
+AS_CATEGORY_IMPLEMENTABLE
 - (void)layoutDidFinish ASDISPLAYNODE_REQUIRES_SUPER;
 
 /**
@@ -96,6 +111,7 @@ NS_ASSUME_NONNULL_BEGIN
  * @discussion When the .calculatedLayout property is set to a new ASLayout (directly from -calculateLayoutThatFits: or
  * calculated via use of -layoutSpecThatFits:), subclasses may inspect it here.
  */
+AS_CATEGORY_IMPLEMENTABLE
 - (void)calculatedLayoutDidChange ASDISPLAYNODE_REQUIRES_SUPER;
 
 
@@ -163,15 +179,25 @@ NS_ASSUME_NONNULL_BEGIN
   * For descriptions, see <ASInterfaceStateDelegate> definition.
   */
 
+AS_CATEGORY_IMPLEMENTABLE
 - (void)didEnterVisibleState ASDISPLAYNODE_REQUIRES_SUPER;
+
+AS_CATEGORY_IMPLEMENTABLE
 - (void)didExitVisibleState  ASDISPLAYNODE_REQUIRES_SUPER;
 
+AS_CATEGORY_IMPLEMENTABLE
 - (void)didEnterDisplayState ASDISPLAYNODE_REQUIRES_SUPER;
+
+AS_CATEGORY_IMPLEMENTABLE
 - (void)didExitDisplayState  ASDISPLAYNODE_REQUIRES_SUPER;
 
+AS_CATEGORY_IMPLEMENTABLE
 - (void)didEnterPreloadState ASDISPLAYNODE_REQUIRES_SUPER;
+
+AS_CATEGORY_IMPLEMENTABLE
 - (void)didExitPreloadState  ASDISPLAYNODE_REQUIRES_SUPER;
 
+AS_CATEGORY_IMPLEMENTABLE
 - (void)interfaceStateDidChange:(ASInterfaceState)newState
                       fromState:(ASInterfaceState)oldState ASDISPLAYNODE_REQUIRES_SUPER;
 
@@ -180,6 +206,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @discussion Subclasses can override this method to react to a trait collection change.
  */
+AS_CATEGORY_IMPLEMENTABLE
 - (void)asyncTraitCollectionDidChange;
 
 #pragma mark - Drawing

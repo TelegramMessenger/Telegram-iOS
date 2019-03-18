@@ -17,15 +17,14 @@ NSArray<NSString *> *ASExperimentalFeaturesGetNames(ASExperimentalFeatures flags
                                       @"exp_interface_state_coalesce",
                                       @"exp_unfair_lock",
                                       @"exp_infer_layer_defaults",
-                                      @"exp_network_image_queue",
                                       @"exp_collection_teardown",
                                       @"exp_framesetter_cache",
                                       @"exp_skip_clear_data",
                                       @"exp_did_enter_preload_skip_asm_layout",
                                       @"exp_disable_a11y_cache",
-                                      @"exp_skip_a11y_wait",
-                                      @"exp_new_default_cell_layout_mode"]));
-  
+                                      @"exp_dispatch_apply",
+                                      @"exp_image_downloader_priority",
+                                      @"exp_text_drawing"]));
   if (flags == ASExperimentalFeatureAll) {
     return allNames;
   }

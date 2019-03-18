@@ -169,13 +169,13 @@
 
 - (NSString *)animatedImageRunLoopMode
 {
-  ASDN::MutexLocker l(_displayLinkLock);
+  AS::MutexLocker l(_displayLinkLock);
   return _animatedImageRunLoopMode;
 }
 
 - (void)setAnimatedImageRunLoopMode:(NSString *)runLoopMode
 {
-  ASDN::MutexLocker l(_displayLinkLock);
+  AS::MutexLocker l(_displayLinkLock);
 
   if (runLoopMode == nil) {
     runLoopMode = ASAnimatedImageDefaultRunLoopMode;
@@ -252,7 +252,7 @@
 
   // Get frame interval before holding display link lock to avoid deadlock
   NSUInteger frameInterval = self.animatedImage.frameInterval;
-  ASDN::MutexLocker l(_displayLinkLock);
+  AS::MutexLocker l(_displayLinkLock);
   if (_displayLink == nil) {
     _playHead = 0;
     _displayLink = [CADisplayLink displayLinkWithTarget:[ASWeakProxy weakProxyWithTarget:self] selector:@selector(displayLinkFired:)];
@@ -282,7 +282,7 @@
   NSLog(@"stopping animation: %p", self);
 #endif
   ASDisplayNodeAssertMainThread();
-  ASDN::MutexLocker l(_displayLinkLock);
+  AS::MutexLocker l(_displayLinkLock);
   _displayLink.paused = YES;
   self.lastDisplayLinkFire = 0;
   
@@ -401,7 +401,7 @@
 
 - (void)invalidateAnimatedImage
 {
-  ASDN::MutexLocker l(_displayLinkLock);
+  AS::MutexLocker l(_displayLinkLock);
 #if ASAnimatedImageDebug
   if (_displayLink) {
     NSLog(@"invalidating display link");

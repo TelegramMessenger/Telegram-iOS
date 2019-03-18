@@ -1050,12 +1050,6 @@
            shouldWaitUntilAllUpdatesAreProcessed:YES];
 }
 
-- (void)testInitialRangeBoundsCellLayoutModeSyncForSmallContent
-{
-  [self testInitialRangeBoundsWithCellLayoutMode:ASCellLayoutModeSyncForSmallContent
-           shouldWaitUntilAllUpdatesAreProcessed:YES]; // Need to wait because the first initial data load is always async
-}
-
 - (void)testInitialRangeBoundsCellLayoutModeAlwaysAsync
 {
   [self testInitialRangeBoundsWithCellLayoutMode:ASCellLayoutModeAlwaysAsync

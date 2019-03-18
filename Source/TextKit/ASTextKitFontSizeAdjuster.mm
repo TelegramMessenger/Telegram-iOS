@@ -33,7 +33,7 @@
   ASTextKitAttributes _attributes;
   BOOL _measured;
   CGFloat _scaleFactor;
-  ASDN::Mutex __instanceLock__;
+  AS::Mutex __instanceLock__;
 }
 
 @synthesize sizingLayoutManager = _sizingLayoutManager;
@@ -127,7 +127,7 @@
 
 - (NSLayoutManager *)sizingLayoutManager
 {
-  ASDN::MutexLocker l(__instanceLock__);
+  AS::MutexLocker l(__instanceLock__);
   if (_sizingLayoutManager == nil) {
     _sizingLayoutManager = [[ASLayoutManager alloc] init];
     _sizingLayoutManager.usesFontLeading = NO;

@@ -196,6 +196,12 @@ typedef NS_ENUM(NSUInteger, ASCellNodeVisibilityEvent) {
  */
 @property (nullable) UIView *selectedBackgroundView;
 
+/* @abstract The view used as the background of the cell.
+ * ASTableView uses these properties when configuring UITableViewCells that host ASCellNodes.
+ * ASCollectionView uses these properties when configuring UICollectionViewCells that host ASCellNodes.
+ */
+@property (nullable) UIView *backgroundView;
+
 /* @abstract The accessory type view on the right side of the cell. Please take care of your ASLayoutSpec so that doesn't overlay the accessoryView
  * @default UITableViewCellAccessoryNone
  * ASTableView uses these properties when configuring UITableViewCells that host ASCellNodes.

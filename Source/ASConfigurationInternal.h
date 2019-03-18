@@ -20,7 +20,21 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * The delegate will be notified asynchronously.
  */
-AS_EXTERN BOOL ASActivateExperimentalFeature(ASExperimentalFeatures option);
+#if DEBUG
+#define ASActivateExperimentalFeature(opt) _ASActivateExperimentalFeature(opt)
+#else
+#define ASActivateExperimentalFeature(opt) ({\
+  static BOOL result;\
+  static dispatch_once_t onceToken;\
+  dispatch_once(&onceToken, ^{ result = _ASActivateExperimentalFeature(opt); });\
+  result;\
+})
+#endif
+
+/**
+ * Internal function. Use the macro without the underbar.
+ */
+AS_EXTERN BOOL _ASActivateExperimentalFeature(ASExperimentalFeatures option);
 
 /**
  * Notify the configuration delegate that the framework initialized, if needed.

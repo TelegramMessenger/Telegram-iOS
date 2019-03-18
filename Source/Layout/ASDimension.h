@@ -27,9 +27,10 @@ ASDISPLAYNODE_INLINE BOOL AS_WARN_UNUSED_RESULT ASIsCGSizeValidForLayout(CGSize 
   return (ASPointsValidForLayout(size.width) && ASPointsValidForLayout(size.height));
 }
 
+// Note we want YGUndefined (10E20) to be considered invalid, so we have picked a smaller number than CGFLOAT_MAX/2.0
 ASDISPLAYNODE_INLINE BOOL AS_WARN_UNUSED_RESULT ASPointsValidForSize(CGFloat points)
 {
-  return ((isnormal(points) || points == 0.0) && points >= 0.0 && points < (FLT_MAX / 2.0));
+  return ((isnormal(points) || points == 0.0) && points >= 0.0 && points < 10000000.0);
 }
 
 ASDISPLAYNODE_INLINE BOOL AS_WARN_UNUSED_RESULT ASIsCGSizeValidForSize(CGSize size)
@@ -37,9 +38,10 @@ ASDISPLAYNODE_INLINE BOOL AS_WARN_UNUSED_RESULT ASIsCGSizeValidForSize(CGSize si
   return (ASPointsValidForSize(size.width) && ASPointsValidForSize(size.height));
 }
 
+// Note we want YGUndefined (10E20) to be considered invalid, so we have picked a smaller number than CGFLOAT_MAX/2.0
 ASDISPLAYNODE_INLINE BOOL ASIsCGPositionPointsValidForLayout(CGFloat points)
 {
-  return ((isnormal(points) || points == 0.0) && points < (CGFLOAT_MAX / 2.0));
+  return ((isnormal(points) || points == 0.0) && points < 10000000.0);
 }
 
 ASDISPLAYNODE_INLINE BOOL ASIsCGPositionValidForLayout(CGPoint point)
