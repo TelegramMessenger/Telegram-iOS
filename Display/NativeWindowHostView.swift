@@ -52,6 +52,9 @@ private final class WindowRootViewControllerView: UIView {
 }
 
 private final class WindowRootViewController: UIViewController, UIViewControllerPreviewingDelegate {
+    private var voiceOverStatusObserver: AnyObject?
+    private var registeredForPreviewing = false
+    
     var presentController: ((UIViewController, PresentationSurfaceLevel, Bool, (() -> Void)?) -> Void)?
     var transitionToSize: ((CGSize, Double) -> Void)?
     
@@ -106,10 +109,24 @@ private final class WindowRootViewController: UIViewController, UIViewController
         super.init(nibName: nil, bundle: nil)
         
         self.extendedLayoutIncludesOpaqueBars = true
+        
+        if #available(iOSApplicationExtension 11.0, *) {
+            self.voiceOverStatusObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIAccessibilityVoiceOverStatusDidChange, object: nil, queue: OperationQueue.main, using: { [weak self] _ in
+                if let strongSelf = self {
+                    strongSelf.updatePreviewingRegistration()
+                }
+            })
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        if let voiceOverStatusObserver = self.voiceOverStatusObserver {
+            NotificationCenter.default.removeObserver(voiceOverStatusObserver)
+        }
     }
     
     override func preferredScreenEdgesDeferringSystemGestures() -> UIRectEdge {
@@ -132,14 +149,45 @@ private final class WindowRootViewController: UIViewController, UIViewController
         self.view.isOpaque = false
         self.view.backgroundColor = nil
         
-        if #available(iOSApplicationExtension 9.0, *) {
-            self.registerForPreviewing(with: self, sourceView: self.view)
+        self.updatePreviewingRegistration()
+    }
+    
+    private var previewingContext: AnyObject?
+    
+    private func updatePreviewingRegistration() {
+        var shouldRegister = false
+        
+        var isVoiceOverRunning = false
+        if #available(iOSApplicationExtension 10.0, *) {
+            isVoiceOverRunning = UIAccessibility.isVoiceOverRunning
+        }
+        if !isVoiceOverRunning {
+            shouldRegister = true
+        }
+        
+        if shouldRegister != self.registeredForPreviewing {
+            self.registeredForPreviewing = shouldRegister
+            if shouldRegister {
+                if #available(iOSApplicationExtension 9.0, *) {
+                    self.previewingContext = self.registerForPreviewing(with: self, sourceView: self.view)
+                }
+            } else if let previewingContext = self.previewingContext {
+                self.previewingContext = nil
+                if let previewingContext = previewingContext as? UIViewControllerPreviewing {
+                    if #available(iOSApplicationExtension 9.0, *) {
+                        self.unregisterForPreviewing(withContext: previewingContext)
+                    }
+                }
+            }
         }
     }
     
     private weak var previousPreviewingHostView: (UIView & PreviewingHostView)?
     
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
+        if UIAccessibility.isVoiceOverRunning {
+            return nil
+        }
         if #available(iOSApplicationExtension 9.0, *) {
             guard let result = self.view.hitTest(location, with: nil) else {
                 return nil

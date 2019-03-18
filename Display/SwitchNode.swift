@@ -62,6 +62,8 @@ open class SwitchNode: ASDisplayNode {
     override open func didLoad() {
         super.didLoad()
         
+        self.view.isAccessibilityElement = false
+        
         (self.view as! UISwitch).backgroundColor = self.backgroundColor
         (self.view as! UISwitch).tintColor = self.frameColor
         //(self.view as! UISwitch).thumbTintColor = self.handleColor

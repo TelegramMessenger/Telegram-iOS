@@ -333,9 +333,9 @@ public class Window1 {
     
     private var isInteractionBlocked = false
     
-    private var accessibilityElements: [Any]? {
+    /*private var accessibilityElements: [Any]? {
         return self.viewController?.view.accessibilityElements
-    }
+    }*/
     
     public init(hostView: WindowHostView, statusBarHost: StatusBarHost?) {
         self.hostView = hostView
@@ -425,9 +425,9 @@ public class Window1 {
             })
         }
         
-        self.hostView.getAccessibilityElements = { [weak self] in
+        /*self.hostView.getAccessibilityElements = { [weak self] in
             return self?.accessibilityElements
-        }
+        }*/
         
         self.presentationContext.view = self.hostView.containerView
         self.presentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation), transition: .immediate)
@@ -571,6 +571,9 @@ public class Window1 {
         }
         if let keyboardTypeChangeObserver = self.keyboardTypeChangeObserver {
             NotificationCenter.default.removeObserver(keyboardTypeChangeObserver)
+        }
+        if let voiceOverStatusObserver = self.voiceOverStatusObserver {
+            NotificationCenter.default.removeObserver(voiceOverStatusObserver)
         }
     }
     
