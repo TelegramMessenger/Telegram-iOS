@@ -172,7 +172,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
             self?.performActionAtEnd()
         }
         
-        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, videoReference: fileReference, imageReference: imageReference, onlyFullSize: onlyFullSizeThumbnail,  autoFetchFullSizeThumbnail: fileReference.media.isInstantVideo) |> map { [weak self] getSize, getData in
+        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, videoReference: fileReference, imageReference: imageReference, onlyFullSize: onlyFullSizeThumbnail, autoFetchFullSizeThumbnail: fileReference.media.isInstantVideo) |> map { [weak self] getSize, getData in
             Queue.mainQueue().async {
                 if let strongSelf = self, strongSelf.dimensions == nil {
                     if let dimensions = getSize() {
@@ -275,7 +275,26 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
                 self.player.actionAtEnd = .loopDisablingSound(action)
             case .stop:
                 self.player.actionAtEnd = .action(action)
+            case .repeatIfNeeded:
+                let _ = (self.player.status
+                |> deliverOnMainQueue
+                |> take(1)).start(next: { [weak self] status in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if status.timestamp > status.duration * 0.1 {
+                        strongSelf.player.actionAtEnd = .loop({ [weak self] in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.player.actionAtEnd = .loopDisablingSound(action)
+                        })
+                    } else {
+                        strongSelf.player.actionAtEnd = .loopDisablingSound(action)
+                    }
+                })
         }
+        
         self.player.playOnceWithSound(playAndRecord: playAndRecord, seekToStart: seekToStart)
     }
     
@@ -298,7 +317,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         switch actionAtEnd {
             case .loop:
                 self.player.actionAtEnd = .loop({})
-            case .loopDisablingSound:
+            case .loopDisablingSound, .repeatIfNeeded:
                 self.player.actionAtEnd = .loopDisablingSound(action)
             case .stop:
                 self.player.actionAtEnd = .action(action)

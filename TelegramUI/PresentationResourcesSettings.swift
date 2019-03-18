@@ -2,6 +2,7 @@ import Foundation
 import Display
 
 struct PresentationResourcesSettings {
+    static let editProfile = UIImage(bundleImageName: "Settings/MenuIcons/EditProfile")?.precomposed()
     static let proxy = UIImage(bundleImageName: "Settings/MenuIcons/Proxy")?.precomposed()
     static let savedMessages = UIImage(bundleImageName: "Settings/MenuIcons/SavedMessages")?.precomposed()
     static let recentCalls = UIImage(bundleImageName: "Settings/MenuIcons/RecentCalls")?.precomposed()
@@ -18,4 +19,9 @@ struct PresentationResourcesSettings {
     
     static let support = UIImage(bundleImageName: "Settings/MenuIcons/Support")?.precomposed()
     static let faq = UIImage(bundleImageName: "Settings/MenuIcons/Faq")?.precomposed()
+    
+    static let addAccount = UIImage(bundleImageName: "Settings/MenuIcons/AddAccount")?.precomposed()
+    static let setPasscode = UIImage(bundleImageName: "Settings/MenuIcons/SetPasscode")?.precomposed()
+    static let clearCache = UIImage(bundleImageName: "Settings/MenuIcons/ClearCache")?.precomposed()
+    static let changePhoneNumber = UIImage(bundleImageName: "Settings/MenuIcons/ChangePhoneNumber")?.precomposed()
 }

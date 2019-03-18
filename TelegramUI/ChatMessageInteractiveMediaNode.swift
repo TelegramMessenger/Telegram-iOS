@@ -178,8 +178,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
             let point = recognizer.location(in: self.imageNode.view)
             if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
                 var videoContentMatch = true
-                if let content = self.videoContent, case let .message(id, _, _) = content.nativeId {
-                    videoContentMatch = self.message?.id == id
+                if let content = self.videoContent, case let .message(id, _, mediaId) = content.nativeId {
+                    videoContentMatch = self.message?.id == id && self.media?.id == mediaId
                 }
                 self.activateLocalContent((self.automaticPlayback ?? false) && videoContentMatch ? .automaticPlayback : .default)
             } else {
@@ -698,26 +698,20 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                     } else if let image = media as? TelegramMediaWebFile {
                                         strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, image: image).start())
                                     } else if let file = media as? TelegramMediaFile {
-                                        if automaticPlayback || !file.isAnimated {
-                                            let fetchSignal = messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: false)
-                                            if !file.isAnimated {
-                                                let visibilityAwareFetchSignal = strongSelf.visibilityPromise.get()
-                                                    |> mapToSignal { visibility -> Signal<Void, NoError> in
-                                                        switch visibility {
-                                                            case .visible:
-                                                                return fetchSignal
-                                                                |> mapToSignal { _ -> Signal<Void, NoError> in
-                                                                    return .complete()
-                                                                }
-                                                            case .none:
-                                                                return .complete()
+                                        let fetchSignal = messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: false)
+                                        let visibilityAwareFetchSignal = strongSelf.visibilityPromise.get()
+                                            |> mapToSignal { visibility -> Signal<Void, NoError> in
+                                                switch visibility {
+                                                    case .visible:
+                                                        return fetchSignal
+                                                        |> mapToSignal { _ -> Signal<Void, NoError> in
+                                                            return .complete()
                                                         }
+                                                    case .none:
+                                                        return .complete()
                                                 }
-                                                strongSelf.fetchDisposable.set(visibilityAwareFetchSignal.start())
-                                            } else {
-                                                strongSelf.fetchDisposable.set(fetchSignal.start())
-                                            }
                                         }
+                                        strongSelf.fetchDisposable.set(visibilityAwareFetchSignal.start())
                                     }
                                 } else if case .prefetch = automaticDownload, message.id.namespace != Namespaces.Message.SecretIncoming {
                                     if let file = media as? TelegramMediaFile {
@@ -927,7 +921,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                         if wideLayout {
                             if let size = file.size {
                                  let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, decimalSeparator: decimalSeparator)) / \(dataSizeString(size, forceDecimal: true, decimalSeparator: decimalSeparator))"
-                                if file.isAnimated && !automaticDownload {
+                                if file.isAnimated && (!automaticDownload || !automaticPlayback) {
                                     badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: "GIF " + sizeString, size: nil, muted: false, active: false)
                                 }
                                 else if let duration = file.duration, !message.flags.contains(.Unsent) {
@@ -1011,7 +1005,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     } else if isSecretMedia, let secretProgressIcon = secretProgressIcon {
                         state = .customIcon(secretProgressIcon)
                     } else if let file = media as? TelegramMediaFile {
-                        let isInlinePlayableVideo = file.isVideo && !isSecretMedia && automaticPlayback
+                        let isInlinePlayableVideo = file.isVideo && !isSecretMedia && (self.automaticPlayback ?? false)
                         if !isInlinePlayableVideo && file.isVideo {
                             state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
                         } else {
@@ -1031,7 +1025,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                 case .Remote:
                     state = .download(bubbleTheme.mediaOverlayControlForegroundColor)
                     if let file = self.media as? TelegramMediaFile {
-                        if file.isAnimated && !automaticDownload {
+                        if file.isAnimated && (!automaticDownload || !automaticPlayback) {
                             let string = "GIF " + dataSizeString(file.size ?? 0, decimalSeparator: decimalSeparator)
                             badgeContent = .mediaDownload(backgroundColor: bubbleTheme.mediaDateAndStatusFillColor, foregroundColor: bubbleTheme.mediaDateAndStatusTextColor, duration: string, size: nil, muted: false, active: false)
                         } else {
@@ -1075,11 +1069,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
         
         if let statusNode = self.statusNode {
-            if state == .none {
+            var removeStatusNode = false
+            if statusNode.state != .none && state == .none {
                 self.statusNode = nil
+                removeStatusNode = true
             }
             statusNode.transitionToState(state, completion: { [weak statusNode] in
-                if state == .none {
+                if removeStatusNode {
                     statusNode?.removeFromSupernode()
                 }
             })
@@ -1223,6 +1219,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         var actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd = .loopDisablingSound
         if let message = self.message, message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
             actionAtEnd = .loop
+        } else {
+            actionAtEnd = .repeatIfNeeded
         }
         
         if let videoNode = self.videoNode, let context = self.context, (self.automaticPlayback ?? false) && !isAnimated {

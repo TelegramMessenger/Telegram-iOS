@@ -207,9 +207,14 @@ public final class RadialStatusNode: ASControlNode {
                 contentNode.frame = self.bounds
                 contentNode.prepareAnimateIn(from: nil)
                 self.addSubnode(contentNode)
-                if animated, case .check = state, self.isNodeLoaded {
-                    contentNode.layout()
-                    contentNode.animateIn(from: fromState, delay: 0.0)
+                if animated, self.isNodeLoaded {
+                    switch state {
+                        case .check, .progress:
+                            contentNode.layout()
+                            contentNode.animateIn(from: fromState, delay: 0.0)
+                        default:
+                            break
+                    }
                 }
             }
             self.transitionToBackgroundColor(backgroundColor, previousContentNode: nil, animated: animated, completion: completion)

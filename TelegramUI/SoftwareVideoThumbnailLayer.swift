@@ -10,7 +10,7 @@ private final class SoftwareVideoThumbnailLayerNullAction: NSObject, CAAction {
 }
 
 final class SoftwareVideoThumbnailLayer: CALayer {
-    var disposable: Disposable?
+    var disposable = MetaDisposable()
     
     var ready: (() -> Void)? {
         didSet {
@@ -28,8 +28,7 @@ final class SoftwareVideoThumbnailLayer: CALayer {
         self.masksToBounds = true
         
         if let dimensions = fileReference.media.dimensions {
-            self.disposable = (mediaGridMessageVideo(postbox: account.postbox, videoReference: fileReference)
-            |> deliverOn(Queue.concurrentDefaultQueue())).start(next: { [weak self] transform in
+            self.disposable.set((mediaGridMessageVideo(postbox: account.postbox, videoReference: fileReference)).start(next: { [weak self] transform in
                 var boundingSize = dimensions.aspectFilled(CGSize(width: 93.0, height: 93.0))
                 let imageSize = boundingSize
                 boundingSize.width = min(200.0, boundingSize.width)
@@ -42,7 +41,7 @@ final class SoftwareVideoThumbnailLayer: CALayer {
                         }
                     }
                 }
-            })
+            }))
         }
     }
     
@@ -51,7 +50,7 @@ final class SoftwareVideoThumbnailLayer: CALayer {
     }
     
     deinit {
-        self.disposable?.dispose()
+        self.disposable.dispose()
     }
     
     override func action(forKey event: String) -> CAAction? {

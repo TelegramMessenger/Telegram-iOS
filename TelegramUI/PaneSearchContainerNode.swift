@@ -13,7 +13,7 @@ protocol PaneSearchContentNode {
     var updateActivity: ((Bool) -> Void)? { get set }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings)
-    func updateText(_ text: String)
+    func updateText(_ text: String, languageCode: String?)
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, transition: ContainedViewLayoutTransition)
     
     func animateIn(additivePosition: CGFloat, transition: ContainedViewLayoutTransition)
@@ -74,8 +74,8 @@ final class PaneSearchContainerNode: ASDisplayNode {
         }
         self.searchBar.activate()
         
-        self.searchBar.textUpdated = { [weak self] text in
-            self?.contentNode.updateText(text)
+        self.searchBar.textUpdated = { [weak self] text, languageCode in
+            self?.contentNode.updateText(text, languageCode: languageCode)
         }
         
         self.updateThemeAndStrings(theme: theme, strings: strings)

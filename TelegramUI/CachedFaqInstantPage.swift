@@ -71,6 +71,7 @@ func faqSearchableItems(context: AccountContext) -> Signal<[SettingsSearchableIt
     return cachedFaqInstantPage(context: context)
     |> map { resolvedUrl -> [SettingsSearchableItem] in
         var results: [SettingsSearchableItem] = []
+        var nextIndex: Int = 1
         if case let .instantView(webPage, _) = resolvedUrl {
             if case let .Loaded(content) = webPage.content, let instantPage = content.instantPage {
                 var processingQuestions = false
@@ -83,14 +84,15 @@ func faqSearchableItems(context: AccountContext) -> Signal<[SettingsSearchableIt
                                 if results.isEmpty {
                                     processingQuestions = true
                                 }
-                            case let .anchor(anchor):
-                                currentAnchor = anchor
-                            case let .header(text):
-                                if let anchor = currentAnchor {
-                                    results.append(SettingsSearchableItem(id: .faq(results.count + 1), title: text.plainText, alternate: [], icon: .faq, breadcrumbs: [strings.SettingsSearch_FAQ], present: { context, _, present in
-                                        present(.push, InstantPageController(context: context, webPage: webPage, sourcePeerType: .channel, anchor: anchor))
-                                    }))
-                                }
+//                            case let .anchor(anchor):
+//                                currentAnchor = anchor
+//                            case let .header(text):
+//                                if let anchor = currentAnchor {
+//                                    results.append(SettingsSearchableItem(id: .faq(nextIndex), title: text.plainText, alternate: [], icon: .faq, breadcrumbs: [strings.SettingsSearch_FAQ], present: { context, _, present in
+//                                        present(.push, InstantPageController(context: context, webPage: webPage, sourcePeerType: .channel, anchor: anchor))
+//                                    }))
+//                                    nextIndex += 1
+//                                }
                             default:
                                 break
                         }
@@ -107,9 +109,20 @@ func faqSearchableItems(context: AccountContext) -> Signal<[SettingsSearchableIt
                                     for item in items {
                                         if case let .text(itemText, _) = item, case let .url(text, url, _) = itemText {
                                             let (_, anchor) = extractAnchor(string: url)
-                                            results.append(SettingsSearchableItem(id: .faq(results.count + 1), title: text.plainText, alternate: [], icon: .faq, breadcrumbs: [strings.SettingsSearch_FAQ, currentSection], present: { context, _, present in
+                                            var index = nextIndex
+                                            if anchor?.contains("delete-my-account") ?? false {
+                                                index = 0
+                                            } else {
+                                                nextIndex += 1
+                                            }
+                                            let item = SettingsSearchableItem(id: .faq(index), title: text.plainText, alternate: [], icon: .faq, breadcrumbs: [strings.SettingsSearch_FAQ, currentSection], present: { context, _, present in
                                                 present(.push, InstantPageController(context: context, webPage: webPage, sourcePeerType: .channel, anchor: anchor))
-                                            }))
+                                            })
+                                            if index == 0 {
+                                                results.insert(item, at: 0)
+                                            } else {
+                                                results.append(item)
+                                            }
                                         }
                                     }
                                 }

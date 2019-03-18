@@ -312,7 +312,6 @@ private func chatMessageVideoDatas(postbox: Postbox, fileReference: FileMediaRef
     |> mapToSignal { maybeData -> Signal<(Data?, (Data, String)?, Bool), NoError> in
         if maybeData.complete {
             let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
-            
             return .single((nil, loadedData == nil ? nil : (loadedData!, maybeData.path), true))
         } else {
             let thumbnail: Signal<Data?, NoError>

@@ -94,7 +94,7 @@ class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
     private var item: ItemListActionItem?
     
     var tag: ItemListItemTag? {
-        return self.item?.tag
+        return self.item?.tag as? ItemListItemTag
     }
     
     init() {
