@@ -452,9 +452,9 @@ extension JSON {
                     var dictionary = dictionary
                     switch value {
                         case let .jsonObjectValue(key, value):
-                        if let value = JSON(apiJson: value, root: false) {
-                            dictionary[key] = value
-                        }
+                            if let value = JSON(apiJson: value, root: false) {
+                                dictionary[key] = value
+                            }
                     }
                     return dictionary
                 })
