@@ -8,6 +8,15 @@ enum ManagedAudioSessionType: Equatable {
     case playWithPossiblePortOverride
     case record(speaker: Bool)
     case voiceCall
+    
+    var isPlay: Bool {
+        switch self {
+            case .play, .playWithPossiblePortOverride:
+                return true
+            default:
+                return false
+        }
+    }
 }
 
 private func nativeCategoryForType(_ type: ManagedAudioSessionType, headphones: Bool) -> String {
@@ -652,7 +661,7 @@ public final class ManagedAudioSession {
                 subscriber(true)
             }
         }
-        if !wasPlaybackActive && self.currentTypeAndOutputMode?.0 == .play {
+        if !wasPlaybackActive && (self.currentTypeAndOutputMode?.0.isPlay ?? false) {
             for subscriber in self.isPlaybackActiveSubscribers.copyItems() {
                 subscriber(true)
             }

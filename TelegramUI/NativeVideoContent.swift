@@ -172,7 +172,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
             self?.performActionAtEnd()
         }
         
-        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, videoReference: fileReference, imageReference: imageReference, onlyFullSize: onlyFullSizeThumbnail,  autoFetchFullSizeThumbnail: fileReference.media.isInstantVideo) |> map { [weak self] getSize, getData in
+        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, videoReference: fileReference, imageReference: imageReference, onlyFullSize: onlyFullSizeThumbnail, autoFetchFullSizeThumbnail: fileReference.media.isInstantVideo) |> map { [weak self] getSize, getData in
             Queue.mainQueue().async {
                 if let strongSelf = self, strongSelf.dimensions == nil {
                     if let dimensions = getSize() {
@@ -283,11 +283,10 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
                         return
                     }
                     if status.timestamp > status.duration * 0.1 {
-                        strongSelf.player.actionAtEnd = .action({ [weak self] in
+                        strongSelf.player.actionAtEnd = .loop({ [weak self] in
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.player.seek(timestamp: 0.0)
                             strongSelf.player.actionAtEnd = .loopDisablingSound(action)
                         })
                     } else {

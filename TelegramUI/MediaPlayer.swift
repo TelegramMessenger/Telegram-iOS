@@ -549,7 +549,11 @@ private final class MediaPlayerContext {
             if let loadedState = loadedState {
                 self.enableSound = false
                 self.playAndRecord = false
-                let timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
+                
+                var timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
+                if let duration = currentDuration(), timestamp > duration - 2.0 {
+                    timestamp = 0.0
+                }
                 self.seek(timestamp: timestamp, action: .play)
             }
         }
