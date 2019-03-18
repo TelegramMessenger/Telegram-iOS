@@ -7,6 +7,8 @@
 //  Licensed under Apache 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <AsyncDisplayKit/ASDelegateProxy.h>
 #import <AsyncDisplayKit/ASTableNode.h>
 #import <AsyncDisplayKit/ASCollectionNode.h>
@@ -267,3 +269,5 @@
 }
 
 @end
+
+#endif
