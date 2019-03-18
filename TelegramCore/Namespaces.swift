@@ -151,6 +151,7 @@ private enum PreferencesKeyValues: Int32 {
     case localizationListState = 13
     case appConfiguration = 14
     case searchBotsConfiguration = 15
+    case contactsSettings = 16
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -235,6 +236,12 @@ public struct PreferencesKeys {
     public static let searchBotsConfiguration: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.searchBotsConfiguration.rawValue)
+        return key
+    }()
+    
+    public static let contactsSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.contactsSettings.rawValue)
         return key
     }()
 }
