@@ -3,4 +3,5 @@ add_library(rlottie-image-loader SHARED
            )
 install(TARGETS rlottie-image-loader
         LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+        ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
        )
