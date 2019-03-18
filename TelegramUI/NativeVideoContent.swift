@@ -275,7 +275,27 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
                 self.player.actionAtEnd = .loopDisablingSound(action)
             case .stop:
                 self.player.actionAtEnd = .action(action)
+            case .repeatIfNeeded:
+                let _ = (self.player.status
+                |> deliverOnMainQueue
+                |> take(1)).start(next: { [weak self] status in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if status.timestamp > status.duration * 0.1 {
+                        strongSelf.player.actionAtEnd = .action({ [weak self] in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.player.seek(timestamp: 0.0)
+                            strongSelf.player.actionAtEnd = .loopDisablingSound(action)
+                        })
+                    } else {
+                        strongSelf.player.actionAtEnd = .loopDisablingSound(action)
+                    }
+                })
         }
+        
         self.player.playOnceWithSound(playAndRecord: playAndRecord, seekToStart: seekToStart)
     }
     
@@ -298,7 +318,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         switch actionAtEnd {
             case .loop:
                 self.player.actionAtEnd = .loop({})
-            case .loopDisablingSound:
+            case .loopDisablingSound, .repeatIfNeeded:
                 self.player.actionAtEnd = .loopDisablingSound(action)
             case .stop:
                 self.player.actionAtEnd = .action(action)

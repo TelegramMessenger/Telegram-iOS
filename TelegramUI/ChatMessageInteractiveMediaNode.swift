@@ -1005,7 +1005,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                     } else if isSecretMedia, let secretProgressIcon = secretProgressIcon {
                         state = .customIcon(secretProgressIcon)
                     } else if let file = media as? TelegramMediaFile {
-                        let isInlinePlayableVideo = file.isVideo && !isSecretMedia && automaticPlayback
+                        let isInlinePlayableVideo = file.isVideo && !isSecretMedia && (self.automaticPlayback ?? false)
                         if !isInlinePlayableVideo && file.isVideo {
                             state = .play(bubbleTheme.mediaOverlayControlForegroundColor)
                         } else {
@@ -1069,11 +1069,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
         
         if let statusNode = self.statusNode {
-            if state == .none {
+            var removeStatusNode = false
+            if statusNode.state != .none && state == .none {
                 self.statusNode = nil
+                removeStatusNode = true
             }
             statusNode.transitionToState(state, completion: { [weak statusNode] in
-                if state == .none {
+                if removeStatusNode {
                     statusNode?.removeFromSupernode()
                 }
             })
@@ -1217,6 +1219,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         var actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd = .loopDisablingSound
         if let message = self.message, message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
             actionAtEnd = .loop
+        } else {
+            actionAtEnd = .repeatIfNeeded
         }
         
         if let videoNode = self.videoNode, let context = self.context, (self.automaticPlayback ?? false) && !isAnimated {

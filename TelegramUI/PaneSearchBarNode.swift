@@ -121,7 +121,7 @@ private class PaneSearchBarTextField: UITextField {
 
 class PaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
     var cancel: (() -> Void)?
-    var textUpdated: ((String) -> Void)?
+    var textUpdated: ((String, String) -> Void)?
     var clearPrefix: (() -> Void)?
     
     private let backgroundNode: ASDisplayNode
@@ -446,7 +446,7 @@ class PaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
     @objc func textFieldDidChange(_ textField: UITextField) {
         self.updateIsEmpty()
         if let textUpdated = self.textUpdated {
-            textUpdated(textField.text ?? "")
+            textUpdated(textField.text ?? "", self.textField.textInputMode?.primaryLanguage ?? "")
         }
     }
     

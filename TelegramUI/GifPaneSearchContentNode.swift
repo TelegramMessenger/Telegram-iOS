@@ -72,7 +72,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
         self.searchDisposable.dispose()
     }
     
-    func updateText(_ text: String) {
+    func updateText(_ text: String, languageCode: String?) {
         let signal: Signal<[FileMediaReference]?, NoError>
         if !text.isEmpty {
             signal = self.signalForQuery(text)
@@ -133,7 +133,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
         }
         
         if firstLayout {
-            self.updateText("")
+            self.updateText("", languageCode: nil)
         }
     }
     

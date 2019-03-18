@@ -388,7 +388,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         updatedPlayerStatusSignal = videoNode.status
                         |> mapToSignal { status -> Signal<MediaPlayerStatus?, NoError> in
                             if let status = status, case .buffering = status.status {
-                                return .single(status) |> delay(1.0, queue: Queue.mainQueue())
+                                return .single(status) |> delay(0.5, queue: Queue.mainQueue())
                             } else {
                                 return .single(status)
                             }
