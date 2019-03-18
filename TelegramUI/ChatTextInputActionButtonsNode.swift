@@ -42,12 +42,20 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
     }
     
     func updateAccessibility() {
-        if self.sendButton.alpha.isZero {
-            self.accessibilityTraits = UIAccessibilityTraitButton | UIAccessibilityTraitNotEnabled
-            self.accessibilityLabel = "Send"
+        if !self.micButton.alpha.isZero {
+            self.accessibilityTraits = UIAccessibilityTraitButton
+            switch self.micButton.mode {
+                case .audio:
+                    self.accessibilityLabel = "Voice Message"
+                    self.accessibilityHint = "Double tap and hold to record voice message. Slide up to pin recording, slide left to cancel. Double tap to switch to video."
+                case .video:
+                    self.accessibilityLabel = "Video Message"
+                    self.accessibilityHint = "Double tap and hold to record voice message. Slide up to pin recording, slide left to cancel. Double tap to switch to audio."
+            }
         } else {
             self.accessibilityTraits = UIAccessibilityTraitButton
             self.accessibilityLabel = "Send"
+            self.accessibilityHint = nil
         }
     }
 }

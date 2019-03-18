@@ -95,6 +95,8 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
     
     private let textNode: TextNode
     
+    private let activateArea: AccessibilityAreaNode
+    
     private var item: ItemListMultilineTextItem?
     
     var tag: Any? {
@@ -124,9 +126,12 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
+        self.activateArea = AccessibilityAreaNode()
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.textNode)
+        self.addSubnode(self.activateArea)
     }
     
     override func didLoad() {
@@ -200,6 +205,9 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
+                    strongSelf.activateArea.accessibilityLabel = item.text
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor

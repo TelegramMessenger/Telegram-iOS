@@ -505,6 +505,18 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 return
             }
             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withToggledSelectedMessages(ids, value: value) } })
+            if let selectionState = strongSelf.presentationInterfaceState.interfaceState.selectionState {
+                let count = selectionState.selectedIds.count
+                let text: String
+                if count == 1 {
+                    text = "1 message selected"
+                } else {
+                    text = "\(count) messages selected"
+                }
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: {
+                    UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification, text as NSString)
+                })
+            }
         }, sendMessage: { [weak self] text in
             guard let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) else {
                 return
@@ -2190,6 +2202,17 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }, beginMessageSelection: { [weak self] messageIds in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true,{ $0.updatedInterfaceState { $0.withUpdatedSelectedMessages(messageIds) } })
+                
+                    if let selectionState = strongSelf.presentationInterfaceState.interfaceState.selectionState {
+                    let count = selectionState.selectedIds.count
+                    let text: String
+                    if count == 1 {
+                        text = "1 message selected"
+                    } else {
+                        text = "\(count) messages selected"
+                    }
+                    UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification, text)
+                }
             }
         }, deleteSelectedMessages: { [weak self] in
             if let strongSelf = self {

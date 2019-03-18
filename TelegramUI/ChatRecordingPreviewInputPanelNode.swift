@@ -50,12 +50,15 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         self.playButton = HighlightableButtonNode()
         self.playButton.displaysAsynchronously = false
         self.playButton.setImage(generatePlayIcon(theme), for: [])
+        self.playButton.isUserInteractionEnabled = false
         self.pauseButton = HighlightableButtonNode()
         self.pauseButton.displaysAsynchronously = false
         self.pauseButton.setImage(generatePauseIcon(theme), for: [])
         self.pauseButton.isHidden = true
+        self.pauseButton.isUserInteractionEnabled = false
         
         self.waveformButton = ASButtonNode()
+        self.waveformButton.accessibilityTraits |= UIAccessibilityTraitStartsMediaSession
         
         self.waveformNode = AudioWaveformNode()
         self.waveformNode.isLayerBacked = true
@@ -99,6 +102,11 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
             var updateWaveform = false
             if self.presentationInterfaceState?.recordedMediaPreview != interfaceState.recordedMediaPreview {
                 updateWaveform = true
+            }
+            if self.presentationInterfaceState?.strings !== interfaceState.strings {
+                self.deleteButton.accessibilityLabel = "Delete"
+                self.sendButton.accessibilityLabel = "Send"
+                self.waveformButton.accessibilityLabel = "Preview voice message"
             }
             self.presentationInterfaceState = interfaceState
             

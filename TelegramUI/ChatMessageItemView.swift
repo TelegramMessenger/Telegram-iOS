@@ -98,35 +98,131 @@ enum ChatMessagePeekPreviewContent {
     case url(ASDisplayNode, CGRect, String)
 }
 
+private let voiceMessageDurationFormatter: DateComponentsFormatter = {
+    let formatter = DateComponentsFormatter()
+    formatter.unitsStyle = .spellOut
+    formatter.allowedUnits = [.second]
+    formatter.zeroFormattingBehavior = .pad
+    return formatter
+}()
+
+private let musicDurationFormatter: DateComponentsFormatter = {
+    let formatter = DateComponentsFormatter()
+    formatter.unitsStyle = .spellOut
+    formatter.allowedUnits = [.minute, .second]
+    formatter.zeroFormattingBehavior = .pad
+    return formatter
+}()
+
 final class ChatMessageAccessibilityData {
     let label: String?
     let value: String?
+    let hint: String?
+    let traits: UIAccessibilityTraits
     
-    init(item: ChatMessageItem) {
-        let label: String
+    init(item: ChatMessageItem, isSelected: Bool?) {
+        var label: String
         let value: String
+        var hint: String?
+        var traits: UIAccessibilityTraits = 0
         
+        let isIncoming = item.message.effectivelyIncoming(item.context.account.peerId)
+        var announceIncomingAuthors = false
+        if let peer = item.message.peers[item.message.id.peerId] {
+            if peer is TelegramGroup {
+                announceIncomingAuthors = true
+            } else if let channel = peer as? TelegramChannel, case .group = channel.info {
+                announceIncomingAuthors = true
+            }
+        }
+        
+        var authorName: String?
         if let author = item.message.author {
-            if item.message.effectivelyIncoming(item.context.account.peerId) {
+            authorName = author.displayTitle
+            if isIncoming {
                 label = author.displayTitle
             } else {
-                label = "Outgoing message"
+                label = "Your message"
             }
         } else {
-            label = "Post"
+            label = "Message"
         }
         
         if let chatPeer = item.message.peers[item.message.id.peerId] {
             let (_, _, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: item.message, chatPeer: RenderedPeer(peer: chatPeer), accountPeerId: item.context.account.peerId)
+            
+            var text = messageText
+            
+            loop: for media in item.message.media {
+                if let file = media as? TelegramMediaFile {
+                    for attribute in file.attributes {
+                        switch attribute {
+                            case let .Audio(audio):
+                                if isSelected == nil {
+                                    hint = "Double tap to play"
+                                }
+                                traits |= UIAccessibilityTraitStartsMediaSession
+                                if audio.isVoice {
+                                    let durationString = voiceMessageDurationFormatter.string(from: Double(audio.duration)) ?? ""
+                                    if isIncoming {
+                                        if announceIncomingAuthors, let authorName = authorName {
+                                            label = "Voice message, from: \(authorName)"
+                                        } else {
+                                            label = "Voice message"
+                                        }
+                                    } else {
+                                        label = "Your voice message"
+                                    }
+                                    text = "Duration: \(durationString)"
+                                } else {
+                                    let durationString = musicDurationFormatter.string(from: Double(audio.duration)) ?? ""
+                                    if announceIncomingAuthors, let authorName = authorName {
+                                        label = "Music file, from: \(authorName)"
+                                    } else {
+                                        label = "Your music file"
+                                    }
+                                    let performer = audio.performer ?? "Unknown"
+                                    let title = audio.title ?? "Unknown"
+                                    text = "\(title), by \(performer). Duration: \(durationString)"
+                                }
+                            default:
+                                break
+                        }
+                    }
+                    break loop
+                }
+            }
+            
             var result = ""
-            result += "\(messageText)"
+            
+            if let isSelected = isSelected {
+                if isSelected {
+                    result += "Selected.\n"
+                }
+                traits |= UIAccessibilityTraitStartsMediaSession
+            }
+            
+            result += "\(text)"
+            
+            let dateString = DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double(item.message.timestamp)), dateStyle: DateFormatter.Style.medium, timeStyle: DateFormatter.Style.short)
+            
+            result += "\n\(dateString)"
+            if !isIncoming && item.read {
+                if announceIncomingAuthors {
+                    result += "Seen by recipients"
+                } else {
+                    result += "Seen by recipient"
+                }
+            }
             value = result
         } else {
-            value = "Empty"
+            value = ""
         }
         
         self.label = label
         self.value = value
+        self.hint = hint
+        self.traits = traits
     }
 }
 
@@ -142,8 +238,6 @@ public class ChatMessageItemView: ListViewItemNode {
     public init(layerBacked: Bool) {
         super.init(layerBacked: layerBacked, dynamicBounce: true, rotated: true)
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
-        
-        self.isAccessibilityElement = true
     }
 
     required public init?(coder aDecoder: NSCoder) {

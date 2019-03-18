@@ -599,14 +599,16 @@ private func canPerformDeleteActions(limits: LimitsConfiguration, accountPeerId:
         return true
     }
     
-    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-    if message.id.peerId.namespace == Namespaces.Peer.CloudUser {
-        if message.timestamp + limits.maxMessageRevokeIntervalInPrivateChats > timestamp {
-            return true
-        }
-    } else {
-        if message.timestamp + limits.maxMessageRevokeInterval > timestamp {
-            return true
+    if message.flags.contains(.Incoming) {
+        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+        if message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+            if message.timestamp + limits.maxMessageRevokeIntervalInPrivateChats > timestamp {
+                return true
+            }
+        } else {
+            if message.timestamp + limits.maxMessageRevokeInterval > timestamp {
+                return true
+            }
         }
     }
     

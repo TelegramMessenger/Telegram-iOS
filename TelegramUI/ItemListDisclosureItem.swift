@@ -110,6 +110,8 @@ class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
     let labelBadgeNode: ASImageNode
     let labelImageNode: ASImageNode
     
+    private let activateArea: AccessibilityAreaNode
+    
     private var item: ItemListDisclosureItem?
     
     override var canBeSelected: Bool {
@@ -159,13 +161,15 @@ class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        self.activateArea = AccessibilityAreaNode()
         
-        self.isAccessibilityElement = true
+        super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.labelNode)
         self.addSubnode(self.arrowNode)
+        
+        self.addSubnode(self.activateArea)
     }
     
     func asyncLayout() -> (_ item: ItemListDisclosureItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -294,9 +298,14 @@ class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     
-                    strongSelf.accessibilityLabel = item.title
-                    strongSelf.accessibilityValue = item.label
-                    strongSelf.accessibilityTraits = UIAccessibilityTraitButton
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
+                    strongSelf.activateArea.accessibilityLabel = item.title
+                    strongSelf.activateArea.accessibilityValue = item.label
+                    if item.enabled {
+                        strongSelf.activateArea.accessibilityTraits = 0
+                    } else {
+                        strongSelf.activateArea.accessibilityTraits = UIAccessibilityTraitNotEnabled
+                    }
                     
                     if let icon = item.icon {
                         if strongSelf.iconNode.supernode == nil {

@@ -1795,6 +1795,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 })
                 self.messageActionSheetController = nil
                 self.messageActionSheetControllerAdditionalInset = nil
+                self.accessibilityElementsHidden = false
             }
             if let stableId = self.controllerInteraction.contextHighlightedState?.messageStableId {
                 let contextMenuController = displayContextMenuController?.0
@@ -1803,6 +1804,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     contextMenuController?.dismiss()
                 }, associatedController: contextMenuController)
                 self.messageActionSheetController = (controller, stableId)
+                self.accessibilityElementsHidden = true
                 if let sheetActions = sheetActions, !sheetActions.isEmpty {
                     self.controllerInteraction.presentGlobalOverlayController(controller, nil)
                 }

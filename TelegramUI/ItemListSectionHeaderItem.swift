@@ -73,6 +73,8 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
     private let titleNode: TextNode
     private let accessoryTextNode: TextNode
     
+    private let activateArea: AccessibilityAreaNode
+    
     init() {
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -84,12 +86,14 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
         self.accessoryTextNode.contentMode = .left
         self.accessoryTextNode.contentsScale = UIScreen.main.scale
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        self.activateArea = AccessibilityAreaNode()
+        self.activateArea.accessibilityTraits = UIAccessibilityTraitStaticText | UIAccessibilityTraitHeader
         
-        self.isAccessibilityElement = true
+        super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.accessoryTextNode)
+        self.addSubnode(self.activateArea)
     }
     
     func asyncLayout() -> (_ item: ItemListSectionHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -133,7 +137,8 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
                     let _ = titleApply()
                     let _ = accessoryApply()
                     
-                    strongSelf.accessibilityLabel = item.text
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
+                    strongSelf.activateArea.accessibilityLabel = item.text
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 7.0), size: titleLayout.size)
                     strongSelf.accessoryTextNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - accessoryLayout.size.width, y: 7.0), size: accessoryLayout.size)

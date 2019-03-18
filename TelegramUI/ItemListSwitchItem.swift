@@ -81,6 +81,9 @@ private protocol ItemListSwitchNodeImpl {
     var handleColor: UIColor { get set }
     var positiveContentColor: UIColor { get set }
     var negativeContentColor: UIColor { get set }
+    
+    var isOn: Bool { get }
+    func setOn(_ value: Bool, animated: Bool)
 }
 
 extension SwitchNode: ItemListSwitchNodeImpl {
@@ -114,6 +117,8 @@ class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
     private let switchGestureNode: ASDisplayNode
     private var disabledOverlayNode: ASDisplayNode?
     
+    private let activateArea: AccessibilityAreaNode
+    
     private var item: ItemListSwitchItem?
     
     var tag: ItemListItemTag? {
@@ -145,13 +150,26 @@ class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
         
         self.switchGestureNode = ASDisplayNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        self.activateArea = AccessibilityAreaNode()
         
-        self.isAccessibilityElement = true
+        super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.switchNode)
         self.addSubnode(self.switchGestureNode)
+        self.addSubnode(self.activateArea)
+        
+        self.activateArea.activate = { [weak self] in
+            guard let strongSelf = self, let item = strongSelf.item, item.enabled else {
+                return false
+            }
+            let value = !strongSelf.switchNode.isOn
+            if item.enableInteractiveChanges {
+                strongSelf.switchNode.setOn(value, animated: true)
+            }
+            item.updated(value)
+            return true
+        }
     }
     
     override func didLoad() {
@@ -213,14 +231,17 @@ class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     
-                    strongSelf.accessibilityLabel = item.title
-                    strongSelf.accessibilityValue = item.value ? "On" : "Off"
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
+                    
+                    strongSelf.activateArea.accessibilityLabel = item.title
+                    strongSelf.activateArea.accessibilityValue = item.value ? "On" : "Off"
+                    strongSelf.activateArea.accessibilityHint = "Tap to change"
                     var accessibilityTraits = UIAccessibilityTraits()
                     if item.enabled {
                     } else {
                         accessibilityTraits |= UIAccessibilityTraitNotEnabled
                     }
-                    strongSelf.accessibilityTraits = accessibilityTraits
+                    strongSelf.activateArea.accessibilityTraits = accessibilityTraits
                     
                     let transition: ContainedViewLayoutTransition
                     if animated {
