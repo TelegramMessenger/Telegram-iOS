@@ -2,6 +2,10 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
+public protocol PresentableController: class {
+    func viewDidAppear(completion: @escaping () -> Void)
+}
+
 public protocol ContainableController: class {
     var view: UIView! { get }
     var displayNode: ASDisplayNode { get }

@@ -110,7 +110,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.updateScrollDimViews(size: layout.size, insets: insets)
     }
     
-    func animateIn() {
+    func animateIn(completion: @escaping () -> Void) {
         let tempDimView = UIView()
         tempDimView.backgroundColor = self.theme.dimColor
         tempDimView.frame = self.bounds.offsetBy(dx: 0.0, dy: -self.bounds.size.height)
@@ -124,6 +124,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.layer.animateBounds(from: self.bounds.offsetBy(dx: 0.0, dy: -self.bounds.size.height), to: self.bounds, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak tempDimView] _ in
             tempDimView?.removeFromSuperview()
+            completion()
         })
     }
     

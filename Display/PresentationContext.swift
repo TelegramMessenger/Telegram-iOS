@@ -189,7 +189,14 @@ final class PresentationContext {
                         (controller as? UIViewController)?.setIgnoreAppearanceMethodInvocations(false)
                         view.layer.invalidateUpTheTree()
                         controller.viewWillAppear(false)
-                        controller.viewDidAppear(false)
+                        if let controller = controller as? PresentableController {
+                            controller.viewDidAppear(completion: { [weak self] in
+                                self?.notifyAccessibilityScreenChanged()
+                            })
+                        } else {
+                            controller.viewDidAppear(false)
+                            strongSelf.notifyAccessibilityScreenChanged()
+                        }
                     }
                     strongSelf.updateViews()
                 }
@@ -246,7 +253,14 @@ final class PresentationContext {
                 }
                 controller.view.frame = CGRect(origin: CGPoint(), size: layout.size)
                 controller.containerLayoutUpdated(layout, transition: .immediate)
-                controller.viewDidAppear(false)
+                if let controller = controller as? PresentableController {
+                    controller.viewDidAppear(completion: { [weak self] in
+                        self?.notifyAccessibilityScreenChanged()
+                    })
+                } else {
+                    controller.viewDidAppear(false)
+                    self.notifyAccessibilityScreenChanged()
+                }
             }
             self.updateViews()
         }
@@ -261,7 +275,7 @@ final class PresentationContext {
     }
     
     private func updateViews() {
-        self.hasOpaqueOverlay = self.isCurrentlyOpaque
+        self.hasOpaqueOverlay = self.currentlyBlocksBackgroundWhenInOverlay
         var topHasOpaque = false
         for (controller, _) in self.controllers.reversed() {
             if topHasOpaque {
@@ -273,6 +287,10 @@ final class PresentationContext {
                 controller.displayNode.accessibilityElementsHidden = false
             }
         }
+    }
+    
+    private func notifyAccessibilityScreenChanged() {
+        UIAccessibilityPostNotification(UIAccessibilityScreenChangedNotification, nil)
     }
     
     func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

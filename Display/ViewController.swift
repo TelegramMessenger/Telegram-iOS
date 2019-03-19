@@ -321,6 +321,10 @@ open class ViewControllerPresentationArguments {
             layer.setTraceableInfo(CATracingLayerInfo(shouldBeAdjustedToInverseTransform: false, userData: self.displayNode.layer, tracingTag: WindowTracingTags.keyboard, disableChildrenTracingTags: 0))
         }
         self.updateScrollToTopView()
+        if let backgroundColor = self.displayNode.backgroundColor, backgroundColor.alpha.isEqual(to: 1.0) {
+            self.blocksBackgroundWhenInOverlay = true
+            self.isOpaqueWhenInOverlay = true
+        }
     }
     
     public func requestLayout(transition: ContainedViewLayoutTransition) {

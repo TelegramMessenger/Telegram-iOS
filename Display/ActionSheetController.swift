@@ -1,6 +1,6 @@
 import Foundation
 
-open class ActionSheetController: ViewController {
+open class ActionSheetController: ViewController, PresentableController {
     private var actionSheetNode: ActionSheetControllerNode {
         return self.displayNode as! ActionSheetControllerNode
     }
@@ -23,6 +23,8 @@ open class ActionSheetController: ViewController {
         self.theme = theme
         
         super.init(navigationBarPresentationData: nil)
+        
+        self.blocksBackgroundWhenInOverlay = true
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -54,10 +56,14 @@ open class ActionSheetController: ViewController {
         self.actionSheetNode.containerLayoutUpdated(layout, transition: transition)
     }
     
-    open override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
+    open override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
         
-        self.actionSheetNode.animateIn()
+        self.viewDidAppear(completion: {})
+    }
+    
+    public func viewDidAppear(completion: @escaping () -> Void) {
+        self.actionSheetNode.animateIn(completion: completion)
     }
     
     public func setItemGroups(_ groups: [ActionSheetItemGroup]) {
