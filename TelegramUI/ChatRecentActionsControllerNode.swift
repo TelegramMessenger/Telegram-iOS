@@ -363,7 +363,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             if let strongSelf = self {
                 strongSelf.context.sharedContext.applicationBindings.openAppStorePage()
             }
-        }, displayMessageTooltip: { _, _, _ in
+        }, displayMessageTooltip: { _, _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
