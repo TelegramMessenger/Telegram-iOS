@@ -1247,13 +1247,13 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                     var actions: [ContextMenuAction] = []
                     
                     if let phone = user.phone, !phone.isEmpty {
-                        actions.append(ContextMenuAction(content: .text(presentationData.strings.Settings_CopyPhoneNumber), action: {
+                        actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Settings_CopyPhoneNumber, accessibilityLabel: presentationData.strings.Settings_CopyPhoneNumber), action: {
                             UIPasteboard.general.string = formatPhoneNumber(phone)
                         }))
                     }
                     
                     if let username = user.username, !username.isEmpty {
-                        actions.append(ContextMenuAction(content: .text(presentationData.strings.Settings_CopyUsername), action: {
+                        actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Settings_CopyUsername, accessibilityLabel: presentationData.strings.Settings_CopyUsername), action: {
                             UIPasteboard.general.string = username
                         }))
                     }

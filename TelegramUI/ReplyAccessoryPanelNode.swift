@@ -17,6 +17,8 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     let textNode: ImmediateTextNode
     let imageNode: TransformImageNode
     
+    private let actionArea: AccessibilityAreaNode
+    
     var theme: PresentationTheme
     
     init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
@@ -25,6 +27,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.theme = theme
         
         self.closeButton = ASButtonNode()
+        self.closeButton.accessibilityLabel = "Discard"
         self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
         self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
         self.closeButton.displaysAsynchronously = false
@@ -46,6 +49,8 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.imageNode.contentAnimations = [.subsequentUpdates]
         self.imageNode.isHidden = true
         
+        self.actionArea = AccessibilityAreaNode()
+        
         super.init()
         
         self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: [.touchUpInside])
@@ -55,6 +60,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.actionArea)
         
         self.messageDisposable.set((context.account.postbox.messageAtId(messageId)
         |> deliverOnMainQueue).start(next: { [weak self] message in
@@ -144,6 +150,16 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 strongSelf.titleNode.attributedText = NSAttributedString(string: authorName, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
                 strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
                 
+                let headerString: String
+                if let message = message, message.flags.contains(.Incoming), let author = message.author {
+                    headerString = "Reply to message. From: \(author.displayTitle)"
+                } else if let message = message, !message.flags.contains(.Incoming) {
+                    headerString = "Reply to your message"
+                } else {
+                    headerString = "Reply to message"
+                }
+                strongSelf.actionArea.accessibilityLabel = "\(headerString).\n\(text)"
+                
                 if let applyImage = applyImage {
                     applyImage()
                     strongSelf.imageNode.isHidden = false
@@ -203,8 +219,11 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         let rightInset: CGFloat = 55.0
         let textRightInset: CGFloat = 20.0
         
-        let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
-        self.closeButton.frame = CGRect(origin: CGPoint(x: bounds.size.width - rightInset - closeButtonSize.width, y: 19.0), size: closeButtonSize)
+        let closeButtonSize = CGSize(width: 44.0, height: bounds.height)
+        let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - rightInset - closeButtonSize.width + 12.0, y: 2.0), size: closeButtonSize)
+        self.closeButton.frame = closeButtonFrame
+        
+        self.actionArea.frame = CGRect(origin: CGPoint(x: leftInset, y: 2.0), size: CGSize(width: closeButtonFrame.minX - leftInset, height: bounds.height))
         
         self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
         

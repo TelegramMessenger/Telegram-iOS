@@ -158,6 +158,8 @@ final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
             
             return (textSize.size.width + labelInset * 2.0, { refinedWidth in
                 return (CGSize(width: refinedWidth, height: 33.0), {
+                    targetNode.accessibilityLabel = title
+                    
                     if let updatedRegularImage = updatedRegularImage {
                         targetNode.regularImage = updatedRegularImage
                         if !targetNode.textNode.isHidden {

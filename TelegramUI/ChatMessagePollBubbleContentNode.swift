@@ -4,7 +4,7 @@ import Display
 import TelegramCore
 import Postbox
 
-private struct PercentCounterItem: Comparable  {
+struct PercentCounterItem: Comparable  {
     var index: Int = 0
     var percent: Int = 0
     var remainder: Int = 0
@@ -20,7 +20,7 @@ private struct PercentCounterItem: Comparable  {
     
 }
 
-private func adjustPercentCount(_ items: [PercentCounterItem], left: Int) -> [PercentCounterItem] {
+func adjustPercentCount(_ items: [PercentCounterItem], left: Int) -> [PercentCounterItem] {
     var left = left
     var items = items.sorted(by: <)
     var i:Int = 0
@@ -47,7 +47,7 @@ private func adjustPercentCount(_ items: [PercentCounterItem], left: Int) -> [Pe
     return items
 }
 
-private func countNicePercent(votes: [Int], total: Int) -> [Int] {
+func countNicePercent(votes: [Int], total: Int) -> [Int] {
     var result:[Int] = []
     var items:[PercentCounterItem] = []
     for _ in votes {
@@ -400,6 +400,8 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     node.currentResult = optionResult
                     
                     node.highlightedBackgroundNode.backgroundColor = (incoming ? presentationData.theme.theme.chat.bubble.incomingAccentTextColor : presentationData.theme.theme.chat.bubble.outgoingAccentTextColor).withAlphaComponent(0.15)
+                    
+                    node.buttonNode.accessibilityLabel = option.text
                     
                     let titleNode = titleApply()
                     if node.titleNode !== titleNode {

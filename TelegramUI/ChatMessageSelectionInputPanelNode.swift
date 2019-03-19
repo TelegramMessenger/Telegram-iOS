@@ -6,10 +6,10 @@ import TelegramCore
 import SwiftSignalKit
 
 final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
-    private let deleteButton: UIButton
-    private let reportButton: UIButton
-    private let forwardButton: UIButton
-    private let shareButton: UIButton
+    private let deleteButton: HighlightableButtonNode
+    private let reportButton: HighlightableButtonNode
+    private let forwardButton: HighlightableButtonNode
+    private let shareButton: HighlightableButtonNode
     
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, metrics: LayoutMetrics)?
     private var presentationInterfaceState: ChatPresentationInterfaceState?
@@ -48,13 +48,24 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     init(theme: PresentationTheme) {
         self.theme = theme
         
-        self.deleteButton = UIButton()
+        self.deleteButton = HighlightableButtonNode()
         self.deleteButton.isEnabled = false
-        self.reportButton = UIButton()
+        self.deleteButton.isAccessibilityElement = true
+        self.deleteButton.accessibilityLabel = "Delete"
+        
+        self.reportButton = HighlightableButtonNode()
         self.reportButton.isEnabled = false
-        self.forwardButton = UIButton()
-        self.shareButton = UIButton()
+        self.reportButton.isAccessibilityElement = true
+        self.reportButton.accessibilityLabel = "Report"
+        
+        self.forwardButton = HighlightableButtonNode()
+        self.forwardButton.isAccessibilityElement = true
+        self.forwardButton.accessibilityLabel = "Forward"
+        
+        self.shareButton = HighlightableButtonNode()
         self.shareButton.isEnabled = false
+        self.shareButton.isAccessibilityElement = true
+        self.shareButton.accessibilityLabel = "Share"
         
         self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
         self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
@@ -67,17 +78,17 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         
         super.init()
         
-        self.view.addSubview(self.deleteButton)
-        self.view.addSubview(self.reportButton)
-        self.view.addSubview(self.forwardButton)
-        self.view.addSubview(self.shareButton)
+        self.addSubnode(self.deleteButton)
+        self.addSubnode(self.reportButton)
+        self.addSubnode(self.forwardButton)
+        self.addSubnode(self.shareButton)
         
         self.forwardButton.isEnabled = false
         
-        self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), for: [.touchUpInside])
-        self.reportButton.addTarget(self, action: #selector(self.reportButtonPressed), for: [.touchUpInside])
-        self.forwardButton.addTarget(self, action: #selector(self.forwardButtonPressed), for: [.touchUpInside])
-        self.shareButton.addTarget(self, action: #selector(self.shareButtonPressed), for: [.touchUpInside])
+        self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), forControlEvents: .touchUpInside)
+        self.reportButton.addTarget(self, action: #selector(self.reportButtonPressed), forControlEvents: .touchUpInside)
+        self.forwardButton.addTarget(self, action: #selector(self.forwardButtonPressed), forControlEvents: .touchUpInside)
+        self.shareButton.addTarget(self, action: #selector(self.shareButtonPressed), forControlEvents: .touchUpInside)
     }
     
     deinit {
@@ -155,7 +166,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.forwardButton.frame = CGRect(origin: CGPoint(x: width - rightInset - 57.0, y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
             self.shareButton.frame = CGRect(origin: CGPoint(x: floor((width - rightInset - 57.0) / 2.0), y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
         } else if !self.deleteButton.isHidden {
-            let buttons: [UIButton] = [
+            let buttons: [HighlightableButtonNode] = [
                 self.deleteButton,
                 self.reportButton,
                 self.shareButton,

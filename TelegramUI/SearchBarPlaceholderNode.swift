@@ -57,7 +57,7 @@ class SearchBarPlaceholderNode: ASDisplayNode {
         
         self.labelNode = TextNode()
         self.labelNode.isOpaque = false
-        self.labelNode.isLayerBacked = true
+        self.labelNode.isUserInteractionEnabled = false
         
         super.init()
         

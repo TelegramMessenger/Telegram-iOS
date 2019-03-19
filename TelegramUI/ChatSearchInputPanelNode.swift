@@ -47,7 +47,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         self.calendarButton = HighlightableButtonNode()
         self.membersButton = HighlightableButtonNode()
         self.resultsLabel = TextNode()
-        self.resultsLabel.isLayerBacked = true
+        self.resultsLabel.isUserInteractionEnabled = false
         self.resultsLabel.displaysAsynchronously = false
         self.activityIndicator = ActivityIndicator(type: .navigationAccent(theme))
         self.activityIndicator.isHidden = true

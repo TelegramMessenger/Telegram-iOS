@@ -48,7 +48,7 @@ final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
     init(collectionInfo: StickerPackCollectionInfo?, canManagePeerSpecificPack: Bool?, theme: PresentationTheme, interaction: ChatMediaInputNodeInteraction) {
         self.interaction = interaction
         self.titleNode = ASTextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         
         if collectionInfo?.id.namespace == ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, let canManage = canManagePeerSpecificPack, canManage {
             let setupNode = HighlightableButtonNode()

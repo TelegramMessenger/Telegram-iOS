@@ -564,7 +564,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         } else if let cachedLayout = node.labelNode.cachedLayout {
             let labelNode = TextNode()
             labelNode.isOpaque = false
-            labelNode.isLayerBacked = true
+            labelNode.isUserInteractionEnabled = false
             let labelLayout = TextNode.asyncLayout(labelNode)
             let (labelLayoutResult, labelApply) = labelLayout(TextNodeLayoutArguments(attributedString: self.placeholderString, backgroundColor: .clear, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: cachedLayout.size, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let _ = labelApply()

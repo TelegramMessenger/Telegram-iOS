@@ -119,11 +119,11 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.albumArtNode = TransformImageNode()
         
         self.titleNode = TextNode()
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
         
         self.descriptionNode = TextNode()
-        self.descriptionNode.isLayerBacked = true
+        self.descriptionNode.isUserInteractionEnabled = false
         self.descriptionNode.displaysAsynchronously = false
         
         self.shareNode = HighlightableButtonNode()

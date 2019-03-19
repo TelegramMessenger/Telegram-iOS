@@ -324,7 +324,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.textInputBackgroundView = UIImageView()
         self.textPlaceholderNode = ImmediateTextNode()
         self.textPlaceholderNode.maximumNumberOfLines = 1
-        self.textPlaceholderNode.isLayerBacked = true
+        self.textPlaceholderNode.isUserInteractionEnabled = false
         self.attachmentButton = HighlightableButtonNode()
         self.attachmentButton.accessibilityLabel = "Send media"
         self.attachmentButton.isAccessibilityElement = true
@@ -1032,7 +1032,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             if self.contextPlaceholderNode !== contextPlaceholderNode {
                 contextPlaceholderNode.displaysAsynchronously = false
-                contextPlaceholderNode.isLayerBacked = true
+                contextPlaceholderNode.isUserInteractionEnabled = false
                 self.contextPlaceholderNode = contextPlaceholderNode
                 self.insertSubnode(contextPlaceholderNode, aboveSubnode: self.textPlaceholderNode)
             }

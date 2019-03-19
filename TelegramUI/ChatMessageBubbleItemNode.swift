@@ -172,6 +172,16 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.messageAccessibilityArea)
+        
+        self.messageAccessibilityArea.activate = { [weak self] in
+            guard let strongSelf = self, let accessibilityData = strongSelf.accessibilityData else {
+                return false
+            }
+            if let singleUrl = accessibilityData.singleUrl {
+                strongSelf.item?.controllerInteraction.openUrl(singleUrl, false, false)
+            }
+            return false
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -1471,11 +1481,44 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
     }
     
-    private func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
+    override func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
+        super.updateAccessibilityData(accessibilityData)
+        
         self.messageAccessibilityArea.accessibilityLabel = accessibilityData.label
         self.messageAccessibilityArea.accessibilityValue = accessibilityData.value
         self.messageAccessibilityArea.accessibilityHint = accessibilityData.hint
         self.messageAccessibilityArea.accessibilityTraits = accessibilityData.traits
+        if let customActions = accessibilityData.customActions {
+            self.messageAccessibilityArea.accessibilityCustomActions = customActions.map({ action -> UIAccessibilityCustomAction in
+                return ChatMessageAccessibilityCustomAction(name: action.name, target: self, selector: #selector(self.performLocalAccessibilityCustomAction(_:)), action: action.action)
+            })
+        } else {
+            self.messageAccessibilityArea.accessibilityCustomActions = nil
+        }
+    }
+    
+    @objc private func performLocalAccessibilityCustomAction(_ action: UIAccessibilityCustomAction) {
+        if let action = action as? ChatMessageAccessibilityCustomAction {
+            switch action.action {
+                case .reply:
+                    if let item = self.item {
+                        item.controllerInteraction.setupReply(item.message.id)
+                    }
+                case .options:
+                    if let item = self.item {
+                        var subFrame = self.backgroundNode.frame
+                        if case .group = item.content {
+                            for contentNode in self.contentNodes {
+                                if contentNode.item?.message.stableId == item.message.stableId {
+                                    subFrame = contentNode.frame.insetBy(dx: 0.0, dy: -4.0)
+                                    break
+                                }
+                            }
+                        }
+                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, subFrame)
+                    }
+            }
+        }
     }
     
     private func addContentNode(node: ChatMessageBubbleContentNode) {

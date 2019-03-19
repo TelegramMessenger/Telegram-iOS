@@ -716,7 +716,9 @@ public final class ManagedAudioSession {
         }
         if resetToBuiltin {
             switch type {
-                case .voiceCall, .playWithPossiblePortOverride, .record:
+                case .record(false):
+                    try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
+                case .voiceCall, .playWithPossiblePortOverride, .record(true):
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
                     if let routes = AVAudioSession.sharedInstance().availableInputs {
                         for route in routes {

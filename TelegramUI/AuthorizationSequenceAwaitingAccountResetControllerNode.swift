@@ -54,12 +54,12 @@ final class AuthorizationSequenceAwaitingAccountResetControllerNode: ASDisplayNo
         self.noticeNode.displaysAsynchronously = false
         
         self.timerTitleNode = ASTextNode()
-        self.timerTitleNode.isLayerBacked = true
+        self.timerTitleNode.isUserInteractionEnabled = false
         self.timerTitleNode.displaysAsynchronously = false
         self.timerTitleNode.attributedText = NSAttributedString(string: strings.Login_ResetAccountProtected_TimerTitle, font: Font.regular(16.0), textColor: self.theme.list.itemPrimaryTextColor)
         
         self.timerValueNode = ASTextNode()
-        self.timerValueNode.isLayerBacked = true
+        self.timerValueNode.isUserInteractionEnabled = false
         self.timerValueNode.displaysAsynchronously = false
         
         self.resetNode = HighlightableButtonNode()

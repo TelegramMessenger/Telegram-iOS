@@ -211,6 +211,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.inputPanelBackgroundSeparatorNode.isLayerBacked = true
         
         self.navigateButtons = ChatHistoryNavigationButtons(theme: self.chatPresentationInterfaceState.theme)
+        self.navigateButtons.accessibilityElementsHidden = true
         
         super.init()
         

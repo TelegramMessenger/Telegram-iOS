@@ -32,6 +32,7 @@ private final class CachedChatMessageText {
 
 class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNode
+    private let textAccessibilityOverlayNode: TextAccessibilityOverlayNode
     private let statusNode: ChatMessageDateAndStatusNode
     private var linkHighlightingNode: LinkHighlightingNode?
     
@@ -41,7 +42,10 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     required init() {
         self.textNode = TextNode()
+        
         self.statusNode = ChatMessageDateAndStatusNode()
+        
+        self.textAccessibilityOverlayNode = TextAccessibilityOverlayNode()
         
         super.init()
         
@@ -50,6 +54,11 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         self.textNode.contentsScale = UIScreenScale
         self.textNode.displaysAsynchronously = true
         self.addSubnode(self.textNode)
+        self.addSubnode(self.textAccessibilityOverlayNode)
+        
+        self.textAccessibilityOverlayNode.openUrl = { [weak self] url in
+            self?.item?.controllerInteraction.openUrl(url, false, false)
+        }
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -280,6 +289,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             
                             strongSelf.textNode.frame = textFrame
+                            strongSelf.textAccessibilityOverlayNode.frame = textFrame
+                            strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
                         }
                     })
                 })

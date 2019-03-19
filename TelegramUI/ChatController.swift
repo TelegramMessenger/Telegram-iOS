@@ -1243,6 +1243,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
         chatInfoButtonItem.target = self
         chatInfoButtonItem.action = #selector(self.rightNavigationButtonAction)
+        chatInfoButtonItem.accessibilityLabel = "Info"
         self.chatInfoNavigationButton = ChatNavigationButton(action: .openChatInfo, buttonItem: chatInfoButtonItem)
         
         self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in

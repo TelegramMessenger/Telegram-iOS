@@ -403,9 +403,9 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
                 coveringRect = coveringRect.union(rects[i])
             }
             
-            let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(self.presentationData.strings.Conversation_ContextMenuCopy), action: {
+            let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
                 UIPasteboard.general.string = text
-            }), ContextMenuAction(content: .text(self.presentationData.strings.Conversation_ContextMenuShare), action: { [weak self] in
+            }), ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuShare, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuShare), action: { [weak self] in
                 if let strongSelf = self, case let .Loaded(content) = strongSelf.webPage.content {
                     strongSelf.present(ShareController(context: strongSelf.context, subject: .quote(text: text, url: content.url)), nil)
                 }

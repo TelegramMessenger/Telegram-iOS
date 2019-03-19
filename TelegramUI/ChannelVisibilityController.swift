@@ -1221,7 +1221,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             })
             if let resultItemNode = resultItemNode {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(presentationData.strings.Conversation_ContextMenuCopyLink), action: {
+                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuCopyLink, accessibilityLabel: presentationData.strings.Conversation_ContextMenuCopyLink), action: {
                     UIPasteboard.general.string = text
                 })])
                 strongController.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in

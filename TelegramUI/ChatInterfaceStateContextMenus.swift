@@ -338,7 +338,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         if data.canReply {
-            actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuReply), action: {
+            actions.append(.context(ContextMenuAction(content: .text(title: chatPresentationInterfaceState.strings.Conversation_ContextMenuReply, accessibilityLabel: chatPresentationInterfaceState.strings.Conversation_ContextMenuReply), action: {
                 interfaceInteraction.setupReplyMessage(messages[0].id)
             })))
         }
@@ -358,7 +358,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         if !messages[0].text.isEmpty || resourceAvailable {
             let message = messages[0]
-            actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy), action: {
+            actions.append(.context(ContextMenuAction(content: .text(title: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, accessibilityLabel: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy), action: {
                 if resourceAvailable {
                     for media in message.media {
                         if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
@@ -489,12 +489,12 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         if data.canSelect {
-            actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuMore), action: {
+            actions.append(.context(ContextMenuAction(content: .text(title: chatPresentationInterfaceState.strings.Conversation_ContextMenuMore, accessibilityLabel: chatPresentationInterfaceState.strings.Conversation_ContextMenuMore.replacingOccurrences(of: "...", with: "")), action: {
                 interfaceInteraction.beginMessageSelection(selectAll ? messages.map { $0.id } : [message.id])
             })))
         }
         if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && isAction {
-            actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete), action: {
+            actions.append(.context(ContextMenuAction(content: .text(title: chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete, accessibilityLabel: chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete), action: {
                 interfaceInteraction.deleteMessages(messages)
             })))
         }

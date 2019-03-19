@@ -24,7 +24,7 @@ final class ChatTextInputAudioRecordingCancelIndicator: ASDisplayNode {
         
         self.labelNode = TextNode()
         self.labelNode.displaysAsynchronously = false
-        self.labelNode.isLayerBacked = true
+        self.labelNode.isUserInteractionEnabled = false
         
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setTitle(strings.Common_Cancel, with: cancelFont, with: theme.chat.inputPanel.panelControlAccentColor, for: [])
