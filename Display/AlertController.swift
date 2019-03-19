@@ -61,6 +61,8 @@ open class AlertController: ViewController {
     private let contentNode: AlertContentNode
     private let allowInputInset: Bool
     
+    public var dismissed: (() -> Void)?
+    
     public init(theme: AlertControllerTheme, contentNode: AlertContentNode, allowInputInset: Bool = true) {
         self.theme = theme
         self.contentNode = contentNode
@@ -103,6 +105,7 @@ open class AlertController: ViewController {
     }
     
     override open func dismiss(completion: (() -> Void)? = nil) {
+        self.dismissed?()
         self.presentingViewController?.dismiss(animated: false, completion: completion)
     }
     

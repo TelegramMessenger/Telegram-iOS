@@ -271,6 +271,10 @@ class TabBarNode: ASDisplayNode {
                 
                 self.tabBarNodeContainers[i].badgeBackgroundNode.image = self.badgeImage
             }
+            
+            if let validLayout = self.validLayout {
+                self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, bottomInset: validLayout.3, transition: .immediate)
+            }
         }
     }
     
@@ -421,8 +425,9 @@ class TabBarNode: ASDisplayNode {
                 }
                 
                 if !container.badgeContainerNode.isHidden {
+                    let hasSingleLetterValue = container.badgeTextNode.attributedText?.string.count == 1
                     let badgeSize = container.badgeTextNode.updateLayout(CGSize(width: 200.0, height: 100.0))
-                    let backgroundSize = CGSize(width: max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
+                    let backgroundSize = CGSize(width: hasSingleLetterValue ? 18.0 : max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
                     let backgroundFrame: CGRect
                     if horizontal {
                         backgroundFrame = CGRect(origin: CGPoint(x: originX + 8.0, y: 2.0), size: backgroundSize)
