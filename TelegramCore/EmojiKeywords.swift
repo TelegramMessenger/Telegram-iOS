@@ -258,7 +258,7 @@ private func downloadEmojiKeywordsDifference(network: Network, languageCode: Str
 
 public func emojiKeywords(accountManager: AccountManager, network: Network, inputLanguageCode: String) -> Signal<EmojiKeywords?, NoError> {
     return accountManager.sharedData(keys: [SharedDataKeys.emojiKeywords])
-    |> take(1)
+//    |> take(1)
     |> map { sharedData in
         return sharedData.entries[SharedDataKeys.emojiKeywords] as? EmojiKeywordsMap ?? .defaultValue
     }
@@ -285,7 +285,7 @@ public func emojiKeywords(accountManager: AccountManager, network: Network, inpu
             if emojiKeywords.timestamp + refreshTimeout > timestamp {
                 return .single(emojiKeywords)
             } else {
-                return downloadEmojiKeywordsDifference(network: network, languageCode: emojiKeywords.languageCode, inputLanguageCode: inputLanguageCode, fromVersion: emojiKeywords.version)
+                return .single(emojiKeywords) |> then(downloadEmojiKeywordsDifference(network: network, languageCode: emojiKeywords.languageCode, inputLanguageCode: inputLanguageCode, fromVersion: emojiKeywords.version)
                     |> map(Optional.init)
                     |> `catch` { _ -> Signal<EmojiKeywords?, NoError> in
                         return .single(nil)
@@ -313,7 +313,7 @@ public func emojiKeywords(accountManager: AccountManager, network: Network, inpu
                         } else {
                             return downloadEmojiKeywordsSignal
                         }
-                }
+                })
             }
         } else {
             return downloadEmojiKeywordsSignal
