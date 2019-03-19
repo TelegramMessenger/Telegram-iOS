@@ -5,7 +5,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 
-class ContactSelectionController: ViewController {
+class ContactSelectionController: ViewController, PresentableController {
     private let context: AccountContext
     private let autoDismiss: Bool
     
@@ -72,6 +72,8 @@ class ContactSelectionController: ViewController {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        
+        self.blocksBackgroundWhenInOverlay = true
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
         
@@ -198,17 +200,21 @@ class ContactSelectionController: ViewController {
         self.contactsNode.contactListNode.enableUpdates = true
     }
     
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
+    func viewDidAppear(completion: @escaping () -> Void) {
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
             switch presentationArguments.presentationAnimation {
                 case .modalSheet:
-                    self.contactsNode.animateIn()
+                    self.contactsNode.animateIn(completion: completion)
                 case .none:
                     break
             }
         }
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        self.viewDidAppear(completion: {})
     }
     
     override func viewDidDisappear(_ animated: Bool) {

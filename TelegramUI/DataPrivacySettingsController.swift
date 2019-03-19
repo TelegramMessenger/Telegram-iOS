@@ -402,7 +402,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                     })
                 }).start()
                 
-                actionsDisposable.add(((deleteAllContacts(postbox: context.account.postbox, network: context.account.network) |> then(resetSavedContacts(network: context.account.network)))
+                actionsDisposable.add((deleteAllContacts(account: context.account)
                 |> deliverOnMainQueue).start(completed: {
                     updateState { state in
                         var state = state
