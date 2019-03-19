@@ -327,12 +327,14 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
         self.listNode.isHidden = true
         
         self.recentListNode = ListView()
-        self.recentListNode.backgroundColor = .clear
+        self.recentListNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         
         super.init()
         
-        self.addSubnode(self.dimNode)
+        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
+        
+        //self.addSubnode(self.dimNode)
         self.addSubnode(self.recentListNode)
         self.addSubnode(self.listNode)
         
@@ -465,9 +467,7 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.listNode.backgroundColor = theme.chatList.backgroundColor
-        if self.recentListNode.backgroundColor != .clear {
-            self.recentListNode.backgroundColor = theme.chatList.backgroundColor
-        }
+        self.recentListNode.backgroundColor = theme.chatList.backgroundColor
         self.recentListNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
     }
     
@@ -498,7 +498,6 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
             
             let isSearching = transition.isSearching
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
-                self?.recentListNode.isHidden = isSearching
                 self?.listNode.isHidden = !isSearching
                 self?.dimNode.isHidden = isSearching
             })

@@ -21,6 +21,7 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
         self.theme = theme
         self.placeholder = placeholder
         self.placeholderNode = SearchBarPlaceholderNode(fieldStyle: .modern)
+        self.placeholderNode.labelNode.displaysAsynchronously = false
         
         super.init()
         
