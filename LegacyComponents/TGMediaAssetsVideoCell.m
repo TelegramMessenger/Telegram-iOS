@@ -85,6 +85,8 @@ NSString *const TGMediaAssetsVideoCellKind = @"TGMediaAssetsVideoCellKind";
             _iconView.accessibilityIgnoresInvertColors = true;
             _durationLabel.accessibilityIgnoresInvertColors = true;
         }
+        
+        self.accessibilityLabel = @"Video";
     }
     return self;
 }

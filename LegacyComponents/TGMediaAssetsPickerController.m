@@ -361,6 +361,12 @@
 {
     TGMediaAsset *asset = [self _itemAtIndexPath:indexPath];
 
+    TGMediaSelectionContext *selectionContext = ((TGMediaAssetsController *)self.navigationController).selectionContext;
+    if (UIAccessibilityIsVoiceOverRunning() && selectionContext != nil) {
+        [selectionContext toggleItemSelection:asset];
+        return;
+    }
+    
     __block UIImage *thumbnailImage = nil;
     if ([TGMediaAssetsLibrary usesPhotoFramework])
     {

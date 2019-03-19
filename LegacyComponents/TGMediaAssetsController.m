@@ -304,6 +304,42 @@
             
             if (groupingButtonVisible && [strongSelf shouldDisplayTooltip] && strongSelf->_selectionContext.grouping)
                 [strongSelf setupTooltip:[strongSelf->_toolbarView convertRect:strongSelf->_toolbarView.centerButton.frame toView:strongSelf.view]];
+            
+            NSUInteger count = strongSelf->_selectionContext.count;
+            NSString *text = nil;
+            __block bool hasPhoto = false;
+            __block bool hasVideo = false;
+            [strongSelf->_selectionContext enumerateSelectedItems:^(TGMediaAsset *asset) {
+                if (![asset isKindOfClass:[TGMediaAsset class]])
+                    return;
+                if (asset.isVideo) {
+                    hasVideo = true;
+                } else {
+                    hasPhoto = true;
+                }
+            }];
+            
+            if (hasPhoto && hasVideo) {
+                if (count == 1) {
+                    text = @"1 media selected";
+                } else {
+                    text = [NSString stringWithFormat:@"%lu medias selected", (unsigned long)count];
+                }
+            } else if (hasPhoto) {
+                if (count == 1) {
+                    text = @"1 photo selected";
+                } else {
+                    text = [NSString stringWithFormat:@"%lu photos selected", count];
+                }
+            } else if (hasVideo) {
+                if (count == 1) {
+                    text = @"1 message selected";
+                } else {
+                    text = [NSString stringWithFormat:@"%lu videos selected", count];
+                }
+            }
+
+            UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification, text);
         }]];
         
         if (intent == TGMediaAssetsControllerSendMediaIntent || intent == TGMediaAssetsControllerSetProfilePhotoIntent || intent == TGMediaAssetsControllerSetSignupProfilePhotoIntent || intent == TGMediaAssetsControllerPassportIntent || intent == TGMediaAssetsControllerPassportMultipleIntent)

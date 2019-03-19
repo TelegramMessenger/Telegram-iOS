@@ -33,6 +33,8 @@
         
         if (iosMajorVersion() >= 11)
             _imageView.accessibilityIgnoresInvertColors = true;
+        
+        self.isAccessibilityElement = true;
     }
     return self;
 }
