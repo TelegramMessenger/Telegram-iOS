@@ -270,13 +270,8 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 if peerId == context.account.peerId {
                     if let forwardInfo = content.firstMessage.forwardInfo {
                         effectiveAuthor = forwardInfo.author
-                    }
-                    if effectiveAuthor == nil {
-                        for attribute in content.firstMessage.attributes {
-                            if let attribute = attribute as? SourceReferenceMessageAttribute, let sourcePeer = content.firstMessage.peers[attribute.messageId.peerId] {
-                                effectiveAuthor = sourcePeer
-                                break
-                            }
+                        if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature  {
+                            effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: Int32(clamping: authorSignature.persistentHashValue)), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: UserInfoFlags())
                         }
                     }
                     displayAuthorInfo = incoming && effectiveAuthor != nil

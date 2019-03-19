@@ -1169,7 +1169,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             if let strongSelf = self {
                 strongSelf.context.sharedContext.applicationBindings.openAppStorePage()
             }
-        }, displayMessageTooltip: { [weak self] messageId, text, sourceNode in
+        }, displayMessageTooltip: { [weak self] messageId, text, sourceNode, sourceFrame in
             if let strongSelf = self {
                 if let sourceNode = sourceNode {
                     strongSelf.messageTooltipController?.dismiss()
@@ -1182,7 +1182,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     }
                     strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
                         if let strongSelf = self {
-                            let rect = sourceNode.view.convert(sourceNode.view.bounds, to: strongSelf.chatDisplayNode.view)
+                            var rect = sourceNode.view.convert(sourceNode.view.bounds, to: strongSelf.chatDisplayNode.view)
+                            if let sourceFrame = sourceFrame {
+                                rect = CGRect(x: rect.minX + sourceFrame.minX, y: rect.minY + sourceFrame.minY, width: sourceFrame.width, height: sourceFrame.height)
+                            }
                             return (strongSelf.chatDisplayNode, rect)
                         }
                         return nil

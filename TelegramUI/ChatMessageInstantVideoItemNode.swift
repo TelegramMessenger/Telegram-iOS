@@ -493,7 +493,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                 } else {
                                     navigate = .info
                                 }
-                                item.controllerInteraction.openPeer(item.effectiveAuthorId ?? author.id, navigate, item.message)
+                                
+                                if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
+                                    item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
+                                } else {
+                                    item.controllerInteraction.openPeer(item.effectiveAuthorId ?? author.id, navigate, item.message)
+                                }
                             }
                             return
                         }
@@ -516,7 +521,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                 } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
                                     item.controllerInteraction.openPeer(id, .chat(textInputState: nil, messageId: nil), nil)
                                 } else if let _ = forwardInfo.authorSignature {
-                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode)
+                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
                                 }
                                 return
                             }
