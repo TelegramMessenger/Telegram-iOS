@@ -167,17 +167,31 @@ public func deleteContactPeerInteractively(account: Account, peerId: PeerId) -> 
     |> switchToLatest
 }
 
-public func deleteAllContacts(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> [Api.InputUser] in
+public func deleteAllContacts(account: Account) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> [Api.InputUser] in
         return transaction.getContactPeerIds().compactMap(transaction.getPeer).compactMap({ apiInputUser($0) }).compactMap({ $0 })
     }
-    |> mapToSignal { users -> Signal<Void, NoError> in
-        return network.request(Api.functions.contacts.deleteContacts(id: users))
+    |> mapToSignal { users -> Signal<Never, NoError> in
+        let deleteContacts = account.network.request(Api.functions.contacts.deleteContacts(id: users))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         }
-        |> mapToSignal { _ -> Signal<Void, NoError> in
-            return .complete()
+        let deleteImported = account.network.request(Api.functions.contacts.resetSaved())
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        return combineLatest(deleteContacts, deleteImported)
+        |> mapToSignal { _ -> Signal<Never, NoError> in
+            return account.postbox.transaction { transaction -> Void in
+                transaction.replaceContactPeerIds(Set())
+                transaction.clearDeviceContactImportInfoIdentifiers()
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                account.restartContactManagement()
+                
+                return .complete()
+            }
+            |> ignoreValues
         }
     }
 }

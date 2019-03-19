@@ -11,7 +11,7 @@ public final class NotificationExceptionsList: Equatable {
     public let peers: [PeerId: Peer]
     public let settings: [PeerId: TelegramPeerNotificationSettings]
     
-    init(peers: [PeerId: Peer], settings: [PeerId: TelegramPeerNotificationSettings]) {
+    public init(peers: [PeerId: Peer], settings: [PeerId: TelegramPeerNotificationSettings]) {
         self.peers = peers
         self.settings = settings
     }
