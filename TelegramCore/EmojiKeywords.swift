@@ -139,7 +139,7 @@ public final class EmojiKeywords: PostboxCoding, Equatable {
             return true
         }
         
-        if lhs.languageCode == rhs.languageCode && lhs.inputLanguageCode == rhs.inputLanguageCode && lhs.entries == rhs.entries {
+        if lhs.languageCode == rhs.languageCode && lhs.inputLanguageCode == rhs.inputLanguageCode && lhs.entries == rhs.entries && lhs.timestamp == rhs.timestamp {
             return true
         }
         return false
@@ -229,7 +229,7 @@ private func downloadEmojiKeywords(network: Network, inputLanguageCode: String) 
                     let emojiKeyword = EmojiKeyword(apiEmojiKeyword: apiEmojiKeyword)
                     entries[emojiKeyword.name] = emojiKeyword
                 }
-                return EmojiKeywords(languageCode: langCode, inputLanguageCode: inputLanguageCode, version: version, timestamp: Int32(CFAbsoluteTimeGetCurrent()), entries: entries)
+                return EmojiKeywords(languageCode: langCode, inputLanguageCode: inputLanguageCode, version: version, timestamp: Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970), entries: entries)
         }
     }
 }
@@ -248,7 +248,7 @@ private func downloadEmojiKeywordsDifference(network: Network, languageCode: Str
                         let emojiKeyword = EmojiKeyword(apiEmojiKeyword: apiEmojiKeyword)
                         entries[emojiKeyword.name] = emojiKeyword
                     }
-                    return .single(EmojiKeywords(languageCode: langCode, inputLanguageCode: inputLanguageCode, version: version, timestamp: Int32(CFAbsoluteTimeGetCurrent()), entries: entries))
+                    return .single(EmojiKeywords(languageCode: langCode, inputLanguageCode: inputLanguageCode, version: version, timestamp: Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970), entries: entries))
                 } else {
                     return .fail(.invalidLanguageCode)
                 }
@@ -263,7 +263,7 @@ public func emojiKeywords(accountManager: AccountManager, network: Network, inpu
         return sharedData.entries[SharedDataKeys.emojiKeywords] as? EmojiKeywordsMap ?? .defaultValue
     }
     |> mapToSignal { keywordsMap -> Signal<EmojiKeywords?, NoError> in
-        let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
         
         let downloadEmojiKeywordsSignal: Signal<EmojiKeywords?, NoError> = downloadEmojiKeywords(network: network, inputLanguageCode: inputLanguageCode)
         |> map(Optional.init)
@@ -286,33 +286,33 @@ public func emojiKeywords(accountManager: AccountManager, network: Network, inpu
                 return .single(emojiKeywords)
             } else {
                 return downloadEmojiKeywordsDifference(network: network, languageCode: emojiKeywords.languageCode, inputLanguageCode: inputLanguageCode, fromVersion: emojiKeywords.version)
-                |> map(Optional.init)
-                |> `catch` { _ -> Signal<EmojiKeywords?, NoError> in
-                    return .single(nil)
-                }
-                |> mapToSignal { differenceKeywords -> Signal<EmojiKeywords?, NoError> in
-                    if let differenceKeywords = differenceKeywords {
-                        var updatedKeywords = emojiKeywords
-                        var updatedKeywordEntries: [String: EmojiKeyword] = emojiKeywords.entries
-                        for differenceKeywordEntry in differenceKeywords.entries.values {
-                            let name = differenceKeywordEntry.name
-                            if let existingKeyword = updatedKeywordEntries[name] {
-                                updatedKeywordEntries[name] = existingKeyword.union(differenceKeywordEntry)
-                            } else if case .keyword = differenceKeywordEntry {
-                                updatedKeywordEntries[name] = differenceKeywordEntry
-                            }
-                        }
-                        updatedKeywords = EmojiKeywords(languageCode: differenceKeywords.languageCode, inputLanguageCode: inputLanguageCode, version: differenceKeywords.version, timestamp: Int32(CFAbsoluteTimeGetCurrent()), entries: updatedKeywordEntries)
-                        
-                        updateEmojiKeywordsList(accountManager: accountManager, { keywordsMap -> EmojiKeywordsMap in
-                            var entries = keywordsMap.entries
-                            entries[inputLanguageCode] = updatedKeywords
-                            return EmojiKeywordsMap(entries: entries)
-                        })
-                        return .complete()
-                    } else {
-                        return downloadEmojiKeywordsSignal
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<EmojiKeywords?, NoError> in
+                        return .single(nil)
                     }
+                    |> mapToSignal { differenceKeywords -> Signal<EmojiKeywords?, NoError> in
+                        if let differenceKeywords = differenceKeywords {
+                            var updatedKeywords = emojiKeywords
+                            var updatedKeywordEntries: [String: EmojiKeyword] = emojiKeywords.entries
+                            for differenceKeywordEntry in differenceKeywords.entries.values {
+                                let name = differenceKeywordEntry.name
+                                if let existingKeyword = updatedKeywordEntries[name] {
+                                    updatedKeywordEntries[name] = existingKeyword.union(differenceKeywordEntry)
+                                } else if case .keyword = differenceKeywordEntry {
+                                    updatedKeywordEntries[name] = differenceKeywordEntry
+                                }
+                            }
+                            updatedKeywords = EmojiKeywords(languageCode: differenceKeywords.languageCode, inputLanguageCode: inputLanguageCode, version: differenceKeywords.version, timestamp: Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970), entries: updatedKeywordEntries)
+                            
+                            updateEmojiKeywordsList(accountManager: accountManager, { keywordsMap -> EmojiKeywordsMap in
+                                var entries = keywordsMap.entries
+                                entries[inputLanguageCode] = updatedKeywords
+                                return EmojiKeywordsMap(entries: entries)
+                            })
+                            return .single(updatedKeywords)
+                        } else {
+                            return downloadEmojiKeywordsSignal
+                        }
                 }
             }
         } else {
@@ -321,28 +321,28 @@ public func emojiKeywords(accountManager: AccountManager, network: Network, inpu
     }
 }
 
-public func searchEmojiKeywords(keywords: EmojiKeywords, query: String, completeMatch: Bool) -> Signal<[String], NoError> {
+public func searchEmojiKeywords(keywords: EmojiKeywords, query: String, completeMatch: Bool) -> Signal<[(String, String)], NoError> {
     return Signal { subscriber in
         let query = query.lowercased()
         
         var existing = Set<String>()
-        var matched: [String] = []
+        var matched: [(String, String)] = []
         if completeMatch {
-            if let keyword = keywords.entries[query], case let .keyword(_, emoticons) = keyword {
+            if let keyword = keywords.entries[query], case let .keyword(name, emoticons) = keyword {
                 for emoticon in emoticons {
                     if !existing.contains(emoticon) {
                         existing.insert(emoticon)
-                        matched.append(emoticon)
+                        matched.append((name, emoticon))
                     }
                 }
             }
         } else {
-            for case let .keyword(name, emoticons) in keywords.entries.values {
+            for case let .keyword(name, emoticons) in keywords.entries.sorted(by: { $0.key < $1.key }).map ( { $0.value } ) {
                 if name.hasPrefix(query) {
                     for emoticon in emoticons {
                         if !existing.contains(emoticon) {
                             existing.insert(emoticon)
-                            matched.append(emoticon)
+                            matched.append((name, emoticon))
                         }
                     }
                 }

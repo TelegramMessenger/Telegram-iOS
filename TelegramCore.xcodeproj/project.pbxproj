@@ -24,6 +24,7 @@
 		9F10CE8B20613C78002DD61A /* SecretApiLayer73.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018EDFF2044939F00CBB130 /* SecretApiLayer73.swift */; };
 		9F10CE8C20613CDB002DD61A /* TelegramDeviceContactImportInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F7732052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift */; };
 		9F153D1021E8E0A200B95D82 /* Wallpaper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0900555521E4A96D0030924C /* Wallpaper.swift */; };
+		9F1BC1A6223FD53F00F21815 /* EmojiKeywords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A80E223F1FBF0038140F /* EmojiKeywords.swift */; };
 		9F4EEF9B21DCF66F002C3B33 /* JSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66C21B5C56F00245FD9 /* JSON.swift */; };
 		9F4EEF9C21DCF66F002C3B33 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66E21B6147600245FD9 /* AppConfiguration.swift */; };
 		9F4EEF9D21DCF66F002C3B33 /* SearchBotsConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E68021BAA20E00245FD9 /* SearchBotsConfiguration.swift */; };
@@ -2578,6 +2579,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9F1BC1A6223FD53F00F21815 /* EmojiKeywords.swift in Sources */,
 				9F7D42262223FF49007B68BB /* AutodownloadSettings.swift in Sources */,
 				9F7D42272223FF49007B68BB /* ManagedAutodownloadSettingsUpdates.swift in Sources */,
 				9F153D1021E8E0A200B95D82 /* Wallpaper.swift in Sources */,
