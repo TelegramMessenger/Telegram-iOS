@@ -275,6 +275,49 @@ public final class TextNodeLayout: NSObject {
         return nil
     }
     
+    public func allAttributeRects(name: String) -> [(Any, CGRect)] {
+        guard let attributedString = self.attributedString else {
+            return []
+        }
+        var result: [(Any, CGRect)] = []
+        attributedString.enumerateAttribute(NSAttributedStringKey(rawValue: name), in: NSRange(location: 0, length: attributedString.length), options: []) { (value, range, _) in
+            if let value = value, range.length != 0 {
+                var coveringRect = CGRect()
+                for line in self.lines {
+                    let lineRange = NSIntersectionRange(range, line.range)
+                    if lineRange.length != 0 {
+                        var leftOffset: CGFloat = 0.0
+                        if lineRange.location != line.range.location {
+                            leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
+                        }
+                        var rightOffset: CGFloat = line.frame.width
+                        if lineRange.location + lineRange.length != line.range.length {
+                            var secondaryOffset: CGFloat = 0.0
+                            let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
+                            rightOffset = ceil(rawOffset)
+                            if !rawOffset.isEqual(to: secondaryOffset) {
+                                rightOffset = ceil(secondaryOffset)
+                            }
+                        }
+                        var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                        lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
+                        
+                        let rect = CGRect(origin: CGPoint(x: lineFrame.minX + leftOffset + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: rightOffset - leftOffset, height: lineFrame.size.height))
+                        if coveringRect.isEmpty {
+                            coveringRect = rect
+                        } else {
+                            coveringRect = coveringRect.union(rect)
+                        }
+                    }
+                }
+                if !coveringRect.isEmpty {
+                    result.append((value, coveringRect))
+                }
+            }
+        }
+        return result
+    }
+    
     public func lineAndAttributeRects(name: String, at index: Int) -> [(CGRect, CGRect)]? {
         if let attributedString = self.attributedString {
             var range = NSRange()
@@ -309,6 +352,110 @@ public final class TextNodeLayout: NSObject {
                 }
             }
         }
+        return nil
+    }
+}
+
+private final class TextAccessibilityOverlayElement: UIAccessibilityElement {
+    private let url: String
+    private let openUrl: (String) -> Void
+    
+    init(accessibilityContainer: Any, url: String, openUrl: @escaping (String) -> Void) {
+        self.url = url
+        self.openUrl = openUrl
+        
+        super.init(accessibilityContainer: accessibilityContainer)
+    }
+    
+    override func accessibilityActivate() -> Bool {
+        self.openUrl(self.url)
+        return true
+    }
+}
+
+private final class TextAccessibilityOverlayNodeView: UIView {
+    fileprivate var cachedLayout: TextNodeLayout? {
+        didSet {
+            self.currentAccessibilityNodes?.forEach({ $0.removeFromSupernode() })
+            self.currentAccessibilityNodes = nil
+        }
+    }
+    fileprivate let openUrl: (String) -> Void
+    
+    private var currentAccessibilityNodes: [AccessibilityAreaNode]?
+    
+    override var accessibilityElements: [Any]? {
+        get {
+            if let _ = self.currentAccessibilityNodes {
+                return nil
+            }
+            guard let cachedLayout = self.cachedLayout else {
+                return nil
+            }
+            let urlAttributesAndRects = cachedLayout.allAttributeRects(name: "UrlAttributeT")
+            
+            var urlElements: [AccessibilityAreaNode] = []
+            for (value, rect) in urlAttributesAndRects {
+                let element = AccessibilityAreaNode()
+                element.accessibilityLabel = value as? String ?? ""
+                element.frame = rect
+                element.accessibilityTraits = UIAccessibilityTraitLink
+                element.activate = { [weak self] in
+                    self?.openUrl(value as? String ?? "")
+                    return true
+                }
+                self.addSubnode(element)
+                urlElements.append(element)
+            }
+            self.currentAccessibilityNodes = urlElements
+            return nil
+        } set(value) {
+        }
+    }
+    
+    init(openUrl: @escaping (String) -> Void) {
+        self.openUrl = openUrl
+        
+        super.init(frame: CGRect())
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+}
+
+public final class TextAccessibilityOverlayNode: ASDisplayNode {
+    public var cachedLayout: TextNodeLayout? {
+        didSet {
+            if self.isNodeLoaded {
+                (self.view as? TextAccessibilityOverlayNodeView)?.cachedLayout = self.cachedLayout
+            }
+        }
+    }
+    
+    public var openUrl: ((String) -> Void)?
+    
+    override public init() {
+        super.init()
+        
+        let openUrl: (String) -> Void = { [weak self] url in
+            self?.openUrl?(url)
+        }
+        
+        self.isAccessibilityElement = false
+        
+        self.setViewBlock({
+            return TextAccessibilityOverlayNodeView(openUrl: openUrl)
+        })
+    }
+    
+    override public func didLoad() {
+        super.didLoad()
+        
+        (self.view as? TextAccessibilityOverlayNodeView)?.cachedLayout = self.cachedLayout
+    }
+    
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         return nil
     }
 }

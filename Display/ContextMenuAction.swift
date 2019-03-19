@@ -1,6 +1,6 @@
 
 public enum ContextMenuActionContent {
-    case text(String)
+    case text(title: String, accessibilityLabel: String)
     case icon(UIImage)
 }
 

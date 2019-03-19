@@ -26,8 +26,8 @@ final class ContextMenuActionNode: ASDisplayNode {
         self.actionArea.accessibilityTraits = UIAccessibilityTraitButton
         
         switch action.content {
-            case let .text(title):
-                self.actionArea.accessibilityLabel = title
+            case let .text(title, accessibilityLabel):
+                self.actionArea.accessibilityLabel = accessibilityLabel
                 
                 let textNode = ImmediateTextNode()
                 textNode.isUserInteractionEnabled = false
