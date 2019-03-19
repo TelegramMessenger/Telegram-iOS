@@ -4133,7 +4133,7 @@ Unused sets are archived when you add more.";
 "SettingsSearch.Synonyms.Notifications.ContactJoined" = "";
 "SettingsSearch.Synonyms.Notifications.ResetAllNotifications" = "";
 
-"SettingsSearch.Synonyms.Privacy.Title" = "";
+"SettingsSearch.Synonyms.Privacy.Title" = " ";
 "SettingsSearch.Synonyms.Privacy.BlockedUsers" = "";
 "SettingsSearch.Synonyms.Privacy.LastSeen" = "";
 "SettingsSearch.Synonyms.Privacy.ProfilePhoto" = "";
@@ -4176,7 +4176,7 @@ Unused sets are archived when you add more.";
 
 "SettingsSearch.Synonyms.Appearance.Title" = "";
 "SettingsSearch.Synonyms.Appearance.TextSize" = "";
-"SettingsSearch.Synonyms.Appearance.ChatBackground" = "";
+"SettingsSearch.Synonyms.Appearance.ChatBackground" = "Wallpaper";
 "SettingsSearch.Synonyms.Appearance.ChatBackground.SetColor" = "";
 "SettingsSearch.Synonyms.Appearance.ChatBackground.Custom" = "";
 "SettingsSearch.Synonyms.Appearance.AutoNightTheme" = "";
