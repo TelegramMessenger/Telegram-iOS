@@ -798,13 +798,13 @@
                    '<(tgvoip_src_loc)/os/darwin/SampleBufferDisplayLayerRenderer.mm',
                    '<(tgvoip_src_loc)/os/darwin/SampleBufferDisplayLayerRenderer.h',
                   ],
-                }]
+                }],
+                ['"<(official_build_target)" == "macstore"', {
+                 'defines': [
+                  'TGVOIP_NO_OSX_PRIVATE_API',
+                 ],
+                }],
               ],
-              ['"<(official_build_target)" == "macstore"', {
-               'defines': [
-                'TGVOIP_NO_OSX_PRIVATE_API',
-               ],
-              }],
             },
           ],
           [
