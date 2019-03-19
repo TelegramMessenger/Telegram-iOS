@@ -293,9 +293,9 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                             |> map { result -> [Signal<(String?, [FoundStickerItem]), NoError>] in
                                 var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
                                 for emoji in result {
-                                    signals.append(searchStickers(account: self.context.account, query: emoji)
+                                    signals.append(searchStickers(account: self.context.account, query: emoji.1)
                                     |> take(1)
-                                    |> map { (emoji, $0) })
+                                    |> map { (emoji.1, $0) })
                                 }
                                 return signals
                             }
