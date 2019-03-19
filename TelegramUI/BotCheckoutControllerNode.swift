@@ -488,7 +488,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                                     var text = strongSelf.presentationData.strings.Checkout_NewCard_SaveInfoEnableHelp
                                     text = text.replacingOccurrences(of: "[", with: "")
                                     text = text.replacingOccurrences(of: "]", with: "")
-                                    present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_NotNow, action: {
+                                    present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_NotNow, action: {
                                         var updatedToken = webToken
                                         updatedToken.saveOnServer = false
                                         applyPaymentMethod(.webToken(updatedToken))
@@ -544,7 +544,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                         let canSave = paymentForm.canSaveCredentials || paymentForm.passwordMissing
                         let allowSaving = paymentForm.canSaveCredentials && !paymentForm.passwordMissing
                         if canSave {
-                            present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Checkout_NewCard_SaveInfoHelp, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_NotNow, action: {
+                            present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Checkout_NewCard_SaveInfoHelp, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_NotNow, action: {
                                 var updatedToken = token
                                 updatedToken.saveOnServer = false
                                 applyPaymentMethod(.webToken(updatedToken))
@@ -583,7 +583,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                             applyPaymentMethod(.webToken(updatedToken))
                             
                             if allowSaving {
-                                present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Checkout_NewCard_SaveInfoEnableHelp.replacingOccurrences(of: "]", with: "").replacingOccurrences(of: "[", with: ""), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                                present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Checkout_NewCard_SaveInfoEnableHelp.replacingOccurrences(of: "]", with: "").replacingOccurrences(of: "[", with: ""), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                                 })]), nil)
                             }
                         }
@@ -874,7 +874,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                     if value {
                         strongSelf.pay(savedCredentialsToken: savedCredentialsToken, liabilityNoticeAccepted: true)
                     } else {
-                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Checkout_LiabilityAlertTitle, text: strongSelf.presentationData.strings.Checkout_LiabilityAlert(botPeer.displayTitle, providerPeer.displayTitle).0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Checkout_LiabilityAlertTitle, text: strongSelf.presentationData.strings.Checkout_LiabilityAlert(botPeer.displayTitle, providerPeer.displayTitle).0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                             if let strongSelf = self {
                                 let _ = ApplicationSpecificNotice.setBotPaymentLiability(accountManager: strongSelf.context.sharedContext.accountManager, peerId: strongSelf.messageId.peerId).start()
                                 strongSelf.pay(savedCredentialsToken: savedCredentialsToken, liabilityNoticeAccepted: true)
@@ -945,7 +945,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                             text = strongSelf.presentationData.strings.Checkout_ErrorGeneric
                     }
                     
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                 }
             }))
         }
@@ -976,7 +976,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                     alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeout(durationString).0
                 }
                 
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: alertText, actions: [
+                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: alertText, actions: [
                     TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_No, action: {
                         if let strongSelf = self {
                             strongSelf.pay(savedCredentialsToken: token)

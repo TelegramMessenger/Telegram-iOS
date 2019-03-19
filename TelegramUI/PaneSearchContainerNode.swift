@@ -39,14 +39,14 @@ final class PaneSearchContainerNode: ASDisplayNode {
         return self.contentNode.ready
     }
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, cancel: @escaping () -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, trendingGifsPromise: Promise<[FileMediaReference]?>, cancel: @escaping () -> Void) {
         self.context = context
         self.mode = mode
         self.controllerInteraction = controllerInteraction
         self.inputNodeInteraction = inputNodeInteraction
         switch mode {
             case .gif:
-                self.contentNode = GifPaneSearchContentNode(context: context, theme: theme, strings: strings, controllerInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction)
+                self.contentNode = GifPaneSearchContentNode(context: context, theme: theme, strings: strings, controllerInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction, trendingPromise: trendingGifsPromise)
             case .sticker:
                 self.contentNode = StickerPaneSearchContentNode(context: context, theme: theme, strings: strings, controllerInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction)
         }
@@ -117,7 +117,7 @@ final class PaneSearchContainerNode: ASDisplayNode {
         self.searchBar.deactivate(clear: true)
     }
     
-    func animateIn(from placeholder: PaneSearchBarPlaceholderNode, transition: ContainedViewLayoutTransition) {
+    func animateIn(from placeholder: PaneSearchBarPlaceholderNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         let placeholderFrame = placeholder.view.convert(placeholder.bounds, to: self.view)
         let verticalOrigin = placeholderFrame.minY - 4.0
         self.contentNode.animateIn(additivePosition: verticalOrigin, transition: transition)
@@ -125,7 +125,7 @@ final class PaneSearchContainerNode: ASDisplayNode {
         switch transition {
             case let .animated(duration, curve):
                 self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration / 2.0)
-                self.searchBar.animateIn(from: placeholder, duration: duration, timingFunction: curve.timingFunction)
+                self.searchBar.animateIn(from: placeholder, duration: duration, timingFunction: curve.timingFunction, completion: completion)
                 if let size = self.validLayout {
                     let initialBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: verticalOrigin), size: CGSize(width: size.width, height: max(0.0, size.height - verticalOrigin)))
                     self.backgroundNode.layer.animateFrame(from: initialBackgroundFrame, to: self.backgroundNode.frame, duration: duration, timingFunction: curve.timingFunction)
@@ -143,9 +143,7 @@ final class PaneSearchContainerNode: ASDisplayNode {
                 self.backgroundNode.layer.animateFrame(from: self.backgroundNode.frame, to: CGRect(origin: CGPoint(x: 0.0, y: verticalOrigin), size: CGSize(width: size.width, height: max(0.0, size.height - verticalOrigin))), duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: false)
             }
         }
-        self.searchBar.transitionOut(to: placeholder, transition: transition, completion: {
-            completion()
-        })
+        self.searchBar.transitionOut(to: placeholder, transition: transition, completion: completion)
         transition.updateAlpha(node: self.backgroundNode, alpha: 0.0)
         if animateOutSearchBar {
             transition.updateAlpha(node: self.searchBar, alpha: 0.0)

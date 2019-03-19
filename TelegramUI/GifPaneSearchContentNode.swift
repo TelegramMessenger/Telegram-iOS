@@ -5,7 +5,95 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-private let trendingGifsPromise = Promise<[FileMediaReference]?>(nil)
+func paneGifSearchForQuery(account: Account, query: String, updateActivity: ((Bool) -> Void)?) -> Signal<[FileMediaReference]?, NoError> {
+    let delayRequest = true
+    
+    let contextBot = resolvePeerByName(account: account, name: "gif")
+    |> mapToSignal { peerId -> Signal<Peer?, NoError> in
+        if let peerId = peerId {
+            return account.postbox.loadedPeerWithId(peerId)
+                |> map { peer -> Peer? in
+                    return peer
+                }
+                |> take(1)
+        } else {
+            return .single(nil)
+        }
+    }
+    |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> in
+        if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
+            let results = requestContextResults(account: account, botId: user.id, query: query, peerId: account.peerId, limit: 64)
+            |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                return { _ in
+                    return .contextRequestResult(user, results)
+                }
+            }
+            
+            let botResult: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .single({ previousResult in
+                var passthroughPreviousResult: ChatContextResultCollection?
+                if let previousResult = previousResult {
+                    if case let .contextRequestResult(previousUser, previousResults) = previousResult {
+                        if previousUser?.id == user.id {
+                            passthroughPreviousResult = previousResults
+                        }
+                    }
+                }
+                return .contextRequestResult(nil, passthroughPreviousResult)
+            })
+            
+            let maybeDelayedContextResults: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>
+            if delayRequest {
+                maybeDelayedContextResults = results |> delay(0.4, queue: Queue.concurrentDefaultQueue())
+            } else {
+                maybeDelayedContextResults = results
+            }
+            
+            return botResult |> then(maybeDelayedContextResults)
+        } else {
+            return .single({ _ in return nil })
+        }
+    }
+    return contextBot
+    |> mapToSignal { result -> Signal<[FileMediaReference]?, NoError> in
+        if let r = result(nil), case let .contextRequestResult(_, collection) = r, let results = collection?.results {
+            var references: [FileMediaReference] = []
+            for result in results {
+                switch result {
+                case let .externalReference(_, _, type, _, _, _, content, thumbnail, _):
+                    var imageResource: TelegramMediaResource?
+                    var uniqueId: Int64?
+                    if let content = content {
+                        imageResource = content.resource
+                        if let resource = content.resource as? WebFileReferenceMediaResource {
+                            uniqueId = Int64(murMurHashString32(resource.url))
+                        }
+                    } else if let thumbnail = thumbnail {
+                        imageResource = thumbnail.resource
+                    }
+                    
+                    if type == "gif", let thumbnailResource = imageResource, let content = content, let dimensions = content.dimensions {
+                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: uniqueId ?? 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
+                        references.append(FileMediaReference.standalone(media: file))
+                    }
+                case let .internalReference(_, _, _, _, _, _, file, _):
+                    if let file = file {
+                        references.append(FileMediaReference.standalone(media: file))
+                    }
+                }
+            }
+            return .single(references)
+        } else {
+            return .complete()
+        }
+    }
+    |> deliverOnMainQueue
+    |> beforeStarted {
+        updateActivity?(true)
+    }
+    |> afterCompleted {
+        updateActivity?(false)
+    }
+}
 
 final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     private let context: AccountContext
@@ -21,6 +109,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     
     private var validLayout: CGSize?
     
+    private let trendingPromise: Promise<[FileMediaReference]?>
     private let searchDisposable = MetaDisposable()
     
     private let _ready = Promise<Void>()
@@ -31,10 +120,11 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     var deactivateSearchBar: (() -> Void)?
     var updateActivity: ((Bool) -> Void)?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, trendingPromise: Promise<[FileMediaReference]?>) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.inputNodeInteraction = inputNodeInteraction
+        self.trendingPromise = trendingPromise
         
         self.theme = theme
         self.strings = strings
@@ -53,14 +143,6 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
         
         self.notFoundNode.isHidden = true
         
-        let _ = (trendingGifsPromise.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { next in
-            if next == nil {
-                trendingGifsPromise.set(self.signalForQuery(""))
-            }
-        })
-        
         self._ready.set(.single(Void()))
         
         self.addSubnode(self.notFoundNode)
@@ -75,10 +157,10 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     func updateText(_ text: String, languageCode: String?) {
         let signal: Signal<[FileMediaReference]?, NoError>
         if !text.isEmpty {
-            signal = self.signalForQuery(text)
+            signal = paneGifSearchForQuery(account: self.context.account, query: text, updateActivity: self.updateActivity)
             self.updateActivity?(true)
         } else {
-            signal = trendingGifsPromise.get()
+            signal = self.trendingPromise.get()
             self.updateActivity?(false)
         }
         
@@ -180,96 +262,5 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
         
         transition.updateAlpha(layer: multiplexedNode.layer, alpha: 0.0, completion: { _ in
         })
-    }
-    
-    private func signalForQuery(_ query: String) -> Signal<[FileMediaReference]?, NoError> {
-        let delayRequest = true
-
-        let account = self.context.account
-        let contextBot = resolvePeerByName(account: account, name: "gif")
-        |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-            if let peerId = peerId {
-            return account.postbox.loadedPeerWithId(peerId)
-                |> map { peer -> Peer? in
-                    return peer
-                }
-                |> take(1)
-            } else {
-                return .single(nil)
-            }
-        }
-        |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> in
-            if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-                let results = requestContextResults(account: account, botId: user.id, query: query, peerId: self.context.account.peerId, limit: 64)
-                |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
-                    return { _ in
-                        return .contextRequestResult(user, results)
-                    }
-                }
-                
-                let botResult: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .single({ previousResult in
-                    var passthroughPreviousResult: ChatContextResultCollection?
-                    if let previousResult = previousResult {
-                        if case let .contextRequestResult(previousUser, previousResults) = previousResult {
-                            if previousUser?.id == user.id {
-                                passthroughPreviousResult = previousResults
-                            }
-                        }
-                    }
-                    return .contextRequestResult(nil, passthroughPreviousResult)
-                })
-                
-                let maybeDelayedContextResults: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>
-                if delayRequest {
-                    maybeDelayedContextResults = results |> delay(0.4, queue: Queue.concurrentDefaultQueue())
-                } else {
-                    maybeDelayedContextResults = results
-                }
-                
-                return botResult |> then(maybeDelayedContextResults)
-            } else {
-                return .single({ _ in return nil })
-            }
-        }
-        return contextBot
-        |> mapToSignal { result -> Signal<[FileMediaReference]?, NoError> in
-            if let r = result(nil), case let .contextRequestResult(_, collection) = r, let results = collection?.results {
-                var references: [FileMediaReference] = []
-                for result in results {
-                    switch result {
-                        case let .externalReference(_, _, type, _, _, _, content, thumbnail, _):
-                            var imageResource: TelegramMediaResource?
-                            var uniqueId: Int64?
-                            if let content = content {
-                                imageResource = content.resource
-                                if let resource = content.resource as? WebFileReferenceMediaResource {
-                                    uniqueId = Int64(murMurHashString32(resource.url))
-                                }
-                            } else if let thumbnail = thumbnail {
-                                imageResource = thumbnail.resource
-                            }
-                            
-                            if type == "gif", let thumbnailResource = imageResource, let content = content, let dimensions = content.dimensions {
-                                let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: uniqueId ?? 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource)], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
-                                references.append(FileMediaReference.standalone(media: file))
-                            }
-                        case let .internalReference(_, _, _, _, _, _, file, _):
-                            if let file = file {
-                                references.append(FileMediaReference.standalone(media: file))
-                            }
-                    }
-                }
-                return .single(references)
-            } else {
-                return .complete()
-            }
-        }
-        |> deliverOnMainQueue
-        |> beforeStarted { [weak self] in
-            self?.updateActivity?(true)
-        }
-        |> afterCompleted { [weak self] in
-            self?.updateActivity?(false)
-        }
     }
 }

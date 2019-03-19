@@ -26,6 +26,10 @@ class ItemListControllerSearchNode: ASDisplayNode {
         })
     }
     
+    func scrollToTop() {
+        
+    }
+    
     func queryUpdated(_ query: String) {
         
     }

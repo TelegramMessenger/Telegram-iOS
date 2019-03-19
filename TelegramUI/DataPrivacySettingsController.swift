@@ -379,7 +379,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
         }
         if canBegin {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Privacy_ContactsResetConfirmation, actions: [TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
+            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_ContactsResetConfirmation, actions: [TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
                 var begin = false
                 updateState { state in
                     var state = state
@@ -433,7 +433,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
         }
         if !value {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Privacy_TopPeersWarning, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_TopPeersWarning, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                 apply()
             })]))
         } else {

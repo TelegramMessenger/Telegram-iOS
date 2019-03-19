@@ -63,7 +63,7 @@ public final class LanguageLinkPreviewController: ViewController {
                 return
             }
             if result.languageCode == strongSelf.presentationData.strings.primaryComponent.languageCode {
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.ApplyLanguage_ChangeLanguageAlreadyActive(result.localizedTitle).0, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.ApplyLanguage_ChangeLanguageAlreadyActive(result.localizedTitle).0, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 strongSelf.dismiss()
             } else {
                 strongSelf.localizationInfo = result
@@ -73,7 +73,7 @@ public final class LanguageLinkPreviewController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.ApplyLanguage_LanguageNotSupportedError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.ApplyLanguage_LanguageNotSupportedError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             strongSelf.dismiss()
         }))
         self.ready.set(self.controllerNode.ready.get())
@@ -115,7 +115,7 @@ public final class LanguageLinkPreviewController: ViewController {
                 return
             }
             strongSelf.controllerNode.setInProgress(false)
-            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
         }, completed: { [weak self] in
             guard let strongSelf = self else {
                 return

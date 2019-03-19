@@ -71,7 +71,7 @@ func faqSearchableItems(context: AccountContext) -> Signal<[SettingsSearchableIt
     return cachedFaqInstantPage(context: context)
     |> map { resolvedUrl -> [SettingsSearchableItem] in
         var results: [SettingsSearchableItem] = []
-        var nextIndex: Int = 1
+        var nextIndex: Int32 = 2
         if case let .instantView(webPage, _) = resolvedUrl {
             if case let .Loaded(content) = webPage.content, let instantPage = content.instantPage {
                 var processingQuestions = false
@@ -111,14 +111,14 @@ func faqSearchableItems(context: AccountContext) -> Signal<[SettingsSearchableIt
                                             let (_, anchor) = extractAnchor(string: url)
                                             var index = nextIndex
                                             if anchor?.contains("delete-my-account") ?? false {
-                                                index = 0
+                                                index = 1
                                             } else {
                                                 nextIndex += 1
                                             }
                                             let item = SettingsSearchableItem(id: .faq(index), title: text.plainText, alternate: [], icon: .faq, breadcrumbs: [strings.SettingsSearch_FAQ, currentSection], present: { context, _, present in
                                                 present(.push, InstantPageController(context: context, webPage: webPage, sourcePeerType: .channel, anchor: anchor))
                                             })
-                                            if index == 0 {
+                                            if index == 1 {
                                                 results.insert(item, at: 0)
                                             } else {
                                                 results.append(item)

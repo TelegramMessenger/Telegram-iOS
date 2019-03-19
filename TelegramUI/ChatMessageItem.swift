@@ -271,6 +271,14 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                     if let forwardInfo = content.firstMessage.forwardInfo {
                         effectiveAuthor = forwardInfo.author
                     }
+                    if effectiveAuthor == nil {
+                        for attribute in content.firstMessage.attributes {
+                            if let attribute = attribute as? SourceReferenceMessageAttribute, let sourcePeer = content.firstMessage.peers[attribute.messageId.peerId] {
+                                effectiveAuthor = sourcePeer
+                                break
+                            }
+                        }
+                    }
                     displayAuthorInfo = incoming && effectiveAuthor != nil
                 } else {
                     effectiveAuthor = content.firstMessage.author

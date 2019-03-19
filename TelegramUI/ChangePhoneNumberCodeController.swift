@@ -258,7 +258,7 @@ func changePhoneNumberCodeController(context: AccountContext, phoneNumber: Strin
                     case .limitExceeded:
                         alertText = presentationData.strings.Login_CodeFloodError
                 }
-                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                presentControllerImpl?(textAlertController(context: context, title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }, completed: {
                 updateState {
                     return $0.withUpdatedChecking(false)

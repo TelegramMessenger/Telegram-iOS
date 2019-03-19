@@ -53,7 +53,7 @@ private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, them
 final class OverlayPlayerControlsNode: ASDisplayNode {
     private let accountManager: AccountManager
     private let postbox: Postbox
-    private let theme: PresentationTheme
+    private var theme: PresentationTheme
     
     private let backgroundNode: ASImageNode
     
@@ -234,11 +234,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     if strongSelf.currentIsPaused != isPaused {
                         strongSelf.currentIsPaused = isPaused
                         
-                        if isPaused {
-                            strongSelf.playPauseButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Play"), color: strongSelf.theme.list.itemPrimaryTextColor)
-                        } else {
-                            strongSelf.playPauseButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Pause"), color: strongSelf.theme.list.itemPrimaryTextColor)
-                        }
+                        strongSelf.updatePlayPauseButton(paused: isPaused)
                     }
                     
                     strongSelf.playPauseButton.isEnabled = true
@@ -247,30 +243,15 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     
                     displayData = value.item.displayData
                     
-                    let baseColor = strongSelf.theme.list.itemSecondaryTextColor                    
+                    let baseColor = strongSelf.theme.list.itemSecondaryTextColor
                     if value.order != strongSelf.currentOrder {
                         strongSelf.updateOrder?(value.order)
                         strongSelf.currentOrder = value.order
-                        switch value.order {
-                            case .regular:
-                                strongSelf.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: baseColor)
-                            case .reversed:
-                                strongSelf.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: strongSelf.theme.list.itemAccentColor)
-                            case .random:
-                                strongSelf.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderRandom"), color: strongSelf.theme.list.itemAccentColor)
-                        }
+                        strongSelf.updateOrderButton(value.order)
                     }
                     if value.looping != strongSelf.currentLooping {
                         strongSelf.currentLooping = value.looping
-                        
-                        switch value.looping {
-                            case .none:
-                                strongSelf.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Repeat"), color: baseColor)
-                            case .item:
-                                strongSelf.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/RepeatOne"), color: strongSelf.theme.list.itemAccentColor)
-                            case .all:
-                                strongSelf.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Repeat"), color: strongSelf.theme.list.itemAccentColor)
-                        }
+                        strongSelf.updateLoopButton(value.looping)
                     }
                 } else {
                     strongSelf.playPauseButton.isEnabled = false
@@ -326,6 +307,32 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.albumArtNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.albumArtTap(_:))))
     }
     
+    func updateTheme(_ theme: PresentationTheme) {
+        guard self.theme !== theme else {
+            return
+        }
+        self.theme = theme
+        
+        self.backgroundNode.image = generateBackground(theme: theme)
+        self.collapseNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/CollapseArrow"), color: theme.list.controlSecondaryColor), for: [])
+        self.shareNode.setImage(generateShareIcon(theme: theme), for: [])
+        self.scrubberNode.updateColors(backgroundColor: theme.list.controlSecondaryColor, foregroundColor: theme.list.itemAccentColor)
+        self.leftDurationLabel.textColor = theme.list.itemSecondaryTextColor
+        self.rightDurationLabel.textColor = theme.list.itemSecondaryTextColor
+        self.backwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Previous"), color: theme.list.itemPrimaryTextColor)
+        self.forwardButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Next"), color: theme.list.itemPrimaryTextColor)
+        if let isPaused = self.currentIsPaused {
+            self.updatePlayPauseButton(paused: isPaused)
+        }
+        if let order = self.currentOrder {
+            self.updateOrderButton(order)
+        }
+        if let looping = self.currentLooping {
+            self.updateLoopButton(looping)
+        }
+        self.separatorNode.backgroundColor = theme.list.itemPlainSeparatorColor
+    }
+    
     private func updateLabels(transition: ContainedViewLayoutTransition) {
         guard let (width, leftInset, rightInset, maxHeight) = self.validLayout else {
             return
@@ -368,6 +375,38 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             if let largeAlbumArtNode = self.largeAlbumArtNode {
                 largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: false))
             }
+        }
+    }
+    
+    private func updatePlayPauseButton(paused: Bool) {
+        if paused {
+            self.playPauseButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Pause"), color: self.theme.list.itemPrimaryTextColor)
+        } else {
+            self.playPauseButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Play"), color: self.theme.list.itemPrimaryTextColor)
+        }
+    }
+    
+    private func updateOrderButton(_ order: MusicPlaybackSettingsOrder) {
+        let baseColor = self.theme.list.itemSecondaryTextColor
+        switch order {
+            case .regular:
+                self.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: baseColor)
+            case .reversed:
+                self.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderReverse"), color: self.theme.list.itemAccentColor)
+            case .random:
+                self.orderButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/OrderRandom"), color: self.theme.list.itemAccentColor)
+        }
+    }
+    
+    private func updateLoopButton(_ looping: MusicPlaybackSettingsLooping) {
+        let baseColor = self.theme.list.itemSecondaryTextColor
+        switch looping {
+            case .none:
+                self.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Repeat"), color: baseColor)
+            case .item:
+                self.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/RepeatOne"), color: self.theme.list.itemAccentColor)
+            case .all:
+                self.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Repeat"), color: self.theme.list.itemAccentColor)
         }
     }
     

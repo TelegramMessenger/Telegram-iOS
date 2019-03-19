@@ -81,7 +81,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     
     private var secretTimer: SwiftSignalKit.Timer?
     
-    var visibilityPromise = ValuePromise<ListViewItemNodeVisibility>(.none)
+    var visibilityPromise = ValuePromise<ListViewItemNodeVisibility>(.none, ignoreRepeated: true)
     var visibility: ListViewItemNodeVisibility = .none {
         didSet {
             if let videoNode = self.videoNode {

@@ -148,7 +148,7 @@ public class ComposeController: ViewController {
                                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                 
                                 controller.displayNavigationActivity = false
-                                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                controller.present(textAlertController(context: strongSelf.context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                             }
                         }))
                     }

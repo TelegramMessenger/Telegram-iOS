@@ -70,18 +70,12 @@ func peerReportOptionsController(context: AccountContext, subject: PeerReportSub
                     case let .peer(peerId):
                         let _ = (reportPeer(account: context.account, peerId: peerId, reason: reportReason)
                         |> deliverOnMainQueue).start(completed: {
-                            let alert = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {
-                                
-                            })])
-                            present(alert, nil)
+                            present(textAlertController(context: context, title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                         })
                     case let .messages(messageIds):
                         let _ = (reportPeerMessages(account: context.account, messageIds: messageIds, reason: reportReason)
                         |> deliverOnMainQueue).start(completed: {
-                            let alert = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {
-                                
-                            })])
-                            present(alert, nil)
+                            present(textAlertController(context: context, title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                         })
                 }
             } else {
@@ -229,21 +223,17 @@ private func peerReportController(context: AccountContext, subject: PeerReportSu
                     if !text.isEmpty {
                         let completed: () -> Void = {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            
-                            let alert = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {
-                                
-                            })])
-                            presentControllerImpl?(alert, nil)
+                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction.init(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                             dismissImpl?()
                         }
                         switch subject {
-                        case let .peer(peerId):
-                            reportDisposable.set((reportPeer(account: context.account, peerId: peerId, reason: .custom(text))
+                            case let .peer(peerId):
+                                reportDisposable.set((reportPeer(account: context.account, peerId: peerId, reason: .custom(text))
                                 |> deliverOnMainQueue).start(completed: {
                                     completed()
                                 }))
-                        case let .messages(messageIds):
-                            reportDisposable.set((reportPeerMessages(account: context.account, messageIds: messageIds, reason: .custom(text))
+                            case let .messages(messageIds):
+                                reportDisposable.set((reportPeerMessages(account: context.account, messageIds: messageIds, reason: .custom(text))
                                 |> deliverOnMainQueue).start(completed: {
                                     completed()
                                 }))

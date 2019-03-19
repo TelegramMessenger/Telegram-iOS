@@ -20,10 +20,10 @@ func openAddContact(context: AccountContext, firstName: String = "", lastName: S
                     }
                 }), completed: completed), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             case .notDetermined:
-                DeviceAccess.authorizeAccess(to: .contacts)
+                DeviceAccess.authorizeAccess(to: .contacts, context: context)
             default:
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                present(textAlertController(context: context, title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
                     context.sharedContext.applicationBindings.openSettings()
                 })]), nil)
         }

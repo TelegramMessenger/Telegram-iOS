@@ -144,24 +144,34 @@ final class SettingsSearchItem: ItemListControllerSearch {
     }
 }
 
-private enum SettingsSearchItemId: Hashable {
+final class SettingsSearchInteraction {
+    let openItem: (SettingsSearchableItem) -> Void
+    let deleteRecentItem: (SettingsSearchableItemId) -> Void
+    
+    init(openItem: @escaping (SettingsSearchableItem) -> Void, deleteRecentItem: @escaping (SettingsSearchableItemId) -> Void) {
+        self.openItem = openItem
+        self.deleteRecentItem = deleteRecentItem
+    }
+}
+
+private enum SettingsSearchEntryStableId: Hashable {
     case result(SettingsSearchableItemId)
     case faq(String)
 }
 
 private enum SettingsSearchEntry: Comparable, Identifiable {
-    case result(index: Int, item: SettingsSearchableItem, title: String, breadcrumbs: [String], icon: UIImage?)
+    case result(index: Int, item: SettingsSearchableItem, icon: UIImage?)
     
-    var stableId: SettingsSearchItemId {
+    var stableId: SettingsSearchEntryStableId {
         switch self {
-            case let .result(_, item, _, _, _):
+            case let .result(_, item, _):
                 return .result(item.id)
         }
     }
     
     private func index() -> Int {
         switch self {
-            case let .result(index, _, _, _, _):
+            case let .result(index, _, _):
                 return index
         }
     }
@@ -171,20 +181,18 @@ private enum SettingsSearchEntry: Comparable, Identifiable {
     }
     
     static func == (lhs: SettingsSearchEntry, rhs: SettingsSearchEntry) -> Bool {
-        if case let .result(lhsIndex, _, lhsTitle, lhsBreadcrumbs, _) = lhs {
-            if case let .result(rhsIndex, _, rhsTitle, rhsBreadcrumbs, _) = rhs, lhsIndex == rhsIndex, lhsTitle == rhsTitle, lhsBreadcrumbs == rhsBreadcrumbs {
+        if case let .result(lhsIndex, lhsItem, _) = lhs {
+            if case let .result(rhsIndex, rhsItem, _) = rhs, lhsIndex == rhsIndex, lhsItem.id == rhsItem.id {
                 return true
             }
         }
         return false
     }
     
-    func item(theme: PresentationTheme, strings: PresentationStrings, openResult: @escaping (SettingsSearchableItem) -> Void)  -> ListViewItem {
+    func item(theme: PresentationTheme, strings: PresentationStrings, interaction: SettingsSearchInteraction)  -> ListViewItem {
         switch self {
-            case let .result(_, item, title, breadcrumbs, icon):
-                return SettingsSearchResultItem(theme: theme, strings: strings, title: title, breadcrumbs: breadcrumbs, icon: icon, action: {
-                    openResult(item)
-                }, sectionId: 0)
+            case let .result(_, item, icon):
+                return SettingsSearchResultItem(theme: theme, strings: strings, item: item, icon: icon, interaction: interaction, sectionId: 0)
         }
     }
 }
@@ -196,50 +204,146 @@ private struct SettingsSearchContainerTransition {
     let isSearching: Bool
 }
 
-private func preparedSettingsSearchContainerTransition(theme: PresentationTheme, strings: PresentationStrings, from fromEntries: [SettingsSearchEntry], to toEntries: [SettingsSearchEntry], openResult: @escaping (SettingsSearchableItem) -> Void, isSearching: Bool, forceUpdate: Bool) -> SettingsSearchContainerTransition {
+private func preparedSettingsSearchContainerTransition(theme: PresentationTheme, strings: PresentationStrings, from fromEntries: [SettingsSearchEntry], to toEntries: [SettingsSearchEntry], interaction: SettingsSearchInteraction, isSearching: Bool, forceUpdate: Bool) -> SettingsSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries, allUpdated: forceUpdate)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: theme, strings: strings, openResult: openResult), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: theme, strings: strings, openResult: openResult), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: theme, strings: strings, interaction: interaction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: theme, strings: strings, interaction: interaction), directionHint: nil) }
     
     return SettingsSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching)
 }
 
+private enum SettingsSearchRecentEntryStableId: Hashable {
+    case recent(SettingsSearchableItemId)
+    
+    static func ==(lhs: SettingsSearchRecentEntryStableId, rhs: SettingsSearchRecentEntryStableId) -> Bool {
+        switch lhs {
+            case let .recent(id):
+                if case .recent(id) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+    
+    var hashValue: Int {
+        switch self {
+            case let .recent(id):
+                return id.hashValue
+        }
+    }
+}
+
+private enum SettingsSearchRecentEntry: Comparable, Identifiable {
+    case recent(Int, SettingsSearchableItem)
+    
+    var stableId: SettingsSearchRecentEntryStableId {
+        switch self {
+            case let .recent(_, item):
+                return .recent(item.id)
+        }
+    }
+    
+    static func ==(lhs: SettingsSearchRecentEntry, rhs: SettingsSearchRecentEntry) -> Bool {
+        switch lhs {
+            case let .recent(lhsIndex, lhsItem):
+                if case let .recent(rhsIndex, rhsItem) = rhs, lhsIndex == rhsIndex, lhsItem.id == rhsItem.id {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+    
+    static func <(lhs: SettingsSearchRecentEntry, rhs: SettingsSearchRecentEntry) -> Bool {
+        switch lhs {
+            case let .recent(lhsIndex, _):
+                switch rhs {
+                    case let .recent(rhsIndex, _):
+                        return lhsIndex <= rhsIndex
+                }
+        }
+    }
+    
+    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: SettingsSearchInteraction, header: ListViewItemHeader) -> ListViewItem {
+        switch self {
+            case let .recent(_, item):
+                return SettingsSearchRecentItem(account: account, theme: theme, strings: strings, title: item.title, breadcrumbs: item.breadcrumbs, action: {
+                    interaction.openItem(item)
+                }, deleted: {
+                    interaction.deleteRecentItem(item.id)
+                }, header: header)
+        }
+    }
+}
+
+private struct SettingsSearchContainerRecentTransition {
+    let deletions: [ListViewDeleteItem]
+    let insertions: [ListViewInsertItem]
+    let updates: [ListViewUpdateItem]
+    let isEmpty: Bool
+}
+
+private func preparedSettingsSearchContainerRecentTransition(from fromEntries: [SettingsSearchRecentEntry], to toEntries: [SettingsSearchRecentEntry], account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: SettingsSearchInteraction, header: ListViewItemHeader) -> SettingsSearchContainerRecentTransition {
+    let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
+    
+    let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction, header: header), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction, header: header), directionHint: nil) }
+    
+    return SettingsSearchContainerRecentTransition(deletions: deletions, insertions: insertions, updates: updates, isEmpty: toEntries.isEmpty)
+}
+
+
 private final class SettingsSearchContainerNode: SearchDisplayControllerContentNode {
     private let dimNode: ASDisplayNode
     private let listNode: ListView
+    private let recentListNode: ListView
     
     private var enqueuedTransitions: [SettingsSearchContainerTransition] = []
+    private var enqueuedRecentTransitions: [(SettingsSearchContainerRecentTransition, Bool)] = []
     private var hasValidLayout = false
     
     private let searchQuery = Promise<String?>()
     private let searchDisposable = MetaDisposable()
     
+    private var recentDisposable: Disposable?
+    
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
-    
-    private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
+    private let presentationDataPromise: Promise<PresentationData>
     
     init(context: AccountContext, openResult: @escaping (SettingsSearchableItem) -> Void, exceptionsList: Signal<NotificationExceptionsList?, NoError>) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        
-        self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
+        self.presentationDataPromise = Promise(self.presentationData)
         
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         
         self.listNode = ListView()
-        
-        super.init()
-        
         self.listNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.listNode.isHidden = true
         
+        self.recentListNode = ListView()
+        self.recentListNode.backgroundColor = .clear
+        self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
+        
+        super.init()
+        
         self.addSubnode(self.dimNode)
+        self.addSubnode(self.recentListNode)
         self.addSubnode(self.listNode)
         
-        let queryAndFoundItems = combineLatest(settingsSearchableItems(context: context, exceptionsList: exceptionsList), faqSearchableItems(context: context))
+        let interaction = SettingsSearchInteraction(openItem: openResult, deleteRecentItem: { id in
+            removeRecentSettingsSearchItem(postbox: context.account.postbox, item: id)
+        })
+        
+        let searchableItems = Promise<[SettingsSearchableItem]>()
+        searchableItems.set(settingsSearchableItems(context: context, notificationExceptionsList: exceptionsList))
+        
+        let queryAndFoundItems = combineLatest(searchableItems.get(), faqSearchableItems(context: context))
         |> mapToSignal { searchableItems, faqSearchableItems -> Signal<(String, [SettingsSearchableItem])?, NoError> in
             return self.searchQuery.get()
             |> mapToSignal { query -> Signal<(String, [SettingsSearchableItem])?, NoError> in
@@ -247,7 +351,7 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
                     let results = searchSettingsItems(items: searchableItems, query: query)
                     let faqResults = searchSettingsItems(items: faqSearchableItems, query: query)
                     let finalResults: [SettingsSearchableItem]
-                    if faqResults.first?.id == .faq(0) {
+                    if faqResults.first?.id == .faq(1) {
                         finalResults = faqResults + results
                     } else {
                         finalResults = results + faqResults
@@ -259,8 +363,45 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
             }
         }
         
+        self.recentListNode.isHidden = false
+        
+        let recentSearchItems = combineLatest(searchableItems.get(), settingsSearchRecentItems(postbox: context.account.postbox))
+        |> map { searchableItems, recentItems -> [SettingsSearchableItem] in
+            let searchableItemsMap = searchableItems.reduce([SettingsSearchableItemId : SettingsSearchableItem]()) { (map, item) -> [SettingsSearchableItemId: SettingsSearchableItem] in
+                var map = map
+                map[item.id] = item
+                return map
+            }
+            var result: [SettingsSearchableItem] = []
+            for itemId in recentItems {
+                if let searchItem = searchableItemsMap[itemId] {
+                    result.append(searchItem)
+                }
+            }
+            return result
+        }
+        
+        let previousRecentItems = Atomic<[SettingsSearchRecentEntry]?>(value: nil)
+        self.recentDisposable = (combineLatest(recentSearchItems, self.presentationDataPromise.get())
+        |> deliverOnMainQueue).start(next: { [weak self] recentSearchItems, presentationData in
+            if let strongSelf = self {
+                var entries: [SettingsSearchRecentEntry] = []
+                for i in 0 ..< recentSearchItems.count {
+                    entries.append(.recent(i, recentSearchItems[i]))
+                }
+                
+                let header = ChatListSearchItemHeader(type: .recentPeers, theme: presentationData.theme, strings: presentationData.strings, actionTitle: presentationData.strings.WebSearch_RecentSectionClear.uppercased(), action: {
+                    clearRecentSettingsSearchItems(postbox: context.account.postbox)
+                })
+                
+                let previousEntries = previousRecentItems.swap(entries)
+                let transition = preparedSettingsSearchContainerRecentTransition(from: previousEntries ?? [], to: entries, account: context.account, theme: presentationData.theme, strings: presentationData.strings, interaction: interaction, header: header)
+                strongSelf.enqueueRecentTransition(transition, firstTime: previousEntries == nil)
+            }
+        })
+        
         let previousEntriesHolder = Atomic<([SettingsSearchEntry], PresentationTheme, PresentationStrings)?>(value: nil)
-        self.searchDisposable.set(combineLatest(queue: .mainQueue(), queryAndFoundItems, self.themeAndStringsPromise.get()).start(next: { [weak self] queryAndFoundItems, themeAndStrings in
+        self.searchDisposable.set(combineLatest(queue: .mainQueue(), queryAndFoundItems, self.presentationDataPromise.get()).start(next: { [weak self] queryAndFoundItems, presentationData in
             guard let strongSelf = self else {
                 return
             }
@@ -274,14 +415,14 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
                     if previousIcon != item.icon {
                         image = item.icon.image()
                     }
-                    entries.append(.result(index: entries.count, item: item, title: item.title, breadcrumbs: item.breadcrumbs, icon: image))
+                    entries.append(.result(index: entries.count, item: item, icon: image))
                     previousIcon = item.icon
                 }
             }
             
             if !entries.isEmpty || currentQuery == nil {
-                let previousEntriesAndPresentationData = previousEntriesHolder.swap((entries, themeAndStrings.0, themeAndStrings.1))
-                let transition = preparedSettingsSearchContainerTransition(theme: themeAndStrings.0, strings: themeAndStrings.1, from: previousEntriesAndPresentationData?.0 ?? [], to: entries, openResult: openResult, isSearching: queryAndFoundItems != nil, forceUpdate: previousEntriesAndPresentationData?.1 !== themeAndStrings.0 || previousEntriesAndPresentationData?.2 !== themeAndStrings.1)
+                let previousEntriesAndPresentationData = previousEntriesHolder.swap((entries, presentationData.theme, presentationData.strings))
+                let transition = preparedSettingsSearchContainerTransition(theme: presentationData.theme, strings: presentationData.strings, from: previousEntriesAndPresentationData?.0 ?? [], to: entries, interaction: interaction, isSearching: queryAndFoundItems != nil, forceUpdate: previousEntriesAndPresentationData?.1 !== presentationData.theme || previousEntriesAndPresentationData?.2 !== presentationData.strings)
                 strongSelf.enqueueTransition(transition)
             }
         }))
@@ -296,7 +437,7 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
                     
                     if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                         strongSelf.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
-                        strongSelf.themeAndStringsPromise.set(.single((presentationData.theme, presentationData.strings)))
+                        strongSelf.presentationDataPromise.set(.single(presentationData))
                     }
                 }
             })
@@ -304,10 +445,15 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
         self.listNode.beganInteractiveDragging = { [weak self] in
             self?.dismissInput?()
         }
+        
+        self.recentListNode.beganInteractiveDragging = { [weak self] in
+            self?.dismissInput?()
+        }
     }
     
     deinit {
         self.searchDisposable.dispose()
+        self.recentDisposable?.dispose()
         self.presentationDataDisposable?.dispose()
     }
     
@@ -319,6 +465,10 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.listNode.backgroundColor = theme.chatList.backgroundColor
+        if self.recentListNode.backgroundColor != .clear {
+            self.recentListNode.backgroundColor = theme.chatList.backgroundColor
+        }
+        self.recentListNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
     }
     
     override func searchTextUpdated(text: String) {
@@ -348,8 +498,36 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
             
             let isSearching = transition.isSearching
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+                self?.recentListNode.isHidden = isSearching
                 self?.listNode.isHidden = !isSearching
                 self?.dimNode.isHidden = isSearching
+            })
+        }
+    }
+    
+    private func enqueueRecentTransition(_ transition: SettingsSearchContainerRecentTransition, firstTime: Bool) {
+        self.enqueuedRecentTransitions.append((transition, firstTime))
+        
+        if self.hasValidLayout {
+            while !self.enqueuedRecentTransitions.isEmpty {
+                self.dequeueRecentTransition()
+            }
+        }
+    }
+    
+    private func dequeueRecentTransition() {
+        if let (transition, firstTime) = self.enqueuedRecentTransitions.first {
+            self.enqueuedRecentTransitions.remove(at: 0)
+            
+            var options = ListViewDeleteAndInsertOptions()
+            if firstTime {
+                options.insert(.PreferSynchronousDrawing)
+            } else {
+                options.insert(.AnimateInsertion)
+            }
+            
+            self.recentListNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+                self?.recentListNode.backgroundColor = transition.isEmpty ? .clear : self?.presentationData.theme.chatList.backgroundColor
             })
         }
     }
@@ -387,6 +565,9 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
         
+        self.recentListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        self.recentListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        
         self.listNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
@@ -396,6 +577,16 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
                 self.dequeueTransition()
             }
         }
+    }
+    
+    override func scrollToTop() {
+        let listNodeToScroll: ListView
+        if !self.listNode.isHidden {
+            listNodeToScroll = self.listNode
+        } else {
+            listNodeToScroll = self.recentListNode
+        }
+        listNodeToScroll.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
     
     @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -442,6 +633,8 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
         
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: SettingsSearchContainerNode(context: self.context, openResult: { [weak self] result in
             if let strongSelf = self {
+                addRecentSettingsSearchItem(postbox: strongSelf.context.account.postbox, item: result.id)
+                
                 result.present(strongSelf.context, strongSelf.getNavigationController?(), { [weak self] mode, controller in
                     if let strongSelf = self {
                         switch mode {
@@ -482,6 +675,10 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
     
     var isSearching: Bool {
         return self.searchDisplayController != nil
+    }
+    
+    override func scrollToTop() {
+        self.searchDisplayController?.contentNode.scrollToTop()
     }
     
     override func queryUpdated(_ query: String) {

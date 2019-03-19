@@ -166,7 +166,7 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
             })
         }
         
-        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Settings_FAQ_Intro, actions: [
+        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Settings_FAQ_Intro, actions: [
             TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_FAQ_Button, action: {
                 openFaq(resolvedUrlPromise)
                 dismissImpl?()
@@ -184,7 +184,7 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
         ]), nil)
     }, logout: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Settings_LogoutConfirmationTitle, text: presentationData.strings.Settings_LogoutConfirmationText, actions: [
+        let alertController = textAlertController(context: context, title: presentationData.strings.Settings_LogoutConfirmationTitle, text: presentationData.strings.Settings_LogoutConfirmationText, actions: [
             TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
             }),
             TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {

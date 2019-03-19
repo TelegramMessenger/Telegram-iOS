@@ -39,6 +39,8 @@
 		0941A9A0210B057200EBE194 /* OpenInActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A99F210B057200EBE194 /* OpenInActionSheetController.swift */; };
 		0941A9A4210B0E2E00EBE194 /* OpenInAppIconResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */; };
 		0941A9A6210B822D00EBE194 /* OpenInOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0941A9A5210B822D00EBE194 /* OpenInOptions.swift */; };
+		0947FCAE224043450086741C /* SettingsSearchRecentItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0947FCAD224043450086741C /* SettingsSearchRecentItem.swift */; };
+		0947FCB0224055990086741C /* StringHash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0947FCAF224055990086741C /* StringHash.swift */; };
 		0952D1752176DEB500194860 /* NotificationMuteSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0952D1742176DEB500194860 /* NotificationMuteSettingsController.swift */; };
 		0952D1772177FB5400194860 /* WatchPresetSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0952D1762177FB5400194860 /* WatchPresetSettings.swift */; };
 		0958FBB9218AD6AF00E0CBD8 /* InstantPageFeedbackItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0958FBB8218AD6AF00E0CBD8 /* InstantPageFeedbackItem.swift */; };
@@ -1196,6 +1198,8 @@
 		0941A99F210B057200EBE194 /* OpenInActionSheetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInActionSheetController.swift; sourceTree = "<group>"; };
 		0941A9A3210B0E2E00EBE194 /* OpenInAppIconResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInAppIconResources.swift; sourceTree = "<group>"; };
 		0941A9A5210B822D00EBE194 /* OpenInOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInOptions.swift; sourceTree = "<group>"; };
+		0947FCAD224043450086741C /* SettingsSearchRecentItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSearchRecentItem.swift; sourceTree = "<group>"; };
+		0947FCAF224055990086741C /* StringHash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringHash.swift; sourceTree = "<group>"; };
 		0952D1742176DEB500194860 /* NotificationMuteSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationMuteSettingsController.swift; sourceTree = "<group>"; };
 		0952D1762177FB5400194860 /* WatchPresetSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WatchPresetSettings.swift; sourceTree = "<group>"; };
 		0958FBB8218AD6AF00E0CBD8 /* InstantPageFeedbackItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPageFeedbackItem.swift; sourceTree = "<group>"; };
@@ -2589,6 +2593,7 @@
 				09CE95072237A53900A7D2C3 /* SettingsSearchableItems.swift */,
 				09CE95092237B93500A7D2C3 /* SettingsSearchResultItem.swift */,
 				09CE95102237F3C100A7D2C3 /* SettingsSearchRecentQueries.swift */,
+				0947FCAD224043450086741C /* SettingsSearchRecentItem.swift */,
 			);
 			name = Search;
 			sourceTree = "<group>";
@@ -2763,6 +2768,7 @@
 				D064EF861F69A06F00AC0398 /* MessageContentKind.swift */,
 				D0471B501EFD872F0074D609 /* CurrencyFormat.swift */,
 				0900678E21ED8E0E00530762 /* HexColor.swift */,
+				0947FCAF224055990086741C /* StringHash.swift */,
 			);
 			name = Strings;
 			sourceTree = "<group>";
@@ -5409,6 +5415,7 @@
 				D0EC6CFB1EB9F58800EBF1C3 /* ManagedAudioRecorder.swift in Sources */,
 				D048B339203C532800038D05 /* ChatMediaInputPane.swift in Sources */,
 				D0E817502012027900B82BBB /* ChatMessageEventLogPreviousLinkContentNode.swift in Sources */,
+				0947FCAE224043450086741C /* SettingsSearchRecentItem.swift in Sources */,
 				D0EC6CFD1EB9F58800EBF1C3 /* AudioWaveform.swift in Sources */,
 				D0EC6CFF1EB9F58800EBF1C3 /* OverlayMediaController.swift in Sources */,
 				D0EC6D001EB9F58800EBF1C3 /* OverlayMediaControllerNode.swift in Sources */,
@@ -5841,6 +5848,7 @@
 				D0EC6DC21EB9F58900EBF1C3 /* ChatMediaInputStickerPackItem.swift in Sources */,
 				091346982183498A00846E49 /* InstantPageArticleNode.swift in Sources */,
 				D0EC6DC31EB9F58900EBF1C3 /* ChatMediaInputStickerGridItem.swift in Sources */,
+				0947FCB0224055990086741C /* StringHash.swift in Sources */,
 				D0BE30432061B80B00FBE6D8 /* SecureIdAuthControllerNode.swift in Sources */,
 				099529B221D24F5800805E13 /* RadialDownloadContentNode.swift in Sources */,
 				D0E9BAE81F0574FF00F079A4 /* STPCustomer.m in Sources */,

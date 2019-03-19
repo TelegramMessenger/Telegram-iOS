@@ -521,7 +521,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     if let current = strongSelf.searchContainerNode {
                         searchContainerNode = current
                     } else {
-                        searchContainerNode = PaneSearchContainerNode(context: strongSelf.context, theme: strongSelf.theme, strings: strongSelf.strings, controllerInteraction: strongSelf.controllerInteraction, inputNodeInteraction: strongSelf.inputNodeInteraction, mode: searchMode, cancel: {
+                        searchContainerNode = PaneSearchContainerNode(context: strongSelf.context, theme: strongSelf.theme, strings: strongSelf.strings, controllerInteraction: strongSelf.controllerInteraction, inputNodeInteraction: strongSelf.inputNodeInteraction, mode: searchMode, trendingGifsPromise: strongSelf.gifPane.trendingPromise, cancel: {
                             self?.searchContainerNode?.deactivate()
                             self?.inputNodeInteraction.toggleSearch(false, nil)
                         })
@@ -1160,7 +1160,7 @@ final class ChatMediaInputNode: ChatInputNode {
         let panelHeight: CGFloat
         
         var isExpanded: Bool = false
-        if case let .media(mode, maybeExpanded) = interfaceState.inputMode, let expanded = maybeExpanded {
+        if case let .media(_, maybeExpanded) = interfaceState.inputMode, let expanded = maybeExpanded {
             isExpanded = true
             switch expanded {
                 case .content:
@@ -1204,7 +1204,9 @@ final class ChatMediaInputNode: ChatInputNode {
                     }
                     
                     if let placeholderNode = placeholderNode {
-                        searchContainerNode.animateIn(from: placeholderNode, transition: transition)
+                        searchContainerNode.animateIn(from: placeholderNode, transition: transition, completion: { [weak self] in
+                            self?.gifPane.removeFromSupernode()
+                        })
                     }
                 }
             }
@@ -1263,8 +1265,12 @@ final class ChatMediaInputNode: ChatInputNode {
             switch pane {
                 case .gifs:
                     if self.gifPane.supernode == nil  {
-                        self.insertSubnode(self.gifPane, belowSubnode: self.collectionListContainer)
-                        self.gifPane.frame = CGRect(origin: CGPoint(x: -width, y: 0.0), size: CGSize(width: width, height: panelHeight))
+                        if !displaySearch {
+                            self.insertSubnode(self.gifPane, belowSubnode: self.collectionListContainer)
+                            if self.searchContainerNode == nil {
+                                self.gifPane.frame = CGRect(origin: CGPoint(x: -width, y: 0.0), size: CGSize(width: width, height: panelHeight))
+                            }
+                        }
                     }
                     if self.gifPane.frame != paneFrame {
                         self.gifPane.layer.removeAnimation(forKey: "position")

@@ -23,21 +23,117 @@ enum SettingsSearchableItemIcon {
     case faq
 }
 
+
+
 enum SettingsSearchableItemId: Hashable {
-    case profile(Int)
-    case proxy(Int)
-    case savedMessages(Int)
-    case calls(Int)
-    case stickers(Int)
-    case notifications(Int)
-    case privacy(Int)
-    case data(Int)
-    case appearance(Int)
-    case language(Int)
-    case watch(Int)
-    case passport(Int)
-    case support(Int)
-    case faq(Int)
+    case profile(Int32)
+    case proxy(Int32)
+    case savedMessages(Int32)
+    case calls(Int32)
+    case stickers(Int32)
+    case notifications(Int32)
+    case privacy(Int32)
+    case data(Int32)
+    case appearance(Int32)
+    case language(Int32)
+    case watch(Int32)
+    case passport(Int32)
+    case support(Int32)
+    case faq(Int32)
+    
+    private var namespace: Int32 {
+        switch self {
+            case .profile:
+                return 1
+            case .proxy:
+                return 2
+            case .savedMessages:
+                return 3
+            case .calls:
+                return 4
+            case .stickers:
+                return 5
+            case .notifications:
+                return 6
+            case .privacy:
+                return 7
+            case .data:
+                return 8
+            case .appearance:
+                return 9
+            case .language:
+                return 10
+            case .watch:
+                return 11
+            case .passport:
+                return 12
+            case .support:
+                return 13
+            case .faq:
+                return 14
+        }
+    }
+    
+    private var id: Int32 {
+        switch self {
+            case let .profile(id),
+                 let .proxy(id),
+                 let .savedMessages(id),
+                 let .calls(id),
+                 let .stickers(id),
+                 let .notifications(id),
+                 let .privacy(id),
+                 let .data(id),
+                 let .appearance(id),
+                 let .language(id),
+                 let .watch(id),
+                 let .passport(id),
+                 let .support(id),
+                 let .faq(id):
+                return id
+        }
+    }
+    
+    var index: Int64 {
+        return (Int64(self.namespace) << 32) | Int64(self.id)
+    }
+    
+    init?(index: Int64) {
+        let namespace = Int32((index >> 32) & 0x7fffffff)
+        let id = Int32(bitPattern: UInt32(index & 0xffffffff))
+        switch namespace {
+            case 1:
+                self = .profile(id)
+            case 2:
+                self = .proxy(id)
+            case 3:
+                self = .savedMessages(id)
+            case 4:
+                self = .calls(id)
+            case 5:
+                self = .stickers(id)
+            case 6:
+                self = .notifications(id)
+            case 7:
+                self = .privacy(id)
+            case 8:
+                self = .data(id)
+            case 9:
+                self = .appearance(id)
+            case 10:
+                self = .language(id)
+            case 11:
+                self = .watch(id)
+            case 12:
+                self = .passport(id)
+            case 13:
+                self = .support(id)
+            case 14:
+                self = .faq(id)
+            default:
+                return nil
+        }
+    }
 }
 
 enum SettingsSearchableItemPresentation {
@@ -156,15 +252,11 @@ private func stickerSearchableItems(context: AccountContext) -> [SettingsSearcha
         }),
         SettingsSearchableItem(id: .stickers(4), title: strings.MaskStickerSettings_Title, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_Masks), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
             present(.push, installedStickerPacksController(context: context, mode: .masks, archivedPacks: nil, updatedPacks: { _ in}))
-        }),
-        SettingsSearchableItem(id: .stickers(5), title: strings.StickerPacksSettings_ArchivedMasks, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_ArchivedMasks), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers, strings.MaskStickerSettings_Title], present: { context, _, present in
-            present(.push, archivedStickerPacksController(context: context, mode: .masks, archived: nil, updatedPacks: { _ in
-            }))
         })
     ]
 }
 
-private func notificationSearchableItems(context: AccountContext, exceptionsList: NotificationExceptionsList?) -> [SettingsSearchableItem] {
+private func notificationSearchableItems(context: AccountContext, settings: GlobalNotificationSettingsSet, exceptionsList: NotificationExceptionsList?) -> [SettingsSearchableItem] {
     let icon: SettingsSearchableItemIcon = .notifications
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
@@ -215,6 +307,14 @@ private func notificationSearchableItems(context: AccountContext, exceptionsList
         return (.users(users), .groups(groups), .channels(channels))
     }
     
+    func filteredGlobalSound(_ sound: PeerMessageSound) -> PeerMessageSound {
+        if case .default = sound {
+            return .bundledModern(id: 0)
+        } else {
+            return sound
+        }
+    }
+    
     return [
         SettingsSearchableItem(id: .notifications(0), title: strings.Settings_NotificationsAndSounds, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_Title), icon: icon, breadcrumbs: [], present: { context, _, present in
             presentNotificationSettings(context, present, nil)
@@ -226,7 +326,15 @@ private func notificationSearchableItems(context: AccountContext, exceptionsList
             presentNotificationSettings(context, present, .messagePreviews)
         }),
         SettingsSearchableItem(id: .notifications(3), title: strings.Notifications_MessageNotificationsSound, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_MessageNotificationsSound), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_MessageNotifications.capitalized], present: { context, _, present in
-            presentNotificationSettings(context, present, nil)
+            
+            let controller = notificationSoundSelectionController(context: context, isModal: true, currentSound: filteredGlobalSound(settings.privateChats.sound), defaultSound: nil, completion: { value in
+                let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
+                    var settings = settings
+                    settings.privateChats.sound = value
+                    return settings
+                }).start()
+            })
+            present(.modal, controller)
         }),
         SettingsSearchableItem(id: .notifications(4), title: strings.Notifications_MessageNotificationsExceptions, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_MessageNotificationsExceptions), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_MessageNotifications.capitalized], present: { context, _, present in
             present(.push, NotificationExceptionsController(context: context, mode: exceptions().0, updatedMode: { _ in}))
@@ -238,7 +346,14 @@ private func notificationSearchableItems(context: AccountContext, exceptionsList
             presentNotificationSettings(context, present, .groupPreviews)
         }),
         SettingsSearchableItem(id: .notifications(7), title: strings.Notifications_GroupNotificationsSound, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_GroupNotificationsSound), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_GroupNotifications.capitalized], present: { context, _, present in
-            presentNotificationSettings(context, present, nil)
+            let controller = notificationSoundSelectionController(context: context, isModal: true, currentSound: filteredGlobalSound(settings.groupChats.sound), defaultSound: nil, completion: { value in
+                let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
+                    var settings = settings
+                    settings.groupChats.sound = value
+                    return settings
+                }).start()
+            })
+            present(.modal, controller)
         }),
         SettingsSearchableItem(id: .notifications(8), title: strings.Notifications_GroupNotificationsExceptions, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_GroupNotificationsExceptions), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_GroupNotifications.capitalized], present: { context, _, present in
             present(.push, NotificationExceptionsController(context: context, mode: exceptions().1, updatedMode: { _ in}))
@@ -250,7 +365,14 @@ private func notificationSearchableItems(context: AccountContext, exceptionsList
             presentNotificationSettings(context, present, .channelPreviews)
         }),
         SettingsSearchableItem(id: .notifications(11), title: strings.Notifications_ChannelNotificationsSound, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_ChannelNotificationsSound), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_ChannelNotifications.capitalized], present: { context, _, present in
-            presentNotificationSettings(context, present, nil)
+            let controller = notificationSoundSelectionController(context: context, isModal: true, currentSound: filteredGlobalSound(settings.channels.sound), defaultSound: nil, completion: { value in
+                let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
+                    var settings = settings
+                    settings.channels.sound = value
+                    return settings
+                }).start()
+            })
+            present(.modal, controller)
         }),
         SettingsSearchableItem(id: .notifications(12), title: strings.Notifications_MessageNotificationsExceptions, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_ChannelNotificationsExceptions), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_ChannelNotifications.capitalized], present: { context, _, present in
             present(.push, NotificationExceptionsController(context: context, mode: exceptions().2, updatedMode: { _ in}))
@@ -292,8 +414,8 @@ private func privacySearchableItems(context: AccountContext) -> [SettingsSearcha
     let icon: SettingsSearchableItemIcon = .privacy
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
-    let presentPrivacySettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void) -> Void = { context, present in
-        present(.push, privacyAndSecurityController(context: context))
+    let presentPrivacySettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void, PrivacyAndSecurityEntryTag?) -> Void = { context, present, itemTag in
+        present(.push, privacyAndSecurityController(context: context, focusOnItemTag: itemTag))
     }
     
     let presentSelectivePrivacySettings: (AccountContext, SelectivePrivacySettingsKind, @escaping (SettingsSearchableItemPresentation, ViewController) -> Void) -> Void = { context, kind, present in
@@ -359,7 +481,7 @@ private func privacySearchableItems(context: AccountContext) -> [SettingsSearcha
     
     return [
         SettingsSearchableItem(id: .privacy(0), title: strings.Settings_PrivacySettings, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Title), icon: icon, breadcrumbs: [], present: { context, _, present in
-            presentPrivacySettings(context, present)
+            presentPrivacySettings(context, present, nil)
         }),
         SettingsSearchableItem(id: .privacy(1), title: strings.Settings_BlockedUsers, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_BlockedUsers), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
             present(.push, blockedPeersController(context: context))
@@ -400,7 +522,7 @@ private func privacySearchableItems(context: AccountContext) -> [SettingsSearcha
             present(.push, recentSessionsController(context: context))
         }),
         SettingsSearchableItem(id: .privacy(10), title: strings.PrivacySettings_DeleteAccountTitle.capitalized, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_DeleteAccountIfAwayFor), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
-            presentPrivacySettings(context, present)
+            presentPrivacySettings(context, present, .accountTimeout)
         }),
         SettingsSearchableItem(id: .privacy(11), title: strings.PrivacySettings_DataSettings, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_Data_Title), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
             presentDataPrivacySettings(context, present)
@@ -481,7 +603,7 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
     ]
 }
 
-private func proxySearchableItems(context: AccountContext) -> [SettingsSearchableItem] {
+private func proxySearchableItems(context: AccountContext, servers: [ProxyServerSettings]) -> [SettingsSearchableItem] {
     let icon: SettingsSearchableItemIcon = .proxy
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
@@ -489,17 +611,27 @@ private func proxySearchableItems(context: AccountContext) -> [SettingsSearchabl
         present(.push, proxySettingsController(context: context))
     }
     
-    return [
-        SettingsSearchableItem(id: .proxy(0), title: strings.Settings_Proxy, alternate: synonyms(strings.SettingsSearch_Synonyms_Proxy_Title), icon: icon, breadcrumbs: [], present: { context, _, present in
+    var items: [SettingsSearchableItem] = []
+    items.append(SettingsSearchableItem(id: .proxy(0), title: strings.Settings_Proxy, alternate: synonyms(strings.SettingsSearch_Synonyms_Proxy_Title), icon: icon, breadcrumbs: [], present: { context, _, present in
             presentProxySettings(context, present)
-        }),
-        SettingsSearchableItem(id: .proxy(1), title: strings.SocksProxySetup_AddProxy, alternate: synonyms(strings.SettingsSearch_Synonyms_Proxy_AddProxy), icon: icon, breadcrumbs: [strings.Settings_Proxy], present: { context, _, present in
+    }))
+    items.append(SettingsSearchableItem(id: .proxy(1), title: strings.SocksProxySetup_AddProxy, alternate: synonyms(strings.SettingsSearch_Synonyms_Proxy_AddProxy), icon: icon, breadcrumbs: [strings.Settings_Proxy], present: { context, _, present in
             present(.modal, proxyServerSettingsController(context: context))
-        }),
-        SettingsSearchableItem(id: .proxy(2), title: strings.SocksProxySetup_UseForCalls, alternate: synonyms(strings.SettingsSearch_Synonyms_Proxy_UseForCalls), icon: icon, breadcrumbs: [strings.Settings_Proxy], present: { context, _, present in
-            presentProxySettings(context, present)
-        })
-    ]
+    }))
+    
+    var hasSocksServers = false
+    for server in servers {
+        if case .socks5 = server.connection {
+            hasSocksServers = true
+            break
+        }
+    }
+    if hasSocksServers {
+        items.append(SettingsSearchableItem(id: .proxy(2), title: strings.SocksProxySetup_UseForCalls, alternate: synonyms(strings.SettingsSearch_Synonyms_Proxy_UseForCalls), icon: icon, breadcrumbs: [strings.Settings_Proxy], present: { context, _, present in
+                presentProxySettings(context, present)
+        }))
+    }
+    return items
 }
 
 private func appearanceSearchableItems(context: AccountContext) -> [SettingsSearchableItem] {
@@ -540,16 +672,42 @@ private func appearanceSearchableItems(context: AccountContext) -> [SettingsSear
     ]
 }
 
-func settingsSearchableItems(context: AccountContext, exceptionsList: Signal<NotificationExceptionsList?, NoError>) -> Signal<[SettingsSearchableItem], NoError> {
+func settingsSearchableItems(context: AccountContext, notificationExceptionsList: Signal<NotificationExceptionsList?, NoError>) -> Signal<[SettingsSearchableItem], NoError> {
     let watchAppInstalled = (context.watchManager?.watchAppInstalled ?? .single(false))
     |> take(1)
+
     let canAddAccount = activeAccountsAndPeers(context: context)
     |> take(1)
     |> map { accountsAndPeers -> Bool in
         return accountsAndPeers.1.count + 1 < maximumNumberOfAccounts
     }
-    return combineLatest(watchAppInstalled, canAddAccount, exceptionsList)
-    |> map { watchAppInstalled, canAddAccount, exceptionsList in
+    
+    let notificationSettings = context.account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications])
+    |> take(1)
+    |> map { view -> GlobalNotificationSettingsSet in
+        let viewSettings: GlobalNotificationSettingsSet
+        if let settings = view.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+            viewSettings = settings.effective
+        } else {
+            viewSettings = GlobalNotificationSettingsSet.defaultSettings
+        }
+        return viewSettings
+    }
+    
+    let proxyServers = context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
+    |> map { sharedData -> ProxySettings in
+        if let value = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings {
+            return value
+        } else {
+            return ProxySettings.defaultSettings
+        }
+    }
+    |> map { settings -> [ProxyServerSettings] in
+        return settings.servers
+    }
+    
+    return combineLatest(watchAppInstalled, canAddAccount, notificationSettings, notificationExceptionsList, proxyServers)
+    |> map { watchAppInstalled, canAddAccount, notificationSettings, notificationExceptionsList, proxyServers in
         let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
         
         var allItems: [SettingsSearchableItem] = []
@@ -568,7 +726,7 @@ func settingsSearchableItems(context: AccountContext, exceptionsList: Signal<Not
         let stickerItems = stickerSearchableItems(context: context)
         allItems.append(contentsOf: stickerItems)
 
-        let notificationItems = notificationSearchableItems(context: context, exceptionsList: exceptionsList)
+        let notificationItems = notificationSearchableItems(context: context, settings: notificationSettings, exceptionsList: notificationExceptionsList)
         allItems.append(contentsOf: notificationItems)
         
         let privacyItems = privacySearchableItems(context: context)
@@ -577,7 +735,7 @@ func settingsSearchableItems(context: AccountContext, exceptionsList: Signal<Not
         let dataItems = dataSearchableItems(context: context)
         allItems.append(contentsOf: dataItems)
         
-        let proxyItems = proxySearchableItems(context: context)
+        let proxyItems = proxySearchableItems(context: context, servers: proxyServers)
         allItems.append(contentsOf: proxyItems)
         
         let appearanceItems = appearanceSearchableItems(context: context)
@@ -687,7 +845,12 @@ func searchSettingsItems(items: [SettingsSearchableItem], query: String) -> [Set
     for item in items {
         var string = item.title
         if !item.alternate.isEmpty {
-            string += " \(item.alternate.joined(separator: " "))"
+            for alternate in item.alternate {
+                let trimmed = alternate.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    string += " \(trimmed)"
+                }
+            }
         }
         if item.breadcrumbs.count > 1 {
             string += " \(item.breadcrumbs.suffix(from: 1).joined(separator: " "))"

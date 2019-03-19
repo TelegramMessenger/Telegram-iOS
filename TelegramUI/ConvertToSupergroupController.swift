@@ -130,7 +130,7 @@ public func convertToSupergroupController(context: AccountContext, peerId: PeerI
     let arguments = ConvertToSupergroupArguments(convert: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Group_UpgradeConfirmation, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Group_UpgradeConfirmation, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
             var alreadyConverting = false
             updateState { state in
                 if state.isConverting {

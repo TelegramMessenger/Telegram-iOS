@@ -32,6 +32,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     private let emptyNode: ImmediateTextNode
     
     private let disposable = MetaDisposable()
+    let trendingPromise = Promise<[FileMediaReference]?>(nil)
     
     private var validLayout: (CGSize, CGFloat, CGFloat, Bool, Bool)?
     private var didScrollPreviousOffset: CGFloat?
@@ -124,6 +125,8 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         super.willEnterHierarchy()
         
         if self.multiplexedNode == nil {
+            self.trendingPromise.set(paneGifSearchForQuery(account: account, query: "", updateActivity: nil))
+            
             let multiplexedNode = MultiplexedVideoNode(account: account)
             self.multiplexedNode = multiplexedNode
             if let layout = self.validLayout {

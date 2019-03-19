@@ -779,7 +779,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
             pushControllerImpl?(ChannelStatsController(context: context, url: url, peerId: peerId))
         }, error: { _ in
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
         }))
     }, openAdmins: {
         pushControllerImpl?(channelAdminsController(context: context, peerId: peerId))

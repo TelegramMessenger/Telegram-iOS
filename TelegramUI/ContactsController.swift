@@ -70,6 +70,8 @@ public class ContactsController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
+    var switchToChatsController: (() -> Void)?
+    
     public init(context: AccountContext) {
         self.context = context
         
@@ -187,12 +189,38 @@ public class ContactsController: ViewController {
         
         self.contactsNode.navigationBar = self.navigationBar
         
-        self.contactsNode.requestDeactivateSearch = { [weak self] in
-            self?.deactivateSearch()
+        let openPeer: (ContactListPeer, Bool) -> Void = { [weak self] peer, fromSearch in
+            if let strongSelf = self {
+                strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                switch peer {
+                    case let .peer(peer, _):
+                        if let navigationController = strongSelf.navigationController as? NavigationController {
+                            navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
+                                if fromSearch {
+                                    self?.deactivateSearch(animated: false)
+                                    self?.switchToChatsController?()
+                                }
+                            })
+                        }
+                    case let .deviceContact(id, _):
+                        let _ = ((strongSelf.context.sharedContext.contactDataManager?.extendedData(stableId: id) ?? .single(nil))
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { value in
+                            guard let strongSelf = self, let value = value else {
+                                return
+                            }
+                            (strongSelf.navigationController as? NavigationController)?.pushViewController(deviceContactInfoController(context: strongSelf.context, subject: .vcard(nil, id, value)))
+                        })
+                }
+            }
         }
         
-        self.contactsNode.requestOpenPeerFromSearch = { [weak self] peer in
-            self?.contactsNode.contactListNode.openPeer?(peer)
+        self.contactsNode.requestDeactivateSearch = { [weak self] in
+            self?.deactivateSearch(animated: true)
+        }
+        
+        self.contactsNode.requestOpenPeerFromSearch = { peer in
+            openPeer(peer, true)
         }
         
         self.contactsNode.contactListNode.openPrivacyPolicy = { [weak self] in
@@ -213,23 +241,8 @@ public class ContactsController: ViewController {
             self?.activateSearch()
         }
         
-        self.contactsNode.contactListNode.openPeer = { [weak self] peer in
-            if let strongSelf = self {
-                strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
-                switch peer {
-                    case let .peer(peer, _):
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peer.id)))
-                    case let .deviceContact(id, _):
-                        let _ = ((strongSelf.context.sharedContext.contactDataManager?.extendedData(stableId: id) ?? .single(nil))
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { value in
-                            guard let strongSelf = self, let value = value else {
-                                return
-                            }
-                            (strongSelf.navigationController as? NavigationController)?.pushViewController(deviceContactInfoController(context: strongSelf.context, subject: .vcard(nil, id, value)))
-                        })
-                }
-            }
+        self.contactsNode.contactListNode.openPeer = { peer in
+            openPeer(peer, false)
         }
         
         self.contactsNode.openInvite = { [weak self] in
@@ -295,11 +308,11 @@ public class ContactsController: ViewController {
         }
     }
     
-    private func deactivateSearch() {
+    private func deactivateSearch(animated: Bool) {
         if !self.displayNavigationBar {
-            self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
+            self.setDisplayNavigationBar(true, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)
             if let searchContentNode = self.searchContentNode {
-                self.contactsNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode)
+                self.contactsNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
             }
         }
     }
@@ -362,7 +375,7 @@ public class ContactsController: ViewController {
                     DeviceAccess.authorizeAccess(to: .contacts, context: strongSelf.context)
                 default:
                     let presentationData = strongSelf.presentationData
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                    strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
                         self?.context.sharedContext.applicationBindings.openSettings()
                     })]), in: .window(.root))
             }

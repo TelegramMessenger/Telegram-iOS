@@ -54,10 +54,11 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
     }
     
     func titleContentNode(current: (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode)?) -> NavigationBarContentNode & ItemListControllerSearchNavigationContentNode {
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         if let current = current as? GroupInfoSearchNavigationContentNode {
+            current.updateTheme(presentationData.theme)
             return current
         } else {
-            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             return GroupInfoSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, mode: self.searchMode, cancel: self.cancel, updateActivity: { [weak self] value in
                 self?.updateActivity = value
             })
@@ -91,6 +92,10 @@ private final class ChannelMembersSearchItemNode: ItemListControllerSearchNode {
     
     override func queryUpdated(_ query: String) {
         self.containerNode.searchTextUpdated(text: query)
+    }
+    
+    override func scrollToTop() {
+        self.containerNode.scrollToTop()
     }
     
     override func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

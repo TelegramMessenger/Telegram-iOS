@@ -7,11 +7,12 @@ public func textAlertController(context: AccountContext, title: String?, text: S
     let theme = presentationData.theme
     
     let controller = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: theme), title: title, text: text, actions: actions)
-    _ = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
-        if let strongController = controller {
-            strongController.theme = AlertControllerTheme(presentationTheme: presentationData.theme)
-        }
+    let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
+        controller?.theme = AlertControllerTheme(presentationTheme: presentationData.theme)
     })
+    controller.dismissed = {
+        presentationDataDisposable.dispose()
+    }
     
     return controller
 }

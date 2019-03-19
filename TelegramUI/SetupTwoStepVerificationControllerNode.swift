@@ -350,7 +350,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                         guard let strongSelf = self else {
                                             return
                                         }
-                                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                                         strongSelf.updateState({ state in
                                             var state = state
                                             state.data.activity = false
@@ -399,7 +399,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                     case .generic:
                                         text = strongSelf.presentationData.strings.Login_UnknownError
                                 }
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                                 strongSelf.updateState({ state in
                                     var state = state
                                     state.data.activity = false
@@ -520,7 +520,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                         if password == confirmation {
                             state.data.state = .enterHint(mode: mode, password: password, hint: "")
                         } else {
-                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_SetupPasswordConfirmFailed, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                            strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_SetupPasswordConfirmFailed, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                         }
                     case let .enterHint(mode, password, hint):
                         switch mode {
@@ -552,7 +552,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                                     strongSelf.updateState({ state in
                                         var state = state
                                         state.data.activity = false
@@ -596,7 +596,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                         case .generic:
                                             text = strongSelf.presentationData.strings.Login_UnknownError
                                     }
-                                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                                     strongSelf.updateState({ state in
                                         var state = state
                                         state.data.activity = false
@@ -638,7 +638,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                                     strongSelf.updateState({ state in
                                         var state = state
                                         state.data.activity = false
@@ -667,7 +667,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                                 case .generic:
                                     text = strongSelf.presentationData.strings.Login_UnknownError
                             }
-                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                            strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                             
                             strongSelf.updateState({ state in
                                 var state = state
@@ -692,7 +692,8 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
             }, transition: .animated(duration: 0.5, curve: .spring))
         }
         if case let .enterEmail(enterEmail)? = self.innerState.data.state, case .create = enterEmail.state, enterEmail.email.isEmpty {
-            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: nil, text: self.presentationData.strings.TwoStepAuth_EmailSkipAlert, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .destructiveAction, title: self.presentationData.strings.TwoStepAuth_EmailSkip, action: {
+            
+            self.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.TwoStepAuth_EmailSkipAlert, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .destructiveAction, title: self.presentationData.strings.TwoStepAuth_EmailSkip, action: {
                 continueImpl()
             })]), nil)
         } else {

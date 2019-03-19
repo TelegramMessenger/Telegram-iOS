@@ -183,12 +183,12 @@ final class SecureIdAuthController: ViewController {
                 
                 if appUpdateRequired {
                     let errorText = strongSelf.presentationData.strings.Passport_UpdateRequiredError
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Application_Update, action: {
+                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Application_Update, action: {
                         context.sharedContext.applicationBindings.openAppStorePage()
                     })]), in: .window(.root))
                 } else if let callbackUrl = callbackUrl, let peerId = peerId {
                     let errorText = strongSelf.presentationData.strings.Login_UnknownError
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                         if let error = passError {
                             strongSelf.openUrl(secureIdCallbackUrl(with: callbackUrl, peerId: peerId, result: .error, parameters: ["error": error]))
                         }
@@ -461,7 +461,7 @@ final class SecureIdAuthController: ViewController {
                     case .secretPasswordMismatch:
                         errorText = strongSelf.presentationData.strings.Login_UnknownError
                 }
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 
                 if let verificationState = strongSelf.state.verificationState, case let .passwordChallenge(hint, .checking, hasRecoveryEmail) = verificationState {
                     strongSelf.updateState(animated: !inBackground, { state in
@@ -487,7 +487,7 @@ final class SecureIdAuthController: ViewController {
         }
         
         if passwordChallenge.hasRecoveryEmail {
-            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: self.presentationData.strings.Passport_ForgottenPassword, text: self.presentationData.strings.Passport_PasswordReset, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Login_ResetAccountProtected_Reset, action: { [weak self] in
+            self.present(textAlertController(context: self.context, title: self.presentationData.strings.Passport_ForgottenPassword, text: self.presentationData.strings.Passport_PasswordReset, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Login_ResetAccountProtected_Reset, action: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -517,7 +517,7 @@ final class SecureIdAuthController: ViewController {
                 }))
             })]), in: .window(.root))
         } else {
-            self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: nil, text: self.presentationData.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            self.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.TwoStepAuth_RecoveryUnavailable, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
         }
     }
     
@@ -633,7 +633,7 @@ final class SecureIdAuthController: ViewController {
     }
     
     @objc private func infoPressed() {
-        self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.presentationData.theme), title: self.presentationData.strings.Passport_InfoTitle, text: self.presentationData.strings.Passport_InfoText.replacingOccurrences(of: "**", with: ""), actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {}), TextAlertAction(type: .genericAction, title: self.presentationData.strings.Passport_InfoLearnMore, action: { [weak self] in
+        self.present(textAlertController(context: self.context, title: self.presentationData.strings.Passport_InfoTitle, text: self.presentationData.strings.Passport_InfoText.replacingOccurrences(of: "**", with: ""), actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {}), TextAlertAction(type: .genericAction, title: self.presentationData.strings.Passport_InfoLearnMore, action: { [weak self] in
             guard let strongSelf = self else {
                 return
             }

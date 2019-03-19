@@ -321,8 +321,17 @@ class PaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textField.becomeFirstResponder()
     }
     
-    func animateIn(from node: PaneSearchBarPlaceholderNode, duration: Double, timingFunction: String) {
+    func animateIn(from node: PaneSearchBarPlaceholderNode, duration: Double, timingFunction: String, completion: @escaping () -> Void) {
         let initialTextBackgroundFrame = node.view.convert(node.backgroundNode.frame, to: self.view)
+        
+        var backgroundCompleted = false
+        var separatorCompleted = false
+        var textBackgroundCompleted = false
+        let intermediateCompletion: () -> Void = {
+            if backgroundCompleted && separatorCompleted && textBackgroundCompleted {
+                completion()
+            }
+        }
         
         let initialBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: self.bounds.size.width, height: max(0.0, initialTextBackgroundFrame.maxY + 8.0)))
         if let fromBackgroundColor = node.backgroundColor, let toBackgroundColor = self.backgroundNode.backgroundColor {
@@ -330,13 +339,22 @@ class PaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         } else {
             self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         }
-        self.backgroundNode.layer.animateFrame(from: initialBackgroundFrame, to: self.backgroundNode.frame, duration: duration, timingFunction: timingFunction)
+        self.backgroundNode.layer.animateFrame(from: initialBackgroundFrame, to: self.backgroundNode.frame, duration: duration, timingFunction: timingFunction, completion: { _ in
+            backgroundCompleted = true
+            intermediateCompletion()
+        })
         
         let initialSeparatorFrame = CGRect(origin: CGPoint(x: 0.0, y: max(0.0, initialTextBackgroundFrame.maxY + 8.0)), size: CGSize(width: self.bounds.size.width, height: UIScreenPixel))
         self.separatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
-        self.separatorNode.layer.animateFrame(from: initialSeparatorFrame, to: self.separatorNode.frame, duration: duration, timingFunction: timingFunction)
+        self.separatorNode.layer.animateFrame(from: initialSeparatorFrame, to: self.separatorNode.frame, duration: duration, timingFunction: timingFunction, completion: { _ in
+            separatorCompleted = true
+            intermediateCompletion()
+        })
         
-        self.textBackgroundNode.layer.animateFrame(from: initialTextBackgroundFrame, to: self.textBackgroundNode.frame, duration: duration, timingFunction: timingFunction)
+        self.textBackgroundNode.layer.animateFrame(from: initialTextBackgroundFrame, to: self.textBackgroundNode.frame, duration: duration, timingFunction: timingFunction, completion: { _ in
+            textBackgroundCompleted = true
+            intermediateCompletion()
+        })
         
         let labelFrame = self.textField.placeholderLabel.frame
         let initialLabelNodeFrame = CGRect(origin: node.labelNode.view.convert(node.labelNode.bounds, to: self.textField.superview).origin, size: labelFrame.size)

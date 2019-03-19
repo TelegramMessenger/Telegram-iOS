@@ -1185,7 +1185,7 @@ final class ContactListNode: ASDisplayNode {
             |> deliverOnMainQueue).start(next: { status in
                 switch status {
                     case .notDetermined:
-                        DeviceAccess.authorizeAccess(to: .contacts)
+                        DeviceAccess.authorizeAccess(to: .contacts, context: context)
                     case .denied, .restricted:
                         context.sharedContext.applicationBindings.openSettings()
                     default:

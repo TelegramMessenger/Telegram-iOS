@@ -345,7 +345,7 @@ func twoStepVerificationPasswordEntryController(context: AccountContext, mode: T
                             case .invalidEmail:
                                 alertText = presentationData.strings.TwoStepAuth_EmailInvalid
                         }
-                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        presentControllerImpl?(textAlertController(context: context, title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }))
                 case let .setupEmail(password):
                     updatePasswordDisposable.set((updateTwoStepVerificationEmail(network: context.account.network, currentPassword: password, updatedEmail: email) |> deliverOnMainQueue).start(next: { update in
@@ -370,12 +370,12 @@ func twoStepVerificationPasswordEntryController(context: AccountContext, mode: T
                             case .invalidEmail:
                                 alertText = presentationData.strings.TwoStepAuth_EmailInvalid
                         }
-                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        presentControllerImpl?(textAlertController(context: context, title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }))
             }
         } else if invalidReentry {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.TwoStepAuth_SetupPasswordConfirmFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.TwoStepAuth_SetupPasswordConfirmFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }
     

@@ -1501,7 +1501,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                         let result = ValuePromise<Bool>()
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         if let contactsController = contactsController {
-                            let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.GroupInfo_AddParticipantConfirmation(peer.displayTitle).0, actions: [
+                            let alertController = textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddParticipantConfirmation(peer.displayTitle).0, actions: [
                                 TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {
                                     result.set(false)
                                 }),
@@ -1671,26 +1671,24 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 if let contactsController = contactsController as? ContactMultiselectionController {
                     selectAddMemberDisposable.set((contactsController.result
                     |> deliverOnMainQueue).start(next: { [weak contactsController] peers in
-                            
-                            contactsController?.displayProgress = true
-                            addMemberDisposable.set((addMembers(peers)
-                                |> deliverOnMainQueue).start(error: { error in
-                                    if peers.count == 1, error == .restricted {
-                                        switch peers[0] {
-                                        case let .peer(peerId):
-                                            _ = (context.account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { peer in
-                                                let alert = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})])
-                                                presentControllerImpl?(alert, nil)
-                                            })
-                                        default:
-                                            break
-                                        }
+                        contactsController?.displayProgress = true
+                        addMemberDisposable.set((addMembers(peers)
+                            |> deliverOnMainQueue).start(error: { error in
+                                if peers.count == 1, error == .restricted {
+                                    switch peers[0] {
+                                    case let .peer(peerId):
+                                        _ = (context.account.postbox.loadedPeerWithId(peerId) |> deliverOnMainQueue).start(next: { peer in
+                                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                        })
+                                    default:
+                                        break
                                     }
-                                    
-                                    contactsController?.dismiss()
-                                },completed: {
-                                    contactsController?.dismiss()
-                                }))
+                                }
+                                
+                                contactsController?.dismiss()
+                            },completed: {
+                                contactsController?.dismiss()
+                            }))
                         }))
                     contactsController.dismissed = {
                         selectAddMemberDisposable.set(nil)

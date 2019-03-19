@@ -6,19 +6,17 @@ import SwiftSignalKit
 class SettingsSearchResultItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let title: String
-    let breadcrumbs: [String]
+    let item: SettingsSearchableItem
     let icon: UIImage?
-    let action: () -> Void
+    let interaction: SettingsSearchInteraction
     let sectionId: ItemListSectionId
     
-    init(theme: PresentationTheme, strings: PresentationStrings, title: String, breadcrumbs: [String], icon: UIImage?, action: @escaping () -> Void, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, strings: PresentationStrings, item: SettingsSearchableItem, icon: UIImage?, interaction: SettingsSearchInteraction, sectionId: ItemListSectionId) {
         self.theme = theme
         self.strings = strings
-        self.title = title
-        self.breadcrumbs = breadcrumbs
+        self.item = item
         self.icon = icon
-        self.action = action
+        self.interaction = interaction
         self.sectionId = sectionId
     }
     
@@ -67,7 +65,7 @@ class SettingsSearchResultItem: ListViewItem, ItemListItem {
     
     func selected(listView: ListView){
         listView.clearHighlightAnimated(true)
-        self.action()
+        self.interaction.openItem(self.item)
     }
 }
 
@@ -136,9 +134,9 @@ class SettingsSearchResultItemNode: ListViewItemNode {
             
             leftInset += contentInset
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 16.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 16.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let subtitle = item.breadcrumbs.joined(separator: " → ")
+            let subtitle = item.item.breadcrumbs.joined(separator: " → ")
             
             let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: subtitle, font: subtitleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 16.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             

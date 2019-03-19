@@ -752,18 +752,16 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             let resolvedUrlPromise = Promise<ResolvedUrl>()
             resolvedUrlPromise.set(resolvedUrl)
             
-            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Settings_FAQ_Intro, actions: [
+            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Settings_FAQ_Intro, actions: [
                 TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_FAQ_Button, action: {
-                    openFaq(resolvedUrlPromise)
-                }),
-                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-                    supportPeerDisposable.set((supportPeer.get() |> take(1) |> deliverOnMainQueue).start(next: { peerId in
-                        if let peerId = peerId {
-                            pushControllerImpl?(ChatController(context: context, chatLocation: .peer(peerId)))
-                        }
-                    }))
-                })
-            ]), nil)
+                openFaq(resolvedUrlPromise)
+            }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                supportPeerDisposable.set((supportPeer.get() |> take(1) |> deliverOnMainQueue).start(next: { peerId in
+                    if let peerId = peerId {
+                        pushControllerImpl?(ChatController(context: context, chatLocation: .peer(peerId)))
+                    }
+                }))
+            })]), nil)
         })
     }, openFaq: {
         let resolvedUrlPromise = Promise<ResolvedUrl>()
@@ -1012,14 +1010,17 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         )
     }
     
-    let notifyExceptions = Promise<NotificationExceptionsList?>(nil)
+    let notifyExceptions = Promise<NotificationExceptionsList?>(NotificationExceptionsList(peers: [:], settings: [:]))
     let updateNotifyExceptions: () -> Void = {
         notifyExceptions.set(
             contextValue.get()
             |> take(1)
             |> mapToSignal { context -> Signal<NotificationExceptionsList?, NoError> in
-                return notificationExceptionsList(network: context.account.network)
-                |> map(Optional.init)
+                return .single(NotificationExceptionsList(peers: [:], settings: [:]))
+                |> then(
+                    notificationExceptionsList(network: context.account.network)
+                    |> map(Optional.init)
+                )
             }
         )
     }
@@ -1067,11 +1068,16 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         }
         
         let searchItem = SettingsSearchItem(context: context, theme: presentationData.theme, placeholder: presentationData.strings.Common_Search, activated: state.isSearching, updateActivated: { value in
-            setDisplayNavigationBarImpl?(!value)
+            if !value {
+                setDisplayNavigationBarImpl?(true)
+            }
             updateState { state in
                 var state = state
                 state.isSearching = value
                 return state
+            }
+            if value {
+                setDisplayNavigationBarImpl?(false)
             }
         }, presentController: { v, a in
             dismissInputImpl?()

@@ -368,7 +368,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
                     case .restricted:
                         text = presentationData.strings.Channel_ErrorAddBlocked
                 }
-                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 contactsController?.dismiss()
             }))
             

@@ -247,7 +247,7 @@ func createPasswordController(context: AccountContext, createPasswordContext: Cr
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             if state.passwordText.isEmpty {
             } else if state.passwordText != state.passwordConfirmationText {
-                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.TwoStepAuth_SetupPasswordConfirmFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.TwoStepAuth_SetupPasswordConfirmFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             } else {
                 let saveImpl: () -> Void = {
                     var currentPassword: String?
@@ -287,7 +287,7 @@ func createPasswordController(context: AccountContext, createPasswordContext: Cr
                                 }
                             }
                         }, error: { _ in
-                            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                         }))
                 }
                 
@@ -304,7 +304,7 @@ func createPasswordController(context: AccountContext, createPasswordContext: Cr
                 }
                 
                 if emailAlert {
-                    presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.TwoStepAuth_EmailSkipAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .destructiveAction, title: presentationData.strings.TwoStepAuth_EmailSkip, action: {
+                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.TwoStepAuth_EmailSkipAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .destructiveAction, title: presentationData.strings.TwoStepAuth_EmailSkip, action: {
                         saveImpl()
                     })]), nil)
                 } else {
