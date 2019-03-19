@@ -86,6 +86,7 @@ typedef struct {
   int setLayoutMargins:1;
   int setPreservesSuperviewLayoutMargins:1;
   int setInsetsLayoutMarginsFromSafeArea:1;
+  int setAccessibilityCustomActions:1;
 } ASPendingStateFlags;
 
 @implementation _ASPendingState
@@ -140,6 +141,7 @@ typedef struct {
   CGPoint accessibilityActivationPoint;
   UIBezierPath *accessibilityPath;
   UISemanticContentAttribute semanticContentAttribute API_AVAILABLE(ios(9.0), tvos(9.0));
+  NSArray<UIAccessibilityCustomAction *> * accessibilityCustomActions;
 
   ASPendingStateFlags _flags;
 }
@@ -584,6 +586,11 @@ static UIColor *defaultTintColor = nil;
 - (void)setSemanticContentAttribute:(UISemanticContentAttribute)attribute API_AVAILABLE(ios(9.0), tvos(9.0)) {
   semanticContentAttribute = attribute;
   _flags.setSemanticContentAttribute = YES;
+}
+
+- (void)setAccessibilityCustomActions:(NSArray<UIAccessibilityCustomAction *> *)accessibilityCustomActions {
+  self->accessibilityCustomActions = accessibilityCustomActions;
+  _flags.setAccessibilityCustomActions = YES;
 }
 
 - (BOOL)isAccessibilityElement
@@ -1052,6 +1059,10 @@ static UIColor *defaultTintColor = nil;
     if (flags.setInsetsLayoutMarginsFromSafeArea) {
       view.insetsLayoutMarginsFromSafeArea = insetsLayoutMarginsFromSafeArea;
     }
+  }
+  
+  if (flags.setAccessibilityCustomActions) {
+    view.accessibilityCustomActions = accessibilityCustomActions;
   }
 
   if (flags.setSemanticContentAttribute) {

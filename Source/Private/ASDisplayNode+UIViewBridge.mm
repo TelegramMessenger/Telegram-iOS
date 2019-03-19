@@ -682,6 +682,20 @@ if (shouldApply) { _layer.layerProperty = (layerValueExpr); } else { ASDisplayNo
   }
 }
 
+- (void)setAccessibilityCustomActions:(NSArray<UIAccessibilityCustomAction *> *)accessibilityCustomActions
+{
+  _bridge_prologue_write;
+  BOOL shouldApply = ASDisplayNodeShouldApplyBridgedWriteToView(self);
+  if (shouldApply) {
+    if (_flags.layerBacked) {
+    } else {
+      _view.accessibilityCustomActions = accessibilityCustomActions;
+    }
+  } else {
+    ASDisplayNodeGetPendingState(self).accessibilityCustomActions = accessibilityCustomActions;
+  }
+}
+
 - (UIColor *)backgroundColor
 {
   _bridge_prologue_read;
