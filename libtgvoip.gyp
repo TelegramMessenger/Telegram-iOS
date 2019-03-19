@@ -800,6 +800,11 @@
                   ],
                 }]
               ],
+              ['"<(official_build_target)" == "macstore"', {
+               'defines': [
+                'TGVOIP_NO_OSX_PRIVATE_API',
+               ],
+              }],
             },
           ],
           [
