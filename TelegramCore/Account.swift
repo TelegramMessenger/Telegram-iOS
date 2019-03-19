@@ -1221,8 +1221,12 @@ public class Account {
     
     public func resetStateManagement() {
         self.stateManager.reset()
-        self.contactSyncManager.beginSync(importableContacts: self.importableContacts.get())
+        self.restartContactManagement()
         self.managedStickerPacksDisposable.set(manageStickerPacks(network: self.network, postbox: self.postbox).start())
+    }
+    
+    public func restartContactManagement() {
+        self.contactSyncManager.beginSync(importableContacts: self.importableContacts.get())
     }
     
     public func peerInputActivities(peerId: PeerId) -> Signal<[(PeerId, PeerInputActivity)], NoError> {
