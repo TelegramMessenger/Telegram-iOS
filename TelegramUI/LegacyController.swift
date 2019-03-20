@@ -294,7 +294,7 @@ final class LegacyControllerContext: NSObject, LegacyComponentsContext {
     }
 }
 
-public class LegacyController: ViewController {
+public class LegacyController: ViewController, PresentableController {
     public private(set) var legacyController: UIViewController!
     private let presentation: LegacyControllerPresentation
     
@@ -405,20 +405,30 @@ public class LegacyController: ViewController {
         if self.ignoreAppearanceMethodInvocations() {
             return
         }
-        
+        self.viewDidAppear(animated: animated, completion: {})
+    }
+    
+    public func viewDidAppear(completion: @escaping () -> Void) {
+        self.viewDidAppear(animated: false, completion: completion)
+    }
+    
+    private func viewDidAppear(animated: Bool, completion: @escaping () -> Void) {
         switch self.presentation {
             case let .modal(animateIn):
                 if animateIn {
                     self.controllerNode.animateModalIn(completion: { [weak self] in
                         self?.presentationCompleted?()
+                        completion()
                     })
                 } else {
                     self.presentationCompleted?()
+                    completion()
                 }
                 self.legacyController.viewDidAppear(animated && animateIn)
             case .custom, .navigation:
                 self.legacyController.viewDidAppear(animated)
                 self.presentationCompleted?()
+                completion()
         }
     }
     

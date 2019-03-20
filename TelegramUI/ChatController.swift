@@ -4035,6 +4035,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         
             let legacyController = LegacyController(presentation: .custom, theme: strongSelf.presentationData.theme, initialLayout: strongSelf.validLayout)
+            legacyController.blocksBackgroundWhenInOverlay = true
             legacyController.statusBar.statusBarStyle = .Ignore
             legacyController.controllerLoaded = { [weak legacyController] in
                 legacyController?.view.disablesInteractiveTransitionGestureRecognizer = true

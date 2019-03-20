@@ -131,7 +131,7 @@ struct ItemListControllerState {
     }
 }
 
-class ItemListController<Entry: ItemListNodeEntry>: ViewController {
+class ItemListController<Entry: ItemListNodeEntry>: ViewController, PresentableController {
     private let state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>
     
     private var leftNavigationButtonTitleAndStyle: (ItemListNavigationButtonContent, ItemListNavigationButtonStyle)?
@@ -475,13 +475,24 @@ class ItemListController<Entry: ItemListNodeEntry>: ViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
+        self.viewDidAppear(completion: {})
+    }
+    
+    func viewDidAppear(completion: @escaping () -> Void) {
         (self.displayNode as! ItemListControllerNode<Entry>).listNode.preloadPages = true
         
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments, !self.didPlayPresentationAnimation {
             self.didPlayPresentationAnimation = true
             if case .modalSheet = presentationArguments.presentationAnimation {
-                (self.displayNode as! ItemListControllerNode<Entry>).animateIn(completion: presentationArguments.completion)
+                (self.displayNode as! ItemListControllerNode<Entry>).animateIn(completion: {
+                    presentationArguments.completion?()
+                    completion()
+                })
+            } else {
+                completion()
             }
+        } else {
+            completion()
         }
         
         let firstTime = !self.didAppearOnce

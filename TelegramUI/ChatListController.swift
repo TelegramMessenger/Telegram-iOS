@@ -378,7 +378,12 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 }
             }
             |> deliverOnMainQueue).start(next: { peer in
-                guard let strongSelf = self, let peer = peer, let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
+                guard let strongSelf = self, let peer = peer else {
+                    return
+                }
+                strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in })
+                
+                /*guard let strongSelf = self, let peer = peer, let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
                     return
                 }
                 let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
@@ -514,7 +519,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         })
                     ])
                 ])
-                strongSelf.present(actionSheet, in: .window(.root))
+                strongSelf.present(actionSheet, in: .window(.root))*/
             })
         }
         
