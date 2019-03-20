@@ -1005,7 +1005,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration) 
                 let metadataTable = MetadataTable(valueBox: valueBox, table: MetadataTable.tableSpec(0))
                 
                 let userVersion: Int32? = metadataTable.userVersion()
-                let currentUserVersion: Int32 = 18
+                let currentUserVersion: Int32 = 19
                 
                 if let userVersion = userVersion {
                     if userVersion != currentUserVersion {

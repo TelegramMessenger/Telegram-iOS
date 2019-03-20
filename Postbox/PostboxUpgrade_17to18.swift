@@ -4,13 +4,11 @@ private func convertNamespaces(value: ReadBuffer, buffer: WriteBuffer) {
     var count: Int32 = 0
     value.read(&count, offset: 0, length: 4)
     buffer.write(&count, offset: 0, length: 4)
-    var stateByNamespace: [MessageId.Namespace: PeerReadState] = [:]
     for _ in 0 ..< count {
         var namespaceId: Int32 = 0
         value.read(&namespaceId, offset: 0, length: 4)
         buffer.write(&namespaceId, offset: 0, length: 4)
         
-        let state: PeerReadState
         var kind: Int8 = 0
         value.read(&kind, offset: 0, length: 1)
         buffer.write(&kind, offset: 0, length: 1)
