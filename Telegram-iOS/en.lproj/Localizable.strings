@@ -65,7 +65,7 @@
 "PUSH_CHANNEL_MESSAGE_GIF" = "%1$@ posted a GIF";
 "PUSH_CHANNEL_MESSAGES" = "%1$@ posted %2$@ messages";
 
-"PUSH_PINNED_TEXT" = "%1$@ pinned \"%2$@\"";
+"PUSH_PINNED_TEXT" = "%1$@ pinned \"%2$@\" ";
 "PUSH_PINNED_NOTEXT" = "%1$@ pinned a message";
 "PUSH_PINNED_PHOTO" = "%1$@ pinned a photo";
 "PUSH_PINNED_VIDEO" = "%1$@ pinned a video";
@@ -188,7 +188,7 @@
 "PUSH_CHAT_MESSAGES_1" = "%2$@|%1$@ sent a message";
 "PUSH_CHAT_MESSAGES_any" = "%2$@|%1$@ sent %3$d messages";
 
-"PUSH_PINNED_TEXT" = "%1$@|pinned \"%2$@\"";
+"PUSH_PINNED_TEXT" = "%1$@|pinned \"%2$@\" ";
 "PUSH_PINNED_NOTEXT" = "%1$@|pinned a message";
 "PUSH_PINNED_PHOTO" = "%1$@|pinned a photo";
 "PUSH_PINNED_VIDEO" = "%1$@|pinned a video";
@@ -500,9 +500,9 @@
 "Notification.Kicked" = "%@ removed %@";
 "Notification.CreatedChat" = "%@ created a group";
 "Notification.CreatedChannel" = "Channel created";
-"Notification.CreatedChatWithTitle" = "%@ created the group \"%@\"";
+"Notification.CreatedChatWithTitle" = "%@ created the group \"%@\" ";
 "Notification.Joined" = "%@ joined Telegram";
-"Notification.ChangedGroupName" = "%@ changed group name to \"%@\"";
+"Notification.ChangedGroupName" = "%@ changed group name to \"%@\" ";
 "Notification.NewAuthDetected" = "%1$@,\nWe detected a login into your account from a new device on %2$@, %3$@ at %4$@\n\nDevice: %5$@\nLocation: %6$@\n\nIf this wasn't you, you can go to Settings — Privacy and Security — Sessions and terminate that session.\n\nIf you think that somebody logged in to your account against your will, you can enable two-step verification in Privacy and Security settings.\n\nSincerely,\nThe Telegram Team";
 "Notification.MessageLifetimeChanged" = "%1$@ set the self-destruct timer to %2$@";
 "Notification.MessageLifetimeChangedOutgoing" = "You set the self-destruct timer to %1$@";
@@ -1488,7 +1488,7 @@
 
 "Channel.MessagePhotoUpdated" = "Channel photo updated";
 "Channel.MessagePhotoRemoved" = "Channel photo removed";
-"Channel.MessageTitleUpdated" = "Channel renamed to \"%@\"";
+"Channel.MessageTitleUpdated" = "Channel renamed to \"%@\" ";
 "Channel.TitleInfo" = "Channel Info";
 
 "Channel.UpdatePhotoItem" = "Set Channel Photo";
@@ -1896,7 +1896,7 @@
 "Group.Username.InvalidTooShort" = "Group names must have at least 5 characters.";
 "Group.Username.InvalidStartsWithNumber" = "Group names can't start with a number.";
 
-"Notification.PinnedTextMessage" = "%@ pinned \"%@\"";
+"Notification.PinnedTextMessage" = "%@ pinned \"%@\" ";
 "Notification.PinnedPhotoMessage" = "%@ pinned a photo";
 "Notification.PinnedVideoMessage" = "%@ pinned a video";
 "Notification.PinnedRoundMessage" = "%@ pinned a video message";
@@ -1909,7 +1909,7 @@
 "Notification.PinnedDeletedMessage" = "%@ pinned deleted message";
 "Notification.PinnedPollMessage" = "%@ pinned a poll";
 
-"Message.PinnedTextMessage" = "pinned \"%@\"";
+"Message.PinnedTextMessage" = "pinned \"%@\" ";
 "Message.PinnedPhotoMessage" = "pinned photo";
 "Message.PinnedVideoMessage" = "pinned video";
 "Message.PinnedAudioMessage" = "pinned voice message";
@@ -4061,8 +4061,6 @@ Unused sets are archived when you add more.";
 "Gif.NoGifsFound" = "No GIFs Found";
 "Gif.NoGifsPlaceholder" = "You have no saved GIFs yet.";
 
-"SettingsSearch.FAQ" = "FAQ";
-
 "Privacy.ProfilePhoto" = "Profile Photo";
 "Privacy.Forwards" = "Forwarded Messages";
 
@@ -4092,100 +4090,101 @@ Unused sets are archived when you add more.";
 "Chat.DeleteMessagesConfirmation_1" = "Delete message";
 "Chat.DeleteMessagesConfirmation_any" = "Delete %@ messages";
 
-"SettingsSearch.Synonyms.EditProfile.Title" = "";
-"SettingsSearch.Synonyms.EditProfile.Bio" = "";
-"SettingsSearch.Synonyms.EditProfile.PhoneNumber" = "";
-"SettingsSearch.Synonyms.EditProfile.Username" = "";
-"SettingsSearch.Synonyms.EditProfile.AddAccount" = "";
-"SettingsSearch.Synonyms.EditProfile.Logout" = "";
+"SettingsSearch.FAQ" = "FAQ";
 
-"SettingsSearch.Synonyms.Calls.Title" = "";
-"SettingsSearch.Synonyms.Calls.CallTab" = "";
+"SettingsSearch.Synonyms.EditProfile.Title" = " ";
+"SettingsSearch.Synonyms.EditProfile.Bio" = " ";
+"SettingsSearch.Synonyms.EditProfile.PhoneNumber" = " ";
+"SettingsSearch.Synonyms.EditProfile.Username" = " ";
+"SettingsSearch.Synonyms.EditProfile.AddAccount" = " ";
+"SettingsSearch.Synonyms.EditProfile.Logout" = " ";
 
-"SettingsSearch.Synonyms.Stickers.Title" = "";
-"SettingsSearch.Synonyms.Stickers.SuggestStickers" = "";
-"SettingsSearch.Synonyms.Stickers.FeaturedPacks" = "";
-"SettingsSearch.Synonyms.Stickers.ArchivedPacks" = "";
-"SettingsSearch.Synonyms.Stickers.Masks" = "";
-"SettingsSearch.Synonyms.Stickers.ArchivedMasks" = "";
+"SettingsSearch.Synonyms.Calls.Title" = " ";
+"SettingsSearch.Synonyms.Calls.CallTab" = " ";
 
-"SettingsSearch.Synonyms.Notifications.Title" = "";
-"SettingsSearch.Synonyms.Notifications.MessageNotificationsAlert" = "";
-"SettingsSearch.Synonyms.Notifications.MessageNotificationsPreview" = "";
-"SettingsSearch.Synonyms.Notifications.MessageNotificationsSound" = "";
-"SettingsSearch.Synonyms.Notifications.MessageNotificationsExceptions" = "";
-"SettingsSearch.Synonyms.Notifications.GroupNotificationsAlert" = "";
-"SettingsSearch.Synonyms.Notifications.GroupNotificationsPreview" = "";
-"SettingsSearch.Synonyms.Notifications.GroupNotificationsSound" = "";
-"SettingsSearch.Synonyms.Notifications.GroupNotificationsExceptions" = "";
-"SettingsSearch.Synonyms.Notifications.ChannelNotificationsAlert" = "";
-"SettingsSearch.Synonyms.Notifications.ChannelNotificationsPreview" = "";
-"SettingsSearch.Synonyms.Notifications.ChannelNotificationsSound" = "";
-"SettingsSearch.Synonyms.Notifications.ChannelNotificationsExceptions" = "";
-"SettingsSearch.Synonyms.Notifications.InAppNotificationsSound" = "";
-"SettingsSearch.Synonyms.Notifications.InAppNotificationsVibrate" = "";
-"SettingsSearch.Synonyms.Notifications.InAppNotificationsPreview" = "";
-"SettingsSearch.Synonyms.Notifications.DisplayNamesOnLockScreen" = "";
-"SettingsSearch.Synonyms.Notifications.BadgeIncludeMutedChats" = "";
-"SettingsSearch.Synonyms.Notifications.BadgeIncludeMutedPublicGroups" = "";
-"SettingsSearch.Synonyms.Notifications.BadgeIncludeMutedChannels" = "";
-"SettingsSearch.Synonyms.Notifications.BadgeCountUnreadMessages" = "";
-"SettingsSearch.Synonyms.Notifications.ContactJoined" = "";
-"SettingsSearch.Synonyms.Notifications.ResetAllNotifications" = "";
+"SettingsSearch.Synonyms.Stickers.Title" = " ";
+"SettingsSearch.Synonyms.Stickers.SuggestStickers" = " ";
+"SettingsSearch.Synonyms.Stickers.FeaturedPacks" = " ";
+"SettingsSearch.Synonyms.Stickers.ArchivedPacks" = " ";
+"SettingsSearch.Synonyms.Stickers.Masks" = " ";
+
+"SettingsSearch.Synonyms.Notifications.Title" = " ";
+"SettingsSearch.Synonyms.Notifications.MessageNotificationsAlert" = " ";
+"SettingsSearch.Synonyms.Notifications.MessageNotificationsPreview" = " ";
+"SettingsSearch.Synonyms.Notifications.MessageNotificationsSound" = " ";
+"SettingsSearch.Synonyms.Notifications.MessageNotificationsExceptions" = " ";
+"SettingsSearch.Synonyms.Notifications.GroupNotificationsAlert" = " ";
+"SettingsSearch.Synonyms.Notifications.GroupNotificationsPreview" = " ";
+"SettingsSearch.Synonyms.Notifications.GroupNotificationsSound" = " ";
+"SettingsSearch.Synonyms.Notifications.GroupNotificationsExceptions" = " ";
+"SettingsSearch.Synonyms.Notifications.ChannelNotificationsAlert" = " ";
+"SettingsSearch.Synonyms.Notifications.ChannelNotificationsPreview" = " ";
+"SettingsSearch.Synonyms.Notifications.ChannelNotificationsSound" = " ";
+"SettingsSearch.Synonyms.Notifications.ChannelNotificationsExceptions" = " ";
+"SettingsSearch.Synonyms.Notifications.InAppNotificationsSound" = " ";
+"SettingsSearch.Synonyms.Notifications.InAppNotificationsVibrate" = " ";
+"SettingsSearch.Synonyms.Notifications.InAppNotificationsPreview" = " ";
+"SettingsSearch.Synonyms.Notifications.DisplayNamesOnLockScreen" = " ";
+"SettingsSearch.Synonyms.Notifications.BadgeIncludeMutedChats" = " ";
+"SettingsSearch.Synonyms.Notifications.BadgeIncludeMutedPublicGroups" = " ";
+"SettingsSearch.Synonyms.Notifications.BadgeIncludeMutedChannels" = " ";
+"SettingsSearch.Synonyms.Notifications.BadgeCountUnreadMessages" = " ";
+"SettingsSearch.Synonyms.Notifications.ContactJoined" = " ";
+"SettingsSearch.Synonyms.Notifications.ResetAllNotifications" = " ";
 
 "SettingsSearch.Synonyms.Privacy.Title" = " ";
-"SettingsSearch.Synonyms.Privacy.BlockedUsers" = "";
-"SettingsSearch.Synonyms.Privacy.LastSeen" = "";
-"SettingsSearch.Synonyms.Privacy.ProfilePhoto" = "";
-"SettingsSearch.Synonyms.Privacy.Forwards" = "";
-"SettingsSearch.Synonyms.Privacy.Calls" = "";
-"SettingsSearch.Synonyms.Privacy.GroupsAndChannels" = "";
-"SettingsSearch.Synonyms.Privacy.Passcode" = "";
-"SettingsSearch.Synonyms.Privacy.PasscodeAndTouchId" = "";
-"SettingsSearch.Synonyms.Privacy.PasscodeAndFaceId" = "";
-"SettingsSearch.Synonyms.Privacy.TwoStepAuth" = "";
-"SettingsSearch.Synonyms.Privacy.AuthSessions" = "";
-"SettingsSearch.Synonyms.Privacy.DeleteAccountIfAwayFor" = "";
+"SettingsSearch.Synonyms.Privacy.BlockedUsers" = " ";
+"SettingsSearch.Synonyms.Privacy.LastSeen" = " ";
+"SettingsSearch.Synonyms.Privacy.ProfilePhoto" = " ";
+"SettingsSearch.Synonyms.Privacy.Forwards" = " ";
+"SettingsSearch.Synonyms.Privacy.Calls" = " ";
+"SettingsSearch.Synonyms.Privacy.GroupsAndChannels" = " ";
+"SettingsSearch.Synonyms.Privacy.Passcode" = " ";
+"SettingsSearch.Synonyms.Privacy.PasscodeAndTouchId" = " ";
+"SettingsSearch.Synonyms.Privacy.PasscodeAndFaceId" = " ";
+"SettingsSearch.Synonyms.Privacy.TwoStepAuth" = "Password";
+"SettingsSearch.Synonyms.Privacy.AuthSessions" = " ";
+"SettingsSearch.Synonyms.Privacy.DeleteAccountIfAwayFor" = " ";
 
-"SettingsSearch.Synonyms.Privacy.Data.Title" = "";
-"SettingsSearch.Synonyms.Privacy.Data.ContactsReset" = "";
-"SettingsSearch.Synonyms.Privacy.Data.ContactsSync" = "";
-"SettingsSearch.Synonyms.Privacy.Data.TopPeers" = "";
-"SettingsSearch.Synonyms.Privacy.Data.DeleteDrafts" = "";
-"SettingsSearch.Synonyms.Privacy.Data.ClearPaymentsInfo" = "";
-"SettingsSearch.Synonyms.Privacy.Data.SecretChatLinkPreview" = "";
+"SettingsSearch.Synonyms.Privacy.Data.Title" = " ";
+"SettingsSearch.Synonyms.Privacy.Data.ContactsReset" = " ";
+"SettingsSearch.Synonyms.Privacy.Data.ContactsSync" = " ";
+"SettingsSearch.Synonyms.Privacy.Data.TopPeers" = " ";
+"SettingsSearch.Synonyms.Privacy.Data.DeleteDrafts" = " ";
+"SettingsSearch.Synonyms.Privacy.Data.ClearPaymentsInfo" = " ";
+"SettingsSearch.Synonyms.Privacy.Data.SecretChatLinkPreview" = " ";
 
-"SettingsSearch.Synonyms.Data.Title" = "";
-"SettingsSearch.Synonyms.Data.Storage.Title" = "";
-"SettingsSearch.Synonyms.Data.Storage.KeepMedia" = "";
-"SettingsSearch.Synonyms.Data.Storage.ClearCache" = "";
-"SettingsSearch.Synonyms.Data.NetworkUsage" = "";
-"SettingsSearch.Synonyms.Data.AutoDownloadUsingCellular" = "";
-"SettingsSearch.Synonyms.Data.AutoDownloadUsingWifi" = "";
-"SettingsSearch.Synonyms.Data.AutoDownloadReset" = "";
-"SettingsSearch.Synonyms.Data.AutoplayGifs" = "";
-"SettingsSearch.Synonyms.Data.AutoplayVideos" = "";
-"SettingsSearch.Synonyms.Data.CallsUseLessData" = "";
-"SettingsSearch.Synonyms.Data.SaveIncomingPhotos" = "";
-"SettingsSearch.Synonyms.Data.SaveEditedPhotos" = "";
-"SettingsSearch.Synonyms.Data.DownloadInBackground" = "";
+"SettingsSearch.Synonyms.Data.Title" = " ";
+"SettingsSearch.Synonyms.Data.Storage.Title" = "Cache";
+"SettingsSearch.Synonyms.Data.Storage.KeepMedia" = " ";
+"SettingsSearch.Synonyms.Data.Storage.ClearCache" = " ";
+"SettingsSearch.Synonyms.Data.NetworkUsage" = " ";
+"SettingsSearch.Synonyms.Data.AutoDownloadUsingCellular" = " ";
+"SettingsSearch.Synonyms.Data.AutoDownloadUsingWifi" = " ";
+"SettingsSearch.Synonyms.Data.AutoDownloadReset" = " ";
+"SettingsSearch.Synonyms.Data.AutoplayGifs" = " ";
+"SettingsSearch.Synonyms.Data.AutoplayVideos" = " ";
+"SettingsSearch.Synonyms.Data.CallsUseLessData" = " ";
+"SettingsSearch.Synonyms.Data.SaveIncomingPhotos" = " ";
+"SettingsSearch.Synonyms.Data.SaveEditedPhotos" = " ";
+"SettingsSearch.Synonyms.Data.DownloadInBackground" = " ";
 
-"SettingsSearch.Synonyms.Proxy.Title" = "";
-"SettingsSearch.Synonyms.Proxy.AddProxy" = "";
-"SettingsSearch.Synonyms.Proxy.UseForCalls" = "";
+"SettingsSearch.Synonyms.Proxy.Title" = "SOCKS5|MTProto";
+"SettingsSearch.Synonyms.Proxy.AddProxy" = " ";
+"SettingsSearch.Synonyms.Proxy.UseForCalls" = " ";
 
-"SettingsSearch.Synonyms.Appearance.Title" = "";
-"SettingsSearch.Synonyms.Appearance.TextSize" = "";
+"SettingsSearch.Synonyms.Appearance.Title" = " ";
+"SettingsSearch.Synonyms.Appearance.TextSize" = " ";
 "SettingsSearch.Synonyms.Appearance.ChatBackground" = "Wallpaper";
-"SettingsSearch.Synonyms.Appearance.ChatBackground.SetColor" = "";
-"SettingsSearch.Synonyms.Appearance.ChatBackground.Custom" = "";
-"SettingsSearch.Synonyms.Appearance.AutoNightTheme" = "";
-"SettingsSearch.Synonyms.Appearance.ColorTheme" = "";
-"SettingsSearch.Synonyms.Appearance.Animations" = "";
+"SettingsSearch.Synonyms.Appearance.ChatBackground.SetColor" = " ";
+"SettingsSearch.Synonyms.Appearance.ChatBackground.Custom" = " ";
+"SettingsSearch.Synonyms.Appearance.AutoNightTheme" = " ";
+"SettingsSearch.Synonyms.Appearance.ColorTheme" = " ";
+"SettingsSearch.Synonyms.Appearance.Animations" = "Animations";
 
-"SettingsSearch.Synonyms.SavedMessages" = "";
-"SettingsSearch.Synonyms.AppLanguage" = "";
-"SettingsSearch.Synonyms.Passport" = "";
-"SettingsSearch.Synonyms.Watch" = "";
-"SettingsSearch.Synonyms.Support" = "";
-"SettingsSearch.Synonyms.FAQ" = "";
+"SettingsSearch.Synonyms.SavedMessages" = " ";
+"SettingsSearch.Synonyms.AppLanguage" = " ";
+"SettingsSearch.Synonyms.Passport" = " ";
+"SettingsSearch.Synonyms.Watch" = "Apple Watch";
+"SettingsSearch.Synonyms.Support" = "Support";
+"SettingsSearch.Synonyms.FAQ" = " ";
