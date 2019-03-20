@@ -76,7 +76,6 @@ func faqSearchableItems(context: AccountContext) -> Signal<[SettingsSearchableIt
             if case let .Loaded(content) = webPage.content, let instantPage = content.instantPage {
                 var processingQuestions = false
                 var currentSection: String?
-                var currentAnchor: String?
                 outer: for block in instantPage.blocks {
                     if !processingQuestions {
                         switch block {
@@ -84,15 +83,6 @@ func faqSearchableItems(context: AccountContext) -> Signal<[SettingsSearchableIt
                                 if results.isEmpty {
                                     processingQuestions = true
                                 }
-//                            case let .anchor(anchor):
-//                                currentAnchor = anchor
-//                            case let .header(text):
-//                                if let anchor = currentAnchor {
-//                                    results.append(SettingsSearchableItem(id: .faq(nextIndex), title: text.plainText, alternate: [], icon: .faq, breadcrumbs: [strings.SettingsSearch_FAQ], present: { context, _, present in
-//                                        present(.push, InstantPageController(context: context, webPage: webPage, sourcePeerType: .channel, anchor: anchor))
-//                                    }))
-//                                    nextIndex += 1
-//                                }
                             default:
                                 break
                         }
