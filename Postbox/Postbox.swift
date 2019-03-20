@@ -916,6 +916,11 @@ public final class Transaction {
         return self.postbox?.deviceContactImportInfoTable.getIdentifiers() ?? []
     }
     
+    public func clearDeviceContactImportInfoIdentifiers() {
+        assert(!self.disposed)
+        self.postbox?.clearDeviceContactImportInfoIdentifiers()
+    }
+    
     public func enumerateDeviceContactImportInfoItems(_ f: (ValueBoxKey, PostboxCoding) -> Bool) {
         assert(!self.disposed)
         self.postbox?.deviceContactImportInfoTable.enumerateDeviceContactImportInfoItems(f)
@@ -3483,6 +3488,13 @@ public final class Postbox {
                 default:
                     return nil
             }
+        }
+    }
+    
+    fileprivate func clearDeviceContactImportInfoIdentifiers() {
+        let identifiers = self.deviceContactImportInfoTable.getIdentifiers()
+        for identifier in identifiers {
+            self.deviceContactImportInfoTable.set(identifier, value: nil)
         }
     }
     
