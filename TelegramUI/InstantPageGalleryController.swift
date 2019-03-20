@@ -78,20 +78,30 @@ struct InstantPageGalleryEntry: Equatable {
         
         if let image = self.media.media as? TelegramMediaImage {
             return InstantImageGalleryItem(context: context, presentationData: presentationData, imageReference: .webPage(webPage: WebpageReference(webPage), media: image), caption: caption, credit: credit, location: self.location, openUrl: openUrl, openUrlOptions: openUrlOptions)
-        } else if let file = self.media.media as? TelegramMediaFile, file.isVideo {
-            var indexData: GalleryItemIndexData?
-            if let location = self.location {
-                indexData = GalleryItemIndexData(position: location.position, totalCount: location.totalCount)
-            }
-            
-            let nativeId: NativeVideoContentId
-            if let message = message, case let .Loaded(content) = webPage.content, content.file?.fileId == file.fileId {
-                nativeId = .message(message.id, message.stableId, file.fileId)
+        } else if let file = self.media.media as? TelegramMediaFile {
+            if file.isVideo {
+                var indexData: GalleryItemIndexData?
+                if let location = self.location {
+                    indexData = GalleryItemIndexData(position: location.position, totalCount: location.totalCount)
+                }
+                
+                let nativeId: NativeVideoContentId
+                if let message = message, case let .Loaded(content) = webPage.content, content.file?.fileId == file.fileId {
+                    nativeId = .message(message.id, message.stableId, file.fileId)
+                } else {
+                    nativeId = .instantPage(self.pageId, file.fileId)
+                }
+                
+                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: NativeVideoContent(id: nativeId, fileReference: .webPage(webPage: WebpageReference(webPage), media: file), streamVideo: isMediaStreamable(media: file) ? .conservative : .none), originData: nil, indexData: indexData, contentInfo: .webPage(webPage, file), caption: caption, credit: credit, fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in })
             } else {
-                nativeId = .instantPage(self.pageId, file.fileId)
+                var representations: [TelegramMediaImageRepresentation] = []
+                representations.append(contentsOf: file.previewRepresentations)
+                if let dimensions = file.dimensions {
+                    representations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: file.resource))
+                }
+                let image = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: file.immediateThumbnailData, reference: nil, partialReference: nil)
+                 return InstantImageGalleryItem(context: context, presentationData: presentationData, imageReference: .webPage(webPage: WebpageReference(webPage), media: image), caption: caption, credit: credit, location: self.location, openUrl: openUrl, openUrlOptions: openUrlOptions)
             }
-            
-            return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: NativeVideoContent(id: nativeId, fileReference: .webPage(webPage: WebpageReference(webPage), media: file), streamVideo: isMediaStreamable(media: file) ? .conservative : .none), originData: nil, indexData: indexData, contentInfo: .webPage(webPage, file), caption: caption, credit: credit, fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in })
         } else if let embedWebpage = self.media.media as? TelegramMediaWebpage, case let .Loaded(webpageContent) = embedWebpage.content {
             if let content = WebEmbedVideoContent(webPage: embedWebpage, webpageContent: webpageContent) {
                 return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: nil, indexData: nil, contentInfo: .webPage(webPage, embedWebpage), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in })

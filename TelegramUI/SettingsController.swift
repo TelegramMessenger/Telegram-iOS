@@ -33,7 +33,7 @@ private struct SettingsItemArguments {
     let openProxy: () -> Void
     let openSavedMessages: () -> Void
     let openRecentCalls: () -> Void
-    let openPrivacyAndSecurity: () -> Void
+    let openPrivacyAndSecurity: (AccountPrivacySettings?) -> Void
     let openDataAndStorage: () -> Void
     let openStickerPacks: ([ArchivedStickerPackItem]?) -> Void
     let openNotificationsAndSounds: (NotificationExceptionsList?) -> Void
@@ -77,7 +77,7 @@ private enum SettingsEntry: ItemListNodeEntry {
     case stickers(PresentationTheme, UIImage?, String, String, [ArchivedStickerPackItem]?)
     
     case notificationsAndSounds(PresentationTheme, UIImage?, String, NotificationExceptionsList?, Bool)
-    case privacyAndSecurity(PresentationTheme, UIImage?, String)
+    case privacyAndSecurity(PresentationTheme, UIImage?, String, AccountPrivacySettings?)
     case dataAndStorage(PresentationTheme, UIImage?, String)
     case themes(PresentationTheme, UIImage?, String)
     case language(PresentationTheme, UIImage?, String, String)
@@ -241,8 +241,8 @@ private enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .privacyAndSecurity(lhsTheme, lhsImage, lhsText):
-                if case let .privacyAndSecurity(rhsTheme, rhsImage, rhsText) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText {
+            case let .privacyAndSecurity(lhsTheme, lhsImage, lhsText, _):
+                if case let .privacyAndSecurity(rhsTheme, rhsImage, rhsText, _) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -363,9 +363,9 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: warning ? "!" : "", labelStyle: warning ? .badge(theme.list.itemDestructiveColor) : .text, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openNotificationsAndSounds(exceptionsList)
                 })
-            case let .privacyAndSecurity(theme, image, text):
+            case let .privacyAndSecurity(theme, image, text, privacySettings):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    arguments.openPrivacyAndSecurity()
+                    arguments.openPrivacyAndSecurity(privacySettings)
                 })
             case let .dataAndStorage(theme, image, text):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -405,7 +405,7 @@ private struct SettingsState: Equatable {
     var isSearching: Bool
 }
 
-private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)], inAppNotificationSettings: InAppNotificationSettings) -> [SettingsEntry] {
+private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, privacySettings: AccountPrivacySettings?, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)], inAppNotificationSettings: InAppNotificationSettings) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -450,7 +450,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         
         let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
         entries.append(.notificationsAndSounds(presentationData.theme, PresentationResourcesSettings.notifications, presentationData.strings.Settings_NotificationsAndSounds, notifyExceptions, notificationsWarning))
-        entries.append(.privacyAndSecurity(presentationData.theme, PresentationResourcesSettings.security, presentationData.strings.Settings_PrivacySettings))
+        entries.append(.privacyAndSecurity(presentationData.theme, PresentationResourcesSettings.security, presentationData.strings.Settings_PrivacySettings, privacySettings))
         entries.append(.dataAndStorage(presentationData.theme, PresentationResourcesSettings.dataAndStorage, presentationData.strings.Settings_ChatSettings))
         entries.append(.themes(presentationData.theme, PresentationResourcesSettings.appearance, presentationData.strings.Settings_Appearance))
         let languageName = presentationData.strings.primaryComponent.localizedName
@@ -592,7 +592,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     let accountsAndPeers = Promise<((Account, Peer)?, [(Account, Peer, Int32)])>()
     accountsAndPeers.set(activeAccountsAndPeers(context: context))
     
-    let privacySettings = Promise<[PeerId: AccountPrivacySettings]>([:])
+    let privacySettings = Promise<AccountPrivacySettings?>(nil)
 
     let openFaq: (Promise<ResolvedUrl>) -> Void = { resolvedUrl in
         let _ = (contextValue.get()
@@ -677,23 +677,13 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> take(1)).start(next: { context in
             pushControllerImpl?(CallListController(context: context, mode: .navigation))
         })
-    }, openPrivacyAndSecurity: {
+    }, openPrivacyAndSecurity: { privacySettingsValue in
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            let _ = (privacySettings.get()
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { settings in
-                pushControllerImpl?(privacyAndSecurityController(context: context, initialSettings: settings[context.account.peerId], updatedSettings: { settings in
-                    let _ = ((privacySettings.get()
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { currentPrivacySettings in
-                        var updatedPrivacySettings = currentPrivacySettings
-                        updatedPrivacySettings[context.account.peerId] = settings
-                        privacySettings.set(.single(updatedPrivacySettings))
-                    }))
-                }))
-            })
+            pushControllerImpl?(privacyAndSecurityController(context: context, initialSettings: privacySettingsValue, updatedSettings: { settings in
+                privacySettings.set(.single(settings))
+            }))
         })
     }, openDataAndStorage: {
         let _ = (contextValue.get()
@@ -1025,6 +1015,17 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         )
     }
     
+    privacySettings.set(
+    .single(nil)
+    |> then(
+        contextValue.get()
+        |> mapToSignal { context -> Signal<AccountPrivacySettings?, NoError> in
+            requestAccountPrivacySettings(account: context.account)
+            |> map(Optional.init)
+            }
+        )
+    )
+    
     let hasWatchApp = Promise<Bool>(false)
     hasWatchApp.set(
         contextValue.get()
@@ -1049,7 +1050,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         return context.account.viewTracker.featuredStickerPacks()
     }
     
-    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()), accountsAndPeers.get())
+    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()), accountsAndPeers.get())
     |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasPassportAndWatch, accountsAndPeers -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
         let proxySettings: ProxySettings = preferencesAndExceptions.0.entries[SharedDataKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
         let inAppNotificationSettings: InAppNotificationSettings = preferencesAndExceptions.0.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
@@ -1084,10 +1085,10 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             presentControllerImpl?(v, a)
         }, pushController: { v in
             pushControllerImpl?(v)
-        }, getNavigationController: getNavigationControllerImpl, exceptionsList: notifyExceptions.get())
+        }, getNavigationController: getNavigationControllerImpl, exceptionsList: notifyExceptions.get(), archivedStickerPacks: archivedPacks.get())
         
         let (hasPassport, hasWatchApp) = hasPassportAndWatch
-        let listState = ItemListNodeState(entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings), style: .blocks, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up))
+        let listState = ItemListNodeState(entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, privacySettings: preferencesAndExceptions.4, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings), style: .blocks, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up))
         
         return (controllerState, (listState, arguments))
     }

@@ -61,12 +61,13 @@ final class SettingsSearchItem: ItemListControllerSearch {
     let pushController: (ViewController) -> Void
     let getNavigationController: (() -> NavigationController?)?
     let exceptionsList: Signal<NotificationExceptionsList?, NoError>
+    let archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>
     
     private var updateActivity: ((Bool) -> Void)?
     private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
     private let activityDisposable = MetaDisposable()
     
-    init(context: AccountContext, theme: PresentationTheme, placeholder: String, activated: Bool, updateActivated: @escaping (Bool) -> Void, presentController: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, getNavigationController: (() -> NavigationController?)?, exceptionsList: Signal<NotificationExceptionsList?, NoError>) {
+    init(context: AccountContext, theme: PresentationTheme, placeholder: String, activated: Bool, updateActivated: @escaping (Bool) -> Void, presentController: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, getNavigationController: (() -> NavigationController?)?, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>) {
         self.context = context
         self.theme = theme
         self.placeholder = placeholder
@@ -76,6 +77,7 @@ final class SettingsSearchItem: ItemListControllerSearch {
         self.pushController = pushController
         self.getNavigationController = getNavigationController
         self.exceptionsList = exceptionsList
+        self.archivedStickerPacks = archivedStickerPacks
         self.activityDisposable.set((activity.get() |> mapToSignal { value -> Signal<Bool, NoError> in
             if value {
                 return .single(value) |> delay(0.2, queue: Queue.mainQueue())
@@ -139,7 +141,7 @@ final class SettingsSearchItem: ItemListControllerSearch {
                 pushController(c)
             }, presentController: { c, a in
                 presentController(c, a)
-            }, getNavigationController: self.getNavigationController, exceptionsList: self.exceptionsList)
+            }, getNavigationController: self.getNavigationController, exceptionsList: self.exceptionsList, archivedStickerPacks: self.archivedStickerPacks)
         }
     }
 }
@@ -315,7 +317,7 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
     private var presentationDataDisposable: Disposable?
     private let presentationDataPromise: Promise<PresentationData>
     
-    init(context: AccountContext, openResult: @escaping (SettingsSearchableItem) -> Void, exceptionsList: Signal<NotificationExceptionsList?, NoError>) {
+    init(context: AccountContext, openResult: @escaping (SettingsSearchableItem) -> Void, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationDataPromise = Promise(self.presentationData)
         
@@ -343,7 +345,7 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
         })
         
         let searchableItems = Promise<[SettingsSearchableItem]>()
-        searchableItems.set(settingsSearchableItems(context: context, notificationExceptionsList: exceptionsList))
+        searchableItems.set(settingsSearchableItems(context: context, notificationExceptionsList: exceptionsList, archivedStickerPacks: archivedStickerPacks))
         
         let queryAndFoundItems = combineLatest(searchableItems.get(), faqSearchableItems(context: context))
         |> mapToSignal { searchableItems, faqSearchableItems -> Signal<(String, [SettingsSearchableItem])?, NoError> in
@@ -367,7 +369,7 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
         
         self.recentListNode.isHidden = false
         
-        let recentSearchItems = combineLatest(searchableItems.get(), settingsSearchRecentItems(postbox: context.account.postbox))
+        let recentSearchItems = combineLatest(searchableItems.get(), settingsSearchRecentItems(postbox: context.account.postbox) |> take(1))
         |> map { searchableItems, recentItems -> [SettingsSearchableItem] in
             let searchableItemsMap = searchableItems.reduce([SettingsSearchableItemId : SettingsSearchableItem]()) { (map, item) -> [SettingsSearchableItemId: SettingsSearchableItem] in
                 var map = map
@@ -605,10 +607,11 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
     let presentController: (ViewController, Any?) -> Void
     let getNavigationController: (() -> NavigationController?)?
     let exceptionsList: Signal<NotificationExceptionsList?, NoError>
+    let archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>
     
     var cancel: () -> Void
     
-    init(context: AccountContext, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: (() -> NavigationController?)?, exceptionsList: Signal<NotificationExceptionsList?, NoError>) {
+    init(context: AccountContext, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: (() -> NavigationController?)?, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.cancel = cancel
@@ -616,6 +619,7 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
         self.presentController = presentController
         self.getNavigationController = getNavigationController
         self.exceptionsList = exceptionsList
+        self.archivedStickerPacks = archivedStickerPacks
         
         super.init()
     }
@@ -649,7 +653,7 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
                     }
                 })
             }
-        }, exceptionsList: self.exceptionsList), cancel: { [weak self] in
+        }, exceptionsList: self.exceptionsList, archivedStickerPacks: self.archivedStickerPacks), cancel: { [weak self] in
             self?.cancel()
         })
         

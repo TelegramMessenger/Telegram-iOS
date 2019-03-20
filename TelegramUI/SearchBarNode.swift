@@ -243,7 +243,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     
     private let backgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
-    private let textBackgroundNode: ASImageNode
+    private let textBackgroundNode: ASDisplayNode
     private var activityIndicator: ActivityIndicator?
     private let iconNode: ASImageNode
     private let textField: SearchBarTextField
@@ -333,10 +333,10 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
-        self.textBackgroundNode = ASImageNode()
+        self.textBackgroundNode = ASDisplayNode()
         self.textBackgroundNode.isLayerBacked = false
         self.textBackgroundNode.displaysAsynchronously = false
-        self.textBackgroundNode.displayWithoutProcessing = true
+        self.textBackgroundNode.cornerRadius = self.fieldStyle.cornerDiameter / 2.0
         
         self.iconNode = ASImageNode()
         self.iconNode.isLayerBacked = true
@@ -391,7 +391,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             if self.fieldStyle != .modern {
                 self.separatorNode.backgroundColor = theme.separator
             }
-            self.textBackgroundNode.image = generateBackground(foregroundColor: theme.inputFill, diameter: self.fieldStyle.cornerDiameter)
+            self.textBackgroundNode.backgroundColor = theme.inputFill
             self.textField.textColor = theme.primaryText
             self.clearButton.setImage(generateClearIcon(color: theme.inputClear), for: [])
             self.iconNode.image = generateLoupeIcon(color: theme.inputIcon)
@@ -472,6 +472,9 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.separatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         self.separatorNode.layer.animateFrame(from: initialSeparatorFrame, to: self.separatorNode.frame, duration: duration, timingFunction: timingFunction)
         
+        if let fromTextBackgroundColor = node.backgroundNode.backgroundColor, let toTextBackgroundColor = self.textBackgroundNode.backgroundColor {
+            self.textBackgroundNode.layer.animate(from: fromTextBackgroundColor.cgColor, to: toTextBackgroundColor.cgColor, keyPath: "backgroundColor", timingFunction: timingFunction, duration: duration * 0.5)
+        }
         self.textBackgroundNode.layer.animateFrame(from: initialTextBackgroundFrame, to: self.textBackgroundNode.frame, duration: duration, timingFunction: timingFunction)
         
         let textFieldFrame = self.textField.frame

@@ -280,16 +280,16 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
             let stickers: Signal<[(String?, FoundStickerItem)], NoError> = Signal { subscriber in
                 var signals: Signal<[Signal<(String?, [FoundStickerItem]), NoError>], NoError> = .single([])
                 
-                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                if trimmed.isSingleEmoji {
+                let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                if query.isSingleEmoji {
                     signals = .single([searchStickers(account: self.context.account, query: text.firstEmoji)
                     |> take(1)
                     |> map { (nil, $0) }])
-                } else if trimmed.count > 1 {
+                } else if query.count > 1 {
                     signals = self.emojiKeywordsPromise.get()
                     |> mapToSignal { keywords in
                         if let keywords = keywords {
-                            return searchEmojiKeywords(keywords: keywords, query: trimmed.lowercased(), completeMatch: true)
+                            return searchEmojiKeywords(keywords: keywords, query: query.lowercased(), completeMatch: query.count < 3)
                             |> map { result -> [Signal<(String?, [FoundStickerItem]), NoError>] in
                                 var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
                                 for emoji in result {

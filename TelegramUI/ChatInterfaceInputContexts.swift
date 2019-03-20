@@ -31,7 +31,7 @@ private let newlineScalar = "\n" as UnicodeScalar
 private let hashScalar = "#" as UnicodeScalar
 private let atScalar = "@" as UnicodeScalar
 private let slashScalar = "/" as UnicodeScalar
-private let dotsScalar = ":" as UnicodeScalar
+private let colonScalar = ":" as UnicodeScalar
 private let alphanumerics = CharacterSet.alphanumerics
 
 private func scalarCanPrependQueryControl(_ c: UnicodeScalar?) -> Bool {
@@ -101,7 +101,8 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
         
         var possibleQueryRange: NSRange?
         
-        if (inputString as String).isSingleEmoji {
+        let string = (inputString as String)
+        if string.count < 3, string.trimmingTrailingSpaces().isSingleEmoji {
             return [(NSRange(location: 0, length: inputLength), [.emoji], nil)]
         }
         
@@ -140,7 +141,7 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
                         possibleQueryRange = NSRange(location: index, length: maxIndex - index)
                     }
                     break
-                } else if c == dotsScalar {
+                } else if c == colonScalar {
                     if scalarCanPrependQueryControl(previousC) {
                         possibleTypes = possibleTypes.intersection([.emojiSearch])
                         definedType = true
@@ -231,11 +232,6 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
     
     switch chatPresentationInterfaceState.inputMode {
         case .media:
-//            if contextPlaceholder == nil && chatPresentationInterfaceState.interfaceState.editMessage == nil && chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0, case .media(.gif, _) = chatPresentationInterfaceState.inputMode {
-//                let baseFontSize: CGFloat = max(17.0, chatPresentationInterfaceState.fontSize.baseDisplaySize)
-//                
-//                contextPlaceholder = NSAttributedString(string: "@gif", font: Font.regular(baseFontSize), textColor: chatPresentationInterfaceState.theme.chat.inputPanel.inputPlaceholderColor)
-//            }
             accessoryItems.append(.keyboard)
             return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
         case .inputButtons:
@@ -285,8 +281,4 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
             }
     }
-}
-
-func urlPreviewForPresentationInterfaceState() {
-    
 }

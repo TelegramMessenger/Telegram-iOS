@@ -21,6 +21,14 @@ extension UnicodeScalar {
 }
 
 extension String {
+    func trimmingTrailingSpaces() -> String {
+        var t = self
+        while t.hasSuffix(" ") {
+            t = "" + t.dropLast()
+        }
+        return t
+    }
+    
     var glyphCount: Int {
         let richText = NSAttributedString(string: self)
         let line = CTLineCreateWithAttributedString(richText)
