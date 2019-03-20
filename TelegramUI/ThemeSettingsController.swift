@@ -227,7 +227,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
 private func themeSettingsControllerEntries(presentationData: PresentationData, theme: PresentationTheme, themeAccentColor: Int32?, autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, disableAnimations: Bool) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
-    entries.append(.fontSizeHeader(presentationData.theme, strings.Appearance_TextSize))
+    entries.append(.fontSizeHeader(presentationData.theme, strings.Appearance_TextSize.uppercased()))
     entries.append(.fontSize(presentationData.theme, fontSize))
     entries.append(.chatPreviewHeader(presentationData.theme, strings.Appearance_Preview))
     entries.append(.chatPreview(presentationData.theme, theme, wallpaper, fontSize, presentationData.strings, dateTimeFormat, presentationData.nameDisplayOrder))
@@ -248,13 +248,13 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
         entries.append(.autoNightTheme(presentationData.theme, strings.Appearance_AutoNightTheme, title))
     }
     
-    entries.append(.themeListHeader(presentationData.theme, strings.Appearance_ColorTheme))
+    entries.append(.themeListHeader(presentationData.theme, strings.Appearance_ColorTheme.uppercased()))
     entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeDayClassic, theme.name == .builtin(.dayClassic), 0))
     entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeDay, theme.name == .builtin(.day), 1))
     entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeNight, theme.name == .builtin(.nightGrayscale), 2))
     entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeNightBlue, theme.name == .builtin(.nightAccent), 3))
     
-    entries.append(.animationsHeader(presentationData.theme, strings.Appearance_Animations))
+    entries.append(.animationsHeader(presentationData.theme, strings.Appearance_Animations.uppercased()))
     entries.append(.animations(presentationData.theme, strings.Appearance_ReduceMotion, disableAnimations))
     entries.append(.animationsInfo(presentationData.theme, strings.Appearance_ReduceMotionInfo))
     

@@ -363,7 +363,7 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
     }
     entries.append(.twoStepVerification(presentationData.theme, presentationData.strings.PrivacySettings_TwoStepAuth))
     entries.append(.activeSessions(presentationData.theme, presentationData.strings.PrivacySettings_AuthSessions))
-    entries.append(.accountHeader(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountTitle))
+    entries.append(.accountHeader(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountTitle.uppercased()))
     if let privacySettings = privacySettings {
         let value: Int32
         if let updatingAccountTimeoutValue = state.updatingAccountTimeoutValue {
