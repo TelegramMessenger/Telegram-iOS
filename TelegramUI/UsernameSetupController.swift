@@ -21,6 +21,19 @@ private enum UsernameSetupSection: Int32 {
     case link
 }
 
+public enum UsernameEntryTag: ItemListItemTag {
+    case username
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? UsernameEntryTag, self == other {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
+
 private enum UsernameSetupEntry: ItemListNodeEntry {
     case editablePublicLink(PresentationTheme, String, String?, String)
     case publicLinkStatus(PresentationTheme, String, AddressNameValidationStatus, String)
@@ -74,10 +87,9 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
     func item(_ arguments: UsernameSetupControllerArguments) -> ListViewItem {
         switch self {
             case let .editablePublicLink(theme, prefix, currentText, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .username, spacing: 10.0, sectionId: self.section, textUpdated: { updatedText in
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .username, spacing: 10.0, tag: UsernameEntryTag.username, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePublicLinkText(currentText, updatedText)
                 }, action: {
-                    
                 })
             case let .publicLinkInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section, linkAction: { action in
@@ -320,7 +332,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
             })
             
             let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Username_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: usernameSetupControllerEntries(presentationData: presentationData, view: view, state: state), style: .blocks, animateChanges: false)
+            let listState = ItemListNodeState(entries: usernameSetupControllerEntries(presentationData: presentationData, view: view, state: state), style: .blocks, focusItemTag: UsernameEntryTag.username, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

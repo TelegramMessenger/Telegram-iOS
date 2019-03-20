@@ -334,7 +334,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
     }
     
     private func textUpdated(_ text: String) {
-        self.item?.textUpdated("")
+        self.item?.textUpdated(text)
     }
     
     func focus() {

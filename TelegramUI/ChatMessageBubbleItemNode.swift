@@ -1823,10 +1823,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             return shareButtonNode.view
         }
         
-        if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(point) {
-            return self.view
-        }
-        
         if let selectionNode = self.selectionNode {
             if let result = self.traceSelectionNodes(parent: self, point: point.offsetBy(dx: -42.0, dy: 0.0)) {
                 return result.view
@@ -1840,6 +1836,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             } else {
                 return nil
             }
+        }
+        
+        if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(point) {
+            return self.view
         }
         
         if !self.backgroundNode.frame.contains(point) {

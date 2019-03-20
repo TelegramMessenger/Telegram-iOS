@@ -151,7 +151,7 @@ struct SettingsSearchableItem {
 
 private func synonyms(_ string: String?) -> [String] {
     if let string = string, !string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-        return string.components(separatedBy: "|")
+        return string.components(separatedBy: "\n")
     } else {
         return []
     }
@@ -225,12 +225,12 @@ private func callSearchableItems(context: AccountContext) -> [SettingsSearchable
     ]
 }
 
-private func stickerSearchableItems(context: AccountContext, hasArchivedStickerPacks: Bool) -> [SettingsSearchableItem] {
+private func stickerSearchableItems(context: AccountContext, archivedStickerPacks: [ArchivedStickerPackItem]?) -> [SettingsSearchableItem] {
     let icon: SettingsSearchableItemIcon = .stickers
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
     let presentStickerSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void, InstalledStickerPacksEntryTag?) -> Void = { context, present, itemTag in
-        present(.push, installedStickerPacksController(context: context, mode: .general, archivedPacks: nil, updatedPacks: { _ in }, focusOnItemTag: itemTag))
+        present(.push, installedStickerPacksController(context: context, mode: .general, archivedPacks: archivedStickerPacks, updatedPacks: { _ in }, focusOnItemTag: itemTag))
     }
     
     var items: [SettingsSearchableItem] = []
@@ -244,9 +244,9 @@ private func stickerSearchableItems(context: AccountContext, hasArchivedStickerP
     items.append(SettingsSearchableItem(id: .stickers(2), title: strings.StickerPacksSettings_FeaturedPacks, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_FeaturedPacks), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
         present(.push, featuredStickerPacksController(context: context))
     }))
-    if hasArchivedStickerPacks {
+    if !(archivedStickerPacks?.isEmpty ?? true) {
         items.append(SettingsSearchableItem(id: .stickers(3), title: strings.StickerPacksSettings_ArchivedPacks, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_ArchivedPacks), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
-            present(.push, archivedStickerPacksController(context: context, mode: .stickers, archived: nil, updatedPacks: { _ in }))
+            present(.push, archivedStickerPacksController(context: context, mode: .stickers, archived: archivedStickerPacks, updatedPacks: { _ in }))
         }))
     }
     items.append(SettingsSearchableItem(id: .stickers(4), title: strings.MaskStickerSettings_Title, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_Masks), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
@@ -693,11 +693,8 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         return viewSettings
     }
     
-    let hasArchivedStickerPacks = archivedStickerPacks
+    let archivedStickerPacks = archivedStickerPacks
     |> take(1)
-    |> map { stickerPacks -> Bool in
-        return !(stickerPacks?.isEmpty ?? true) 
-    }
     
     let proxyServers = context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
     |> map { sharedData -> ProxySettings in
@@ -711,8 +708,8 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         return settings.servers
     }
     
-    return combineLatest(watchAppInstalled, canAddAccount, notificationSettings, notificationExceptionsList, hasArchivedStickerPacks, proxyServers)
-    |> map { watchAppInstalled, canAddAccount, notificationSettings, notificationExceptionsList, hasArchivedStickerPacks, proxyServers in
+    return combineLatest(watchAppInstalled, canAddAccount, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers)
+    |> map { watchAppInstalled, canAddAccount, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers in
         let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
         
         var allItems: [SettingsSearchableItem] = []
@@ -728,7 +725,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         let callItems = callSearchableItems(context: context)
         allItems.append(contentsOf: callItems)
         
-        let stickerItems = stickerSearchableItems(context: context, hasArchivedStickerPacks: hasArchivedStickerPacks)
+        let stickerItems = stickerSearchableItems(context: context, archivedStickerPacks: archivedStickerPacks)
         allItems.append(contentsOf: stickerItems)
 
         let notificationItems = notificationSearchableItems(context: context, settings: notificationSettings, exceptionsList: notificationExceptionsList)
