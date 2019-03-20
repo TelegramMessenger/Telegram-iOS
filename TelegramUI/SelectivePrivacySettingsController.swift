@@ -732,22 +732,22 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
             callDataSaving = state.callDataSaving
             callIntegrationEnabled = state.callIntegrationEnabled
             switch state.setting {
-            case .everybody:
-                settings = SelectivePrivacySettings.enableEveryone(disableFor: state.disableFor)
-            case .contacts:
-                settings = SelectivePrivacySettings.enableContacts(enableFor: state.enableFor, disableFor: state.disableFor)
-            case .nobody:
-                settings = SelectivePrivacySettings.disableEveryone(enableFor: state.enableFor)
+                case .everybody:
+                    settings = SelectivePrivacySettings.enableEveryone(disableFor: state.disableFor)
+                case .contacts:
+                    settings = SelectivePrivacySettings.enableContacts(enableFor: state.enableFor, disableFor: state.disableFor)
+                case .nobody:
+                    settings = SelectivePrivacySettings.disableEveryone(enableFor: state.enableFor)
             }
             
             if case .voiceCalls = kind, let callP2PMode = state.callP2PMode, let disableFor = state.callP2PDisableFor, let enableFor = state.callP2PEnableFor {
                 switch callP2PMode {
-                case .everybody:
-                    callP2PSettings = SelectivePrivacySettings.enableEveryone(disableFor: disableFor)
-                case .contacts:
-                    callP2PSettings = SelectivePrivacySettings.enableContacts(enableFor: enableFor, disableFor: disableFor)
-                case .nobody:
-                    callP2PSettings = SelectivePrivacySettings.disableEveryone(enableFor: enableFor)
+                    case .everybody:
+                        callP2PSettings = SelectivePrivacySettings.enableEveryone(disableFor: disableFor)
+                    case .contacts:
+                        callP2PSettings = SelectivePrivacySettings.enableContacts(enableFor: enableFor, disableFor: disableFor)
+                    case .nobody:
+                        callP2PSettings = SelectivePrivacySettings.disableEveryone(enableFor: enableFor)
                 }
             }
             
@@ -757,16 +757,16 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
         if let settings = settings, !wasSaving {
             let type: UpdateSelectiveAccountPrivacySettingsType
             switch kind {
-            case .presence:
-                type = .presence
-            case .groupInvitations:
-                type = .groupInvitations
-            case .voiceCalls:
-                type = .voiceCalls
-            case .profilePhoto:
-                type = .profilePhoto
-            case .forwards:
-                type = .forwards
+                case .presence:
+                    type = .presence
+                case .groupInvitations:
+                    type = .groupInvitations
+                case .voiceCalls:
+                    type = .voiceCalls
+                case .profilePhoto:
+                    type = .profilePhoto
+                case .forwards:
+                    type = .forwards
             }
             
             let updateSettingsSignal = updateSelectiveAccountPrivacySettings(account: context.account, type: type, settings: settings)
