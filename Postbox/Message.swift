@@ -396,6 +396,14 @@ public struct MessageForwardInfo: Equatable {
     public let sourceMessageId: MessageId?
     public let date: Int32
     public let authorSignature: String?
+    
+    public init(author: Peer?, source: Peer?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?) {
+        self.author = author
+        self.source = source
+        self.sourceMessageId = sourceMessageId
+        self.date = date
+        self.authorSignature = authorSignature
+    }
 
     public static func ==(lhs: MessageForwardInfo, rhs: MessageForwardInfo) -> Bool {
         if !arePeersEqual(lhs.author, rhs.author) {
