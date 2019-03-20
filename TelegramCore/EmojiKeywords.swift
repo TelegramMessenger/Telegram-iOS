@@ -337,7 +337,14 @@ public func searchEmojiKeywords(keywords: EmojiKeywords, query: String, complete
                 }
             }
         } else {
-            for case let .keyword(name, emoticons) in keywords.entries.sorted(by: { $0.key < $1.key }).map ( { $0.value } ) {
+            let sortedEntries = keywords.entries.sorted(by: { lhs, rhs -> Bool in
+                if lhs.key.count == rhs.key.count {
+                    return lhs.key < rhs.key
+                } else {
+                    return lhs.key.count < rhs.key.count
+                }
+            })
+            for case let .keyword(name, emoticons) in sortedEntries.map ({ $0.value }) {
                 if name.hasPrefix(query) {
                     for emoticon in emoticons {
                         if !existing.contains(emoticon) {
