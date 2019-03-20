@@ -4188,3 +4188,8 @@ Unused sets are archived when you add more.";
 "SettingsSearch.Synonyms.Watch" = "Apple Watch";
 "SettingsSearch.Synonyms.Support" = "Support";
 "SettingsSearch.Synonyms.FAQ" = " ";
+
+"ChatList.DeleteForCurrentUser" = "Delete just for me";
+"ChatList.DeleteForEveryone" = "Delete for me and %@";
+
+"ChatList.ClearChatConfirmation" = "Are you sure you want to delete all\nmessages in the chat with %@?";
