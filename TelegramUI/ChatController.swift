@@ -3842,6 +3842,10 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
             case .clearHistory:
                 if case let .peer(peerId) = self.chatLocation {
+                    guard let peer = self.presentationInterfaceState.renderedPeer, let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
+                        return
+                    }
+                    
                     let text: String
                     if peerId == self.context.account.peerId {
                         text = self.presentationData.strings.Conversation_ClearSelfHistory
@@ -3852,28 +3856,57 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     } else {
                         text = self.presentationData.strings.Conversation_ClearPrivateHistory
                     }
-
-                    let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                        ActionSheetTextItem(title: text),
-                        ActionSheetButtonItem(title: self.presentationData.strings.Conversation_ClearAll, color: .destructive, action: { [weak self, weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            if let strongSelf = self {
-                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                                strongSelf.chatDisplayNode.historyNode.historyAppearsCleared = true
-                                let account = strongSelf.context.account
-                                strongSelf.present(UndoOverlayController(context: strongSelf.context, text: strongSelf.presentationData.strings.Undo_MessagesDeleted, action: { shouldCommit in
-                                    if shouldCommit {
-                                        let _ = clearHistoryInteractively(postbox: account.postbox, peerId: peerId).start(completed: {
-                                            self?.chatDisplayNode.historyNode.historyAppearsCleared = false
-                                        })
-                                    } else {
-                                        self?.chatDisplayNode.historyNode.historyAppearsCleared = false
-                                    }
-                                }), in: .window(.root))
+                    
+                    var canRemoveGlobally = false
+                    let limitsConfiguration = self.context.currentLimitsConfiguration.with { $0 }
+                    if peerId.namespace == Namespaces.Peer.CloudUser && peerId != self.context.account.peerId {
+                        if limitsConfiguration.maxMessageRevokeIntervalInPrivateChats == LimitsConfiguration.timeIntervalForever {
+                            canRemoveGlobally = true
+                        }
+                    }
+                    
+                    let account = self.context.account
+                    
+                    let beginClear: (InteractiveMessagesDeletionType) -> Void = { [weak self] type in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                        strongSelf.chatDisplayNode.historyNode.historyAppearsCleared = true
+                        
+                        strongSelf.present(UndoOverlayController(context: strongSelf.context, text: strongSelf.presentationData.strings.Undo_MessagesDeleted, action: { shouldCommit in
+                            if shouldCommit {
+                                let _ = clearHistoryInteractively(postbox: account.postbox, peerId: peerId, type: type).start(completed: {
+                                    self?.chatDisplayNode.historyNode.historyAppearsCleared = false
+                                })
+                            } else {
+                                self?.chatDisplayNode.historyNode.historyAppearsCleared = false
                             }
-                        })
-                    ]), ActionSheetItemGroup(items: [
+                        }), in: .window(.root))
+                    }
+                    
+                    let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
+                    var items: [ActionSheetItem] = []
+                        
+                    if canRemoveGlobally {
+                        items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory, strings: self.presentationData.strings))
+                        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
+                            beginClear(.forLocalPeer)
+                            actionSheet?.dismissAnimated()
+                        }))
+                        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)).0, color: .destructive, action: { [weak actionSheet] in
+                            beginClear(.forEveryone)
+                            actionSheet?.dismissAnimated()
+                        }))
+                    } else {
+                        items.append(ActionSheetTextItem(title: text))
+                        items.append(ActionSheetButtonItem(title: self.presentationData.strings.Conversation_ClearAll, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            beginClear(.forLocalPeer)
+                        }))
+                    }
+
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                         })

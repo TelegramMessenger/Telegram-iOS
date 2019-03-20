@@ -31,11 +31,11 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                     entries.append(.HoleEntry(hole, presentationData))
                 }
             case let .MessageEntry(message, read, _, monthLocation, attributes):
-                if message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
+                if message.id.peerId.namespace == Namespaces.Peer.CloudChannel || message.id.peerId.namespace == Namespaces.Peer.CloudUser {
                     for media in message.media {
                         if let action = media as? TelegramMediaAction {
                             switch action.action {
-                                case .channelMigratedFromGroup, .groupMigratedToChannel:
+                                case .channelMigratedFromGroup, .groupMigratedToChannel, .historyCleared:
                                     continue loop
                                 default:
                                     break

@@ -403,7 +403,16 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 } else if let _ = chatPeer as? TelegramSecretChat {
                     deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
                 }
-                items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, strings: strongSelf.presentationData.strings))
+                
+                var canRemoveGlobally = false
+                let limitsConfiguration = strongSelf.context.currentLimitsConfiguration.with { $0 }
+                if chatPeer is TelegramUser && chatPeer.id != strongSelf.context.account.peerId {
+                    if limitsConfiguration.maxMessageRevokeIntervalInPrivateChats == LimitsConfiguration.timeIntervalForever {
+                        canRemoveGlobally = true
+                    }
+                }
+                
+                items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .delete, strings: strongSelf.presentationData.strings))
                 if canClear {
                     items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DialogList_ClearHistoryConfirmation, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
@@ -411,34 +420,67 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
-                            var state = state
-                            state.pendingClearHistoryPeerIds.insert(peer.peerId)
-                            return state
-                        })
-                        strongSelf.present(UndoOverlayController(context: strongSelf.context, text: strongSelf.presentationData.strings.Undo_MessagesDeleted, action: { shouldCommit in
+                        
+                        let beginClear: (InteractiveMessagesDeletionType) -> Void = { type in
                             guard let strongSelf = self else {
                                 return
                             }
-                            if shouldCommit {
-                                let _ = clearHistoryInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId).start(completed: {
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
+                            strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                                var state = state
+                                state.pendingClearHistoryPeerIds.insert(peer.peerId)
+                                return state
+                            })
+                            strongSelf.present(UndoOverlayController(context: strongSelf.context, text: strongSelf.presentationData.strings.Undo_MessagesDeleted, action: { shouldCommit in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                if shouldCommit {
+                                    let _ = clearHistoryInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, type: type).start(completed: {
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                                            var state = state
+                                            state.pendingClearHistoryPeerIds.remove(peer.peerId)
+                                            return state
+                                        })
+                                    })
+                                } else {
                                     strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
                                         var state = state
                                         state.pendingClearHistoryPeerIds.remove(peer.peerId)
                                         return state
                                     })
-                                })
-                            } else {
-                                strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
-                                    var state = state
-                                    state.pendingClearHistoryPeerIds.remove(peer.peerId)
-                                    return state
-                                })
-                            }
-                        }), in: .window(.root))
+                                }
+                            }), in: .window(.root))
+                        }
+                        
+                        if canRemoveGlobally {
+                            let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                            var items: [ActionSheetItem] = []
+                            
+                            items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory, strings: strongSelf.presentationData.strings))
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
+                                beginClear(.forLocalPeer)
+                                actionSheet?.dismissAnimated()
+                            }))
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0, color: .destructive, action: { [weak actionSheet] in
+                                beginClear(.forEveryone)
+                                actionSheet?.dismissAnimated()
+                            }))
+                            
+                            actionSheet.setItemGroups([
+                                ActionSheetItemGroup(items: items),
+                                ActionSheetItemGroup(items: [
+                                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                    })
+                                ])
+                            ])
+                            strongSelf.present(actionSheet, in: .window(.root))
+                        } else {
+                            beginClear(.forLocalPeer)
+                        }
                     }))
                 }
             
@@ -447,7 +489,8 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.schedulePeerChatRemoval(peer: peer)
+                    
+                    strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in })
                 }))
         
                 if canStop {
@@ -1137,10 +1180,60 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         }
     }
     
-    func schedulePeerChatRemoval(peer: RenderedPeer, deleteGloballyIfPossible: Bool = false) {
+    func maybeAskForPeerChatRemoval(peer: RenderedPeer, deleteGloballyIfPossible: Bool = false, completion: @escaping (Bool) -> Void) {
+        guard let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
+            completion(false)
+            return
+        }
+        var canRemoveGlobally = false
+        let limitsConfiguration = self.context.currentLimitsConfiguration.with { $0 }
+        if peer.peerId.namespace == Namespaces.Peer.CloudUser && peer.peerId != self.context.account.peerId {
+            if limitsConfiguration.maxMessageRevokeIntervalInPrivateChats == LimitsConfiguration.timeIntervalForever {
+                canRemoveGlobally = true
+            }
+        }
+        
+        if canRemoveGlobally {
+            let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
+            var items: [ActionSheetItem] = []
+            
+            items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: mainPeer, chatPeer: chatPeer, action: .delete, strings: self.presentationData.strings))
+            items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak self, weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                self?.schedulePeerChatRemoval(peer: peer, type: .forLocalPeer, deleteGloballyIfPossible: deleteGloballyIfPossible)
+                completion(true)
+            }))
+            items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)).0, color: .destructive, action: { [weak self, weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                self?.schedulePeerChatRemoval(peer: peer, type: .forEveryone, deleteGloballyIfPossible: deleteGloballyIfPossible)
+                completion(true)
+            }))
+            
+            actionSheet.setItemGroups([
+                ActionSheetItemGroup(items: items),
+                ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        completion(false)
+                    })
+                ])
+            ])
+            self.present(actionSheet, in: .window(.root))
+        } else {
+            self.schedulePeerChatRemoval(peer: peer, type: .forLocalPeer, deleteGloballyIfPossible: deleteGloballyIfPossible)
+        }
+    }
+    
+    private func schedulePeerChatRemoval(peer: RenderedPeer, type: InteractiveMessagesDeletionType, deleteGloballyIfPossible: Bool) {
         guard let chatPeer = peer.peers[peer.peerId] else {
             return
         }
+        
+        var deleteGloballyIfPossible = deleteGloballyIfPossible
+        if case .forEveryone = type {
+            deleteGloballyIfPossible = true
+        }
+        
         let peerId = peer.peerId
         self.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
         self.chatListDisplayNode.chatListNode.updateState({ state in

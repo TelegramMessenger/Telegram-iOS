@@ -584,7 +584,7 @@ private func canPerformEditingActions(limits: LimitsConfiguration, accountPeerId
     }
     
     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-    if message.timestamp + limits.maxMessageEditingInterval > timestamp {
+    if Int64(message.timestamp) + Int64(limits.maxMessageEditingInterval) > Int64(timestamp) {
         return true
     }
     
@@ -602,7 +602,7 @@ private func canPerformDeleteActions(limits: LimitsConfiguration, accountPeerId:
     if !message.flags.contains(.Incoming) {
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         if message.id.peerId.namespace == Namespaces.Peer.CloudUser {
-            if message.timestamp + limits.maxMessageRevokeIntervalInPrivateChats > timestamp {
+            if Int64(message.timestamp) + Int64(limits.maxMessageRevokeIntervalInPrivateChats) > Int64(timestamp) {
                 return true
             }
         } else {
