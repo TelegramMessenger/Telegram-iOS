@@ -86,15 +86,18 @@ final class CloudChatRemoveChatOperation: PostboxCoding {
 final class CloudChatClearHistoryOperation: PostboxCoding {
     let peerId: PeerId
     let topMessageId: MessageId
+    let type: InteractiveMessagesDeletionType
     
-    init(peerId: PeerId, topMessageId: MessageId) {
+    init(peerId: PeerId, topMessageId: MessageId, type: InteractiveMessagesDeletionType) {
         self.peerId = peerId
         self.topMessageId = topMessageId
+        self.type = type
     }
     
     init(decoder: PostboxDecoder) {
         self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
         self.topMessageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("m.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("m.n", orElse: 0), id: decoder.decodeInt32ForKey("m.i", orElse: 0))
+        self.type = InteractiveMessagesDeletionType(rawValue: decoder.decodeInt32ForKey("type", orElse: 0)) ?? .forLocalPeer
     }
     
     func encode(_ encoder: PostboxEncoder) {
@@ -102,6 +105,7 @@ final class CloudChatClearHistoryOperation: PostboxCoding {
         encoder.encodeInt64(self.topMessageId.peerId.toInt64(), forKey: "m.p")
         encoder.encodeInt32(self.topMessageId.namespace, forKey: "m.n")
         encoder.encodeInt32(self.topMessageId.id, forKey: "m.i")
+        encoder.encodeInt32(self.type.rawValue, forKey: "type")
     }
 }
 
@@ -113,7 +117,7 @@ func cloudChatAddRemoveChatOperation(transaction: Transaction, peerId: PeerId, r
     transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatRemoveChatOperation(peerId: peerId, reportChatSpam: reportChatSpam, deleteGloballyIfPossible: deleteGloballyIfPossible, topMessageId: transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud)))
 }
 
-func cloudChatAddClearHistoryOperation(transaction: Transaction, peerId: PeerId, explicitTopMessageId: MessageId?) {
+func cloudChatAddClearHistoryOperation(transaction: Transaction, peerId: PeerId, explicitTopMessageId: MessageId?, type: InteractiveMessagesDeletionType) {
     let topMessageId: MessageId?
     if let explicitTopMessageId = explicitTopMessageId {
         topMessageId = explicitTopMessageId
@@ -121,6 +125,6 @@ func cloudChatAddClearHistoryOperation(transaction: Transaction, peerId: PeerId,
         topMessageId = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud)
     }
     if let topMessageId = topMessageId {
-        transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: topMessageId))
+        transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: topMessageId, type: type))
     }
 }

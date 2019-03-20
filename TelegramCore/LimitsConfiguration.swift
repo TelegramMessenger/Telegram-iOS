@@ -6,6 +6,8 @@ import Foundation
 #endif
 
 public struct LimitsConfiguration: Equatable, PreferencesEntry {
+    public static let timeIntervalForever: Int32 = 0x7fffffff
+    
     public var maxGroupMemberCount: Int32
     public var maxSupergroupMemberCount: Int32
     public var maxMessageForwardBatchSize: Int32

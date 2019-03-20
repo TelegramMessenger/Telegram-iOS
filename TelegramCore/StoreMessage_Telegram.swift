@@ -559,9 +559,6 @@ extension StoreMessage {
             case .messageEmpty:
                 return nil
             case let .messageService(flags, id, fromId, toId, replyToMsgId, date, action):
-                if case .messageActionHistoryClear = action {
-                    return nil
-                }
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {

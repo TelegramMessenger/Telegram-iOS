@@ -90,6 +90,7 @@ enum AccountStateMutationOperation {
     case UpdateCall(Api.PhoneCall)
     case UpdateLangPack(String, Api.LangPackDifference?)
     case UpdateMinAvailableMessage(MessageId)
+    case UpdatePeerInclusionMinTimestamp(PeerId, Int32)
 }
 
 struct AccountMutableState {
@@ -277,6 +278,10 @@ struct AccountMutableState {
         self.addOperation(.UpdateMinAvailableMessage(id))
     }
     
+    mutating func updatePeerInclusionMinTimestamp(peerId: PeerId, timestamp: Int32) {
+        self.addOperation(.UpdatePeerInclusionMinTimestamp(peerId, timestamp))
+    }
+    
     mutating func mergeUsers(_ users: [Api.User]) {
         self.addOperation(.MergeApiUsers(users))
         
@@ -347,7 +352,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerInclusionMinTimestamp, .UpdatePeerChatUnreadMark, .UpdateIsContact:
                 break
             case let .AddMessages(messages, location):
                 for message in messages {
