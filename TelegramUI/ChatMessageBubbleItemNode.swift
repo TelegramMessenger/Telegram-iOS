@@ -356,6 +356,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         if let forwardInfo = item.content.firstMessage.forwardInfo {
                             ignoreForward = true
                             effectiveAuthor = forwardInfo.author
+                            if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature  {
+                                effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: Int32(clamping: authorSignature.persistentHashValue)), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: UserInfoFlags())
+                            }
                         }
                         displayAuthorInfo = !mergedTop.merged && incoming && effectiveAuthor != nil
                     } else {

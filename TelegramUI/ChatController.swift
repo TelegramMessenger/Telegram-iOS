@@ -1184,7 +1184,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         if let strongSelf = self {
                             var rect = sourceNode.view.convert(sourceNode.view.bounds, to: strongSelf.chatDisplayNode.view)
                             if let sourceFrame = sourceFrame {
-                                rect = CGRect(x: rect.minX + sourceFrame.minX, y: rect.minY + sourceFrame.minY, width: sourceFrame.width, height: sourceFrame.height)
+                                rect = CGRect(origin: rect.origin.offsetBy(dx: sourceFrame.minX, dy: sourceFrame.minY - sourceNode.bounds.minY), size: sourceFrame.size)
                             }
                             return (strongSelf.chatDisplayNode, rect)
                         }
@@ -3266,7 +3266,24 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }
         
-        self.volumeButtonsListener = VolumeButtonsListener(view: self.chatDisplayNode.view, shouldBeActive: self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes, valueChanged: { [weak self] in
+        let shouldBeActive = combineLatest(MediaManager.globalAudioSession.isPlaybackActive(), self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes)
+        |> mapToSignal { [weak self] isPlaybackActive, hasVisiblePlayableItemNodes -> Signal<Bool, NoError> in
+            if hasVisiblePlayableItemNodes && !isPlaybackActive {
+                return Signal<Bool, NoError> { [weak self] subscriber in
+                    guard let strongSelf = self else {
+                        subscriber.putCompletion()
+                        return EmptyDisposable
+                    }
+                    subscriber.putNext(strongSelf.traceVisibility() && isTopmostChatController(strongSelf))
+                    subscriber.putCompletion()
+                    return EmptyDisposable
+                } |> then(.complete() |> delay(1.0, queue: Queue.mainQueue())) |> restart
+            } else {
+                return .single(false)
+            }
+        }
+        
+        self.volumeButtonsListener = VolumeButtonsListener(shouldBeActive: shouldBeActive, valueChanged: { [weak self] in
             guard let strongSelf = self, strongSelf.traceVisibility() && isTopmostChatController(strongSelf) else {
                 return
             }

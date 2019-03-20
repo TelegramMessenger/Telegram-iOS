@@ -409,7 +409,7 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
     ]
 }
 
-private func privacySearchableItems(context: AccountContext) -> [SettingsSearchableItem] {
+private func privacySearchableItems(context: AccountContext, privacySettings: AccountPrivacySettings?) -> [SettingsSearchableItem] {
     let icon: SettingsSearchableItemIcon = .privacy
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
@@ -418,7 +418,12 @@ private func privacySearchableItems(context: AccountContext) -> [SettingsSearcha
     }
     
     let presentSelectivePrivacySettings: (AccountContext, SelectivePrivacySettingsKind, @escaping (SettingsSearchableItemPresentation, ViewController) -> Void) -> Void = { context, kind, present in
-        let privacySignal = requestAccountPrivacySettings(account: context.account)
+        let privacySignal: Signal<AccountPrivacySettings, NoError>
+        if let privacySettings = privacySettings {
+            privacySignal = .single(privacySettings)
+        } else {
+            privacySignal = requestAccountPrivacySettings(account: context.account)
+        }
         let callsSignal: Signal<(VoiceCallSettings, VoipConfiguration)?, NoError>
         if case .voiceCalls = kind {
             callsSignal = combineLatest(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings]), context.account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration]))
@@ -443,9 +448,9 @@ private func privacySearchableItems(context: AccountContext) -> [SettingsSearcha
                 case .voiceCalls:
                     current = info.voiceCalls
                 case .profilePhoto:
-                    current = info.voiceCalls
+                    current = info.profilePhoto
                 case .forwards:
-                    current = info.voiceCalls
+                    current = info.forwards
             }
 
             present(.push, selectivePrivacySettingsController(context: context, kind: kind, current: current, callSettings: callSettings != nil ? (info.voiceCallsP2P, callSettings!.0) : nil, voipConfiguration: callSettings?.1, callIntegrationAvailable: CallKitIntegration.isAvailable, updated: { updated, updatedCallSettings in
@@ -671,7 +676,7 @@ private func appearanceSearchableItems(context: AccountContext) -> [SettingsSear
     ]
 }
 
-func settingsSearchableItems(context: AccountContext, notificationExceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>) -> Signal<[SettingsSearchableItem], NoError> {
+func settingsSearchableItems(context: AccountContext, notificationExceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>) -> Signal<[SettingsSearchableItem], NoError> {
     let watchAppInstalled = (context.watchManager?.watchAppInstalled ?? .single(false))
     |> take(1)
 
@@ -696,6 +701,9 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
     let archivedStickerPacks = archivedStickerPacks
     |> take(1)
     
+    let privacySettings = privacySettings
+    |> take(1)
+    
     let proxyServers = context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
     |> map { sharedData -> ProxySettings in
         if let value = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings {
@@ -708,8 +716,8 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         return settings.servers
     }
     
-    return combineLatest(watchAppInstalled, canAddAccount, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers)
-    |> map { watchAppInstalled, canAddAccount, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers in
+    return combineLatest(watchAppInstalled, canAddAccount, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings)
+    |> map { watchAppInstalled, canAddAccount, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings in
         let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
         
         var allItems: [SettingsSearchableItem] = []
@@ -731,7 +739,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         let notificationItems = notificationSearchableItems(context: context, settings: notificationSettings, exceptionsList: notificationExceptionsList)
         allItems.append(contentsOf: notificationItems)
         
-        let privacyItems = privacySearchableItems(context: context)
+        let privacyItems = privacySearchableItems(context: context, privacySettings: privacySettings)
         allItems.append(contentsOf: privacyItems)
         
         let dataItems = dataSearchableItems(context: context)
