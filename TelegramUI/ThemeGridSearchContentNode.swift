@@ -557,7 +557,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                     entries.append(.query(i, queries[i]))
                 }
                 
-                let header = ChatListSearchItemHeader(type: .recentPeers, theme: presentationData.theme, strings: presentationData.strings, actionTitle: presentationData.strings.WebSearch_RecentSectionClear.uppercased(), action: {
+                let header = ChatListSearchItemHeader(type: .recentPeers, theme: presentationData.theme, strings: presentationData.strings, actionTitle: presentationData.strings.WebSearch_RecentSectionClear, action: {
                     _ = clearRecentWallpaperSearchQueries(postbox: strongSelf.context.account.postbox).start()
                 })
                 

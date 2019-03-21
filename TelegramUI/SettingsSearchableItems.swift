@@ -520,7 +520,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             })
         }),
         SettingsSearchableItem(id: .privacy(8), title: strings.PrivacySettings_TwoStepAuth, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_TwoStepAuth), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
-            present(.modal, twoStepVerificationUnlockSettingsController(context: context, mode: .access))
+            present(.push, twoStepVerificationUnlockSettingsController(context: context, mode: .access))
         }),
         SettingsSearchableItem(id: .privacy(9), title: strings.PrivacySettings_AuthSessions, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_AuthSessions), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
             present(.push, recentSessionsController(context: context))

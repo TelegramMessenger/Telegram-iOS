@@ -388,7 +388,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         updatedPlayerStatusSignal = videoNode.status
                         |> mapToSignal { status -> Signal<MediaPlayerStatus?, NoError> in
                             if let status = status, case .buffering = status.status {
-                                return .single(status) |> delay(0.5, queue: Queue.mainQueue())
+                                return .single(status) |> delay(0.75, queue: Queue.mainQueue())
                             } else {
                                 return .single(status)
                             }
@@ -574,7 +574,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         state = .download(bubbleTheme.mediaOverlayControlForegroundColor)
                 }
             default:
-                if isBuffering ?? false {
+                var isLocal = false
+                if case .Local = status.fetchStatus {
+                    isLocal = true
+                }
+                if (isBuffering ?? false) && !isLocal {
                     state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, lineWidth: nil, value: nil, cancelEnabled: true)
                 } else {
                     state = .none

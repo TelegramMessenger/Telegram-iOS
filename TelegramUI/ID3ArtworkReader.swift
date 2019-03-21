@@ -185,7 +185,11 @@ func readAlbumArtworkData(_ data: Data) -> ID3ArtworkResult {
         guard let value: UInt32 = stream.nextValue() else {
             return .moreDataNeeded(tagSize)
         }
-        let frameSize = id3Tag.frameSize(Int32(CFSwapInt32HostToBig(value)))
+        let val = CFSwapInt32HostToBig(value)
+        if val > Int32.max {
+            return .notFound
+        }
+        let frameSize = id3Tag.frameSize(Int32(val))
         let bytesLeft = frameSize - id3Tag.frameSizeOffset - 4
         
         if frameHeader == id3Tag.artworkHeader {
@@ -209,10 +213,11 @@ func readAlbumArtworkData(_ data: Data) -> ID3ArtworkResult {
                         var data = Data(capacity: frameSize + 1024)
                         var previousByte: UInt8 = 0xff
                     
+                        let limit = Int(Double(frameSize - offset) * 0.8)
                         for _ in 0 ..< frameSize - offset {
                             if let byte: UInt8 = stream.nextValue() {
                                 data.append(byte)
-                                if byte == 0xd9 && previousByte == 0xff {
+                                if byte == 0xd9 && previousByte == 0xff && data.count > limit {
                                     break
                                 }
                                 previousByte = byte
