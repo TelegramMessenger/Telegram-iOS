@@ -381,7 +381,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 guard let strongSelf = self, let peer = peer, let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
                     return
                 }
-                if chatPeer is TelegramUser {
+                if let user = chatPeer as? TelegramUser, user.botInfo == nil {
                     strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in })
                 } else {
                     let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
@@ -1224,6 +1224,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             ])
             self.present(actionSheet, in: .window(.root))
         } else {
+            completion(true)
             self.schedulePeerChatRemoval(peer: peer, type: .forLocalPeer, deleteGloballyIfPossible: deleteGloballyIfPossible)
         }
     }
