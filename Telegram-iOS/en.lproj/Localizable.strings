@@ -4090,6 +4090,8 @@ Unused sets are archived when you add more.";
 "Chat.DeleteMessagesConfirmation_1" = "Delete message";
 "Chat.DeleteMessagesConfirmation_any" = "Delete %@ messages";
 
+"Settings.Search" = "Search";
+
 "SettingsSearch.FAQ" = "FAQ";
 
 "SettingsSearch.Synonyms.EditProfile.Title" = " ";
