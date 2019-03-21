@@ -3265,8 +3265,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }
         
-        let shouldBeActive = combineLatest(MediaManager.globalAudioSession.isPlaybackActive(), self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes)
-        |> deliverOnMainQueue
+        let shouldBeActive = combineLatest(MediaManager.globalAudioSession.isPlaybackActive() |> deliverOnMainQueue, self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes)
         |> mapToSignal { [weak self] isPlaybackActive, hasVisiblePlayableItemNodes -> Signal<Bool, NoError> in
             if hasVisiblePlayableItemNodes && !isPlaybackActive {
                 return Signal<Bool, NoError> { [weak self] subscriber in
@@ -3287,6 +3286,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             guard let strongSelf = self, strongSelf.traceVisibility() && isTopmostChatController(strongSelf) else {
                 return
             }
+            strongSelf.videoUnmuteTooltipController?.dismiss()
             strongSelf.chatDisplayNode.playFirstMediaWithSound()
         })
         

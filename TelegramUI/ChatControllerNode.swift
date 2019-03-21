@@ -1493,14 +1493,16 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var hasUnconsumed = false
         self.historyNode.forEachVisibleItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView, let (action, _, _, isUnconsumed, _) = itemNode.playMediaWithSound() {
-                if case let .visible(fraction) = itemNode.visibility {
-                    hasUnconsumed = isUnconsumed
+                if case let .visible(fraction) = itemNode.visibility, fraction > 0.7 {
                     actions.insert((fraction, isUnconsumed, action), at: 0)
+                    if !hasUnconsumed && isUnconsumed {
+                        hasUnconsumed = true
+                    }
                 }
             }
         }
-        for (fraction, isUnconsumed, action) in actions {
-            if fraction > 0.7 && (!hasUnconsumed || isUnconsumed) {
+        for (_, isUnconsumed, action) in actions {
+            if (!hasUnconsumed || isUnconsumed) {
                 action()
                 break
             }
