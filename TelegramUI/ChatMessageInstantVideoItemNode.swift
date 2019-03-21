@@ -287,8 +287,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     }
                 } else {
                     if let currentForwardInfo = currentForwardInfo, forwardInfo.author == nil && currentForwardInfo.0 != nil {
-                        forwardSource = currentForwardInfo.0
-                        forwardAuthorSignature = currentForwardInfo.1
+                        forwardSource = nil
+                        forwardAuthorSignature = currentForwardInfo.0?.displayTitle
                     } else {
                         forwardSource = forwardInfo.author
                         forwardAuthorSignature = forwardInfo.authorSignature

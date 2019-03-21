@@ -276,8 +276,10 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
                                         return MediaFrameSourceSeekResult(buffers: MediaPlaybackBuffers(audioBuffer: nil, videoBuffer: nil), extraDecodedVideoFrames: [], timestamp: timestamp)
                                     }
                                 }))
+                                let _ = currentSemaphore.swap(nil)
                                 subscriber.putCompletion()
                             } else {
+                                let _ = currentSemaphore.swap(nil)
                                 subscriber.putError(.generic)
                             }
                         }

@@ -2717,7 +2717,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 }
             }
         }, displayVideoUnmuteTip: { [weak self] location in
-            guard let strongSelf = self, let layout = strongSelf.validLayout else {
+            guard let strongSelf = self, let layout = strongSelf.validLayout, strongSelf.traceVisibility() && isTopmostChatController(strongSelf) else {
                 return
             }
             let deviceMetrics = DeviceMetrics.forScreenSize(layout.size)
@@ -2734,7 +2734,6 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 tooltipController.dismissed = { [weak tooltipController] in
                     if let strongSelf = self, let tooltipController = tooltipController, strongSelf.videoUnmuteTooltipController === tooltipController {
                         strongSelf.videoUnmuteTooltipController = nil
-                        
                         ApplicationSpecificNotice.setVolumeButtonToUnmute(accountManager: strongSelf.context.sharedContext.accountManager)
                     }
                 }
@@ -3266,7 +3265,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             }
         }
         
-        let shouldBeActive = combineLatest(MediaManager.globalAudioSession.isPlaybackActive(), self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes)
+        let shouldBeActive = combineLatest(MediaManager.globalAudioSession.isPlaybackActive() |> deliverOnMainQueue, self.chatDisplayNode.historyNode.hasVisiblePlayableItemNodes)
         |> mapToSignal { [weak self] isPlaybackActive, hasVisiblePlayableItemNodes -> Signal<Bool, NoError> in
             if hasVisiblePlayableItemNodes && !isPlaybackActive {
                 return Signal<Bool, NoError> { [weak self] subscriber in
@@ -3287,6 +3286,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             guard let strongSelf = self, strongSelf.traceVisibility() && isTopmostChatController(strongSelf) else {
                 return
             }
+            strongSelf.videoUnmuteTooltipController?.dismiss()
             strongSelf.chatDisplayNode.playFirstMediaWithSound()
         })
         
@@ -3506,6 +3506,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
     }
     
     override public func updateToInterfaceOrientation(_ orientation: UIInterfaceOrientation) {
+        guard let layout = self.validLayout, case .compact = layout.metrics.widthClass else {
+            return
+        }
         let hasOverlayNodes = self.context.sharedContext.mediaManager.overlayMediaManager.controller?.hasNodes ?? false
         if self.validLayout != nil && orientation.isLandscape && !hasOverlayNodes && self.traceVisibility() && isTopmostChatController(self) {
             self.chatDisplayNode.openCurrentPlayingWithSoundMedia()

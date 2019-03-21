@@ -388,7 +388,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         updatedPlayerStatusSignal = videoNode.status
                         |> mapToSignal { status -> Signal<MediaPlayerStatus?, NoError> in
                             if let status = status, case .buffering = status.status {
-                                return .single(status) |> delay(0.5, queue: Queue.mainQueue())
+                                return .single(status) |> delay(0.75, queue: Queue.mainQueue())
                             } else {
                                 return .single(status)
                             }
@@ -574,7 +574,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         state = .download(bubbleTheme.mediaOverlayControlForegroundColor)
                 }
             default:
-                if isBuffering ?? false {
+                var isLocal = false
+                if case .Local = status.fetchStatus {
+                    isLocal = true
+                }
+                if (isBuffering ?? false) && !isLocal {
                     state = .progress(color: bubbleTheme.mediaOverlayControlForegroundColor, lineWidth: nil, value: nil, cancelEnabled: true)
                 } else {
                     state = .none
@@ -747,11 +751,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     
     func playMediaWithSound() -> (action: () -> Void, soundEnabled: Bool, isVideoMessage: Bool, isUnread: Bool, badgeNode: ASDisplayNode?)? {
         if let item = self.item {
-            var notConsumed = false
+            var isUnconsumed = false
             for attribute in item.message.attributes {
                 if let attribute = attribute as? ConsumableContentMessageAttribute {
                     if !attribute.consumed {
-                        notConsumed = true
+                        isUnconsumed = true
                     }
                     break
                 }
@@ -778,7 +782,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }
                     })
                 }
-            }, false, true, !notConsumed, nil)
+            }, false, true, isUnconsumed, nil)
         } else {
             return nil
         }

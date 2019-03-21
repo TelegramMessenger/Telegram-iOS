@@ -413,9 +413,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 if display {
                     var nodes: [(CGFloat, ChatMessageItemView, ASDisplayNode)] = []
+                    var skip = false
                     strongSelf.historyNode.forEachVisibleItemNode { itemNode in
-                        if let itemNode = itemNode as? ChatMessageItemView, let (_, _, isVideoMessage, _, badgeNode) = itemNode.playMediaWithSound(), let node = badgeNode {
-                            if !isVideoMessage, case let .visible(fraction) = itemNode.visibility {
+                        if let itemNode = itemNode as? ChatMessageItemView, let (_, soundEnabled, isVideoMessage, _, badgeNode) = itemNode.playMediaWithSound(), let node = badgeNode {
+                            if soundEnabled {
+                                skip = true
+                            } else if !skip && !isVideoMessage, case let .visible(fraction) = itemNode.visibility {
                                 nodes.insert((fraction, itemNode, node), at: 0)
                             }
                         }
@@ -1490,14 +1493,16 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var hasUnconsumed = false
         self.historyNode.forEachVisibleItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView, let (action, _, _, isUnconsumed, _) = itemNode.playMediaWithSound() {
-                if case let .visible(fraction) = itemNode.visibility {
-                    hasUnconsumed = isUnconsumed
+                if case let .visible(fraction) = itemNode.visibility, fraction > 0.7 {
                     actions.insert((fraction, isUnconsumed, action), at: 0)
+                    if !hasUnconsumed && isUnconsumed {
+                        hasUnconsumed = true
+                    }
                 }
             }
         }
-        for (fraction, isUnconsumed, action) in actions {
-            if fraction > 0.7 && (!hasUnconsumed || isUnconsumed) {
+        for (_, isUnconsumed, action) in actions {
+            if (!hasUnconsumed || isUnconsumed) {
                 action()
                 break
             }

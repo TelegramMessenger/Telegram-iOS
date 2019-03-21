@@ -381,7 +381,16 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 guard let strongSelf = self, let peer = peer, let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
                     return
                 }
-                if let user = chatPeer as? TelegramUser, user.botInfo == nil {
+                
+                var canRemoveGlobally = false
+                let limitsConfiguration = strongSelf.context.currentLimitsConfiguration.with { $0 }
+                if peer.peerId.namespace == Namespaces.Peer.CloudUser && peer.peerId != strongSelf.context.account.peerId {
+                    if limitsConfiguration.maxMessageRevokeIntervalInPrivateChats == LimitsConfiguration.timeIntervalForever {
+                        canRemoveGlobally = true
+                    }
+                }
+                
+                if let user = chatPeer as? TelegramUser, user.botInfo == nil, canRemoveGlobally {
                     strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in })
                 } else {
                     let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)

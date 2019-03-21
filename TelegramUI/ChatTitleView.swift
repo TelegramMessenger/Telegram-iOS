@@ -84,7 +84,6 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     private let titleNode: ImmediateTextNode
     private let titleLeftIconNode: ASImageNode
     private let titleRightIconNode: ASImageNode
- 
     private let activityNode: ChatTitleActivityNode
     
     private let button: HighlightTrackingButtonNode
@@ -462,13 +461,21 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 if highlighted {
                     strongSelf.titleNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.activityNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.titleLeftIconNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.titleRightIconNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.titleNode.alpha = 0.4
                     strongSelf.activityNode.alpha = 0.4
+                    strongSelf.titleLeftIconNode.alpha = 0.4
+                    strongSelf.titleRightIconNode.alpha = 0.4
                 } else {
                     strongSelf.titleNode.alpha = 1.0
                     strongSelf.activityNode.alpha = 1.0
+                    strongSelf.titleLeftIconNode.alpha = 1.0
+                    strongSelf.titleRightIconNode.alpha = 1.0
                     strongSelf.titleNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     strongSelf.activityNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.titleLeftIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.titleRightIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
         }
