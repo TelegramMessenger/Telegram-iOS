@@ -751,11 +751,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     
     func playMediaWithSound() -> (action: () -> Void, soundEnabled: Bool, isVideoMessage: Bool, isUnread: Bool, badgeNode: ASDisplayNode?)? {
         if let item = self.item {
-            var notConsumed = false
+            var isUnconsumed = false
             for attribute in item.message.attributes {
                 if let attribute = attribute as? ConsumableContentMessageAttribute {
                     if !attribute.consumed {
-                        notConsumed = true
+                        isUnconsumed = true
                     }
                     break
                 }
@@ -782,7 +782,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }
                     })
                 }
-            }, false, true, !notConsumed, nil)
+            }, false, true, isUnconsumed, nil)
         } else {
             return nil
         }
