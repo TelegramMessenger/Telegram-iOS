@@ -165,7 +165,7 @@ public:
      *
      *  @internal
      */
-    size_t drawRegionPosY() const {return mDrawArea.x;}
+    size_t drawRegionPosY() const {return mDrawArea.y;}
 
     /**
      *  @brief Default constructor.
