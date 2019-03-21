@@ -150,15 +150,21 @@ struct VSpanData {
                 VPainter::CompositionMode mode = VPainter::CompModeSrcOver,
                 int                       alpha = 255);
     void  setupMatrix(const VMatrix &matrix);
-    void  setPos(const VPoint &pos) { mPos = pos; }
+
     VRect clipRect() const
     {
-        return mSystemClip.translated(-mPos.x(), -mPos.y());
+        return VRect(0, 0, mDrawableSize.width(), mDrawableSize.height());
+    }
+
+    void setDrawRegion(const VRect &region)
+    {
+        mOffset = VPoint(region.left(), region.top());
+        mDrawableSize = VSize(region.width(), region.height());
     }
 
     uint *buffer(int x, int y) const
     {
-        return (uint *)(mRasterBuffer->scanLine(y + mPos.y())) + x + mPos.x();
+        return (uint *)(mRasterBuffer->scanLine(y + mOffset.y())) + x + mOffset.x();
     }
     void initTexture(const VBitmap *image, int alpha, VBitmapData::Type type, const VRect &sourceRect);
 
@@ -166,10 +172,10 @@ struct VSpanData {
     VRasterBuffer *                      mRasterBuffer;
     ProcessRleSpan                       mBlendFunc;
     ProcessRleSpan                       mUnclippedBlendFunc;
-    VRect                                mSystemClip;
     VSpanData::Type                      mType;
     std::shared_ptr<VSpanData::Pinnable> mCachedGradient;
-    VPoint                               mPos;
+    VPoint                               mOffset; // offset to the subsurface
+    VSize                                mDrawableSize;// suburface size
     union {
         uint32_t      mSolid;
         VGradientData mGradient;

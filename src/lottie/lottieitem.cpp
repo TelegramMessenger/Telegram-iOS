@@ -126,16 +126,20 @@ bool LOTCompItem::render(const rlottie::Surface &surface)
                    surface.width(), surface.height(),
                    surface.bytesPerLine(), VBitmap::Format::ARGB32_Premultiplied);
 
+
     /* schedule all preprocess task for this frame at once.
      */
     mDrawableList.clear();
     mRootLayer->renderList(mDrawableList);
-    VRect clip(0, 0, surface.width(), surface.height());
+    VRect clip(0, 0, surface.drawRegionWidth(), surface.drawRegionHeight());
     for (auto &e : mDrawableList) {
         e->preprocess(clip);
     }
 
     VPainter painter(&bitmap);
+    // set sub surface area for drawing.
+    painter.setDrawRegion(VRect(surface.drawRegionPosX(), surface.drawRegionPosY(),
+                          surface.drawRegionWidth(), surface.drawRegionHeight()));
     mRootLayer->render(&painter, {}, {});
 
     return true;

@@ -207,7 +207,7 @@ VBitmap::Format VRasterBuffer::prepare(VBitmap *image)
 void VSpanData::init(VRasterBuffer *image)
 {
     mRasterBuffer = image;
-    mSystemClip = VRect(0, 0, image->width(), image->height());
+    setDrawRegion(VRect(0, 0, image->width(), image->height()));
     mType = VSpanData::Type::None;
     mBlendFunc = nullptr;
     mUnclippedBlendFunc = nullptr;

@@ -32,14 +32,12 @@ public:
     VSpanData     mSpanData;
 };
 
-void VPainterImpl::drawRle(const VPoint &pos, const VRle &rle)
+void VPainterImpl::drawRle(const VPoint &, const VRle &rle)
 {
     if (rle.empty()) return;
     // mSpanData.updateSpanFunc();
 
     if (!mSpanData.mUnclippedBlendFunc) return;
-
-    mSpanData.setPos(pos);
 
     // do draw after applying clip.
     rle.intersect(mSpanData.clipRect(), mSpanData.mUnclippedBlendFunc,
@@ -61,9 +59,9 @@ static void fillRect(const VRect &r, VSpanData *data)
     int x1, x2, y1, y2;
 
     x1 = std::max(r.x(), 0);
-    x2 = std::min(r.x() + r.width(), data->mRasterBuffer->width());
+    x2 = std::min(r.x() + r.width(), data->mDrawableSize.width());
     y1 = std::max(r.y(), 0);
-    y2 = std::min(r.y() + r.height(), data->mRasterBuffer->height());
+    y2 = std::min(r.y() + r.height(), data->mDrawableSize.height());
 
     if (x2 <= x1 || y2 <= y1)
         return;
@@ -130,6 +128,12 @@ bool VPainter::begin(VBitmap *buffer)
 }
 void VPainter::end() {}
 
+void  VPainter::setDrawRegion(const VRect &region)
+{
+    mImpl->mSpanData.setDrawRegion(region);
+}
+
+
 void VPainter::setBrush(const VBrush &brush)
 {
     mImpl->mSpanData.setup(brush);
@@ -153,7 +157,7 @@ void VPainter::drawRle(const VRle &rle, const VRle &clip)
 
 VRect VPainter::clipBoundingRect() const
 {
-    return mImpl->mSpanData.mSystemClip;
+    return mImpl->mSpanData.clipRect();
 }
 
 void  VPainter::drawBitmap(const VPoint &point, const VBitmap &bitmap, const VRect &source)

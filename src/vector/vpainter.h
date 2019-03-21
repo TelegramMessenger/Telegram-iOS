@@ -40,6 +40,7 @@ public:
     VPainter(VBitmap *buffer);
     bool  begin(VBitmap *buffer);
     void  end();
+    void  setDrawRegion(const VRect &region); // sub surface rendering area.
     void  setBrush(const VBrush &brush);
     void  setCompositionMode(CompositionMode mode);
     void  drawRle(const VPoint &pos, const VRle &rle);
