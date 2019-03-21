@@ -81,6 +81,7 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible {
         }
     }
 }
+
 public struct MessageIndex: Comparable, Hashable {
     public let id: MessageId
     public let timestamp: Int32

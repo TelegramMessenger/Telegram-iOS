@@ -5,16 +5,8 @@ final class GlobalMessageIdsTable: Table {
         return ValueBoxTable(id: id, keyType: .int64)
     }
     
-    let namespace: Int32
-    
     let sharedKey = ValueBoxKey(length: 8)
     let sharedBuffer = WriteBuffer()
-    
-    init(valueBox: ValueBox, table: ValueBoxTable, namespace: Int32) {
-        self.namespace = namespace
-        
-        super.init(valueBox: valueBox, table: table)
-    }
     
     private func key(_ id: Int32) -> ValueBoxKey {
         self.sharedKey.setInt64(0, value: Int64(id))

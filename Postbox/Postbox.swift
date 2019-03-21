@@ -988,7 +988,7 @@ func debugRestoreState(basePath:String, name: String) {
     }
 }
 
-public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.Namespace, seedConfiguration: SeedConfiguration) -> Signal<PostboxResult, NoError> {
+public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration) -> Signal<PostboxResult, NoError> {
     let queue = Queue(name: "org.telegram.postbox.Postbox")
     return Signal { subscriber in
         queue.async {
@@ -1005,7 +1005,7 @@ public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.N
                 let metadataTable = MetadataTable(valueBox: valueBox, table: MetadataTable.tableSpec(0))
                 
                 let userVersion: Int32? = metadataTable.userVersion()
-                let currentUserVersion: Int32 = 18
+                let currentUserVersion: Int32 = 19
                 
                 if let userVersion = userVersion {
                     if userVersion != currentUserVersion {
@@ -1033,7 +1033,7 @@ public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.N
                     metadataTable.setUserVersion(currentUserVersion)
                 }
                 
-                subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, globalMessageIdsNamespace: globalMessageIdsNamespace, seedConfiguration: seedConfiguration, valueBox: valueBox)))
+                subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, seedConfiguration: seedConfiguration, valueBox: valueBox)))
                 subscriber.putCompletion()
                 break
             }
@@ -1047,7 +1047,6 @@ public final class Postbox {
     private let queue: Queue
     public let seedConfiguration: SeedConfiguration
     private let basePath: String
-    private let globalMessageIdsNamespace: MessageId.Namespace
     private let valueBox: ValueBox
     
     private let ipcNotificationsDisposable = MetaDisposable()
@@ -1185,14 +1184,13 @@ public final class Postbox {
     
     var installedMessageActionsByPeerId: [PeerId: Bag<([StoreMessage], Transaction) -> Void>] = [:]
     
-    fileprivate init(queue: Queue, basePath: String, globalMessageIdsNamespace: MessageId.Namespace, seedConfiguration: SeedConfiguration, valueBox: ValueBox) {
+    fileprivate init(queue: Queue, basePath: String, seedConfiguration: SeedConfiguration, valueBox: ValueBox) {
         assert(queue.isCurrent())
         
         let startTime = CFAbsoluteTimeGetCurrent()
         
         self.queue = queue
         self.basePath = basePath
-        self.globalMessageIdsNamespace = globalMessageIdsNamespace
         self.seedConfiguration = seedConfiguration
         
         print("MediaBox path: \(self.basePath + "/media")")
@@ -1216,7 +1214,7 @@ public final class Postbox {
         self.keychainTable = KeychainTable(valueBox: self.valueBox, table: KeychainTable.tableSpec(1))
         self.reverseAssociatedPeerTable = ReverseAssociatedPeerTable(valueBox: self.valueBox, table:ReverseAssociatedPeerTable.tableSpec(40))
         self.peerTable = PeerTable(valueBox: self.valueBox, table: PeerTable.tableSpec(2), reverseAssociatedTable: self.reverseAssociatedPeerTable)
-        self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox, table: GlobalMessageIdsTable.tableSpec(3), namespace: self.globalMessageIdsNamespace)
+        self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox, table: GlobalMessageIdsTable.tableSpec(3))
         self.globallyUniqueMessageIdsTable = MessageGloballyUniqueIdTable(valueBox: self.valueBox, table: MessageGloballyUniqueIdTable.tableSpec(32))
         self.messageHistoryMetadataTable = MessageHistoryMetadataTable(valueBox: self.valueBox, table: MessageHistoryMetadataTable.tableSpec(10))
         self.messageHistoryUnsentTable = MessageHistoryUnsentTable(valueBox: self.valueBox, table: MessageHistoryUnsentTable.tableSpec(11))
