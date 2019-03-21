@@ -380,9 +380,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     private func updatePlayPauseButton(paused: Bool) {
         if paused {
-            self.playPauseButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Pause"), color: self.theme.list.itemPrimaryTextColor)
-        } else {
             self.playPauseButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Play"), color: self.theme.list.itemPrimaryTextColor)
+        } else {
+            self.playPauseButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Pause"), color: self.theme.list.itemPrimaryTextColor)
         }
     }
     

@@ -343,7 +343,7 @@ public final class ManagedAudioSession {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
-                subscriber.putNext(strongSelf.currentTypeAndOutputMode?.0 == .play)
+                subscriber.putNext(strongSelf.currentTypeAndOutputMode?.0.isPlay ?? false)
                 
                 let index = strongSelf.isPlaybackActiveSubscribers.add({ value in
                     subscriber.putNext(value)
@@ -595,7 +595,7 @@ public final class ManagedAudioSession {
         self.deactivateTimer = nil
         
         let wasActive = self.currentTypeAndOutputMode != nil
-        let wasPlaybackActive = self.currentTypeAndOutputMode?.0 == .play
+        let wasPlaybackActive = self.currentTypeAndOutputMode?.0.isPlay ?? false
         self.currentTypeAndOutputMode = nil
         
         print("ManagedAudioSession setting active false")
@@ -624,7 +624,7 @@ public final class ManagedAudioSession {
         self.deactivateTimer = nil
         
         let wasActive = self.currentTypeAndOutputMode != nil
-        let wasPlaybackActive = self.currentTypeAndOutputMode?.0 == .play
+        let wasPlaybackActive = self.currentTypeAndOutputMode?.0.isPlay ?? false
         
         if self.currentTypeAndOutputMode == nil || self.currentTypeAndOutputMode! != (type, outputMode) {
             self.currentTypeAndOutputMode = (type, outputMode)

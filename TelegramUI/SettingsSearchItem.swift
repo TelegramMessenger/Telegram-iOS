@@ -113,7 +113,7 @@ final class SettingsSearchItem: ItemListControllerSearch {
             return current
         } else {
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-            return NavigationBarSearchContentNode(theme: presentationData.theme, placeholder: presentationData.strings.Common_Search, activate: {
+            return NavigationBarSearchContentNode(theme: presentationData.theme, placeholder: presentationData.strings.Settings_Search, activate: {
                 updateActivated(true)
             })
         }
@@ -422,7 +422,7 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
                     entries.append(.recent(i, recentSearchItems[i]))
                 }
                 
-                let header = ChatListSearchItemHeader(type: .recentPeers, theme: presentationData.theme, strings: presentationData.strings, actionTitle: presentationData.strings.WebSearch_RecentSectionClear.uppercased(), action: {
+                let header = ChatListSearchItemHeader(type: .recentPeers, theme: presentationData.theme, strings: presentationData.strings, actionTitle: presentationData.strings.WebSearch_RecentSectionClear, action: {
                     clearRecentSettingsSearchItems(postbox: context.account.postbox)
                 })
                 

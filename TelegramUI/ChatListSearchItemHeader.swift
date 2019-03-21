@@ -22,7 +22,7 @@ final class ChatListSearchItemHeader: ListViewItemHeader {
     let actionTitle: String?
     let action: (() -> Void)?
     
-    let height: CGFloat = 29.0
+    let height: CGFloat = 28.0
     
     init(type: ChatListSearchItemHeaderType, theme: PresentationTheme, strings: PresentationStrings, actionTitle: String?, action: (() -> Void)?) {
         self.type = type

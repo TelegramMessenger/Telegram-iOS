@@ -169,8 +169,8 @@ class PermissionInfoItemNode: ListViewItemNode {
         let currentItem = self.item
         
         return { item, params, neighbors in
-            let leftInset: CGFloat = 16.0 + params.leftInset
-            let rightInset: CGFloat = 16.0 + params.rightInset
+            let leftInset: CGFloat = 15.0 + params.leftInset
+            let rightInset: CGFloat = 15.0 + params.rightInset
     
             var updatedTheme: PresentationTheme?
             var updatedBadgeImage: UIImage?
@@ -296,11 +296,11 @@ class PermissionInfoItemNode: ListViewItemNode {
                         strongSelf.closeButton.setImage(updatedCloseIcon, for: [])
                     }
                     
-                    strongSelf.badgeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 16.0), size: CGSize(width: badgeDiameter, height: badgeDiameter))
+                    strongSelf.badgeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 15.0), size: CGSize(width: badgeDiameter, height: badgeDiameter))
                     
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: strongSelf.badgeNode.frame.midX - labelLayout.size.width / 2.0, y: strongSelf.badgeNode.frame.minY + 1.0), size: labelLayout.size)
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: strongSelf.badgeNode.frame.maxX + 8.0, y: 16.0), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: strongSelf.badgeNode.frame.maxX + 8.0, y: 15.0), size: titleLayout.size)
                     
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + 9.0), size: textLayout.size)
                     

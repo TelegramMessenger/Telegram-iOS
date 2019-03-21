@@ -245,7 +245,7 @@ class WebSearchControllerNode: ASDisplayNode {
                     entries.append(WebSearchRecentQueryEntry(index: i, query: queries[i]))
                 }
                 
-                let header = ChatListSearchItemHeader(type: .recentPeers, theme: interfaceState.presentationData.theme, strings:interfaceState.presentationData.strings, actionTitle: strings.WebSearch_RecentSectionClear.uppercased(), action: {
+                let header = ChatListSearchItemHeader(type: .recentPeers, theme: interfaceState.presentationData.theme, strings:interfaceState.presentationData.strings, actionTitle: strings.WebSearch_RecentSectionClear, action: {
                     _ = clearRecentWebSearchQueries(postbox: strongSelf.context.account.postbox).start()
                 })
                 
