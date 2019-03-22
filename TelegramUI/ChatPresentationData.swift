@@ -71,6 +71,9 @@ public final class ChatPresentationData {
     let disableAnimations: Bool
     
     let messageFont: UIFont
+    let messageEmojiFont1: UIFont
+    let messageEmojiFont2: UIFont
+    let messageEmojiFont3: UIFont
     let messageBoldFont: UIFont
     let messageItalicFont: UIFont
     let messageFixedFont: UIFont
@@ -85,6 +88,9 @@ public final class ChatPresentationData {
         
         let baseFontSize = fontSize.baseDisplaySize
         self.messageFont = UIFont.systemFont(ofSize: baseFontSize)
+        self.messageEmojiFont1 = UIFont.systemFont(ofSize: ceil(baseFontSize * 2.94))
+        self.messageEmojiFont2 = UIFont.systemFont(ofSize: ceil(baseFontSize * 2.29))
+        self.messageEmojiFont3 = UIFont.systemFont(ofSize: ceil(baseFontSize * 1.64))
         self.messageBoldFont = UIFont.boldSystemFont(ofSize: baseFontSize)
         self.messageItalicFont = UIFont.italicSystemFont(ofSize: baseFontSize)
         self.messageFixedFont = UIFont(name: "Menlo-Regular", size: baseFontSize - 1.0) ?? UIFont.systemFont(ofSize: baseFontSize)
