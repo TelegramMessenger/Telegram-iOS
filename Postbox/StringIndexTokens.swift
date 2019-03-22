@@ -1,12 +1,12 @@
 import Foundation
 
-enum StringIndexTokenTransliteration {
+public enum StringIndexTokenTransliteration {
     case none
     case combined
     case transliterated
 }
 
-func stringIndexTokens(_ string: String, transliteration: StringIndexTokenTransliteration) -> [ValueBoxKey] {
+public func stringIndexTokens(_ string: String, transliteration: StringIndexTokenTransliteration) -> [ValueBoxKey] {
     var nsString = string.lowercased() as NSString
     
     var isLatin = true
@@ -45,7 +45,7 @@ func stringIndexTokens(_ string: String, transliteration: StringIndexTokenTransl
     return tokens
 }
 
-func matchStringIndexTokens(_ tokens: [ValueBoxKey], with other: [ValueBoxKey]) -> Bool {
+public func matchStringIndexTokens(_ tokens: [ValueBoxKey], with other: [ValueBoxKey]) -> Bool {
     if other.isEmpty {
         return false
     } else if other.count == 1 {

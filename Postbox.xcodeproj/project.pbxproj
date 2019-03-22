@@ -63,6 +63,8 @@
 		D03229EF1E6B33FD0000AF9C /* SqliteInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03229ED1E6B33FD0000AF9C /* SqliteInterface.swift */; };
 		D033871F223554DE007A2CE4 /* HoleOperationsVector1.json in Resources */ = {isa = PBXBuildFile; fileRef = D033871E223554DE007A2CE4 /* HoleOperationsVector1.json */; };
 		D03387212236C239007A2CE4 /* HoleOperationsVector2.json in Resources */ = {isa = PBXBuildFile; fileRef = D03387202236C239007A2CE4 /* HoleOperationsVector2.json */; };
+		D03387522242E32B007A2CE4 /* PostboxUpgrade_18to19.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03387512242E32A007A2CE4 /* PostboxUpgrade_18to19.swift */; };
+		D03387532242E32B007A2CE4 /* PostboxUpgrade_18to19.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03387512242E32A007A2CE4 /* PostboxUpgrade_18to19.swift */; };
 		D033A6F71C73D512006A2EAB /* MessageHistoryUnsentTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033A6F61C73D512006A2EAB /* MessageHistoryUnsentTable.swift */; };
 		D033A6F91C73E440006A2EAB /* UnsentMessageHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033A6F81C73E440006A2EAB /* UnsentMessageHistoryView.swift */; };
 		D037178B20D923CA004773C8 /* CachedItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D037178A20D923CA004773C8 /* CachedItemView.swift */; };
@@ -422,6 +424,7 @@
 		D03229ED1E6B33FD0000AF9C /* SqliteInterface.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SqliteInterface.swift; sourceTree = "<group>"; };
 		D033871E223554DE007A2CE4 /* HoleOperationsVector1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = HoleOperationsVector1.json; sourceTree = "<group>"; };
 		D03387202236C239007A2CE4 /* HoleOperationsVector2.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = HoleOperationsVector2.json; sourceTree = "<group>"; };
+		D03387512242E32A007A2CE4 /* PostboxUpgrade_18to19.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostboxUpgrade_18to19.swift; sourceTree = "<group>"; };
 		D033A6F61C73D512006A2EAB /* MessageHistoryUnsentTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryUnsentTable.swift; sourceTree = "<group>"; };
 		D033A6F81C73E440006A2EAB /* UnsentMessageHistoryView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UnsentMessageHistoryView.swift; sourceTree = "<group>"; };
 		D037178A20D923CA004773C8 /* CachedItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedItemView.swift; sourceTree = "<group>"; };
@@ -711,6 +714,7 @@
 				D048B33C203C838500038D05 /* PostboxUpgrade_15to16.swift */,
 				D001388520BD942B007C9721 /* PostboxUpgrade_16to17.swift */,
 				D0119CAC20C9E7A100895300 /* PostboxUpgrade_17to18.swift */,
+				D03387512242E32A007A2CE4 /* PostboxUpgrade_18to19.swift */,
 			);
 			name = Upgrade;
 			sourceTree = "<group>";
@@ -1286,6 +1290,7 @@
 				D0F7B1C01E045C62007EB8A5 /* StringIndexTokens.swift in Sources */,
 				D07047AC1F3DD8D100F6A8D4 /* PendingMessageActionsView.swift in Sources */,
 				D0F7B1CA1E045C6A007EB8A5 /* MessageHistoryUnsentTable.swift in Sources */,
+				D03387532242E32B007A2CE4 /* PostboxUpgrade_18to19.swift in Sources */,
 				D01BAA561ED1D70C00295217 /* ManagedFile.swift in Sources */,
 				D0BEAF6B1E54B5FB00BD963D /* AccountManagerMetadataTable.swift in Sources */,
 				D0F02CE01E99223E0065DEE2 /* Upgrades.swift in Sources */,
@@ -1464,6 +1469,7 @@
 				D0F02CDF1E99223D0065DEE2 /* Upgrades.swift in Sources */,
 				D08775001E3E3D9F00A97350 /* PreferencesTable.swift in Sources */,
 				D0BEAF6D1E54B77900BD963D /* AccountManagerRecordTable.swift in Sources */,
+				D03387522242E32B007A2CE4 /* PostboxUpgrade_18to19.swift in Sources */,
 				D03120F81DA53FF4006A2A60 /* PeerPresenceTable.swift in Sources */,
 				D0F9E8731C5A1EE500037222 /* GlobalMessageIdsTable.swift in Sources */,
 				D0AE3EBC1F68261B0069BC90 /* PeerNotificationSettingsView.swift in Sources */,

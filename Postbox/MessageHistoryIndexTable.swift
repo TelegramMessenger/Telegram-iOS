@@ -40,14 +40,12 @@ final class MessageHistoryIndexTable: Table {
         return ValueBoxTable(id: id, keyType: .binary)
     }
     
-    let globalMessageIdsNamespace: Int32
     let globalMessageIdsTable: GlobalMessageIdsTable
     let metadataTable: MessageHistoryMetadataTable
     let seedConfiguration: SeedConfiguration
     
     init(valueBox: ValueBox, table: ValueBoxTable, globalMessageIdsTable: GlobalMessageIdsTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
         self.globalMessageIdsTable = globalMessageIdsTable
-        self.globalMessageIdsNamespace = globalMessageIdsTable.namespace
         self.seedConfiguration = seedConfiguration
         self.metadataTable = metadataTable
         
@@ -162,7 +160,7 @@ final class MessageHistoryIndexTable: Table {
         
         operations.append(.InsertMessage(message))
         
-        if index.id.namespace == self.globalMessageIdsNamespace {
+        if self.seedConfiguration.globalMessageIdsPeerIdNamespaces.contains(GlobalMessageIdsNamespace(peerIdNamespace: index.id.peerId.namespace, messageIdNamespace: index.id.namespace)) {
             self.globalMessageIdsTable.set(index.id.id, id: index.id)
         }
     }
@@ -171,7 +169,7 @@ final class MessageHistoryIndexTable: Table {
         self.valueBox.remove(self.table, key: self.key(index.id))
         
         operations.append(.Remove(index: index))
-        if index.id.namespace == self.globalMessageIdsNamespace {
+        if self.seedConfiguration.globalMessageIdsPeerIdNamespaces.contains(GlobalMessageIdsNamespace(peerIdNamespace: index.id.peerId.namespace, messageIdNamespace: index.id.namespace)) {
             self.globalMessageIdsTable.remove(index.id.id)
         }
     }

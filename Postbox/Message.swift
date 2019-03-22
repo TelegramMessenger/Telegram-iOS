@@ -81,6 +81,7 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible {
         }
     }
 }
+
 public struct MessageIndex: Comparable, Hashable {
     public let id: MessageId
     public let timestamp: Int32
@@ -371,13 +372,13 @@ public struct MessageFlags: OptionSet {
 }
 
 public struct StoreMessageForwardInfo {
-    public let authorId: PeerId
+    public let authorId: PeerId?
     public let sourceId: PeerId?
     public let sourceMessageId: MessageId?
     public let date: Int32
     public let authorSignature: String?
     
-    public init(authorId: PeerId, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?) {
+    public init(authorId: PeerId?, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?) {
         self.authorId = authorId
         self.sourceId = sourceId
         self.sourceMessageId = sourceMessageId
@@ -386,19 +387,27 @@ public struct StoreMessageForwardInfo {
     }
     
     public init(_ info: MessageForwardInfo) {
-        self.init(authorId: info.author.id, sourceId: info.source?.id, sourceMessageId: info.sourceMessageId, date: info.date, authorSignature: info.authorSignature)
+        self.init(authorId: info.author?.id, sourceId: info.source?.id, sourceMessageId: info.sourceMessageId, date: info.date, authorSignature: info.authorSignature)
     }
 }
 
 public struct MessageForwardInfo: Equatable {
-    public let author: Peer
+    public let author: Peer?
     public let source: Peer?
     public let sourceMessageId: MessageId?
     public let date: Int32
     public let authorSignature: String?
+    
+    public init(author: Peer?, source: Peer?, sourceMessageId: MessageId?, date: Int32, authorSignature: String?) {
+        self.author = author
+        self.source = source
+        self.sourceMessageId = sourceMessageId
+        self.date = date
+        self.authorSignature = authorSignature
+    }
 
     public static func ==(lhs: MessageForwardInfo, rhs: MessageForwardInfo) -> Bool {
-        if !lhs.author.isEqual(rhs.author) {
+        if !arePeersEqual(lhs.author, rhs.author) {
             return false
         }
         if let lhsSource = lhs.source, let rhsSource = rhs.source {
