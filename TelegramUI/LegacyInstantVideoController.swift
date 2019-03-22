@@ -96,8 +96,10 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
     legacyController.statusBar.statusBarStyle = .Hide
     let baseController = TGViewController(context: legacyController.context)!
     legacyController.bind(controller: baseController)
+    var presented = false
     legacyController.presentationCompleted = { [weak legacyController, weak baseController] in
-        if let legacyController = legacyController, let baseController = baseController {
+        if !presented, let legacyController = legacyController, let baseController = baseController {
+            presented = true
             legacyController.view.disablesInteractiveTransitionGestureRecognizer = true
             var uploadInterface: LegacyLiveUploadInterface?
             if peerId.namespace != Namespaces.Peer.SecretChat {

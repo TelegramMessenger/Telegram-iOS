@@ -6109,62 +6109,74 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         if self.chatDisplayNode.isInputViewFocused {
             inputShortcuts = [KeyShortcut(title: strings.KeyCommand_SendMessage, input: "\r", action: {})]
         } else {
-            inputShortcuts = [KeyShortcut(title: strings.KeyCommand_FocusOnInputField, input: "\r", action: { [weak self] in
-                if let strongSelf = self {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                        return state.updatedInterfaceState { interfaceState in
-                            return interfaceState.withUpdatedEffectiveInputState(interfaceState.effectiveInputState)
-                            }.updatedInputMode({ _ in ChatInputMode.text })
+            inputShortcuts = [
+                KeyShortcut(title: strings.KeyCommand_FocusOnInputField, input: "\r", action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                            return state.updatedInterfaceState { interfaceState in
+                                return interfaceState.withUpdatedEffectiveInputState(interfaceState.effectiveInputState)
+                                }.updatedInputMode({ _ in ChatInputMode.text })
+                            })
+                    }
+                }),
+                KeyShortcut(input: "/", modifiers: [], action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                            if state.interfaceState.effectiveInputState.inputText.length == 0 {
+                                return state.updatedInterfaceState { interfaceState in
+                                    let effectiveInputState = ChatTextInputState(inputText: NSAttributedString(string: "/"))
+                                    return interfaceState.withUpdatedEffectiveInputState(effectiveInputState)
+                                }.updatedInputMode({ _ in ChatInputMode.text })
+                            } else {
+                                return state
+                            }
                         })
-                }
-            }),
-            KeyShortcut(input: "/", modifiers: [], action: { [weak self] in
-                if let strongSelf = self {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                        if state.interfaceState.effectiveInputState.inputText.length == 0 {
-                            return state.updatedInterfaceState { interfaceState in
-                                let effectiveInputState = ChatTextInputState(inputText: NSAttributedString(string: "/"))
-                                return interfaceState.withUpdatedEffectiveInputState(effectiveInputState)
-                            }.updatedInputMode({ _ in ChatInputMode.text })
-                        } else {
-                            return state
-                        }
-                    })
-                }
-            }),
-            KeyShortcut(input: "2", modifiers: [.shift], action: { [weak self] in
-                if let strongSelf = self {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                        if state.interfaceState.effectiveInputState.inputText.length == 0 {
-                            return state.updatedInterfaceState { interfaceState in
-                                let effectiveInputState = ChatTextInputState(inputText: NSAttributedString(string: "@"))
-                                return interfaceState.withUpdatedEffectiveInputState(effectiveInputState)
-                            }.updatedInputMode({ _ in ChatInputMode.text })
-                        } else {
-                            return state
-                        }
-                    })
-                }
-            }),
-            KeyShortcut(input: "3", modifiers: [.shift], action: { [weak self] in
-                if let strongSelf = self {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                        if state.interfaceState.effectiveInputState.inputText.length == 0 {
-                            return state.updatedInterfaceState { interfaceState in
-                                let effectiveInputState = ChatTextInputState(inputText: NSAttributedString(string: "#"))
-                                return interfaceState.withUpdatedEffectiveInputState(effectiveInputState)
-                            }.updatedInputMode({ _ in ChatInputMode.text })
-                        } else {
-                            return state
-                        }
-                    })
-                }
-            })
+                    }
+                }),
+                KeyShortcut(input: "2", modifiers: [.shift], action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                            if state.interfaceState.effectiveInputState.inputText.length == 0 {
+                                return state.updatedInterfaceState { interfaceState in
+                                    let effectiveInputState = ChatTextInputState(inputText: NSAttributedString(string: "@"))
+                                    return interfaceState.withUpdatedEffectiveInputState(effectiveInputState)
+                                }.updatedInputMode({ _ in ChatInputMode.text })
+                            } else {
+                                return state
+                            }
+                        })
+                    }
+                }),
+                KeyShortcut(input: "3", modifiers: [.shift], action: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                            if state.interfaceState.effectiveInputState.inputText.length == 0 {
+                                return state.updatedInterfaceState { interfaceState in
+                                    let effectiveInputState = ChatTextInputState(inputText: NSAttributedString(string: "#"))
+                                    return interfaceState.withUpdatedEffectiveInputState(effectiveInputState)
+                                }.updatedInputMode({ _ in ChatInputMode.text })
+                            } else {
+                                return state
+                            }
+                        })
+                    }
+                })
             ]
             
-            if true {
+            if let message = self.chatDisplayNode.historyNode.latestMessageInCurrentHistoryView(), !message.flags.contains(.Incoming) {
                 inputShortcuts.append(KeyShortcut(input: UIKeyInputUpArrow, action: { [weak self] in
-                    
+                    if let strongSelf = self {
+                        var canEdit = false
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                            if state.interfaceState.effectiveInputState.inputText.length == 0 && state.interfaceState.editMessage == nil {
+                                canEdit = true
+                            }
+                            return state
+                        })
+                        if canEdit {
+                            strongSelf.interfaceInteraction?.setupEditMessage(message.id)
+                        }
+                    }
                 }))
             }
         }
@@ -6172,12 +6184,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         let otherShortcuts: [KeyShortcut] = [
             KeyShortcut(title: strings.KeyCommand_ScrollUp, input: UIKeyInputUpArrow, modifiers: [.shift], action: { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.chatDisplayNode.historyNode.scrollWithDeltaOffset(75)
+                    _ = strongSelf.chatDisplayNode.historyNode.scrollWithDirection(.down, distance: 75.0)
                 }
             }),
             KeyShortcut(title: strings.KeyCommand_ScrollDown, input: UIKeyInputDownArrow, modifiers: [.shift], action: { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.chatDisplayNode.historyNode.scrollWithDeltaOffset(-75)
+                    _ = strongSelf.chatDisplayNode.historyNode.scrollWithDirection(.up, distance: 75.0)
                 }
             }),
             KeyShortcut(title: strings.KeyCommand_ChatInfo, input: "I", modifiers: [.command, .control], action: { [weak self] in
@@ -6193,7 +6205,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         }.updatedInputMode({ _ in ChatInputMode.media(mode: .other, expanded: nil) })
                     })
                 }
-            }),
+            })
         ]
         
         return inputShortcuts + otherShortcuts
