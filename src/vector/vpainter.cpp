@@ -18,6 +18,7 @@
 
 #include "vpainter.h"
 #include "vdrawhelper.h"
+#include <algorithm>
 
 V_BEGIN_NAMESPACE
 

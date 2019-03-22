@@ -1,6 +1,10 @@
 #include "vimageloader.h"
 #include "vdebug.h"
+#ifndef WIN32
 #include <dlfcn.h>
+#else
+#include <Windows.h>
+#endif
 #include <cstring>
 
 using lottie_image_load_f = unsigned char* (*)(const char *filename, int *x, int *y, int *comp, int req_comp);
@@ -9,7 +13,11 @@ using lottie_image_free_f = void (*)(unsigned char *);
 
 struct VImageLoader::Impl
 {
+#ifdef WIN32
+	HMODULE dl_handle{ nullptr };
+#else
     void                    *dl_handle{nullptr};
+#endif
     lottie_image_load_f      lottie_image_load{nullptr};
     lottie_image_free_f      lottie_image_free{nullptr};
     lottie_image_load_data_f lottie_image_load_data{nullptr};
@@ -18,24 +26,47 @@ struct VImageLoader::Impl
     {
         #ifdef __APPLE__
             dl_handle = dlopen("librlottie-image-loader.dylib", RTLD_LAZY);
-        #else
+        #elif WIN32
+		dl_handle = LoadLibraryA("librlottie-image-loader.dll");
+		#else
             dl_handle = dlopen("librlottie-image-loader.so", RTLD_LAZY);
         #endif
         if (!dl_handle)
             vWarning<<"Failed to dlopen librlottie-image-loader library";
-        lottie_image_load = (lottie_image_load_f) dlsym(dl_handle, "lottie_image_load");
+
+#ifdef WIN32
+		lottie_image_load = (lottie_image_load_f)GetProcAddress(dl_handle, "lottie_image_load");
+#else
+		lottie_image_load = (lottie_image_load_f) dlsym(dl_handle, "lottie_image_load");
+#endif
+		
         if (!lottie_image_load)
             vWarning<<"Failed to find symbol lottie_image_load in librlottie-image-loader library";
+#ifdef WIN32
+		lottie_image_free = (lottie_image_free_f)GetProcAddress(dl_handle, "lottie_image_free");
+#else
         lottie_image_free = (lottie_image_free_f) dlsym(dl_handle, "lottie_image_free");
+#endif
         if (!lottie_image_free)
             vWarning<<"Failed to find symbol lottie_image_free in librlottie-image-loader library";
+#ifdef WIN32
+		lottie_image_load_data = (lottie_image_load_data_f)GetProcAddress(dl_handle, "lottie_image_load_from_data");
+#else
         lottie_image_load_data = (lottie_image_load_data_f) dlsym(dl_handle, "lottie_image_load_from_data");
+#endif
         if (!lottie_image_load_data)
             vWarning<<"Failed to find symbol lottie_image_load_data in librlottie-image-loader library";
     }
     ~Impl()
-    {
-        if (dl_handle) dlclose(dl_handle);
+    {	
+		if (dl_handle)
+		{
+#ifdef WIN32
+		FreeLibrary(dl_handle);
+#else
+		dlclose(dl_handle); 
+#endif
+		}
     }
 
     VBitmap createBitmap(unsigned char *data, int width, int height, int channel)

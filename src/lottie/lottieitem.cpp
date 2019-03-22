@@ -19,6 +19,7 @@
 #include "lottieitem.h"
 #include <cmath>
 #include <algorithm>
+#include <iterator> 
 #include "vbitmap.h"
 #include "vdasher.h"
 #include "vpainter.h"

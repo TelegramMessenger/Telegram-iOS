@@ -18,7 +18,38 @@
 #include "v_ft_math.h"
 #include <math.h>
 
-#define SW_FT_MSB(x) (31 - __builtin_clz(x))
+//form https://github.com/chromium/chromium/blob/59afd8336009c9d97c22854c52e0382b62b3aa5e/third_party/abseil-cpp/absl/base/internal/bits.h
+
+#if defined(_MSC_VER)
+#include <intrin.h>
+static unsigned int __inline clz(unsigned int x) {
+	unsigned long r = 0;
+	if (x != 0)
+	{
+		_BitScanReverse(&r, x);
+	}
+	return  r;
+}
+#define SW_FT_MSB(x)  (clz(x))
+#elif defined(__GNUC__)
+#define SW_FT_MSB(x)  (31 - __builtin_clz(x))
+#else
+static unsigned int __inline clz(unsigned int x) {
+	int c = 31;
+	x &= ~x + 1;
+	if (n & 0x0000FFFF) c -= 16;
+	if (n & 0x00FF00FF) c -= 8;
+	if (n & 0x0F0F0F0F) c -= 4;
+	if (n & 0x33333333) c -= 2;
+	if (n & 0x55555555) c -= 1;
+	return c;
+}
+#define SW_FT_MSB(x)  (clz(x))
+#endif
+
+
+
+
 
 #define SW_FT_PAD_FLOOR(x, n) ((x) & ~((n)-1))
 #define SW_FT_PAD_ROUND(x, n) SW_FT_PAD_FLOOR((x) + ((n) / 2), n)

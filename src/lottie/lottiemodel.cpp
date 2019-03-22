@@ -21,6 +21,7 @@
 #include "vimageloader.h"
 #include <cassert>
 #include <stack>
+#include <iterator>  
 
 /*
  * We process the iterator objects in the children list

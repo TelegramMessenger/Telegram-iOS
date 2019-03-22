@@ -22,6 +22,7 @@
 #include<vector>
 #include<memory>
 #include<unordered_map>
+#include <algorithm>
 #include"vpoint.h"
 #include"vrect.h"
 #include"vinterpolator.h"
@@ -760,11 +761,22 @@ public:
         float offset = fmod(mOffset.value(frameNo), 360.0f)/ 360.0f;
 
         float diff = fabs(start - end);
-        if (vCompare(diff, 0)) return {0, 0};
-        if (vCompare(diff, 1)) return {0, 1};
+		if (vCompare(diff, 0.0f)) {
+			Segment tmp;
+			tmp.start = 0;
+			tmp.end = 0;
+			return tmp;
+		} 
+
+		if (vCompare(diff, 1.0f)) {
+			Segment tmp;
+			tmp.start = 0;
+			tmp.end = 1;
+			return tmp;
+		}
 
         // no offset case
-        if (vCompare(fabs(offset), 0.0)) {
+        if (vCompare(fabs(offset), 0.0f)) {
             return noloop(start, end);
         } else {
             if (offset > 0) {

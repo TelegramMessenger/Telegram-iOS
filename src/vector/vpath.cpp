@@ -19,6 +19,7 @@
 #include "vpath.h"
 #include <cassert>
 #include <vector>
+#include <iterator> 
 #include "vbezier.h"
 #include "vdebug.h"
 #include "vrect.h"

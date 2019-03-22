@@ -17,6 +17,7 @@
  */
 
 #include "vrect.h"
+#include <algorithm>
 
 VRect VRect::operator&(const VRect &r) const
 {
