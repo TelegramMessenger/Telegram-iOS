@@ -151,11 +151,6 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
     
     private var enqueuedTransitions: [StickerPaneSearchGridTransition] = []
     
-    private let languageCodePromise = ValuePromise<String>(ignoreRepeated: true)
-    private let emojiKeywordsPromise = Promise<EmojiKeywords?>()
-    
-    private var languageCodeDisposable: Disposable?
-    
     private let searchDisposable = MetaDisposable()
     
     private let queue = Queue()
@@ -254,54 +249,37 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         
         self._ready.set(self.trendingPane.ready)
         self.trendingPane.activate()
-        
-        self.languageCodeDisposable = (self.languageCodePromise.get()
-        |> deliverOnMainQueue).start(next: { [weak self] languageCode in
-            if let strongSelf = self {
-                strongSelf.emojiKeywordsPromise.set(emojiKeywords(accountManager: strongSelf.context.sharedContext.accountManager, network: strongSelf.context.account.network, inputLanguageCode: languageCode))
-            }
-        })
-        
+    
         self.updateThemeAndStrings(theme: theme, strings: strings)
     }
     
     deinit {
-        self.languageCodeDisposable?.dispose()
         self.searchDisposable.dispose()
     }
     
     func updateText(_ text: String, languageCode: String?) {
         let signal: Signal<([(String?, FoundStickerItem)], FoundStickerSets, Bool, FoundStickerSets?)?, NoError>
         if !text.isEmpty {
-            if let languageCode = languageCode, !languageCode.isEmpty {
-                self.languageCodePromise.set(languageCode)
-            }
-            
+            let account = self.context.account
             let stickers: Signal<[(String?, FoundStickerItem)], NoError> = Signal { subscriber in
                 var signals: Signal<[Signal<(String?, [FoundStickerItem]), NoError>], NoError> = .single([])
                 
                 let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if query.isSingleEmoji {
-                    signals = .single([searchStickers(account: self.context.account, query: text.firstEmoji)
+                    signals = .single([searchStickers(account: account, query: text.firstEmoji)
                     |> take(1)
                     |> map { (nil, $0) }])
-                } else if query.count > 1 {
-                    signals = self.emojiKeywordsPromise.get()
-                    |> mapToSignal { keywords in
-                        if let keywords = keywords {
-                            return searchEmojiKeywords(keywords: keywords, query: query.lowercased(), completeMatch: query.count < 3)
-                            |> map { result -> [Signal<(String?, [FoundStickerItem]), NoError>] in
-                                var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
-                                for emoji in result {
-                                    signals.append(searchStickers(account: self.context.account, query: emoji.1)
-                                    |> take(1)
-                                    |> map { (emoji.1, $0) })
-                                }
-                                return signals
-                            }
-                        } else {
-                            return .complete()
+                } else if query.count > 1, let languageCode = languageCode, !languageCode.isEmpty && languageCode != "emoji" {
+                    signals = searchEmojiKeywords(postbox: account.postbox, inputLanguageCode: languageCode, query: query.lowercased(), completeMatch: query.count < 3)
+                    |> map { keywords -> [Signal<(String?, [FoundStickerItem]), NoError>] in
+                        var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
+                        let emoticons = keywords.flatMap { $0.emoticons }
+                        for emoji in emoticons {
+                            signals.append(searchStickers(account: self.context.account, query: emoji)
+                            |> take(1)
+                            |> map { (emoji, $0) })
                         }
+                        return signals
                     }
                 }
                 
