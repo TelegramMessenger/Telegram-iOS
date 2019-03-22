@@ -527,10 +527,11 @@ public final class Transaction {
         return nil
     }
     
-    public func searchItemCollection(namespace: ItemCollectionId.Namespace, key: MemoryBuffer) -> [ItemCollectionItem] {
+    
+    public func searchItemCollection(namespace: ItemCollectionId.Namespace, query: ItemCollectionSearchQuery) -> [ItemCollectionItem] {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            let itemsByCollectionId = postbox.itemCollectionItemTable.exactIndexedItems(namespace: namespace, key: ValueBoxKey(key))
+            let itemsByCollectionId = postbox.itemCollectionItemTable.searchIndexedItems(namespace: namespace, query: query)
             let infoIds = postbox.itemCollectionInfoTable.getIds(namespace: namespace)
             var infoIndices: [ItemCollectionId: Int] = [:]
             for i in 0 ..< infoIds.count {
@@ -999,6 +1000,8 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration) 
             //debugRestoreState(basePath: basePath, name: "previous1")
             #endif
             
+            var debugFirstTime = true
+            
             loop: while true {
                 let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue)
                 
@@ -1007,7 +1010,11 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration) 
                 let userVersion: Int32? = metadataTable.userVersion()
                 let currentUserVersion: Int32 = 19
                 
-                if let userVersion = userVersion {
+                if var userVersion = userVersion {
+                    /*if debugFirstTime {
+                        debugFirstTime = false
+                        userVersion = 18
+                    }*/
                     if userVersion != currentUserVersion {
                         if userVersion > currentUserVersion {
                             postboxLog("Version \(userVersion) is newer than supported")

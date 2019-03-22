@@ -222,8 +222,14 @@ final class ItemCollectionItemTable: Table {
         }
     }
     
-    func exactIndexedItems(namespace: ItemCollectionId.Namespace, key: ValueBoxKey) -> [ItemCollectionId: [ItemCollectionItem]] {
-        let references = self.reverseIndexTable.exactReferences(namespace: ReverseIndexNamespace(namespace), token: key)
+    func searchIndexedItems(namespace: ItemCollectionId.Namespace, query: ItemCollectionSearchQuery) -> [ItemCollectionId: [ItemCollectionItem]] {
+        let references: [ItemCollectionItemReverseIndexReference]
+        switch query {
+            case let .exact(token):
+                references = self.reverseIndexTable.exactReferences(namespace: ReverseIndexNamespace(namespace), token: token)
+            case let .matching(tokens):
+                references = Array(self.reverseIndexTable.matchingReferences(namespace: ReverseIndexNamespace(namespace), tokens: tokens))
+        }
         var resultsByCollectionId: [ItemCollectionId: [(ItemCollectionItemIndex, ItemCollectionItem)]] = [:]
         for reference in references {
             if let value = self.valueBox.get(self.table, key: self.key(collectionId: reference.collectionId, index: reference.itemIndex)), let item = PostboxDecoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
@@ -242,7 +248,7 @@ final class ItemCollectionItemTable: Table {
         }
         return results
     }
-    
+
     override func clearMemoryCache() {
         
     }
