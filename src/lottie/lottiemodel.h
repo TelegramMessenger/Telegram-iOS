@@ -749,35 +749,63 @@ public:
         Individually
     };
     LOTTrimData():LOTData(LOTData::Type::Trim){}
+    /*
+     * if start > end vector trims the path as a loop ( 2 segment)
+     * if start < end vector trims the path without loop ( 1 segment).
+     * if no offset then there is no loop.
+     */
     Segment segment(int frameNo) const {
         float start = mStart.value(frameNo)/100.0f;
         float end = mEnd.value(frameNo)/100.0f;
         float offset = fmod(mOffset.value(frameNo), 360.0f)/ 360.0f;
-        start += offset;
-        end += offset;
-        // normalize start, end value to 0 - 1
-        if (fabs(start) > 1) start = fmod(start, 1);
-        if (fabs(end) > 1) end = fmod(end, 1);
-        Segment s;
-        if (start >= 0 && end >= 0) {
-            s.start = std::min(start, end);
-            s.end = std::max(start, end);
-        } else if (start < 0 && end < 0) {
-            start += 1;
-            end +=1;
-            s.start = std::min(start, end);
-            s.end = std::max(start, end);
-        } else {
-            // one of them is -ve so it a loop
-            if (start < 0) start +=1;
-            if (end < 0) end +=1;
-            s.start = std::max(start, end);
-            s.end = std::min(start, end);
-        }
-        return s;
 
+        float diff = fabs(start - end);
+        if (vCompare(diff, 0)) return {0, 0};
+        if (vCompare(diff, 1)) return {0, 1};
+
+        // no offset case
+        if (vCompare(fabs(offset), 0.0)) {
+            return noloop(start, end);
+        } else {
+            if (offset > 0) {
+                start += offset;
+                end += offset;
+                if (start <= 1 && end <=1) {
+                    return noloop(start, end);
+                } else if (start > 1 && end > 1) {
+                    return noloop(start - 1, end - 1);
+                } else {
+                    if (start > 1) return loop(start - 1 , end);
+                    else return loop(start , end - 1);
+                }
+            } else {
+                start += offset;
+                end   += offset;
+                if (start >= 0 && end >= 0) {
+                    return noloop(start, end);
+                } else if (start < 0 && end < 0) {
+                    return noloop(-start, -end);
+                } else {
+                    if (start < 0) return loop(-start, end);
+                    else return loop(start , -end);
+                }
+            }
+        }
     }
     LOTTrimData::TrimType type() const {return mTrimType;}
+private:
+    Segment noloop(float start, float end) const{
+        Segment s;
+        s.start = std::min(start, end);
+        s.end = std::max(start, end);
+        return s;
+    }
+    Segment loop(float start, float end) const{
+        Segment s;
+        s.start = std::max(start, end);
+        s.end = std::min(start, end);
+        return s;
+    }
 public:
     LOTAnimatable<float>             mStart{0};
     LOTAnimatable<float>             mEnd{0};
