@@ -5,8 +5,16 @@ final class GlobalMessageIdsTable: Table {
         return ValueBoxTable(id: id, keyType: .int64)
     }
     
-    let sharedKey = ValueBoxKey(length: 8)
-    let sharedBuffer = WriteBuffer()
+    private let seedConfiguration: SeedConfiguration
+    
+    private let sharedKey = ValueBoxKey(length: 8)
+    private let sharedBuffer = WriteBuffer()
+    
+    init(valueBox: ValueBox, table: ValueBoxTable, seedConfiguration: SeedConfiguration) {
+        self.seedConfiguration = seedConfiguration
+        
+        super.init(valueBox: valueBox, table: table)
+    }
     
     private func key(_ id: Int32) -> ValueBoxKey {
         self.sharedKey.setInt64(0, value: Int64(id))
@@ -16,6 +24,7 @@ final class GlobalMessageIdsTable: Table {
     func set(_ globalId: Int32, id: MessageId) {
         assert(id.namespace == 0)
         assert(id.peerId.namespace == 0 || id.peerId.namespace == 1)
+        assert(self.seedConfiguration.globalMessageIdsPeerIdNamespaces.contains(GlobalMessageIdsNamespace(peerIdNamespace: id.peerId.namespace, messageIdNamespace: id.namespace)))
         
         self.sharedBuffer.reset()
         var idPeerId: Int64 = id.peerId.toInt64()
