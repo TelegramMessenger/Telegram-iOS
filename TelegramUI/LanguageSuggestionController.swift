@@ -289,7 +289,7 @@ private final class LanguageSuggestionAlertContentNode: AlertContentNode {
  
     override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         var size = size
-        size.width = min(size.width , 270.0)
+        size.width = min(size.width, 270.0)
         
         self.validLayout = size
         

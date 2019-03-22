@@ -976,7 +976,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                                 updateState { state in
                                     return state.withUpdatedUpdatingAddressName(false)
                                 }
-                                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 
                             }, completed: {
                                 updateState { state in
@@ -995,9 +995,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                     
                     _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
                         if showAlert {
-                            let confirm = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Channel_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)])
-                            
-                            presentControllerImpl?(confirm, nil)
+                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
                         } else {
                             invokeAction()
                         }
@@ -1078,16 +1076,14 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                             updateState { state in
                                 return state.withUpdatedUpdatingAddressName(false)
                             }
-                            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                             
                         }))
                     }
                     
                     _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
                         if showAlert {
-                            let confirm = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Channel_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)])
-                            
-                            presentControllerImpl?(confirm, nil)
+                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
                         } else {
                             invokeAction()
                         }
@@ -1221,7 +1217,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             })
             if let resultItemNode = resultItemNode {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(presentationData.strings.Conversation_ContextMenuCopyLink), action: {
+                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuCopyLink, accessibilityLabel: presentationData.strings.Conversation_ContextMenuCopyLink), action: {
                     UIPasteboard.general.string = text
                 })])
                 strongController.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in

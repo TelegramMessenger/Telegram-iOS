@@ -250,7 +250,7 @@ func confirmPhoneNumberCodeController(context: AccountContext, phoneNumber: Stri
                     case .limitExceeded:
                         alertText = presentationData.strings.Login_CodeFloodError
                 }
-                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                presentControllerImpl?(textAlertController(context: context, title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }, completed: {
                 updateState { state in
                     var state = state
@@ -258,7 +258,7 @@ func confirmPhoneNumberCodeController(context: AccountContext, phoneNumber: Stri
                     return state
                 }
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.CancelResetAccount_Success(formatPhoneNumber(phoneNumber)).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.CancelResetAccount_Success(formatPhoneNumber(phoneNumber)).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 dismissImpl?()
             }))
         }

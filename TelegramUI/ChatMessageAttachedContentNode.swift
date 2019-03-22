@@ -158,6 +158,8 @@ final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
             
             return (textSize.size.width + labelInset * 2.0, { refinedWidth in
                 return (CGSize(width: refinedWidth, height: 33.0), {
+                    targetNode.accessibilityLabel = title
+                    
                     if let updatedRegularImage = updatedRegularImage {
                         targetNode.regularImage = updatedRegularImage
                         if !targetNode.textNode.isHidden {
@@ -409,12 +411,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                         }
 
-                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, message, file, automaticDownload, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, presentationData.dateTimeFormat, message, file, automaticDownload, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
                     } else if file.isSticker, let _ = file.dimensions {
                         let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: file)
-                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, message, file, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, presentationData.dateTimeFormat, message, file, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
                     } else {
@@ -439,7 +441,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 } else if let image = media as? TelegramMediaImage {
                     if !flags.contains(.preferMediaInline) {
                         let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: image)
-                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, message, image, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, presentationData.dateTimeFormat, message, image, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
                     } else if let dimensions = largestImageRepresentation(image.representations)?.dimensions {
@@ -451,11 +453,11 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     }
                 } else if let image = media as? TelegramMediaWebFile {
                     let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: image)
-                    let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, message, image, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                    let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, presentationData.dateTimeFormat, message, image, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                     initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                     refineContentImageLayout = refineLayout
                 } else if let wallpaper = media as? WallpaperPreviewMedia {
-                    let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, message, wallpaper, .full, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                    let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, presentationData.dateTimeFormat, message, wallpaper, .full, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                     initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                     refineContentImageLayout = refineLayout
                 }

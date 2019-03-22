@@ -108,6 +108,8 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
     private let checkNode: ASImageNode
     private let activityNode: ActivityIndicator
     
+    private let activateArea: AccessibilityAreaNode
+    
     private var editableControlNode: ItemListEditableControlNode?
     private var reorderControlNode: ItemListEditableReorderControlNode?
     
@@ -154,6 +156,8 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
         self.activityNode = ActivityIndicator(type: .custom(.blue, activitySize.width, 2.0, false))
         self.activityNode.isHidden = true
         
+        self.activateArea = AccessibilityAreaNode()
+        
         self.infoButtonNode = HighlightableButtonNode()
         
         self.highlightedBackgroundNode = ASDisplayNode()
@@ -167,6 +171,7 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.infoIconNode)
         self.addSubnode(self.activityNode)
         self.addSubnode(self.infoButtonNode)
+        self.addSubnode(self.activateArea)
         
         self.infoButtonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -179,7 +184,13 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
                 }
             }
         }
+        self.infoButtonNode.accessibilityLabel = "Info"
         self.infoButtonNode.addTarget(self, action: #selector(self.infoButtonPressed), forControlEvents: .touchUpInside)
+        
+        self.activateArea.activate = { [weak self] in
+            self?.item?.action()
+            return true
+        }
     }
     
     func asyncLayout() -> (_ item: ProxySettingsServerItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
@@ -256,6 +267,13 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.layoutParams = params
+                    
+                    strongSelf.activateArea.accessibilityLabel = "\(titleAttributedString.string)\n\(statusAttributedString.string)"
+                    if item.active {
+                        strongSelf.activateArea.accessibilityValue = "Active"
+                    } else {
+                        strongSelf.activateArea.accessibilityValue = ""
+                    }
                     
                     if let updateInfoIconImage = updateInfoIconImage {
                         strongSelf.infoIconNode.image = updateInfoIconImage
@@ -361,6 +379,8 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
                     
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 12.0), size: titleLayout.size))
                     transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 37.0), size: statusLayout.size))
+                    
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 0.0), size: CGSize(width: params.width - params.rightInset - 56.0 - (leftInset + revealOffset + editingOffset), height: layout.contentSize.height))
                     
                     transition.updateAlpha(node: strongSelf.infoIconNode, alpha: item.editing.editing ? 0.0 : 1.0)
                     

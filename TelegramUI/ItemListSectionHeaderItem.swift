@@ -16,14 +16,16 @@ struct ItemListSectionHeaderAccessoryText: Equatable {
 class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
+    let multiline: Bool
     let accessoryText: ItemListSectionHeaderAccessoryText?
     let sectionId: ItemListSectionId
     
     let isAlwaysPlain: Bool = true
     
-    init(theme: PresentationTheme, text: String, accessoryText: ItemListSectionHeaderAccessoryText? = nil, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, text: String, multiline: Bool = false, accessoryText: ItemListSectionHeaderAccessoryText? = nil, sectionId: ItemListSectionId) {
         self.theme = theme
         self.text = text
+        self.multiline = multiline
         self.accessoryText = accessoryText
         self.sectionId = sectionId
     }
@@ -71,6 +73,8 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
     private let titleNode: TextNode
     private let accessoryTextNode: TextNode
     
+    private let activateArea: AccessibilityAreaNode
+    
     init() {
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -82,10 +86,14 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
         self.accessoryTextNode.contentMode = .left
         self.accessoryTextNode.contentsScale = UIScreen.main.scale
         
+        self.activateArea = AccessibilityAreaNode()
+        self.activateArea.accessibilityTraits = UIAccessibilityTraitStaticText | UIAccessibilityTraitHeader
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.accessoryTextNode)
+        self.addSubnode(self.activateArea)
     }
     
     func asyncLayout() -> (_ item: ItemListSectionHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -95,7 +103,7 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
         return { item, params, neighbors in
             let leftInset: CGFloat = 15.0 + params.leftInset
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text, font: titleFont, textColor: item.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text, font: titleFont, textColor: item.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: item.multiline ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             var accessoryTextString: NSAttributedString?
             if let accessoryText = item.accessoryText {
                 let color: UIColor
@@ -112,7 +120,7 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
             let contentSize: CGSize
             var insets = UIEdgeInsets()
             
-            contentSize = CGSize(width: params.width, height: 30.0)
+            contentSize = CGSize(width: params.width, height: titleLayout.size.height + 13.0)
             switch neighbors.top {
                 case .none:
                     insets.top += 24.0
@@ -128,6 +136,9 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     let _ = titleApply()
                     let _ = accessoryApply()
+                    
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
+                    strongSelf.activateArea.accessibilityLabel = item.text
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 7.0), size: titleLayout.size)
                     strongSelf.accessoryTextNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - accessoryLayout.size.width, y: 7.0), size: accessoryLayout.size)

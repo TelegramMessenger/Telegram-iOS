@@ -89,7 +89,7 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
         let currentItem = self.item
         
         return { [weak self] item, params, last in
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 130.0), insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0))
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 124.0), insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0))
             
             return (nodeLayout, { [weak self] in
                 var updatedTheme: PresentationTheme?

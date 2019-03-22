@@ -5,14 +5,6 @@ import Postbox
 import TelegramCore
 import LegacyComponents
 
-private final class LogoutOptionsItemIcons {
-    static let addAccount = UIImage(bundleImageName: "Settings/MenuIcons/AddAccount")?.precomposed()
-    static let setPasscode = UIImage(bundleImageName: "Settings/MenuIcons/SetPasscode")?.precomposed()
-    static let clearCache = UIImage(bundleImageName: "Settings/MenuIcons/ClearCache")?.precomposed()
-    static let changePhoneNumber = UIImage(bundleImageName: "Settings/MenuIcons/ChangePhoneNumber")?.precomposed()
-    static let contactSupport = UIImage(bundleImageName: "Settings/MenuIcons/Support")?.precomposed()
-}
-
 private struct LogoutOptionsItemArguments {
     let addAccount: () -> Void
     let setPasscode: () -> Void
@@ -76,23 +68,23 @@ private enum LogoutOptionsEntry: ItemListNodeEntry, Equatable {
             case let .alternativeHeader(theme, title):
                 return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
             case let .addAccount(theme, title, text):
-                return ItemListDisclosureItem(theme: theme, icon: LogoutOptionsItemIcons.addAccount, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesSettings.addAccount, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.addAccount()
                 })
             case let .setPasscode(theme, title, text):
-                return ItemListDisclosureItem(theme: theme, icon: LogoutOptionsItemIcons.setPasscode, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesSettings.setPasscode, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.setPasscode()
                 })
             case let .clearCache(theme, title, text):
-                return ItemListDisclosureItem(theme: theme, icon: LogoutOptionsItemIcons.clearCache, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesSettings.clearCache, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.clearCache()
                 })
             case let .changePhoneNumber(theme, title, text):
-                return ItemListDisclosureItem(theme: theme, icon: LogoutOptionsItemIcons.changePhoneNumber, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesSettings.changePhoneNumber, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.changePhoneNumber()
                 })
             case let .contactSupport(theme, title, text):
-                return ItemListDisclosureItem(theme: theme, icon: LogoutOptionsItemIcons.contactSupport, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesSettings.support, title: title, label: text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.contactSupport()
                 })
             case let .logout(theme, title):
@@ -174,7 +166,7 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
             })
         }
         
-        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Settings_FAQ_Intro, actions: [
+        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Settings_FAQ_Intro, actions: [
             TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_FAQ_Button, action: {
                 openFaq(resolvedUrlPromise)
                 dismissImpl?()
@@ -192,7 +184,7 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
         ]), nil)
     }, logout: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.Settings_LogoutConfirmationTitle, text: presentationData.strings.Settings_LogoutConfirmationText, actions: [
+        let alertController = textAlertController(context: context, title: presentationData.strings.Settings_LogoutConfirmationTitle, text: presentationData.strings.Settings_LogoutConfirmationText, actions: [
             TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
             }),
             TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {

@@ -326,10 +326,10 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             var resourceReference: MediaResourceReference?
             if let thumbnail = item.packInfo.thumbnail {
                 thumbnailItem = thumbnail
-                resourceReference = MediaResourceReference.standalone(resource: thumbnail.resource)
+                resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: item.packInfo.id.id, accessHash: item.packInfo.accessHash), resource: thumbnail.resource)
             } else if let item = item.topItem, let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
                 thumbnailItem = TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource)
-                resourceReference = MediaResourceReference.standalone(resource: resource)
+                resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
             }
             
             let fileUpdated = thumbnailItem != previousThumbnailItem

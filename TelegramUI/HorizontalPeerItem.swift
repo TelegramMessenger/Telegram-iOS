@@ -165,7 +165,7 @@ final class HorizontalPeerItemNode: ListViewItemNode {
             
             let currentStatusImage: UIImage?
             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-            if let presence = item.presence as? TelegramUserPresence {
+            if let presence = item.presence as? TelegramUserPresence, !isServicePeer(item.peer) {
                 let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
                 switch relativeStatus {
                     case .online:

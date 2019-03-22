@@ -68,7 +68,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         //self.imageNode.alphaTransitionOnFirstUpdate = true
         
         self.textNode = ASTextNode()
-        self.textNode.isLayerBacked = true
+        self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = true
         
         super.init()

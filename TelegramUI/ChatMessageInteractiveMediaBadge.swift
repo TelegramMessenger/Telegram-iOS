@@ -39,6 +39,8 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
     var pressed: (() -> Void)?
     
     private var mediaDownloadState: ChatMessageInteractiveMediaDownloadState?
+    
+    private var previousContentSize: CGSize?
     private var backgroundNodeColor: UIColor?
     private var foregroundColor: UIColor?
     
@@ -80,14 +82,16 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
         return self.measureNode.measure(CGSize(width: 240.0, height: 160.0)).width
     }
     
-    func update(theme: PresentationTheme, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, alignment: NSTextAlignment = .left, animated: Bool) {
+    func update(theme: PresentationTheme, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, alignment: NSTextAlignment = .left, animated: Bool, badgeAnimated: Bool = true) {
         var transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
         
-        var contentSize = CGSize()
+        let previousContentSize = self.previousContentSize
+        var contentSize: CGSize?
         
         if self.content != content {
             let previousContent = self.content
             self.content = content
+            var currentContentSize = CGSize()
         
             if let content = self.content {
                 var previousActive: Bool?
@@ -114,7 +118,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         self.durationNode.attributedText = convertedText
                         let durationSize = self.durationNode.measure(CGSize(width: 160.0, height: 160.0))
                         self.durationNode.frame = CGRect(x: 7.0 + inset, y: 2.0, width: durationSize.width, height: durationSize.height)
-                        contentSize = CGSize(width: widthForString(text.string) + 14.0 + inset, height: 18.0)
+                        currentContentSize = CGSize(width: widthForString(text.string) + 14.0 + inset, height: 18.0)
                     
                         if let iconNode = self.iconNode {
                             transition.updateTransformScale(node: iconNode, scale: 0.001)
@@ -213,25 +217,30 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         if active {
                             contentWidth += 36.0
                         }
-                        contentSize = CGSize(width: contentWidth, height: active ? 38.0 : 18.0)
+                        currentContentSize = CGSize(width: contentWidth, height: active ? 38.0 : 18.0)
                 }
             }
             
             var originX: CGFloat = 0.0
             if alignment == .right {
-                originX = -contentSize.width
+                originX = -currentContentSize.width
             }
             let previousSize = self.backgroundNode.frame.size
-            if previousSize.height == 0 || (previousSize.height == contentSize.height && contentSize.height == 38.0) {
-                self.backgroundNode.frame = CGRect(x: originX, y: 0.0, width: contentSize.width, height: contentSize.height)
+            if previousSize.height == 0 || (previousSize.height == currentContentSize.height && currentContentSize.height == 38.0) {
+                self.backgroundNode.frame = CGRect(x: originX, y: 0.0, width: currentContentSize.width, height: currentContentSize.height)
             } else {
-                transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: originX, y: 0.0, width: contentSize.width, height: contentSize.height))
+                transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: originX, y: 0.0, width: currentContentSize.width, height: currentContentSize.height))
             }
+            
+            contentSize = currentContentSize
+            self.previousContentSize = contentSize
+        } else {
+            contentSize = previousContentSize
         }
         
-        if self.mediaDownloadState != mediaDownloadState {
+        if self.mediaDownloadState != mediaDownloadState || previousContentSize != contentSize {
             self.mediaDownloadState = mediaDownloadState
-            if let mediaDownloadState = self.mediaDownloadState {
+            if let mediaDownloadState = self.mediaDownloadState, let contentSize = contentSize {
                 let mediaDownloadStatusNode: RadialStatusNode
                 if let current = self.mediaDownloadStatusNode {
                     mediaDownloadStatusNode = current
@@ -276,9 +285,9 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                     mediaStatusFrame = CGRect(origin: CGPoint(x: 7.0 + originX, y: originY), size: CGSize(width: 28.0, height: 28.0))
                 }
                 mediaDownloadStatusNode.frame = mediaStatusFrame
-                mediaDownloadStatusNode.transitionToState(state, animated: true, completion: {})
+                mediaDownloadStatusNode.transitionToState(state, animated: badgeAnimated, completion: {})
             } else if let mediaDownloadStatusNode = self.mediaDownloadStatusNode {
-                mediaDownloadStatusNode.transitionToState(.none, animated: true, completion: {})
+                mediaDownloadStatusNode.transitionToState(.none, animated: badgeAnimated, completion: {})
             }
         }
     }

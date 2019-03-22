@@ -91,7 +91,7 @@ private final class ThemeAccentColorActionSheetItemNode: ActionSheetItemNode {
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.isLayerBacked = true
+        self.titleNode.isUserInteractionEnabled = false
         self.titleNode.attributedText = NSAttributedString(string: strings.Appearance_PickAccentColor, font: Font.medium(18.0), textColor: theme.primaryTextColor)
         
         self.items = [

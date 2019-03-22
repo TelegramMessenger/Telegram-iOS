@@ -129,7 +129,7 @@ func resetPasswordController(context: AccountContext, emailPattern: String, comp
         }
     }, openHelp: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
     })
     
     var initialFocusImpl: (() -> Void)?
@@ -176,7 +176,7 @@ func resetPasswordController(context: AccountContext, emailPattern: String, comp
                                 text = presentationData.strings.Login_UnknownError
                         }
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                        presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                     }, completed: {
                         completion()
                     }))

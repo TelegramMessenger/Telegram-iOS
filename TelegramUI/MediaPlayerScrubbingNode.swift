@@ -364,108 +364,108 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
         }
         
         switch self.contentNodes {
-        case let .standard(node):
-            self.addSubnode(node.backgroundNode)
-            self.addSubnode(node.bufferingNode)
-            node.foregroundNode.addSubnode(node.foregroundContentNode)
-            self.addSubnode(node.foregroundNode)
-            
-            if let handleNodeContainer = node.handleNodeContainer {
-                self.addSubnode(handleNodeContainer)
-                handleNodeContainer.beginScrubbing = { [weak self] in
-                    if let strongSelf = self {
-                        if let statusValue = strongSelf.statusValue, Double(0.0).isLess(than: statusValue.duration) {
-                            strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
-                            strongSelf.scrubbingTimestampValue = statusValue.timestamp
-                            strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
-                            strongSelf.updateProgressAnimations()
-                        }
-                    }
-                }
-                handleNodeContainer.updateScrubbing = { [weak self] addedFraction in
-                    if let strongSelf = self {
-                        if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
-                            strongSelf.scrubbingTimestampValue = max(0.0, min(statusValue.duration, scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)))
-                            strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
-                            strongSelf.updateProgressAnimations()
-                        }
-                    }
-                }
-                handleNodeContainer.endScrubbing = { [weak self] apply in
-                    if let strongSelf = self {
-                        strongSelf.scrubbingBeginTimestamp = nil
-                        let scrubbingTimestampValue = strongSelf.scrubbingTimestampValue
-                        strongSelf.scrubbingTimestampValue = nil
-                        strongSelf._scrubbingTimestamp.set(.single(nil))
-                        if let scrubbingTimestampValue = scrubbingTimestampValue, apply {
-                            if let statusValue = strongSelf.statusValue {
-                                switch statusValue.status {
-                                    case .buffering:
-                                        break
-                                    default:
-                                        strongSelf.ignoreSeekId = statusValue.seekId
-                                }
+            case let .standard(node):
+                self.addSubnode(node.backgroundNode)
+                self.addSubnode(node.bufferingNode)
+                node.foregroundNode.addSubnode(node.foregroundContentNode)
+                self.addSubnode(node.foregroundNode)
+                
+                if let handleNodeContainer = node.handleNodeContainer {
+                    self.addSubnode(handleNodeContainer)
+                    handleNodeContainer.beginScrubbing = { [weak self] in
+                        if let strongSelf = self {
+                            if let statusValue = strongSelf.statusValue, Double(0.0).isLess(than: statusValue.duration) {
+                                strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
+                                strongSelf.scrubbingTimestampValue = statusValue.timestamp
+                                strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
+                                strongSelf.updateProgressAnimations()
                             }
-                            strongSelf.seek?(scrubbingTimestampValue)
                         }
-                        strongSelf.updateProgressAnimations()
                     }
-                }
-            }
-            
-            node.foregroundNode.onEnterHierarchy = { [weak self] in
-                self?.isInHierarchyValue = true
-                self?.updateProgressAnimations()
-            }
-            node.foregroundNode.onExitHierarchy = { [weak self] in
-                self?.isInHierarchyValue = false
-                self?.updateProgressAnimations()
-            }
-        case let .custom(node):
-            self.addSubnode(node.backgroundNode)
-            node.foregroundNode.addSubnode(node.foregroundContentNode)
-            self.addSubnode(node.foregroundNode)
-            
-            if let handleNodeContainer = node.handleNodeContainer {
-                self.addSubnode(handleNodeContainer)
-                handleNodeContainer.beginScrubbing = { [weak self] in
-                    if let strongSelf = self {
-                        if let statusValue = strongSelf.statusValue, Double(0.0).isLess(than: statusValue.duration) {
-                            strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
-                            strongSelf.scrubbingTimestampValue = statusValue.timestamp
+                    handleNodeContainer.updateScrubbing = { [weak self] addedFraction in
+                        if let strongSelf = self {
+                            if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
+                                strongSelf.scrubbingTimestampValue = max(0.0, min(statusValue.duration, scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)))
+                                strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
+                                strongSelf.updateProgressAnimations()
+                            }
+                        }
+                    }
+                    handleNodeContainer.endScrubbing = { [weak self] apply in
+                        if let strongSelf = self {
+                            strongSelf.scrubbingBeginTimestamp = nil
+                            let scrubbingTimestampValue = strongSelf.scrubbingTimestampValue
+                            strongSelf.scrubbingTimestampValue = nil
+                            strongSelf._scrubbingTimestamp.set(.single(nil))
+                            if let scrubbingTimestampValue = scrubbingTimestampValue, apply {
+                                if let statusValue = strongSelf.statusValue {
+                                    switch statusValue.status {
+                                        case .buffering:
+                                            break
+                                        default:
+                                            strongSelf.ignoreSeekId = statusValue.seekId
+                                    }
+                                }
+                                strongSelf.seek?(scrubbingTimestampValue)
+                            }
                             strongSelf.updateProgressAnimations()
                         }
                     }
                 }
-                handleNodeContainer.updateScrubbing = { [weak self] addedFraction in
-                    if let strongSelf = self {
-                        if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
-                            strongSelf.scrubbingTimestampValue = scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)
+                
+                node.foregroundNode.onEnterHierarchy = { [weak self] in
+                    self?.isInHierarchyValue = true
+                    self?.updateProgressAnimations()
+                }
+                node.foregroundNode.onExitHierarchy = { [weak self] in
+                    self?.isInHierarchyValue = false
+                    self?.updateProgressAnimations()
+                }
+            case let .custom(node):
+                self.addSubnode(node.backgroundNode)
+                node.foregroundNode.addSubnode(node.foregroundContentNode)
+                self.addSubnode(node.foregroundNode)
+                
+                if let handleNodeContainer = node.handleNodeContainer {
+                    self.addSubnode(handleNodeContainer)
+                    handleNodeContainer.beginScrubbing = { [weak self] in
+                        if let strongSelf = self {
+                            if let statusValue = strongSelf.statusValue, Double(0.0).isLess(than: statusValue.duration) {
+                                strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
+                                strongSelf.scrubbingTimestampValue = statusValue.timestamp
+                                strongSelf.updateProgressAnimations()
+                            }
+                        }
+                    }
+                    handleNodeContainer.updateScrubbing = { [weak self] addedFraction in
+                        if let strongSelf = self {
+                            if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
+                                strongSelf.scrubbingTimestampValue = scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)
+                                strongSelf.updateProgressAnimations()
+                            }
+                        }
+                    }
+                    handleNodeContainer.endScrubbing = { [weak self] apply in
+                        if let strongSelf = self {
+                            strongSelf.scrubbingBeginTimestamp = nil
+                            let scrubbingTimestampValue = strongSelf.scrubbingTimestampValue
+                            strongSelf.scrubbingTimestampValue = nil
+                            if let scrubbingTimestampValue = scrubbingTimestampValue, apply {
+                                strongSelf.seek?(scrubbingTimestampValue)
+                            }
                             strongSelf.updateProgressAnimations()
                         }
                     }
                 }
-                handleNodeContainer.endScrubbing = { [weak self] apply in
-                    if let strongSelf = self {
-                        strongSelf.scrubbingBeginTimestamp = nil
-                        let scrubbingTimestampValue = strongSelf.scrubbingTimestampValue
-                        strongSelf.scrubbingTimestampValue = nil
-                        if let scrubbingTimestampValue = scrubbingTimestampValue, apply {
-                            strongSelf.seek?(scrubbingTimestampValue)
-                        }
-                        strongSelf.updateProgressAnimations()
-                    }
+                
+                node.foregroundNode.onEnterHierarchy = { [weak self] in
+                    self?.isInHierarchyValue = true
+                    self?.updateProgressAnimations()
                 }
-            }
-            
-            node.foregroundNode.onEnterHierarchy = { [weak self] in
-                self?.isInHierarchyValue = true
-                self?.updateProgressAnimations()
-            }
-            node.foregroundNode.onExitHierarchy = { [weak self] in
-                self?.isInHierarchyValue = false
-                self?.updateProgressAnimations()
-            }
+                node.foregroundNode.onExitHierarchy = { [weak self] in
+                    self?.isInHierarchyValue = false
+                    self?.updateProgressAnimations()
+                }
         }
     }
     
@@ -592,7 +592,7 @@ final class MediaPlayerScrubbingNode: ASDisplayNode {
                     if case .circle = node.handle, let handleNode = handleNode as? ASImageNode, let image = handleNode.image {
                         handleSize = image.size
                     }
-                    handleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floor((bounds.size.height - handleSize.height) / 2.0)), size: handleSize)
+                    handleNode.frame = CGRect(origin: CGPoint(x: -handleSize.width / 2.0, y: floor((bounds.size.height - handleSize.height) / 2.0)), size: handleSize)
                 }
                 
                 if let handleNodeContainer = node.handleNodeContainer {

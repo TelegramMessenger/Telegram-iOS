@@ -349,11 +349,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     strongSelf.presentController(actionSheet, nil)
                 }
             }
-        }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
+        }, openCheckoutOrReceipt: { _ in
+        }, openSearch: {
+        }, setupReply: { _ in
         }, canSetupReply: { _ in
             return false
         }, navigateToFirstDateMessage: { _ in
-            
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in
         }, rateCall: { _, _ in
@@ -362,6 +363,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             if let strongSelf = self {
                 strongSelf.context.sharedContext.applicationBindings.openAppStorePage()
             }
+        }, displayMessageTooltip: { _, _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
@@ -656,7 +658,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private func openMessageContextMenu(message: Message, selectAll: Bool, node: ASDisplayNode, frame: CGRect) {
         var actions: [ContextMenuAction] = []
             if !message.text.isEmpty {
-            actions.append(ContextMenuAction(content: .text(self.presentationData.strings.Conversation_ContextMenuCopy), action: {
+                actions.append(ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
                 UIPasteboard.general.string = message.text
             }))
         }
@@ -684,7 +686,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
             
             if canBan {
-                actions.append(ContextMenuAction(content: .text(self.presentationData.strings.Conversation_ContextMenuBan), action: { [weak self] in
+                actions.append(ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuBan, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuBan), action: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.banDisposables.set((fetchChannelParticipant(account: strongSelf.context.account, peerId: strongSelf.peer.id, participantId: author.id)
                         |> deliverOnMainQueue).start(next: { participant in

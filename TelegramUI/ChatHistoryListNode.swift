@@ -363,6 +363,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         return self.hasVisiblePlayableItemNodesPromise.get()
     }
     
+    private var isInteractivelyScrollingValue: Bool = false
     private let isInteractivelyScrollingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     var isInteractivelyScrolling: Signal<Bool, NoError> {
         return self.isInteractivelyScrollingPromise.get()
@@ -856,37 +857,42 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                     }
                     strongSelf.hasVisiblePlayableItemNodesPromise.set(containsPlayableWithSoundItemNode)
+                    
+                    if containsPlayableWithSoundItemNode && !strongSelf.isInteractivelyScrollingValue {
+                        strongSelf.isInteractivelyScrollingPromise.set(true)
+                        strongSelf.isInteractivelyScrollingPromise.set(false)
+                    }
                 }
             }
         }
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-                if let strongSelf = self {
-                    let previousTheme = strongSelf.currentPresentationData.theme
-                    let previousStrings = strongSelf.currentPresentationData.strings
-                    let previousWallpaper = strongSelf.currentPresentationData.chatWallpaper
-                    let previousDisableAnimations = strongSelf.currentPresentationData.disableAnimations
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.currentPresentationData.theme
+                let previousStrings = strongSelf.currentPresentationData.strings
+                let previousWallpaper = strongSelf.currentPresentationData.chatWallpaper
+                let previousDisableAnimations = strongSelf.currentPresentationData.disableAnimations
+                
+                strongSelf.currentPresentationData = presentationData
+                
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousWallpaper != presentationData.chatWallpaper || previousDisableAnimations != presentationData.disableAnimations {
+                    let themeData = ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper)
+                    let chatPresentationData = ChatPresentationData(theme: themeData, fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
                     
-                    strongSelf.currentPresentationData = presentationData
+                    strongSelf.dynamicBounceEnabled = !presentationData.disableAnimations
                     
-                    if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousWallpaper != presentationData.chatWallpaper || previousDisableAnimations != presentationData.disableAnimations {
-                        let themeData = ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper)
-                        let chatPresentationData = ChatPresentationData(theme: themeData, fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
-                        
-                        strongSelf.dynamicBounceEnabled = !presentationData.disableAnimations
-                        
-                        strongSelf.forEachItemHeaderNode { itemHeaderNode in
-                            if let dateNode = itemHeaderNode as? ChatMessageDateHeaderNode {
-                                dateNode.updatePresentationData(chatPresentationData)
-                            } else if let dateNode = itemHeaderNode as? ListMessageDateHeaderNode {
-                                dateNode.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
-                            }
+                    strongSelf.forEachItemHeaderNode { itemHeaderNode in
+                        if let dateNode = itemHeaderNode as? ChatMessageDateHeaderNode {
+                            dateNode.updatePresentationData(chatPresentationData)
+                        } else if let dateNode = itemHeaderNode as? ListMessageDateHeaderNode {
+                            dateNode.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
                         }
-                        strongSelf.chatPresentationDataPromise.set(.single(chatPresentationData))
                     }
+                    strongSelf.chatPresentationDataPromise.set(.single(chatPresentationData))
                 }
-            })
+            }
+        })
         
         self.visibleContentOffsetChanged = { [weak self] offset in
             if let strongSelf = self {
@@ -925,10 +931,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }).start()
         
         self.beganInteractiveDragging = { [weak self] in
+            self?.isInteractivelyScrollingValue = true
             self?.isInteractivelyScrollingPromise.set(true)
         }
         
         self.didEndScrolling = { [weak self] in
+            self?.isInteractivelyScrollingValue = false
             self?.isInteractivelyScrollingPromise.set(false)
         }
     }

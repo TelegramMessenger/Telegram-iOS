@@ -296,7 +296,7 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
                         return
                     case let .member(_, _, adminInfo, _):
                         if let adminInfo = adminInfo, adminInfo.promotedBy != context.account.peerId {
-                            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Channel_Members_AddBannedErrorAdmin, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_Members_AddBannedErrorAdmin, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                             return
                         }
                 }

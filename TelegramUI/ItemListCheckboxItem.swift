@@ -83,6 +83,8 @@ class ItemListCheckboxItemNode: ListViewItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
+    private let activateArea: AccessibilityAreaNode
+    
     private let iconNode: ASImageNode
     private let titleNode: TextNode
     
@@ -111,10 +113,18 @@ class ItemListCheckboxItemNode: ListViewItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
+        self.activateArea = AccessibilityAreaNode()
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.activateArea)
+        
+        self.activateArea.activate = { [weak self] in
+            self?.item?.action()
+            return true
+        }
     }
     
     func asyncLayout() -> (_ item: ItemListCheckboxItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -160,6 +170,15 @@ class ItemListCheckboxItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    strongSelf.activateArea.accessibilityLabel = item.title
+                    if item.checked {
+                        strongSelf.activateArea.accessibilityValue = "Selected"
+                    } else {
+                        strongSelf.activateArea.accessibilityValue = ""
+                    }
+                    
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     
                     if let updateCheckImage = updateCheckImage {
                         strongSelf.iconNode.image = updateCheckImage

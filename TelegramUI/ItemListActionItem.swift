@@ -81,7 +81,7 @@ class ItemListActionItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(17.0)
 
-class ItemListActionItemNode: ListViewItemNode {
+class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -89,10 +89,12 @@ class ItemListActionItemNode: ListViewItemNode {
     
     private let titleNode: TextNode
     
+    private let activateArea: AccessibilityAreaNode
+    
     private var item: ItemListActionItem?
     
-    var tag: Any? {
-        return self.item?.tag
+    var tag: ItemListItemTag? {
+        return self.item?.tag as? ItemListItemTag
     }
     
     init() {
@@ -114,11 +116,13 @@ class ItemListActionItemNode: ListViewItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
+        self.activateArea = AccessibilityAreaNode()
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.isAccessibilityElement = true
-        
         self.addSubnode(self.titleNode)
+        
+        self.addSubnode(self.activateArea)
     }
     
     func asyncLayout() -> (_ item: ItemListActionItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -172,7 +176,9 @@ class ItemListActionItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     
-                    strongSelf.accessibilityLabel = item.title
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
+                    strongSelf.activateArea.accessibilityLabel = item.title
+                    
                     var accessibilityTraits: UIAccessibilityTraits = UIAccessibilityTraitButton
                     switch item.kind {
                         case .disabled:
@@ -180,7 +186,7 @@ class ItemListActionItemNode: ListViewItemNode {
                         default:
                             break
                     }
-                    strongSelf.accessibilityTraits = accessibilityTraits
+                    strongSelf.activateArea.accessibilityTraits = accessibilityTraits
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor

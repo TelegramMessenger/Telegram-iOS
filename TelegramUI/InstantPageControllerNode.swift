@@ -338,23 +338,29 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             shouldUpdateVisibleItems = true
             self.updateNavigationBar()
         }
+        var didSetScrollOffset = false
         if resetOffset {
             var contentOffset = CGPoint(x: 0.0, y: -self.scrollNode.view.contentInset.top)
             if let state = self.initialState {
-                self.setupScrollOffsetOnLayout = false
+                didSetScrollOffset = true
                 contentOffset = CGPoint(x: 0.0, y: CGFloat(state.contentOffset))
             }
             else if let anchor = self.initialAnchor, !anchor.isEmpty {
                 if let items = self.currentLayout?.items {
-                    self.setupScrollOffsetOnLayout = false
+                    didSetScrollOffset = true
                     if let (item, lineOffset, _, _) = self.findAnchorItem(anchor, items: items) {
                         contentOffset = CGPoint(x: 0.0, y: item.frame.minY + lineOffset - self.scrollNode.view.contentInset.top)
                     }
                 }
             } else {
-                self.setupScrollOffsetOnLayout = false
+                didSetScrollOffset = true
             }
             self.scrollNode.view.contentOffset = contentOffset
+            if didSetScrollOffset {
+                self.previousContentOffset = contentOffset
+                self.updateNavigationBar()
+                self.setupScrollOffsetOnLayout = false
+            }
         }
         if shouldUpdateVisibleItems {
             self.updateVisibleItems(visibleBounds: self.scrollNode.view.bounds)
@@ -668,7 +674,9 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         let delta: CGFloat
-        if let previousContentOffset = self.previousContentOffset {
+        if self.setupScrollOffsetOnLayout {
+            delta = 0.0
+        } else if let previousContentOffset = self.previousContentOffset {
             delta = contentOffset.y - previousContentOffset.y
         } else {
             delta = 0.0
@@ -698,6 +706,10 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 navigationBarFrame.size.height -= delta
             }
             navigationBarFrame.size.height = max(minBarHeight, min(maxBarHeight, navigationBarFrame.size.height))
+        }
+        
+        if self.setupScrollOffsetOnLayout {
+            navigationBarFrame.size.height = maxBarHeight
         }
         
         let transitionFactor = (navigationBarFrame.size.height - minBarHeight) / (maxBarHeight - minBarHeight)
@@ -865,17 +877,17 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     private func longPressMedia(_ media: InstantPageMedia) {
-        let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
+        let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
             if let strongSelf = self, let image = media.media as? TelegramMediaImage {
                 let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil)
                 let _ = copyToPasteboard(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .standalone(media: media)).start()
             }
-        }), ContextMenuAction(content: .text(self.strings.Conversation_LinkDialogSave), action: { [weak self] in
+        }), ContextMenuAction(content: .text(title: self.strings.Conversation_LinkDialogSave, accessibilityLabel: self.strings.Conversation_LinkDialogSave), action: { [weak self] in
             if let strongSelf = self, let image = media.media as? TelegramMediaImage {
                 let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil)
                 let _ = saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .standalone(media: media)).start()
             }
-        }), ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuShare), action: { [weak self] in
+        }), ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
             if let strongSelf = self, let webPage = strongSelf.webPage, let image = media.media as? TelegramMediaImage {
                 strongSelf.present(ShareController(context: strongSelf.context, subject: .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.media(media: .webPage(webPage: WebpageReference(webPage), media: image), resource: $0.resource)) }))), nil)
             }
@@ -970,9 +982,9 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 coveringRect = coveringRect.union(rects[i])
             }
             
-            let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuCopy), action: {
+            let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.strings.Conversation_ContextMenuCopy), action: {
                 UIPasteboard.general.string = text
-            }), ContextMenuAction(content: .text(self.strings.Conversation_ContextMenuShare), action: { [weak self] in
+            }), ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
                 if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
                     strongSelf.present(ShareController(context: strongSelf.context, subject: .quote(text: text, url: content.url)), nil)
                 }
@@ -1021,11 +1033,29 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return nil
     }
     
-    private func presentReferenceView(item: InstantPageTextItem) {
+    private func presentReferenceView(item: InstantPageTextItem, referenceAnchor: String) {
         guard let theme = self.theme, let webPage = self.webPage else {
             return
         }
-        let controller = InstantPageReferenceController(context: self.context, theme: theme, webPage: webPage, item: item, openUrl: { [weak self] url in
+        
+        var targetAnchor: InstantPageTextAnchorItem?
+        for (name, (line, _)) in item.anchors {
+            if name == referenceAnchor {
+                let anchors = item.lines[line].anchorItems
+                for anchor in anchors {
+                    if anchor.name == referenceAnchor {
+                        targetAnchor = anchor
+                        break
+                    }
+                }
+            }
+        }
+        
+        guard let anchorText = targetAnchor?.anchorText else {
+            return
+        }
+        
+        let controller = InstantPageReferenceController(context: self.context, theme: theme, webPage: webPage, anchorText: anchorText, openUrl: { [weak self] url in
             self?.openUrl(url)
         }, openUrlIn: { [weak self] url in
             self?.openUrlIn(url)
@@ -1043,7 +1073,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if !anchor.isEmpty {
             if let (item, lineOffset, reference, detailsItems) = findAnchorItem(String(anchor), items: items) {
                 if let item = item as? InstantPageTextItem, reference {
-                    self.presentReferenceView(item: item)
+                    self.presentReferenceView(item: item, referenceAnchor: anchor)
                 } else {
                     var previousDetailsNode: InstantPageDetailsNode?
                     var containerOffset: CGFloat = 0.0

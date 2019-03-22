@@ -32,6 +32,7 @@ private final class CachedChatMessageText {
 
 class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNode
+    private let textAccessibilityOverlayNode: TextAccessibilityOverlayNode
     private let statusNode: ChatMessageDateAndStatusNode
     private var linkHighlightingNode: LinkHighlightingNode?
     
@@ -41,7 +42,10 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     required init() {
         self.textNode = TextNode()
+        
         self.statusNode = ChatMessageDateAndStatusNode()
+        
+        self.textAccessibilityOverlayNode = TextAccessibilityOverlayNode()
         
         super.init()
         
@@ -50,6 +54,11 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         self.textNode.contentsScale = UIScreenScale
         self.textNode.displaysAsynchronously = true
         self.addSubnode(self.textNode)
+        self.addSubnode(self.textAccessibilityOverlayNode)
+        
+        self.textAccessibilityOverlayNode.openUrl = { [weak self] url in
+            self?.item?.controllerInteraction.openUrl(url, false, false)
+        }
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -185,14 +194,33 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let bubbleTheme = item.presentationData.theme.theme.chat.bubble
                 
+                var textFont = item.presentationData.messageFont
+                var forceStatusNewline = false
+                if rawText.containsOnlyEmoji {
+                    let emojis = rawText.emojis
+                    switch emojis.count {
+                        case 1:
+                            textFont = item.presentationData.messageEmojiFont1
+                            forceStatusNewline = true
+                        case 2:
+                            textFont = item.presentationData.messageEmojiFont2
+                            forceStatusNewline = true
+                        case 3:
+                            textFont = item.presentationData.messageEmojiFont3
+                            forceStatusNewline = true
+                        default:
+                            break
+                    }
+                }
+                
                 if let entities = entities {
-                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: item.presentationData.messageFont, linkFont: item.presentationData.messageFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, fixedFont: item.presentationData.messageFixedFont)
+                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, fixedFont: item.presentationData.messageFixedFont)
                 } else {
-                    attributedText = NSAttributedString(string: rawText, font: item.presentationData.messageFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor)
+                    attributedText = NSAttributedString(string: rawText, font: textFont, textColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor)
                 }
                 
                 var cutout: TextNodeCutout?
-                if let statusSize = statusSize {
+                if let statusSize = statusSize, !forceStatusNewline {
                     cutout = TextNodeCutout(bottomRight: statusSize)
                 }
                 
@@ -205,26 +233,45 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 var statusFrame: CGRect?
                 if let statusSize = statusSize {
-                    statusFrame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.maxX - statusSize.width, y: textFrameWithoutInsets.maxY - statusSize.height), size: statusSize)
+                    if forceStatusNewline {
+                        statusFrame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.maxX - statusSize.width, y: textFrameWithoutInsets.maxY), size: statusSize)
+                    } else {
+                        statusFrame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.maxX - statusSize.width, y: textFrameWithoutInsets.maxY - statusSize.height), size: statusSize)
+                    }
                 }
                 
                 textFrame = textFrame.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
                 textFrameWithoutInsets = textFrameWithoutInsets.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
                 statusFrame = statusFrame?.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
 
-                var boundingSize: CGSize
+                var suggestedBoundingWidth: CGFloat
                 if let statusFrame = statusFrame {
-                    boundingSize = textFrameWithoutInsets.union(statusFrame).size
+                    suggestedBoundingWidth = textFrameWithoutInsets.union(statusFrame).width
                 } else {
-                    boundingSize = textFrameWithoutInsets.size
+                    suggestedBoundingWidth = textFrameWithoutInsets.width
                 }
-                boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
-                boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
+                suggestedBoundingWidth += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 
-                return (boundingSize.width, { boundingWidth in
+                return (suggestedBoundingWidth, { boundingWidth in
+                    var boundingSize: CGSize
                     var adjustedStatusFrame: CGRect?
+                    
                     if let statusFrame = statusFrame {
-                        adjustedStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - layoutConstants.text.bubbleInsets.right, y: statusFrame.origin.y), size: statusFrame.size)
+                        if !forceStatusNewline || boundingWidth < statusFrame.width + textFrame.width {
+                            boundingSize = textFrameWithoutInsets.union(statusFrame).size
+                            boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
+                            boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
+                            adjustedStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - layoutConstants.text.bubbleInsets.right, y: statusFrame.origin.y), size: statusFrame.size)
+                        } else {
+                            boundingSize = textFrameWithoutInsets.size
+                            boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
+                            boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
+                            adjustedStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - layoutConstants.text.bubbleInsets.right, y: boundingSize.height - statusFrame.height - layoutConstants.text.bubbleInsets.bottom), size: statusFrame.size)
+                        }
+                    } else {
+                        boundingSize = textFrameWithoutInsets.size
+                        boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
+                        boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
                     }
                     
                     return (boundingSize, { [weak self] animation, _ in
@@ -238,7 +285,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             if case .System = animation {
                                 if let cachedLayout = cachedLayout {
-                                    if cachedLayout != textLayout {
+                                    if !cachedLayout.areLinesEqual(to: textLayout) {
                                         if let textContents = strongSelf.textNode.contents {
                                             let fadeNode = ASDisplayNode()
                                             fadeNode.displaysAsynchronously = false
@@ -279,7 +326,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.statusNode.removeFromSupernode()
                             }
                             
-                            strongSelf.textNode.frame = textFrame
+                            var adjustedTextFrame = textFrame
+                            if forceStatusNewline {
+                                adjustedTextFrame.origin.x = floor((boundingWidth - adjustedTextFrame.width) / 2.0)
+                            }
+                            strongSelf.textNode.frame = adjustedTextFrame
+                            strongSelf.textAccessibilityOverlayNode.frame = textFrame
+                            strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
                         }
                     })
                 })

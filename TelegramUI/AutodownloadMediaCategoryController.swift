@@ -4,18 +4,18 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-public func autodownloadDataSizeString(_ size: Int64) -> String {
+public func autodownloadDataSizeString(_ size: Int64, decimalSeparator: String = ".") -> String {
     if size >= 1024 * 1024 * 1024 {
         let remainder = (size % (1024 * 1024 * 1024)) / (1024 * 1024 * 102)
         if remainder != 0 {
-            return "\(size / (1024 * 1024 * 1024)),\(remainder) GB"
+            return "\(size / (1024 * 1024 * 1024))\(decimalSeparator)\(remainder) GB"
         } else {
             return "\(size / (1024 * 1024 * 1024)) GB"
         }
     } else if size >= 1024 * 1024 {
         let remainder = (size % (1024 * 1024)) / (1024 * 102)
         if size < 10 * 1024 * 1024 {
-            return "\(size / (1024 * 1024)),\(remainder) MB"
+            return "\(size / (1024 * 1024))\(decimalSeparator)\(remainder) MB"
         } else {
             return "\(size / (1024 * 1024)) MB"
         }
@@ -64,7 +64,7 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
     case peerChannels(PresentationTheme, String, Bool)
     
     case sizeHeader(PresentationTheme, String)
-    case sizeItem(PresentationTheme, String, Int32)
+    case sizeItem(PresentationTheme, String, String, Int32)
     case sizePreload(PresentationTheme, String, Bool, Bool)
     case sizePreloadInfo(PresentationTheme, String)
     
@@ -138,8 +138,8 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .sizeItem(lhsTheme, lhsText, lhsValue):
-                if case let .sizeItem(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .sizeItem(lhsTheme, lhsDecimalSeparator, lhsText, lhsValue):
+                if case let .sizeItem(rhsTheme, rhsDecimalSeparator, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsDecimalSeparator == rhsDecimalSeparator, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -185,8 +185,8 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
                 })
             case let .sizeHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .sizeItem(theme, text, value):
-                return AutodownloadSizeLimitItem(theme: theme, text: text, value: value, sectionId: self.section, updated: { value in
+            case let .sizeItem(theme, decimalSeparator, text, value):
+                return AutodownloadSizeLimitItem(theme: theme, decimalSeparator: decimalSeparator, text: text, value: value, sectionId: self.section, updated: { value in
                     arguments.adjustSize(value)
                 })
             case let .sizePreload(theme, text, value, enabled):
@@ -264,12 +264,12 @@ private func autodownloadMediaCategoryControllerEntries(presentationData: Presen
             
             let sizeText: String
             if size == Int32.max {
-                sizeText = autodownloadDataSizeString(1536 * 1024 * 1024)
+                sizeText = autodownloadDataSizeString(1536 * 1024 * 1024, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
             } else {
-                sizeText = autodownloadDataSizeString(Int64(size))
+                sizeText = autodownloadDataSizeString(Int64(size), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
             }
             let text = presentationData.strings.AutoDownloadSettings_UpTo(sizeText).0
-            entries.append(.sizeItem(presentationData.theme, text, size))
+            entries.append(.sizeItem(presentationData.theme, presentationData.dateTimeFormat.decimalSeparator, text, size))
             if #available(iOSApplicationExtension 10.3, *), category == .video {
                 entries.append(.sizePreload(presentationData.theme, presentationData.strings.AutoDownloadSettings_PreloadVideo, predownload, size > 2 * 1024 * 1024))
                 entries.append(.sizePreloadInfo(presentationData.theme, presentationData.strings.AutoDownloadSettings_PreloadVideoInfo(sizeText).0))

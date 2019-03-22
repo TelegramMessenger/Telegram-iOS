@@ -7,7 +7,7 @@ import TelegramCore
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []
     var skipText = false
-    var addFinalText = false
+    var messageWithCaptionToAdd: Message?
     var isUnsupportedMedia = false
     
     outer: for message in item.content {
@@ -58,14 +58,14 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
         if !message.text.isEmpty || isUnsupportedMedia {
             if !skipText {
                 if case .group = item.content {
-                    addFinalText = true
+                    messageWithCaptionToAdd = message
                     skipText = true
                 } else {
                     result.append((message, ChatMessageTextBubbleContentNode.self))
                 }
             } else {
                 if case .group = item.content {
-                    addFinalText = false
+                    messageWithCaptionToAdd = nil
                 }
             }
         }
@@ -84,8 +84,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
         }
     }
     
-    if addFinalText && !item.content.firstMessage.text.isEmpty {
-        result.append((item.content.firstMessage, ChatMessageTextBubbleContentNode.self))
+    if let messageWithCaptionToAdd = messageWithCaptionToAdd {
+        result.append((messageWithCaptionToAdd, ChatMessageTextBubbleContentNode.self))
     }
     
     if let additionalContent = item.additionalContent {
@@ -133,7 +133,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     
     private var nameNode: TextNode?
     private var adminBadgeNode: TextNode?
-    private var forwardInfoNode: ChatMessageForwardInfoNode?
+    var forwardInfoNode: ChatMessageForwardInfoNode?
     private var replyInfoNode: ChatMessageReplyInfoNode?
     
     private var contentNodes: [ChatMessageBubbleContentNode] = []
@@ -141,6 +141,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     private var actionButtonsNode: ChatMessageActionButtonsNode?
     
     private var shareButtonNode: HighlightableButtonNode?
+    
+    private let messageAccessibilityArea: AccessibilityAreaNode
 
     private var backgroundType: ChatMessageBackgroundType?
     private var highlightedState: Bool = false
@@ -150,6 +152,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
     private var appliedItem: ChatMessageItem?
+    private var appliedForwardInfo: (Peer?, String?)?
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -163,10 +166,22 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     
     required init() {
         self.backgroundNode = ChatMessageBackground()
+        self.messageAccessibilityArea = AccessibilityAreaNode()
         
         super.init(layerBacked: false)
         
         self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.messageAccessibilityArea)
+        
+        self.messageAccessibilityArea.activate = { [weak self] in
+            guard let strongSelf = self, let accessibilityData = strongSelf.accessibilityData else {
+                return false
+            }
+            if let singleUrl = accessibilityData.singleUrl {
+                strongSelf.item?.controllerInteraction.openUrl(singleUrl, false, false)
+            }
+            return false
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -314,9 +329,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         let layoutConstants = self.layoutConstants
         
         let currentItem = self.appliedItem
+        let currentForwardInfo = self.appliedForwardInfo
+        
+        let isSelected = self.selectionNode?.selected
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
-            let accessibilityData = ChatMessageAccessibilityData(item: item)
+            let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: isSelected)
             
             let baseWidth = params.width - params.leftInset - params.rightInset
             
@@ -338,6 +356,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         if let forwardInfo = item.content.firstMessage.forwardInfo {
                             ignoreForward = true
                             effectiveAuthor = forwardInfo.author
+                            if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature  {
+                                effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: Int32(clamping: authorSignature.persistentHashValue)), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: UserInfoFlags())
+                            }
                         }
                         displayAuthorInfo = !mergedTop.merged && incoming && effectiveAuthor != nil
                     } else {
@@ -366,7 +387,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     displayAuthorInfo = true*/
             }
             
-            if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.source == nil, forwardInfo.author.id.namespace == Namespaces.Peer.CloudUser {
+            if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.source == nil, forwardInfo.author?.id.namespace == Namespaces.Peer.CloudUser {
                 for media in item.content.firstMessage.media {
                     if let file = media as? TelegramMediaFile, file.isMusic {
                         ignoreForward = true
@@ -746,6 +767,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             var forwardInfoOriginY: CGFloat = 0.0
             var forwardInfoSizeApply: (CGSize, () -> ChatMessageForwardInfoNode?) = (CGSize(), { nil })
             
+            var forwardSource: Peer?
+            var forwardAuthorSignature: String?
+            
             if displayHeader {
                 if authorNameString != nil || inlineBotNameString != nil {
                     if headerSize.height.isZero {
@@ -790,26 +814,29 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     headerSize.width = max(headerSize.width, nameNodeSizeApply.0.width + adminBadgeSizeAndApply.0.size.width + layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right)
                     headerSize.height += nameNodeSizeApply.0.height
                 }
-                
+
                 if !ignoreForward, let forwardInfo = firstMessage.forwardInfo {
                     if headerSize.height.isZero {
                         headerSize.height += 5.0
                     }
-                    let forwardSource: Peer
-                    let forwardAuthorSignature: String?
                     
                     if let source = forwardInfo.source {
                         forwardSource = source
                         if let authorSignature = forwardInfo.authorSignature {
                             forwardAuthorSignature = authorSignature
-                        } else if forwardInfo.author.id != source.id {
-                            forwardAuthorSignature = forwardInfo.author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                        } else if let forwardInfoAuthor = forwardInfo.author, forwardInfoAuthor.id != source.id {
+                            forwardAuthorSignature = forwardInfoAuthor.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                         } else {
                             forwardAuthorSignature = nil
                         }
                     } else {
-                        forwardSource = forwardInfo.author
-                        forwardAuthorSignature = nil
+                        if let currentForwardInfo = currentForwardInfo, forwardInfo.author == nil && currentForwardInfo.0 != nil {
+                            forwardSource = nil
+                            forwardAuthorSignature = currentForwardInfo.0?.displayTitle
+                        } else {
+                            forwardSource = forwardInfo.author
+                            forwardAuthorSignature = forwardInfo.authorSignature
+                        }
                     }
                     let sizeAndApply = forwardInfoLayout(item.presentationData, item.presentationData.strings, .bubble(incoming: incoming), forwardSource, forwardAuthorSignature, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
                     forwardInfoSizeApply = (sizeAndApply.0, { sizeAndApply.1() })
@@ -1148,8 +1175,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             return (layout, { [weak self] animation, synchronousLoads in
                 if let strongSelf = self {
                     strongSelf.appliedItem = item
-                    strongSelf.accessibilityLabel = accessibilityData.label
-                    strongSelf.accessibilityValue = accessibilityData.value
+                    strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
+                    strongSelf.updateAccessibilityData(accessibilityData)
                     
                     var transition: ContainedViewLayoutTransition = .immediate
                     if case let .System(duration) = animation {
@@ -1188,7 +1215,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                 }
                             })
                             strongSelf.deliveryFailedNode = deliveryFailedNode
-                            strongSelf.addSubnode(deliveryFailedNode)
+                            strongSelf.insertSubnode(deliveryFailedNode, belowSubnode: strongSelf.messageAccessibilityArea)
                         }
                         let deliveryFailedSize = deliveryFailedNode.updateLayout(theme: item.presentationData.theme.theme)
                         let deliveryFailedFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + deliveryFailedInset - deliveryFailedSize.width, y: backgroundFrame.maxY - deliveryFailedSize.height), size: deliveryFailedSize)
@@ -1212,7 +1239,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             if !nameNode.isNodeLoaded {
                                 nameNode.isUserInteractionEnabled = false
                             }
-                            strongSelf.addSubnode(nameNode)
+                            strongSelf.insertSubnode(nameNode, belowSubnode: strongSelf.messageAccessibilityArea)
                         }
                         nameNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY), size: nameNodeSizeApply.0)
                         
@@ -1223,7 +1250,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                 if !adminBadgeNode.isNodeLoaded {
                                     adminBadgeNode.isUserInteractionEnabled = false
                                 }
-                                strongSelf.addSubnode(adminBadgeNode)
+                                strongSelf.insertSubnode(adminBadgeNode, belowSubnode: strongSelf.messageAccessibilityArea)
                                 adminBadgeNode.frame = adminBadgeFrame
                             } else {
                                 let previousAdminBadgeFrame = adminBadgeNode.frame
@@ -1245,7 +1272,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         strongSelf.forwardInfoNode = forwardInfoNode
                         var animateFrame = true
                         if forwardInfoNode.supernode == nil {
-                            strongSelf.addSubnode(forwardInfoNode)
+                            strongSelf.insertSubnode(forwardInfoNode, belowSubnode: strongSelf.messageAccessibilityArea)
                             animateFrame = false
                         }
                         let previousForwardInfoNodeFrame = forwardInfoNode.frame
@@ -1264,7 +1291,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         strongSelf.replyInfoNode = replyInfoNode
                         var animateFrame = true
                         if replyInfoNode.supernode == nil {
-                            strongSelf.addSubnode(replyInfoNode)
+                            strongSelf.insertSubnode(replyInfoNode, belowSubnode: strongSelf.messageAccessibilityArea)
                             animateFrame = false
                         }
                         let previousReplyInfoNodeFrame = replyInfoNode.frame
@@ -1297,9 +1324,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         }
                         
                         if let addedContentNodes = addedContentNodes {
-                            for (contentNodeMessage, contentNode) in addedContentNodes {
+                            for (_, contentNode) in addedContentNodes {
                                 updatedContentNodes.append(contentNode)
-                                strongSelf.addSubnode(contentNode)
+                                strongSelf.insertSubnode(contentNode, belowSubnode: strongSelf.messageAccessibilityArea)
                                 
                                 contentNode.visibility = strongSelf.visibility
                             }
@@ -1367,7 +1394,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         if mosaicStatusNode !== strongSelf.mosaicStatusNode {
                             strongSelf.mosaicStatusNode?.removeFromSupernode()
                             strongSelf.mosaicStatusNode = mosaicStatusNode
-                            strongSelf.addSubnode(mosaicStatusNode)
+                            strongSelf.insertSubnode(mosaicStatusNode, belowSubnode: strongSelf.messageAccessibilityArea)
                         }
                         let absoluteOrigin = mosaicStatusOrigin.offsetBy(dx: contentOrigin.x, dy: contentOrigin.y)
                         mosaicStatusNode.frame = CGRect(origin: CGPoint(x: absoluteOrigin.x - layoutConstants.image.statusInsets.right - size.width, y: absoluteOrigin.y - layoutConstants.image.statusInsets.bottom - size.height), size: size)
@@ -1382,7 +1409,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                 shareButtonNode.removeFromSupernode()
                             }
                             strongSelf.shareButtonNode = updatedShareButtonNode
-                            strongSelf.addSubnode(updatedShareButtonNode)
+                            strongSelf.insertSubnode(updatedShareButtonNode, belowSubnode: strongSelf.messageAccessibilityArea)
                             updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
                         }
                         if let updatedShareButtonBackground = updatedShareButtonBackground {
@@ -1408,6 +1435,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             strongSelf.backgroundFrameTransition = nil
                         }
                         strongSelf.backgroundNode.frame = backgroundFrame
+                        strongSelf.messageAccessibilityArea.frame = backgroundFrame
                         if let shareButtonNode = strongSelf.shareButtonNode {
                             shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - 30.0), size: CGSize(width: 29.0, height: 29.0))
                         }
@@ -1439,7 +1467,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     strongSelf.presentMessageButtonContextMenu(button: button)
                                 }
                             }
-                            strongSelf.addSubnode(actionButtonsNode)
+                            strongSelf.insertSubnode(actionButtonsNode, belowSubnode: strongSelf.messageAccessibilityArea)
                         } else {
                             if case let .System(duration) = animation {
                                 actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
@@ -1456,11 +1484,51 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
     }
     
+    override func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
+        super.updateAccessibilityData(accessibilityData)
+        
+        self.messageAccessibilityArea.accessibilityLabel = accessibilityData.label
+        self.messageAccessibilityArea.accessibilityValue = accessibilityData.value
+        self.messageAccessibilityArea.accessibilityHint = accessibilityData.hint
+        self.messageAccessibilityArea.accessibilityTraits = accessibilityData.traits
+        if let customActions = accessibilityData.customActions {
+            self.messageAccessibilityArea.accessibilityCustomActions = customActions.map({ action -> UIAccessibilityCustomAction in
+                return ChatMessageAccessibilityCustomAction(name: action.name, target: self, selector: #selector(self.performLocalAccessibilityCustomAction(_:)), action: action.action)
+            })
+        } else {
+            self.messageAccessibilityArea.accessibilityCustomActions = nil
+        }
+    }
+    
+    @objc private func performLocalAccessibilityCustomAction(_ action: UIAccessibilityCustomAction) {
+        if let action = action as? ChatMessageAccessibilityCustomAction {
+            switch action.action {
+                case .reply:
+                    if let item = self.item {
+                        item.controllerInteraction.setupReply(item.message.id)
+                    }
+                case .options:
+                    if let item = self.item {
+                        var subFrame = self.backgroundNode.frame
+                        if case .group = item.content {
+                            for contentNode in self.contentNodes {
+                                if contentNode.item?.message.stableId == item.message.stableId {
+                                    subFrame = contentNode.frame.insetBy(dx: 0.0, dy: -4.0)
+                                    break
+                                }
+                            }
+                        }
+                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, subFrame)
+                    }
+            }
+        }
+    }
+    
     private func addContentNode(node: ChatMessageBubbleContentNode) {
         if let transitionClippingNode = self.transitionClippingNode {
             transitionClippingNode.addSubnode(node)
         } else {
-            self.addSubnode(node)
+            self.insertSubnode(node, belowSubnode: self.messageAccessibilityArea)
         }
     }
     
@@ -1481,7 +1549,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             for contentNode in self.contentNodes {
                 node.addSubnode(contentNode)
             }
-            self.addSubnode(node)
+            self.insertSubnode(node, belowSubnode: self.messageAccessibilityArea)
             self.transitionClippingNode = node
         }
     }
@@ -1489,13 +1557,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     private func disableTransitionClippingNode() {
         if let transitionClippingNode = self.transitionClippingNode {
             if let forwardInfoNode = self.forwardInfoNode {
-                self.addSubnode(forwardInfoNode)
+                self.insertSubnode(forwardInfoNode, belowSubnode: self.messageAccessibilityArea)
             }
             if let replyInfoNode = self.replyInfoNode {
-                self.addSubnode(replyInfoNode)
+                self.insertSubnode(replyInfoNode, belowSubnode: self.messageAccessibilityArea)
             }
             for contentNode in self.contentNodes {
-                self.addSubnode(contentNode)
+                self.insertSubnode(contentNode, belowSubnode: self.messageAccessibilityArea)
             }
             transitionClippingNode.removeFromSupernode()
             self.transitionClippingNode = nil
@@ -1516,6 +1584,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         if let backgroundFrameTransition = self.backgroundFrameTransition {
             let backgroundFrame = CGRect.interpolator()(backgroundFrameTransition.0, backgroundFrameTransition.1, progress) as! CGRect
             self.backgroundNode.frame = backgroundFrame
+            self.messageAccessibilityArea.frame = backgroundFrame
             
             if let shareButtonNode = self.shareButtonNode {
                 shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - 30.0), size: CGSize(width: 29.0, height: 29.0))
@@ -1553,7 +1622,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     } else {
                                         navigate = .info
                                     }
-                                    item.controllerInteraction.openPeer(item.effectiveAuthorId ?? author.id, navigate, item.message)
+                                    
+                                    if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
+                                        item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
+                                    } else {
+                                        item.controllerInteraction.openPeer(item.effectiveAuthorId ?? author.id, navigate, item.message)
+                                    }
                                 }
                                 return
                             }
@@ -1595,8 +1669,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                 if let item = self.item, let forwardInfo = item.message.forwardInfo {
                                     if let sourceMessageId = forwardInfo.sourceMessageId {
                                         item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
-                                    } else {
-                                        item.controllerInteraction.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .info, nil)
+                                    } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
+                                        item.controllerInteraction.openPeer(id, .info, nil)
+                                    } else if let _ = forwardInfo.authorSignature {
+                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
                                     }
                                     return
                                 }
@@ -1750,10 +1826,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             return shareButtonNode.view
         }
         
-        if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(point) {
-            return self.view
-        }
-        
         if let selectionNode = self.selectionNode {
             if let result = self.traceSelectionNodes(parent: self, point: point.offsetBy(dx: -42.0, dy: 0.0)) {
                 return result.view
@@ -1767,6 +1839,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             } else {
                 return nil
             }
+        }
+        
+        if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(point) {
+            return self.view
         }
         
         if !self.backgroundNode.frame.contains(point) {
@@ -1870,6 +1946,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             return
         }
         
+        let wasSelected = self.selectionNode?.selected
+        
         var canHaveSelection = true
         switch item.content {
             case let .message(message, _, _, _):
@@ -1924,7 +2002,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 })
                 
                 selectionNode.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
-                self.addSubnode(selectionNode)
+                self.insertSubnode(selectionNode, belowSubnode: self.messageAccessibilityArea)
                 self.selectionNode = selectionNode
                 selectionNode.updateSelected(selected, animated: false)
                 let previousSubnodeTransform = self.subnodeTransform
@@ -1957,6 +2035,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     selectionNode.removeFromSupernode()
                 }
             }
+        }
+        
+        let isSelected = self.selectionNode?.selected
+        if wasSelected != isSelected {
+            self.updateAccessibilityData(ChatMessageAccessibilityData(item: item, isSelected: isSelected))
         }
     }
     
@@ -2044,7 +2127,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
 
                         let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
                         self.swipeToReplyNode = swipeToReplyNode
-                        self.addSubnode(swipeToReplyNode)
+                        self.insertSubnode(swipeToReplyNode, belowSubnode: self.messageAccessibilityArea)
                         animateReplyNodeIn = true
                     }
                 }

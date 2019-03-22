@@ -8,6 +8,8 @@ enum SelectivePrivacySettingsKind {
     case presence
     case groupInvitations
     case voiceCalls
+    case profilePhoto
+    case forwards
 }
 
 private enum SelectivePrivacySettingType {
@@ -33,7 +35,7 @@ enum SelectivePrivacySettingsPeerTarget {
 }
 
 private final class SelectivePrivacySettingsControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let updateType: (SelectivePrivacySettingType) -> Void
     let openEnableFor: (SelectivePrivacySettingsPeerTarget) -> Void
@@ -42,8 +44,8 @@ private final class SelectivePrivacySettingsControllerArguments {
     let updateCallP2PMode: ((SelectivePrivacySettingType) -> Void)?
     let updateCallIntegrationEnabled: ((Bool) -> Void)?
     
-    init(account: Account, updateType: @escaping (SelectivePrivacySettingType) -> Void, openEnableFor: @escaping (SelectivePrivacySettingsPeerTarget) -> Void, openDisableFor: @escaping (SelectivePrivacySettingsPeerTarget) -> Void, updateCallP2PMode: ((SelectivePrivacySettingType) -> Void)?, updateCallIntegrationEnabled: ((Bool) -> Void)?) {
-        self.account = account
+    init(context: AccountContext, updateType: @escaping (SelectivePrivacySettingType) -> Void, openEnableFor: @escaping (SelectivePrivacySettingsPeerTarget) -> Void, openDisableFor: @escaping (SelectivePrivacySettingsPeerTarget) -> Void, updateCallP2PMode: ((SelectivePrivacySettingType) -> Void)?, updateCallIntegrationEnabled: ((Bool) -> Void)?) {
+        self.context = context
         self.updateType = updateType
         self.openEnableFor = openEnableFor
         self.openDisableFor = openDisableFor
@@ -54,6 +56,7 @@ private final class SelectivePrivacySettingsControllerArguments {
 }
 
 private enum SelectivePrivacySettingsSection: Int32 {
+    case forwards
     case setting
     case peers
     case callsP2P
@@ -70,6 +73,8 @@ private func stringForUserCount(_ count: Int, strings: PresentationStrings) -> S
 }
 
 private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
+    case forwardsPreviewHeader(PresentationTheme, String)
+    case forwardsPreview(PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, String, Bool, String)
     case settingHeader(PresentationTheme, String)
     case everybody(PresentationTheme, String, Bool)
     case contacts(PresentationTheme, String, Bool)
@@ -91,6 +96,8 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
+            case .forwardsPreviewHeader, .forwardsPreview:
+                return SelectivePrivacySettingsSection.forwards.rawValue
             case .settingHeader, .everybody, .contacts, .nobody, .settingInfo:
                 return SelectivePrivacySettingsSection.setting.rawValue
             case .disableFor, .enableFor, .peersInfo:
@@ -106,47 +113,63 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-            case .settingHeader:
+            case .forwardsPreviewHeader:
                 return 0
-            case .everybody:
+            case .forwardsPreview:
                 return 1
-            case .contacts:
+            case .settingHeader:
                 return 2
-            case .nobody:
+            case .everybody:
                 return 3
-            case .settingInfo:
+            case .contacts:
                 return 4
-            case .disableFor:
+            case .nobody:
                 return 5
-            case .enableFor:
+            case .settingInfo:
                 return 6
-            case .peersInfo:
+            case .disableFor:
                 return 7
-            case .callsP2PHeader:
+            case .enableFor:
                 return 8
-            case .callsP2PAlways:
+            case .peersInfo:
                 return 9
-            case .callsP2PContacts:
+            case .callsP2PHeader:
                 return 10
-            case .callsP2PNever:
+            case .callsP2PAlways:
                 return 11
-            case .callsP2PInfo:
+            case .callsP2PContacts:
                 return 12
-            case .callsP2PDisableFor:
+            case .callsP2PNever:
                 return 13
-            case .callsP2PEnableFor:
+            case .callsP2PInfo:
                 return 14
-            case .callsP2PPeersInfo:
+            case .callsP2PDisableFor:
                 return 15
-            case .callsIntegrationEnabled:
+            case .callsP2PEnableFor:
                 return 16
-            case .callsIntegrationInfo:
+            case .callsP2PPeersInfo:
                 return 17
+            case .callsIntegrationEnabled:
+                return 18
+            case .callsIntegrationInfo:
+                return 19
         }
     }
     
     static func ==(lhs: SelectivePrivacySettingsEntry, rhs: SelectivePrivacySettingsEntry) -> Bool {
         switch lhs {
+            case let .forwardsPreviewHeader(lhsTheme, lhsText):
+                if case let .forwardsPreviewHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .forwardsPreview(lhsTheme, lhsWallpaper, lhsFontSize, lhsStrings, lhsTimeFormat, lhsNameOrder, lhsPeerName, lhsLinkEnabled, lhsTooltipText):
+                if case let .forwardsPreview(rhsTheme, rhsWallpaper, rhsFontSize, rhsStrings, rhsTimeFormat, rhsNameOrder, rhsPeerName, rhsLinkEnabled, rhsTooltipText) = rhs, lhsTheme === rhsTheme, lhsWallpaper == rhsWallpaper, lhsFontSize == rhsFontSize, lhsStrings === rhsStrings, lhsTimeFormat == rhsTimeFormat, lhsNameOrder == rhsNameOrder, lhsPeerName == rhsPeerName, lhsLinkEnabled == rhsLinkEnabled, lhsTooltipText == rhsTooltipText {
+                    return true
+                } else {
+                    return false
+                }
             case let .settingHeader(lhsTheme, lhsText):
                 if case let .settingHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -264,8 +287,12 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     
     func item(_ arguments: SelectivePrivacySettingsControllerArguments) -> ListViewItem {
         switch self {
+            case let .forwardsPreviewHeader(theme, text):
+                return ItemListSectionHeaderItem(theme: theme, text: text, multiline: true, sectionId: self.section)
+            case let .forwardsPreview(theme, wallpaper, fontSize, strings, dateTimeFormat, nameDisplayOrder, peerName, linkEnabled, tooltipText):
+                return ForwardPrivacyChatPreviewItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, fontSize: fontSize, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, peerName: peerName, linkEnabled: linkEnabled, tooltipText: tooltipText)
             case let .settingHeader(theme, text):
-                return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+                return ItemListSectionHeaderItem(theme: theme, text: text, multiline: true, sectionId: self.section)
             case let .everybody(theme, text, value):
                 return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateType(.everybody)
@@ -421,7 +448,7 @@ private struct SelectivePrivacySettingsControllerState: Equatable {
     }
 }
 
-private func selectivePrivacySettingsControllerEntries(presentationData: PresentationData, kind: SelectivePrivacySettingsKind, state: SelectivePrivacySettingsControllerState) -> [SelectivePrivacySettingsEntry] {
+private func selectivePrivacySettingsControllerEntries(presentationData: PresentationData, kind: SelectivePrivacySettingsKind, state: SelectivePrivacySettingsControllerState, peerName: String) -> [SelectivePrivacySettingsEntry] {
     var entries: [SelectivePrivacySettingsEntry] = []
     
     let settingTitle: String
@@ -444,6 +471,34 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
             settingInfoText = presentationData.strings.Privacy_Calls_CustomHelp
             disableForText = presentationData.strings.Privacy_GroupsAndChannels_NeverAllow
             enableForText = presentationData.strings.Privacy_GroupsAndChannels_AlwaysAllow
+        case .profilePhoto:
+            settingTitle = presentationData.strings.Privacy_ProfilePhoto_WhoCanSeeMyPhoto
+            settingInfoText = presentationData.strings.Privacy_ProfilePhoto_CustomHelp
+            disableForText = presentationData.strings.PrivacyLastSeenSettings_NeverShareWith
+            enableForText = presentationData.strings.PrivacyLastSeenSettings_AlwaysShareWith
+        case .forwards:
+            settingTitle = presentationData.strings.Privacy_Forwards_WhoCanForward
+            settingInfoText = presentationData.strings.Privacy_Forwards_CustomHelp
+            disableForText = presentationData.strings.Privacy_GroupsAndChannels_NeverAllow
+            enableForText = presentationData.strings.Privacy_GroupsAndChannels_AlwaysAllow
+    }
+    
+    if case .forwards = kind {
+        let linkEnabled: Bool
+        let tootipText: String
+        switch state.setting {
+            case .everybody:
+                tootipText = presentationData.strings.Privacy_Forwards_AlwaysLink
+                linkEnabled = true
+            case .contacts:
+                tootipText = presentationData.strings.Privacy_Forwards_LinkIfAllowed
+                linkEnabled = true
+            case .nobody:
+                tootipText = presentationData.strings.Privacy_Forwards_NeverLink
+                linkEnabled = false
+        }
+        entries.append(.forwardsPreviewHeader(presentationData.theme, presentationData.strings.Privacy_Forwards_Preview))
+        entries.append(.forwardsPreview(presentationData.theme, presentationData.chatWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peerName, linkEnabled, tootipText))
     }
     
     entries.append(.settingHeader(presentationData.theme, settingTitle))
@@ -451,9 +506,9 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     entries.append(.everybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.setting == .everybody))
     entries.append(.contacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.setting == .contacts))
     switch kind {
-        case .presence, .voiceCalls:
+        case .presence, .voiceCalls, .forwards:
             entries.append(.nobody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenNobody, state.setting == .nobody))
-        case .groupInvitations:
+        case .groupInvitations, .profilePhoto:
             break
     }
     entries.append(.settingInfo(presentationData.theme, settingInfoText))
@@ -543,9 +598,8 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
     let actionsDisposable = DisposableSet()
     
     let updateSettingsDisposable = MetaDisposable()
-    actionsDisposable.add(updateSettingsDisposable)
     
-    let arguments = SelectivePrivacySettingsControllerArguments(account: context.account, updateType: { type in
+    let arguments = SelectivePrivacySettingsControllerArguments(context: context, updateType: { type in
         updateState {
             $0.withUpdatedSetting(type)
         }
@@ -558,6 +612,10 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                 title = strings.Privacy_GroupsAndChannels_AlwaysAllow_Title
             case .voiceCalls:
                 title = strings.Privacy_Calls_AlwaysAllow_Title
+            case .profilePhoto:
+                title = strings.Privacy_ProfilePhoto_AlwaysShareWith_Title
+            case .forwards:
+                title = strings.Privacy_Forwards_AlwaysAllow_Title
         }
         var peerIds = Set<PeerId>()
         updateState { state in
@@ -591,6 +649,10 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
                 title = strings.Privacy_GroupsAndChannels_NeverAllow_Title
             case .voiceCalls:
                 title = strings.Privacy_Calls_NeverAllow_Title
+            case .profilePhoto:
+                title = strings.Privacy_ProfilePhoto_NeverShareWith_Title
+            case .forwards:
+                title = strings.Privacy_Forwards_NeverAllow_Title
         }
         var peerIds = Set<PeerId>()
         updateState { state in
@@ -630,96 +692,112 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
         }).start()
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get()) |> deliverOnMainQueue
-        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<SelectivePrivacySettingsEntry>, SelectivePrivacySettingsEntry.ItemGenerationArguments)) in
-            
-            let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-                dismissImpl?()
-            })
-            
-            let rightNavigationButton: ItemListNavigationButton
-            if state.saving {
-                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
-            } else {
-                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                    var wasSaving = false
-                    var settings: SelectivePrivacySettings?
-                    var callP2PSettings: SelectivePrivacySettings?
-                    updateState { state in
-                        wasSaving = state.saving
-                        switch state.setting {
-                            case .everybody:
-                                settings = SelectivePrivacySettings.enableEveryone(disableFor: state.disableFor)
-                            case .contacts:
-                                settings = SelectivePrivacySettings.enableContacts(enableFor: state.enableFor, disableFor: state.disableFor)
-                            case .nobody:
-                                settings = SelectivePrivacySettings.disableEveryone(enableFor: state.enableFor)
-                        }
-                        
-                        if case .voiceCalls = kind, let callP2PMode = state.callP2PMode, let disableFor = state.callP2PDisableFor, let enableFor = state.callP2PEnableFor {
-                            switch callP2PMode {
-                                case .everybody:
-                                    callP2PSettings = SelectivePrivacySettings.enableEveryone(disableFor: disableFor)
-                                case .contacts:
-                                    callP2PSettings = SelectivePrivacySettings.enableContacts(enableFor: enableFor, disableFor: disableFor)
-                                case .nobody:
-                                    callP2PSettings = SelectivePrivacySettings.disableEveryone(enableFor: enableFor)
-                            }
-                        }
-                        
-                        return state.withUpdatedSaving(true)
-                    }
-                    
-                    if let settings = settings, !wasSaving {
-                        let type: UpdateSelectiveAccountPrivacySettingsType
-                        switch kind {
-                            case .presence:
-                                type = .presence
-                            case .groupInvitations:
-                                type = .groupInvitations
-                            case .voiceCalls:
-                                type = .voiceCalls
-                        }
-                        
-                        let updateSettingsSignal = updateSelectiveAccountPrivacySettings(account: context.account, type: type, settings: settings)
-                        var updateCallP2PSettingsSignal: Signal<Void, NoError> = Signal.complete()
-                        if let callP2PSettings = callP2PSettings {
-                            updateCallP2PSettingsSignal = updateSelectiveAccountPrivacySettings(account: context.account, type: .voiceCallsP2P, settings: callP2PSettings)
-                        }
-                        
-                        updateSettingsDisposable.set((combineLatest(updateSettingsSignal, updateCallP2PSettingsSignal) |> deliverOnMainQueue).start(completed: {
-                            updateState { state in
-                                return state.withUpdatedSaving(false)
-                            }
-                            if case .voiceCalls = kind, let dataSaving = state.callDataSaving, let callP2PSettings = callP2PSettings, let systemIntegrationEnabled = state.callIntegrationEnabled {
-                                updated(settings, (callP2PSettings, VoiceCallSettings(dataSaving: dataSaving, enableSystemIntegration: systemIntegrationEnabled)))
-                            } else {
-                                updated(settings, nil)
-                            }
-                            dismissImpl?()
-                        }))
-                    }
-                })
+    let peerName = context.account.postbox.transaction { transaction -> String in
+        return (transaction.getPeer(context.account.peerId) as? TelegramUser)?.displayTitle ?? ""
+    }
+    
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peerName) |> deliverOnMainQueue
+    |> map { presentationData, state, peerName -> (ItemListControllerState, (ItemListNodeState<SelectivePrivacySettingsEntry>, SelectivePrivacySettingsEntry.ItemGenerationArguments)) in
+        
+        let title: String
+        switch kind {
+            case .presence:
+                title = presentationData.strings.PrivacySettings_LastSeenTitle
+            case .groupInvitations:
+                title = presentationData.strings.Privacy_GroupsAndChannels
+            case .voiceCalls:
+                title = presentationData.strings.Settings_CallSettings
+            case .profilePhoto:
+                title = presentationData.strings.Privacy_ProfilePhoto
+            case .forwards:
+                title = presentationData.strings.Privacy_Forwards
+        }
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let listState = ItemListNodeState(entries: selectivePrivacySettingsControllerEntries(presentationData: presentationData, kind: kind, state: state, peerName: peerName), style: .blocks, animateChanges: false)
+        
+        return (controllerState, (listState, arguments))
+    } |> afterDisposed {
+        actionsDisposable.dispose()
+    }
+    
+    
+    let update: (Bool) -> Void = { save in
+        var wasSaving = false
+        var settings: SelectivePrivacySettings?
+        var callP2PSettings: SelectivePrivacySettings?
+        var callDataSaving: VoiceCallDataSaving?
+        var callIntegrationEnabled: Bool?
+        updateState { state in
+            wasSaving = state.saving
+            callDataSaving = state.callDataSaving
+            callIntegrationEnabled = state.callIntegrationEnabled
+            switch state.setting {
+                case .everybody:
+                    settings = SelectivePrivacySettings.enableEveryone(disableFor: state.disableFor)
+                case .contacts:
+                    settings = SelectivePrivacySettings.enableContacts(enableFor: state.enableFor, disableFor: state.disableFor)
+                case .nobody:
+                    settings = SelectivePrivacySettings.disableEveryone(enableFor: state.enableFor)
             }
             
-            let title: String
+            if case .voiceCalls = kind, let callP2PMode = state.callP2PMode, let disableFor = state.callP2PDisableFor, let enableFor = state.callP2PEnableFor {
+                switch callP2PMode {
+                    case .everybody:
+                        callP2PSettings = SelectivePrivacySettings.enableEveryone(disableFor: disableFor)
+                    case .contacts:
+                        callP2PSettings = SelectivePrivacySettings.enableContacts(enableFor: enableFor, disableFor: disableFor)
+                    case .nobody:
+                        callP2PSettings = SelectivePrivacySettings.disableEveryone(enableFor: enableFor)
+                }
+            }
+            
+            return state.withUpdatedSaving(true)
+        }
+        
+        if let settings = settings, !wasSaving {
+            let type: UpdateSelectiveAccountPrivacySettingsType
             switch kind {
                 case .presence:
-                    title = presentationData.strings.PrivacySettings_LastSeenTitle
+                    type = .presence
                 case .groupInvitations:
-                    title = presentationData.strings.Privacy_GroupsAndChannels
+                    type = .groupInvitations
                 case .voiceCalls:
-                    title = presentationData.strings.Settings_CallSettings
+                    type = .voiceCalls
+                case .profilePhoto:
+                    type = .profilePhoto
+                case .forwards:
+                    type = .forwards
             }
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: selectivePrivacySettingsControllerEntries(presentationData: presentationData, kind: kind, state: state), style: .blocks, animateChanges: false)
             
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+            let updateSettingsSignal = updateSelectiveAccountPrivacySettings(account: context.account, type: type, settings: settings)
+            var updateCallP2PSettingsSignal: Signal<Void, NoError> = Signal.complete()
+            if let callP2PSettings = callP2PSettings {
+                updateCallP2PSettingsSignal = updateSelectiveAccountPrivacySettings(account: context.account, type: .voiceCallsP2P, settings: callP2PSettings)
+            }
+            
+            updateSettingsDisposable.set((combineLatest(updateSettingsSignal, updateCallP2PSettingsSignal) |> deliverOnMainQueue).start(completed: {
+            }))
+            
+            if case .voiceCalls = kind, let dataSaving = callDataSaving, let callP2PSettings = callP2PSettings, let systemIntegrationEnabled = callIntegrationEnabled {
+                updated(settings, (callP2PSettings, VoiceCallSettings(dataSaving: dataSaving, enableSystemIntegration: systemIntegrationEnabled)))
+            } else {
+                updated(settings, nil)
+            }
+        }
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.willDisappear = { [weak controller] _ in
+        if let controller = controller, controller.navigationController?.viewControllers.firstIndex(of: controller) == nil {
+            update(false)
+        }
+    }
+    controller.didDisappear = { [weak controller] _ in
+        if let controller = controller, controller.navigationController?.viewControllers.firstIndex(of: controller) == nil {
+            update(true)
+        }
+    }
+    
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }

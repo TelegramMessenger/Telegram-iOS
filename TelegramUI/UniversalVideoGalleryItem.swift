@@ -139,7 +139,7 @@ private struct FetchControls {
 
 final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let context: AccountContext
-    private let strings: PresentationStrings
+    private let presentationData: PresentationData
     
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
@@ -178,7 +178,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.context = context
-        self.strings = presentationData.strings
+        self.presentationData = presentationData
         self.scrubberView = ChatVideoGalleryItemScrubberView()
         
         self.footerContentNode = ChatItemGalleryFooterContentNode(context: context, presentationData: presentationData)
@@ -284,7 +284,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         if dismiss {
-            self.keepSoundOnDismiss = true
             self.dismiss()
         }
     }
@@ -363,7 +362,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if let file = file {
                     let status = messageMediaFileStatus(context: item.context, messageId: message.id, file: file)
                     if !isWebpage {
-                        self.scrubberView.setFetchStatusSignal(status, strings: self.strings, fileSize: file.size)
+                        self.scrubberView.setFetchStatusSignal(status, strings: self.presentationData.strings, decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator, fileSize: file.size)
                     }
                     
                     self.requiresDownload = !isMediaStreamable(message: message, media: file)
@@ -419,7 +418,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     }
                                 }
                             default:
-                                if let content = item.content as? NativeVideoContent, !content.streamVideo {
+                                if let content = item.content as? NativeVideoContent, !content.streamVideo.enabled {
                                     if !content.enableSound {
                                         isPaused = false
                                     }
@@ -511,7 +510,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private func updateDisplayPlaceholder(_ displayPlaceholder: Bool) {
         if displayPlaceholder {
             if self.pictureInPictureNode == nil {
-                let pictureInPictureNode = UniversalVideoGalleryItemPictureInPictureNode(strings: self.strings)
+                let pictureInPictureNode = UniversalVideoGalleryItemPictureInPictureNode(strings: self.presentationData.strings)
                 pictureInPictureNode.isUserInteractionEnabled = false
                 self.pictureInPictureNode = pictureInPictureNode
                 self.insertSubnode(pictureInPictureNode, aboveSubnode: self.scrollNode)
@@ -558,10 +557,21 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             if let videoNode = self.videoNode {
                 if isCentral {
+                    var isAnimated = false
+                    if let item = self.item, let content = item.content as? NativeVideoContent {
+                        isAnimated = content.fileReference.media.isAnimated
+                    }
+                    
                     self.hideStatusNodeUntilCentrality = false
-                    if self.shouldAutoplayOnCentrality()  {
-                        self.initiallyActivated = true
-                        videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+                    if videoNode.ownsContentNode {
+                        if isAnimated {
+                            videoNode.seek(0.0)
+                            videoNode.play()
+                        }
+                        else if self.shouldAutoplayOnCentrality()  {
+                            self.initiallyActivated = true
+                            videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+                        }
                     }
                 } else {
                     self.dismissOnOrientationChange = false
@@ -605,7 +615,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     override func activateAsInitial() {
         if let videoNode = self.videoNode, self.isCentral {
             self.initiallyActivated = true
-            
+
             var isAnimated = false
             if let item = self.item, let content = item.content as? NativeVideoContent {
                 isAnimated = content.fileReference.media.isAnimated
@@ -709,9 +719,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             videoNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: videoNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
             
-            Queue.mainQueue().after(0.001) {
-                videoNode.canAttachContent = true
-                self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
+            if self.item?.fromPlayingVideo ?? false {
+                Queue.mainQueue().after(0.001) {
+                    videoNode.canAttachContent = true
+                    self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
+                }
             }
             
             if let pictureInPictureNode = self.pictureInPictureNode {

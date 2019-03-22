@@ -23,12 +23,6 @@ final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestureRecog
         self.addSubnode(self.backgroundNode)
         
         self.addSubnode(self.headerNode)
-        
-        self.headerNode.tapAction = { [weak self] in
-            if let strongSelf = self {
-                
-            }
-        }
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {

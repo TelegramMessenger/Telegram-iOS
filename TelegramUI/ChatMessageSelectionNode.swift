@@ -4,7 +4,7 @@ import AsyncDisplayKit
 final class ChatMessageSelectionNode: ASDisplayNode {
     private let toggle: (Bool) -> Void
     
-    private var selected = false
+    private(set) var selected = false
     private let checkNode: CheckNode
     
     init(theme: PresentationTheme, toggle: @escaping (Bool) -> Void) {

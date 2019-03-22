@@ -24,6 +24,10 @@ public final class OverlayMediaController: ViewController {
         self.displayNodeDidLoad()
     }
     
+    var hasNodes: Bool {
+        return self.controllerNode.hasNodes
+    }
+    
     func addNode(_ node: OverlayMediaItemNode, customTransition: Bool = false) {
         self.controllerNode.addNode(node, customTransition: customTransition)
     }

@@ -33,7 +33,7 @@ final class ChatRecentActionsController: TelegramController {
         
         self.interaction = ChatRecentActionsInteraction(displayInfoAlert: { [weak self] in
             if let strongSelf = self {
-                self?.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertTitle, text: strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                self?.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertTitle, text: strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }
         })
         

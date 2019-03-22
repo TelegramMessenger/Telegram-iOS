@@ -21,54 +21,65 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
     
     var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)] = []
     loop: for entry in view.entries {
-        if entry.message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
-            for media in entry.message.media {
-                if let action = media as? TelegramMediaAction {
-                    switch action.action {
-                        case .channelMigratedFromGroup, .groupMigratedToChannel:
-                            continue loop
-                        default:
-                            break
+        switch entry {
+            case let .HoleEntry(hole, _):
+                if !groupBucket.isEmpty {
+                    entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+                    groupBucket.removeAll()
+                }
+                if view.tagMask == nil {
+                    entries.append(.HoleEntry(hole, presentationData))
+                }
+            case let .MessageEntry(message, read, _, monthLocation, attributes):
+                if message.id.peerId.namespace == Namespaces.Peer.CloudChannel || message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+                    for media in message.media {
+                        if let action = media as? TelegramMediaAction {
+                            switch action.action {
+                                case .channelMigratedFromGroup, .groupMigratedToChannel, .historyCleared:
+                                    continue loop
+                                default:
+                                    break
+                            }
+                        }
                     }
                 }
-            }
-        }
-        
-        var isAdmin = false
-        if let author = entry.message.author {
-            isAdmin = adminIds.contains(author.id)
-        }
-        
-        if groupMessages {
-            if !groupBucket.isEmpty && entry.message.groupInfo != groupBucket[0].0.groupInfo {
-                entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
-                groupBucket.removeAll()
-            }
-            if let _ = entry.message.groupInfo {
-                let selection: ChatHistoryMessageSelection
-                if let selectedMessages = selectedMessages {
-                    selection = .selectable(selected: selectedMessages.contains(entry.message.id))
-                } else {
-                    selection = .none
+                
+                var isAdmin = false
+                if let author = message.author {
+                    isAdmin = adminIds.contains(author.id)
                 }
-                groupBucket.append((entry.message, entry.isRead, selection, ChatMessageEntryAttributes(isAdmin: isAdmin, isContact: entry.attributes.authorIsContact)))
-            } else {
-                let selection: ChatHistoryMessageSelection
-                if let selectedMessages = selectedMessages {
-                    selection = .selectable(selected: selectedMessages.contains(entry.message.id))
+                
+                if groupMessages {
+                    if !groupBucket.isEmpty && message.groupInfo != groupBucket[0].0.groupInfo {
+                        entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+                        groupBucket.removeAll()
+                    }
+                    if let _ = message.groupInfo {
+                        let selection: ChatHistoryMessageSelection
+                        if let selectedMessages = selectedMessages {
+                            selection = .selectable(selected: selectedMessages.contains(message.id))
+                        } else {
+                            selection = .none
+                        }
+                        groupBucket.append((message, read, selection, ChatMessageEntryAttributes(isAdmin: isAdmin, isContact: attributes.authorIsContact)))
+                    } else {
+                        let selection: ChatHistoryMessageSelection
+                        if let selectedMessages = selectedMessages {
+                            selection = .selectable(selected: selectedMessages.contains(message.id))
+                        } else {
+                            selection = .none
+                        }
+                        entries.append(.MessageEntry(message, presentationData, read, monthLocation, selection, ChatMessageEntryAttributes(isAdmin: isAdmin, isContact: attributes.authorIsContact)))
+                    }
                 } else {
-                    selection = .none
+                    let selection: ChatHistoryMessageSelection
+                    if let selectedMessages = selectedMessages {
+                        selection = .selectable(selected: selectedMessages.contains(message.id))
+                    } else {
+                        selection = .none
+                    }
+                    entries.append(.MessageEntry(message, presentationData, read, monthLocation, selection, ChatMessageEntryAttributes(isAdmin: isAdmin, isContact: attributes.authorIsContact)))
                 }
-                entries.append(.MessageEntry(entry.message, presentationData, entry.isRead, entry.monthLocation, selection, ChatMessageEntryAttributes(isAdmin: isAdmin, isContact: entry.attributes.authorIsContact)))
-            }
-        } else {
-            let selection: ChatHistoryMessageSelection
-            if let selectedMessages = selectedMessages {
-                selection = .selectable(selected: selectedMessages.contains(entry.message.id))
-            } else {
-                selection = .none
-            }
-            entries.append(.MessageEntry(entry.message, presentationData, entry.isRead, entry.monthLocation, selection, ChatMessageEntryAttributes(isAdmin: isAdmin, isContact: entry.attributes.authorIsContact)))
         }
     }
     

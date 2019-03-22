@@ -971,8 +971,13 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
             listViewCurve = .Default(duration: nil)
         }
         
+        var insets = layout.insets(options: [.input])
+        insets.top += navigationBarHeight
+        insets.left += layout.safeInsets.left
+        insets.right += layout.safeInsets.right
+        
         self.listNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: navigationBarHeight, left: 0.0, bottom: layout.insets(options: [.input]).bottom, right: 0.0), duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         if !hasValidLayout {
             hasValidLayout = true
@@ -980,6 +985,10 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                 self.dequeueTransition()
             }
         }
+    }
+    
+    override func scrollToTop() {
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
     
     @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {

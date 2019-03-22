@@ -505,7 +505,7 @@ class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
                         combinedValueString.append(statusString)
                     }
                     if let labelString = labelAttributedString?.string, !labelString.isEmpty {
-                        combinedValueString.append(labelString)
+                        combinedValueString.append(", \(labelString)")
                     }
                     
                     strongSelf.accessibilityValue = combinedValueString

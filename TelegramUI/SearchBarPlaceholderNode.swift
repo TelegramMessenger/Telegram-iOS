@@ -57,7 +57,7 @@ class SearchBarPlaceholderNode: ASDisplayNode {
         
         self.labelNode = TextNode()
         self.labelNode.isOpaque = false
-        self.labelNode.isLayerBacked = true
+        self.labelNode.isUserInteractionEnabled = false
         
         super.init()
         
@@ -77,7 +77,7 @@ class SearchBarPlaceholderNode: ASDisplayNode {
                 return
             }
             if let _ = point {
-                strongSelf.backgroundNode.layer.animate(from: (strongSelf.backgroundNode.backgroundColor ?? strongSelf.foregroundColor).cgColor, to: strongSelf.foregroundColor.withMultipliedBrightnessBy(0.9).cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.3)
+                strongSelf.backgroundNode.layer.animate(from: (strongSelf.backgroundNode.backgroundColor ?? strongSelf.foregroundColor).cgColor, to: strongSelf.foregroundColor.withMultipliedBrightnessBy(0.9).cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.2)
                 strongSelf.backgroundNode.backgroundColor = strongSelf.foregroundColor.withMultipliedBrightnessBy(0.9)
             } else {
                 strongSelf.backgroundNode.layer.animate(from: (strongSelf.backgroundNode.backgroundColor ?? strongSelf.foregroundColor).cgColor, to: strongSelf.foregroundColor.cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.4)
@@ -115,7 +115,7 @@ class SearchBarPlaceholderNode: ASDisplayNode {
                     strongSelf.fillBackgroundColor = backgroundColor
                     strongSelf.foregroundColor = foregroundColor
                     strongSelf.iconColor = iconColor
-                    strongSelf.backgroundNode.isUserInteractionEnabled = expansionProgress > 1.0 - CGFloat.ulpOfOne
+                    strongSelf.backgroundNode.isUserInteractionEnabled = expansionProgress > 0.9999
                     
                     if let updatedColor = updatedColor {
                         strongSelf.backgroundNode.backgroundColor = updatedColor

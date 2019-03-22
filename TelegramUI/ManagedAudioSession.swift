@@ -8,6 +8,15 @@ enum ManagedAudioSessionType: Equatable {
     case playWithPossiblePortOverride
     case record(speaker: Bool)
     case voiceCall
+    
+    var isPlay: Bool {
+        switch self {
+            case .play, .playWithPossiblePortOverride:
+                return true
+            default:
+                return false
+        }
+    }
 }
 
 private func nativeCategoryForType(_ type: ManagedAudioSessionType, headphones: Bool) -> String {
@@ -334,7 +343,7 @@ public final class ManagedAudioSession {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
-                subscriber.putNext(strongSelf.currentTypeAndOutputMode?.0 == .play)
+                subscriber.putNext(strongSelf.currentTypeAndOutputMode?.0.isPlay ?? false)
                 
                 let index = strongSelf.isPlaybackActiveSubscribers.add({ value in
                     subscriber.putNext(value)
@@ -586,7 +595,7 @@ public final class ManagedAudioSession {
         self.deactivateTimer = nil
         
         let wasActive = self.currentTypeAndOutputMode != nil
-        let wasPlaybackActive = self.currentTypeAndOutputMode?.0 == .play
+        let wasPlaybackActive = self.currentTypeAndOutputMode?.0.isPlay ?? false
         self.currentTypeAndOutputMode = nil
         
         print("ManagedAudioSession setting active false")
@@ -615,7 +624,7 @@ public final class ManagedAudioSession {
         self.deactivateTimer = nil
         
         let wasActive = self.currentTypeAndOutputMode != nil
-        let wasPlaybackActive = self.currentTypeAndOutputMode?.0 == .play
+        let wasPlaybackActive = self.currentTypeAndOutputMode?.0.isPlay ?? false
         
         if self.currentTypeAndOutputMode == nil || self.currentTypeAndOutputMode! != (type, outputMode) {
             self.currentTypeAndOutputMode = (type, outputMode)
@@ -652,7 +661,7 @@ public final class ManagedAudioSession {
                 subscriber(true)
             }
         }
-        if !wasPlaybackActive && self.currentTypeAndOutputMode?.0 == .play {
+        if !wasPlaybackActive && (self.currentTypeAndOutputMode?.0.isPlay ?? false) {
             for subscriber in self.isPlaybackActiveSubscribers.copyItems() {
                 subscriber(true)
             }
@@ -707,7 +716,9 @@ public final class ManagedAudioSession {
         }
         if resetToBuiltin {
             switch type {
-                case .voiceCall, .playWithPossiblePortOverride, .record:
+                case .record(false):
+                    try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
+                case .voiceCall, .playWithPossiblePortOverride, .record(true):
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
                     if let routes = AVAudioSession.sharedInstance().availableInputs {
                         for route in routes {

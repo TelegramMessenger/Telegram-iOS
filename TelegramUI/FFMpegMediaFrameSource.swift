@@ -71,6 +71,9 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
     private let resourceReference: MediaResourceReference
     private let tempFilePath: String?
     private let streamable: Bool
+    private let stallDuration: Double
+    private let lowWaterDuration: Double
+    private let highWaterDuration: Double
     private let video: Bool
     private let preferSoftwareDecoding: Bool
     private let fetchAutomatically: Bool
@@ -95,7 +98,7 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         }
     }
    
-    init(queue: Queue, postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int? = nil) {
+    init(queue: Queue, postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int? = nil, stallDuration: Double = 1.0, lowWaterDuration: Double = 2.0, highWaterDuration: Double = 3.0) {
         self.queue = queue
         self.postbox = postbox
         self.resourceReference = resourceReference
@@ -105,6 +108,9 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         self.preferSoftwareDecoding = preferSoftwareDecoding
         self.fetchAutomatically = fetchAutomatically
         self.maximumFetchSize = maximumFetchSize
+        self.stallDuration = stallDuration
+        self.lowWaterDuration = lowWaterDuration
+        self.highWaterDuration = highWaterDuration
         
         self.taskQueue = ThreadTaskQueue()
         
@@ -252,12 +258,12 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
                                         var videoBuffer: MediaTrackFrameBuffer?
                                         
                                         if let audio = streamDescriptions.audio {
-                                            audioBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: audio.decoder, type: .audio, duration: audio.duration, rotationAngle: 0.0, aspect: 1.0)
+                                            audioBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: audio.decoder, type: .audio, duration: audio.duration, rotationAngle: 0.0, aspect: 1.0, stallDuration: strongSelf.stallDuration, lowWaterDuration: strongSelf.lowWaterDuration, highWaterDuration: strongSelf.highWaterDuration)
                                         }
                                         
                                         var extraDecodedVideoFrames: [MediaTrackFrame] = []
                                         if let video = streamDescriptions.video {
-                                            videoBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: video.decoder, type: .video, duration: video.duration, rotationAngle: video.rotationAngle, aspect: video.aspect)
+                                            videoBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: video.decoder, type: .video, duration: video.duration, rotationAngle: video.rotationAngle, aspect: video.aspect, stallDuration: strongSelf.stallDuration, lowWaterDuration: strongSelf.lowWaterDuration, highWaterDuration: strongSelf.highWaterDuration)
                                             for videoFrame in streamDescriptions.extraVideoFrames {
                                                 if let decodedFrame = video.decoder.decode(frame: videoFrame) {
                                                     extraDecodedVideoFrames.append(decodedFrame)
@@ -270,8 +276,10 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
                                         return MediaFrameSourceSeekResult(buffers: MediaPlaybackBuffers(audioBuffer: nil, videoBuffer: nil), extraDecodedVideoFrames: [], timestamp: timestamp)
                                     }
                                 }))
+                                let _ = currentSemaphore.swap(nil)
                                 subscriber.putCompletion()
                             } else {
+                                let _ = currentSemaphore.swap(nil)
                                 subscriber.putError(.generic)
                             }
                         }

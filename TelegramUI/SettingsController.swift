@@ -10,25 +10,6 @@ private let maximumNumberOfAccounts = 3
 
 private let avatarFont: UIFont = UIFont(name: ".SFCompactRounded-Semibold", size: 13.0)!
 
-private final class SettingsItemIcons {
-    static let proxy = UIImage(bundleImageName: "Settings/MenuIcons/Proxy")?.precomposed()
-    static let savedMessages = UIImage(bundleImageName: "Settings/MenuIcons/SavedMessages")?.precomposed()
-    static let recentCalls = UIImage(bundleImageName: "Settings/MenuIcons/RecentCalls")?.precomposed()
-    static let stickers = UIImage(bundleImageName: "Settings/MenuIcons/Stickers")?.precomposed()
-    
-    static let notifications = UIImage(bundleImageName: "Settings/MenuIcons/Notifications")?.precomposed()
-    static let security = UIImage(bundleImageName: "Settings/MenuIcons/Security")?.precomposed()
-    static let dataAndStorage = UIImage(bundleImageName: "Settings/MenuIcons/DataAndStorage")?.precomposed()
-    static let appearance = UIImage(bundleImageName: "Settings/MenuIcons/Appearance")?.precomposed()
-    static let language = UIImage(bundleImageName: "Settings/MenuIcons/Language")?.precomposed()
-    
-    static let passport = UIImage(bundleImageName: "Settings/MenuIcons/Passport")?.precomposed()
-    static let watch = UIImage(bundleImageName: "Settings/MenuIcons/Watch")?.precomposed()
-    
-    static let support = UIImage(bundleImageName: "Settings/MenuIcons/Support")?.precomposed()
-    static let faq = UIImage(bundleImageName: "Settings/MenuIcons/Faq")?.precomposed()
-}
-
 private enum SettingsEntryTag: Equatable, ItemListItemTag {
     case account(AccountRecordId)
     
@@ -52,7 +33,7 @@ private struct SettingsItemArguments {
     let openProxy: () -> Void
     let openSavedMessages: () -> Void
     let openRecentCalls: () -> Void
-    let openPrivacyAndSecurity: () -> Void
+    let openPrivacyAndSecurity: (AccountPrivacySettings?) -> Void
     let openDataAndStorage: () -> Void
     let openStickerPacks: ([ArchivedStickerPackItem]?) -> Void
     let openNotificationsAndSounds: (NotificationExceptionsList?) -> Void
@@ -96,7 +77,7 @@ private enum SettingsEntry: ItemListNodeEntry {
     case stickers(PresentationTheme, UIImage?, String, String, [ArchivedStickerPackItem]?)
     
     case notificationsAndSounds(PresentationTheme, UIImage?, String, NotificationExceptionsList?, Bool)
-    case privacyAndSecurity(PresentationTheme, UIImage?, String)
+    case privacyAndSecurity(PresentationTheme, UIImage?, String, AccountPrivacySettings?)
     case dataAndStorage(PresentationTheme, UIImage?, String)
     case themes(PresentationTheme, UIImage?, String)
     case language(PresentationTheme, UIImage?, String, String)
@@ -260,8 +241,8 @@ private enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .privacyAndSecurity(lhsTheme, lhsImage, lhsText):
-                if case let .privacyAndSecurity(rhsTheme, rhsImage, rhsText) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText {
+            case let .privacyAndSecurity(lhsTheme, lhsImage, lhsText, _):
+                if case let .privacyAndSecurity(rhsTheme, rhsImage, rhsText, _) = rhs, lhsTheme === rhsTheme, lhsImage === rhsImage, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -343,7 +324,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                         label = .badge("\(badgeCount)")
                     }
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: "."), nameDisplayOrder: .firstLast, account: account, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, sectionId: self.section, action: {
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: "."), nameDisplayOrder: .firstLast, account: account, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, sectionId: self.section, action: {
                     arguments.switchToAccount(account.id)
                 }, setPeerIdWithRevealedOptions: { lhs, rhs in
                     var lhsAccountId: AccountRecordId?
@@ -382,9 +363,9 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: warning ? "!" : "", labelStyle: warning ? .badge(theme.list.itemDestructiveColor) : .text, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openNotificationsAndSounds(exceptionsList)
                 })
-            case let .privacyAndSecurity(theme, image, text):
+            case let .privacyAndSecurity(theme, image, text, privacySettings):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    arguments.openPrivacyAndSecurity()
+                    arguments.openPrivacyAndSecurity(privacySettings)
                 })
             case let .dataAndStorage(theme, image, text):
                 return ItemListDisclosureItem(theme: theme, icon: image, title: text, label: "", sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -421,9 +402,10 @@ private enum SettingsEntry: ItemListNodeEntry {
 private struct SettingsState: Equatable {
     var updatingAvatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?
     var accountIdWithRevealedOptions: AccountRecordId?
+    var isSearching: Bool
 }
 
-private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)], inAppNotificationSettings: InAppNotificationSettings) -> [SettingsEntry] {
+private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, privacySettings: AccountPrivacySettings?, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)], inAppNotificationSettings: InAppNotificationSettings) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -459,30 +441,30 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
             } else {
                 valueString = presentationData.strings.Settings_ProxyDisabled
             }
-            entries.append(.proxy(presentationData.theme, SettingsItemIcons.proxy, presentationData.strings.Settings_Proxy, valueString))
+            entries.append(.proxy(presentationData.theme, PresentationResourcesSettings.proxy, presentationData.strings.Settings_Proxy, valueString))
         }
         
-        entries.append(.savedMessages(presentationData.theme, SettingsItemIcons.savedMessages, presentationData.strings.Settings_SavedMessages))
-        entries.append(.recentCalls(presentationData.theme, SettingsItemIcons.recentCalls, presentationData.strings.CallSettings_RecentCalls))
-        entries.append(.stickers(presentationData.theme, SettingsItemIcons.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
+        entries.append(.savedMessages(presentationData.theme, PresentationResourcesSettings.savedMessages, presentationData.strings.Settings_SavedMessages))
+        entries.append(.recentCalls(presentationData.theme, PresentationResourcesSettings.recentCalls, presentationData.strings.CallSettings_RecentCalls))
+        entries.append(.stickers(presentationData.theme, PresentationResourcesSettings.stickers, presentationData.strings.ChatSettings_Stickers, unreadTrendingStickerPacks == 0 ? "" : "\(unreadTrendingStickerPacks)", archivedPacks))
         
         let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
-        entries.append(.notificationsAndSounds(presentationData.theme, SettingsItemIcons.notifications, presentationData.strings.Settings_NotificationsAndSounds, notifyExceptions, notificationsWarning))
-        entries.append(.privacyAndSecurity(presentationData.theme, SettingsItemIcons.security, presentationData.strings.Settings_PrivacySettings))
-        entries.append(.dataAndStorage(presentationData.theme, SettingsItemIcons.dataAndStorage, presentationData.strings.Settings_ChatSettings))
-        entries.append(.themes(presentationData.theme, SettingsItemIcons.appearance, presentationData.strings.Settings_Appearance))
+        entries.append(.notificationsAndSounds(presentationData.theme, PresentationResourcesSettings.notifications, presentationData.strings.Settings_NotificationsAndSounds, notifyExceptions, notificationsWarning))
+        entries.append(.privacyAndSecurity(presentationData.theme, PresentationResourcesSettings.security, presentationData.strings.Settings_PrivacySettings, privacySettings))
+        entries.append(.dataAndStorage(presentationData.theme, PresentationResourcesSettings.dataAndStorage, presentationData.strings.Settings_ChatSettings))
+        entries.append(.themes(presentationData.theme, PresentationResourcesSettings.appearance, presentationData.strings.Settings_Appearance))
         let languageName = presentationData.strings.primaryComponent.localizedName
-        entries.append(.language(presentationData.theme, SettingsItemIcons.language, presentationData.strings.Settings_AppLanguage, languageName.isEmpty ? presentationData.strings.Localization_LanguageName : languageName))
+        entries.append(.language(presentationData.theme, PresentationResourcesSettings.language, presentationData.strings.Settings_AppLanguage, languageName.isEmpty ? presentationData.strings.Localization_LanguageName : languageName))
         
         if hasPassport {
-            entries.append(.passport(presentationData.theme, SettingsItemIcons.passport, presentationData.strings.Settings_Passport, ""))
+            entries.append(.passport(presentationData.theme, PresentationResourcesSettings.passport, presentationData.strings.Settings_Passport, ""))
         }
         if hasWatchApp {
-            entries.append(.watch(presentationData.theme, SettingsItemIcons.watch, presentationData.strings.Settings_AppleWatch, ""))
+            entries.append(.watch(presentationData.theme, PresentationResourcesSettings.watch, presentationData.strings.Settings_AppleWatch, ""))
         }
         
-        entries.append(.askAQuestion(presentationData.theme, SettingsItemIcons.support, presentationData.strings.Settings_Support))
-        entries.append(.faq(presentationData.theme, SettingsItemIcons.faq, presentationData.strings.Settings_FAQ))
+        entries.append(.askAQuestion(presentationData.theme, PresentationResourcesSettings.support, presentationData.strings.Settings_Support))
+        entries.append(.faq(presentationData.theme, PresentationResourcesSettings.faq, presentationData.strings.Settings_FAQ))
     }
     
     return entries
@@ -565,14 +547,17 @@ private final class SettingsControllerImpl: ItemListController<SettingsEntry>, S
 }
 
 public func settingsController(context: AccountContext, accountManager: AccountManager) -> SettingsController & ViewController {
-    let statePromise = ValuePromise(SettingsState(), ignoreRepeated: true)
-    let stateValue = Atomic(value: SettingsState())
+    let initialState = SettingsState(updatingAvatar: nil, accountIdWithRevealedOptions: nil, isSearching: false)
+    let statePromise = ValuePromise(initialState, ignoreRepeated: true)
+    let stateValue = Atomic(value: initialState)
     let updateState: ((SettingsState) -> SettingsState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
     
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var dismissInputImpl: (() -> Void)?
+    var setDisplayNavigationBarImpl: ((Bool) -> Void)?
     var getNavigationControllerImpl: (() -> NavigationController?)?
     
     let actionsDisposable = DisposableSet()
@@ -604,47 +589,10 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     let archivedPacks = Promise<[ArchivedStickerPackItem]?>()
     
     let contextValue = Promise<AccountContext>()
-    
-    let networkArguments = context.account.networkArguments
-    let auxiliaryMethods = context.account.auxiliaryMethods
-    let rootPath = rootPathForBasePath(context.sharedContext.applicationBindings.containerPath)
-    
-    let sharedContext = context.sharedContext
-    let accountsAndPeersSignal: Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> = context.sharedContext.activeAccounts
-    |> mapToSignal { primary, activeAccounts, _ -> Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> in
-        var accounts: [Signal<(Account, Peer, Int32)?, NoError>] = []
-        func accountWithPeer(_ account: Account) -> Signal<(Account, Peer, Int32)?, NoError> {
-            return combineLatest(account.postbox.peerView(id: account.peerId), renderedTotalUnreadCount(accountManager: sharedContext.accountManager, postbox: account.postbox))
-            |> map { view, totalUnreadCount -> (Peer?, Int32) in
-                return (view.peers[view.peerId], totalUnreadCount.0)
-            }
-            |> distinctUntilChanged { lhs, rhs in
-                return arePeersEqual(lhs.0, rhs.0) && lhs.1 == rhs.1
-            }
-            |> map { peer, totalUnreadCount -> (Account, Peer, Int32)? in
-                if let peer = peer {
-                    return (account, peer, totalUnreadCount)
-                } else {
-                    return nil
-                }
-            }
-        }
-        for (_, account, _) in activeAccounts {
-            accounts.append(accountWithPeer(account))
-        }
-        
-        return combineLatest(accounts)
-        |> map { accounts -> ((Account, Peer)?, [(Account, Peer, Int32)]) in
-            var primaryRecord: (Account, Peer)?
-            if let first = accounts.filter({ $0?.0.id == primary?.id }).first, let (account, peer, _) = first {
-                primaryRecord = (account, peer)
-            }
-            return (primaryRecord, accounts.filter({ $0?.0.id != primary?.id }).compactMap({ $0 }))
-        }
-    }
-    
     let accountsAndPeers = Promise<((Account, Peer)?, [(Account, Peer, Int32)])>()
-    accountsAndPeers.set(accountsAndPeersSignal)
+    accountsAndPeers.set(activeAccountsAndPeers(context: context))
+    
+    let privacySettings = Promise<AccountPrivacySettings?>(nil)
 
     let openFaq: (Promise<ResolvedUrl>) -> Void = { resolvedUrl in
         let _ = (contextValue.get()
@@ -669,11 +617,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     let resolvedUrl = contextValue.get()
     |> deliverOnMainQueue
     |> mapToSignal { context -> Signal<ResolvedUrl, NoError> in
-        var faqUrl = context.sharedContext.currentPresentationData.with { $0 }.strings.Settings_FAQ_URL
-        if faqUrl == "Settings.FAQ_URL" || faqUrl.isEmpty {
-            faqUrl = "https://telegram.org/faq#general"
-        }
-        return resolveInstantViewUrl(account: context.account, url: faqUrl)
+        return cachedFaqInstantPage(context: context)
     }
     
     var switchToAccountImpl: ((AccountRecordId) -> Void)?
@@ -733,11 +677,13 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> take(1)).start(next: { context in
             pushControllerImpl?(CallListController(context: context, mode: .navigation))
         })
-    }, openPrivacyAndSecurity: {
+    }, openPrivacyAndSecurity: { privacySettingsValue in
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            pushControllerImpl?(privacyAndSecurityController(context: context, initialSettings: .single(nil) |> then(requestAccountPrivacySettings(account: context.account) |> map(Optional.init))))
+            pushControllerImpl?(privacyAndSecurityController(context: context, initialSettings: privacySettingsValue, updatedSettings: { settings in
+                privacySettings.set(.single(settings))
+            }))
         })
     }, openDataAndStorage: {
         let _ = (contextValue.get()
@@ -777,15 +723,13 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            let controller = SecureIdAuthController(context: context, mode: .list)
-            presentControllerImpl?(controller, nil)
+            presentControllerImpl?(SecureIdAuthController(context: context, mode: .list), nil)
         })
     }, openWatch: {
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            let controller = watchSettingsController(context: context)
-            pushControllerImpl?(controller)
+            pushControllerImpl?(watchSettingsController(context: context))
         })
     }, openSupport: {
         let _ = (contextValue.get()
@@ -798,18 +742,16 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             let resolvedUrlPromise = Promise<ResolvedUrl>()
             resolvedUrlPromise.set(resolvedUrl)
             
-            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.Settings_FAQ_Intro, actions: [
+            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Settings_FAQ_Intro, actions: [
                 TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_FAQ_Button, action: {
-                    openFaq(resolvedUrlPromise)
-                }),
-                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-                    supportPeerDisposable.set((supportPeer.get() |> take(1) |> deliverOnMainQueue).start(next: { peerId in
-                        if let peerId = peerId {
-                            pushControllerImpl?(ChatController(context: context, chatLocation: .peer(peerId)))
-                        }
-                    }))
-                })
-            ]), nil)
+                openFaq(resolvedUrlPromise)
+            }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                supportPeerDisposable.set((supportPeer.get() |> take(1) |> deliverOnMainQueue).start(next: { peerId in
+                    if let peerId = peerId {
+                        pushControllerImpl?(ChatController(context: context, chatLocation: .peer(peerId)))
+                    }
+                }))
+            })]), nil)
         })
     }, openFaq: {
         let resolvedUrlPromise = Promise<ResolvedUrl>()
@@ -820,48 +762,9 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            var cancelImpl: (() -> Void)?
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let progressSignal = Signal<Never, NoError> { subscriber in
-                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
-                    cancelImpl?()
-                }))
-                presentControllerImpl?(controller, nil)
-                return ActionDisposable { [weak controller] in
-                    Queue.mainQueue().async() {
-                        controller?.dismiss()
-                    }
-                }
+            if let presentControllerImpl = presentControllerImpl, let pushControllerImpl = pushControllerImpl {
+                openEditingDisposable.set(openEditSettings(context: context, accountsAndPeers: accountsAndPeers.get(), presentController: presentControllerImpl, pushController: pushControllerImpl))
             }
-            |> runOn(Queue.mainQueue())
-            |> delay(0.15, queue: Queue.mainQueue())
-            let progressDisposable = progressSignal.start()
-            
-            let peerKey: PostboxViewKey = .peer(peerId: context.account.peerId, components: [])
-            let cachedDataKey: PostboxViewKey = .cachedPeerData(peerId: context.account.peerId)
-            let signal = (combineLatest(accountsAndPeers.get() |> take(1), context.account.postbox.combinedView(keys: [peerKey, cachedDataKey]))
-            |> mapToSignal { accountsAndPeers, view -> Signal<(TelegramUser, CachedUserData, Bool), NoError> in
-                guard let cachedDataView = view.views[cachedDataKey] as? CachedPeerDataView, let cachedData = cachedDataView.cachedPeerData as? CachedUserData else {
-                    return .complete()
-                }
-                guard let peerView = view.views[peerKey] as? PeerView, let peer = peerView.peers[context.account.peerId] as? TelegramUser else {
-                    return .complete()
-                }
-                return .single((peer, cachedData, accountsAndPeers.1.count + 1 < maximumNumberOfAccounts))
-            }
-            |> take(1))
-            |> afterDisposed {
-                Queue.mainQueue().async {
-                    progressDisposable.dispose()
-                }
-            }
-            cancelImpl = {
-                openEditingDisposable.set(nil)
-            }
-            openEditingDisposable.set((signal
-            |> deliverOnMainQueue).start(next: { peer, cachedData, canAddAccounts in
-                pushControllerImpl?(editSettingsController(context: context, currentName: .personName(firstName: peer.firstName ?? "", lastName: peer.lastName ?? ""), currentBioText: cachedData.about ?? "", accountManager: accountManager, canAddAccounts: canAddAccounts))
-            }))
         })
     }, displayCopyContextMenu: {
         let _ = (contextValue.get()
@@ -1097,17 +1000,31 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         )
     }
     
-    let notifyExceptions = Promise<NotificationExceptionsList?>(nil)
+    let notifyExceptions = Promise<NotificationExceptionsList?>(NotificationExceptionsList(peers: [:], settings: [:]))
     let updateNotifyExceptions: () -> Void = {
         notifyExceptions.set(
             contextValue.get()
             |> take(1)
             |> mapToSignal { context -> Signal<NotificationExceptionsList?, NoError> in
-                return notificationExceptionsList(network: context.account.network)
-                |> map(Optional.init)
+                return .single(NotificationExceptionsList(peers: [:], settings: [:]))
+                |> then(
+                    notificationExceptionsList(network: context.account.network)
+                    |> map(Optional.init)
+                )
             }
         )
     }
+    
+    privacySettings.set(
+    .single(nil)
+    |> then(
+        contextValue.get()
+        |> mapToSignal { context -> Signal<AccountPrivacySettings?, NoError> in
+            requestAccountPrivacySettings(account: context.account)
+            |> map(Optional.init)
+            }
+        )
+    )
     
     let hasWatchApp = Promise<Bool>(false)
     hasWatchApp.set(
@@ -1133,7 +1050,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         return context.account.viewTracker.featuredStickerPacks()
     }
     
-    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()), accountsAndPeers.get())
+    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasPassport.get(), hasWatchApp.get()), accountsAndPeers.get())
     |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasPassportAndWatch, accountsAndPeers -> (ItemListControllerState, (ItemListNodeState<SettingsEntry>, SettingsEntry.ItemGenerationArguments)) in
         let proxySettings: ProxySettings = preferencesAndExceptions.0.entries[SharedDataKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
         let inAppNotificationSettings: InAppNotificationSettings = preferencesAndExceptions.0.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
@@ -1151,8 +1068,27 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             }
         }
         
+        let searchItem = SettingsSearchItem(context: context, theme: presentationData.theme, placeholder: presentationData.strings.Common_Search, activated: state.isSearching, updateActivated: { value in
+            if !value {
+                setDisplayNavigationBarImpl?(true)
+            }
+            updateState { state in
+                var state = state
+                state.isSearching = value
+                return state
+            }
+            if value {
+                setDisplayNavigationBarImpl?(false)
+            }
+        }, presentController: { v, a in
+            dismissInputImpl?()
+            presentControllerImpl?(v, a)
+        }, pushController: { v in
+            pushControllerImpl?(v)
+        }, getNavigationController: getNavigationControllerImpl, exceptionsList: notifyExceptions.get(), archivedStickerPacks: archivedPacks.get(), privacySettings: privacySettings.get())
+        
         let (hasPassport, hasWatchApp) = hasPassportAndWatch
-        let listState = ItemListNodeState(entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings), style: .blocks)
+        let listState = ItemListNodeState(entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, privacySettings: preferencesAndExceptions.4, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings), style: .blocks, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up))
         
         return (controllerState, (listState, arguments))
     }
@@ -1251,7 +1187,10 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true)
     }
     presentControllerImpl = { [weak controller] value, arguments in
-        controller?.present(value, in: .window(.root), with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        controller?.present(value, in: .window(.root), with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet), blockInteraction: true)
+    }
+    dismissInputImpl = { [weak controller] in
+        controller?.view.window?.endEditing(true)
     }
     getNavigationControllerImpl = { [weak controller] in
         return (controller?.navigationController as? NavigationController)
@@ -1293,7 +1232,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { accountContext in
-            pushControllerImpl?(debugController(sharedContext: sharedContext, context: accountContext))
+            pushControllerImpl?(debugController(sharedContext: accountContext.sharedContext, context: accountContext))
         })
     }
     
@@ -1315,13 +1254,13 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                     var actions: [ContextMenuAction] = []
                     
                     if let phone = user.phone, !phone.isEmpty {
-                        actions.append(ContextMenuAction(content: .text(presentationData.strings.Settings_CopyPhoneNumber), action: {
+                        actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Settings_CopyPhoneNumber, accessibilityLabel: presentationData.strings.Settings_CopyPhoneNumber), action: {
                             UIPasteboard.general.string = formatPhoneNumber(phone)
                         }))
                     }
                     
                     if let username = user.username, !username.isEmpty {
-                        actions.append(ContextMenuAction(content: .text(presentationData.strings.Settings_CopyUsername), action: {
+                        actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Settings_CopyUsername, accessibilityLabel: presentationData.strings.Settings_CopyUsername), action: {
                             UIPasteboard.general.string = username
                         }))
                     }
@@ -1399,6 +1338,42 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> deliverOnMainQueue).start(next: { context in
             context.sharedContext.beginNewAuth(testingEnvironment: false)
         })
+    }
+    
+    controller.contentOffsetChanged = { [weak controller] offset, inVoiceOver in
+        if let controller = controller, let navigationBar = controller.navigationBar, let searchContentNode = navigationBar.contentNode as? NavigationBarSearchContentNode {
+            var offset = offset
+            if inVoiceOver {
+                offset = .known(0.0)
+            }
+            searchContentNode.updateListVisibleContentOffset(offset)
+        }
+    }
+    
+    controller.contentScrollingEnded = { [weak controller] listNode in
+        if let controller = controller, let navigationBar = controller.navigationBar, let searchContentNode = navigationBar.contentNode as? NavigationBarSearchContentNode {
+            return fixNavigationSearchableListNodeScrolling(listNode, searchNode: searchContentNode)
+        }
+        return false
+    }
+    
+    controller.willScrollToTop = { [weak controller] in
+         if let controller = controller, let navigationBar = controller.navigationBar, let searchContentNode = navigationBar.contentNode as? NavigationBarSearchContentNode {
+            searchContentNode.updateExpansionProgress(1.0, animated: true)
+        }
+    }
+    
+    controller.didDisappear = { _ in
+        setDisplayNavigationBarImpl?(true)
+        updateState { state in
+            var state = state
+            state.isSearching = false
+            return state
+        }
+    }
+    
+    setDisplayNavigationBarImpl = { [weak controller] display in
+        controller?.setDisplayNavigationBar(display, transition: .animated(duration: 0.5, curve: .spring))
     }
     return controller
 }

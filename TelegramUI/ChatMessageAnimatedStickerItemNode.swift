@@ -427,7 +427,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             } else {
                                 navigate = .info
                             }
-                            item.controllerInteraction.openPeer(item.effectiveAuthorId ?? author.id, navigate, item.message)
+                            
+                            if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
+                                item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
+                            } else {
+                                item.controllerInteraction.openPeer(item.effectiveAuthorId ?? author.id, navigate, item.message)
+                            }
                         }
                         return
                     }

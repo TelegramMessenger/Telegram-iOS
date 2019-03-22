@@ -70,6 +70,7 @@ private let titleBoldFont = Font.semibold(14.0)
 
 class ItemListTextItemNode: ListViewItemNode {
     private let titleNode: TextNode
+    private let activateArea: AccessibilityAreaNode
     
     private var item: ItemListTextItem?
     
@@ -79,12 +80,13 @@ class ItemListTextItemNode: ListViewItemNode {
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
+        self.activateArea = AccessibilityAreaNode()
+        self.activateArea.accessibilityTraits = UIAccessibilityTraitStaticText
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.isAccessibilityElement = true
-        self.accessibilityTraits = UIAccessibilityTraitStaticText
-        
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.activateArea)
     }
     
     override func didLoad() {
@@ -125,6 +127,9 @@ class ItemListTextItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
+                    strongSelf.activateArea.accessibilityLabel = attributedText.string
                     
                     strongSelf.accessibilityLabel = attributedText.string
                     

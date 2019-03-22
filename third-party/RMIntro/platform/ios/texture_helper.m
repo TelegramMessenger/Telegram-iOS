@@ -10,7 +10,7 @@
 
 #import <UIKit/UIKit.h>
 
-GLuint setup_texture(NSString *fileName)
+GLuint setup_texture(NSString *fileName, UIColor *color)
 {
     CGImageRef spriteImage = [[UIImage imageNamed:fileName] CGImage];
     if (!spriteImage) {
@@ -29,7 +29,7 @@ GLuint setup_texture(NSString *fileName)
     
     // 3
     if ([fileName isEqualToString:@"telegram_sphere.png"]) {
-        CGContextSetFillColorWithColor(spriteContext, [UIColor whiteColor].CGColor);
+        CGContextSetFillColorWithColor(spriteContext, color.CGColor);
         CGContextFillRect(spriteContext, CGRectMake(0, 0, width, height));
     }
     CGContextDrawImage(spriteContext, CGRectMake(0, 0, width, height), spriteImage);

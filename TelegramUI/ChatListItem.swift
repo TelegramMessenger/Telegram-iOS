@@ -488,7 +488,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         return { item, params, first, last, firstWithHeader, nextIsPinned in
             let account = item.account
-            let message: Message?
+            var message: Message?
             let itemPeer: RenderedPeer
             let combinedReadState: CombinedPeerReadState?
             let unreadCount: (count: Int32, unread: Bool, muted: Bool)
@@ -544,6 +544,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         unreadCount = (0, false, false)
                     }
                     isAd = false*/
+            }
+            
+            if let messageValue = message {
+                for media in messageValue.media {
+                    if let media = media as? TelegramMediaAction, case .historyCleared = media.action {
+                        message = nil
+                    }
+                }
             }
             
             let theme = item.presentationData.theme.chatList

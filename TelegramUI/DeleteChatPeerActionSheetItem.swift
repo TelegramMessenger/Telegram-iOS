@@ -3,21 +3,28 @@ import Display
 import Postbox
 import TelegramCore
 
+enum DeleteChatPeerAction {
+    case delete
+    case clearHistory
+}
+
 final class DeleteChatPeerActionSheetItem: ActionSheetItem {
     let context: AccountContext
     let peer: Peer
     let chatPeer: Peer
+    let action: DeleteChatPeerAction
     let strings: PresentationStrings
     
-    init(context: AccountContext, peer: Peer, chatPeer: Peer, strings: PresentationStrings) {
+    init(context: AccountContext, peer: Peer, chatPeer: Peer, action: DeleteChatPeerAction, strings: PresentationStrings) {
         self.context = context
         self.peer = peer
         self.chatPeer = chatPeer
+        self.action = action
         self.strings = strings
     }
     
     func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
-        return DeleteChatPeerActionSheetItemNode(theme: theme, strings: self.strings, context: self.context, peer: self.peer, chatPeer: self.chatPeer)
+        return DeleteChatPeerActionSheetItemNode(theme: theme, strings: self.strings, context: self.context, peer: self.peer, chatPeer: self.chatPeer, action: self.action)
     }
     
     func updateNode(_ node: ActionSheetItemNode) {
@@ -33,7 +40,7 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
     private let avatarNode: AvatarNode
     private let textNode: ImmediateTextNode
     
-    init(theme: ActionSheetControllerTheme, strings: PresentationStrings, context: AccountContext, peer: Peer, chatPeer: Peer) {
+    init(theme: ActionSheetControllerTheme, strings: PresentationStrings, context: AccountContext, peer: Peer, chatPeer: Peer, action: DeleteChatPeerAction) {
         self.theme = theme
         self.strings = strings
         
@@ -55,14 +62,19 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
         }
         
         let text: (String, [(Int, NSRange)])
-        if chatPeer.id == context.account.peerId {
-            text = (strings.ChatList_DeleteSavedMessagesConfirmation, [])
-        } else if chatPeer is TelegramGroup || chatPeer is TelegramChannel {
-            text = strings.ChatList_LeaveGroupConfirmation(peer.displayTitle)
-        } else if chatPeer is TelegramSecretChat {
-            text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle)
-        } else {
-            text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle)
+        switch action {
+            case .delete:
+                if chatPeer.id == context.account.peerId {
+                    text = (strings.ChatList_DeleteSavedMessagesConfirmation, [])
+                } else if chatPeer is TelegramGroup || chatPeer is TelegramChannel {
+                    text = strings.ChatList_LeaveGroupConfirmation(peer.displayTitle)
+                } else if chatPeer is TelegramSecretChat {
+                    text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle)
+                } else {
+                    text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle)
+                }
+            case .clearHistory:
+                text = strings.ChatList_ClearChatConfirmation(peer.displayTitle)
         }
         let attributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.0, font: Font.regular(14.0), textColor: theme.primaryTextColor))
         for (_, range) in text.1 {

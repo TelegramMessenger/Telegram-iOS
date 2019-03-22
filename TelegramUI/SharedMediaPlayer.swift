@@ -466,13 +466,13 @@ final class SharedMediaPlayer {
                             case .voice, .music:
                                 switch playbackData.source {
                                     case let .telegramFile(fileReference):
-                                        strongSelf.playbackItem = .audio(MediaPlayer(audioSessionManager: strongSelf.audioSession, postbox: strongSelf.account.postbox, resourceReference: fileReference.resourceReference(fileReference.media.resource), streamable: playbackData.type == .music, video: false, preferSoftwareDecoding: false, enableSound: true, baseRate: rateValue, fetchAutomatically: true, playAndRecord: controlPlaybackWithProximity))
+                                        strongSelf.playbackItem = .audio(MediaPlayer(audioSessionManager: strongSelf.audioSession, postbox: strongSelf.account.postbox, resourceReference: fileReference.resourceReference(fileReference.media.resource), streamable: playbackData.type == .music ? .conservative : .none, video: false, preferSoftwareDecoding: false, enableSound: true, baseRate: rateValue, fetchAutomatically: true, playAndRecord: controlPlaybackWithProximity))
                                 }
                             case .instantVideo:
                                 if let mediaManager = strongSelf.mediaManager, let item = item as? MessageMediaPlaylistItem {
                                     switch playbackData.source {
                                         case let .telegramFile(fileReference):
-                                            let videoNode = OverlayInstantVideoNode(postbox: strongSelf.account.postbox, audioSession: strongSelf.audioSession, manager: mediaManager.universalVideoManager, content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, fileReference.media.fileId), fileReference: fileReference, streamVideo: false, enableSound: false, baseRate: rateValue), close: { [weak mediaManager] in
+                                            let videoNode = OverlayInstantVideoNode(postbox: strongSelf.account.postbox, audioSession: strongSelf.audioSession, manager: mediaManager.universalVideoManager, content: NativeVideoContent(id: .message(item.message.id, item.message.stableId, fileReference.media.fileId), fileReference: fileReference, enableSound: false, baseRate: rateValue), close: { [weak mediaManager] in
                                                 mediaManager?.setPlaylist(nil, type: .voice)
                                             })
                                             strongSelf.playbackItem = .instantVideo(videoNode)

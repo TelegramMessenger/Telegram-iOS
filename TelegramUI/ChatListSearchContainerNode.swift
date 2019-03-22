@@ -144,11 +144,12 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 
                 let status: ContactsPeerItemStatus
                 if let user = primaryPeer as? TelegramUser {
-                    if user.flags.contains(.isSupport) {
+                    let servicePeer = isServicePeer(primaryPeer)
+                    if user.flags.contains(.isSupport) && !servicePeer {
                         status = .custom(strings.Bot_GenericSupportStatus)
                     } else if let _ = user.botInfo {
                         status = .custom(strings.Bot_GenericBotStatus)
-                    } else if user.id != context.account.peerId {
+                    } else if user.id != context.account.peerId && !servicePeer {
                         let presence = peer.presence ?? TelegramUserPresence(status: .none, lastActivity: 0)
                         status = .presence(presence, timeFormat)
                     } else {
@@ -183,7 +184,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     badge = ContactsPeerItemBadge(count: peer.unreadCount, type: isMuted ? .inactive : .active)
                 }
                 
-                return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: context.account, peerMode: .generalSearch, peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: status, badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: true, editing: false, revealed: hasRevealControls), index: nil, header: ChatListSearchItemHeader(type: .recentPeers, theme: theme, strings: strings, actionTitle: strings.WebSearch_RecentSectionClear.uppercased(), action: {
+                return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: context.account, peerMode: .generalSearch, peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: status, badge: badge, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: true, editing: false, revealed: hasRevealControls), index: nil, header: ChatListSearchItemHeader(type: .recentPeers, theme: theme, strings: strings, actionTitle: strings.WebSearch_RecentSectionClear, action: {
                     clearRecentlySearchedPeers()
                 }), action: { _ in
                     if let chatPeer = peer.peer.peers[peer.peer.peerId] {
@@ -896,8 +897,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             return result
         }
         
-        var recentItemsTransition = combineLatest(hasRecentPeers, fixedRecentlySearchedPeers, presentationDataPromise.get(), self.statePromise.get())
-        |> mapToSignal { [weak self] hasRecentPeers, peers, presentationData, state -> Signal<(ChatListSearchContainerRecentTransition, Bool), NoError> in
+        var recentItems = combineLatest(hasRecentPeers, fixedRecentlySearchedPeers, presentationDataPromise.get(), self.statePromise.get())
+        |> mapToSignal { hasRecentPeers, peers, presentationData, state -> Signal<[ChatListRecentEntry], NoError> in
             var entries: [ChatListRecentEntry] = []
             if !filter.contains(.onlyGroups) {
                 if groupId == nil, hasRecentPeers {
@@ -920,34 +921,37 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     index += 1
                 }
             }
-            let previousEntries = previousRecentItems.swap(entries)
-            
-            let transition = chatListSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries, context: context, filter: filter, peerSelected: { peer in
-                openPeer(peer, true)
-                let _ = addRecentlySearchedPeer(postbox: context.account.postbox, peerId: peer.id).start()
-                self?.recentListNode.clearHighlightAnimated(true)
-            }, peerLongTapped: { peer in
-                openRecentPeerOptions(peer)
-            }, clearRecentlySearchedPeers: {
-                self?.clearRecentSearch()
-            }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
-                interaction.setPeerIdWithRevealedOptions(peerId, fromPeerId)
-            }, deletePeer: { peerId in
-                if let strongSelf = self {
-                    let _ = removeRecentlySearchedPeer(postbox: strongSelf.context.account.postbox, peerId: peerId).start()
-                }
-            })
-            return .single((transition, previousEntries == nil))
+           
+            return .single(entries)
         }
         
         if filter.contains(.excludeRecent) {
-            recentItemsTransition = .single((ChatListSearchContainerRecentTransition(deletions: [], insertions: [], updates: []), true))
+            recentItems = .single([])
         }
         
         self.updatedRecentPeersDisposable.set(managedUpdatedRecentPeers(accountPeerId: context.account.peerId, postbox: context.account.postbox, network: context.account.network).start())
         
-        self.recentDisposable.set((recentItemsTransition |> deliverOnMainQueue).start(next: { [weak self] (transition, firstTime) in
+        self.recentDisposable.set((recentItems
+        |> deliverOnMainQueue).start(next: { [weak self] entries in
             if let strongSelf = self {
+                let previousEntries = previousRecentItems.swap(entries)
+                
+                let firstTime = previousEntries == nil
+                let transition = chatListSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries, context: context, filter: filter, peerSelected: { peer in
+                    openPeer(peer, true)
+                    let _ = addRecentlySearchedPeer(postbox: context.account.postbox, peerId: peer.id).start()
+                    self?.recentListNode.clearHighlightAnimated(true)
+                }, peerLongTapped: { peer in
+                    openRecentPeerOptions(peer)
+                }, clearRecentlySearchedPeers: {
+                    self?.clearRecentSearch()
+                }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
+                    interaction.setPeerIdWithRevealedOptions(peerId, fromPeerId)
+                }, deletePeer: { peerId in
+                    if let strongSelf = self {
+                        let _ = removeRecentlySearchedPeer(postbox: strongSelf.context.account.postbox, peerId: peerId).start()
+                    }
+                })
                 strongSelf.enqueueRecentTransition(transition, firstTime: firstTime)
             }
         }))
@@ -969,8 +973,6 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
-                //let previousStrings = strongSelf.presentationData.strings
-                
                 strongSelf.presentationData = presentationData
                 strongSelf.presentationDataPromise.set(.single(ChatListPresentationData(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)))
                 
@@ -1031,7 +1033,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     }
     
     private func enqueueRecentTransition(_ transition: ChatListSearchContainerRecentTransition, firstTime: Bool) {
-        enqueuedRecentTransitions.append((transition, firstTime))
+        self.enqueuedRecentTransitions.append((transition, firstTime))
         
         if self.validLayout != nil {
             while !self.enqueuedRecentTransitions.isEmpty {
@@ -1067,16 +1069,12 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     }
     
     private func dequeueTransition() {
-        if let (transition, firstTime) = self.enqueuedTransitions.first {
+        if let (transition, _) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
             options.insert(.PreferSynchronousDrawing)
             options.insert(.PreferSynchronousResourceLoading)
-            if firstTime {
-            } else {
-                //options.insert(.AnimateAlpha)
-            }
             
             let displayingResults = transition.displayingResults
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in

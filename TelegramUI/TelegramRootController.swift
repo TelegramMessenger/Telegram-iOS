@@ -56,6 +56,9 @@ public final class TelegramRootController: NavigationController {
         var controllers: [ViewController] = []
         
         let contactsController = ContactsController(context: self.context)
+        contactsController.switchToChatsController = {  [weak self] in
+            self?.openChatsController(activateSearch: false)
+        }
         controllers.append(contactsController)
         
         if showCallsTab {
@@ -95,18 +98,22 @@ public final class TelegramRootController: NavigationController {
         rootTabController.setControllers(controllers, selectedIndex: nil)
     }
     
-    public func openChatsSearch() {
+    public func openChatsController(activateSearch: Bool) {
         guard let rootTabController = self.rootTabController else {
             return
         }
         
-        self.popToRoot(animated: false)
+        if activateSearch {
+            self.popToRoot(animated: false)
+        }
         
         if let index = rootTabController.controllers.index(where: { $0 is ChatListController}) {
             rootTabController.selectedIndex = index
         }
         
-        self.chatListController?.activateSearch()
+        if activateSearch {
+            self.chatListController?.activateSearch()
+        }
     }
     
     public func openRootCompose() {
@@ -117,6 +124,7 @@ public final class TelegramRootController: NavigationController {
         guard let controller = self.viewControllers.last as? ViewController else {
             return
         }
+        controller.view.endEditing(true)
         presentedLegacyShortcutCamera(context: self.context, saveCapturedMedia: false, saveEditedPhotos: false, mediaGrouping: true, parentController: controller)
     }
 }

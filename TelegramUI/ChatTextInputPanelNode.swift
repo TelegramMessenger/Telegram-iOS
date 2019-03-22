@@ -196,15 +196,16 @@ enum ChatTextInputPanelPasteData {
 }
 
 class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
-    var textPlaceholderNode: TextNode
+    var textPlaceholderNode: ImmediateTextNode
     var contextPlaceholderNode: TextNode?
     let textInputContainer: ASDisplayNode
     var textInputNode: EditableTextNode?
     
     let textInputBackgroundView: UIImageView
     let actionButtons: ChatTextInputActionButtonsNode
+    var mediaRecordingAccessibilityArea: AccessibilityAreaNode?
     
-    let attachmentButton: HighlightableButton
+    let attachmentButton: HighlightableButtonNode
     let searchLayoutClearButton: HighlightableButton
     let searchLayoutProgressView: UIImageView
     var audioRecordingInfoContainerNode: ASDisplayNode?
@@ -321,9 +322,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.textInputContainer.backgroundColor = theme.chat.inputPanel.inputBackgroundColor
         
         self.textInputBackgroundView = UIImageView()
-        self.textPlaceholderNode = TextNode()
-        self.textPlaceholderNode.isLayerBacked = true
-        self.attachmentButton = HighlightableButton()
+        self.textPlaceholderNode = ImmediateTextNode()
+        self.textPlaceholderNode.maximumNumberOfLines = 1
+        self.textPlaceholderNode.isUserInteractionEnabled = false
+        self.attachmentButton = HighlightableButtonNode()
+        self.attachmentButton.accessibilityLabel = "Send media"
+        self.attachmentButton.isAccessibilityElement = true
         self.searchLayoutClearButton = HighlightableButton()
         self.searchLayoutProgressView = UIImageView(image: searchLayoutProgressImage)
         self.searchLayoutProgressView.isHidden = true
@@ -332,8 +336,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         super.init()
         
-        self.attachmentButton.addTarget(self, action: #selector(self.attachmentButtonPressed), for: .touchUpInside)
-        self.view.addSubview(self.attachmentButton)
+        self.attachmentButton.addTarget(self, action: #selector(self.attachmentButtonPressed), forControlEvents: .touchUpInside)
+        self.addSubnode(self.attachmentButton)
         
         self.addSubnode(self.actionButtons)
         
@@ -495,6 +499,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         textInputNode.view.addGestureRecognizer(recognizer)
+        
+        textInputNode.textView.accessibilityHint = self.textPlaceholderNode.attributedText?.string
     }
     
     private func textFieldMaxHeight(_ maxHeight: CGFloat, metrics: LayoutMetrics) -> CGFloat {
@@ -688,7 +694,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     self.currentPlaceholder = placeholder
                     let placeholderLayout = TextNode.asyncLayout(self.textPlaceholderNode)
                     let baseFontSize = max(17.0, interfaceState.fontSize.baseDisplaySize)
-                    let (placeholderSize, placeholderApply) = placeholderLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: placeholder, font: Font.regular(baseFontSize), textColor: interfaceState.theme.chat.inputPanel.inputPlaceholderColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                    self.textPlaceholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(baseFontSize), textColor: interfaceState.theme.chat.inputPanel.inputPlaceholderColor)
+                    self.textInputNode?.textView.accessibilityHint = placeholder
+                    let placeholderSize = self.textPlaceholderNode.updateLayout(CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude))
                     if transition.isAnimated, let snapshotLayer = self.textPlaceholderNode.layer.snapshotContentTree() {
                         self.textPlaceholderNode.supernode?.layer.insertSublayer(snapshotLayer, above: self.textPlaceholderNode.layer)
                         snapshotLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.22, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
@@ -696,8 +704,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         })
                         self.textPlaceholderNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
                     }
-                    self.textPlaceholderNode.frame = CGRect(origin: self.textPlaceholderNode.frame.origin, size: placeholderSize.size)
-                    let _ = placeholderApply()
+                    self.textPlaceholderNode.frame = CGRect(origin: self.textPlaceholderNode.frame.origin, size: placeholderSize)
                 }
             }
             
@@ -953,9 +960,46 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             textInputBackgroundWidthOffset = 36.0
         }
         
-        transition.updateFrame(node: self.actionButtons, frame: CGRect(origin: CGPoint(x: width - rightInset - 43.0 - UIScreenPixel + composeButtonsOffset, y: panelHeight - minimalHeight), size: CGSize(width: 44.0, height: minimalHeight)))
+        let actionButtonsFrame = CGRect(origin: CGPoint(x: width - rightInset - 43.0 - UIScreenPixel + composeButtonsOffset, y: panelHeight - minimalHeight), size: CGSize(width: 44.0, height: minimalHeight))
+        transition.updateFrame(node: self.actionButtons, frame: actionButtonsFrame)
+        
         if let presentationInterfaceState = self.presentationInterfaceState {
             self.actionButtons.updateLayout(size: CGSize(width: 44.0, height: minimalHeight), transition: transition, interfaceState: presentationInterfaceState)
+        }
+        
+        if let mediaRecordingState = interfaceState.inputTextPanelState.mediaRecordingState {
+            let text: String = "Send"
+            let mediaRecordingAccessibilityArea: AccessibilityAreaNode
+            var added = false
+            if let current = self.mediaRecordingAccessibilityArea {
+                mediaRecordingAccessibilityArea = current
+            } else {
+                added = true
+                mediaRecordingAccessibilityArea = AccessibilityAreaNode()
+                mediaRecordingAccessibilityArea.accessibilityLabel = text
+                mediaRecordingAccessibilityArea.accessibilityTraits = UIAccessibilityTraitButton | UIAccessibilityTraitStartsMediaSession
+                self.mediaRecordingAccessibilityArea = mediaRecordingAccessibilityArea
+                mediaRecordingAccessibilityArea.activate = { [weak self] in
+                    self?.interfaceInteraction?.finishMediaRecording(.send)
+                    return true
+                }
+                self.insertSubnode(mediaRecordingAccessibilityArea, aboveSubnode: self.actionButtons)
+            }
+            self.actionButtons.isAccessibilityElement = false
+            let size: CGFloat = 120.0
+            mediaRecordingAccessibilityArea.frame = CGRect(origin: CGPoint(x: actionButtonsFrame.midX - size / 2.0, y: actionButtonsFrame.midY - size / 2.0), size: CGSize(width: size, height: size))
+            if added {
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.4, execute: {
+                    [weak mediaRecordingAccessibilityArea] in
+                    UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification, mediaRecordingAccessibilityArea?.view)
+                })
+            }
+        } else {
+            self.actionButtons.isAccessibilityElement = true
+            if let mediaRecordingAccessibilityArea = self.mediaRecordingAccessibilityArea {
+                self.mediaRecordingAccessibilityArea = nil
+                mediaRecordingAccessibilityArea.removeFromSupernode()
+            }
         }
         
         let searchLayoutClearButtonSize = CGSize(width: 44.0, height: minimalHeight)
@@ -988,7 +1032,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             if self.contextPlaceholderNode !== contextPlaceholderNode {
                 contextPlaceholderNode.displaysAsynchronously = false
-                contextPlaceholderNode.isLayerBacked = true
+                contextPlaceholderNode.isUserInteractionEnabled = false
                 self.contextPlaceholderNode = contextPlaceholderNode
                 self.insertSubnode(contextPlaceholderNode, aboveSubnode: self.textPlaceholderNode)
             }
@@ -1223,6 +1267,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
             }
         }
+        
+        self.actionButtons.updateAccessibility()
     }
     
     private func updateTextHeight() {
@@ -1271,11 +1317,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
         var activateGifInput = false
-        if let presentationInterfaceState = self.presentationInterfaceState {
-            if case .media(.gif, _) = presentationInterfaceState.inputMode {
-                activateGifInput = true
-            }
-        }
+//        if let presentationInterfaceState = self.presentationInterfaceState {
+//            if case .media(.gif, _) = presentationInterfaceState.inputMode {
+//                activateGifInput = true
+//            }
+//        }
         self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
             return (.text, state.keyboardButtonsMessage?.id)
         })

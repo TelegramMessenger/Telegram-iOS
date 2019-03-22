@@ -22,6 +22,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
     private let actionPauseNode: ASImageNode
     private let actionPlayNode: ASImageNode
     private let rateButton: HighlightableButtonNode
+    private let accessibilityAreaNode: AccessibilityAreaNode
     
     private let scrubbingNode: MediaPlayerScrubbingNode
     
@@ -50,8 +51,14 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
             switch voiceBaseRate {
                 case .x1:
                     self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateInactiveIcon(self.theme), for: [])
+                    self.rateButton.accessibilityLabel = "Playback rate"
+                    self.rateButton.accessibilityValue = "Normal"
+                    self.rateButton.accessibilityHint = "Double tap to change"
                 case .x2:
                     self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateActiveIcon(self.theme), for: [])
+                    self.rateButton.accessibilityLabel = "Playback rate"
+                    self.rateButton.accessibilityValue = "Fast"
+                    self.rateButton.accessibilityHint = "Double tap to change"
             }
         }
     }
@@ -83,14 +90,18 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.subtitleNode.displaysAsynchronously = false
         
         self.closeButton = HighlightableButtonNode()
+        self.closeButton.accessibilityLabel = "Stop playback"
         self.closeButton.setImage(PresentationResourcesRootController.navigationPlayerCloseButton(self.theme), for: [])
         self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
+        self.closeButton.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 2.0)
         self.closeButton.displaysAsynchronously = false
         
         self.rateButton = HighlightableButtonNode()
         
         self.rateButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -4.0, -8.0, -4.0)
         self.rateButton.displaysAsynchronously = false
+        
+        self.accessibilityAreaNode = AccessibilityAreaNode()
         
         self.actionButton = HighlightTrackingButtonNode()
         self.actionButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
@@ -126,6 +137,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         
         self.addSubnode(self.closeButton)
         self.addSubnode(self.rateButton)
+        self.addSubnode(self.accessibilityAreaNode)
         
         self.actionButton.addSubnode(self.actionPauseNode)
         self.actionButton.addSubnode(self.actionPlayNode)
@@ -185,6 +197,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
                 }
                 strongSelf.actionPlayNode.isHidden = !paused
                 strongSelf.actionPauseNode.isHidden = paused
+                strongSelf.actionButton.accessibilityLabel = paused ? "Play" : "Pause"
             }
         }
     }
@@ -207,6 +220,18 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.actionPauseNode.image = PresentationResourcesRootController.navigationPlayerPauseIcon(self.theme)
         self.separatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
         self.scrubbingNode.updateContent(.standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor))
+        
+        if let voiceBaseRate = self.voiceBaseRate {
+            switch voiceBaseRate {
+                case .x1:
+                    self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateInactiveIcon(self.theme), for: [])
+                case .x2:
+                    self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateActiveIcon(self.theme), for: [])
+            }
+        }
+        if let (size, leftInset, rightInset) = self.validLayout {
+            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+        }
     }
     
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -275,6 +300,8 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: size.width - titleSideInset, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: subtitleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: size.width - titleSideInset, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
+        self.accessibilityAreaNode.accessibilityLabel = "\(titleString?.string ?? ""). \(subtitleString?.string ?? "")"
+        
         let _ = titleApply()
         let _ = subtitleApply()
         
@@ -287,7 +314,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         transition.updateFrame(node: self.subtitleNode, frame: minimizedSubtitleFrame)
         
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width - rightInset, y: minimizedTitleFrame.minY + 8.0), size: closeButtonSize))
+        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 44.0 - rightInset, y: 0.0), size: CGSize(width: 44.0, height: minHeight)))
         let rateButtonSize = CGSize(width: 24.0, height: minHeight)
         transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width - 18.0 - rateButtonSize.width - rightInset, y: 0.0), size: rateButtonSize))
         transition.updateFrame(node: self.actionPlayNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
@@ -296,6 +323,8 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         transition.updateFrame(node: self.scrubbingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 37.0 - 2.0), size: CGSize(width: size.width, height: 2.0)))
 
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: minHeight - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
+        
+        self.accessibilityAreaNode.frame = CGRect(origin: CGPoint(x: self.actionButton.frame.maxX, y: 0.0), size: CGSize(width: self.rateButton.frame.minX - self.actionButton.frame.maxX, height: minHeight))
     }
     
     @objc func closeButtonPressed() {

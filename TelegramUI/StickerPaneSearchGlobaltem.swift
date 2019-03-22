@@ -5,6 +5,30 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 
+final class StickerPaneSearchGlobalSection: GridSection {
+    let height: CGFloat = 0.0
+    
+    var hashValue: Int {
+        return 0
+    }
+    
+    init() {
+    }
+    
+    func isEqual(to: GridSection) -> Bool {
+        if to is StickerPaneSearchGlobalSection {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    func node() -> ASDisplayNode {
+        return ASDisplayNode()
+    }
+}
+
+
 final class StickerPaneSearchGlobalItem: GridItem {
     let account: Account
     let theme: PresentationTheme
@@ -17,7 +41,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
     let install: () -> Void
     let getItemIsPreviewed: (StickerPackItem) -> Bool
     
-    let section: GridSection? = nil
+    let section: GridSection? = StickerPaneSearchGlobalSection()
     let fillsRowWithHeight: CGFloat? = 128.0
     
     init(account: Account, theme: PresentationTheme, strings: PresentationStrings, info: StickerPackCollectionInfo, topItems: [StickerPackItem], installed: Bool, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {

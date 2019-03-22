@@ -6,13 +6,13 @@ func fixSearchableListNodeScrolling(_ listNode: ListView) {
     var searchItemNode: ListViewItemNode?
     var nextItemNode: ListViewItemNode?
     
-    listNode.forEachItemNode({ itemNode in
+    listNode.forEachItemNode { itemNode in
         if let itemNode = itemNode as? ChatListSearchItemNode {
             searchItemNode = itemNode
         } else if searchItemNode != nil && nextItemNode == nil {
             nextItemNode = itemNode as? ListViewItemNode
         }
-    })
+    }
     
     if let searchItemNode = searchItemNode {
         let itemFrame = searchItemNode.apparentFrame

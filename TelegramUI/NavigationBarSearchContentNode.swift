@@ -21,6 +21,7 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
         self.theme = theme
         self.placeholder = placeholder
         self.placeholderNode = SearchBarPlaceholderNode(fieldStyle: .modern)
+        self.placeholderNode.labelNode.displaysAsynchronously = false
         
         super.init()
         
@@ -72,7 +73,7 @@ class NavigationBarSearchContentNode: NavigationBarContentNode {
     
     func updateExpansionProgress(_ progress: CGFloat, animated: Bool = false) {
         let newProgress = max(0.0, min(1.0, progress))
-        if newProgress != self.expansionProgress {
+        if abs(newProgress - self.expansionProgress) > 0.0001 {
             self.expansionProgress = newProgress
         
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate

@@ -203,7 +203,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                         }
                                     }
                                 default:
-                                    if let content = item.content as? NativeVideoContent, !content.streamVideo {
+                                    if let content = item.content as? NativeVideoContent, !content.streamVideo.enabled {
                                         if !content.enableSound {
                                             isPaused = false
                                         }

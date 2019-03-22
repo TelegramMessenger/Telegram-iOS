@@ -112,10 +112,10 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         var resourceReference: MediaResourceReference?
         if let thumbnail = info.thumbnail {
             thumbnailItem = thumbnail
-            resourceReference = MediaResourceReference.standalone(resource: thumbnail.resource)
+            resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)
         } else if let item = item, let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
             thumbnailItem = TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource)
-            resourceReference = MediaResourceReference.standalone(resource: resource)
+            resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
         }
         
         if self.currentThumbnailItem != thumbnailItem {

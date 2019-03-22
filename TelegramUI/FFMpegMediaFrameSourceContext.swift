@@ -84,7 +84,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
         }
         if totalCount > maximumFetchSize {
             context.readingError = true
-            return -1
+            return 0
         }
     }
     
@@ -111,7 +111,8 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
                 let _ = context.currentSemaphore.swap(nil)
                 disposable.dispose()
                 if !completedRequest {
-                    return -1
+                    context.readingError = true
+                    return 0
                 }
             }
         }
@@ -162,7 +163,8 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
             let _ = context.currentSemaphore.swap(nil)
             disposable.dispose()
             if !completedRequest {
-                return -1
+                context.readingError = true
+                return 0
             }
         }
     }
@@ -175,7 +177,8 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     }
     
     if context.closed {
-        return -1
+        context.readingError = true
+        return 0
     }
     return fetchedCount
 }
@@ -212,7 +215,8 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
                 let _ = context.currentSemaphore.swap(nil)
                 disposable.dispose()
                 if !completedRequest {
-                    return -1
+                    context.readingError = true
+                    return 0
                 }
                 resourceSize = resultSize
             }
@@ -222,7 +226,7 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
     }
     
     if (whence & FFMPEG_AVSEEK_SIZE) != 0 {
-        result = Int64(resourceSize == Int(Int32.max - 1) ? -1 : resourceSize)
+        result = Int64(resourceSize == Int(Int32.max - 1) ? 0 : resourceSize)
     } else {
         context.readingOffset = Int(min(Int64(resourceSize), offset))
         
@@ -248,7 +252,8 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
     }
     
     if context.closed {
-        return -1
+        context.readingError = true
+        return 0
     }
     
     return result

@@ -62,7 +62,7 @@ public final class JoinLinkPreviewController: ViewController {
                         strongSelf.navigateToPeer(peerId)
                         strongSelf.dismiss()
                     case .invalidHash:
-                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.GroupInfo_InvitationLinkDoesNotExist, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.GroupInfo_InvitationLinkDoesNotExist, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                         strongSelf.dismiss()
                 }
             }

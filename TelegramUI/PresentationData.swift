@@ -9,6 +9,7 @@ public struct PresentationDateTimeFormat: Equatable {
     let timeFormat: PresentationTimeFormat
     let dateFormat: PresentationDateFormat
     let dateSeparator: String
+    let decimalSeparator: String
 }
 
 public struct PresentationVolumeControlStatusBarIcons: Equatable {
@@ -102,7 +103,7 @@ private func volumeControlStatusBarIcons() -> PresentationVolumeControlStatusBar
     return PresentationVolumeControlStatusBarIcons(offIcon: UIImage(bundleImageName: "Components/Volume/VolumeOff")!, halfIcon: UIImage(bundleImageName: "Components/Volume/VolumeHalf")!, fullIcon: UIImage(bundleImageName: "Components/Volume/VolumeFull")!)
 }
 
-private func currentDateTimeFormat() -> PresentationDateTimeFormat {
+private func currentDateTimeFormat(strings: PresentationStrings) -> PresentationDateTimeFormat {
     let locale = Locale.current
     let dateFormatter = DateFormatter()
     dateFormatter.locale = locale
@@ -119,29 +120,24 @@ private func currentDateTimeFormat() -> PresentationDateTimeFormat {
     }
     
     let dateFormat: PresentationDateFormat
-    let dateSeparator: String
+    var dateSeparator = "/"
     if let dateString = DateFormatter.dateFormat(fromTemplate: "MdY", options: 0, locale: locale) {
-        if dateString.contains(".") {
-            dateSeparator = "."
-        } else if dateString.contains("/") {
-            dateSeparator = "/"
-        } else if dateString.contains("-") {
-            dateSeparator = "-"
-        } else {
-            dateSeparator = "/"
+        for separator in [".", "/", "-", "/"] {
+            if dateString.contains(separator) {
+                dateSeparator = separator
+                break
+            }
         }
-        
-        if dateString.contains("M\(dateSeparator)d") {
-            dateFormat = .monthFirst
-        } else {
-            dateFormat = .dayFirst
-        }
+    }
+    
+    if dateString.contains("M\(dateSeparator)d") {
+        dateFormat = .monthFirst
     } else {
-        dateSeparator = "/"
         dateFormat = .dayFirst
     }
     
-    return PresentationDateTimeFormat(timeFormat: timeFormat, dateFormat: dateFormat, dateSeparator: dateSeparator)
+    let decimalSeparator = locale.decimalSeparator ?? "."
+    return PresentationDateTimeFormat(timeFormat: timeFormat, dateFormat: dateFormat, dateSeparator: dateSeparator, decimalSeparator: decimalSeparator)
 }
 
 private func currentPersonNameSortOrder() -> PresentationPersonNameOrder {
@@ -270,7 +266,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager) -
         } else {
             stringsValue = defaultPresentationStrings
         }
-        let dateTimeFormat = currentDateTimeFormat()
+        let dateTimeFormat = currentDateTimeFormat(strings: stringsValue)
         let nameDisplayOrder = contactSettings.nameDisplayOrder
         let nameSortOrder = currentPersonNameSortOrder()
         return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: themeValue, chatWallpaper: effectiveChatWallpaper, volumeControlStatusBarIcons: volumeControlStatusBarIcons(), fontSize: themeSettings.fontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, disableAnimations: themeSettings.disableAnimations), automaticMediaDownloadSettings: automaticMediaDownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
@@ -426,7 +422,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationB
                             stringsValue = defaultPresentationStrings
                         }
                         
-                        let dateTimeFormat = currentDateTimeFormat()
+                        let dateTimeFormat = currentDateTimeFormat(strings: stringsValue)
                         let nameDisplayOrder = contactSettings.nameDisplayOrder
                         let nameSortOrder = currentPersonNameSortOrder()
                         
@@ -441,7 +437,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationB
 }
 
 public func defaultPresentationData() -> PresentationData {
-    let dateTimeFormat = currentDateTimeFormat()
+    let dateTimeFormat = currentDateTimeFormat(strings: defaultPresentationStrings)
     let nameDisplayOrder: PresentationPersonNameOrder = .firstLast
     let nameSortOrder = currentPersonNameSortOrder()
     

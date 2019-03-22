@@ -345,7 +345,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                             if let performer = performer {
                                 descriptionString = performer
                             } else if let size = file.size {
-                                descriptionString = dataSizeString(size)
+                                descriptionString = dataSizeString(size, decimalSeparator: item.dateTimeFormat.decimalSeparator)
                             } else {
                                 descriptionString = ""
                             }
@@ -379,7 +379,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                         
                         let descriptionString: String
                         if let size = file.size {
-                            descriptionString = "\(dataSizeString(size)) • \(dateString)"
+                            descriptionString = "\(dataSizeString(size, decimalSeparator: item.dateTimeFormat.decimalSeparator)) • \(dateString)"
                         } else {
                             descriptionString = "\(dateString)"
                         }
@@ -768,7 +768,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                     switch fetchStatus {
                         case let .Fetching(_, progress):
                             if let file = self.currentMedia as? TelegramMediaFile, let size = file.size {
-                                downloadingString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true)) / \(dataSizeString(size, forceDecimal: true))"
+                                downloadingString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, decimalSeparator: item.dateTimeFormat.decimalSeparator)) / \(dataSizeString(size, forceDecimal: true, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
                             }
                             descriptionOffset = 14.0
                         case .Remote:

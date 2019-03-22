@@ -491,7 +491,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
         presentControllerImpl?(actionSheet, nil)
     }, notifyPermissionGloballyDisabled: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: presentationData.strings.GroupPermission_PermissionGloballyDisabled, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.GroupPermission_PermissionGloballyDisabled, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
     })
     
     var keys: [PostboxViewKey] = [.peer(peerId: peerId, components: .all), .peer(peerId: memberId, components: .all)]

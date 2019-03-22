@@ -26,6 +26,9 @@ public func navigateToChatController(navigationController: NavigationController,
                 controller.scrollToEndOfHistory()
                 let _ = navigationController.popToViewController(controller, animated: animated)
                 completion()
+            } else {
+                let _ = navigationController.popToViewController(controller, animated: animated)
+                completion()
             }
             controller.purposefulAction = purposefulAction
             found = true

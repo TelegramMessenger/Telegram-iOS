@@ -33,7 +33,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
             self.controllerNode.inProgress = self.inProgress
         }
     }
-    var loginWithNumber: ((String) -> Void)?
+    var loginWithNumber: ((String, Bool) -> Void)?
     
     private let termsDisposable = MetaDisposable()
     
@@ -94,7 +94,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
                 return
             }
             self?.present(debugController(sharedContext: strongSelf.sharedContext, context: nil, modal: true), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        })
+            }, hasOtherAccounts: self.otherAccountPhoneNumbers.0 != nil)
         if let (code, name, number) = self.currentData {
             self.controllerNode.codeAndNumber = (code, name, number)
         }
@@ -160,7 +160,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
                 actions.append(TextAlertAction(type: .defaultAction, title: self.strings.Common_OK, action: {}))
                 self.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: self.theme), title: nil, text: self.strings.Login_PhoneNumberAlreadyAuthorized, actions: actions), in: .window(.root))
             } else {
-                self.loginWithNumber?(self.controllerNode.currentNumber)
+                self.loginWithNumber?(self.controllerNode.currentNumber, self.controllerNode.syncContacts)
             }
         } else {
             hapticFeedback.error()

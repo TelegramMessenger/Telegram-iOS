@@ -10,7 +10,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
     
     private let context: AccountContext
     private let peerId: PeerId
-    private let presentationData: PresentationData
+    private var presentationData: PresentationData
     private let type: MediaManagerPlayerType
     private let requestDismiss: () -> Void
     private let requestShare: (MessageId) -> Void
@@ -31,6 +31,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
     
     private var validLayout: ContainerViewLayout?
     
+    private var presentationDataDisposable: Disposable?
     private let replacementHistoryNodeReadyDisposable = MetaDisposable()
     
     init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType,  initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, requestDismiss: @escaping () -> Void, requestShare: @escaping (MessageId) -> Void) {
@@ -71,6 +72,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         }, rateCall: { _, _ in
         }, requestSelectMessagePollOption: { _, _ in
         }, openAppStorePage: {
+        }, displayMessageTooltip: { _, _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -169,12 +171,21 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
             return false
         }
         
+        self.presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                if strongSelf.presentationData.theme !== presentationData.theme || strongSelf.presentationData.strings !== presentationData.strings {
+                    strongSelf.updatePresentationData(presentationData)
+                }
+            }
+        })
+        
         self.ready.set(self.historyNode.historyState.get() |> map { _ -> Bool in
             return true
         } |> take(1))
     }
     
     deinit {
+        self.presentationDataDisposable?.dispose()
         self.replacementHistoryNodeReadyDisposable.dispose()
     }
     
@@ -188,6 +199,13 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
         self.view.addGestureRecognizer(panRecognizer)
+    }
+    
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
+        self.historyBackgroundContentNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+        self.controlsNode.updateTheme(self.presentationData.theme)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

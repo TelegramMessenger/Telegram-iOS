@@ -135,7 +135,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
             if recipients.count < 100 {
                 f()
             } else if let strongSelf = self {
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Invite_LargeRecipientsCountWarning, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: f)]), in: .window(.root))
+                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Invite_LargeRecipientsCountWarning, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: f)]), in: .window(.root))
             }
         }
         

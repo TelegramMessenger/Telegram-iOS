@@ -47,11 +47,13 @@ private struct ItemListNodeTransition<Entry: ItemListNodeEntry> {
     let searchItem: ItemListControllerSearch?
     let focusItemTag: ItemListItemTag?
     let ensureVisibleItemTag: ItemListItemTag?
+    let scrollToItem: ListViewScrollToItem?
     let firstTime: Bool
     let animated: Bool
     let animateAlpha: Bool
     let crossfade: Bool
     let mergedEntries: [Entry]
+    let userInteractionEnabled: Bool
 }
 
 struct ItemListNodeState<Entry: ItemListNodeEntry> {
@@ -61,10 +63,12 @@ struct ItemListNodeState<Entry: ItemListNodeEntry> {
     let searchItem: ItemListControllerSearch?
     let animateChanges: Bool
     let crossfadeState: Bool
+    let userInteractionEnabled: Bool
     let focusItemTag: ItemListItemTag?
     let ensureVisibleItemTag: ItemListItemTag?
+    let initialScrollToItem: ListViewScrollToItem?
     
-    init(entries: [Entry], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, ensureVisibleItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, crossfadeState: Bool = false, animateChanges: Bool = true) {
+    init(entries: [Entry], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, ensureVisibleItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, initialScrollToItem: ListViewScrollToItem? = nil, crossfadeState: Bool = false, animateChanges: Bool = true, userInteractionEnabled: Bool = true) {
         self.entries = entries
         self.style = style
         self.emptyStateItem = emptyStateItem
@@ -73,6 +77,8 @@ struct ItemListNodeState<Entry: ItemListNodeEntry> {
         self.animateChanges = animateChanges
         self.focusItemTag = focusItemTag
         self.ensureVisibleItemTag = ensureVisibleItemTag
+        self.initialScrollToItem = initialScrollToItem
+        self.userInteractionEnabled = userInteractionEnabled
     }
 }
 
@@ -176,6 +182,9 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
     
     var visibleEntriesUpdated: ((ItemListNodeVisibleEntries<Entry>) -> Void)?
     var visibleBottomContentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
+    var contentOffsetChanged: ((ListViewVisibleContentOffset, Bool) -> Void)?
+    var contentScrollingEnded: ((ListView) -> Bool)?
+    var searchActivated: ((Bool) -> Void)?
     var reorderEntry: ((Int, Int, [Entry]) -> Void)?
     
     var enableInteractiveDismiss = false {
@@ -232,6 +241,20 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
             self?.visibleBottomContentOffsetChanged?(offset)
         }
         
+        self.listNode.visibleContentOffsetChanged = { [weak self] offset in
+            var inVoiceOver = false
+            if let validLayout = self?.validLayout {
+                inVoiceOver = validLayout.0.inVoiceOver
+            }
+            self?.contentOffsetChanged?(offset, inVoiceOver)
+        }
+        
+        self.listNode.didEndScrolling = { [weak self] in
+            if let strongSelf = self {
+                let _ = strongSelf.contentScrollingEnded?(strongSelf.listNode)
+            }
+        }
+        
         let previousState = Atomic<ItemListNodeState<Entry>?>(value: nil)
         self.transitionDisposable.set(((state |> map { theme, stateAndArguments -> ItemListNodeTransition<Entry> in
             let (state, arguments) = stateAndArguments
@@ -242,7 +265,13 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
             if previous?.style != state.style {
                 updatedStyle = state.style
             }
-            return ItemListNodeTransition(theme: theme, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, focusItemTag: state.focusItemTag, ensureVisibleItemTag: state.ensureVisibleItemTag, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, crossfade: state.crossfadeState, mergedEntries: state.entries)
+            
+            var scrollToItem: ListViewScrollToItem?
+            if previous == nil {
+                scrollToItem = state.initialScrollToItem
+            }
+            
+            return ItemListNodeTransition(theme: theme, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, focusItemTag: state.focusItemTag, ensureVisibleItemTag: state.ensureVisibleItemTag, scrollToItem: scrollToItem, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, crossfade: state.crossfadeState, mergedEntries: state.entries, userInteractionEnabled: state.userInteractionEnabled)
         }) |> deliverOnMainQueue).start(next: { [weak self] transition in
             if let strongSelf = self {
                 strongSelf.enqueueTransition(transition)
@@ -275,8 +304,10 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
         }
     }
     
-    func animateIn() {
-        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+    func animateIn(completion: (() -> Void)? = nil) {
+        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+            completion?()
+        })
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
@@ -406,13 +437,66 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
             let focusItemTag = transition.focusItemTag
             let ensureVisibleItemTag = transition.ensureVisibleItemTag
             var scrollToItem: ListViewScrollToItem?
-            if self.listNode.experimentalSnapScrollToItem, let ensureVisibleItemTag = ensureVisibleItemTag {
+            if let item = transition.scrollToItem {
+                scrollToItem = item
+            } else if self.listNode.experimentalSnapScrollToItem, let ensureVisibleItemTag = ensureVisibleItemTag {
                 for i in 0 ..< transition.mergedEntries.count {
                     if let tag = transition.mergedEntries[i].tag, tag.isEqual(to: ensureVisibleItemTag) {
                         scrollToItem = ListViewScrollToItem(index: i, position: ListViewScrollPosition.visible, animated: true, curve: .Default(duration: nil), directionHint: .Down)
                     }
                 }
             }
+            
+            var updateSearchItem = false
+            if let searchItem = self.searchItem, let updatedSearchItem = transition.searchItem {
+                updateSearchItem = !searchItem.isEqual(to: updatedSearchItem)
+            } else if (self.searchItem != nil) != (transition.searchItem != nil) {
+                updateSearchItem = true
+            }
+            if updateSearchItem {
+                self.searchItem = transition.searchItem
+                if let searchItem = transition.searchItem {
+                    let updatedTitleContentNode = searchItem.titleContentNode(current: self.navigationBar.contentNode as? (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode))
+                    if updatedTitleContentNode !== self.navigationBar.contentNode {
+                        if let titleContentNode = self.navigationBar.contentNode as? ItemListControllerSearchNavigationContentNode {
+                            titleContentNode.deactivate()
+                        }
+                        updatedTitleContentNode.setQueryUpdated { [weak self] query in
+                            if let strongSelf = self {
+                                strongSelf.searchNode?.queryUpdated(query)
+                            }
+                        }
+                        self.navigationBar.setContentNode(updatedTitleContentNode, animated: true)
+                        updatedTitleContentNode.activate()
+                    }
+                    
+                    let updatedNode = searchItem.node(current: self.searchNode, titleContentNode: updatedTitleContentNode)
+                    if let searchNode = self.searchNode, updatedNode !== searchNode {
+                        searchNode.removeFromSupernode()
+                    }
+                    if self.searchNode !== updatedNode {
+                        self.searchNode = updatedNode
+                        if let validLayout = self.validLayout {
+                            updatedNode.updateLayout(layout: validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
+                        }
+                        self.insertSubnode(updatedNode, belowSubnode: self.navigationBar)
+                        updatedNode.activate()
+                    }
+                } else {
+                    if let searchNode = self.searchNode {
+                        self.searchNode = nil
+                        searchNode.deactivate()
+                    }
+                    
+                    if let titleContentNode = self.navigationBar.contentNode {
+                        if let titleContentNode = titleContentNode as? ItemListControllerSearchNavigationContentNode {
+                            titleContentNode.deactivate()
+                        }
+                        self.navigationBar.setContentNode(nil, animated: true)
+                    }
+                }
+            }
+            
             self.listNode.transaction(deleteIndices: transition.entries.deletions, insertIndicesAndItems: transition.entries.insertions, updateIndicesAndItems: transition.entries.updates, options: options, scrollToItem: scrollToItem, updateOpaqueState: ItemListNodeOpaqueState(mergedEntries: transition.mergedEntries), completion: { [weak self] _ in
                 if let strongSelf = self {
                     if !strongSelf.didSetReady {
@@ -460,6 +544,10 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
                                         if itemTag.isEqual(to: ensureVisibleItemTag) {
                                             if let itemNode = itemNode as? ListViewItemNode {
                                                 strongSelf.listNode.ensureItemNodeVisible(itemNode)
+                                                itemNode.setHighlighted(true, at: CGPoint(), animated: false)
+                                                Queue.mainQueue().after(1.0, {
+                                                    itemNode.setHighlighted(false, at: CGPoint(), animated: true)
+                                                })
                                                 applied = true
                                             }
                                         }
@@ -501,62 +589,13 @@ class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollV
                     self.emptyStateNode = nil
                 }
             }
-            
-            var updateSearchItem = false
-            if let searchItem = self.searchItem, let updatedSearchItem = transition.searchItem {
-                updateSearchItem = !searchItem.isEqual(to: updatedSearchItem)
-            } else if (self.searchItem != nil) != (transition.searchItem != nil) {
-                updateSearchItem = true
-            }
-            if updateSearchItem {
-                self.searchItem = transition.searchItem
-                if let searchItem = transition.searchItem {
-                    let updatedNode = searchItem.node(current: self.searchNode)
-                    if let searchNode = self.searchNode, updatedNode !== searchNode {
-                        searchNode.removeFromSupernode()
-                    }
-                    if self.searchNode !== updatedNode {
-                        self.searchNode = updatedNode
-                        if let validLayout = self.validLayout {
-                            updatedNode.updateLayout(layout: validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
-                        }
-                        self.insertSubnode(updatedNode, belowSubnode: self.navigationBar)
-                        updatedNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut)
-                    }
-                    let updatedTitleContentNode = searchItem.titleContentNode(current: self.navigationBar.contentNode as? (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode))
-                    if updatedTitleContentNode !== self.navigationBar.contentNode {
-                        if let titleContentNode = self.navigationBar.contentNode as? ItemListControllerSearchNavigationContentNode {
-                            titleContentNode.deactivate()
-                        }
-                        updatedTitleContentNode.setQueryUpdated { [weak self] query in
-                            if let strongSelf = self {
-                                strongSelf.searchNode?.queryUpdated(query)
-                            }
-                        }
-                        self.navigationBar.setContentNode(updatedTitleContentNode, animated: true)
-                        updatedTitleContentNode.activate()
-                    }
-                } else {
-                    if let searchNode = self.searchNode {
-                        self.searchNode = nil
-                        searchNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { [weak searchNode]_ in
-                            searchNode?.removeFromSupernode()
-                        })
-                    }
-                    
-                    if let titleContentNode = self.navigationBar.contentNode {
-                        if let titleContentNode = titleContentNode as? ItemListControllerSearchNavigationContentNode {
-                            titleContentNode.deactivate()
-                        }
-                        self.navigationBar.setContentNode(nil, animated: true)
-                    }
-                }
-            }
+            self.listNode.isUserInteractionEnabled = transition.userInteractionEnabled
         }
     }
     
     func scrollToTop() {
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.searchNode?.scrollToTop()
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {

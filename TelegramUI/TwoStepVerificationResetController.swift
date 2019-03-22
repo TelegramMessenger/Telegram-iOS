@@ -40,7 +40,7 @@ private enum TwoStepVerificationResetTag: ItemListItemTag {
 }
 
 private enum TwoStepVerificationResetEntry: ItemListNodeEntry {
-    case codeEntry(PresentationTheme, String)
+    case codeEntry(PresentationTheme, String, String)
     case codeInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -58,8 +58,8 @@ private enum TwoStepVerificationResetEntry: ItemListNodeEntry {
     
     static func ==(lhs: TwoStepVerificationResetEntry, rhs: TwoStepVerificationResetEntry) -> Bool {
         switch lhs {
-            case let .codeEntry(lhsTheme, lhsText):
-                if case let .codeEntry(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .codeEntry(lhsTheme, lhsPlaceholder, lhsText):
+                if case let .codeEntry(rhsTheme, rhsPlaceholder, rhsText) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -79,8 +79,8 @@ private enum TwoStepVerificationResetEntry: ItemListNodeEntry {
     
     func item(_ arguments: TwoStepVerificationResetControllerArguments) -> ListViewItem {
         switch self {
-            case let .codeEntry(theme, text):
-                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: "Code", textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .password, spacing: 10.0, tag: TwoStepVerificationResetTag.input, sectionId: self.section, textUpdated: { updatedText in
+            case let .codeEntry(theme, placeholder, text):
+                return ItemListSingleLineInputItem(theme: theme, title: NSAttributedString(string: placeholder, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .password, spacing: 10.0, tag: TwoStepVerificationResetTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
@@ -123,8 +123,8 @@ private struct TwoStepVerificationResetControllerState: Equatable {
 private func twoStepVerificationResetControllerEntries(presentationData: PresentationData, state: TwoStepVerificationResetControllerState, emailPattern: String) -> [TwoStepVerificationResetEntry] {
     var entries: [TwoStepVerificationResetEntry] = []
 
-    entries.append(.codeEntry(presentationData.theme, state.codeText))
-    entries.append(.codeInfo(presentationData.theme, "Please check your e-mail and enter the 6-digit code we've sent there to deactivate your cloud password.\n\n[Having trouble accessing your e-mail \(escapedPlaintextForMarkdown(emailPattern))?]()"))
+    entries.append(.codeEntry(presentationData.theme, presentationData.strings.TwoStepAuth_RecoveryCode, state.codeText))
+    entries.append(.codeInfo(presentationData.theme, "\(presentationData.strings.TwoStepAuth_RecoveryCodeHelp)\n\n[\(presentationData.strings.TwoStepAuth_RecoveryEmailUnavailable(escapedPlaintextForMarkdown(emailPattern)).0)]()"))
     
     return entries
 }
@@ -165,15 +165,15 @@ func twoStepVerificationResetController(context: AccountContext, emailPattern: S
                 let alertText: String
                 switch error {
                     case .generic:
-                        alertText = "An error occurred."
+                        alertText = presentationData.strings.Login_UnknownError
                     case .invalidCode:
-                        alertText = "Invalid code. Please try again."
+                        alertText = presentationData.strings.Login_InvalidCodeError
                     case .codeExpired:
-                        alertText = "Code expired."
+                        alertText = presentationData.strings.Login_CodeExpiredError
                     case .limitExceeded:
-                        alertText = "You have entered invalid code too many times. Please try again later."
+                        alertText = presentationData.strings.Login_CodeFloodError
                 }
-                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                presentControllerImpl?(textAlertController(context: context, title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }, completed: {
                 updateState {
                     return $0.withUpdatedChecking(false)
@@ -191,7 +191,7 @@ func twoStepVerificationResetController(context: AccountContext, emailPattern: S
         checkCode()
     }, openEmailInaccessible: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Your remaining options are either to remember your password or to reset your account.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get()) |> deliverOnMainQueue

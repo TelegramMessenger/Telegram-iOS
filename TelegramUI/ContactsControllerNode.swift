@@ -80,10 +80,10 @@ final class ContactsControllerNode: ASDisplayNode {
                     case .allowed:
                         strongSelf.openInvite?()
                     case .notDetermined:
-                        DeviceAccess.authorizeAccess(to: .contacts)
+                        DeviceAccess.authorizeAccess(to: .contacts, context: strongSelf.context)
                     default:
                         let presentationData = strongSelf.presentationData
-                        present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                        present(textAlertController(context: strongSelf.context, title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
                             self?.context.sharedContext.applicationBindings.openSettings()
                         })]), nil)
                 }
@@ -145,9 +145,9 @@ final class ContactsControllerNode: ASDisplayNode {
         }, placeholder: placeholderNode)
     }
     
-    func deactivateSearch(placeholderNode: SearchBarPlaceholderNode) {
+    func deactivateSearch(placeholderNode: SearchBarPlaceholderNode, animated: Bool) {
         if let searchDisplayController = self.searchDisplayController {
-            searchDisplayController.deactivate(placeholder: placeholderNode)
+            searchDisplayController.deactivate(placeholder: placeholderNode, animated: animated)
             self.searchDisplayController = nil
         }
     }

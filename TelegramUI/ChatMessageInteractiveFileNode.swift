@@ -44,7 +44,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 } else {
                     self.stopTimer()
                 }
-                //self.updateFetchStatus()
+                self.updateStatus()
             }
         }
     }
@@ -58,7 +58,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     
     private var context: AccountContext?
     private var message: Message?
-    private var themeAndStrings: (ChatPresentationThemeData, PresentationStrings)?
+    private var themeAndStrings: (ChatPresentationThemeData, PresentationStrings, String)?
     private var file: TelegramMediaFile?
     private var progressFrame: CGRect?
     private var streamingCacheStatusFrame: CGRect?
@@ -317,7 +317,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             if let performer = performer {
                                 descriptionText = performer
                             } else if let size = file.size {
-                                descriptionText = dataSizeString(size)
+                                descriptionText = dataSizeString(size, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
                             } else {
                                 descriptionText = ""
                             }
@@ -341,7 +341,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 } else if !isVoice {
                     let descriptionText: String
                     if let size = file.size {
-                        descriptionText = dataSizeString(size)
+                        descriptionText = dataSizeString(size, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
                     } else {
                         descriptionText = ""
                     }
@@ -485,7 +485,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     return (fittedLayoutSize, { [weak self] in
                         if let strongSelf = self {
                             strongSelf.context = context
-                            strongSelf.themeAndStrings = (presentationData.theme, presentationData.strings)
+                            strongSelf.themeAndStrings = (presentationData.theme, presentationData.strings, presentationData.dateTimeFormat.decimalSeparator)
                             strongSelf.message = message
                             strongSelf.file = file
                             
@@ -609,6 +609,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             
                             if let updatedPlaybackStatusSignal = updatedPlaybackStatusSignal {
                                 strongSelf.playbackStatus.set(updatedPlaybackStatusSignal)
+                                strongSelf.playbackStatusDisposable.set((updatedPlaybackStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
+                                    displayLinkDispatcher.dispatch {
+                                        if let strongSelf = strongSelf {
+                                            strongSelf.playerStatus = status
+                                        }
+                                    }
+                                }))
                             }
                             
                             strongSelf.statusNode?.frame = progressFrame
@@ -643,7 +650,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         guard let context = self.context else {
             return
         }
-        guard let presentationData = self.themeAndStrings?.0 else {
+        guard let (presentationData, _, decimalSeparator) = self.themeAndStrings else {
             return
         }
         guard let progressFrame = self.progressFrame, let streamingCacheStatusFrame = self.streamingCacheStatusFrame else {
@@ -657,12 +664,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         var isAudio = false
         var isVoice = false
+        var audioDuration: Int32?
         for attribute in file.attributes {
-            if case let .Audio(voice, _, _, _, _) = attribute {
+            if case let .Audio(voice, duration, _, _, _) = attribute {
                 isAudio = true
-                
                 if voice {
                     isVoice = true
+                    audioDuration = Int32(duration)
                 }
                 break
             }
@@ -673,7 +681,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         let isSending = message.flags.isSending
         
-        var downloadingStrings: (String, String)?
+        var downloadingStrings: (String, String, UIFont)?
         
         if !isAudio {
             switch resourceStatus.mediaStatus {
@@ -681,14 +689,28 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     switch fetchStatus {
                         case let .Fetching(_, progress):
                             if let size = file.size {
-                                let compactString = dataSizeString(Int(Float(size) * progress), forceDecimal: true)
-                                downloadingStrings = ("\(compactString) / \(dataSizeString(size, forceDecimal: true))", compactString)
+                                let compactString = dataSizeString(Int(Float(size) * progress), forceDecimal: true, decimalSeparator: decimalSeparator)
+                                downloadingStrings = ("\(compactString) / \(dataSizeString(size, forceDecimal: true, decimalSeparator: decimalSeparator))", compactString, descriptionFont)
                             }
                         default:
                             break
                     }
                 default:
                     break
+            }
+        } else if isVoice {
+            if let playerStatus = self.playerStatus {
+                var playerPosition: Int32?
+                var playerDuration: Int32 = 0
+                if !playerStatus.generationTimestamp.isZero, case .playing = playerStatus.status {
+                    playerPosition = Int32(playerStatus.timestamp + (CACurrentMediaTime() - playerStatus.generationTimestamp))
+                } else {
+                    playerPosition = Int32(playerStatus.timestamp)
+                }
+                playerDuration = Int32(playerStatus.duration)
+                
+                let durationString = stringForDuration(playerDuration > 0 ? playerDuration : (audioDuration ?? 0), position: playerPosition)
+                downloadingStrings = (durationString, durationString, durationFont)
             }
         }
         
@@ -725,7 +747,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             statusForegroundColor = presentationData.wallpaper.isEmpty ? bubbleTheme.outgoing.withoutWallpaper.fill : bubbleTheme.outgoing.withWallpaper.fill
         }
         switch resourceStatus.mediaStatus {
-            case let .fetchStatus(fetchStatus):
+            case var .fetchStatus(fetchStatus):
+                if self.message?.forwardInfo != nil {
+                    fetchStatus = resourceStatus.fetchStatus
+                }
                 self.waveformScrubbingNode?.enableScrubbing = false
                 switch fetchStatus {
                     case let .Fetching(_, progress):
@@ -800,14 +825,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                 })
             } else {
-                streamingStatusNode.transitionToState(streamingState, completion: {
-                })
+                streamingStatusNode.transitionToState(streamingState)
             }
         }
         
-        if let (expandedString, compactString) = downloadingStrings {
-            self.fetchingTextNode.attributedText = NSAttributedString(string: expandedString, font: descriptionFont, textColor: incoming ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
-            self.fetchingCompactTextNode.attributedText = NSAttributedString(string: compactString, font: descriptionFont, textColor: incoming ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
+        if let (expandedString, compactString, font) = downloadingStrings {
+            self.fetchingTextNode.attributedText = NSAttributedString(string: expandedString, font: font, textColor: incoming ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
+            self.fetchingCompactTextNode.attributedText = NSAttributedString(string: compactString, font: font, textColor: incoming ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
         } else {
             self.fetchingTextNode.attributedText = nil
             self.fetchingCompactTextNode.attributedText = nil
@@ -895,7 +919,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private func ensureHasTimer() {
         if self.playerUpdateTimer == nil {
             let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
-                //self?.updateFetchStatus()
+                self?.updateStatus()
             }, queue: Queue.mainQueue())
             self.playerUpdateTimer = timer
             timer.start()

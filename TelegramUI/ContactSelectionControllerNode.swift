@@ -146,8 +146,10 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         }
     }
     
-    func animateIn() {
-        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+    func animateIn(completion: @escaping () -> Void) {
+        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+            completion()
+        })
     }
     
     func animateOut(completion: (() -> Void)? = nil) {

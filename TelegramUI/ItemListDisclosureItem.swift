@@ -33,8 +33,9 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let style: ItemListStyle
     let disclosureStyle: ItemListDisclosureStyle
     let action: (() -> Void)?
+    let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, icon: UIImage? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?) {
+    init(theme: PresentationTheme, icon: UIImage? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.icon = icon
         self.title = title
@@ -46,6 +47,7 @@ class ItemListDisclosureItem: ListViewItem, ItemListItem {
         self.style = style
         self.disclosureStyle = disclosureStyle
         self.action = action
+        self.tag = tag
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -95,7 +97,7 @@ private let titleFont = Font.regular(17.0)
 private let badgeFont = Font.regular(15.0)
 private let detailFont = Font.regular(13.0)
 
-class ItemListDisclosureItemNode: ListViewItemNode {
+class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -108,6 +110,8 @@ class ItemListDisclosureItemNode: ListViewItemNode {
     let labelBadgeNode: ASImageNode
     let labelImageNode: ASImageNode
     
+    private let activateArea: AccessibilityAreaNode
+    
     private var item: ItemListDisclosureItem?
     
     override var canBeSelected: Bool {
@@ -116,6 +120,10 @@ class ItemListDisclosureItemNode: ListViewItemNode {
         } else {
             return false
         }
+    }
+    
+    var tag: ItemListItemTag? {
+        return self.item?.tag
     }
     
     init() {
@@ -153,13 +161,15 @@ class ItemListDisclosureItemNode: ListViewItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        self.activateArea = AccessibilityAreaNode()
         
-        self.isAccessibilityElement = true
+        super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.labelNode)
         self.addSubnode(self.arrowNode)
+        
+        self.addSubnode(self.activateArea)
     }
     
     func asyncLayout() -> (_ item: ItemListDisclosureItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -288,9 +298,14 @@ class ItemListDisclosureItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     
-                    strongSelf.accessibilityLabel = item.title
-                    strongSelf.accessibilityValue = item.label
-                    strongSelf.accessibilityTraits = UIAccessibilityTraitButton
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
+                    strongSelf.activateArea.accessibilityLabel = item.title
+                    strongSelf.activateArea.accessibilityValue = item.label
+                    if item.enabled {
+                        strongSelf.activateArea.accessibilityTraits = 0
+                    } else {
+                        strongSelf.activateArea.accessibilityTraits = UIAccessibilityTraitNotEnabled
+                    }
                     
                     if let icon = item.icon {
                         if strongSelf.iconNode.supernode == nil {

@@ -116,6 +116,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         self.clearIconNode.displaysAsynchronously = false
         
         self.clearButtonNode = HighlightableButtonNode()
+        self.clearButtonNode.accessibilityLabel = "Clear Text"
         
         super.init(layerBacked: false, dynamicBounce: false)
         
@@ -146,6 +147,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         if let item = self.item {
             self.textNode.textField.textColor = item.theme.list.itemPrimaryTextColor
             self.textNode.textField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+            self.textNode.textField.accessibilityHint = item.placeholder
         }
         self.textNode.clipsToBounds = true
         self.textNode.textField.delegate = self
@@ -277,6 +279,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                     
                     strongSelf.clearIconNode.isHidden = !item.clearButton || item.text.isEmpty
                     strongSelf.clearButtonNode.isHidden = !item.clearButton || item.text.isEmpty
+                    strongSelf.clearButtonNode.isAccessibilityElement = !strongSelf.clearButtonNode.isHidden
                     
                     if strongSelf.backgroundNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -306,6 +309,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                     
                     if strongSelf.textNode.textField.attributedPlaceholder == nil || !strongSelf.textNode.textField.attributedPlaceholder!.isEqual(to: attributedPlaceholderText) {
                         strongSelf.textNode.textField.attributedPlaceholder = attributedPlaceholderText
+                        strongSelf.textNode.textField.accessibilityHint = attributedPlaceholderText.string
                     }
                 }
             })
@@ -321,20 +325,16 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
     }
     
     @objc private func textFieldTextChanged(_ textField: UITextField) {
-        if let item = self.item {
-            if let text = self.textNode.textField.text {
-                item.textUpdated(text)
-            } else {
-                item.textUpdated("")
-            }
-        }
+        self.textUpdated(self.textNode.textField.text ?? "")
     }
     
     @objc private func clearButtonPressed() {
-        if let item = self.item {
-            self.textNode.textField.text = ""
-            item.textUpdated("")
-        }
+        self.textNode.textField.text = ""
+        self.textUpdated("")
+    }
+    
+    private func textUpdated(_ text: String) {
+        self.item?.textUpdated(text)
     }
     
     func focus() {

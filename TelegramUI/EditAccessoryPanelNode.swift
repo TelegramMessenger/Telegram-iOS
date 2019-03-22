@@ -14,6 +14,8 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     let textNode: ImmediateTextNode
     let imageNode: TransformImageNode
     
+    private let actionArea: AccessibilityAreaNode
+    
     private let activityIndicator: ActivityIndicator
     private let statusNode: RadialStatusNode
     private let tapNode: ASDisplayNode
@@ -61,6 +63,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.nameDisplayOrder = nameDisplayOrder
         
         self.closeButton = ASButtonNode()
+        self.closeButton.accessibilityLabel = "Discard"
         self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
         self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
         self.closeButton.displaysAsynchronously = false
@@ -91,6 +94,8 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         
         self.tapNode = ASDisplayNode()
         
+        self.actionArea = AccessibilityAreaNode()
+        
         super.init()
         
         self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: [.touchUpInside])
@@ -103,6 +108,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.activityIndicator)
         self.addSubnode(self.statusNode)
         self.addSubnode(self.tapNode)
+        self.addSubnode(self.actionArea)
         self.messageDisposable.set((context.account.postbox.messageAtId(messageId)
         |> deliverOnMainQueue).start(next: { [weak self] message in
             self?.updateMessage(message)
@@ -215,8 +221,12 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             canEditMedia = false
         }
         
-        self.titleNode.attributedText = NSAttributedString(string: canEditMedia ? self.strings.Conversation_EditingCaptionPanelTitle : self.strings.Conversation_EditingMessagePanelTitle, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
+        let titleString = canEditMedia ? self.strings.Conversation_EditingCaptionPanelTitle : self.strings.Conversation_EditingMessagePanelTitle
+        self.titleNode.attributedText = NSAttributedString(string: titleString, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
         self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: isMedia ? self.theme.chat.inputPanel.secondaryTextColor : self.theme.chat.inputPanel.primaryTextColor)
+        
+        let headerString: String = titleString
+        self.actionArea.accessibilityLabel = "\(headerString).\n\(text)"
         
         if let applyImage = applyImage {
             applyImage()
@@ -297,8 +307,11 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.activityIndicator.frame = CGRect(origin: CGPoint(x: 18.0, y: 15.0), size: indicatorSize)
         self.statusNode.frame = CGRect(origin: CGPoint(x: 18.0, y: 15.0), size: indicatorSize).insetBy(dx: -2.0, dy: -2.0)
         
-        let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
-        self.closeButton.frame = CGRect(origin: CGPoint(x: bounds.size.width - rightInset - closeButtonSize.width, y: 19.0), size: closeButtonSize)
+        let closeButtonSize = CGSize(width: 44.0, height: bounds.height)
+        let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - rightInset - closeButtonSize.width + 12.0, y: 2.0), size: closeButtonSize)
+        self.closeButton.frame = closeButtonFrame
+        
+        self.actionArea.frame = CGRect(origin: CGPoint(x: leftInset, y: 2.0), size: CGSize(width: closeButtonFrame.minX - leftInset, height: bounds.height))
         
         self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
         

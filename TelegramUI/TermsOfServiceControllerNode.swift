@@ -141,7 +141,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                     setToProcceedBot(mention)
                     rightAction()
                 })
-                ]), ActionSheetItemGroup.init(items: [ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, action: { [weak actionSheet] in
+                ]), ActionSheetItemGroup(items: [ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                 })])])
             strongSelf.present(actionSheet, nil)

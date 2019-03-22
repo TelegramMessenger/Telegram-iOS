@@ -54,7 +54,11 @@ private final class MediaPlayerTimeTextNodeParameters: NSObject {
 final class MediaPlayerTimeTextNode: ASDisplayNode {
     var alignment: NSTextAlignment = .left
     var mode: MediaPlayerTimeTextNodeMode = .normal
-    private let textColor: UIColor
+    var textColor: UIColor {
+        didSet {
+            self.updateTimestamp()
+        }
+    }
     var defaultDuration: Double? {
         didSet {
             self.updateTimestamp()

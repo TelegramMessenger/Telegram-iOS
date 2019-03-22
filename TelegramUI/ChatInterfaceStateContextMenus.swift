@@ -338,7 +338,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         if data.canReply {
-            actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuReply), action: {
+            actions.append(.context(ContextMenuAction(content: .text(title: chatPresentationInterfaceState.strings.Conversation_ContextMenuReply, accessibilityLabel: chatPresentationInterfaceState.strings.Conversation_ContextMenuReply), action: {
                 interfaceInteraction.setupReplyMessage(messages[0].id)
             })))
         }
@@ -358,7 +358,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         if !messages[0].text.isEmpty || resourceAvailable {
             let message = messages[0]
-            actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy), action: {
+            actions.append(.context(ContextMenuAction(content: .text(title: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, accessibilityLabel: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy), action: {
                 if resourceAvailable {
                     for media in message.media {
                         if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
@@ -489,12 +489,12 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         if data.canSelect {
-            actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuMore), action: {
+            actions.append(.context(ContextMenuAction(content: .text(title: chatPresentationInterfaceState.strings.Conversation_ContextMenuMore, accessibilityLabel: chatPresentationInterfaceState.strings.Conversation_ContextMenuMore.replacingOccurrences(of: "...", with: "")), action: {
                 interfaceInteraction.beginMessageSelection(selectAll ? messages.map { $0.id } : [message.id])
             })))
         }
         if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && isAction {
-            actions.append(.context(ContextMenuAction(content: .text(chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete), action: {
+            actions.append(.context(ContextMenuAction(content: .text(title: chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete, accessibilityLabel: chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete), action: {
                 interfaceInteraction.deleteMessages(messages)
             })))
         }
@@ -542,7 +542,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && !isAction {
-            actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .destructive, title: chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete, action: {
+            let title = message.flags.isSending ? chatPresentationInterfaceState.strings.Conversation_ContextMenuCancelSending : chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete
+            actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .destructive, title: title, action: {
                 interfaceInteraction.deleteMessages(selectAll ? messages : [message])
             })))
         }
@@ -568,6 +569,8 @@ struct ChatAvailableMessageActionOptions: OptionSet {
     static let report = ChatAvailableMessageActionOptions(rawValue: 1 << 3)
     static let viewStickerPack = ChatAvailableMessageActionOptions(rawValue: 1 << 4)
     static let rateCall = ChatAvailableMessageActionOptions(rawValue: 1 << 5)
+    static let cancelSending = ChatAvailableMessageActionOptions(rawValue: 1 << 6)
+    static let unsendPersonal = ChatAvailableMessageActionOptions(rawValue: 1 << 7)
 }
 
 struct ChatAvailableMessageActions {
@@ -581,8 +584,32 @@ private func canPerformEditingActions(limits: LimitsConfiguration, accountPeerId
     }
     
     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-    if message.timestamp + limits.maxMessageEditingInterval > timestamp {
+    if Int64(message.timestamp) + Int64(limits.maxMessageEditingInterval) > Int64(timestamp) {
         return true
+    }
+    
+    return false
+}
+
+private func canPerformDeleteActions(limits: LimitsConfiguration, accountPeerId: PeerId, message: Message) -> Bool {
+    if message.id.peerId == accountPeerId {
+        return true
+    }
+    if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+        return true
+    }
+    
+    if !message.flags.contains(.Incoming) {
+        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+        if message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+            if Int64(message.timestamp) + Int64(limits.maxMessageRevokeIntervalInPrivateChats) > Int64(timestamp) {
+                return true
+            }
+        } else {
+            if message.timestamp + limits.maxMessageRevokeInterval > timestamp {
+                return true
+            }
+        }
     }
     
     return false
@@ -593,6 +620,7 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
         let limitsConfiguration: LimitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
         var optionsMap: [MessageId: ChatAvailableMessageActionOptions] = [:]
         var banPeer: Peer?
+        var hadPersonalIncoming = false
         var hadBanPeerId = false
         for id in messageIds {
             if optionsMap[id] == nil {
@@ -697,9 +725,16 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                             }
                         }
                         optionsMap[id]!.insert(.deleteLocally)
-                        if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message) && !message.flags.contains(.Incoming) {
-                            optionsMap[id]!.insert(.deleteGlobally)
+                        var canDeleteGlobally = false
+                        if canPerformDeleteActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message) {
+                            canDeleteGlobally = true
                         } else if limitsConfiguration.canRemoveIncomingMessagesInPrivateChats {
+                            canDeleteGlobally = true
+                        }
+                        if message.flags.contains(.Incoming) {
+                            hadPersonalIncoming = true
+                        }
+                        if canDeleteGlobally {
                             optionsMap[id]!.insert(.deleteGlobally)
                         }
                         if user.botInfo != nil {
@@ -734,6 +769,9 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
             var reducedOptions = optionsMap.values.first!
             for value in optionsMap.values {
                 reducedOptions.formIntersection(value)
+            }
+            if hadPersonalIncoming && optionsMap.values.contains(where: { $0.contains(.deleteGlobally) }) && !reducedOptions.contains(.deleteGlobally) {
+                reducedOptions.insert(.unsendPersonal)
             }
             return ChatAvailableMessageActions(options: reducedOptions, banAuthor: banPeer)
         } else {

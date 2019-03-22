@@ -84,7 +84,6 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     private let titleNode: ImmediateTextNode
     private let titleLeftIconNode: ASImageNode
     private let titleRightIconNode: ASImageNode
- 
     private let activityNode: ChatTitleActivityNode
     
     private let button: HighlightTrackingButtonNode
@@ -299,11 +298,12 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 switch titleContent {
                     case let .peer(peerView, onlineMemberCount):
                         if let peer = peerViewMainPeer(peerView) {
+                            let servicePeer = isServicePeer(peer)
                             if peer.id == self.account.peerId {
                                 let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                                 state = .info(string, .generic)
                             } else if let user = peer as? TelegramUser {
-                                if user.id.namespace == Namespaces.Peer.CloudUser && user.id.id == 777000 {
+                                if servicePeer {
                                     let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                                     state = .info(string, .generic)
                                 } else if user.flags.contains(.isSupport) {
@@ -461,13 +461,21 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 if highlighted {
                     strongSelf.titleNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.activityNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.titleLeftIconNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.titleRightIconNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.titleNode.alpha = 0.4
                     strongSelf.activityNode.alpha = 0.4
+                    strongSelf.titleLeftIconNode.alpha = 0.4
+                    strongSelf.titleRightIconNode.alpha = 0.4
                 } else {
                     strongSelf.titleNode.alpha = 1.0
                     strongSelf.activityNode.alpha = 1.0
+                    strongSelf.titleLeftIconNode.alpha = 1.0
+                    strongSelf.titleRightIconNode.alpha = 1.0
                     strongSelf.titleNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     strongSelf.activityNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.titleLeftIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.titleRightIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
         }

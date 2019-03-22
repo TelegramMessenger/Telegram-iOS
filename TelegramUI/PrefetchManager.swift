@@ -116,16 +116,8 @@ private final class PrefetchManagerImpl {
                         context.fetchDisposable.set(fetchSignal.start())
                     }
                 } else if case .prefetch = automaticDownload, mediaItem.media.peer.id.namespace != Namespaces.Peer.SecretChat {
-                    if let file = media as? TelegramMediaFile, let fileSize = file.size {
-                        let fetchHeadRange: Range<Int> = 0 ..< 2 * 1024 * 1024
-                        let fetchTailRange: Range<Int> = fileSize - 256 * 1024 ..< Int(Int32.max)
-                        
-                        var ranges = IndexSet()
-                        ranges.insert(integersIn: fetchHeadRange)
-                        ranges.insert(integersIn: fetchTailRange)
-                        
-                        let fetchSignal = messageMediaFileInteractiveFetched(fetchManager: self.fetchManager, messageId: mediaItem.media.index.id, messageReference: MessageReference(peer: mediaItem.media.peer, id: mediaItem.media.index.id, timestamp: mediaItem.media.index.timestamp, incoming: true, secret: false), file: file, ranges: ranges, userInitiated: false, priority: priority)
-                        context.fetchDisposable.set(fetchSignal.start())
+                    if let file = media as? TelegramMediaFile, let _ = file.size {
+                        context.fetchDisposable.set(preloadVideoResource(postbox: self.account.postbox, resourceReference: FileMediaReference.message(message: MessageReference(peer: mediaItem.media.peer, id: mediaItem.media.index.id, timestamp: mediaItem.media.index.timestamp, incoming: true, secret: false), media: file).resourceReference(file.resource), duration: 4.0).start())
                     }
                 }
             }

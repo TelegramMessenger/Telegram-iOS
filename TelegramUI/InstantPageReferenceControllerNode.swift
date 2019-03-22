@@ -10,7 +10,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
     private let theme: InstantPageTheme
     private var presentationData: PresentationData
     private let webPage: TelegramMediaWebpage
-    private let item: InstantPageTextItem
+    private let anchorText: NSAttributedString
 
     private let dimNode: ASDisplayNode
     private let wrappingScrollNode: ASScrollNode
@@ -32,12 +32,12 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
     var dismiss: (() -> Void)?
     var close: (() -> Void)?
     
-    init(context: AccountContext, theme: InstantPageTheme, webPage: TelegramMediaWebpage, item: InstantPageTextItem, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlIn: @escaping (InstantPageUrlItem) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, theme: InstantPageTheme, webPage: TelegramMediaWebpage, anchorText: NSAttributedString, openUrl: @escaping (InstantPageUrlItem) -> Void, openUrlIn: @escaping (InstantPageUrlItem) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.theme = theme
         self.webPage = webPage
-        self.item = item
+        self.anchorText = anchorText
         self.openUrl = openUrl
         self.openUrlIn = openUrlIn
         self.present = present
@@ -195,7 +195,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
             }
             
             let sideInset: CGFloat = 16.0
-            let (_, items, contentSize) = layoutTextItemWithString(self.item.attributedString, boundingWidth: width - sideInset * 2.0, offset: CGPoint(x: sideInset, y: sideInset), media: media, webpage: self.webPage)
+            let (_, items, contentSize) = layoutTextItemWithString(self.anchorText, boundingWidth: width - sideInset * 2.0, offset: CGPoint(x: sideInset, y: sideInset), media: media, webpage: self.webPage)
             let contentNode = InstantPageContentNode(context: self.context, strings: self.presentationData.strings, theme: self.theme, items: items, contentSize: CGSize(width: width, height: contentSize.height), inOverlayPanel: true, openMedia: { _ in }, longPressMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in })
             transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: titleAreaHeight), size: CGSize(width: width, height: contentSize.height)))
             self.contentContainerNode.insertSubnode(contentNode, at: 0)
@@ -403,9 +403,9 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
                 coveringRect = coveringRect.union(rects[i])
             }
             
-            let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(self.presentationData.strings.Conversation_ContextMenuCopy), action: {
+            let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
                 UIPasteboard.general.string = text
-            }), ContextMenuAction(content: .text(self.presentationData.strings.Conversation_ContextMenuShare), action: { [weak self] in
+            }), ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuShare, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuShare), action: { [weak self] in
                 if let strongSelf = self, case let .Loaded(content) = strongSelf.webPage.content {
                     strongSelf.present(ShareController(context: strongSelf.context, subject: .quote(text: text, url: content.url)), nil)
                 }

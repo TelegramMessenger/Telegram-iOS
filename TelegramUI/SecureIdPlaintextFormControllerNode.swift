@@ -783,7 +783,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                                     case .invalid:
                                         errorText = strongSelf.strings.Login_InvalidCodeError
                                 }
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
+                                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
                             }
                         }))
                         
@@ -834,7 +834,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                         case .flood:
                             errorText = strongSelf.strings.Login_CodeFloodError
                         }
-                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
                     }
             }))
     }
@@ -895,7 +895,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                     case .flood:
                         errorText = strongSelf.strings.Login_CodeFloodError
                 }
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
+                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
             }))
         }))
     }
@@ -944,7 +944,7 @@ final class SecureIdPlaintextFormControllerNode: FormControllerNode<SecureIdPlai
                 case .invalid:
                     errorText = strongSelf.strings.Login_InvalidCodeError
                 }
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.theme), title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
+                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.strings.Common_OK, action: {})]), nil)
             }
         }))
     }

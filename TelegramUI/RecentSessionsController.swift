@@ -609,67 +609,67 @@ public func recentSessionsController(context: AccountContext) -> ViewController 
     let previousMode = Atomic<RecentSessionsMode>(value: .sessions)
     
     let signal = combineLatest(context.sharedContext.presentationData, mode.get(), statePromise.get(), sessionsPromise.get(), websitesPromise.get())
-        |> deliverOnMainQueue
-        |> map { presentationData, mode, state, sessions, websitesAndPeers -> (ItemListControllerState, (ItemListNodeState<RecentSessionsEntry>, RecentSessionsEntry.ItemGenerationArguments)) in
-            var rightNavigationButton: ItemListNavigationButton?
-            let websites = websitesAndPeers?.0
-            let peers = websitesAndPeers?.1
-            
-            if let sessions = sessions, sessions.count > 1 {
-                if state.terminatingOtherSessions {
-                    rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
-                } else if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                        updateState { state in
-                            return state.withUpdatedEditing(false)
-                        }
-                    })
-                } else {
-                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
-                        updateState { state in
-                            return state.withUpdatedEditing(true)
-                        }
-                    })
-                }
-            }
-            
-            var emptyStateItem: ItemListControllerEmptyStateItem?
-            if sessions == nil {
-                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
-            } else if let sessions = sessions, sessions.count == 1 {
-                emptyStateItem = RecentSessionsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
-            }
-            
-            let title: ItemListControllerTitle
-            let entries: [RecentSessionsEntry]
-            if let websites = websites, !websites.isEmpty {
-                title = .sectionControl([presentationData.strings.AuthSessions_Sessions, presentationData.strings.AuthSessions_LoggedIn], mode.rawValue)
+    |> deliverOnMainQueue
+    |> map { presentationData, mode, state, sessions, websitesAndPeers -> (ItemListControllerState, (ItemListNodeState<RecentSessionsEntry>, RecentSessionsEntry.ItemGenerationArguments)) in
+        var rightNavigationButton: ItemListNavigationButton?
+        let websites = websitesAndPeers?.0
+        let peers = websitesAndPeers?.1
+        
+        if let sessions = sessions, sessions.count > 1 {
+            if state.terminatingOtherSessions {
+                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
+            } else if state.editing {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+                    updateState { state in
+                        return state.withUpdatedEditing(false)
+                    }
+                })
             } else {
-                title = .text(presentationData.strings.AuthSessions_Title)
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
+                    updateState { state in
+                        return state.withUpdatedEditing(true)
+                    }
+                })
             }
-            
-            var animateChanges = true
-            switch (mode, websites, peers) {
-                case (.websites, let websites, let peers):
-                    entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, websites: websites, peers: peers)
-                default:
-                    entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, sessions: sessions)
-            }
-            
-            let previousMode = previousMode.swap(mode)
-            var crossfadeState = false
-            
-            if previousMode != mode {
-                crossfadeState = true
-                animateChanges = false
-            }
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: title, leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-            let listState = ItemListNodeState(entries: entries, style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: crossfadeState, animateChanges: animateChanges)
-            
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+        }
+        
+        var emptyStateItem: ItemListControllerEmptyStateItem?
+        if sessions == nil {
+            emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
+        } else if let sessions = sessions, sessions.count == 1 {
+            emptyStateItem = RecentSessionsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
+        }
+        
+        let title: ItemListControllerTitle
+        let entries: [RecentSessionsEntry]
+        if let websites = websites, !websites.isEmpty {
+            title = .sectionControl([presentationData.strings.AuthSessions_Sessions, presentationData.strings.AuthSessions_LoggedIn], mode.rawValue)
+        } else {
+            title = .text(presentationData.strings.AuthSessions_Title)
+        }
+        
+        var animateChanges = true
+        switch (mode, websites, peers) {
+            case (.websites, let websites, let peers):
+                entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, websites: websites, peers: peers)
+            default:
+                entries = recentSessionsControllerEntries(presentationData: presentationData, state: state, sessions: sessions)
+        }
+        
+        let previousMode = previousMode.swap(mode)
+        var crossfadeState = false
+        
+        if previousMode != mode {
+            crossfadeState = true
+            animateChanges = false
+        }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: title, leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        let listState = ItemListNodeState(entries: entries, style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: crossfadeState, animateChanges: animateChanges, userInteractionEnabled: emptyStateItem == nil)
+        
+        return (controllerState, (listState, arguments))
+    } |> afterDisposed {
+        actionsDisposable.dispose()
     }
     
     let controller = ItemListController(context: context, state: signal)

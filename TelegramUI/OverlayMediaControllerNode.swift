@@ -146,7 +146,7 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
         
         let currentPosition = result
         
-        let TGVideoMessagePIPAngleEpsilon: CGFloat = 30.0
+        let angleEpsilon: CGFloat = 30.0
         var shouldHide = false
         
         if (velocity.x * velocity.x + velocity.y * velocity.y) >= 500.0 * 500.0 {
@@ -159,84 +159,74 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
             }
             
             if currentPosition.x.isZero && currentPosition.y.isZero {
-                if ((angle > 0 && angle < 90 - TGVideoMessagePIPAngleEpsilon) || angle > 360 - TGVideoMessagePIPAngleEpsilon)
-                {
+                if ((angle > 0 && angle < 90 - angleEpsilon) || angle > 360 - angleEpsilon) {
                     result.x = 1.0
                     result.y = 0.0
-                } else if (angle > 180 + TGVideoMessagePIPAngleEpsilon && angle < 270 + TGVideoMessagePIPAngleEpsilon)
-                {
+                } else if (angle > 180 + angleEpsilon && angle < 270 + angleEpsilon) {
                     result.x = 0.0
                     result.y = 1.0
-                } else if (angle > 270 + TGVideoMessagePIPAngleEpsilon && angle < 360 - TGVideoMessagePIPAngleEpsilon) {
+                } else if (angle > 270 + angleEpsilon && angle < 360 - angleEpsilon) {
                     result.x = 1.0
                     result.y = 1.0
                 } else {
                     shouldHide = true
                 }
             } else if !currentPosition.x.isZero && currentPosition.y.isZero {
-                if (angle > 90 + TGVideoMessagePIPAngleEpsilon && angle < 180 + TGVideoMessagePIPAngleEpsilon)
-                {
+                if (angle > 90 + angleEpsilon && angle < 180 + angleEpsilon) {
                     result.x = 0.0
                     result.y = 0.0
                 }
-                else if (angle > 270 - TGVideoMessagePIPAngleEpsilon && angle < 360 - TGVideoMessagePIPAngleEpsilon)
-                {
+                else if (angle > 270 - angleEpsilon && angle < 360 - angleEpsilon) {
                     result.x = 1.0
                     result.y = 1.0
                 }
-                else if (angle > 180 + TGVideoMessagePIPAngleEpsilon && angle < 270 - TGVideoMessagePIPAngleEpsilon)
-                {
+                else if (angle > 180 + angleEpsilon && angle < 270 - angleEpsilon) {
                     result.x = 0.0
                     result.y = 1.0
                 }
-                else
-                {
+                else {
                     shouldHide = true
                 }
             } else if currentPosition.x.isZero && !currentPosition.y.isZero {
-                if (angle > 90 - TGVideoMessagePIPAngleEpsilon && angle < 180 - TGVideoMessagePIPAngleEpsilon)
-                {
+                if (angle > 90 - angleEpsilon && angle < 180 - angleEpsilon) {
                     result.x = 0.0
                     result.y = 0.0
                 }
-                else if (angle < TGVideoMessagePIPAngleEpsilon || angle > 270 + TGVideoMessagePIPAngleEpsilon)
-                {
+                else if (angle < angleEpsilon || angle > 270 + angleEpsilon) {
                     result.x = 1.0
                     result.y = 1.0
                 }
-                else if (angle > TGVideoMessagePIPAngleEpsilon && angle < 90 - TGVideoMessagePIPAngleEpsilon)
-                {
+                else if (angle > angleEpsilon && angle < 90 - angleEpsilon) {
                     result.x = 1.0
                     result.y = 0.0
                 }
-                else if (!shouldHide)
-                {
+                else if (!shouldHide) {
                     shouldHide = true
                 }
             } else if !currentPosition.x.isZero && !currentPosition.y.isZero {
-                if (angle > TGVideoMessagePIPAngleEpsilon && angle < 90 + TGVideoMessagePIPAngleEpsilon)
-                {
+                if (angle > angleEpsilon && angle < 90 + angleEpsilon) {
                     result.x = 1.0
                     result.y = 0.0
                 }
-                else if (angle > 180 - TGVideoMessagePIPAngleEpsilon && angle < 270 - TGVideoMessagePIPAngleEpsilon)
-                {
+                else if (angle > 180 - angleEpsilon && angle < 270 - angleEpsilon) {
                     result.x = 0.0
                     result.y = 1.0
                 }
-                else if (angle > 90 + TGVideoMessagePIPAngleEpsilon && angle < 180 - TGVideoMessagePIPAngleEpsilon)
-                {
+                else if (angle > 90 + angleEpsilon && angle < 180 - angleEpsilon) {
                     result.x = 0.0
                     result.y = 0.0
                 }
-                else if (!shouldHide)
-                {
+                else if (!shouldHide) {
                     shouldHide = true
                 }
             }
         }
         
         return (result, shouldHide)
+    }
+    
+    var hasNodes: Bool {
+        return !self.videoNodes.isEmpty
     }
     
     func addNode(_ node: OverlayMediaItemNode, customTransition: Bool) {

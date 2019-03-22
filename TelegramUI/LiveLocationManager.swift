@@ -235,7 +235,7 @@ public final class LiveLocationManager {
                     transaction.updateMessage(id, update: { currentMessage in
                         var storeForwardInfo: StoreMessageForwardInfo?
                         if let forwardInfo = currentMessage.forwardInfo {
-                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
                         }
                         var updatedMedia = currentMessage.media
                         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
