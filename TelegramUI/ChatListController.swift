@@ -391,7 +391,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 }
                 
                 if let user = chatPeer as? TelegramUser, user.botInfo == nil, canRemoveGlobally {
-                    strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in })
+                    strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in }, removed: {})
                 } else {
                     let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                     var items: [ActionSheetItem] = []
@@ -411,6 +411,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         }
                     } else if let user = chatPeer as? TelegramUser, user.botInfo != nil {
                         canStop = !user.flags.contains(.isSupport)
+                        canClear = user.botInfo == nil
                         deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
                     } else if let _ = chatPeer as? TelegramSecretChat {
                         deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
@@ -502,7 +503,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                             return
                         }
                         
-                        strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in })
+                        strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in }, removed: {})
                     }))
             
                     if canStop {
@@ -510,11 +511,13 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                             actionSheet?.dismissAnimated()
                             
                             if let strongSelf = self {
-                                strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
-                                let _ = removePeerChat(account: strongSelf.context.account, peerId: peerId, reportChatSpam: false).start(completed: {
-                                    self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+                                strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in
+                                }, removed: {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    let _ = requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.peerId, isBlocked: true).start()
                                 })
-                                let _ = requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.peerId, isBlocked: true).start()
                             }
                         }))
                     }
@@ -1193,7 +1196,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         }
     }
     
-    func maybeAskForPeerChatRemoval(peer: RenderedPeer, deleteGloballyIfPossible: Bool = false, completion: @escaping (Bool) -> Void) {
+    func maybeAskForPeerChatRemoval(peer: RenderedPeer, deleteGloballyIfPossible: Bool = false, completion: @escaping (Bool) -> Void, removed: @escaping () -> Void) {
         guard let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
             completion(false)
             return
@@ -1205,6 +1208,9 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 canRemoveGlobally = true
             }
         }
+        if let user = chatPeer as? TelegramUser, user.botInfo != nil {
+            canRemoveGlobally = false
+        }
         
         if canRemoveGlobally {
             let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
@@ -1213,12 +1219,16 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: mainPeer, chatPeer: chatPeer, action: .delete, strings: self.presentationData.strings))
             items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak self, weak actionSheet] in
                 actionSheet?.dismissAnimated()
-                self?.schedulePeerChatRemoval(peer: peer, type: .forLocalPeer, deleteGloballyIfPossible: deleteGloballyIfPossible)
+                self?.schedulePeerChatRemoval(peer: peer, type: .forLocalPeer, deleteGloballyIfPossible: deleteGloballyIfPossible, completion: {
+                    removed()
+                })
                 completion(true)
             }))
             items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)).0, color: .destructive, action: { [weak self, weak actionSheet] in
                 actionSheet?.dismissAnimated()
-                self?.schedulePeerChatRemoval(peer: peer, type: .forEveryone, deleteGloballyIfPossible: deleteGloballyIfPossible)
+                self?.schedulePeerChatRemoval(peer: peer, type: .forEveryone, deleteGloballyIfPossible: deleteGloballyIfPossible, completion: {
+                    removed()
+                })
                 completion(true)
             }))
             
@@ -1234,11 +1244,13 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             self.present(actionSheet, in: .window(.root))
         } else {
             completion(true)
-            self.schedulePeerChatRemoval(peer: peer, type: .forLocalPeer, deleteGloballyIfPossible: deleteGloballyIfPossible)
+            self.schedulePeerChatRemoval(peer: peer, type: .forLocalPeer, deleteGloballyIfPossible: deleteGloballyIfPossible, completion: {
+                removed()
+            })
         }
     }
     
-    private func schedulePeerChatRemoval(peer: RenderedPeer, type: InteractiveMessagesDeletionType, deleteGloballyIfPossible: Bool) {
+    private func schedulePeerChatRemoval(peer: RenderedPeer, type: InteractiveMessagesDeletionType, deleteGloballyIfPossible: Bool, completion: @escaping () -> Void) {
         guard let chatPeer = peer.peers[peer.peerId] else {
             return
         }
@@ -1299,6 +1311,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     })
                     self?.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
                 })
+                completion()
             } else {
                 strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
                 strongSelf.chatListDisplayNode.chatListNode.updateState({ state in

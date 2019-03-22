@@ -3884,6 +3884,9 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             canRemoveGlobally = true
                         }
                     }
+                    if let user = chatPeer as? TelegramUser, user.botInfo != nil {
+                        canRemoveGlobally = false
+                    }
                     
                     let account = self.context.account
                     

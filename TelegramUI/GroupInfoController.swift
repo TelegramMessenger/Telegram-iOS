@@ -2102,6 +2102,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     if removed {
                         navigationController?.popToRoot(animated: true)
                     }
+                }, removed: {
                 })
                 break
             }
