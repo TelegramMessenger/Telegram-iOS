@@ -96,6 +96,11 @@ public enum ListViewVisibleContentOffset {
     case none
 }
 
+public enum ListViewScrollDirection {
+    case up
+    case down
+}
+
 public struct ListViewKeepTopItemOverscrollBackground {
     public let color: UIColor
     public let direction: Bool
@@ -3825,7 +3830,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
-    public func scrollWithDirection(_ direction: UIAccessibilityScrollDirection) -> Bool {
+    public func scrollWithDirection(_ direction: ListViewScrollDirection, distance: CGFloat) -> Bool {
         var accessibilityFocusedNode: (ASDisplayNode, CGRect)?
         for itemNode in self.itemNodes {
             if findAccessibilityFocus(itemNode) {
@@ -3833,12 +3838,11 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 break
             }
         }
-        let scrollDistance = floor((self.visibleSize.height - self.insets.top - self.insets.bottom) / 2.0)
         let initialOffset = self.scroller.contentOffset
         switch direction {
             case .up:
                 var contentOffset = initialOffset
-                contentOffset.y -= scrollDistance
+                contentOffset.y -= distance
                 contentOffset.y = max(self.scroller.contentInset.top, contentOffset.y)
                 if contentOffset.y < initialOffset.y {
                     self.ignoreScrollingEvents = true
@@ -3850,7 +3854,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 }
             case .down:
                 var contentOffset = initialOffset
-                contentOffset.y += scrollDistance
+                contentOffset.y += distance
                 contentOffset.y = max(self.scroller.contentInset.top, min(contentOffset.y, self.scroller.contentSize.height - self.visibleSize.height - self.insets.bottom - self.insets.top))
                 if contentOffset.y > initialOffset.y {
                     self.ignoreScrollingEvents = true
@@ -3860,8 +3864,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 } else {
                     return false
                 }
-            default:
-                return false
         }
         if let (_, frame) = accessibilityFocusedNode {
             for itemNode in self.itemNodes {
@@ -3879,7 +3881,15 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     override open func accessibilityScroll(_ direction: UIAccessibilityScrollDirection) -> Bool {
-        return self.scrollWithDirection(direction)
+        let distance = floor((self.visibleSize.height - self.insets.top - self.insets.bottom) / 2.0)
+        let scrollDirection: ListViewScrollDirection
+        switch direction {
+            case .down:
+                scrollDirection = .down
+            default:
+                scrollDirection = .up
+        }
+        return self.scrollWithDirection(scrollDirection, distance: distance)
     }
 }
 
