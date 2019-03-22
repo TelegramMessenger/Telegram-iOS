@@ -1000,8 +1000,6 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration) 
             //debugRestoreState(basePath: basePath, name: "previous1")
             #endif
             
-            var debugFirstTime = true
-            
             loop: while true {
                 let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue)
                 
@@ -1010,11 +1008,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration) 
                 let userVersion: Int32? = metadataTable.userVersion()
                 let currentUserVersion: Int32 = 19
                 
-                if var userVersion = userVersion {
-                    /*if debugFirstTime {
-                        debugFirstTime = false
-                        userVersion = 18
-                    }*/
+                if let userVersion = userVersion {
                     if userVersion != currentUserVersion {
                         if userVersion > currentUserVersion {
                             postboxLog("Version \(userVersion) is newer than supported")
