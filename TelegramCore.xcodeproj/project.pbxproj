@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		0900555621E4A96E0030924C /* Wallpaper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0900555521E4A96D0030924C /* Wallpaper.swift */; };
 		09028386218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */; };
+		093857A82243D87900EB6A54 /* ManagedSynchronizeEmojiKeywordsOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093857A62243D87800EB6A54 /* ManagedSynchronizeEmojiKeywordsOperations.swift */; };
+		093857A92243D87900EB6A54 /* SynchronizeEmojiKeywordsOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093857A72243D87900EB6A54 /* SynchronizeEmojiKeywordsOperation.swift */; };
+		093857AB2243D88D00EB6A54 /* EmojiKeywords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093857AA2243D88C00EB6A54 /* EmojiKeywords.swift */; };
 		0962E66721B59BAA00245FD9 /* ManagedAppConfigurationUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66621B59BAA00245FD9 /* ManagedAppConfigurationUpdates.swift */; };
 		0962E66921B5A11100245FD9 /* SynchronizeAppLogEventsOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66821B5A11100245FD9 /* SynchronizeAppLogEventsOperation.swift */; };
 		0962E66B21B5A41C00245FD9 /* ManagedSynchronizeAppLogEventsOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66A21B5A41C00245FD9 /* ManagedSynchronizeAppLogEventsOperations.swift */; };
@@ -16,7 +19,6 @@
 		0962E66F21B6147600245FD9 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66E21B6147600245FD9 /* AppConfiguration.swift */; };
 		0962E67521B6437600245FD9 /* SplitTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E67421B6437600245FD9 /* SplitTest.swift */; };
 		0962E68121BAA20E00245FD9 /* SearchBotsConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E68021BAA20E00245FD9 /* SearchBotsConfiguration.swift */; };
-		09E4A80F223F1FBF0038140F /* EmojiKeywords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A80E223F1FBF0038140F /* EmojiKeywords.swift */; };
 		09EDAD382213120C0012A50B /* AutodownloadSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD372213120C0012A50B /* AutodownloadSettings.swift */; };
 		09EDAD3A22131D010012A50B /* ManagedAutodownloadSettingsUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD3922131D010012A50B /* ManagedAutodownloadSettingsUpdates.swift */; };
 		9F06831021A40DEC001D8EDB /* NotificationExceptionsList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */; };
@@ -24,7 +26,6 @@
 		9F10CE8B20613C78002DD61A /* SecretApiLayer73.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018EDFF2044939F00CBB130 /* SecretApiLayer73.swift */; };
 		9F10CE8C20613CDB002DD61A /* TelegramDeviceContactImportInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F7732052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift */; };
 		9F153D1021E8E0A200B95D82 /* Wallpaper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0900555521E4A96D0030924C /* Wallpaper.swift */; };
-		9F1BC1A6223FD53F00F21815 /* EmojiKeywords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E4A80E223F1FBF0038140F /* EmojiKeywords.swift */; };
 		9F4EEF9B21DCF66F002C3B33 /* JSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66C21B5C56F00245FD9 /* JSON.swift */; };
 		9F4EEF9C21DCF66F002C3B33 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66E21B6147600245FD9 /* AppConfiguration.swift */; };
 		9F4EEF9D21DCF66F002C3B33 /* SearchBotsConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E68021BAA20E00245FD9 /* SearchBotsConfiguration.swift */; };
@@ -812,6 +813,9 @@
 /* Begin PBXFileReference section */
 		0900555521E4A96D0030924C /* Wallpaper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Wallpaper.swift; sourceTree = "<group>"; };
 		09028385218E5DBB0067EFBD /* ManagedVoipConfigurationUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedVoipConfigurationUpdates.swift; sourceTree = "<group>"; };
+		093857A62243D87800EB6A54 /* ManagedSynchronizeEmojiKeywordsOperations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeEmojiKeywordsOperations.swift; sourceTree = "<group>"; };
+		093857A72243D87900EB6A54 /* SynchronizeEmojiKeywordsOperation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizeEmojiKeywordsOperation.swift; sourceTree = "<group>"; };
+		093857AA2243D88C00EB6A54 /* EmojiKeywords.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EmojiKeywords.swift; sourceTree = "<group>"; };
 		0962E66621B59BAA00245FD9 /* ManagedAppConfigurationUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAppConfigurationUpdates.swift; sourceTree = "<group>"; };
 		0962E66821B5A11100245FD9 /* SynchronizeAppLogEventsOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynchronizeAppLogEventsOperation.swift; sourceTree = "<group>"; };
 		0962E66A21B5A41C00245FD9 /* ManagedSynchronizeAppLogEventsOperations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizeAppLogEventsOperations.swift; sourceTree = "<group>"; };
@@ -819,7 +823,6 @@
 		0962E66E21B6147600245FD9 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
 		0962E67421B6437600245FD9 /* SplitTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitTest.swift; sourceTree = "<group>"; };
 		0962E68021BAA20E00245FD9 /* SearchBotsConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBotsConfiguration.swift; sourceTree = "<group>"; };
-		09E4A80E223F1FBF0038140F /* EmojiKeywords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiKeywords.swift; sourceTree = "<group>"; };
 		09EDAD372213120C0012A50B /* AutodownloadSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadSettings.swift; sourceTree = "<group>"; };
 		09EDAD3922131D010012A50B /* ManagedAutodownloadSettingsUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAutodownloadSettingsUpdates.swift; sourceTree = "<group>"; };
 		9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationExceptionsList.swift; sourceTree = "<group>"; };
@@ -1564,6 +1567,8 @@
 				0962E66821B5A11100245FD9 /* SynchronizeAppLogEventsOperation.swift */,
 				0962E66A21B5A41C00245FD9 /* ManagedSynchronizeAppLogEventsOperations.swift */,
 				09EDAD3922131D010012A50B /* ManagedAutodownloadSettingsUpdates.swift */,
+				093857A72243D87900EB6A54 /* SynchronizeEmojiKeywordsOperation.swift */,
+				093857A62243D87800EB6A54 /* ManagedSynchronizeEmojiKeywordsOperations.swift */,
 			);
 			name = State;
 			sourceTree = "<group>";
@@ -1768,7 +1773,7 @@
 				D08CAA831ED8164B0000FDA8 /* Localization.swift */,
 				D08CAA861ED81DD40000FDA8 /* LocalizationInfo.swift */,
 				D05D8B362192F8AF0064586F /* LocalizationListState.swift */,
-				09E4A80E223F1FBF0038140F /* EmojiKeywords.swift */,
+				093857AA2243D88C00EB6A54 /* EmojiKeywords.swift */,
 			);
 			name = Localization;
 			sourceTree = "<group>";
@@ -2325,7 +2330,6 @@
 				D00D34421E6EDD2E0057B307 /* ManagedSynchronizeConsumeMessageContentsOperations.swift in Sources */,
 				D08984FB2118816A00918162 /* Reachability.m in Sources */,
 				D0DA1D321F7043D50034E892 /* ManagedPendingPeerNotificationSettings.swift in Sources */,
-				09E4A80F223F1FBF0038140F /* EmojiKeywords.swift in Sources */,
 				D099D7491EEF418D00A3128C /* HistoryViewChannelStateValidation.swift in Sources */,
 				C23BC3871E9BE3CA00D79F92 /* ImportContact.swift in Sources */,
 				D00422D321677F4500719B67 /* ManagedAccountPresence.swift in Sources */,
@@ -2469,10 +2473,12 @@
 				D0467D0B20D7F1E60055C28F /* SynchronizeMarkAllUnseenPersonalMessagesOperation.swift in Sources */,
 				D0613FCA1E60440600202CDB /* InvitationLinks.swift in Sources */,
 				D03B0D721D631ABA00955575 /* SearchMessages.swift in Sources */,
+				093857A92243D87900EB6A54 /* SynchronizeEmojiKeywordsOperation.swift in Sources */,
 				D0DC35501DE36900000195EB /* ChatContextResult.swift in Sources */,
 				D00580AE21E2A08900CB7CD3 /* AccountEnvironmentAttribute.swift in Sources */,
 				D00D34391E6EC9520057B307 /* TeleramMediaUnsupported.swift in Sources */,
 				D00D97CA1E32917C00E5C2B6 /* PeerInputActivityManager.swift in Sources */,
+				093857AB2243D88D00EB6A54 /* EmojiKeywords.swift in Sources */,
 				C2FD33E11E680E9E008D13D4 /* RequestUserPhotos.swift in Sources */,
 				D0177B7B1DF8A16C00A5083A /* SecretChatState.swift in Sources */,
 				D0AAD1AA1E32638500D5B9DE /* ApplyMaxReadIndexInteractively.swift in Sources */,
@@ -2496,6 +2502,7 @@
 				D03B0D5D1D631A6900955575 /* MultipartFetch.swift in Sources */,
 				D058E0D11E8AD65C00A442DE /* StandaloneSendMessage.swift in Sources */,
 				D0BC38751E40A7F70044D6FE /* RemovePeerChat.swift in Sources */,
+				093857A82243D87900EB6A54 /* ManagedSynchronizeEmojiKeywordsOperations.swift in Sources */,
 				D09F9DC820767D2C00DB4DE1 /* Api3.swift in Sources */,
 				D0529D2721A4141800D7C3C4 /* ManagedSynchronizeRecentlyUsedMediaOperations.swift in Sources */,
 				D0AB0B961D662F0B002C78E7 /* ManagedChatListHoles.swift in Sources */,
@@ -2579,7 +2586,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9F1BC1A6223FD53F00F21815 /* EmojiKeywords.swift in Sources */,
 				9F7D42262223FF49007B68BB /* AutodownloadSettings.swift in Sources */,
 				9F7D42272223FF49007B68BB /* ManagedAutodownloadSettingsUpdates.swift in Sources */,
 				9F153D1021E8E0A200B95D82 /* Wallpaper.swift in Sources */,

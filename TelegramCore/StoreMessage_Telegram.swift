@@ -507,9 +507,7 @@ extension StoreMessage {
                     var noEntities = false
                     loop: for media in medias {
                         switch media {
-                            case _ as TelegramMediaImage,
-                                 _ as TelegramMediaFile,
-                                 _ as TelegramMediaContact,
+                            case _ as TelegramMediaContact,
                                  _ as TelegramMediaMap:
                                 noEntities = true
                             break loop

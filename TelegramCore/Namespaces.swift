@@ -41,7 +41,7 @@ public struct Namespaces {
     public struct ItemCollection {
         public static let CloudStickerPacks: Int32 = 0
         public static let CloudMaskPacks: Int32 = 1
-        public static let CloudRecentStickers: Int32 = 2
+        public static let EmojiKeywords: Int32 = 2
     }
     
     public struct OrderedItemList {
@@ -130,6 +130,7 @@ public struct OperationLogTags {
     static let SynchronizeMarkAllUnseenPersonalMessages = PeerOperationLogTag(value: 16)
     static let SynchronizeRecentlyUsedStickers = PeerOperationLogTag(value: 17)
     static let SynchronizeAppLogEvents = PeerOperationLogTag(value: 18)
+    static let SynchronizeEmojiKeywords = PeerOperationLogTag(value: 19)
 }
 
 public extension PeerSummaryCounterTags {
@@ -252,7 +253,6 @@ private enum SharedDataKeyValues: Int32 {
     case localizationSettings = 3
     case proxySettings = 4
     case autodownloadSettings = 5
-    case emojiKeywords = 6
 }
 
 public struct SharedDataKeys {
@@ -283,12 +283,6 @@ public struct SharedDataKeys {
     public static let autodownloadSettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: SharedDataKeyValues.autodownloadSettings.rawValue)
-        return key
-    }()
-    
-    public static let emojiKeywords: ValueBoxKey = {
-        let key = ValueBoxKey(length: 4)
-        key.setInt32(0, value: SharedDataKeyValues.emojiKeywords.rawValue)
         return key
     }()
 }
