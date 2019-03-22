@@ -3913,12 +3913,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         
                     if canRemoveGlobally {
                         items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory, strings: self.presentationData.strings))
-                        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
-                            beginClear(.forLocalPeer)
+                        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).0, color: .destructive, action: { [weak actionSheet] in
+                            beginClear(.forEveryone)
                             actionSheet?.dismissAnimated()
                         }))
-                        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)).0, color: .destructive, action: { [weak actionSheet] in
-                            beginClear(.forEveryone)
+                        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
+                            beginClear(.forLocalPeer)
                             actionSheet?.dismissAnimated()
                         }))
                     } else {
