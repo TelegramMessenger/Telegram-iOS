@@ -399,6 +399,8 @@ public class LegacyController: ViewController, PresentableController {
         self.legacyController.viewWillDisappear(animated && passControllerAppearanceAnimated(in: false, presentation: self.presentation))
     }
     
+    private var viewDidAppearProcessed = false
+    
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         self.enableContainerLayoutUpdates = true
@@ -413,6 +415,11 @@ public class LegacyController: ViewController, PresentableController {
     }
     
     private func viewDidAppear(animated: Bool, completion: @escaping () -> Void) {
+        if self.viewDidAppearProcessed {
+            completion()
+            return
+        }
+        self.viewDidAppearProcessed = true
         switch self.presentation {
             case let .modal(animateIn):
                 if animateIn {
@@ -434,6 +441,7 @@ public class LegacyController: ViewController, PresentableController {
     
     override public func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
+        self.viewDidAppearProcessed = false
         
         if self.ignoreAppearanceMethodInvocations() {
             return
