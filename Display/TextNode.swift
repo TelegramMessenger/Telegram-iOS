@@ -125,6 +125,50 @@ public final class TextNodeLayout: NSObject {
         self.hasRTL = hasRTL
     }
     
+    public func areLinesEqual(to other: TextNodeLayout) -> Bool {
+        if self.lines.count != other.lines.count {
+            return false
+        }
+        for i in 0 ..< self.lines.count {
+            if !self.lines[i].frame.equalTo(other.lines[i].frame) {
+                return false
+            }
+            if self.lines[i].isRTL != other.lines[i].isRTL {
+                return false
+            }
+            if self.lines[i].range != other.lines[i].range {
+                return false
+            }
+            let lhsRuns = CTLineGetGlyphRuns(self.lines[i].line) as NSArray
+            let rhsRuns = CTLineGetGlyphRuns(other.lines[i].line) as NSArray
+            
+            if lhsRuns.count != rhsRuns.count {
+                return false
+            }
+            
+            for j in 0 ..< lhsRuns.count {
+                let lhsRun = lhsRuns[j] as! CTRun
+                let rhsRun = rhsRuns[j] as! CTRun
+                let lhsGlyphCount = CTRunGetGlyphCount(lhsRun)
+                let rhsGlyphCount = CTRunGetGlyphCount(rhsRun)
+                if lhsGlyphCount != rhsGlyphCount {
+                    return false
+                }
+                
+                for k in 0 ..< lhsGlyphCount {
+                    var lhsGlyph = CGGlyph()
+                    var rhsGlyph = CGGlyph()
+                    CTRunGetGlyphs(lhsRun, CFRangeMake(k, 1), &lhsGlyph)
+                    CTRunGetGlyphs(rhsRun, CFRangeMake(k, 1), &rhsGlyph)
+                    if lhsGlyph != rhsGlyph {
+                        return false
+                    }
+                }
+            }
+        }
+        return true
+    }
+    
     public var numberOfLines: Int {
         return self.lines.count
     }
