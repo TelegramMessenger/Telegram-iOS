@@ -527,10 +527,11 @@ public final class Transaction {
         return nil
     }
     
-    public func searchItemCollection(namespace: ItemCollectionId.Namespace, key: MemoryBuffer) -> [ItemCollectionItem] {
+    
+    public func searchItemCollection(namespace: ItemCollectionId.Namespace, query: ItemCollectionSearchQuery) -> [ItemCollectionItem] {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            let itemsByCollectionId = postbox.itemCollectionItemTable.exactIndexedItems(namespace: namespace, key: ValueBoxKey(key))
+            let itemsByCollectionId = postbox.itemCollectionItemTable.searchIndexedItems(namespace: namespace, query: query)
             let infoIds = postbox.itemCollectionInfoTable.getIds(namespace: namespace)
             var infoIndices: [ItemCollectionId: Int] = [:]
             for i in 0 ..< infoIds.count {
