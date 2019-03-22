@@ -1016,6 +1016,17 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         return result
     }
     
+    public func latestMessageInCurrentHistoryView() -> Message? {
+        if let historyView = self.historyView {
+            if historyView.originalView.laterId == nil, let firstEntry = historyView.filteredEntries.last {
+                if case let .MessageEntry(message, _, _, _, _, _) = firstEntry {
+                    return message
+                }
+            }
+        }
+        return nil
+    }
+    
     public func messageInCurrentHistoryView(_ id: MessageId) -> Message? {
         if let historyView = self.historyView {
             for entry in historyView.filteredEntries {
