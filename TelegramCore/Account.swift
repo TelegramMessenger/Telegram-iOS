@@ -244,7 +244,12 @@ let telegramPostboxSeedConfiguration: SeedConfiguration = {
         ]
     }
     
-    return SeedConfiguration(initializeChatListWithHole: (topLevel: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: Int32.max - 1)), groups: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))), messageHoles: messageHoles, messageTagsWithSummary: MessageTags.unseenPersonalMessage, existingGlobalMessageTags: GlobalMessageTags.all, peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat], peerSummaryCounterTags: { peer in
+    var globalMessageIdsPeerIdNamespaces = Set<GlobalMessageIdsNamespace>()
+    for peerIdNamespace in [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup] {
+        globalMessageIdsPeerIdNamespaces.insert(GlobalMessageIdsNamespace(peerIdNamespace: peerIdNamespace, messageIdNamespace: Namespaces.Message.Cloud))
+    }
+    
+    return SeedConfiguration(globalMessageIdsPeerIdNamespaces: globalMessageIdsPeerIdNamespaces, initializeChatListWithHole: (topLevel: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: Int32.max - 1)), groups: ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))), initializeMessageNamespacesWithHoles: initializeMessageNamespacesWithHoles, existingMessageTags: MessageTags.all, messageHoles: messageHoles, messageTagsWithSummary: MessageTags.unseenPersonalMessage, existingGlobalMessageTags: GlobalMessageTags.all, peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat], peerSummaryCounterTags: { peer in
         if let peer = peer as? TelegramChannel {
             switch peer.info {
                 case .group:
@@ -264,7 +269,7 @@ let telegramPostboxSeedConfiguration: SeedConfiguration = {
 
 public func accountPreferenceEntries(rootPath: String, id: AccountRecordId, keys: Set<ValueBoxKey>) -> Signal<(String, [ValueBoxKey: PreferencesEntry]), NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: telegramPostboxSeedConfiguration)
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration)
     return postbox
     |> mapToSignal { value -> Signal<(String, [ValueBoxKey: PreferencesEntry]), NoError> in
         switch value {
@@ -286,7 +291,7 @@ public func accountPreferenceEntries(rootPath: String, id: AccountRecordId, keys
 
 public func accountNoticeEntries(rootPath: String, id: AccountRecordId) -> Signal<(String, [ValueBoxKey: NoticeEntry]), NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: telegramPostboxSeedConfiguration)
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration)
     return postbox
     |> mapToSignal { value -> Signal<(String, [ValueBoxKey: NoticeEntry]), NoError> in
         switch value {
@@ -302,7 +307,7 @@ public func accountNoticeEntries(rootPath: String, id: AccountRecordId) -> Signa
 
 public func accountLegacyAccessChallengeData(rootPath: String, id: AccountRecordId) -> Signal<PostboxAccessChallengeData, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: telegramPostboxSeedConfiguration)
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration)
     return postbox
     |> mapToSignal { value -> Signal<PostboxAccessChallengeData, NoError> in
         switch value {
@@ -316,10 +321,24 @@ public func accountLegacyAccessChallengeData(rootPath: String, id: AccountRecord
     }
 }
 
+public func accountTransaction<T>(rootPath: String, id: AccountRecordId, transaction: @escaping (Transaction) -> T) -> Signal<T, NoError> {
+    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration)
+    return postbox
+    |> mapToSignal { value -> Signal<T, NoError> in
+        switch value {
+            case let .postbox(postbox):
+                return postbox.transaction(transaction)
+            default:
+                return .complete()
+        }
+    }
+}
+
 public func accountWithId(accountManager: AccountManager, networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     
-    let postbox = openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: telegramPostboxSeedConfiguration)
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration)
     
     return postbox
     |> mapToSignal { result -> Signal<AccountResult, NoError> in
@@ -1120,8 +1139,8 @@ public class Account {
         self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.postbox, network: self.network, accountPeerId: self.peerId).start())
         self.managedOperationsDisposable.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedConsumePersonalMessagesActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
-        
         self.managedOperationsDisposable.add(managedSynchronizeMarkAllUnseenPersonalMessagesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
+        self.managedOperationsDisposable.add(managedSynchronizeEmojiKeywordsOperations(postbox: self.postbox, network: self.network).start())
         
         let importantBackgroundOperations: [Signal<AccountRunningImportantTasks, NoError>] = [
             managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { $0 ? AccountRunningImportantTasks.other : [] },
@@ -1209,8 +1228,12 @@ public class Account {
     
     public func resetStateManagement() {
         self.stateManager.reset()
-        self.contactSyncManager.beginSync(importableContacts: self.importableContacts.get())
+        self.restartContactManagement()
         self.managedStickerPacksDisposable.set(manageStickerPacks(network: self.network, postbox: self.postbox).start())
+    }
+    
+    public func restartContactManagement() {
+        self.contactSyncManager.beginSync(importableContacts: self.importableContacts.get())
     }
     
     public func peerInputActivities(peerId: PeerId) -> Signal<[(PeerId, PeerInputActivity)], NoError> {

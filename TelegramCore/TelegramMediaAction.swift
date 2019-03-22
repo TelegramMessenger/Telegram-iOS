@@ -240,7 +240,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             return TelegramMediaAction(action: .channelMigratedFromGroup(title: title, groupId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)))
         case let .messageActionChatAddUser(users):
             return TelegramMediaAction(action: .addedMembers(peerIds: users.map({ PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) })))
-        case let .messageActionChatCreate(title, userIds):
+        case let .messageActionChatCreate(title, _):
             return TelegramMediaAction(action: .groupCreated(title: title))
         case .messageActionChatDeletePhoto:
             return TelegramMediaAction(action: .photoUpdated(image: nil))

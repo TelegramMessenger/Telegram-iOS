@@ -2875,6 +2875,20 @@ extension Api {
                         return result
                     })
                 }
+            
+                static func getEmojiURL(langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.EmojiURL>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-709817306)
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getEmojiURL", parameters: [("langCode", langCode)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.EmojiURL? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.EmojiURL?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.EmojiURL
+                        }
+                        return result
+                    })
+                }
             }
             struct channels {
                 static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {

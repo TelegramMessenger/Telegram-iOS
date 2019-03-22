@@ -6,6 +6,8 @@ import Foundation
 #endif
 
 public struct LimitsConfiguration: Equatable, PreferencesEntry {
+    public static let timeIntervalForever: Int32 = 0x7fffffff
+    
     public var maxGroupMemberCount: Int32
     public var maxSupergroupMemberCount: Int32
     public var maxMessageForwardBatchSize: Int32
@@ -14,12 +16,14 @@ public struct LimitsConfiguration: Equatable, PreferencesEntry {
     public var maxMessageEditingInterval: Int32
     public var maxMediaCaptionLength: Int32
     public var canRemoveIncomingMessagesInPrivateChats: Bool
+    public var maxMessageRevokeInterval: Int32
+    public var maxMessageRevokeIntervalInPrivateChats: Int32
     
     public static var defaultValue: LimitsConfiguration {
-        return LimitsConfiguration(maxGroupMemberCount: 200, maxSupergroupMemberCount: 200000, maxMessageForwardBatchSize: 50, maxSavedGifCount: 200, maxRecentStickerCount: 20, maxMessageEditingInterval: 2 * 24 * 60 * 60, maxMediaCaptionLength: 1000, canRemoveIncomingMessagesInPrivateChats: false)
+        return LimitsConfiguration(maxGroupMemberCount: 200, maxSupergroupMemberCount: 200000, maxMessageForwardBatchSize: 50, maxSavedGifCount: 200, maxRecentStickerCount: 20, maxMessageEditingInterval: 2 * 24 * 60 * 60, maxMediaCaptionLength: 1000, canRemoveIncomingMessagesInPrivateChats: false, maxMessageRevokeInterval: 2 * 24 * 60 * 60, maxMessageRevokeIntervalInPrivateChats: 2 * 24 * 60 * 60)
     }
     
-    init(maxGroupMemberCount: Int32, maxSupergroupMemberCount: Int32, maxMessageForwardBatchSize: Int32, maxSavedGifCount: Int32, maxRecentStickerCount: Int32, maxMessageEditingInterval: Int32, maxMediaCaptionLength: Int32, canRemoveIncomingMessagesInPrivateChats: Bool) {
+    init(maxGroupMemberCount: Int32, maxSupergroupMemberCount: Int32, maxMessageForwardBatchSize: Int32, maxSavedGifCount: Int32, maxRecentStickerCount: Int32, maxMessageEditingInterval: Int32, maxMediaCaptionLength: Int32, canRemoveIncomingMessagesInPrivateChats: Bool, maxMessageRevokeInterval: Int32, maxMessageRevokeIntervalInPrivateChats: Int32) {
         self.maxGroupMemberCount = maxGroupMemberCount
         self.maxSupergroupMemberCount = maxSupergroupMemberCount
         self.maxMessageForwardBatchSize = maxMessageForwardBatchSize
@@ -28,6 +32,8 @@ public struct LimitsConfiguration: Equatable, PreferencesEntry {
         self.maxMessageEditingInterval = maxMessageEditingInterval
         self.maxMediaCaptionLength = maxMediaCaptionLength
         self.canRemoveIncomingMessagesInPrivateChats = canRemoveIncomingMessagesInPrivateChats
+        self.maxMessageRevokeInterval = maxMessageRevokeInterval
+        self.maxMessageRevokeIntervalInPrivateChats = maxMessageRevokeIntervalInPrivateChats
     }
     
     public init(decoder: PostboxDecoder) {
@@ -39,6 +45,8 @@ public struct LimitsConfiguration: Equatable, PreferencesEntry {
         self.maxMessageEditingInterval = decoder.decodeInt32ForKey("maxMessageEditingInterval", orElse: 2 * 24 * 60 * 60)
         self.maxMediaCaptionLength = decoder.decodeInt32ForKey("maxMediaCaptionLength", orElse: 1000)
         self.canRemoveIncomingMessagesInPrivateChats = decoder.decodeInt32ForKey("canRemoveIncomingMessagesInPrivateChats", orElse: 0) != 0
+        self.maxMessageRevokeInterval = decoder.decodeInt32ForKey("maxMessageRevokeInterval", orElse: 2 * 24 * 60 * 60)
+        self.maxMessageRevokeIntervalInPrivateChats = decoder.decodeInt32ForKey("maxMessageRevokeIntervalInPrivateChats", orElse: 2 * 24 * 60 * 60)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -50,6 +58,8 @@ public struct LimitsConfiguration: Equatable, PreferencesEntry {
         encoder.encodeInt32(self.maxMessageEditingInterval, forKey: "maxMessageEditingInterval")
         encoder.encodeInt32(self.maxMediaCaptionLength, forKey: "maxMediaCaptionLength")
         encoder.encodeInt32(self.canRemoveIncomingMessagesInPrivateChats ? 1 : 0, forKey: "canRemoveIncomingMessagesInPrivateChats")
+        encoder.encodeInt32(self.maxMessageRevokeInterval, forKey: "maxMessageRevokeInterval")
+        encoder.encodeInt32(self.maxMessageRevokeIntervalInPrivateChats, forKey: "maxMessageRevokeIntervalInPrivateChats")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {

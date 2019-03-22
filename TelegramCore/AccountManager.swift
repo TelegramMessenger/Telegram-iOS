@@ -130,6 +130,10 @@ private var declaredEncodables: Void = {
     declareEncodable(AutodownloadSettings.self, f: { AutodownloadSettings(decoder: $0 )})
     declareEncodable(TelegramMediaPoll.self, f: { TelegramMediaPoll(decoder: $0) })
     declareEncodable(TelegramMediaUnsupported.self, f: { TelegramMediaUnsupported(decoder: $0) })
+    declareEncodable(ContactsSettings.self, f: { ContactsSettings(decoder: $0) })
+    declareEncodable(EmojiKeywordCollectionInfo.self, f: { EmojiKeywordCollectionInfo(decoder: $0) })
+    declareEncodable(EmojiKeywordItem.self, f: { EmojiKeywordItem(decoder: $0) })
+    declareEncodable(SynchronizeEmojiKeywordsOperation.self, f: { SynchronizeEmojiKeywordsOperation(decoder: $0) })
     
     return
 }()
@@ -181,7 +185,7 @@ public func temporaryAccount(manager: AccountManager, rootPath: String) -> Signa
     return manager.allocatedTemporaryAccountId()
     |> mapToSignal { id -> Signal<TemporaryAccount, NoError> in
         let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-        return openPostbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: telegramPostboxSeedConfiguration)
+        return openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration)
         |> mapToSignal { result -> Signal<TemporaryAccount, NoError> in
             switch result {
                 case .upgrading:

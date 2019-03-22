@@ -2883,6 +2883,40 @@ extension Api {
         }
     
     }
+    enum EmojiURL: TypeConstructorDescription {
+        case EmojiURL(url: String)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .EmojiURL(let url):
+                    if boxed {
+                        buffer.appendInt32(1152191385)
+                    }
+                    serializeString(url, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .EmojiURL(let url):
+                return ("EmojiURL", [("url", url)])
+    }
+    }
+    
+        static func parse_EmojiURL(_ reader: BufferReader) -> EmojiURL? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.EmojiURL.EmojiURL(url: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     enum InputCheckPasswordSRP: TypeConstructorDescription {
         case inputCheckPasswordEmpty
         case inputCheckPasswordSRP(srpId: Int64, A: Buffer, M1: Buffer)
@@ -3678,6 +3712,8 @@ extension Api {
         case privacyKeyChatInvite
         case privacyKeyPhoneCall
         case privacyKeyPhoneP2P
+        case privacyKeyForwards
+        case privacyKeyProfilePhoto
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -3705,6 +3741,18 @@ extension Api {
                     }
                     
                     break
+                case .privacyKeyForwards:
+                    if boxed {
+                        buffer.appendInt32(1777096355)
+                    }
+                    
+                    break
+                case .privacyKeyProfilePhoto:
+                    if boxed {
+                        buffer.appendInt32(-1777000467)
+                    }
+                    
+                    break
     }
     }
     
@@ -3718,6 +3766,10 @@ extension Api {
                 return ("privacyKeyPhoneCall", [])
                 case .privacyKeyPhoneP2P:
                 return ("privacyKeyPhoneP2P", [])
+                case .privacyKeyForwards:
+                return ("privacyKeyForwards", [])
+                case .privacyKeyProfilePhoto:
+                return ("privacyKeyProfilePhoto", [])
     }
     }
     
@@ -3732,6 +3784,12 @@ extension Api {
         }
         static func parse_privacyKeyPhoneP2P(_ reader: BufferReader) -> PrivacyKey? {
             return Api.PrivacyKey.privacyKeyPhoneP2P
+        }
+        static func parse_privacyKeyForwards(_ reader: BufferReader) -> PrivacyKey? {
+            return Api.PrivacyKey.privacyKeyForwards
+        }
+        static func parse_privacyKeyProfilePhoto(_ reader: BufferReader) -> PrivacyKey? {
+            return Api.PrivacyKey.privacyKeyProfilePhoto
         }
     
     }
@@ -10100,6 +10158,8 @@ extension Api {
         case inputPrivacyKeyChatInvite
         case inputPrivacyKeyPhoneCall
         case inputPrivacyKeyPhoneP2P
+        case inputPrivacyKeyForwards
+        case inputPrivacyKeyProfilePhoto
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -10127,6 +10187,18 @@ extension Api {
                     }
                     
                     break
+                case .inputPrivacyKeyForwards:
+                    if boxed {
+                        buffer.appendInt32(-1529000952)
+                    }
+                    
+                    break
+                case .inputPrivacyKeyProfilePhoto:
+                    if boxed {
+                        buffer.appendInt32(1461304012)
+                    }
+                    
+                    break
     }
     }
     
@@ -10140,6 +10212,10 @@ extension Api {
                 return ("inputPrivacyKeyPhoneCall", [])
                 case .inputPrivacyKeyPhoneP2P:
                 return ("inputPrivacyKeyPhoneP2P", [])
+                case .inputPrivacyKeyForwards:
+                return ("inputPrivacyKeyForwards", [])
+                case .inputPrivacyKeyProfilePhoto:
+                return ("inputPrivacyKeyProfilePhoto", [])
     }
     }
     
@@ -10154,6 +10230,12 @@ extension Api {
         }
         static func parse_inputPrivacyKeyPhoneP2P(_ reader: BufferReader) -> InputPrivacyKey? {
             return Api.InputPrivacyKey.inputPrivacyKeyPhoneP2P
+        }
+        static func parse_inputPrivacyKeyForwards(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyForwards
+        }
+        static func parse_inputPrivacyKeyProfilePhoto(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyProfilePhoto
         }
     
     }
@@ -10268,14 +10350,15 @@ extension Api {
     
     }
     enum EmojiKeywordsDifference: TypeConstructorDescription {
-        case emojiKeywordsDifference(fromVersion: Int32, version: Int32, keywords: [Api.EmojiKeyword])
+        case emojiKeywordsDifference(langCode: String, fromVersion: Int32, version: Int32, keywords: [Api.EmojiKeyword])
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .emojiKeywordsDifference(let fromVersion, let version, let keywords):
+                case .emojiKeywordsDifference(let langCode, let fromVersion, let version, let keywords):
                     if boxed {
-                        buffer.appendInt32(2147310185)
+                        buffer.appendInt32(1556570557)
                     }
+                    serializeString(langCode, buffer: buffer, boxed: false)
                     serializeInt32(fromVersion, buffer: buffer, boxed: false)
                     serializeInt32(version, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
@@ -10289,25 +10372,28 @@ extension Api {
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .emojiKeywordsDifference(let fromVersion, let version, let keywords):
-                return ("emojiKeywordsDifference", [("fromVersion", fromVersion), ("version", version), ("keywords", keywords)])
+                case .emojiKeywordsDifference(let langCode, let fromVersion, let version, let keywords):
+                return ("emojiKeywordsDifference", [("langCode", langCode), ("fromVersion", fromVersion), ("version", version), ("keywords", keywords)])
     }
     }
     
         static func parse_emojiKeywordsDifference(_ reader: BufferReader) -> EmojiKeywordsDifference? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: String?
+            _1 = parseString(reader)
             var _2: Int32?
             _2 = reader.readInt32()
-            var _3: [Api.EmojiKeyword]?
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: [Api.EmojiKeyword]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.EmojiKeyword.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.EmojiKeyword.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.EmojiKeywordsDifference.emojiKeywordsDifference(fromVersion: _1!, version: _2!, keywords: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.EmojiKeywordsDifference.emojiKeywordsDifference(langCode: _1!, fromVersion: _2!, version: _3!, keywords: _4!)
             }
             else {
                 return nil
@@ -14580,16 +14666,17 @@ extension Api {
     
     }
     enum MessageFwdHeader: TypeConstructorDescription {
-        case messageFwdHeader(flags: Int32, fromId: Int32?, date: Int32, channelId: Int32?, channelPost: Int32?, postAuthor: String?, savedFromPeer: Api.Peer?, savedFromMsgId: Int32?)
+        case messageFwdHeader(flags: Int32, fromId: Int32?, fromName: String?, date: Int32, channelId: Int32?, channelPost: Int32?, postAuthor: String?, savedFromPeer: Api.Peer?, savedFromMsgId: Int32?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .messageFwdHeader(let flags, let fromId, let date, let channelId, let channelPost, let postAuthor, let savedFromPeer, let savedFromMsgId):
+                case .messageFwdHeader(let flags, let fromId, let fromName, let date, let channelId, let channelPost, let postAuthor, let savedFromPeer, let savedFromMsgId):
                     if boxed {
-                        buffer.appendInt32(1436466797)
+                        buffer.appendInt32(-332168592)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(fromId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 5) != 0 {serializeString(fromName!, buffer: buffer, boxed: false)}
                     serializeInt32(date, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(channelId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(channelPost!, buffer: buffer, boxed: false)}
@@ -14602,8 +14689,8 @@ extension Api {
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .messageFwdHeader(let flags, let fromId, let date, let channelId, let channelPost, let postAuthor, let savedFromPeer, let savedFromMsgId):
-                return ("messageFwdHeader", [("flags", flags), ("fromId", fromId), ("date", date), ("channelId", channelId), ("channelPost", channelPost), ("postAuthor", postAuthor), ("savedFromPeer", savedFromPeer), ("savedFromMsgId", savedFromMsgId)])
+                case .messageFwdHeader(let flags, let fromId, let fromName, let date, let channelId, let channelPost, let postAuthor, let savedFromPeer, let savedFromMsgId):
+                return ("messageFwdHeader", [("flags", flags), ("fromId", fromId), ("fromName", fromName), ("date", date), ("channelId", channelId), ("channelPost", channelPost), ("postAuthor", postAuthor), ("savedFromPeer", savedFromPeer), ("savedFromMsgId", savedFromMsgId)])
     }
     }
     
@@ -14612,30 +14699,33 @@ extension Api {
             _1 = reader.readInt32()
             var _2: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _3: String?
+            if Int(_1!) & Int(1 << 5) != 0 {_3 = parseString(reader) }
             var _4: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_4 = reader.readInt32() }
+            _4 = reader.readInt32()
             var _5: Int32?
-            if Int(_1!) & Int(1 << 2) != 0 {_5 = reader.readInt32() }
-            var _6: String?
-            if Int(_1!) & Int(1 << 3) != 0 {_6 = parseString(reader) }
-            var _7: Api.Peer?
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt32() }
+            var _6: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_6 = reader.readInt32() }
+            var _7: String?
+            if Int(_1!) & Int(1 << 3) != 0 {_7 = parseString(reader) }
+            var _8: Api.Peer?
             if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.Peer
+                _8 = Api.parse(reader, signature: signature) as? Api.Peer
             } }
-            var _8: Int32?
-            if Int(_1!) & Int(1 << 4) != 0 {_8 = reader.readInt32() }
+            var _9: Int32?
+            if Int(_1!) & Int(1 << 4) != 0 {_9 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
+            let _c3 = (Int(_1!) & Int(1 << 5) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 3) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 4) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.MessageFwdHeader.messageFwdHeader(flags: _1!, fromId: _2, date: _3!, channelId: _4, channelPost: _5, postAuthor: _6, savedFromPeer: _7, savedFromMsgId: _8)
+            let _c9 = (Int(_1!) & Int(1 << 4) == 0) || _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.MessageFwdHeader.messageFwdHeader(flags: _1!, fromId: _2, fromName: _3, date: _4!, channelId: _5, channelPost: _6, postAuthor: _7, savedFromPeer: _8, savedFromMsgId: _9)
             }
             else {
                 return nil

@@ -12,10 +12,12 @@ public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPri
     let groupPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyChatInvite))
     let voiceCallPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyPhoneCall))
     let voiceCallP2P = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyPhoneP2P))
+    let profilePhotoPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyProfilePhoto))
+    let forwardPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyForwards))
     let autoremoveTimeout = account.network.request(Api.functions.account.getAccountTTL())
-    return combineLatest(lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, autoremoveTimeout)
+    return combineLatest(lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, autoremoveTimeout)
         |> retryRequest
-        |> mapToSignal { lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, autoremoveTimeout -> Signal<AccountPrivacySettings, NoError> in
+        |> mapToSignal { lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, autoremoveTimeout -> Signal<AccountPrivacySettings, NoError> in
             let accountTimeoutSeconds: Int32
             switch autoremoveTimeout {
                 case let .accountDaysTTL(days):
@@ -27,6 +29,8 @@ public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPri
             let groupRules: [Api.PrivacyRule]
             let voiceRules: [Api.PrivacyRule]
             let voiceP2PRules: [Api.PrivacyRule]
+            let profilePhotoRules: [Api.PrivacyRule]
+            let forwardRules: [Api.PrivacyRule]
             var apiUsers: [Api.User] = []
             
             switch lastSeenPrivacy {
@@ -53,6 +57,18 @@ public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPri
                     voiceP2PRules = rules
             }
             
+            switch profilePhotoPrivacy {
+                case let .privacyRules(rules, users):
+                    apiUsers.append(contentsOf: users)
+                    profilePhotoRules = rules
+            }
+            
+            switch forwardPrivacy {
+                case let .privacyRules(rules, users):
+                    apiUsers.append(contentsOf: users)
+                    forwardRules = rules
+            }
+            
             let peers = apiUsers.map { TelegramUser(user: $0) }
             
             return account.postbox.transaction { transaction -> AccountPrivacySettings in
@@ -60,7 +76,7 @@ public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPri
                     return updated
                 })
                 
-                return AccountPrivacySettings(presence: SelectivePrivacySettings(apiRules: lastSeenRules), groupInvitations: SelectivePrivacySettings(apiRules: groupRules), voiceCalls: SelectivePrivacySettings(apiRules: voiceRules), voiceCallsP2P: SelectivePrivacySettings(apiRules: voiceP2PRules), accountRemovalTimeout: accountTimeoutSeconds)
+                return AccountPrivacySettings(presence: SelectivePrivacySettings(apiRules: lastSeenRules), groupInvitations: SelectivePrivacySettings(apiRules: groupRules), voiceCalls: SelectivePrivacySettings(apiRules: voiceRules), voiceCallsP2P: SelectivePrivacySettings(apiRules: voiceP2PRules), profilePhoto: SelectivePrivacySettings(apiRules: profilePhotoRules), forwards: SelectivePrivacySettings(apiRules: forwardRules), accountRemovalTimeout: accountTimeoutSeconds)
             }
         }
 }
@@ -78,6 +94,8 @@ public enum UpdateSelectiveAccountPrivacySettingsType {
     case groupInvitations
     case voiceCalls
     case voiceCallsP2P
+    case profilePhoto
+    case forwards
     
     var apiKey: Api.InputPrivacyKey {
         switch self {
@@ -89,6 +107,10 @@ public enum UpdateSelectiveAccountPrivacySettingsType {
                 return .inputPrivacyKeyPhoneCall
             case .voiceCallsP2P:
                 return .inputPrivacyKeyPhoneP2P
+            case .profilePhoto:
+                return .inputPrivacyKeyProfilePhoto
+            case .forwards:
+                return .inputPrivacyKeyForwards
         }
     }
 }

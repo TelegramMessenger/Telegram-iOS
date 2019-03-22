@@ -405,7 +405,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             
                             attributes.append(contentsOf: filterMessageAttributesForForwardedMessage(sourceMessage.attributes))
                             if let sourceForwardInfo = sourceMessage.forwardInfo {
-                                forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date, authorSignature: sourceForwardInfo.authorSignature)
+                                forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author?.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date, authorSignature: sourceForwardInfo.authorSignature)
                             } else {
                                 if sourceMessage.id.peerId != account.peerId {
                                     var hasHiddenForwardMedia = false

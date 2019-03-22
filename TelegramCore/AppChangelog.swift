@@ -9,15 +9,6 @@ import SwiftSignalKit
 import MtProtoKitDynamic
 #endif
 
-func initializedAppChangelogAfterLogin(transaction: Transaction, appVersion: String) {
-    updateAppChangelogState(transaction: transaction, { state in
-        var state = state
-        state.checkedVersion = appVersion
-        state.previousVersion = appVersion
-        return state
-    })
-}
-
 func managedAppChangelog(postbox: Postbox, network: Network, stateManager: AccountStateManager, appVersion: String) -> Signal<Void, NoError> {
     return stateManager.pollStateUpdateCompletion()
     |> take(1)

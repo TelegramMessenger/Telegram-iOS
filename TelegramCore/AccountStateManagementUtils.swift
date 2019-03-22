@@ -829,6 +829,13 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         }
                     }
                     updatedState.editMessage(messageId, message: message)
+                    for media in message.media {
+                        if let media = media as? TelegramMediaAction {
+                            if case .historyCleared = media.action {
+                                updatedState.readInbox(messageId)
+                            }
+                        }
+                    }
                 }
             case let .updateNewChannelMessage(apiMessage, pts, ptsCount):
                 if let message = StoreMessage(apiMessage: apiMessage) {
@@ -1885,7 +1892,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerInclusionMinTimestamp, .UpdateIsContact:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -2097,6 +2104,14 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids)
             case let .UpdateMinAvailableMessage(id):
                 transaction.deleteMessagesInRange(peerId: id.peerId, namespace: id.namespace, minId: 1, maxId: id.id)
+            case let .UpdatePeerInclusionMinTimestamp(peerId, timestamp):
+                let inclusion = transaction.getPeerChatListInclusion(peerId)
+                switch inclusion {
+                    case .ifHasMessages, .ifHasMessagesOrOneOf:
+                        transaction.updatePeerChatListInclusion(peerId, inclusion: inclusion.withSetIfHasMessagesOrMaxMinTimestamp(timestamp))
+                    default:
+                        break
+                }
             case let .EditMessage(id, message):
                 transaction.updateMessage(id, update: { previousMessage in
                     var updatedFlags = message.flags
@@ -2342,7 +2357,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 transaction.updateMessage(id, update: { currentMessage in
                     var storeForwardInfo: StoreMessageForwardInfo?
                     if let forwardInfo = currentMessage.forwardInfo {
-                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
                     }
                     var attributes = currentMessage.attributes
                     loop: for j in 0 ..< attributes.count {

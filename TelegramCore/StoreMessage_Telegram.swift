@@ -150,14 +150,14 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
         
             if let fwdHeader = fwdHeader {
                 switch fwdHeader {
-                    case let .messageFwdHeader(_, fromId, _, channelId, _, _, savedFromPeer, _):
-                        if let channelId = channelId {
+                    case let .messageFwdHeader(messageFwdHeader):
+                        if let channelId = messageFwdHeader.channelId {
                             result.append(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
                         }
-                        if let fromId = fromId {
+                        if let fromId = messageFwdHeader.fromId {
                             result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId))
                         }
-                        if let savedFromPeer = savedFromPeer {
+                        if let savedFromPeer = messageFwdHeader.savedFromPeer {
                             result.append(savedFromPeer.peerId)
                         }
                 }
@@ -403,7 +403,7 @@ extension StoreMessage {
                 var forwardInfo: StoreMessageForwardInfo?
                 if let fwdFrom = fwdFrom {
                     switch fwdFrom {
-                        case let .messageFwdHeader(_, fromId, date, channelId, channelPost, postAuthor, savedFromPeer, savedFromMsgId):
+                        case let .messageFwdHeader(_, fromId, fromName, date, channelId, channelPost, postAuthor, savedFromPeer, savedFromMsgId):
                             var authorId: PeerId?
                             var sourceId: PeerId?
                             var sourceMessageId: MessageId?
@@ -423,12 +423,12 @@ extension StoreMessage {
                             if let savedFromPeer = savedFromPeer, let savedFromMsgId = savedFromMsgId {
                                 let peerId: PeerId
                                 switch savedFromPeer {
-                                case let .peerChannel(channelId):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                                case let .peerChat(chatId):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                                case let .peerUser(userId):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                                    case let .peerChannel(channelId):
+                                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                                    case let .peerChat(chatId):
+                                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                                    case let .peerUser(userId):
+                                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                                 }
                                 let messageId: MessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: savedFromMsgId)
                                 attributes.append(SourceReferenceMessageAttribute(messageId: messageId))
@@ -438,6 +438,8 @@ extension StoreMessage {
                                 forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor)
                             } else if let sourceId = sourceId {
                                 forwardInfo = StoreMessageForwardInfo(authorId: sourceId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor)
+                            } else if let postAuthor = postAuthor ?? fromName {
+                                forwardInfo = StoreMessageForwardInfo(authorId: nil, sourceId: nil, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor)
                             }
                     }
                 }
@@ -505,9 +507,7 @@ extension StoreMessage {
                     var noEntities = false
                     loop: for media in medias {
                         switch media {
-                            case _ as TelegramMediaImage,
-                                 _ as TelegramMediaFile,
-                                 _ as TelegramMediaContact,
+                            case _ as TelegramMediaContact,
                                  _ as TelegramMediaMap:
                                 noEntities = true
                             break loop
@@ -557,9 +557,6 @@ extension StoreMessage {
             case .messageEmpty:
                 return nil
             case let .messageService(flags, id, fromId, toId, replyToMsgId, date, action):
-                if case .messageActionHistoryClear = action {
-                    return nil
-                }
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {

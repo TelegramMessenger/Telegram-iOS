@@ -436,6 +436,7 @@ public enum MediaResourceReference: Equatable {
     case avatar(peer: PeerReference, resource: MediaResource)
     case messageAuthorAvatar(message: MessageReference, resource: MediaResource)
     case wallpaper(resource: MediaResource)
+    case stickerPackThumbnail(stickerPack: StickerPackReference, resource: MediaResource)
     
     public var resource: MediaResource {
         switch self {
@@ -448,6 +449,8 @@ public enum MediaResourceReference: Equatable {
             case let .messageAuthorAvatar(_, resource):
                 return resource
             case let .wallpaper(resource):
+                return resource
+            case let .stickerPackThumbnail(_, resource):
                 return resource
         }
     }
@@ -480,6 +483,12 @@ public enum MediaResourceReference: Equatable {
                 }
             case let .wallpaper(lhsResource):
                 if case let .wallpaper(rhsResource) = rhs, lhsResource.isEqual(to: rhsResource) {
+                    return true
+                } else {
+                    return false
+                }
+            case let .stickerPackThumbnail(lhsStickerPack, lhsResource):
+                if case let .stickerPackThumbnail(rhsStickerPack, rhsResource) = rhs, lhsStickerPack == rhsStickerPack, lhsResource.isEqual(to: rhsResource) {
                     return true
                 } else {
                     return false
@@ -596,13 +605,17 @@ private func findMediaResource(media: Media, resource: MediaResource) -> MediaRe
 
 private func findMediaResourceReference(media: Media, resource: MediaResource) -> Data? {
     if let foundResource = findMediaResource(media: media, resource: resource) {
-        if let foundResource = foundResource as? CloudFileMediaResource {
-            return foundResource.fileReference
-        } else if let foundResource = foundResource as? CloudDocumentMediaResource {
-            return foundResource.fileReference
-        } else {
-            return nil
-        }
+        return findResourceReference(in: foundResource, resource: resource)
+    } else {
+        return nil
+    }
+}
+
+private func findResourceReference(in foundResource: MediaResource, resource: MediaResource) -> Data? {
+    if let foundResource = foundResource as? CloudFileMediaResource {
+        return foundResource.fileReference
+    } else if let foundResource = foundResource as? CloudDocumentMediaResource {
+        return foundResource.fileReference
     } else {
         return nil
     }
@@ -1020,6 +1033,18 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                             }
                         default:
                             break
+                    }
+                }
+                return .fail(.generic)
+            }
+        case let .stickerPackThumbnail(packReference, resource):
+            return revalidationContext.stickerPack(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, stickerPack: packReference)
+            |> mapToSignal { result -> Signal<Data, RevalidateMediaReferenceError> in
+                if let thumbnail = result.0.thumbnail {
+                    if thumbnail.resource.id.isEqual(to: resource.id) {
+                        if let fileReference = findResourceReference(in: thumbnail.resource, resource: resource) {
+                            return .single(fileReference)
+                        }
                     }
                 }
                 return .fail(.generic)

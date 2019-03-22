@@ -105,6 +105,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1000708810] = { return Api.help.AppUpdate.parse_noAppUpdate($0) }
     dict[-209337866] = { return Api.LangPackDifference.parse_langPackDifference($0) }
     dict[-1590738760] = { return Api.WallPaperSettings.parse_wallPaperSettings($0) }
+    dict[1152191385] = { return Api.EmojiURL.parse_EmojiURL($0) }
     dict[-791039645] = { return Api.channels.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1736378792] = { return Api.InputCheckPasswordSRP.parse_inputCheckPasswordEmpty($0) }
     dict[-763367294] = { return Api.InputCheckPasswordSRP.parse_inputCheckPasswordSRP($0) }
@@ -157,6 +158,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1343122938] = { return Api.PrivacyKey.parse_privacyKeyChatInvite($0) }
     dict[1030105979] = { return Api.PrivacyKey.parse_privacyKeyPhoneCall($0) }
     dict[961092808] = { return Api.PrivacyKey.parse_privacyKeyPhoneP2P($0) }
+    dict[1777096355] = { return Api.PrivacyKey.parse_privacyKeyForwards($0) }
+    dict[-1777000467] = { return Api.PrivacyKey.parse_privacyKeyProfilePhoto($0) }
     dict[522914557] = { return Api.Update.parse_updateNewMessage($0) }
     dict[1318109142] = { return Api.Update.parse_updateMessageID($0) }
     dict[-1576161051] = { return Api.Update.parse_updateDeleteMessages($0) }
@@ -413,12 +416,14 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1107622874] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyChatInvite($0) }
     dict[-88417185] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyPhoneCall($0) }
     dict[-610373422] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyPhoneP2P($0) }
+    dict[-1529000952] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyForwards($0) }
+    dict[1461304012] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyProfilePhoto($0) }
     dict[235081943] = { return Api.help.RecentMeUrls.parse_recentMeUrls($0) }
     dict[-1606526075] = { return Api.ReplyMarkup.parse_replyKeyboardHide($0) }
     dict[-200242528] = { return Api.ReplyMarkup.parse_replyKeyboardForceReply($0) }
     dict[889353612] = { return Api.ReplyMarkup.parse_replyKeyboardMarkup($0) }
     dict[1218642516] = { return Api.ReplyMarkup.parse_replyInlineMarkup($0) }
-    dict[2147310185] = { return Api.EmojiKeywordsDifference.parse_emojiKeywordsDifference($0) }
+    dict[1556570557] = { return Api.EmojiKeywordsDifference.parse_emojiKeywordsDifference($0) }
     dict[1493171408] = { return Api.HighScore.parse_highScore($0) }
     dict[-305282981] = { return Api.TopPeer.parse_topPeer($0) }
     dict[986597452] = { return Api.contacts.Link.parse_link($0) }
@@ -565,7 +570,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1036396922] = { return Api.InputWebFileLocation.parse_inputWebFileLocation($0) }
     dict[1430205163] = { return Api.InputWebFileLocation.parse_inputWebFileGeoMessageLocation($0) }
     dict[-1625153079] = { return Api.InputWebFileLocation.parse_inputWebFileGeoPointLocation($0) }
-    dict[1436466797] = { return Api.MessageFwdHeader.parse_messageFwdHeader($0) }
+    dict[-332168592] = { return Api.MessageFwdHeader.parse_messageFwdHeader($0) }
     dict[398898678] = { return Api.help.Support.parse_support($0) }
     dict[1474492012] = { return Api.MessagesFilter.parse_inputMessagesFilterEmpty($0) }
     dict[-1777752804] = { return Api.MessagesFilter.parse_inputMessagesFilterPhotos($0) }
@@ -846,6 +851,8 @@ struct Api {
             case let _1 as Api.LangPackDifference:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.WallPaperSettings:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.EmojiURL:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.channels.ChannelParticipant:
                 _1.serialize(buffer, boxed)

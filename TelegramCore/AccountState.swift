@@ -145,11 +145,11 @@ extension UnauthorizedAccountTermsOfService {
 public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
     case empty
     case phoneEntry(countryCode: Int32, number: String)
-    case confirmationCodeEntry(number: String, type: SentAuthorizationCodeType, hash: String, timeout: Int32?, nextType: AuthorizationCodeNextType?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?)
-    case passwordEntry(hint: String, number: String?, code: String?, suggestReset: Bool)
-    case passwordRecovery(hint: String, number: String?, code: String?, emailPattern: String)
-    case awaitingAccountReset(protectedUntil: Int32, number: String?)
-    case signUp(number: String, codeHash: String, code: String, firstName: String, lastName: String, termsOfService: UnauthorizedAccountTermsOfService?)
+    case confirmationCodeEntry(number: String, type: SentAuthorizationCodeType, hash: String, timeout: Int32?, nextType: AuthorizationCodeNextType?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?, syncContacts: Bool)
+    case passwordEntry(hint: String, number: String?, code: String?, suggestReset: Bool, syncContacts: Bool)
+    case passwordRecovery(hint: String, number: String?, code: String?, emailPattern: String, syncContacts: Bool)
+    case awaitingAccountReset(protectedUntil: Int32, number: String?, syncContacts: Bool)
+    case signUp(number: String, codeHash: String, code: String, firstName: String, lastName: String, termsOfService: UnauthorizedAccountTermsOfService?, syncContacts: Bool)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
@@ -166,15 +166,15 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 if let termsValue = decoder.decodeObjectForKey("tos", decoder: { UnauthorizedAccountTermsOfService(decoder: $0) }) as? UnauthorizedAccountTermsOfService {
                     termsOfService = (termsValue, decoder.decodeInt32ForKey("tose", orElse: 0) != 0)
                 }
-                self = .confirmationCodeEntry(number: decoder.decodeStringForKey("num", orElse: ""), type: decoder.decodeObjectForKey("t", decoder: { SentAuthorizationCodeType(decoder: $0) }) as! SentAuthorizationCodeType, hash: decoder.decodeStringForKey("h", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("tm"), nextType: nextType, termsOfService: termsOfService)
+                self = .confirmationCodeEntry(number: decoder.decodeStringForKey("num", orElse: ""), type: decoder.decodeObjectForKey("t", decoder: { SentAuthorizationCodeType(decoder: $0) }) as! SentAuthorizationCodeType, hash: decoder.decodeStringForKey("h", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("tm"), nextType: nextType, termsOfService: termsOfService, syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
             case UnauthorizedAccountStateContentsValue.passwordEntry.rawValue:
-                self = .passwordEntry(hint: decoder.decodeStringForKey("h", orElse: ""), number: decoder.decodeOptionalStringForKey("n"), code: decoder.decodeOptionalStringForKey("c"), suggestReset: decoder.decodeInt32ForKey("suggestReset", orElse: 0) != 0)
+                self = .passwordEntry(hint: decoder.decodeStringForKey("h", orElse: ""), number: decoder.decodeOptionalStringForKey("n"), code: decoder.decodeOptionalStringForKey("c"), suggestReset: decoder.decodeInt32ForKey("suggestReset", orElse: 0) != 0, syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
             case UnauthorizedAccountStateContentsValue.passwordRecovery.rawValue:
-                self = .passwordRecovery(hint: decoder.decodeStringForKey("hint", orElse: ""), number: decoder.decodeOptionalStringForKey("number"), code: decoder.decodeOptionalStringForKey("code"), emailPattern: decoder.decodeStringForKey("emailPattern", orElse: ""))
+                self = .passwordRecovery(hint: decoder.decodeStringForKey("hint", orElse: ""), number: decoder.decodeOptionalStringForKey("number"), code: decoder.decodeOptionalStringForKey("code"), emailPattern: decoder.decodeStringForKey("emailPattern", orElse: ""), syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
             case UnauthorizedAccountStateContentsValue.awaitingAccountReset.rawValue:
-                self = .awaitingAccountReset(protectedUntil: decoder.decodeInt32ForKey("protectedUntil", orElse: 0), number: decoder.decodeOptionalStringForKey("number"))
+                self = .awaitingAccountReset(protectedUntil: decoder.decodeInt32ForKey("protectedUntil", orElse: 0), number: decoder.decodeOptionalStringForKey("number"), syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
             case UnauthorizedAccountStateContentsValue.signUp.rawValue:
-                self = .signUp(number: decoder.decodeStringForKey("n", orElse: ""), codeHash: decoder.decodeStringForKey("h", orElse: ""), code: decoder.decodeStringForKey("c", orElse: ""), firstName: decoder.decodeStringForKey("f", orElse: ""), lastName: decoder.decodeStringForKey("l", orElse: ""), termsOfService: decoder.decodeObjectForKey("tos", decoder: { UnauthorizedAccountTermsOfService(decoder: $0) }) as? UnauthorizedAccountTermsOfService)
+                self = .signUp(number: decoder.decodeStringForKey("n", orElse: ""), codeHash: decoder.decodeStringForKey("h", orElse: ""), code: decoder.decodeStringForKey("c", orElse: ""), firstName: decoder.decodeStringForKey("f", orElse: ""), lastName: decoder.decodeStringForKey("l", orElse: ""), termsOfService: decoder.decodeObjectForKey("tos", decoder: { UnauthorizedAccountTermsOfService(decoder: $0) }) as? UnauthorizedAccountTermsOfService, syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
             default:
                 assertionFailure()
                 self = .empty
@@ -189,7 +189,7 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.phoneEntry.rawValue, forKey: "v")
                 encoder.encodeInt32(countryCode, forKey: "cc")
                 encoder.encodeString(number, forKey: "n")
-            case let .confirmationCodeEntry(number, type, hash, timeout, nextType, termsOfService):
+            case let .confirmationCodeEntry(number, type, hash, timeout, nextType, termsOfService, syncContacts):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.confirmationCodeEntry.rawValue, forKey: "v")
                 encoder.encodeString(number, forKey: "num")
                 encoder.encodeObject(type, forKey: "t")
@@ -210,7 +210,8 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "tos")
                 }
-            case let .passwordEntry(hint, number, code, suggestReset):
+                encoder.encodeInt32(syncContacts ? 1 : 0, forKey: "syncContacts")
+            case let .passwordEntry(hint, number, code, suggestReset, syncContacts):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.passwordEntry.rawValue, forKey: "v")
                 encoder.encodeString(hint, forKey: "h")
                 if let number = number {
@@ -224,7 +225,8 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                     encoder.encodeNil(forKey: "c")
                 }
                 encoder.encodeInt32(suggestReset ? 1 : 0, forKey: "suggestReset")
-            case let .passwordRecovery(hint, number, code, emailPattern):
+                encoder.encodeInt32(syncContacts ? 1 : 0, forKey: "syncContacts")
+            case let .passwordRecovery(hint, number, code, emailPattern, syncContacts):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.passwordRecovery.rawValue, forKey: "v")
                 encoder.encodeString(hint, forKey: "hint")
                 if let number = number {
@@ -238,7 +240,8 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                     encoder.encodeNil(forKey: "code")
                 }
                 encoder.encodeString(emailPattern, forKey: "emailPattern")
-            case let .awaitingAccountReset(protectedUntil, number):
+                encoder.encodeInt32(syncContacts ? 1 : 0, forKey: "syncContacts")
+            case let .awaitingAccountReset(protectedUntil, number, syncContacts):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.awaitingAccountReset.rawValue, forKey: "v")
                 encoder.encodeInt32(protectedUntil, forKey: "protectedUntil")
                 if let number = number {
@@ -246,7 +249,8 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "number")
                 }
-            case let .signUp(number, codeHash, code, firstName, lastName, termsOfService):
+                encoder.encodeInt32(syncContacts ? 1 : 0, forKey: "syncContacts")
+            case let .signUp(number, codeHash, code, firstName, lastName, termsOfService, syncContacts):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.signUp.rawValue, forKey: "v")
                 encoder.encodeString(number, forKey: "n")
                 encoder.encodeString(codeHash, forKey: "h")
@@ -258,6 +262,7 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "tos")
                 }
+                encoder.encodeInt32(syncContacts ? 1 : 0, forKey: "syncContacts")
         }
     }
     
@@ -275,8 +280,8 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 } else {
                     return false
                 }
-            case let .confirmationCodeEntry(lhsNumber, lhsType, lhsHash, lhsTimeout, lhsNextType, lhsTermsOfService):
-                if case let .confirmationCodeEntry(rhsNumber, rhsType, rhsHash, rhsTimeout, rhsNextType, rhsTermsOfService) = rhs {
+            case let .confirmationCodeEntry(lhsNumber, lhsType, lhsHash, lhsTimeout, lhsNextType, lhsTermsOfService, lhsSyncContacts):
+                if case let .confirmationCodeEntry(rhsNumber, rhsType, rhsHash, rhsTimeout, rhsNextType, rhsTermsOfService, rhsSyncContacts) = rhs {
                     if lhsNumber != rhsNumber {
                         return false
                     }
@@ -298,30 +303,33 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                     if lhsTermsOfService?.1 != rhsTermsOfService?.1 {
                         return false
                     }
+                    if lhsSyncContacts != rhsSyncContacts {
+                        return false
+                    }
                     return true
                 } else {
                     return false
                 }
-            case let .passwordEntry(lhsHint, lhsNumber, lhsCode, lhsSuggestReset):
-                if case let .passwordEntry(rhsHint, rhsNumber, rhsCode, rhsSuggestReset) = rhs {
-                    return lhsHint == rhsHint && lhsNumber == rhsNumber && lhsCode == rhsCode && lhsSuggestReset == rhsSuggestReset
+            case let .passwordEntry(lhsHint, lhsNumber, lhsCode, lhsSuggestReset, lhsSyncContacts):
+                if case let .passwordEntry(rhsHint, rhsNumber, rhsCode, rhsSuggestReset, rhsSyncContacts) = rhs {
+                    return lhsHint == rhsHint && lhsNumber == rhsNumber && lhsCode == rhsCode && lhsSuggestReset == rhsSuggestReset && lhsSyncContacts == rhsSyncContacts
                 } else {
                     return false
                 }
-            case let .passwordRecovery(lhsHint, lhsNumber, lhsCode, lhsEmailPattern):
-                if case let .passwordRecovery(rhsHint, rhsNumber, rhsCode, rhsEmailPattern) = rhs {
-                    return lhsHint == rhsHint && lhsNumber == rhsNumber && lhsCode == rhsCode && lhsEmailPattern == rhsEmailPattern
+            case let .passwordRecovery(lhsHint, lhsNumber, lhsCode, lhsEmailPattern, lhsSyncContacts):
+                if case let .passwordRecovery(rhsHint, rhsNumber, rhsCode, rhsEmailPattern, rhsSyncContacts) = rhs {
+                    return lhsHint == rhsHint && lhsNumber == rhsNumber && lhsCode == rhsCode && lhsEmailPattern == rhsEmailPattern && lhsSyncContacts == rhsSyncContacts
                 } else {
                     return false
                 }
-            case let .awaitingAccountReset(lhsProtectedUntil, lhsNumber):
-                if case let .awaitingAccountReset(rhsProtectedUntil, rhsNumber) = rhs {
-                    return lhsProtectedUntil == rhsProtectedUntil && lhsNumber == rhsNumber
+            case let .awaitingAccountReset(lhsProtectedUntil, lhsNumber, lhsSyncContacts):
+                if case let .awaitingAccountReset(rhsProtectedUntil, rhsNumber, rhsSyncContacts) = rhs {
+                    return lhsProtectedUntil == rhsProtectedUntil && lhsNumber == rhsNumber && lhsSyncContacts == rhsSyncContacts
                 } else {
                     return false
                 }
-            case let .signUp(number, codeHash, code, firstName, lastName, termsOfService):
-                if case .signUp(number, codeHash, code, firstName, lastName, termsOfService) = rhs {
+            case let .signUp(number, codeHash, code, firstName, lastName, termsOfService, syncContacts):
+                if case .signUp(number, codeHash, code, firstName, lastName, termsOfService, syncContacts) = rhs {
                     return true
                 } else {
                     return false

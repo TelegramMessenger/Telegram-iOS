@@ -261,7 +261,7 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
         }
         let deleteMessages: Signal<Void, NoError>
         if let inputPeer = apiInputPeer(peer), let topMessageId = operation.topMessageId ?? transaction.getTopPeerMessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud) {
-            deleteMessages = requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: topMessageId.id, justClear: false)
+            deleteMessages = requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: topMessageId.id, justClear: false, type: operation.deleteGloballyIfPossible ? .forEveryone : .forLocalPeer)
         } else {
             deleteMessages = .complete()
         }
@@ -285,7 +285,7 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
             } else {
                 reportSignal = .complete()
             }
-            return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId?.id ?? Int32.max - 1, justClear: false)
+            return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId?.id ?? Int32.max - 1, justClear: false, type: operation.deleteGloballyIfPossible ? .forEveryone : .forLocalPeer)
             |> then(reportSignal)
             |> then(postbox.transaction { transaction -> Void in
                 clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id)
@@ -298,8 +298,15 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
     }
 }
 
-private func requestClearHistory(postbox: Postbox, network: Network, stateManager: AccountStateManager, inputPeer: Api.InputPeer, maxId: Int32, justClear: Bool) -> Signal<Void, NoError> {
-    let signal = network.request(Api.functions.messages.deleteHistory(flags: justClear ? 1 : 0, peer: inputPeer, maxId: maxId))
+private func requestClearHistory(postbox: Postbox, network: Network, stateManager: AccountStateManager, inputPeer: Api.InputPeer, maxId: Int32, justClear: Bool, type: InteractiveMessagesDeletionType) -> Signal<Void, NoError> {
+    var flags: Int32 = 0
+    if justClear {
+        flags |= 1 << 0
+    }
+    if case .forEveryone = type {
+        flags |= 1 << 1
+    }
+    let signal = network.request(Api.functions.messages.deleteHistory(flags: flags, peer: inputPeer, maxId: maxId))
     |> map { result -> Api.messages.AffectedHistory? in
         return result
     }
@@ -330,7 +337,7 @@ private func requestClearHistory(postbox: Postbox, network: Network, stateManage
 private func clearHistory(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatClearHistoryOperation) -> Signal<Void, NoError> {
     if peer.id.namespace == Namespaces.Peer.CloudGroup || peer.id.namespace == Namespaces.Peer.CloudUser {
         if let inputPeer = apiInputPeer(peer) {
-            return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId.id, justClear: true)
+            return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId.id, justClear: true, type: operation.type)
         } else {
             return .complete()
         }

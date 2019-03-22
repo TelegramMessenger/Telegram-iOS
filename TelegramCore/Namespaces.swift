@@ -41,7 +41,7 @@ public struct Namespaces {
     public struct ItemCollection {
         public static let CloudStickerPacks: Int32 = 0
         public static let CloudMaskPacks: Int32 = 1
-        public static let CloudRecentStickers: Int32 = 2
+        public static let EmojiKeywords: Int32 = 2
     }
     
     public struct OrderedItemList {
@@ -130,6 +130,7 @@ public struct OperationLogTags {
     static let SynchronizeMarkAllUnseenPersonalMessages = PeerOperationLogTag(value: 16)
     static let SynchronizeRecentlyUsedStickers = PeerOperationLogTag(value: 17)
     static let SynchronizeAppLogEvents = PeerOperationLogTag(value: 18)
+    static let SynchronizeEmojiKeywords = PeerOperationLogTag(value: 19)
 }
 
 public extension PeerSummaryCounterTags {
@@ -151,6 +152,7 @@ private enum PreferencesKeyValues: Int32 {
     case localizationListState = 13
     case appConfiguration = 14
     case searchBotsConfiguration = 15
+    case contactsSettings = 16
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -235,6 +237,12 @@ public struct PreferencesKeys {
     public static let searchBotsConfiguration: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.searchBotsConfiguration.rawValue)
+        return key
+    }()
+    
+    public static let contactsSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.contactsSettings.rawValue)
         return key
     }()
 }

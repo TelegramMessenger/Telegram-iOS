@@ -75,10 +75,12 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             let media: [Media]
             var attributes: [MessageAttribute]
             let text: String
+            let forwardInfo: StoreMessageForwardInfo?
             if let apiMessage = apiMessage, let updatedMessage = StoreMessage(apiMessage: apiMessage) {
                 media = updatedMessage.media
                 attributes = updatedMessage.attributes
                 text = updatedMessage.text
+                forwardInfo = updatedMessage.forwardInfo
             } else if case let .updateShortSentMessage(_, _, _, _, _, apiMedia, entities) = result {
                 let (mediaValue, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
                 if let mediaValue = mediaValue {
@@ -100,10 +102,13 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 
                 attributes = updatedAttributes
                 text = currentMessage.text
+                
+                forwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
             } else {
                 media = currentMessage.media
                 attributes = currentMessage.attributes
                 text = currentMessage.text
+                forwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
             }
             
             if let channelPts = channelPts {
@@ -116,16 +121,11 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
             }
             
-            var storeForwardInfo: StoreMessageForwardInfo?
-            if let forwardInfo = currentMessage.forwardInfo {
-                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-            }
-            
             if let fromMedia = currentMessage.media.first, let toMedia = media.first {
                 applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
             }
             
-            if storeForwardInfo == nil {
+            if forwardInfo == nil {
                 for media in media {
                     if let file = media as? TelegramMediaFile {
                         if file.isSticker {
@@ -147,7 +147,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             
             let (tags, globalTags) = tagsForStoreMessage(incoming: currentMessage.flags.contains(.Incoming), attributes: attributes, media: media, textEntities: entitiesAttribute?.entities)
             
-            return .update(StoreMessage(id: updatedId, globallyUniqueId: nil, groupingKey: currentMessage.groupingKey, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
+            return .update(StoreMessage(id: updatedId, globallyUniqueId: nil, groupingKey: currentMessage.groupingKey, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: forwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
         })
         for file in sentStickers {
             transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
@@ -229,7 +229,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                 
                 var storeForwardInfo: StoreMessageForwardInfo?
                 if let forwardInfo = currentMessage.forwardInfo {
-                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
                 }
                 
                 if let fromMedia = currentMessage.media.first, let toMedia = media.first {

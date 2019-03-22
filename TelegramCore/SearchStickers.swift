@@ -124,7 +124,7 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
             }
             
             var installed: [FoundStickerItem] = []
-            for item in transaction.searchItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, key: ValueBoxKey(query).toMemoryBuffer()) {
+            for item in transaction.searchItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, query: .exact(ValueBoxKey(query))) {
                 if let item = item as? StickerPackItem {
                     if !currentItems.contains(item.file.fileId) {
                         var stringRepresentations: [String] = []
