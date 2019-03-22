@@ -14,7 +14,9 @@ final class GlobalMessageIdsTable: Table {
     }
     
     func set(_ globalId: Int32, id: MessageId) {
-        assert(self.get(globalId) == nil)
+        assert(id.namespace == 0)
+        assert(id.peerId.namespace == 0 || id.peerId.namespace == 1)
+        
         self.sharedBuffer.reset()
         var idPeerId: Int64 = id.peerId.toInt64()
         var idNamespace: Int32 = id.namespace
