@@ -114,24 +114,28 @@ public func searchEmojiKeywords(postbox: Postbox, inputLanguageCode: String, que
     let collectionId = emojiKeywordColletionIdForCode(inputLanguageCode)
     
     let search: (Transaction) -> [EmojiKeywordItem] = { transaction in
-        let items: [EmojiKeywordItem]
         let queryTokens = stringIndexTokens(query, transliteration: .none)
-        let query: ItemCollectionSearchQuery = completeMatch ? .exact(queryTokens.first!) : .matching(queryTokens)
-        items = transaction.searchItemCollection(namespace: Namespaces.ItemCollection.EmojiKeywords, query: query).filter { item -> Bool in
-            if let item = item as? EmojiKeywordItem, item.collectionId == collectionId.id {
-                return true
-            } else {
-                return false
+        if let firstQueryToken = queryTokens.first {
+            let query: ItemCollectionSearchQuery = completeMatch ? .exact(firstQueryToken) : .matching(queryTokens)
+            let items = transaction.searchItemCollection(namespace: Namespaces.ItemCollection.EmojiKeywords, query: query).filter { item -> Bool in
+                if let item = item as? EmojiKeywordItem, item.collectionId == collectionId.id {
+                    return true
+                } else {
+                    return false
+                }
+            } as? [EmojiKeywordItem]
+            
+            if let items = items {
+                return items.sorted(by: { lhs, rhs -> Bool in
+                    if lhs.keyword.count == rhs.keyword.count {
+                        return lhs.keyword < rhs.keyword
+                    } else {
+                        return lhs.keyword.count < rhs.keyword.count
+                    }
+                })
             }
-        } as! [EmojiKeywordItem]
-        
-        return items.sorted(by: { lhs, rhs -> Bool in
-            if lhs.keyword.count == rhs.keyword.count {
-                return lhs.keyword < rhs.keyword
-            } else {
-                return lhs.keyword.count < rhs.keyword.count
-            }
-        })
+        }
+        return []
     }
     
     return postbox.transaction { transaction -> Signal<SearchEmojiKeywordsIntermediateResult, NoError> in
