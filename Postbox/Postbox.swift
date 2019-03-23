@@ -1000,8 +1000,6 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration) 
             //debugRestoreState(basePath: basePath, name: "previous1")
             #endif
             
-            var debugFirstTime = true
-            
             loop: while true {
                 let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue)
                 
@@ -1010,11 +1008,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration) 
                 let userVersion: Int32? = metadataTable.userVersion()
                 let currentUserVersion: Int32 = 19
                 
-                if var userVersion = userVersion {
-                    /*if debugFirstTime {
-                        debugFirstTime = false
-                        userVersion = 18
-                    }*/
+                if let userVersion = userVersion {
                     if userVersion != currentUserVersion {
                         if userVersion > currentUserVersion {
                             postboxLog("Version \(userVersion) is newer than supported")
@@ -1221,7 +1215,7 @@ public final class Postbox {
         self.keychainTable = KeychainTable(valueBox: self.valueBox, table: KeychainTable.tableSpec(1))
         self.reverseAssociatedPeerTable = ReverseAssociatedPeerTable(valueBox: self.valueBox, table:ReverseAssociatedPeerTable.tableSpec(40))
         self.peerTable = PeerTable(valueBox: self.valueBox, table: PeerTable.tableSpec(2), reverseAssociatedTable: self.reverseAssociatedPeerTable)
-        self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox, table: GlobalMessageIdsTable.tableSpec(3))
+        self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox, table: GlobalMessageIdsTable.tableSpec(3), seedConfiguration: seedConfiguration)
         self.globallyUniqueMessageIdsTable = MessageGloballyUniqueIdTable(valueBox: self.valueBox, table: MessageGloballyUniqueIdTable.tableSpec(32))
         self.messageHistoryMetadataTable = MessageHistoryMetadataTable(valueBox: self.valueBox, table: MessageHistoryMetadataTable.tableSpec(10))
         self.messageHistoryUnsentTable = MessageHistoryUnsentTable(valueBox: self.valueBox, table: MessageHistoryUnsentTable.tableSpec(11))
