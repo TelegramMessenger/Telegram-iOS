@@ -6,6 +6,8 @@ import Foundation
 #endif
 
 public enum MessageTextEntityType: Equatable {
+    public typealias CustomEntityType = Int32
+    
     case Unknown
     case Mention
     case Hashtag
@@ -19,6 +21,7 @@ public enum MessageTextEntityType: Equatable {
     case TextUrl(url: String)
     case TextMention(peerId: PeerId)
     case PhoneNumber
+    case Custom(type: CustomEntityType)
     
     public static func ==(lhs: MessageTextEntityType, rhs: MessageTextEntityType) -> Bool {
         switch lhs {
@@ -100,6 +103,12 @@ public enum MessageTextEntityType: Equatable {
                 } else {
                     return false
                 }
+            case let .Custom(type):
+                if case .Custom(type) = rhs {
+                    return true
+                } else {
+                    return false
+            }
         }
     }
 }
@@ -141,6 +150,8 @@ public struct MessageTextEntity: PostboxCoding, Equatable {
                 self.type = .TextMention(peerId: PeerId(decoder.decodeInt64ForKey("peerId", orElse: 0)))
             case 12:
                 self.type = .PhoneNumber
+            case Int32.max:
+                self.type = .Custom(type: decoder.decodeInt32ForKey("type", orElse: 0))
             default:
                 self.type = .Unknown
         }
@@ -178,6 +189,9 @@ public struct MessageTextEntity: PostboxCoding, Equatable {
                 encoder.encodeInt64(peerId.toInt64(), forKey: "peerId")
             case .PhoneNumber:
                 encoder.encodeInt32(12, forKey: "_rawValue")
+            case let .Custom(type):
+                encoder.encodeInt32(Int32.max, forKey: "_rawValue")
+                encoder.encodeInt32(type, forKey: "type")
         }
     }
     
@@ -254,6 +268,8 @@ func apiTextAttributeEntities(_ attribute: TextEntitiesMessageAttribute, associa
                     entities.append(.inputMessageEntityMentionName(offset: offset, length: length, userId: inputUser))
                 }
             case .PhoneNumber:
+                break
+            case .Custom:
                 break
         }
     }
