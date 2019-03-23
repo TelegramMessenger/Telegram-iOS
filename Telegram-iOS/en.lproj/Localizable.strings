@@ -4195,3 +4195,8 @@ Unused sets are archived when you add more.";
 "ChatList.DeleteForEveryone" = "Delete for me and %@";
 
 "ChatList.ClearChatConfirmation" = "Are you sure you want to delete all\nmessages in the chat with %@?";
+
+"Settings.CheckPhoneNumberTitle" = "Is %@ still your number?";
+"Settings.CheckPhoneNumberText" = "Keep your number up to date to ensure you can always log in to Telegram. [Learn more]()";
+"Settings.KeepPhoneNumber" = "Keep %@";
+"Settings.ChangePhoneNumber" = "Change Number";
