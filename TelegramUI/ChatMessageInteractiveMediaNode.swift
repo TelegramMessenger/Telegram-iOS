@@ -1210,7 +1210,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         })
     }
     
-    func playMediaWithSound() -> (action: () -> Void, soundEnabled: Bool, isVideoMessage: Bool, isUnread: Bool, badgeNode: ASDisplayNode?)? {
+    func playMediaWithSound() -> (action: (Double?) -> Void, soundEnabled: Bool, isVideoMessage: Bool, isUnread: Bool, badgeNode: ASDisplayNode?)? {
         var isAnimated = false
         if let file = self.media as? TelegramMediaFile, file.isAnimated {
             isAnimated = true
@@ -1224,25 +1224,30 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         }
         
         if let videoNode = self.videoNode, let context = self.context, (self.automaticPlayback ?? false) && !isAnimated {
-            return ({
-                let _ = (context.sharedContext.mediaManager.globalMediaPlayerState
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { playlistStateAndType in
-                    var canPlay = true
-                    if let (_, state, _) = playlistStateAndType {
-                        switch state {
-                            case let .state(state):
-                                if case .playing = state.status.status {
-                                    canPlay = false
-                                }
-                            case .loading:
-                                break
+            return ({ timecode in
+                if let timecode = timecode {
+                    context.sharedContext.mediaManager.playlistControl(.playback(.pause))
+                    videoNode.playOnceWithSound(playAndRecord: false, seek: .timecode(timecode), actionAtEnd: actionAtEnd)
+                } else {
+                    let _ = (context.sharedContext.mediaManager.globalMediaPlayerState
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { playlistStateAndType in
+                        var canPlay = true
+                        if let (_, state, _) = playlistStateAndType {
+                            switch state {
+                                case let .state(state):
+                                    if case .playing = state.status.status {
+                                        canPlay = false
+                                    }
+                                case .loading:
+                                    break
+                            }
                         }
-                    }
-                    if canPlay {
-                        videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: actionAtEnd)
-                    }
-                })
+                        if canPlay {
+                            videoNode.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: actionAtEnd)
+                        }
+                    })
+                }
             }, (self.playerStatus?.soundEnabled ?? false), false, false, self.badgeNode)
         } else {
             return nil

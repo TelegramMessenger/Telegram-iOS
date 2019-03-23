@@ -860,7 +860,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     }
                 })
             }
-        }, longTap: { [weak self] action in
+        }, longTap: { [weak self] action, messageId in
             if let strongSelf = self {
                 switch action {
                     case let .url(url):
@@ -1024,6 +1024,30 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                                 actionSheet?.dismissAnimated()
                             })
                         ])])
+                        strongSelf.chatDisplayNode.dismissInput()
+                        strongSelf.present(actionSheet, in: .window(.root))
+                    case let .timecode(timecode, text):
+                        guard let messageId = messageId else {
+                            return
+                        }
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                            ActionSheetTextItem(title: text),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let strongSelf = self {
+                                    strongSelf.controllerInteraction?.seekToTimecode(messageId, timecode)
+                                }
+                            }),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                UIPasteboard.general.string = text
+                            })
+                            ]), ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])])
                         strongSelf.chatDisplayNode.dismissInput()
                         strongSelf.present(actionSheet, in: .window(.root))
                 }
@@ -1190,6 +1214,24 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         }
                         return nil
                     }))
+                }
+            }
+        }, seekToTimecode: { [weak self] messageId, timestamp in
+            if let strongSelf = self {
+                let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId)
+                var completed = false
+                strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
+                    if !completed, let itemNode = itemNode as? ChatMessageItemView, itemNode.item?.message.id == messageId, let (action, _, _, _, _) = itemNode.playMediaWithSound() {
+                        if case let .visible(fraction) = itemNode.visibility, fraction > 0.7 {
+                            action(Double(timestamp))
+                        } else if let message = message {
+                            let _ = strongSelf.controllerInteraction?.openMessage(message, .timecode(Double(timestamp)))
+                        }
+                        completed = true
+                    }
+                }
+                if !completed, let message = message {
+                    let _ = strongSelf.controllerInteraction?.openMessage(message, .timecode(Double(timestamp)))
                 }
             }
         }, requestMessageUpdate: { [weak self] id in
@@ -3287,7 +3329,25 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 return
             }
             strongSelf.videoUnmuteTooltipController?.dismiss()
-            strongSelf.chatDisplayNode.playFirstMediaWithSound()
+            
+            var actions: [(Bool, (Double?) -> Void)] = []
+            var hasUnconsumed = false
+            strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
+                if let itemNode = itemNode as? ChatMessageItemView, let (action, _, _, isUnconsumed, _) = itemNode.playMediaWithSound() {
+                    if case let .visible(fraction) = itemNode.visibility, fraction > 0.7 {
+                        actions.insert((isUnconsumed, action), at: 0)
+                        if !hasUnconsumed && isUnconsumed {
+                            hasUnconsumed = true
+                        }
+                    }
+                }
+            }
+            for (isUnconsumed, action) in actions {
+                if (!hasUnconsumed || isUnconsumed) {
+                    action(nil)
+                    break
+                }
+            }
         })
         
         self.displayNodeDidLoad()
@@ -3511,7 +3571,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
         let hasOverlayNodes = self.context.sharedContext.mediaManager.overlayMediaManager.controller?.hasNodes ?? false
         if self.validLayout != nil && orientation.isLandscape && !hasOverlayNodes && self.traceVisibility() && isTopmostChatController(self) {
-            self.chatDisplayNode.openCurrentPlayingWithSoundMedia()
+            var completed = false
+            self.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
+                if !completed, let itemNode = itemNode as? ChatMessageItemView, let message = itemNode.item?.message,  let (_, soundEnabled, _, _, _) = itemNode.playMediaWithSound(), soundEnabled {
+                    let _ = self.controllerInteraction?.openMessage(message, .landscape)
+                    completed = true
+                }
+            }
         }
     }
     

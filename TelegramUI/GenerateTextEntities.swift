@@ -27,11 +27,28 @@ private let externalIdentifierDelimiterSet: CharacterSet = {
     set.remove(".")
     return set
 }()
+private let timecodeDelimiterSet: CharacterSet = {
+    var set = CharacterSet.punctuationCharacters
+    set.formUnion(CharacterSet.whitespacesAndNewlines)
+    set.remove(":")
+    return set
+}()
+private let validTimecodeSet: CharacterSet = {
+    var set = CharacterSet(charactersIn: "0".unicodeScalars.first! ... "9".unicodeScalars.first!)
+    set.insert(":")
+    return set
+}()
+
+struct ApplicationSpecificEntityType {
+    public static let Timecode: Int32 = 1
+}
 
 private enum CurrentEntityType {
     case command
     case mention
     case hashtag
+    case phoneNumber
+    case timecode
     
     var type: EnabledEntityTypes {
         switch self {
@@ -41,6 +58,10 @@ private enum CurrentEntityType {
                 return .mention
             case .hashtag:
                 return .hashtag
+            case .phoneNumber:
+                return .phoneNumber
+            case .timecode:
+                return .timecode
         }
     }
 }
@@ -57,12 +78,13 @@ public struct EnabledEntityTypes: OptionSet {
     public static let hashtag = EnabledEntityTypes(rawValue: 1 << 2)
     public static let url = EnabledEntityTypes(rawValue: 1 << 3)
     public static let phoneNumber = EnabledEntityTypes(rawValue: 1 << 4)
-    public static let external = EnabledEntityTypes(rawValue: 1 << 5)
+    public static let timecode = EnabledEntityTypes(rawValue: 1 << 5)
+    public static let external = EnabledEntityTypes(rawValue: 1 << 6)
     
     public static let all: EnabledEntityTypes = [.command, .mention, .hashtag, .url, .phoneNumber]
 }
 
-private func commitEntity(_ utf16: String.UTF16View, _ type: CurrentEntityType, _ range: Range<String.UTF16View.Index>, _ enabledTypes: EnabledEntityTypes, _ entities: inout [MessageTextEntity]) {
+private func commitEntity(_ utf16: String.UTF16View, _ type: CurrentEntityType, _ range: Range<String.UTF16View.Index>, _ enabledTypes: EnabledEntityTypes, _ entities: inout [MessageTextEntity], mediaDuration: Double? = nil) {
     if !enabledTypes.contains(type.type) {
         return
     }
@@ -76,15 +98,26 @@ private func commitEntity(_ utf16: String.UTF16View, _ type: CurrentEntityType, 
     }
     if !overlaps {
         let entityType: MessageTextEntityType
-        switch type {
-            case .command:
-                entityType = .BotCommand
-            case .mention:
-                entityType = .Mention
-            case .hashtag:
-                entityType = .Hashtag
+            switch type {
+                case .command:
+                    entityType = .BotCommand
+                case .mention:
+                    entityType = .Mention
+                case .hashtag:
+                    entityType = .Hashtag
+                case .phoneNumber:
+                    entityType = .PhoneNumber
+                case .timecode:
+                    entityType = .Custom(type: ApplicationSpecificEntityType.Timecode)
         }
-        entities.append(MessageTextEntity(range: indexRange, type: entityType))
+        
+        if case .timecode = type, let mediaDuration = mediaDuration, let timecode = parseTimecodeString(String(utf16[range])) {
+            if timecode <= mediaDuration {
+                entities.append(MessageTextEntity(range: indexRange, type: entityType))
+            }
+        } else {
+            entities.append(MessageTextEntity(range: indexRange, type: entityType))
+        }
     }
 }
 
@@ -202,6 +235,8 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
                                 }
                                 currentEntity = nil
                             }
+                        default:
+                            break
                     }
                 }
             }
@@ -216,23 +251,34 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
     return entities
 }
 
-func addLocallyGeneratedEntities(_ text: String, enabledTypes: EnabledEntityTypes, entities: [MessageTextEntity]) -> [MessageTextEntity]? {
+func addLocallyGeneratedEntities(_ text: String, enabledTypes: EnabledEntityTypes, entities: [MessageTextEntity], mediaDuration: Double? = nil) -> [MessageTextEntity]? {
     var resultEntities = entities
     
     var hasDigits = false
-    if enabledTypes.contains(.phoneNumber) {
+    var hasColons = false
+    
+    let detectPhoneNumbers = enabledTypes.contains(.phoneNumber)
+    let detectTimecodes = enabledTypes.contains(.timecode)
+    if detectPhoneNumbers || detectTimecodes {
         loop: for c in text.utf16 {
             if let scalar = UnicodeScalar(c) {
                 if scalar >= "0" && scalar <= "9" {
                     hasDigits = true
-                    break loop
+                    if !detectTimecodes || hasColons {
+                        break loop
+                    }
+                } else if scalar == ":" {
+                    hasColons = true
+                    if !detectPhoneNumbers || hasDigits {
+                        break loop
+                    }
                 }
             }
         }
     }
     
     if hasDigits {
-        if let phoneNumberDetector = phoneNumberDetector, enabledTypes.contains(.phoneNumber) {
+        if let phoneNumberDetector = phoneNumberDetector, detectPhoneNumbers {
             let utf16 = text.utf16
             phoneNumberDetector.enumerateMatches(in: text, options: [], range: NSMakeRange(0, utf16.count), using: { result, _, _ in
                 if let result = result {
@@ -240,21 +286,54 @@ func addLocallyGeneratedEntities(_ text: String, enabledTypes: EnabledEntityType
                         let lowerBound = utf16.index(utf16.startIndex, offsetBy: result.range.location).samePosition(in: text)
                         let upperBound = utf16.index(utf16.startIndex, offsetBy: result.range.location + result.range.length).samePosition(in: text)
                         if let lowerBound = lowerBound, let upperBound = upperBound {
-                            let indexRange: Range<Int> = utf16.distance(from: text.startIndex, to: lowerBound) ..< utf16.distance(from: text.startIndex, to: upperBound)
-                            var overlaps = false
-                            for entity in resultEntities {
-                                if entity.range.overlaps(indexRange) {
-                                    overlaps = true
-                                    break
-                                }
-                            }
-                            if !overlaps {
-                                resultEntities.append(MessageTextEntity(range: indexRange, type: .PhoneNumber))
-                            }
+                            commitEntity(utf16, .phoneNumber, lowerBound ..< upperBound, enabledTypes, &resultEntities)
                         }
                     }
                 }
             })
+        }
+        if hasColons && detectTimecodes {
+            let utf16 = text.utf16
+            let delimiterSet = timecodeDelimiterSet
+            
+            var index = utf16.startIndex
+            var currentEntity: (CurrentEntityType, Range<String.UTF16View.Index>)?
+            
+            var previousScalar: UnicodeScalar?
+            while index != utf16.endIndex {
+                let c = utf16[index]
+                let scalar = UnicodeScalar(c)
+                var notFound = true
+                if let scalar = scalar {
+                    if validTimecodeSet.contains(scalar) {
+                        notFound = false
+                        if let (type, range) = currentEntity, type == .timecode {
+                            currentEntity = (.timecode, range.lowerBound ..< utf16.index(after: index))
+                        } else if previousScalar == nil || CharacterSet.whitespacesAndNewlines.contains(previousScalar!) {
+                            currentEntity = (.timecode, index ..< index)
+                        }
+                    }
+                    
+                    if notFound {
+                        if let (type, range) = currentEntity {
+                            switch type {
+                                case .timecode:
+                                    if delimiterSet.contains(scalar) {
+                                        commitEntity(utf16, type, range, enabledTypes, &resultEntities, mediaDuration: mediaDuration)
+                                        currentEntity = nil
+                                    }
+                                default:
+                                    break
+                            }
+                        }
+                    }
+                }
+                index = utf16.index(after: index)
+                previousScalar = scalar
+            }
+            if let (type, range) = currentEntity {
+                commitEntity(utf16, type, range, enabledTypes, &resultEntities, mediaDuration: mediaDuration)
+            }
         }
     }
     
@@ -263,4 +342,26 @@ func addLocallyGeneratedEntities(_ text: String, enabledTypes: EnabledEntityType
     } else {
         return nil
     }
+}
+
+func parseTimecodeString(_ string: String?) -> Double? {
+    if let string = string, string.rangeOfCharacter(from: validTimecodeSet.inverted) == nil {
+        let components = string.components(separatedBy: ":")
+        if components.count > 1 && components.count <= 3 {
+            if components.count == 3 {
+                if let hours = Int(components[0]), let minutes = Int(components[1]), let seconds = Int(components[2]) {
+                    if hours >= 0 && hours < 48 && minutes >= 0 && minutes < 60 && seconds >= 0 && seconds < 60 {
+                        return Double(seconds) + Double(minutes) * 60.0 + Double(hours) * 60.0 * 60.0
+                    }
+                }
+            } else if components.count == 2 {
+                if let minutes = Int(components[0]), let seconds = Int(components[1]) {
+                    if minutes >= 0 && minutes < 60 && seconds >= 0 && seconds < 60 {
+                        return Double(seconds) + Double(minutes) * 60.0
+                    }
+                }
+            }
+        }
+    }
+    return nil
 }

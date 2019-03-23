@@ -121,7 +121,7 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     case allAccounts(PresentationTheme, String, Bool)
     case accountsInfo(PresentationTheme, String)
     
-    case permissionInfo(PresentationTheme, PresentationStrings, AccessType)
+    case permissionInfo(PresentationTheme, String, String, Bool)
     case permissionEnable(PresentationTheme, String)
     
     case messageHeader(PresentationTheme, String)
@@ -336,8 +336,8 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .permissionInfo(lhsTheme, lhsStrings, lhsAccessType):
-                if case let .permissionInfo(rhsTheme, rhsStrings, rhsAccessType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsAccessType == rhsAccessType {
+            case let .permissionInfo(lhsTheme, lhsTitle, lhsText, lhsSuppressed):
+                if case let .permissionInfo(rhsTheme, rhsTitle, rhsText, rhsSuppressed) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText, lhsSuppressed == rhsSuppressed {
                     return true
                 } else {
                     return false
@@ -569,8 +569,8 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 }, tag: self.tag)
             case let .accountsInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
-            case let .permissionInfo(theme, strings, type):
-                return PermissionInfoItemListItem(theme: theme, strings: strings, subject: .notifications, type: type, style: .blocks, sectionId: self.section, suppressed: false, close: {
+            case let .permissionInfo(theme, title, text, suppressed):
+                return ItemListInfoItem(theme: theme, title: title, text: .plain(text), style: .blocks, sectionId: self.section, closeAction: suppressed ? nil : {
                     arguments.suppressWarning()
                 })
             case let .permissionEnable(theme, text):
@@ -725,15 +725,25 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
     }
     
     if #available(iOSApplicationExtension 10.0, *) {
+        let title: String
+        let text: String
+        if case .unreachable = authorizationStatus {
+            title = presentationData.strings.Notifications_PermissionsUnreachableTitle
+            text = presentationData.strings.Notifications_PermissionsUnreachableText
+        } else {
+            title = presentationData.strings.Notifications_PermissionsTitle
+            text = presentationData.strings.Notifications_PermissionsText
+        }
+    
         switch (authorizationStatus, warningSuppressed) {
             case (.denied, _):
-                entries.append(.permissionInfo(presentationData.theme, presentationData.strings, authorizationStatus))
+                entries.append(.permissionInfo(presentationData.theme, title, text, true))
                 entries.append(.permissionEnable(presentationData.theme, presentationData.strings.Notifications_PermissionsAllowInSettings))
             case (.unreachable, false):
-                entries.append(.permissionInfo(presentationData.theme, presentationData.strings, authorizationStatus))
+                entries.append(.permissionInfo(presentationData.theme, title, text, false))
                 entries.append(.permissionEnable(presentationData.theme, presentationData.strings.Notifications_PermissionsOpenSettings))
             case (.notDetermined, _):
-                entries.append(.permissionInfo(presentationData.theme, presentationData.strings, authorizationStatus))
+                entries.append(.permissionInfo(presentationData.theme, title, text, true))
                 entries.append(.permissionEnable(presentationData.theme, presentationData.strings.Notifications_PermissionsAllow))
             default:
                 break

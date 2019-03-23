@@ -163,7 +163,7 @@ enum ContactListPeer: Equatable {
 private enum ContactListNodeEntry: Comparable, Identifiable {
     case search(PresentationTheme, PresentationStrings)
     case sort(PresentationTheme, PresentationStrings, ContactsSortOrder)
-    case permissionInfo(PresentationTheme, PresentationStrings, Bool)
+    case permissionInfo(PresentationTheme, String, String, Bool)
     case permissionEnable(PresentationTheme, String)
     case option(Int, ContactListAdditionalOption, ListViewItemHeader?, PresentationTheme, PresentationStrings)
     case peer(Int, ContactListPeer, PeerPresence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool)
@@ -204,8 +204,8 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 return ContactListActionItem(theme: theme, title: text, icon: .inline(dropDownIcon, .right), highlight: .alpha, header: nil, action: {
                     interaction.openSortMenu()
             })
-            case let .permissionInfo(theme, strings, suppressed):
-                return PermissionInfoItem(theme: theme, strings: strings, subject: .contacts, type: .denied, style: .plain, suppressed: suppressed, close: {
+            case let .permissionInfo(theme, title, text, suppressed):
+                return InfoListItem(theme: theme, title: title, text: .plain(text), style: .plain, closeAction: suppressed ? nil : {
                     interaction.suppressWarning()
                 })
             case let .permissionEnable(theme, text):
@@ -250,8 +250,8 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .permissionInfo(lhsTheme, lhsStrings, lhsSuppressed):
-                if case let .permissionInfo(rhsTheme, rhsStrings, rhsSuppressed) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsSuppressed == rhsSuppressed {
+            case let .permissionInfo(lhsTheme, lhsTitle, lhsText, lhsSuppressed):
+                if case let .permissionInfo(rhsTheme, rhsTitle, rhsText, rhsSuppressed) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText, lhsSuppressed == rhsSuppressed {
                     return true
                 } else {
                     return false
@@ -441,15 +441,17 @@ private func contactListNodeEntries(accountPeer: Peer?, peers: [ContactListPeer]
     if #available(iOSApplicationExtension 10.0, *) {
         let (suppressed, syncDisabled) = warningSuppressed
         if !peers.isEmpty && !syncDisabled {
+            let title = strings.Contacts_PermissionsTitle
+            let text = strings.Contacts_PermissionsText
             switch authorizationStatus {
-            case .denied:
-                entries.append(.permissionInfo(theme, strings, suppressed))
-                entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllowInSettings_v0))
-                addHeader = true
-            case .notDetermined:
-                entries.append(.permissionInfo(theme, strings, false))
-                entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllow_v0))
-                addHeader = true
+                case .denied:
+                    entries.append(.permissionInfo(theme, title, text, suppressed))
+                    entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllowInSettings_v0))
+                    addHeader = true
+                case .notDetermined:
+                    entries.append(.permissionInfo(theme, title, text, false))
+                    entries.append(.permissionEnable(theme, strings.Permissions_ContactsAllow_v0))
+                    addHeader = true
             default:
                 break
             }

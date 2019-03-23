@@ -23,11 +23,12 @@ class UniversalVideoGalleryItem: GalleryItem {
     let hideControls: Bool
     let fromPlayingVideo: Bool
     let landscape: Bool
+    let timecode: Double?
     let playbackCompleted: () -> Void
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.content = content
@@ -39,6 +40,7 @@ class UniversalVideoGalleryItem: GalleryItem {
         self.hideControls = hideControls
         self.fromPlayingVideo = fromPlayingVideo
         self.landscape = landscape
+        self.timecode = timecode
         self.playbackCompleted = playbackCompleted
         self.performAction = performAction
         self.openActionOptions = openActionOptions
@@ -195,8 +197,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         super.init()
         
-        self.scrubberView.seek = { [weak self] timestamp in
-            self?.videoNode?.seek(timestamp)
+        self.scrubberView.seek = { [weak self] timecode in
+            self?.videoNode?.seek(timecode)
         }
         
         self.statusButtonNode.addSubnode(self.statusNode)
@@ -612,19 +614,34 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
+    override func processAction(_ action: GalleryControllerItemNodeAction) {
+        guard let videoNode = self.videoNode else {
+            return
+        }
+        
+        switch action {
+            case let .timecode(timecode):
+                videoNode.seek(timecode)
+        }
+    }
+    
     override func activateAsInitial() {
         if let videoNode = self.videoNode, self.isCentral {
             self.initiallyActivated = true
 
             var isAnimated = false
+            var seek = MediaPlayerSeek.start
             if let item = self.item, let content = item.content as? NativeVideoContent {
                 isAnimated = content.fileReference.media.isAnimated
+                if let time = item.timecode {
+                    seek = .timecode(time)
+                }
             }
             if isAnimated {
                 videoNode.seek(0.0)
                 videoNode.play()
             } else {
-                videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+                videoNode.playOnceWithSound(playAndRecord: false, seek: seek, actionAtEnd: .stop)
             }
         }
     }
@@ -979,18 +996,18 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if let fetchStatus = self.fetchStatus {
                 switch fetchStatus {
                     case .Local:
-                        videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: .stop)
+                        videoNode.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: .stop)
                     case .Remote:
                         if self.requiresDownload {
                             self.fetchControls?.fetch()
                         } else {
-                            videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: .stop)
+                            videoNode.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: .stop)
                         }
                     case .Fetching:
                         self.fetchControls?.cancel()
                 }
             } else {
-                videoNode.playOnceWithSound(playAndRecord: false, seekToStart: .none, actionAtEnd: .stop)
+                videoNode.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: .stop)
             }
         }
     }

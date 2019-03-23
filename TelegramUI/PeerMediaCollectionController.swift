@@ -205,7 +205,7 @@ public class PeerMediaCollectionController: TelegramController {
             }, navigationController: {
                 return nil
             }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in
-            }, longTap: { [weak self] content in
+            }, longTap: { [weak self] content, _ in
                 if let strongSelf = self {
                     strongSelf.view.endEditing(true)
                     switch content {
@@ -254,6 +254,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, requestSelectMessagePollOption: { _, _ in
         }, openAppStorePage: {
         }, displayMessageTooltip: { _, _, _, _ in    
+        }, seekToTimecode: { _, _ in    
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

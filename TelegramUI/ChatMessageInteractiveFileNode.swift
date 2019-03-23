@@ -504,7 +504,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 if strongSelf.consumableContentNode.image !== consumableContentIcon {
                                     strongSelf.consumableContentNode.image = consumableContentIcon
                                 }
-                                strongSelf.consumableContentNode.frame = CGRect(origin: CGPoint(x: descriptionFrame.maxX + 2.0, y: descriptionFrame.minY + 5.0), size: consumableContentIcon.size)
+                                strongSelf.consumableContentNode.frame = CGRect(origin: CGPoint(x: descriptionFrame.maxX + 5.0, y: descriptionFrame.minY + 5.0), size: consumableContentIcon.size)
                             } else if strongSelf.consumableContentNode.supernode != nil {
                                 strongSelf.consumableContentNode.removeFromSupernode()
                             }

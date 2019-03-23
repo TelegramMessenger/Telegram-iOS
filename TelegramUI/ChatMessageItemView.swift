@@ -697,7 +697,7 @@ public class ChatMessageItemView: ListViewItemNode {
     func updateAutomaticMediaDownloadSettings() {
     }
     
-    func playMediaWithSound() -> (() -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
+    func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         return nil
     }
     
@@ -757,7 +757,7 @@ public class ChatMessageItemView: ListViewItemNode {
         if let item = self.item {
             switch button.action {
                 case let .url(url):
-                    item.controllerInteraction.longTap(.url(url))
+                    item.controllerInteraction.longTap(.url(url), item.message.id)
                 default:
                     break
             }

@@ -108,7 +108,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                         break
                     case .ignore:
                         return .fail
-                    case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .call, .openMessage:
+                    case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .call, .openMessage, .timecode:
                         return .waitForSingleTap
                 }
             }
@@ -301,15 +301,15 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                                     case .none, .ignore:
                                         break
                                     case let .url(url, _):
-                                        item.controllerInteraction.longTap(.url(url))
+                                        item.controllerInteraction.longTap(.url(url), nil)
                                     case let .peerMention(peerId, mention):
-                                        item.controllerInteraction.longTap(.peerMention(peerId, mention))
+                                        item.controllerInteraction.longTap(.peerMention(peerId, mention), nil)
                                     case let .textMention(name):
-                                        item.controllerInteraction.longTap(.mention(name))
+                                        item.controllerInteraction.longTap(.mention(name), nil)
                                     case let .botCommand(command):
-                                        item.controllerInteraction.longTap(.command(command))
+                                        item.controllerInteraction.longTap(.command(command), nil)
                                     case let .hashtag(_, hashtag):
-                                        item.controllerInteraction.longTap(.hashtag(hashtag))
+                                        item.controllerInteraction.longTap(.hashtag(hashtag), nil)
                                     default:
                                         break
                                 }

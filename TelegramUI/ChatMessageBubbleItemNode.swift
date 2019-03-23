@@ -257,7 +257,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             break
                         case .ignore:
                             return .fail
-                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .call, .openMessage:
+                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .call, .openMessage, .timecode:
                             return .waitForSingleTap
                     }
                 }
@@ -1727,6 +1727,37 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                             let _ = item.controllerInteraction.openMessage(item.message, .default)
                                         }
                                         break loop
+                                    case let .timecode(timecode, _):
+                                        foundTapAction = true
+                                        if let item = self.item {
+                                            var messageId: MessageId?
+                                            for media in item.message.media {
+                                                if let file = media as? TelegramMediaFile, file.duration != nil {
+                                                    messageId = item.message.id
+                                                }
+                                            }
+                                            if messageId == nil {
+                                                for attribute in item.message.attributes {
+                                                    if let attribute = attribute as? ReplyMessageAttribute {
+                                                        if let replyMessage = item.message.associatedMessages[attribute.messageId] {
+                                                            for media in replyMessage.media {
+                                                                if let file = media as? TelegramMediaFile, file.duration != nil {
+                                                                    messageId = replyMessage.id
+                                                                    break
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            if messageId == nil {
+                                                messageId = item.message.id
+                                            }
+                                            if let messageId = messageId {
+                                                item.controllerInteraction.seekToTimecode(messageId, timecode)
+                                            }
+                                        }
+                                        break loop
                                 }
                             }
                             if !foundTapAction {
@@ -1734,6 +1765,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             }
                         case .longTap, .doubleTap:
                             if let item = self.item, self.backgroundNode.frame.contains(location) {
+                                let messageId = item.message.id
+                                
                                 var foundTapAction = false
                                 var tapMessage: Message? = item.content.firstMessage
                                 var selectAll = true
@@ -1750,23 +1783,23 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                             break
                                         case let .url(url, _):
                                             foundTapAction = true
-                                            item.controllerInteraction.longTap(.url(url))
+                                            item.controllerInteraction.longTap(.url(url), messageId)
                                             break loop
                                         case let .peerMention(peerId, mention):
                                             foundTapAction = true
-                                            item.controllerInteraction.longTap(.peerMention(peerId, mention))
+                                            item.controllerInteraction.longTap(.peerMention(peerId, mention), messageId)
                                             break loop
                                         case let .textMention(name):
                                             foundTapAction = true
-                                            item.controllerInteraction.longTap(.mention(name))
+                                            item.controllerInteraction.longTap(.mention(name), messageId)
                                             break loop
                                         case let .botCommand(command):
                                             foundTapAction = true
-                                            item.controllerInteraction.longTap(.command(command))
+                                            item.controllerInteraction.longTap(.command(command), messageId)
                                             break loop
                                         case let .hashtag(_, hashtag):
                                             foundTapAction = true
-                                            item.controllerInteraction.longTap(.hashtag(hashtag))
+                                            item.controllerInteraction.longTap(.hashtag(hashtag), messageId)
                                             break loop
                                         case .instantPage:
                                             break
@@ -1777,6 +1810,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                         case .openMessage:
                                             foundTapAction = false
                                             break
+                                        case let .timecode(timecode, text):
+                                            foundTapAction = true
+                                            item.controllerInteraction.longTap(.timecode(timecode, text), messageId)
+                                            break loop
                                     }
                                 }
                                 if !foundTapAction, let tapMessage = tapMessage {
@@ -1932,7 +1969,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     }
     
     
-    override func playMediaWithSound() -> (() -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
+    override func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         for contentNode in self.contentNodes {
             if let playMediaWithSound = contentNode.playMediaWithSound() {
                 return playMediaWithSound

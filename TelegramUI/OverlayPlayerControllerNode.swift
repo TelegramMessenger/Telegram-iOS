@@ -60,7 +60,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
             return nil
         }, presentGlobalOverlayController: { _, _ in
         }, callPeer: { _ in
-        }, longTap: { _ in
+        }, longTap: { _, _ in
         }, openCheckoutOrReceipt: { _ in
         }, openSearch: {
         }, setupReply: { _ in
@@ -73,6 +73,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         }, requestSelectMessagePollOption: { _, _ in
         }, openAppStorePage: {
         }, displayMessageTooltip: { _, _, _, _ in
+        }, seekToTimecode: { _, _ in    
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

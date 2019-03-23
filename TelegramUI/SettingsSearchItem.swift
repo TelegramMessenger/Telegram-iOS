@@ -672,13 +672,21 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
                     if let strongSelf = self {
                         switch mode {
                             case .push:
-                                strongSelf.pushController(controller)
+                                if let controller = controller {
+                                    strongSelf.pushController(controller)
+                                }
                             case .modal:
-                                strongSelf.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet, completion: { [weak self] in
-                                    self?.cancel()
-                                }))
+                                if let controller = controller {
+                                    strongSelf.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet, completion: { [weak self] in
+                                        self?.cancel()
+                                    }))
+                                }
                             case .immediate:
-                                strongSelf.presentController(controller, nil)
+                                if let controller = controller {
+                                    strongSelf.presentController(controller, nil)
+                                }
+                            case .dismiss:
+                                strongSelf.cancel()
                         }
                     }
                 })

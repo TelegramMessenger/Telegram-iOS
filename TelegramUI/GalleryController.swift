@@ -131,7 +131,7 @@ private func galleryMessageCaptionText(_ message: Message) -> String {
     return message.text
 }
 
-func galleryItemForEntry(context: AccountContext, presentationData: PresentationData, entry: MessageHistoryEntry, isCentral: Bool = false, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, tempFilePath: String? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }) -> GalleryItem? {
+func galleryItemForEntry(context: AccountContext, presentationData: PresentationData, entry: MessageHistoryEntry, isCentral: Bool = false, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, tempFilePath: String? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }) -> GalleryItem? {
     switch entry {
         case let .MessageEntry(message, _, location, _, _):
             if let (media, mediaImage) = mediaForMessage(message: message) {
@@ -157,8 +157,14 @@ func galleryItemForEntry(context: AccountContext, presentationData: Presentation
                                 break
                             }
                         }
-                        let caption = galleryCaptionStringWithAppliedEntities(galleryMessageCaptionText(message), entities: entities)
-                        return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, hideControls: hideControls, fromPlayingVideo: fromPlayingVideo, landscape: landscape, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions)
+                        
+                        let text = galleryMessageCaptionText(message)
+                        if let result = addLocallyGeneratedEntities(text, enabledTypes: [.timecode], entities: entities, mediaDuration: file.duration.flatMap(Double.init)) {
+                            entities = result
+                        }
+                        
+                        let caption = galleryCaptionStringWithAppliedEntities(text, entities: entities)
+                        return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, hideControls: hideControls, fromPlayingVideo: fromPlayingVideo, landscape: landscape, timecode: timecode, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions)
                     } else {
                         if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
                             var pixelsCount: Int = 0
@@ -194,7 +200,7 @@ func galleryItemForEntry(context: AccountContext, presentationData: Presentation
                             }
                     }
                     if let content = content {
-                        return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: performAction, openActionOptions: openActionOptions)
+                        return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, timecode: timecode, performAction: performAction, openActionOptions: openActionOptions)
                     } else {
                         return nil
                     }
@@ -251,6 +257,11 @@ enum GalleryControllerInteractionTapAction {
     case peerMention(PeerId, String)
     case botCommand(String)
     case hashtag(String?, String)
+    case timecode(Double, String)
+}
+
+public enum GalleryControllerItemNodeAction {
+    case timecode(Double)
 }
 
 final class GalleryControllerActionInteraction {
@@ -298,6 +309,7 @@ class GalleryController: ViewController {
     var temporaryDoNotWaitForReady = false
     private let fromPlayingVideo: Bool
     private let landscape: Bool
+    private let timecode: Double?
     
     private let accountInUseDisposable = MetaDisposable()
     private let disposable = MetaDisposable()
@@ -323,7 +335,7 @@ class GalleryController: ViewController {
     private var performAction: (GalleryControllerInteractionTapAction) -> Void
     private var openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     
-    init(context: AccountContext, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
+    init(context: AccountContext, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
         self.context = context
         self.source = source
         self.replaceRootController = replaceRootController
@@ -332,6 +344,7 @@ class GalleryController: ViewController {
         self.streamVideos = streamSingleVideo
         self.fromPlayingVideo = fromPlayingVideo
         self.landscape = landscape
+        self.timecode = timecode
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -438,7 +451,7 @@ class GalleryController: ViewController {
                                 if case let .MessageEntry(message, _, _, _, _) = entry, message.stableId == strongSelf.centralEntryStableId {
                                     isCentral = true
                                 }
-                                if let item = galleryItemForEntry(context: context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: streamSingleVideo, fromPlayingVideo: isCentral && fromPlayingVideo, landscape: isCentral && landscape, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions) {
+                                if let item = galleryItemForEntry(context: context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: streamSingleVideo, fromPlayingVideo: isCentral && fromPlayingVideo, landscape: isCentral && landscape, timecode: isCentral ? timecode : nil, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions) {
                                     if isCentral {
                                         centralItemIndex = items.count
                                     }
@@ -536,7 +549,10 @@ class GalleryController: ViewController {
         
         performActionImpl = { [weak self] action in
             if let strongSelf = self {
-                strongSelf.dismiss(forceAway: false)
+                if case .timecode = action {
+                } else {
+                    strongSelf.dismiss(forceAway: false)
+                }
                 switch action {
                     case let .url(url, concealed):
                         strongSelf.actionInteraction?.openUrl(url, concealed)
@@ -548,6 +564,8 @@ class GalleryController: ViewController {
                         strongSelf.actionInteraction?.openBotCommand(command)
                     case let .hashtag(peerName, hashtag):
                         strongSelf.actionInteraction?.openHashtag(peerName, hashtag)
+                    case let .timecode(timecode, _):
+                        strongSelf.galleryNode.pager.centralItemNode()?.processAction(.timecode(timecode))
                 }
             }
         }
@@ -555,149 +573,171 @@ class GalleryController: ViewController {
         openActionOptionsImpl = { [weak self] action in
             if let strongSelf = self {
                 switch action {
-                case let .url(url, _):
-                    var cleanUrl = url
-                    var canAddToReadingList = true
-                    let canOpenIn = availableOpenInOptions(context: strongSelf.context, item: .url(url: url)).count > 1
-                    let mailtoString = "mailto:"
-                    let telString = "tel:"
-                    var openText = strongSelf.presentationData.strings.Conversation_LinkDialogOpen
-                    var phoneNumber: String?
-                    if cleanUrl.hasPrefix(mailtoString) {
-                        canAddToReadingList = false
-                        cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: mailtoString.distance(from: mailtoString.startIndex, to: mailtoString.endIndex))...])
-                    } else if cleanUrl.hasPrefix(telString) {
-                        canAddToReadingList = false
-                        phoneNumber = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: telString.distance(from: telString.startIndex, to: telString.endIndex))...])
-                        cleanUrl = phoneNumber!
-                        openText = strongSelf.presentationData.strings.UserInfo_PhoneCall
-                    } else if canOpenIn {
-                        openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
-                    }
-                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                    
-                    var items: [ActionSheetItem] = []
-                    items.append(ActionSheetTextItem(title: cleanUrl))
-                    items.append(ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        if let strongSelf = self {
-                            if canOpenIn {
-                                strongSelf.actionInteraction?.openUrlIn(url)
-                            } else {
-                                strongSelf.dismiss(forceAway: false)
-                                strongSelf.actionInteraction?.openUrl(url, false)
-                            }
+                    case let .url(url, _):
+                        var cleanUrl = url
+                        var canAddToReadingList = true
+                        let canOpenIn = availableOpenInOptions(context: strongSelf.context, item: .url(url: url)).count > 1
+                        let mailtoString = "mailto:"
+                        let telString = "tel:"
+                        var openText = strongSelf.presentationData.strings.Conversation_LinkDialogOpen
+                        var phoneNumber: String?
+                        if cleanUrl.hasPrefix(mailtoString) {
+                            canAddToReadingList = false
+                            cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: mailtoString.distance(from: mailtoString.startIndex, to: mailtoString.endIndex))...])
+                        } else if cleanUrl.hasPrefix(telString) {
+                            canAddToReadingList = false
+                            phoneNumber = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: telString.distance(from: telString.startIndex, to: telString.endIndex))...])
+                            cleanUrl = phoneNumber!
+                            openText = strongSelf.presentationData.strings.UserInfo_PhoneCall
+                        } else if canOpenIn {
+                            openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
                         }
-                    }))
-                    if let phoneNumber = phoneNumber {
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddContact, color: .accent, action: { [weak actionSheet] in
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        
+                        var items: [ActionSheetItem] = []
+                        items.append(ActionSheetTextItem(title: cleanUrl))
+                        items.append(ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            if let strongSelf = self {
+                                if canOpenIn {
+                                    strongSelf.actionInteraction?.openUrlIn(url)
+                                } else {
+                                    strongSelf.dismiss(forceAway: false)
+                                    strongSelf.actionInteraction?.openUrl(url, false)
+                                }
+                            }
+                        }))
+                        if let phoneNumber = phoneNumber {
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddContact, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let strongSelf = self {
+                                    strongSelf.dismiss(forceAway: false)
+                                    strongSelf.actionInteraction?.addContact(phoneNumber)
+                                }
+                            }))
+                        }
+                        items.append(ActionSheetButtonItem(title: canAddToReadingList ? strongSelf.presentationData.strings.ShareMenu_CopyShareLink : strongSelf.presentationData.strings.Conversation_ContextMenuCopy, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            UIPasteboard.general.string = cleanUrl
+                        }))
+                        if canAddToReadingList {
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let link = URL(string: url) {
+                                    let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
+                                }
+                            }))
+                        }
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        strongSelf.present(actionSheet, in: .window(.root))
+                    case let .peerMention(peerId, mention):
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        var items: [ActionSheetItem] = []
+                        if !mention.isEmpty {
+                            items.append(ActionSheetTextItem(title: mention))
+                        }
+                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
                                 strongSelf.dismiss(forceAway: false)
-                                strongSelf.actionInteraction?.addContact(phoneNumber)
+                                strongSelf.actionInteraction?.openPeer(peerId)
                             }
                         }))
-                    }
-                    items.append(ActionSheetButtonItem(title: canAddToReadingList ? strongSelf.presentationData.strings.ShareMenu_CopyShareLink : strongSelf.presentationData.strings.Conversation_ContextMenuCopy, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        UIPasteboard.general.string = cleanUrl
-                    }))
-                    if canAddToReadingList {
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            if let link = URL(string: url) {
-                                let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
-                            }
-                        }))
-                    }
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])])
-                    strongSelf.present(actionSheet, in: .window(.root))
-                case let .peerMention(peerId, mention):
-                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                    var items: [ActionSheetItem] = []
-                    if !mention.isEmpty {
-                        items.append(ActionSheetTextItem(title: mention))
-                    }
-                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        if let strongSelf = self {
-                            strongSelf.dismiss(forceAway: false)
-                            strongSelf.actionInteraction?.openPeer(peerId)
+                        if !mention.isEmpty {
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                UIPasteboard.general.string = mention
+                            }))
                         }
-                    }))
-                    if !mention.isEmpty {
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items:items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        strongSelf.present(actionSheet, in: .window(.root))
+                    case let .textMention(mention):
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                            ActionSheetTextItem(title: mention),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let strongSelf = self {
+                                    strongSelf.dismiss(forceAway: false)
+                                    strongSelf.actionInteraction?.openPeerMention(mention)
+                                }
+                            }),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                UIPasteboard.general.string = mention
+                            })
+                        ]), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        strongSelf.present(actionSheet, in: .window(.root))
+                    case let .botCommand(command):
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        var items: [ActionSheetItem] = []
+                        items.append(ActionSheetTextItem(title: command))
                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
-                            UIPasteboard.general.string = mention
+                            UIPasteboard.general.string = command
                         }))
-                    }
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items:items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                        ])])
-                    strongSelf.present(actionSheet, in: .window(.root))
-                case let .textMention(mention):
-                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                        ActionSheetTextItem(title: mention),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            if let strongSelf = self {
-                                strongSelf.dismiss(forceAway: false)
-                                strongSelf.actionInteraction?.openPeerMention(mention)
-                            }
-                        }),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            UIPasteboard.general.string = mention
-                        })
-                        ]), ActionSheetItemGroup(items: [
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
-                            ])])
-                    strongSelf.present(actionSheet, in: .window(.root))
-                case let .botCommand(command):
-                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                    var items: [ActionSheetItem] = []
-                    items.append(ActionSheetTextItem(title: command))
-                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        UIPasteboard.general.string = command
-                    }))
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
                         ])])
-                    strongSelf.present(actionSheet, in: .window(.root))
-                case let .hashtag(peerName, hashtag):
-                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                        ActionSheetTextItem(title: hashtag),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            if let strongSelf = self {
-                                strongSelf.dismiss(forceAway: false)
-                                strongSelf.actionInteraction?.openHashtag(peerName, hashtag)
-                            }
-                        }),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            UIPasteboard.general.string = hashtag
-                        })
-                        ]), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        strongSelf.present(actionSheet, in: .window(.root))
+                    case let .hashtag(peerName, hashtag):
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                            ActionSheetTextItem(title: hashtag),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
+                                if let strongSelf = self {
+                                    strongSelf.dismiss(forceAway: false)
+                                    strongSelf.actionInteraction?.openHashtag(peerName, hashtag)
+                                }
+                            }),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                UIPasteboard.general.string = hashtag
                             })
+                        ]), ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])
                         ])
-                    ])
-                    strongSelf.present(actionSheet, in: .window(.root))
+                        strongSelf.present(actionSheet, in: .window(.root))
+                    case let .timecode(timecode, text):
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                            ActionSheetTextItem(title: text),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let strongSelf = self {
+                                    strongSelf.dismiss(forceAway: false)
+                                    strongSelf.galleryNode.pager.centralItemNode()?.processAction(.timecode(timecode))
+                                }
+                            }),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                UIPasteboard.general.string = text
+                            })
+                        ]), ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])
+                        ])
+                        strongSelf.present(actionSheet, in: .window(.root))
                 }
             }
         }
@@ -817,8 +857,12 @@ class GalleryController: ViewController {
         var items: [GalleryItem] = []
         var centralItemIndex: Int?
         for entry in self.entries {
-            if let item = galleryItemForEntry(context: context, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, fromPlayingVideo: self.fromPlayingVideo, landscape: self.landscape, performAction: self.performAction, openActionOptions: self.openActionOptions) {
-                if case let .MessageEntry(message, _, _, _, _) = entry, message.stableId == self.centralEntryStableId {
+            var isCentral = false
+            if case let .MessageEntry(message, _, _, _, _) = entry, message.stableId == self.centralEntryStableId {
+                isCentral = true
+            }
+            if let item = galleryItemForEntry(context: context, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, fromPlayingVideo: isCentral && self.fromPlayingVideo, landscape: isCentral && self.landscape, timecode: isCentral ? self.timecode : nil, performAction: self.performAction, openActionOptions: self.openActionOptions) {
+                if isCentral {
                     centralItemIndex = items.count
                 }
                 items.append(item)

@@ -248,7 +248,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
                                          TelegramTextAttributes.PeerMention,
                                          TelegramTextAttributes.PeerTextMention,
                                          TelegramTextAttributes.BotCommand,
-                                         TelegramTextAttributes.Hashtag]
+                                         TelegramTextAttributes.Hashtag,
+                                         TelegramTextAttributes.Timecode]
             
             for attribute in highlightedAttributes {
                 if let _ = attributes[NSAttributedStringKey(rawValue: attribute)] {
@@ -308,10 +309,6 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     private func actionForAttributes(_ attributes: [NSAttributedStringKey: Any]) -> GalleryControllerInteractionTapAction? {
         if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
-//            var concealed = true
-//            if let attributeText = self.labelNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
-//                concealed = !doesUrlMatchText(url: url, text: attributeText)
-//            }
             return .url(url: url, concealed: false)
         } else if let peerMention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
             return .peerMention(peerMention.peerId, peerMention.mention)
@@ -321,6 +318,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             return .botCommand(botCommand)
         } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
             return .hashtag(hashtag.peerName, hashtag.hashtag)
+        } else if let timecode = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Timecode)] as? TelegramTimecode {
+            return .timecode(timecode.time, timecode.text)
         } else {
             return nil
         }

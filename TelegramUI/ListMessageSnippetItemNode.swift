@@ -543,7 +543,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                         case .tap, .longTap:
                             if let item = self.item, let url = self.urlAtPoint(location) {
                                 if case .longTap = gesture {
-                                    item.controllerInteraction.longTap(ChatControllerInteractionLongTapAction.url(url))
+                                    item.controllerInteraction.longTap(ChatControllerInteractionLongTapAction.url(url), item.message.id)
                                 } else if url == self.currentPrimaryUrl {
                                     if !item.controllerInteraction.openMessage(item.message, .default) {
                                         item.controllerInteraction.openUrl(url, false, false)

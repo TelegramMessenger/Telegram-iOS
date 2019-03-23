@@ -3,30 +3,37 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
-class PermissionInfoItem: ListViewItem {
+enum InfoListItemText {
+    case plain(String)
+    case markdown(String)
+}
+
+enum InfoListItemLinkAction {
+    case tap(String)
+}
+
+class InfoListItem: ListViewItem {
     let selectable: Bool = false
     
     let theme: PresentationTheme
-    let strings: PresentationStrings
-    let subject: DeviceAccessSubject
-    let type: AccessType
+    let title: String
+    let text: InfoListItemText
     let style: ItemListStyle
-    let suppressed: Bool
-    let close: () -> Void
+    let linkAction: ((InfoListItemLinkAction) -> Void)?
+    let closeAction: (() -> Void)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType, style: ItemListStyle, suppressed: Bool, close: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: String, text: InfoListItemText, style: ItemListStyle, linkAction: ((InfoListItemLinkAction) -> Void)? = nil, closeAction: (() -> Void)?) {
         self.theme = theme
-        self.strings = strings
-        self.subject = subject
-        self.type = type
+        self.title = title
+        self.text = text
         self.style = style
-        self.suppressed = suppressed
-        self.close = close
+        self.linkAction = linkAction
+        self.closeAction = closeAction
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
-            let node = PermissionInfoItemNode()
+            let node = InfoItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, nil)
             
             node.contentSize = layout.contentSize
@@ -42,7 +49,7 @@ class PermissionInfoItem: ListViewItem {
     
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
-            if let nodeValue = node() as? PermissionInfoItemNode {
+            if let nodeValue = node() as? InfoItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
@@ -58,17 +65,17 @@ class PermissionInfoItem: ListViewItem {
     }
 }
 
-class PermissionInfoItemListItem: PermissionInfoItem, ItemListItem {
+class ItemListInfoItem: InfoListItem, ItemListItem {
     let sectionId: ItemListSectionId
     
-    init(theme: PresentationTheme, strings: PresentationStrings, subject: DeviceAccessSubject, type: AccessType, style: ItemListStyle, sectionId: ItemListSectionId, suppressed: Bool, close: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: String, text: InfoListItemText, style: ItemListStyle, sectionId: ItemListSectionId, linkAction: ((InfoListItemLinkAction) -> Void)? = nil, closeAction: (() -> Void)?) {
         self.sectionId = sectionId
-        super.init(theme: theme, strings: strings, subject: subject, type: type, style: style, suppressed: suppressed, close: close)
+        super.init(theme: theme, title: title, text: text, style: style, linkAction: linkAction, closeAction: closeAction)
     }
     
     override func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
-            let node = PermissionInfoItemNode()
+            let node = InfoItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
@@ -84,7 +91,7 @@ class PermissionInfoItemListItem: PermissionInfoItem, ItemListItem {
     
     override func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
-            if let nodeValue = node() as? PermissionInfoItemNode {
+            if let nodeValue = node() as? InfoItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
@@ -102,20 +109,24 @@ class PermissionInfoItemListItem: PermissionInfoItem, ItemListItem {
 
 private let titleFont = Font.semibold(17.0)
 private let textFont = Font.regular(16.0)
+private let textBoldFont = Font.semibold(16.0)
 private let badgeFont = Font.regular(15.0)
 
-class PermissionInfoItemNode: ListViewItemNode {
+class InfoItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let closeButton: HighlightableButtonNode
 
-    let badgeNode: ASImageNode
-    let labelNode: TextNode
-    let titleNode: TextNode
-    let textNode: TextNode
+    private let badgeNode: ASImageNode
+    private let labelNode: TextNode
+    private let titleNode: TextNode
+    private let textNode: TextNode
+    private var linkHighlightingNode: LinkHighlightingNode?
     
-    private var item: PermissionInfoItem?
+    private let activateArea: AccessibilityAreaNode
+    
+    private var item: InfoListItem?
     
     override var canBeSelected: Bool {
         return false
@@ -146,6 +157,9 @@ class PermissionInfoItemNode: ListViewItemNode {
         self.textNode = TextNode()
         self.textNode.isUserInteractionEnabled = false
         
+        self.activateArea = AccessibilityAreaNode()
+        self.activateArea.accessibilityTraits = UIAccessibilityTraitStaticText
+        
         self.closeButton = HighlightableButtonNode()
         self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
         self.closeButton.displaysAsynchronously = false
@@ -156,12 +170,28 @@ class PermissionInfoItemNode: ListViewItemNode {
         self.addSubnode(self.labelNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
+        self.addSubnode(self.activateArea)
         self.addSubnode(self.closeButton)
         
         self.closeButton.addTarget(self, action: #selector(self.closeButtonPressed), forControlEvents: .touchUpInside)
     }
     
-    func asyncLayout() -> (_ item: PermissionInfoItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors?) -> (ListViewItemNodeLayout, () -> Void) {
+    override func didLoad() {
+        super.didLoad()
+        
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.tapActionAtPoint = { _ in
+            return .waitForSingleTap
+        }
+        recognizer.highlight = { [weak self] point in
+            if let strongSelf = self {
+                strongSelf.updateTouchesAtPoint(point)
+            }
+        }
+        self.view.addGestureRecognizer(recognizer)
+    }
+    
+    func asyncLayout() -> (_ item: InfoListItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors?) -> (ListViewItemNodeLayout, () -> Void) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
@@ -204,34 +234,30 @@ class PermissionInfoItemNode: ListViewItemNode {
                     itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
             }
             
-            let title: String
-            let text: String
-            switch item.subject {
-                case .contacts:
-                    title = item.strings.Contacts_PermissionsTitle
-                    text = item.strings.Contacts_PermissionsText
-                case .notifications:
-                    switch item.type {
-                        case .unreachable:
-                            title = item.strings.Notifications_PermissionsUnreachableTitle
-                            text = item.strings.Notifications_PermissionsUnreachableText
-                        default:
-                            title = item.strings.Notifications_PermissionsTitle
-                            text = item.strings.Notifications_PermissionsText
-                    }
-                default:
-                    title = ""
-                    text = ""
+            let attributedText: NSAttributedString
+            switch item.text {
+                case let .plain(text):
+                    attributedText = NSAttributedString(string: text, font: textFont, textColor: item.theme.list.itemPrimaryTextColor)
+                case let .markdown(text):
+                    attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: item.theme.list.itemPrimaryTextColor), bold: MarkdownAttributeSet(font: textBoldFont, textColor: item.theme.list.itemPrimaryTextColor), link: MarkdownAttributeSet(font: textFont, textColor: item.theme.list.itemAccentColor), linkAttribute: { contents in
+                        return (TelegramTextAttributes.URL, contents)
+                    }))
             }
             
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "!", font: badgeFont, textColor: item.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: badgeDiameter, height: badgeDiameter), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - badgeDiameter - 8.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: textFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - badgeDiameter - 8.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize = CGSize(width: params.width, height: titleLayout.size.height + textLayout.size.height + 36.0)
-            return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
+            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
+            
+            return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    strongSelf.accessibilityLabel = "\(item.title)\n\(attributedText.string)"
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
+                    strongSelf.activateArea.accessibilityLabel = strongSelf.accessibilityLabel
                 
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
@@ -272,14 +298,7 @@ class PermissionInfoItemNode: ListViewItemNode {
                         bottomStripeInset = leftInset
                     }
                     
-                    if let item = strongSelf.item {
-                        switch (item.subject, item.type, item.suppressed) {
-                            case (.contacts, _, false), (.notifications, .unreachable, _):
-                                strongSelf.closeButton.isHidden = false
-                            default:
-                                strongSelf.closeButton.isHidden = true
-                        }
-                    }
+                    strongSelf.closeButton.isHidden = item.closeAction == nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
@@ -324,7 +343,72 @@ class PermissionInfoItemNode: ListViewItemNode {
     
     @objc func closeButtonPressed() {
         if let item = self.item {
-            item.close()
+            item.closeAction?()
+        }
+    }
+    
+    @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+            case .ended:
+                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                    switch gesture {
+                        case .tap:
+                            let titleFrame = self.textNode.frame
+                            if let item = self.item, titleFrame.contains(location) {
+                                if let (_, attributes) = self.textNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
+                                    if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+                                        item.linkAction?(.tap(url))
+                                    }
+                                }
+                            }
+                        default:
+                            break
+                    }
+                }
+            default:
+                break
+        }
+    }
+    
+    private func updateTouchesAtPoint(_ point: CGPoint?) {
+        if let item = self.item {
+            var rects: [CGRect]?
+            if let point = point {
+                let textNodeFrame = self.textNode.frame
+                if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+                    let possibleNames: [String] = [
+                        TelegramTextAttributes.URL,
+                        TelegramTextAttributes.PeerMention,
+                        TelegramTextAttributes.PeerTextMention,
+                        TelegramTextAttributes.BotCommand,
+                        TelegramTextAttributes.Hashtag
+                    ]
+                    for name in possibleNames {
+                        if let _ = attributes[NSAttributedStringKey(rawValue: name)] {
+                            rects = self.textNode.attributeRects(name: name, at: index)
+                            break
+                        }
+                    }
+                }
+            }
+            
+            if let rects = rects {
+                let linkHighlightingNode: LinkHighlightingNode
+                if let current = self.linkHighlightingNode {
+                    linkHighlightingNode = current
+                } else {
+                    linkHighlightingNode = LinkHighlightingNode(color: item.theme.list.itemAccentColor.withAlphaComponent(0.5))
+                    self.linkHighlightingNode = linkHighlightingNode
+                    self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
+                }
+                linkHighlightingNode.frame = self.textNode.frame
+                linkHighlightingNode.updateRects(rects)
+            } else if let linkHighlightingNode = self.linkHighlightingNode {
+                self.linkHighlightingNode = nil
+                linkHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak linkHighlightingNode] _ in
+                    linkHighlightingNode?.removeFromSupernode()
+                })
+            }
         }
     }
 }
