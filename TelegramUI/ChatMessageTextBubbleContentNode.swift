@@ -217,7 +217,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 var textFont = item.presentationData.messageFont
                 var forceStatusNewline = false
-                /*if rawText.containsOnlyEmoji {
+                if rawText.containsOnlyEmoji {
                     let emojis = rawText.emojis
                     switch emojis.count {
                         case 1:
@@ -232,7 +232,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         default:
                             break
                     }
-                }*/
+                }
                 
                 if let entities = entities {
                     attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, fixedFont: item.presentationData.messageFixedFont)
