@@ -482,6 +482,9 @@ public final class TextAccessibilityOverlayNode: ASDisplayNode {
     override public init() {
         super.init()
         
+        self.isOpaque = false
+        self.backgroundColor = nil
+        
         let openUrl: (String) -> Void = { [weak self] url in
             self?.openUrl?(url)
         }
