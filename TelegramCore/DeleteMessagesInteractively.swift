@@ -63,7 +63,7 @@ public func clearHistoryInteractively(postbox: Postbox, peerId: PeerId, type: In
             cloudChatAddClearHistoryOperation(transaction: transaction, peerId: peerId, explicitTopMessageId: nil, type: type)
             var topIndex: MessageIndex?
             if let topMessageId = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud), let topMessage = transaction.getMessage(topMessageId) {
-                topIndex = MessageIndex(topMessage)
+                topIndex = topMessage.index
             }
             clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId)
             if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData, let migrationReference = cachedData.migrationReference {
