@@ -649,7 +649,7 @@ final class AuthorizedApplicationContext {
                         
                         if !didAppear {
                             Queue.mainQueue().after(0.15, {
-                                (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments.init(presentationAnimation: .modalSheet))
+                                (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                             })
                         }
                     } else {
@@ -698,7 +698,7 @@ final class AuthorizedApplicationContext {
             if let strongSelf = self{
                 for text in alerts {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                    let controller = textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
                     (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                 }
             }
@@ -712,10 +712,10 @@ final class AuthorizedApplicationContext {
         })
        
         let importableContacts = self.context.sharedContext.contactDataManager?.importable() ?? .single([:])
-        self.context.account.importableContacts.set(self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings])
-        |> mapToSignal { sharedData -> Signal<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData], NoError> in
-            let settings: ContactSynchronizationSettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings) ?? .defaultSettings
-            if settings.synchronizeDeviceContacts {
+        self.context.account.importableContacts.set(self.context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings])
+        |> mapToSignal { preferences -> Signal<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData], NoError> in
+            let settings: ContactsSettings = (preferences.values[PreferencesKeys.contactsSettings] as? ContactsSettings) ?? .defaultSettings
+            if settings.synchronizeContacts {
                 return importableContacts
             } else {
                 return .single([:])
@@ -783,7 +783,7 @@ final class AuthorizedApplicationContext {
                             navigateToMessage()
                         } else {
                             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                            let controller = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: presentationData.strings.WatchRemote_AlertTitle, text: presentationData.strings.WatchRemote_AlertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.WatchRemote_AlertOpen, action:navigateToMessage)])
+                            let controller = textAlertController(context: strongSelf.context, title: presentationData.strings.WatchRemote_AlertTitle, text: presentationData.strings.WatchRemote_AlertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.WatchRemote_AlertOpen, action:navigateToMessage)])
                             (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                         }
                     } else {
@@ -840,7 +840,7 @@ final class AuthorizedApplicationContext {
     }
     
     func openRootSearch() {
-        self.rootController.openChatsSearch()
+        self.rootController.openChatsController(activateSearch: true)
     }
     
     func openRootCompose() {

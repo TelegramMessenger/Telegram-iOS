@@ -86,7 +86,7 @@ func makeBridgeMedia(message: Message, strings: PresentationStrings, chatPeer: P
     
     if let forward = message.forwardInfo {
         let bridgeForward = TGBridgeForwardedMessageMediaAttachment()
-        bridgeForward.peerId = makeBridgeIdentifier(forward.author.id)
+        bridgeForward.peerId = forward.author.flatMap({ makeBridgeIdentifier($0.id) }) ?? 0
         if let sourceMessageId = forward.sourceMessageId {
             bridgeForward.mid = sourceMessageId.id
         }

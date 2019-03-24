@@ -236,6 +236,7 @@
 		D02CF61B215DA24900E0F56A /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02CF61A215DA24900E0F56A /* TelegramCore.framework */; };
 		D02CF61C215E51D500E0F56A /* BuildConfig.m in Sources */ = {isa = PBXBuildFile; fileRef = D09250011FE52D2A003F693F /* BuildConfig.m */; };
 		D02E31231BD803E800CD3F01 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = D02E31221BD803E800CD3F01 /* main.m */; };
+		D0338736223A9A9A007A2CE4 /* Config-Hockeyapp-Internal.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */; };
 		D03B0E7B1D63484500955575 /* ShareRootController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0E7A1D63484500955575 /* ShareRootController.swift */; };
 		D03B0E821D63484500955575 /* Share.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D03B0E781D63484500955575 /* Share.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D03B0E8A1D634B1100955575 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03B0E871D634B1100955575 /* Display.framework */; };
@@ -948,6 +949,7 @@
 		D02CF61A215DA24900E0F56A /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D02CF61D215E522400E0F56A /* NotificationContent-Bridging-Header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NotificationContent-Bridging-Header.h"; sourceTree = "<group>"; };
 		D02E31221BD803E800CD3F01 /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = "Config-Hockeyapp-Internal.xcconfig"; sourceTree = "<group>"; };
 		D0369C8B1D3E2C9500D91AFC /* libiconv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.tbd; path = usr/lib/libiconv.tbd; sourceTree = SDKROOT; };
 		D0369C8D1D3E2E4800D91AFC /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
 		D0369C8F1D3E2E5000D91AFC /* libbz2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libbz2.tbd; path = usr/lib/libbz2.tbd; sourceTree = SDKROOT; };
@@ -1047,7 +1049,6 @@
 		D073E51F21FF7CE900742DDD /* Crypto.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Crypto.m; sourceTree = "<group>"; };
 		D073E52122003E1E00742DDD /* Data.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Data.swift; sourceTree = "<group>"; };
 		D079FD001F06BBD10038FADE /* Telegram-iOS-AppStore.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Telegram-iOS-AppStore.entitlements"; sourceTree = "<group>"; };
-		D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = "Config-Hockeyapp.xcconfig"; sourceTree = "<group>"; };
 		D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = "Config-AppStore.xcconfig"; sourceTree = "<group>"; };
 		D084023120E1883500065674 /* ApplicationShortcutItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationShortcutItem.swift; sourceTree = "<group>"; };
 		D08410431FABDC5B008FFE92 /* TGItemProviderSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGItemProviderSignals.h; sourceTree = "<group>"; };
@@ -1067,7 +1068,6 @@
 		D08985032118B46F00918162 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D08985052118B62400918162 /* SiriIntents-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "SiriIntents-Bridging-Header.h"; sourceTree = "<group>"; };
 		D08985062119B7FE00918162 /* IntentContacts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentContacts.swift; sourceTree = "<group>"; };
-		D0924FFE1FE52C75003F693F /* Config-Hockeyapp Internal.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = "Config-Hockeyapp Internal.xcconfig"; sourceTree = "<group>"; };
 		D09250001FE52D2A003F693F /* BuildConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BuildConfig.h; sourceTree = "<group>"; };
 		D09250011FE52D2A003F693F /* BuildConfig.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BuildConfig.m; sourceTree = "<group>"; };
 		D096C2BD1CC3C021006D814E /* Display.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1966,11 +1966,8 @@
 		D008599E1B28189D00EAF753 /* Telegram-iOS */ = {
 			isa = PBXGroup;
 			children = (
+				D0338729223A8347007A2CE4 /* Config */,
 				09C50E7821738150009E676F /* Watch */,
-				D0ADF914212B399A00310BBC /* Config-AppStoreLLC.xcconfig */,
-				D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */,
-				D0924FFE1FE52C75003F693F /* Config-Hockeyapp Internal.xcconfig */,
-				D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */,
 				D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */,
 				D0ADF913212B398000310BBC /* Telegram-iOS-AppStoreLLC.entitlements */,
 				D079FD001F06BBD10038FADE /* Telegram-iOS-AppStore.entitlements */,
@@ -2138,6 +2135,40 @@
 				D02CF605215D9ABF00E0F56A /* Info.plist */,
 			);
 			path = NotificationContent;
+			sourceTree = "<group>";
+		};
+		D0338729223A8347007A2CE4 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				D0338734223A9A7E007A2CE4 /* Hockeyapp-Internal */,
+				D033872B223A835E007A2CE4 /* AppStore */,
+				D033872A223A834F007A2CE4 /* AppStoreLLC */,
+			);
+			name = Config;
+			sourceTree = "<group>";
+		};
+		D033872A223A834F007A2CE4 /* AppStoreLLC */ = {
+			isa = PBXGroup;
+			children = (
+				D0ADF914212B399A00310BBC /* Config-AppStoreLLC.xcconfig */,
+			);
+			name = AppStoreLLC;
+			sourceTree = "<group>";
+		};
+		D033872B223A835E007A2CE4 /* AppStore */ = {
+			isa = PBXGroup;
+			children = (
+				D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */,
+			);
+			name = AppStore;
+			sourceTree = "<group>";
+		};
+		D0338734223A9A7E007A2CE4 /* Hockeyapp-Internal */ = {
+			isa = PBXGroup;
+			children = (
+				D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */,
+			);
+			name = "Hockeyapp-Internal";
 			sourceTree = "<group>";
 		};
 		D03B0E791D63484500955575 /* Share */ = {
@@ -2880,6 +2911,7 @@
 				D04DCC211F71C80000B021D7 /* 0.m4a in Resources */,
 				D04DCC261F71C80000B021D7 /* 103.m4a in Resources */,
 				D0CE6F69213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
+				D0338736223A9A9A007A2CE4 /* Config-Hockeyapp-Internal.xcconfig in Resources */,
 				D08DB0C0213F4D1D00F2ADBF /* telegram_sphere@2x.png in Resources */,
 				D08DB0AB213F4D1D00F2ADBF /* ic_bubble@2x.png in Resources */,
 				D04DCC341F71C80000B021D7 /* 7.m4a in Resources */,
@@ -3743,7 +3775,7 @@
 /* Begin XCBuildConfiguration section */
 		09C56FA62172797500BDF00F /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -4102,77 +4134,9 @@
 			};
 			name = ReleaseAppStoreLLC;
 		};
-		09C56FAB2172797500BDF00F /* ReleaseHockeyapp */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				BUILD_NUMBER = 99999;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				CODE_SIGN_STYLE = Manual;
-				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				IBSC_MODULE = Watch_Extension;
-				INFOPLIST_FILE = Watch/App/Info.plist;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}.watchkitapp";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "match InHouse org.telegram.Telegram-iOS.watchkitapp";
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.2;
-				TARGETED_DEVICE_FAMILY = 4;
-				VALIDATE_PRODUCT = YES;
-				WATCHOS_DEPLOYMENT_TARGET = 2.2;
-			};
-			name = ReleaseHockeyapp;
-		};
 		09C56FAC2172797500BDF00F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0924FFE1FE52C75003F693F /* Config-Hockeyapp Internal.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -4240,7 +4204,7 @@
 		};
 		09C56FAD2172797500BDF00F /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_COMPLICATION_NAME = Complication;
@@ -4605,77 +4569,9 @@
 			};
 			name = ReleaseAppStoreLLC;
 		};
-		09C56FB22172797500BDF00F /* ReleaseHockeyapp */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_COMPLICATION_NAME = Complication;
-				BUILD_NUMBER = 99999;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_STYLE = Manual;
-				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = submodules/SSignalKit;
-				INFOPLIST_FILE = Watch/Extension/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				LIBRARY_SEARCH_PATHS = submodules/SSignalKit;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}.watchkitapp.watchkitextension";
-				PRODUCT_NAME = "${TARGET_NAME}";
-				PROVISIONING_PROFILE_SPECIFIER = "match InHouse org.telegram.Telegram-iOS.watchkitapp.watchkitextension";
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.2;
-				TARGETED_DEVICE_FAMILY = 4;
-				VALIDATE_PRODUCT = YES;
-				WATCHOS_DEPLOYMENT_TARGET = 2.2;
-			};
-			name = ReleaseHockeyapp;
-		};
 		09C56FB32172797500BDF00F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0924FFE1FE52C75003F693F /* Config-Hockeyapp Internal.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_COMPLICATION_NAME = Complication;
@@ -4743,6 +4639,7 @@
 		};
 		D000CAD121FB6E380011B15D /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -4818,6 +4715,7 @@
 		};
 		D000CAD221FB6E380011B15D /* DebugFork */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -4893,6 +4791,7 @@
 		};
 		D000CAD321FB6E380011B15D /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -4968,6 +4867,7 @@
 		};
 		D000CAD421FB6E380011B15D /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0ADF914212B399A00310BBC /* Config-AppStoreLLC.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -5043,6 +4943,7 @@
 		};
 		D000CAD521FB6E380011B15D /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D079FD021F06BBD60038FADE /* Config-AppStore.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -5111,6 +5012,7 @@
 		};
 		D000CAD621FB6E380011B15D /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0ADF914212B399A00310BBC /* Config-AppStoreLLC.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -5177,76 +5079,9 @@
 			};
 			name = ReleaseAppStoreLLC;
 		};
-		D000CAD721FB6E380011B15D /* ReleaseHockeyapp */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				BUILD_NUMBER = 99999;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_ENTITLEMENTS = "NotificationService/NotificationService-Hockeyapp.entitlements";
-				CODE_SIGN_IDENTITY = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				CODE_SIGN_STYLE = Manual;
-				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = NotificationService/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				MTL_ENABLE_DEBUG_INFO = NO;
-				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID).NotificationService";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "match InHouse org.telegram.Telegram-iOS.NotificationService";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "NotificationService/NotificationService-Bridging-Header.h";
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.2;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-			};
-			name = ReleaseHockeyapp;
-		};
 		D000CAD821FB6E380011B15D /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -5315,7 +5150,7 @@
 		};
 		D00859B91B28189D00EAF753 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 9999;
@@ -5410,7 +5245,7 @@
 		};
 		D00859BC1B28189D00EAF753 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -5497,7 +5332,7 @@
 		};
 		D00859BF1B28189D00EAF753 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -6087,7 +5922,7 @@
 		};
 		D02CF609215D9ABF00E0F56A /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -6451,78 +6286,9 @@
 			};
 			name = ReleaseAppStoreLLC;
 		};
-		D02CF60E215D9ABF00E0F56A /* ReleaseHockeyapp */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				BUILD_NUMBER = 99999;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_ENTITLEMENTS = "NotificationContent/NotificationContent-HockeyApp.entitlements";
-				CODE_SIGN_IDENTITY = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				CODE_SIGN_STYLE = Manual;
-				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = NotificationContent/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				MTL_ENABLE_DEBUG_INFO = NO;
-				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}.NotificationContent";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "match InHouse org.telegram.Telegram-iOS.NotificationContent";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "NotificationContent/NotificationContent-Bridging-Header.h";
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.2;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-			};
-			name = ReleaseHockeyapp;
-		};
 		D02CF60F215D9ABF00E0F56A /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0924FFE1FE52C75003F693F /* Config-Hockeyapp Internal.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -6591,7 +6357,7 @@
 		};
 		D03B0E841D63484500955575 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				BITCODE_GENERATION_MODE = marker;
 				BUILD_NUMBER = 99999;
@@ -6651,37 +6417,6 @@
 				SWIFT_VERSION = 4.0;
 			};
 			name = ReleaseAppStore;
-		};
-		D03B0E861D63484500955575 /* ReleaseHockeyapp */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
-			buildSettings = {
-				BITCODE_GENERATION_MODE = bitcode;
-				BUILD_NUMBER = 99999;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_SUSPICIOUS_MOVES = YES;
-				CODE_SIGN_ENTITLEMENTS = "Share/Share-HockeyApp.entitlements";
-				CODE_SIGN_IDENTITY = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				CURRENT_PROJECT_VERSION = 667;
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				INFOPLIST_FILE = Share/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}.Share";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE = "cfe514a2-916a-4247-b5a4-c2c4c6fd2805";
-				PROVISIONING_PROFILE_SPECIFIER = "match InHouse org.telegram.Telegram-iOS.Share";
-				SKIP_INSTALL = YES;
-				SWIFT_INSTALL_OBJC_HEADER = NO;
-				SWIFT_OBJC_BRIDGING_HEADER = "Share/Share-Bridging-Header.h";
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.0;
-			};
-			name = ReleaseHockeyapp;
 		};
 		D079FCF91F06BBA40038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
@@ -6865,7 +6600,7 @@
 		};
 		D0924FF91FE52C46003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0924FFE1FE52C75003F693F /* Config-Hockeyapp Internal.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 9999;
@@ -6909,7 +6644,7 @@
 		};
 		D0924FFA1FE52C46003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0924FFE1FE52C75003F693F /* Config-Hockeyapp Internal.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -6953,7 +6688,7 @@
 		};
 		D0924FFB1FE52C46003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0924FFE1FE52C75003F693F /* Config-Hockeyapp Internal.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -6972,7 +6707,7 @@
 		};
 		D0924FFC1FE52C46003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0924FFE1FE52C75003F693F /* Config-Hockeyapp Internal.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				BITCODE_GENERATION_MODE = bitcode;
 				BUILD_NUMBER = 99999;
@@ -7003,7 +6738,7 @@
 		};
 		D0924FFD1FE52C46003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0924FFE1FE52C75003F693F /* Config-Hockeyapp Internal.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				BITCODE_GENERATION_MODE = bitcode;
 				BUILD_NUMBER = 99999;
@@ -7354,7 +7089,7 @@
 		};
 		D0B2F743204F4C9900D3BFB9 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -7563,75 +7298,9 @@
 			};
 			name = ReleaseAppStore;
 		};
-		D0B2F746204F4C9900D3BFB9 /* ReleaseHockeyapp */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				BUILD_NUMBER = 99999;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_ENTITLEMENTS = "Widget/Widget-HockeyApp.entitlements";
-				CODE_SIGN_IDENTITY = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				CODE_SIGN_STYLE = Manual;
-				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = Widget/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				MTL_ENABLE_DEBUG_INFO = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}.Widget";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE = "1a27976e-0845-48e4-ae3d-2ff38089024d";
-				PROVISIONING_PROFILE_SPECIFIER = "match InHouse org.telegram.Telegram-iOS.Widget";
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "Widget/Widget-Bridging-Header.h";
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-			};
-			name = ReleaseHockeyapp;
-		};
 		D0B2F747204F4C9900D3BFB9 /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0924FFE1FE52C75003F693F /* Config-Hockeyapp Internal.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				BUILD_NUMBER = 99999;
@@ -7993,7 +7662,7 @@
 		};
 		D0D2688F1D79A70B00C422DA /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				BITCODE_GENERATION_MODE = marker;
 				BUILD_NUMBER = 99999;
@@ -8048,145 +7717,9 @@
 			};
 			name = ReleaseAppStore;
 		};
-		D0D268911D79A70B00C422DA /* ReleaseHockeyapp */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
-			buildSettings = {
-				BITCODE_GENERATION_MODE = bitcode;
-				BUILD_NUMBER = 99999;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_SUSPICIOUS_MOVES = YES;
-				CODE_SIGN_ENTITLEMENTS = "SiriIntents/SiriIntents-Hockeyapp.entitlements";
-				CODE_SIGN_IDENTITY = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				CURRENT_PROJECT_VERSION = 667;
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				INFOPLIST_FILE = SiriIntents/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}.SiriIntents";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE = "94efdcdd-1da2-4ec6-87f3-5e50b55a07f9";
-				PROVISIONING_PROFILE_SPECIFIER = "match InHouse org.telegram.Telegram-iOS.SiriIntents";
-				SKIP_INSTALL = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "SiriIntents/SiriIntents-Bridging-Header.h";
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.0;
-			};
-			name = ReleaseHockeyapp;
-		};
-		D0D7481D1CBBE0AC00B0ED5C /* ReleaseHockeyapp */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				BUILD_NUMBER = 9999;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				PROVISIONING_PROFILE = "f58b31fd-48bf-4eac-b066-a5ebea37dfd7";
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-			};
-			name = ReleaseHockeyapp;
-		};
-		D0D7481E1CBBE0AC00B0ED5C /* ReleaseHockeyapp */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
-			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				BITCODE_GENERATION_MODE = bitcode;
-				BUILD_NUMBER = 99999;
-				CLANG_MODULES_AUTOLINK = NO;
-				CODE_SIGN_ENTITLEMENTS = "Telegram-iOS/Telegram-iOS-Hockeyapp.entitlements";
-				CODE_SIGN_IDENTITY = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: TELEGRAM MESSENGER LLP";
-				COMMIT_ID = "";
-				CURRENT_PROJECT_VERSION = 667;
-				DEVELOPMENT_TEAM = X834Q8SBVP;
-				ENABLE_BITCODE = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(BUILT_PRODUCTS_DIR)",
-					"$(PROJECT_DIR)/third-party",
-				);
-				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/Watch/Bridge";
-				INFOPLIST_FILE = "Telegram-iOS/Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/submodules/TelegramUI/third-party/opus/lib",
-				);
-				OTHER_LDFLAGS = (
-					"-ObjC",
-					"-lz",
-				);
-				OTHER_SWIFT_FLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = "${APP_BUNDLE_ID}";
-				PRODUCT_NAME = "Telegram X";
-				PROVISIONING_PROFILE = "a453791e-7153-42a4-8b61-d00a130e59d2";
-				PROVISIONING_PROFILE_SPECIFIER = "match InHouse org.telegram.Telegram-iOS";
-				SWIFT_OBJC_BRIDGING_HEADER = "Telegram-iOS/Telegram-Bridging-Header.h";
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.0;
-				USER_HEADER_SEARCH_PATHS = "";
-			};
-			name = ReleaseHockeyapp;
-		};
-		D0D7481F1CBBE0AC00B0ED5C /* ReleaseHockeyapp */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)/Developer/Library/Frameworks";
-				INFOPLIST_FILE = "Telegram-iOSTests/Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "";
-				SWIFT_VERSION = 3.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Telegram-iOS.app/Telegram-iOS";
-			};
-			name = ReleaseHockeyapp;
-		};
 		D0ECCB831FE9C38500609802 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -8384,71 +7917,9 @@
 			};
 			name = ReleaseAppStore;
 		};
-		D0ECCB861FE9C38500609802 /* ReleaseHockeyapp */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D079FD011F06BBD60038FADE /* Config-Hockeyapp.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CODE_SIGN_STYLE = Manual;
-				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = "Telegram-iOS UITests/Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 11.2;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				MTL_ENABLE_DEBUG_INFO = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = "org.Telegram.Telegram-iOS-UITests";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE = "df24dc18-3fdc-447c-b347-5a110cecd77d";
-				PROVISIONING_PROFILE_SPECIFIER = "";
-				SDKROOT = iphoneos;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = "Telegram-iOS";
-				VALIDATE_PRODUCT = YES;
-			};
-			name = ReleaseHockeyapp;
-		};
 		D0ECCB871FE9C38500609802 /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0924FFE1FE52C75003F693F /* Config-Hockeyapp Internal.xcconfig */;
+			baseConfigurationReference = D0338735223A9A99007A2CE4 /* Config-Hockeyapp-Internal.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -8520,7 +7991,6 @@
 				09C56FAF2172797500BDF00F /* DebugAppStoreLLC */,
 				09C56FB02172797500BDF00F /* ReleaseAppStore */,
 				09C56FB12172797500BDF00F /* ReleaseAppStoreLLC */,
-				09C56FB22172797500BDF00F /* ReleaseHockeyapp */,
 				09C56FB32172797500BDF00F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -8535,7 +8005,6 @@
 				09C56FA82172797500BDF00F /* DebugAppStoreLLC */,
 				09C56FA92172797500BDF00F /* ReleaseAppStore */,
 				09C56FAA2172797500BDF00F /* ReleaseAppStoreLLC */,
-				09C56FAB2172797500BDF00F /* ReleaseHockeyapp */,
 				09C56FAC2172797500BDF00F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -8550,7 +8019,6 @@
 				D000CAD421FB6E380011B15D /* DebugAppStoreLLC */,
 				D000CAD521FB6E380011B15D /* ReleaseAppStore */,
 				D000CAD621FB6E380011B15D /* ReleaseAppStoreLLC */,
-				D000CAD721FB6E380011B15D /* ReleaseHockeyapp */,
 				D000CAD821FB6E380011B15D /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -8565,7 +8033,6 @@
 				D0ADF915212B3A9D00310BBC /* DebugAppStoreLLC */,
 				D00859BA1B28189D00EAF753 /* ReleaseAppStore */,
 				D0CE6F0D213DC33200BCD44B /* ReleaseAppStoreLLC */,
-				D0D7481D1CBBE0AC00B0ED5C /* ReleaseHockeyapp */,
 				D0924FF91FE52C46003F693F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -8580,7 +8047,6 @@
 				D0ADF916212B3A9D00310BBC /* DebugAppStoreLLC */,
 				D00859BD1B28189D00EAF753 /* ReleaseAppStore */,
 				D0CE6F0E213DC33200BCD44B /* ReleaseAppStoreLLC */,
-				D0D7481E1CBBE0AC00B0ED5C /* ReleaseHockeyapp */,
 				D0924FFA1FE52C46003F693F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -8595,7 +8061,6 @@
 				D0ADF917212B3A9E00310BBC /* DebugAppStoreLLC */,
 				D00859C01B28189D00EAF753 /* ReleaseAppStore */,
 				D0CE6F0F213DC33200BCD44B /* ReleaseAppStoreLLC */,
-				D0D7481F1CBBE0AC00B0ED5C /* ReleaseHockeyapp */,
 				D0924FFB1FE52C46003F693F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -8610,7 +8075,6 @@
 				D02CF60B215D9ABF00E0F56A /* DebugAppStoreLLC */,
 				D02CF60C215D9ABF00E0F56A /* ReleaseAppStore */,
 				D02CF60D215D9ABF00E0F56A /* ReleaseAppStoreLLC */,
-				D02CF60E215D9ABF00E0F56A /* ReleaseHockeyapp */,
 				D02CF60F215D9ABF00E0F56A /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -8625,7 +8089,6 @@
 				D0ADF918212B3A9E00310BBC /* DebugAppStoreLLC */,
 				D03B0E851D63484500955575 /* ReleaseAppStore */,
 				D0CE6F10213DC33200BCD44B /* ReleaseAppStoreLLC */,
-				D03B0E861D63484500955575 /* ReleaseHockeyapp */,
 				D0924FFC1FE52C46003F693F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -8640,7 +8103,6 @@
 				D0ADF91B212B3A9E00310BBC /* DebugAppStoreLLC */,
 				D0B2F745204F4C9900D3BFB9 /* ReleaseAppStore */,
 				D0CE6F13213DC33200BCD44B /* ReleaseAppStoreLLC */,
-				D0B2F746204F4C9900D3BFB9 /* ReleaseHockeyapp */,
 				D0B2F747204F4C9900D3BFB9 /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -8655,7 +8117,6 @@
 				D0ADF919212B3A9E00310BBC /* DebugAppStoreLLC */,
 				D0D268901D79A70B00C422DA /* ReleaseAppStore */,
 				D0CE6F11213DC33200BCD44B /* ReleaseAppStoreLLC */,
-				D0D268911D79A70B00C422DA /* ReleaseHockeyapp */,
 				D0924FFD1FE52C46003F693F /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -8670,7 +8131,6 @@
 				D0ADF91A212B3A9E00310BBC /* DebugAppStoreLLC */,
 				D0ECCB851FE9C38500609802 /* ReleaseAppStore */,
 				D0CE6F12213DC33200BCD44B /* ReleaseAppStoreLLC */,
-				D0ECCB861FE9C38500609802 /* ReleaseHockeyapp */,
 				D0ECCB871FE9C38500609802 /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;

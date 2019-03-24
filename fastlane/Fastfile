@@ -1,1 +1,63 @@
+fastlane_version "1.81.0"
+
+default_platform :ios
+
+base_app_identifier_llc = "ph.telegra.Telegraph"
+app_identifier_llc = [
+  base_app_identifier_llc,
+  base_app_identifier_llc + ".Widget",
+  base_app_identifier_llc + ".NotificationContent",
+  base_app_identifier_llc + ".SiriIntents",
+  base_app_identifier_llc + ".Share",
+  base_app_identifier_llc + ".watchkitapp",
+  base_app_identifier_llc + ".watchkitapp.watchkitextension",
+  base_app_identifier_llc + ".NotificationService"
+]
+
+lane :do_build_app do |options|
+  gym(
+    workspace: "Telegram-iOS.xcworkspace",
+    configuration: options[:configuration],
+    scheme: options[:scheme],
+    silent: false,
+    clean: true,
+    export_method: options[:export_method],
+    output_name: options[:scheme],
+    derived_data_path: "build/" + options[:scheme] + "/DerivedData",
+    xcargs: "BUILD_NUMBER='" + options[:build_number] + "' " + "COMMIT_ID='" + options[:commit_id] + "'",
+    archive_path: "build/" + options[:scheme] + "/Archive",
+    export_options: {
+      compileBitcode: false,
+      iCloudContainerEnvironment: "Production",
+      provisioningProfiles: options[:provisioningProfiles],
+      stripSwiftSymbols: true,
+      uploadBitcode: false
+    }
+  )
+end
+
+lane :build_for_appstore do |options|
+  commit = last_git_commit
+  commit_count = sh("git rev-list --count HEAD")
+  commit_count_int = commit_count.to_i + 1000
+  commit_count_string = commit_count_int.to_s
+  do_build_app(
+  	configuration: "ReleaseAppStoreLLC",
+    scheme: "Telegram-iOS-AppStoreLLC",
+    export_method: "app-store",
+    build_number: commit_count_string,
+    commit_id: commit[:commit_hash],
+    provisioningProfiles: { 
+      base_app_identifier_llc => "match AppStore " + base_app_identifier_llc,
+      base_app_identifier_llc + ".Share" => "match AppStore " + base_app_identifier_llc + ".Share",
+      base_app_identifier_llc + ".SiriIntents" => "match AppStore " + base_app_identifier_llc + ".SiriIntents",
+      base_app_identifier_llc + ".Widget" => "match AppStore " + base_app_identifier_llc + ".Widget",
+      base_app_identifier_llc + ".NotificationContent" => "match AppStore " + base_app_identifier_llc + ".NotificationContent",
+      base_app_identifier_llc + ".watchkitapp.watchkitextension" => "match AppStore " + base_app_identifier_llc + ".watchkitapp.watchkitextension",
+      base_app_identifier_llc + ".watchkitapp" => "match AppStore " + base_app_identifier_llc + ".watchkitapp",
+      base_app_identifier_llc + ".NotificationService" => "match AppStore " + base_app_identifier_llc + ".NotificationService"
+    }
+  )
+end
+
 import "../../Telegram-iOS-Shared/fastlane/Fastfile"

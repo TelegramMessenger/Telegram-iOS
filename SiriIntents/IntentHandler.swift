@@ -84,7 +84,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             initializeAccountManagement()
             let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
             
-            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods)
+            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, appData: BuildConfig.shared().bundleData), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods)
             |> mapToSignal { account -> Signal<Account, NoError> in
                 if let account = account {
                     switch account {
