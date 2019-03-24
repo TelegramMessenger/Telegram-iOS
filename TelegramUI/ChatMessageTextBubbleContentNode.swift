@@ -278,7 +278,10 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     var adjustedStatusFrame: CGRect?
                     
                     if let statusFrame = statusFrame {
-                        if !forceStatusNewline || boundingWidth < statusFrame.width + textFrame.width {
+                        let centeredTextFrame = CGRect(origin: CGPoint(x: floor((boundingWidth - textFrame.size.width) / 2.0), y: 0.0), size: textFrame.size)
+                        let statusOverlapsCenteredText = CGRect(origin: CGPoint(), size: statusFrame.size).intersects(centeredTextFrame)
+                        
+                        if !forceStatusNewline || statusOverlapsCenteredText {
                             boundingSize = textFrameWithoutInsets.union(statusFrame).size
                             boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                             boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
