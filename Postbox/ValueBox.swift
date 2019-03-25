@@ -31,6 +31,7 @@ protocol ValueBox {
     func set(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer)
     func remove(_ table: ValueBoxTable, key: ValueBoxKey)
     func move(_ table: ValueBoxTable, from previousKey: ValueBoxKey, to updatedKey: ValueBoxKey)
+    func removeRange(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey)
     func fullTextSet(_ table: ValueBoxFullTextTable, collectionId: String, itemId: String, contents: String, tags: String)
     func fullTextMatch(_ table: ValueBoxFullTextTable, collectionId: String?, query: String, tags: String?, values: (String, String) -> Bool)
     func fullTextRemove(_ table: ValueBoxFullTextTable, itemId: String)

@@ -124,6 +124,7 @@ final class SqliteValueBox: ValueBox {
     private var rangeKeyAscStatementsNoLimit: [Int32 : SqlitePreparedStatement] = [:]
     private var rangeKeyDescStatementsLimit: [Int32 : SqlitePreparedStatement] = [:]
     private var rangeKeyDescStatementsNoLimit: [Int32 : SqlitePreparedStatement] = [:]
+    private var deleteRangeStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var rangeValueAscStatementsLimit: [Int32 : SqlitePreparedStatement] = [:]
     private var rangeValueAscStatementsNoLimit: [Int32 : SqlitePreparedStatement] = [:]
     private var rangeValueDescStatementsLimit: [Int32 : SqlitePreparedStatement] = [:]
@@ -529,6 +530,38 @@ final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
+    private func rangeDeleteStatement(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
+        let resultStatement: SqlitePreparedStatement
+        checkTableKey(table, start)
+        checkTableKey(table, end)
+        assert(start <= end)
+        
+        if let statement = self.deleteRangeStatements[table.id] {
+            resultStatement = statement
+        } else {
+            var statement: OpaquePointer? = nil
+            let status = sqlite3_prepare_v2(self.database.handle, "DELETE FROM t\(table.id) WHERE key >= ? AND key <= ?", -1, &statement, nil)
+            assert(status == SQLITE_OK)
+            let preparedStatement = SqlitePreparedStatement(statement: statement)
+            self.deleteRangeStatements[table.id] = preparedStatement
+            resultStatement = preparedStatement
+        }
+        
+        resultStatement.reset()
+        
+        switch table.keyType {
+            case .binary:
+                resultStatement.bind(1, data: start.memory, length: start.length)
+                resultStatement.bind(2, data: end.memory, length: end.length)
+            case .int64:
+                resultStatement.bind(1, number: start.getInt64(0))
+                resultStatement.bind(2, number: end.getInt64(0))
+        }
+        
+        return resultStatement
+    }
+    
     private func rangeValueAscStatementLimit(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
         checkTableKey(table, start)
@@ -633,7 +666,7 @@ final class SqliteValueBox: ValueBox {
         
         let resultStatement: SqlitePreparedStatement
         
-        if let statement = self.rangeKeyDescStatementsNoLimit[table.id] {
+        if let statement = self.rangeValueDescStatementsNoLimit[table.id] {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
@@ -1378,6 +1411,20 @@ final class SqliteValueBox: ValueBox {
         }
     }
     
+    public func removeRange(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey) {
+        assert(self.queue.isCurrent())
+        if let _ = self.tables[table.id] {
+            let startTime = CFAbsoluteTimeGetCurrent()
+            
+            let statement = self.rangeDeleteStatement(table, start: min(start, end), end: max(start, end))
+            while statement.step(handle: self.database.handle, path: self.databasePath) {
+            }
+            statement.reset()
+            
+            self.writeQueryTime += CFAbsoluteTimeGetCurrent() - startTime
+        }
+    }
+    
     public func move(_ table: ValueBoxTable, from previousKey: ValueBoxKey, to updatedKey: ValueBoxKey) {
         assert(self.queue.isCurrent())
         if let _ = self.tables[table.id] {
@@ -1497,6 +1544,11 @@ final class SqliteValueBox: ValueBox {
             statement.destroy()
         }
         self.rangeKeyDescStatementsNoLimit.removeAll()
+        
+        for (_, statement) in self.deleteRangeStatements {
+            statement.destroy()
+        }
+        self.deleteRangeStatements.removeAll()
         
         for (_, statement) in self.rangeValueAscStatementsLimit {
             statement.destroy()
