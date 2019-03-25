@@ -125,11 +125,6 @@ V_CONSTEXPR inline const T &vMax(const T &a, const T &b)
 static const double EPSILON_DOUBLE = 0.000000000001f;
 static const float  EPSILON_FLOAT = 0.000001f;
 
-static inline bool vCompare(double p1, double p2)
-{
-    return (std::abs(p1 - p2) < EPSILON_DOUBLE);
-}
-
 static inline bool vCompare(float p1, float p2)
 {
     return (std::abs(p1 - p2) < EPSILON_FLOAT);
