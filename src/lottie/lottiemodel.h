@@ -786,8 +786,8 @@ public:
                 } else if (start < 0 && end < 0) {
                     return noloop(-start, -end);
                 } else {
-                    if (start < 0) return loop(-start, end);
-                    else return loop(start , -end);
+                    if (start < 0) return loop(1 + start, end);
+                    else return loop(start , 1 + end);
                 }
             }
         }
