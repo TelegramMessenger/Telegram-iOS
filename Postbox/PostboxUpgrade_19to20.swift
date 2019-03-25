@@ -394,8 +394,6 @@ func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox) {
                     }
                 }
                 valueBox.remove(messageHistoryTable, key: sharedMessageHistoryKey)
-            } else {
-                assert(false)
             }
         
             return true
