@@ -2601,7 +2601,7 @@ public final class Postbox {
                             assertionFailure()
                         }
                     } else {
-                        assertionFailure()
+                        //assertionFailure()
                     }
                 } else {
                     let item: MessageHistoryTopTaggedMessage? = nil
