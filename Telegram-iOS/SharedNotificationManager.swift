@@ -198,6 +198,7 @@ final class SharedNotificationManager {
             let aps = payload["aps"] as? [AnyHashable: Any]
             
             var readMessageId: MessageId?
+            var removedMessageId: MessageId?
             var isCall = false
             var isAnnouncement = false
             var isLocationPolling = false
