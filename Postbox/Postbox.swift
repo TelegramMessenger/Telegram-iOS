@@ -1006,7 +1006,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration) 
                 let metadataTable = MetadataTable(valueBox: valueBox, table: MetadataTable.tableSpec(0))
                 
                 let userVersion: Int32? = metadataTable.userVersion()
-                let currentUserVersion: Int32 = 19
+                let currentUserVersion: Int32 = 20
                 
                 if let userVersion = userVersion {
                     if userVersion != currentUserVersion {
@@ -1352,40 +1352,38 @@ public final class Postbox {
         
         print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         
-        for id in self.messageHistoryUnsentTable.get() {
-            self.updateMessage(id, update: { message in
-                if !message.flags.contains(.Failed) {
-                    var flags = StoreMessageFlags(message.flags)
-                    flags.remove(.Unsent)
-                    flags.remove(.Sending)
-                    flags.insert(.Failed)
-                    var storeForwardInfo: StoreMessageForwardInfo?
-                    if let forwardInfo = message.forwardInfo {
-                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
-                    }
-                    return .update(StoreMessage(id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, timestamp: message.timestamp, flags: flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: storeForwardInfo, authorId: message.author?.id, text: message.text, attributes: message.attributes, media: message.media))
-                } else {
-                    return .skip
-                }
-            })
-        }
-        
-        do {
-            /*let startTime = CFAbsoluteTimeGetCurrent()
-            let state = self.chatListIndexTable.debugReindexUnreadCounts(postbox: self)
-            if state != self.messageHistoryMetadataTable.getChatListTotalUnreadState() {
-                print("Initial read state mismatch")
+        let _ = self.transaction({ transaction -> Void in
+            if self.messageHistoryMetadataTable.shouldReindexUnreadCounts() {
+                let startTime = CFAbsoluteTimeGetCurrent()
+                let state = self.chatListIndexTable.debugReindexUnreadCounts(postbox: self)
                 self.messageHistoryMetadataTable.setChatListTotalUnreadState(state)
-            }*/
-            postboxLog("debugReindexUnreadCounts took \(CFAbsoluteTimeGetCurrent() - startTime)")
-        }
+                postboxLog("reindexUnreadCounts took \(CFAbsoluteTimeGetCurrent() - startTime)")
+                self.messageHistoryMetadataTable.setShouldReindexUnreadCounts(value: false)
+            }
+            
+            for id in self.messageHistoryUnsentTable.get() {
+                transaction.updateMessage(id, update: { message in
+                    if !message.flags.contains(.Failed) {
+                        var flags = StoreMessageFlags(message.flags)
+                        flags.remove(.Unsent)
+                        flags.remove(.Sending)
+                        flags.insert(.Failed)
+                        var storeForwardInfo: StoreMessageForwardInfo?
+                        if let forwardInfo = message.forwardInfo {
+                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                        }
+                        return .update(StoreMessage(id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, timestamp: message.timestamp, flags: flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: storeForwardInfo, authorId: message.author?.id, text: message.text, attributes: message.attributes, media: message.media))
+                    } else {
+                        return .skip
+                    }
+                })
+            }
+        }).start()
     }
     
     deinit {
         assert(true)
     }
-    
-   
     
     private func takeNextViewId() -> Int {
         let nextId = self.nextViewId

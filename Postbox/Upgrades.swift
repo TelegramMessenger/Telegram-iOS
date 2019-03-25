@@ -13,5 +13,6 @@ func registeredUpgrades() -> [Int32: PostboxUpgradeOperation] {
     dict[16] = .inplace(postboxUpgrade_16to17)
     dict[17] = .inplace(postboxUpgrade_17to18)
     dict[18] = .inplace(postboxUpgrade_18to19)
+    dict[19] = .inplace(postboxUpgrade_19to20)
     return dict
 }
