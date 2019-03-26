@@ -231,7 +231,7 @@ public func accountRecordIdPathName(_ id: AccountRecordId) -> String {
 }
 
 public enum AccountResult {
-    case upgrading
+    case upgrading(Float)
     case unauthorized(UnauthorizedAccount)
     case authorized(Account)
 }
@@ -341,8 +341,8 @@ public func accountWithId(accountManager: AccountManager, networkArguments: Netw
     return postbox
     |> mapToSignal { result -> Signal<AccountResult, NoError> in
         switch result {
-            case .upgrading:
-                return .single(.upgrading)
+            case let .upgrading(progress):
+                return .single(.upgrading(progress))
             case let .postbox(postbox):
                 return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
                     return (transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings) as? ProxySettings)
