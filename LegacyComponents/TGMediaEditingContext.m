@@ -102,6 +102,9 @@
     
     NSString *_forcedCaption;
     NSArray *_forcedEntities;
+    
+    NSString *_initialCaption;
+    NSArray *_initialEntities;
 }
 @end
 
@@ -391,6 +394,12 @@
 }
 
 - (void)setForcedCaption:(NSString *)caption entities:(NSArray *)entities
+{
+    _forcedCaption = caption;
+    _forcedEntities = entities;
+}
+
+- (void)setInitialCaption:(NSString *)caption entities:(NSArray *)entities
 {
     _forcedCaption = caption;
     _forcedEntities = entities;
