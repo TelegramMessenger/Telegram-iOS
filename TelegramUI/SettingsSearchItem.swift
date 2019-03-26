@@ -160,7 +160,6 @@ final class SettingsSearchInteraction {
 
 private enum SettingsSearchEntryStableId: Hashable {
     case result(SettingsSearchableItemId)
-    case faq(String)
 }
 
 private enum SettingsSearchEntry: Comparable, Identifiable {
@@ -302,7 +301,6 @@ private func preparedSettingsSearchContainerRecentTransition(from fromEntries: [
 
 
 private final class SettingsSearchContainerNode: SearchDisplayControllerContentNode {
-    private let dimNode: ASDisplayNode
     private let listNode: ListView
     private let recentListNode: ListView
     
@@ -323,9 +321,6 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationDataPromise = Promise(self.presentationData)
         
-        self.dimNode = ASDisplayNode()
-        self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        
         self.listNode = ListView()
         self.listNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.listNode.isHidden = true
@@ -338,7 +333,6 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
         
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
-        //self.addSubnode(self.dimNode)
         self.addSubnode(self.recentListNode)
         self.addSubnode(self.listNode)
         
@@ -407,7 +401,10 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
             var result: [SettingsSearchableItem] = []
             for itemId in recentItems {
                 if let searchItem = searchableItemsMap[itemId] {
-                    result.append(searchItem)
+                    if case let .language(id) = searchItem.id, id > 0 {
+                    } else {
+                        result.append(searchItem)
+                    }
                 }
             }
             return result
@@ -489,12 +486,6 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
         self.presentationDataDisposable?.dispose()
     }
     
-    override func didLoad() {
-        super.didLoad()
-        
-        self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
-    }
-    
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.listNode.backgroundColor = theme.chatList.backgroundColor
         self.recentListNode.backgroundColor = theme.chatList.backgroundColor
@@ -529,7 +520,6 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
             let isSearching = transition.isSearching
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
                 self?.listNode.isHidden = !isSearching
-                self?.dimNode.isHidden = isSearching
             })
         }
     }
@@ -563,10 +553,7 @@ private final class SettingsSearchContainerNode: SearchDisplayControllerContentN
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
-        
-        let topInset = navigationBarHeight
-        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: layout.size.height - topInset)))
-        
+                
         var duration: Double = 0.0
         var curve: UInt = 0
         switch transition {
@@ -723,7 +710,6 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
     }
     
     override func queryUpdated(_ query: String) {
-        //self.containerNode.searchTextUpdated(text: query)
     }
     
     override func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

@@ -111,8 +111,8 @@ private func commitEntity(_ utf16: String.UTF16View, _ type: CurrentEntityType, 
                     entityType = .Custom(type: ApplicationSpecificEntityType.Timecode)
         }
         
-        if case .timecode = type, let mediaDuration = mediaDuration, let timecode = parseTimecodeString(String(utf16[range])) {
-            if timecode <= mediaDuration {
+        if case .timecode = type {
+            if let mediaDuration = mediaDuration, let timecode = parseTimecodeString(String(utf16[range])), timecode <= mediaDuration {
                 entities.append(MessageTextEntity(range: indexRange, type: entityType))
             }
         } else {

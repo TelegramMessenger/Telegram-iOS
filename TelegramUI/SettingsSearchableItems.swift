@@ -747,17 +747,22 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
     }
     
     let localizationPreferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.localizationListState]))
-    let localizations = context.account.postbox.combinedView(keys: [localizationPreferencesKey])
-    |> map { view -> [LocalizationInfo] in
+    let localizations = combineLatest(context.account.postbox.combinedView(keys: [localizationPreferencesKey]), context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.localizationSettings]))
+    |> map { view, sharedData -> [LocalizationInfo] in
         if let localizationListState = (view.views[localizationPreferencesKey] as? PreferencesView)?.values[PreferencesKeys.localizationListState] as? LocalizationListState, !localizationListState.availableOfficialLocalizations.isEmpty {
             
             var existingIds = Set<String>()
             let availableSavedLocalizations = localizationListState.availableSavedLocalizations.filter({ info in !localizationListState.availableOfficialLocalizations.contains(where: { $0.languageCode == info.languageCode }) })
             
+            var activeLanguageCode: String?
+            if let localizationSettings = sharedData.entries[SharedDataKeys.localizationSettings] as? LocalizationSettings {
+                activeLanguageCode = localizationSettings.primaryComponent.languageCode
+            }
+            
             var localizationItems: [LocalizationInfo] = []
             if !availableSavedLocalizations.isEmpty {
                 for info in availableSavedLocalizations {
-                    if existingIds.contains(info.languageCode) {
+                    if existingIds.contains(info.languageCode) || info.languageCode == activeLanguageCode {
                         continue
                     }
                     existingIds.insert(info.languageCode)
@@ -765,7 +770,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
                 }
             }
             for info in localizationListState.availableOfficialLocalizations {
-                if existingIds.contains(info.languageCode) {
+                if existingIds.contains(info.languageCode) || info.languageCode == activeLanguageCode {
                     continue
                 }
                 existingIds.insert(info.languageCode)

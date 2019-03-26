@@ -254,7 +254,7 @@ public class PeerMediaCollectionController: TelegramController {
         }, requestSelectMessagePollOption: { _, _ in
         }, openAppStorePage: {
         }, displayMessageTooltip: { _, _, _, _ in    
-        }, seekToTimecode: { _, _ in    
+        }, seekToTimecode: { _, _, _ in    
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

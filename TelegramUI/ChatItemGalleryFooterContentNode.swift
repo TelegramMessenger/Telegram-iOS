@@ -57,6 +57,19 @@ private let playImage = generateImage(CGSize(width: 15.0, height: 18.0), rotated
 
 private let cloudFetchIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FileCloudFetch"), color: UIColor.white)
 
+private let captionMaskImage = generateImage(CGSize(width: 1.0, height: 17.0), opaque: false, rotatedContext: { size, context in
+    let bounds = CGRect(origin: CGPoint(), size: size)
+    context.clear(bounds)
+    
+    let gradientColors = [UIColor.white.withAlphaComponent(1.0).cgColor, UIColor.white.withAlphaComponent(0.0).cgColor] as CFArray
+    
+    var locations: [CGFloat] = [0.0, 1.0]
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: 17.0), options: CGGradientDrawingOptions())
+})
+
 private let titleFont = Font.medium(15.0)
 private let dateFont = Font.regular(14.0)
 
@@ -102,7 +115,7 @@ enum ChatItemGalleryFooterContentTapAction {
     case ignore
 }
 
-final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
+final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var theme: PresentationTheme
     private var strings: PresentationStrings
@@ -110,6 +123,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     private let deleteButton: UIButton
     private let actionButton: UIButton
+    private let maskNode: ASDisplayNode
+    private let scrollWrapperNode: ASDisplayNode
+    private let scrollNode: ASScrollNode
+
     private let textNode: ImmediateTextNode
     private let authorNameNode: ASTextNode
     private let dateNode: ASTextNode
@@ -213,10 +230,18 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.deleteButton.setImage(deleteImage, for: [.normal])
         self.actionButton.setImage(actionImage, for: [.normal])
         
+        self.scrollWrapperNode = ASDisplayNode()
+        self.scrollWrapperNode.clipsToBounds = true
+        
+        self.scrollNode = ASScrollNode()
+        self.scrollNode.clipsToBounds = false
+        
+        self.maskNode = ASDisplayNode()
+        
         self.textNode = ImmediateTextNode()
-        self.textNode.maximumNumberOfLines = 10
+        self.textNode.maximumNumberOfLines = 0
         self.textNode.linkHighlightColor = UIColor(rgb: 0x5ac8fa, alpha: 0.2)
-
+        
         self.authorNameNode = ASTextNode()
         self.authorNameNode.maximumNumberOfLines = 1
         self.authorNameNode.isUserInteractionEnabled = false
@@ -271,7 +296,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         
         self.view.addSubview(self.deleteButton)
         self.view.addSubview(self.actionButton)
-        self.addSubnode(self.textNode)
+        self.addSubnode(self.scrollWrapperNode)
+        self.scrollWrapperNode.addSubnode(self.scrollNode)
+        self.scrollNode.addSubnode(self.textNode)
+        
         self.addSubnode(self.authorNameNode)
         self.addSubnode(self.dateNode)
         
@@ -305,6 +333,21 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
     
     deinit {
         self.messageContextDisposable.dispose()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        self.scrollNode.view.delegate = self
+        
+        if let maskImage = captionMaskImage {
+            let mask = CALayer()
+            mask.contents = maskImage.cgImage
+            mask.contentsScale = maskImage.scale
+            //mask.contentsCenter = CGRect(x: max(corners.topLeft.radius, corners.bottomLeft.radius) / maskImage.size.width, y: max(corners.topLeft.radius, corners.topRight.radius) / maskImage.size.height, width: (maskImage.size.width - max(corners.topLeft.radius, corners.bottomLeft.radius) - max(corners.topRight.radius, corners.bottomRight.radius)) / maskImage.size.width, height: (maskImage.size.height - max(corners.topLeft.radius, corners.topRight.radius) - max(corners.bottomLeft.radius, corners.bottomRight.radius)) / maskImage.size.height)
+            
+            //self.scrollWrapperNode.layer.mask = mask
+            //self.scrollWrapperNode.layer.mask?.frame = self.scrollWrapperNode.bounds
+        }
     }
     
     private func actionForAttributes(_ attributes: [NSAttributedStringKey: Any]) -> GalleryControllerInteractionTapAction? {
@@ -441,7 +484,20 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.currentWebPageAndMedia = (webPage, media)
     }
     
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        self.requestLayout?(.immediate)
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        if self.scrollWrapperNode.frame.contains(point) {
+            return self.scrollNode.view
+        } else {
+            return result
+        }
+    }
+    
+    override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         let width = size.width
         var bottomInset = bottomInset
         if bottomInset < 30.0 {
@@ -451,7 +507,12 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         panelHeight += contentInset
         
         let isLandscape = size.width > size.height
-        let displayCaption = !self.textNode.isHidden && !isLandscape
+        let displayCaption: Bool
+        if case .compact = metrics.widthClass {
+            displayCaption = !self.textNode.isHidden && !isLandscape
+        } else {
+            displayCaption = !self.textNode.isHidden
+        }
         
         var textFrame = CGRect()
         if !self.textNode.isHidden {
@@ -459,10 +520,55 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             let topInset: CGFloat = 8.0
             let textBottomInset: CGFloat = 8.0
             let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            
+            var textOffset: CGFloat = 0.0
             if displayCaption {
-                panelHeight += textSize.height + topInset + textBottomInset
+                var visibleTextHeight = textSize.height
+                if visibleTextHeight > 100.0 {
+                    visibleTextHeight = 80.0
+                    self.scrollNode.view.isScrollEnabled = true
+                } else {
+                    self.scrollNode.view.isScrollEnabled = false
+                }
+                
+                let visibleTextPanelHeight = visibleTextHeight + topInset + textBottomInset
+                let scrollViewContentSize = CGSize(width: width, height: textSize.height + topInset + textBottomInset)
+                if self.scrollNode.view.contentSize != scrollViewContentSize {
+                    self.scrollNode.view.contentSize = scrollViewContentSize
+                }
+                let scrollNodeFrame = CGRect(x: 0.0, y: 0.0, width: width, height: visibleTextPanelHeight)
+                if self.scrollNode.frame != scrollNodeFrame {
+                    self.scrollNode.frame = scrollNodeFrame
+                }
+                
+                textOffset = min(400.0, self.scrollNode.view.contentOffset.y)
+                panelHeight = max(0.0, panelHeight + visibleTextPanelHeight + textOffset)
+                
+                if self.scrollNode.view.isScrollEnabled {
+                    if self.scrollWrapperNode.layer.mask == nil {
+                        let maskImage = captionMaskImage!
+                        let maskLayer = CALayer()
+                        maskLayer.contents = maskImage.cgImage
+                        maskLayer.contentsScale = maskImage.scale
+                        maskLayer.contentsCenter = CGRect(x: 0.0, y: 0.0, width: 1.0, height: (maskImage.size.height - 16.0) / maskImage.size.height)
+                        self.scrollWrapperNode.layer.mask = maskLayer
+                        
+                    }
+                } else {
+                    self.scrollWrapperNode.layer.mask = nil
+                }
+                
+                let scrollWrapperNodeFrame = CGRect(x: 0.0, y: 0.0, width: width, height: max(0.0, visibleTextPanelHeight + textOffset))
+                if self.scrollWrapperNode.frame != scrollWrapperNodeFrame {
+                    self.scrollWrapperNode.frame = scrollWrapperNodeFrame
+                    self.scrollWrapperNode.layer.mask?.frame = self.scrollWrapperNode.bounds //.offsetBy(dx: 0.0, dy: textOffset)
+                    self.scrollWrapperNode.layer.mask?.removeAllAnimations()
+                }
             }
-            textFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize)
+            textFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset + textOffset), size: textSize)
+            if self.textNode.frame != textFrame {
+                self.textNode.frame = textFrame
+            }
         }
         
         if let scrubberView = self.scrubberView, scrubberView.superview == self.view {
@@ -484,8 +590,6 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             scrubberView.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
             transition.updateFrame(layer: scrubberView.layer, frame: scrubberFrame)
         }
-        
-        self.textNode.frame = textFrame
         transition.updateAlpha(node: self.textNode, alpha: displayCaption ? 1.0 : 0.0)
         
         self.actionButton.frame = CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
@@ -524,8 +628,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             scrubberView.alpha = 1.0
             scrubberView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
         }
-        transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: 0.0, y: self.bounds.height - fromHeight))
-        self.textNode.alpha = 1.0
+        transition.animatePositionAdditive(node: self.scrollWrapperNode, offset: CGPoint(x: 0.0, y: self.bounds.height - fromHeight))
+        self.scrollWrapperNode.alpha = 1.0
         self.dateNode.alpha = 1.0
         self.authorNameNode.alpha = 1.0
         self.deleteButton.alpha = 1.0
@@ -534,7 +638,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.forwardButton.alpha = 1.0
         self.statusNode.alpha = 1.0
         self.playbackControlButton.alpha = 1.0
-        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        self.scrollWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
     }
     
     override func animateOut(toHeight: CGFloat, nextContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
@@ -546,8 +650,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
             scrubberView.alpha = 0.0
             scrubberView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
         }
-        transition.updateFrame(node: self.textNode, frame: self.textNode.frame.offsetBy(dx: 0.0, dy: self.bounds.height - toHeight))
-        self.textNode.alpha = 0.0
+        transition.updateFrame(node: self.scrollWrapperNode, frame: self.scrollWrapperNode.frame.offsetBy(dx: 0.0, dy: self.bounds.height - toHeight))
+        self.scrollWrapperNode.alpha = 0.0
         self.dateNode.alpha = 0.0
         self.authorNameNode.alpha = 0.0
         self.deleteButton.alpha = 0.0
@@ -556,7 +660,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode {
         self.forwardButton.alpha = 0.0
         self.statusNode.alpha = 0.0
         self.playbackControlButton.alpha = 0.0
-        self.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { _ in
+        self.scrollWrapperNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { _ in
             completion()
         })
     }

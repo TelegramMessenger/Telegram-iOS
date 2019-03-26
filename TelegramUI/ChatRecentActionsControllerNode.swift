@@ -220,7 +220,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, presentController: { _, _ in
         }, navigationController: { [weak self] in
             return self?.getNavigationController()
-        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { [weak self] action, messageId in
+        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { [weak self] action, message in
             if let strongSelf = self {
                 switch action {
                     case let .url(url):
@@ -348,7 +348,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             ])])
                         strongSelf.presentController(actionSheet, nil)
                     case let .timecode(timecode, text):
-                        guard let messageId = messageId else {
+                        guard let message = message else {
                             return
                         }
                         let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
@@ -357,7 +357,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 if let strongSelf = self {
-                                    strongSelf.controllerInteraction?.seekToTimecode(messageId, timecode)
+                                    strongSelf.controllerInteraction?.seekToTimecode(message, timecode, true)
                                 }
                             }),
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
@@ -387,7 +387,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 strongSelf.context.sharedContext.applicationBindings.openAppStorePage()
             }
         }, displayMessageTooltip: { _, _, _, _ in
-        }, seekToTimecode: { _, _ in
+        }, seekToTimecode: { _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,

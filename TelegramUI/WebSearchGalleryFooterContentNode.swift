@@ -40,22 +40,11 @@ final class WebSearchGalleryFooterContentNode: GalleryFooterContentNode {
         
     }
     
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         let width = size.width
         let panelSize: CGFloat = 49.0
         var panelHeight: CGFloat = panelSize + bottomInset
         panelHeight += contentInset
-        var textFrame = CGRect()
-//        if !self.textNode.isHidden {
-//            let sideInset: CGFloat = 8.0 + leftInset
-//            let topInset: CGFloat = 8.0
-//            let textBottomInset: CGFloat = 8.0
-//            let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
-//            panelHeight += textSize.height + topInset + textBottomInset
-//            textFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: textSize)
-//        }
-
-        //self.textNode.frame = textFrame
         
         self.cancelButton.frame = CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - panelSize), size: CGSize(width: panelSize, height: panelSize))
         self.sendButton.frame = CGRect(origin: CGPoint(x: width - panelSize - rightInset, y: panelHeight - bottomInset - panelSize), size: CGSize(width: panelSize, height: panelSize))

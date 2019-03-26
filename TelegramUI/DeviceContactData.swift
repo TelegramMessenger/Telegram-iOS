@@ -337,6 +337,9 @@ public extension DeviceContactExtendedData {
             value.postalCode = address.postcode
             return CNLabeledValue<CNPostalAddress>(label: address.label, value: value)
         })
+        if let birthdayDate = self.birthdayDate {
+            contact.birthday = Calendar(identifier: .gregorian).dateComponents([.day, .month, .year], from: birthdayDate)
+        }
         return contact
     }
     

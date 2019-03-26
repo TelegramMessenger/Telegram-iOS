@@ -757,7 +757,7 @@ public class ChatMessageItemView: ListViewItemNode {
         if let item = self.item {
             switch button.action {
                 case let .url(url):
-                    item.controllerInteraction.longTap(.url(url), item.message.id)
+                    item.controllerInteraction.longTap(.url(url), item.message)
                 default:
                     break
             }

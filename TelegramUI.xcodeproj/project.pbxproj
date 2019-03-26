@@ -2490,6 +2490,13 @@
 			path = TelegramUI/Resources/Animations;
 			sourceTree = "<group>";
 		};
+		093857B422464B2700EB6A54 /* Stats */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Stats;
+			sourceTree = "<group>";
+		};
 		0941A99E210B053300EBE194 /* Open In */ = {
 			isa = PBXGroup;
 			children = (
@@ -4325,6 +4332,7 @@
 		D0EE97131D88BB1A006C18E1 /* Peer Info */ = {
 			isa = PBXGroup;
 			children = (
+				093857B422464B2700EB6A54 /* Stats */,
 				D0B843CC1DA903BB005F29E1 /* PeerInfoController.swift */,
 				D0486F091E523C8500091F0C /* GroupInfoController.swift */,
 				D03E5E0E1E55F8B90029569A /* ChannelVisibilityController.swift */,
