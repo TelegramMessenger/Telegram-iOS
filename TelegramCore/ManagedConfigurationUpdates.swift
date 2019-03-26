@@ -11,7 +11,9 @@ import Foundation
 
 func managedConfigurationUpdates(accountManager: AccountManager, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = Signal<Void, NoError> { subscriber in
-        return (network.request(Api.functions.help.getConfig()) |> retryRequest |> mapToSignal { result -> Signal<Void, NoError> in
+        return (network.request(Api.functions.help.getConfig())
+        |> retryRequest
+        |> mapToSignal { result -> Signal<Void, NoError> in
             return postbox.transaction { transaction -> Signal<Void, NoError> in
                 switch result {
                     case let .config(config):
