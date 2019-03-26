@@ -101,8 +101,8 @@ public final class AccountStateManager {
         return self.notificationMessagesPipe.signal()
     }
     
-    private let displayAlertsPipe = ValuePipe<[String]>()
-    public var displayAlerts: Signal<[String], NoError> {
+    private let displayAlertsPipe = ValuePipe<[(text: String, isDropAuth: Bool)]>()
+    public var displayAlerts: Signal<[(text: String, isDropAuth: Bool)], NoError> {
         return self.displayAlertsPipe.signal()
     }
     

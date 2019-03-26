@@ -882,7 +882,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     }
                     updatedState.addMessages([message], location: .UpperHistoryBlock)
                 }
-            case let .updateServiceNotification(_, date, _, text, media, entities):
+            case let .updateServiceNotification(_, date, type, text, media, entities):
                 if let date = date {
                     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 777000)
                     
@@ -928,7 +928,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         updatedState.addMessages([message], location: .UpperHistoryBlock)
                     }
                 } else {
-                    updatedState.addDisplayAlert(text)
+                    updatedState.addDisplayAlert(text, isDropAuth: type.hasPrefix("AUTH_KEY_DROP_"))
                 }
             case let .updateReadChannelInbox(channelId, maxId):
                 updatedState.readInbox(MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: maxId))
