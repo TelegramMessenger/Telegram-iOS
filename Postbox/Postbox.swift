@@ -961,7 +961,7 @@ fileprivate class PipeNotifier: NSObject {
 }
 
 public enum PostboxResult {
-    case upgrading
+    case upgrading(Float)
     case postbox(Postbox)
 }
 
