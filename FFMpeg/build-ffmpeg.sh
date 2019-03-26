@@ -19,6 +19,8 @@ SOURCE_DIR=$4
 FF_VERSION="4.1"
 SOURCE="$SOURCE_DIR/ffmpeg-$FF_VERSION"
 
+GAS_PREPROCESSOR_PATH="$SOURCE_DIR/../gas-preprocessor.pl"
+
 FAT="$BUILD_DIR/FFmpeg-iOS"
 
 SCRATCH="$BUILD_DIR/scratch"
@@ -89,11 +91,10 @@ then
 		echo 'pkg-config not found'
 		exit 1
 	fi
-	if [ ! `which gas-preprocessor.pl` ]
+	if [ ! `which "$GAS_PREPROCESSOR_PATH"` ]
 	then
-		echo 'gas-preprocessor.pl not found.'
+		echo '$GAS_PREPROCESSOR_PATH not found.'
 		exit 1
-		#curl -L https://github.com/libav/gas-preprocessor/raw/master/gas-preprocessor.pl -o /usr/local/bin/gas-preprocessor.pl && chmod +x /usr/local/bin/gas-preprocessor.pl
 	fi
 
 	if [ ! -r $SOURCE ]
@@ -143,12 +144,11 @@ then
 		XCRUN_SDK=`echo $PLATFORM | tr '[:upper:]' '[:lower:]'`
 		CC="xcrun -sdk $XCRUN_SDK clang"
 
-		# force "configure" to use "gas-preprocessor.pl" (FFmpeg 3.3)
 		if [ "$ARCH" = "arm64" ]
 		then
-		    AS="gas-preprocessor.pl -arch aarch64 -- $CC"
+		    AS="$GAS_PREPROCESSOR_PATH -arch aarch64 -- $CC"
 		else
-		    AS="gas-preprocessor.pl -- $CC"
+		    AS="$GAS_PREPROCESSOR_PATH -- $CC"
 		fi
 
 		CXXFLAGS="$CFLAGS"
