@@ -698,10 +698,20 @@ final class AuthorizedApplicationContext {
         
         self.displayAlertsDisposable = (context.account.stateManager.displayAlerts
         |> deliverOnMainQueue).start(next: { [weak self] alerts in
-            if let strongSelf = self{
-                for text in alerts {
+            if let strongSelf = self {
+                for (text, isDropAuth) in alerts {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                    let actions: [TextAlertAction]
+                    if isDropAuth {
+                        actions = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.LogoutOptions_LogOut, action: {
+                            if let strongSelf = self {
+                                let _ = logoutFromAccount(id: strongSelf.context.account.id, accountManager: strongSelf.context.sharedContext.accountManager).start()
+                            }
+                        })]
+                    } else {
+                        actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
+                    }
+                    let controller = textAlertController(context: strongSelf.context, title: nil, text: text, actions: actions)
                     (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                 }
             }
