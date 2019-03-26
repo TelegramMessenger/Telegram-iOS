@@ -46,6 +46,7 @@ private struct PasscodeState: Equatable {
 }
 
 final class AuthorizedApplicationContext {
+    let sharedApplicationContext: SharedApplicationContext
     let mainWindow: Window1
     let lockedCoveringView: LockedWindowCoveringView
     
@@ -99,7 +100,9 @@ final class AuthorizedApplicationContext {
     private var showCallsTabDisposable: Disposable?
     private var enablePostboxTransactionsDiposable: Disposable?
     
-    init(mainWindow: Window1, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, context: AccountContext, accountManager: AccountManager, showCallsTab: Bool, reinitializedNotificationSettings: @escaping () -> Void) {
+    init(sharedApplicationContext: SharedApplicationContext, mainWindow: Window1, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, context: AccountContext, accountManager: AccountManager, showCallsTab: Bool, reinitializedNotificationSettings: @escaping () -> Void) {
+        self.sharedApplicationContext = sharedApplicationContext
+        
         setupLegacyComponents(context: context)
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
