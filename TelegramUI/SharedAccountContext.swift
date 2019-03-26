@@ -318,7 +318,7 @@ public final class SharedAccountContext {
             var addedAuthSignal: Signal<UnauthorizedAccount?, NoError> = .single(nil)
             for (id, attributes) in records {
                 if self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == id}) == nil {
-                    addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, supplementary: false, rootPath: rootPath, beginWithTestingEnvironment: attributes.isTestingEnvironment, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+                    addedSignals.append(accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: attributes.isTestingEnvironment, auxiliaryMethods: telegramAccountAuxiliaryMethods)
                     |> map { result -> (AccountRecordId, Account?, Int32) in
                         switch result {
                             case let .authorized(account):
@@ -339,7 +339,7 @@ public final class SharedAccountContext {
                 }
             }
             if let authRecord = authRecord, authRecord.0 != self.activeAccountsValue?.currentAuth?.id {
-                addedAuthSignal = accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: authRecord.0, supplementary: false, rootPath: rootPath, beginWithTestingEnvironment: authRecord.1, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+                addedAuthSignal = accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: authRecord.0, supplementary: !applicationBindings.isMainApp, rootPath: rootPath, beginWithTestingEnvironment: authRecord.1, auxiliaryMethods: telegramAccountAuxiliaryMethods)
                 |> map { result -> UnauthorizedAccount? in
                     switch result {
                         case let .unauthorized(account):
