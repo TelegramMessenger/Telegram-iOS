@@ -46,6 +46,6 @@ final class GlobalMessageIdsTable: Table {
     }
     
     func remove(_ globalId: Int32) {
-        self.valueBox.remove(self.table, key: self.key(globalId))
+        self.valueBox.remove(self.table, key: self.key(globalId), secure: false)
     }
 }

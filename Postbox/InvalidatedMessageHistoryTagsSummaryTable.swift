@@ -79,7 +79,7 @@ final class InvalidatedMessageHistoryTagsSummaryTable: Table {
     
     func remove(_ entry: InvalidatedMessageHistoryTagsSummaryEntry, operations: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
         if let current = self.get(entry.key), current.version == entry.version {
-            self.valueBox.remove(self.table, key: self.key(entry.key))
+            self.valueBox.remove(self.table, key: self.key(entry.key), secure: false)
             operations.append(.remove(entry.key))
         }
     }

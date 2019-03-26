@@ -143,6 +143,8 @@ final class SqliteValueBox: ValueBox {
     private var fullTextMatchCollectionStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var fullTextMatchCollectionTagsStatements: [Int32 : SqlitePreparedStatement] = [:]
     
+    private var secureDeleteEnabled: Bool = false
+    
     private var readQueryTime: CFAbsoluteTime = 0.0
     private var writeQueryTime: CFAbsoluteTime = 0.0
     private var commitTime: CFAbsoluteTime = 0.0
@@ -1397,10 +1399,16 @@ final class SqliteValueBox: ValueBox {
         self.writeQueryTime += CFAbsoluteTimeGetCurrent() - startTime
     }
     
-    public func remove(_ table: ValueBoxTable, key: ValueBoxKey) {
+    public func remove(_ table: ValueBoxTable, key: ValueBoxKey, secure: Bool) {
         assert(self.queue.isCurrent())
         if let _ = self.tables[table.id] {
             let startTime = CFAbsoluteTimeGetCurrent()
+            
+            if secure != self.secureDeleteEnabled {
+                self.secureDeleteEnabled = secure
+                let result = database.execute("PRAGMA secure_delete=\(secure ? 1 : 0)")
+                assert(result)
+            }
             
             let statement = self.deleteStatement(table, key: key)
             while statement.step(handle: self.database.handle, path: self.databasePath) {

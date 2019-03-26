@@ -34,7 +34,7 @@ final class PendingPeerNotificationSettingsIndexTable: Table {
         if pending {
             self.valueBox.set(self.table, key: self.key(peerId), value: MemoryBuffer())
         } else {
-            self.valueBox.remove(self.table, key: self.key(peerId))
+            self.valueBox.remove(self.table, key: self.key(peerId), secure: false)
         }
     }
 }

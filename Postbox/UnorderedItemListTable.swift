@@ -232,7 +232,7 @@ final class UnorderedItemListTable: Table {
         }
         
         for id in removeItemIds {
-            self.valueBox.remove(self.table, key: self.entryKey(tag: tag, id: id))
+            self.valueBox.remove(self.table, key: self.entryKey(tag: tag, id: id), secure: false)
         }
         
         return true

@@ -192,7 +192,7 @@ final class PeerOperationLogTable: Table {
         }
         
         for index in indices {
-            self.valueBox.remove(self.table, key: self.key(peerId: peerId, tag: tag, index: index))
+            self.valueBox.remove(self.table, key: self.key(peerId: peerId, tag: tag, index: index), secure: false)
         }
         
         if !mergedIndices.isEmpty {
@@ -219,7 +219,7 @@ final class PeerOperationLogTable: Table {
         }, limit: 0)
         
         for index in indices {
-            self.valueBox.remove(self.table, key: self.key(peerId: peerId, tag: tag, index: index))
+            self.valueBox.remove(self.table, key: self.key(peerId: peerId, tag: tag, index: index), secure: false)
         }
         
         if !mergedIndices.isEmpty {
@@ -245,7 +245,7 @@ final class PeerOperationLogTable: Table {
         }, limit: 0)
         
         for index in indices {
-            self.valueBox.remove(self.table, key: self.key(peerId: peerId, tag: tag, index: index))
+            self.valueBox.remove(self.table, key: self.key(peerId: peerId, tag: tag, index: index), secure: false)
         }
         
         if !mergedIndices.isEmpty {

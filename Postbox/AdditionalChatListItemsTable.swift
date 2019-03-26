@@ -65,7 +65,7 @@ final class AdditionalChatListItemsTable: Table {
                 return true
             }, limit: 0)
             for key in keys {
-                self.valueBox.remove(self.table, key: key)
+                self.valueBox.remove(self.table, key: key, secure: false)
             }
             
             if let items = self.cachedItems {

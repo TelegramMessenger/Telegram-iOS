@@ -473,11 +473,11 @@ final class ChatListTable: Table {
     }
     
     private func justRemoveMessageIndex(groupId: PeerGroupId?, index: ChatListIndex) {
-        self.valueBox.remove(self.table, key: self.key(groupId: groupId, index: index, type: .message))
+        self.valueBox.remove(self.table, key: self.key(groupId: groupId, index: index, type: .message), secure: false)
     }
     
     private func justRemoveGroupReferenceIndex(groupId: PeerGroupId?, index: ChatListIndex) {
-        self.valueBox.remove(self.table, key: self.key(groupId: groupId, index: index, type: .groupReference))
+        self.valueBox.remove(self.table, key: self.key(groupId: groupId, index: index, type: .groupReference), secure: false)
     }
     
     private func justInsertHole(groupId: PeerGroupId?, hole: ChatListHole) {
@@ -485,7 +485,7 @@ final class ChatListTable: Table {
     }
     
     private func justRemoveHole(groupId: PeerGroupId?, index: MessageIndex) {
-        self.valueBox.remove(self.table, key: self.key(groupId: groupId, index: ChatListIndex(pinningIndex: nil, messageIndex: index), type: .hole))
+        self.valueBox.remove(self.table, key: self.key(groupId: groupId, index: ChatListIndex(pinningIndex: nil, messageIndex: index), type: .hole), secure: false)
     }
     
     private func justInsertGroupReferenceIndex(groupId: PeerGroupId?, referenceGroupId: PeerGroupId, index: ChatListIndex) {

@@ -443,7 +443,7 @@ final class MessageHistoryIndexTable: Table {
     func updateTimestamp(_ id: MessageId, timestamp: Int32, operations: inout [MessageHistoryIndexOperation]) {
         if let previousData = self.valueBox.get(self.table, key: self.key(id)), let previousEntry = self.getEnsureInitialized(id, operations: &operations), case let .Message(previousIndex) = previousEntry, previousIndex.timestamp != timestamp {
             let updatedEntry = modifyHistoryIndexEntryTimestamp(value: previousData, timestamp: timestamp)
-            self.valueBox.remove(self.table, key: self.key(id))
+            self.valueBox.remove(self.table, key: self.key(id), secure: false)
             self.valueBox.set(self.table, key: self.key(id), value: updatedEntry)
             
             operations.append(.UpdateTimestamp(MessageIndex(id: id, timestamp: previousIndex.timestamp), timestamp))
@@ -862,7 +862,7 @@ final class MessageHistoryIndexTable: Table {
     }
     
     private func justRemove(_ index: MessageIndex, isMessage: Bool, operations: inout [MessageHistoryIndexOperation]) {
-        self.valueBox.remove(self.table, key: self.key(index.id))
+        self.valueBox.remove(self.table, key: self.key(index.id), secure: false)
         
         operations.append(.Remove(index: index, isMessage: isMessage))
         if self.seedConfiguration.globalMessageIdsPeerIdNamespaces.contains(GlobalMessageIdsNamespace(peerIdNamespace: index.id.peerId.namespace, messageIdNamespace: index.id.namespace)) {

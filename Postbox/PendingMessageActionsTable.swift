@@ -135,8 +135,8 @@ final class PendingMessageActionsTable: Table {
             }
         } else if currentAction != nil {
             operations.append(.remove(type, id))
-            self.valueBox.remove(self.table, key: self.forwardKey(id: id, actionType: type))
-            self.valueBox.remove(self.table, key: self.reverseKey(id: id, actionType: type))
+            self.valueBox.remove(self.table, key: self.forwardKey(id: id, actionType: type), secure: false)
+            self.valueBox.remove(self.table, key: self.reverseKey(id: id, actionType: type), secure: false)
             let updatedCount = self.metadataTable.addCount(.peerNamespaceAction(id.peerId, id.namespace, type), value: -1)
             updatedSummaries[PendingMessageActionsSummaryKey(type: type, peerId: id.peerId, namespace: id.namespace)] = updatedCount
             let _ = self.metadataTable.addCount(.peerNamespace(id.peerId, id.namespace), value: -1)
@@ -152,8 +152,8 @@ final class PendingMessageActionsTable: Table {
             }, limit: 0)
             for type in removeTypes {
                 operations.append(.remove(type, id))
-                self.valueBox.remove(self.table, key: self.forwardKey(id: id, actionType: type))
-                self.valueBox.remove(self.table, key: self.reverseKey(id: id, actionType: type))
+                self.valueBox.remove(self.table, key: self.forwardKey(id: id, actionType: type), secure: false)
+                self.valueBox.remove(self.table, key: self.reverseKey(id: id, actionType: type), secure: false)
                 let updatedCount = self.metadataTable.addCount(.peerNamespaceAction(id.peerId, id.namespace, type), value: -1)
                 updatedSummaries[PendingMessageActionsSummaryKey(type: type, peerId: id.peerId, namespace: id.namespace)] = updatedCount
             }

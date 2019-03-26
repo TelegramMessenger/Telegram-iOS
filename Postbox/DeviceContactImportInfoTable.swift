@@ -21,7 +21,7 @@ final class DeviceContactImportInfoTable: Table {
                 self.valueBox.set(self.table, key: identifier, value: encoder.readBufferNoCopy())
             })
         } else {
-            self.valueBox.remove(self.table, key: identifier)
+            self.valueBox.remove(self.table, key: identifier, secure: false)
         }
     }
     

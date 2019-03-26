@@ -557,7 +557,7 @@ final class MessageHistoryReadStateTable: Table {
                     }
                     self.valueBox.set(self.table, key: self.key(id), value: sharedBuffer)
                 } else {
-                    self.valueBox.remove(self.table, key: self.key(id))
+                    self.valueBox.remove(self.table, key: self.key(id), secure: false)
                 }
             }
             self.updatedInitialPeerReadStates.removeAll()

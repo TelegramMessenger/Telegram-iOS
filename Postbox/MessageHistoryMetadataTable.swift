@@ -242,7 +242,7 @@ final class MessageHistoryMetadataTable: Table {
         if value {
             self.valueBox.set(self.table, key: self.key(MetadataPrefix.ShouldReindexUnreadCounts), value: MemoryBuffer())
         } else {
-            self.valueBox.remove(self.table, key: self.key(MetadataPrefix.ShouldReindexUnreadCounts))
+            self.valueBox.remove(self.table, key: self.key(MetadataPrefix.ShouldReindexUnreadCounts), secure: false)
         }
     }
     
@@ -419,7 +419,7 @@ final class MessageHistoryMetadataTable: Table {
                     sharedBuffer.write(&mutableMaxId, offset: 0, length: 4)
                     self.valueBox.set(self.table, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace), value: sharedBuffer)
                 } else {
-                    self.valueBox.remove(self.table, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace))
+                    self.valueBox.remove(self.table, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace), secure: false)
                 }
             }
         }

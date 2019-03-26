@@ -78,7 +78,7 @@ final class NoticeTable: Table {
             return true
         })
         for key in keys {
-            self.valueBox.remove(self.table, key: key)
+            self.valueBox.remove(self.table, key: key, secure: false)
         }
         self.updatedEntryKeys.formUnion(cachedEntries.keys)
         self.cachedEntries.removeAll()
@@ -98,7 +98,7 @@ final class NoticeTable: Table {
                         self.valueBox.set(self.table, key: key.combinedKey, value: encoder.readBufferNoCopy())
                     })
                 } else {
-                    self.valueBox.remove(self.table, key: key.combinedKey)
+                    self.valueBox.remove(self.table, key: key.combinedKey, secure: false)
                 }
             }
             

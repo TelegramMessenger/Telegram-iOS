@@ -21,6 +21,6 @@ final class KeychainTable: Table {
     }
     
     func remove(_ key: String) {
-        self.valueBox.remove(self.table, key: self.key(key))
+        self.valueBox.remove(self.table, key: self.key(key), secure: false)
     }
 }

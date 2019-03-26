@@ -69,7 +69,7 @@ final class ContactTable: Table {
                 let sharedKey = self.key(PeerId(namespace: 0, id: 0))
                 
                 for peerId in removedPeerIds {
-                    self.valueBox.remove(self.table, key: self.key(peerId, sharedKey: sharedKey))
+                    self.valueBox.remove(self.table, key: self.key(peerId, sharedKey: sharedKey), secure: false)
                     self.peerNameIndexTable.setPeerCategoryState(peerId: peerId, category: [.contacts], includes: false)
                 }
                 

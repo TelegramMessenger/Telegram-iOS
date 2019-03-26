@@ -38,7 +38,7 @@ final class MessageHistoryUnsentTable: Table {
     }
     
     func remove(_ id: MessageId, operations: inout [IntermediateMessageHistoryUnsentOperation]) {
-        self.valueBox.remove(self.table, key: self.key(id))
+        self.valueBox.remove(self.table, key: self.key(id), secure: false)
         operations.append(.Remove(id))
     }
     

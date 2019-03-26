@@ -68,7 +68,7 @@ final class PeerChatInterfaceStateTable: Table {
                     sharedEncoder.encodeRootObject(state)
                     self.valueBox.set(self.table, key: self.key(peerId, sharedKey: self.sharedKey), value: sharedEncoder.readBufferNoCopy())
                     } else {
-                        self.valueBox.remove(self.table, key: self.key(peerId, sharedKey: self.sharedKey))
+                        self.valueBox.remove(self.table, key: self.key(peerId, sharedKey: self.sharedKey), secure: false)
                     }
                 }
             }

@@ -61,7 +61,7 @@ final class RatingTable<T: RatingTableItem>: Table {
         }, limit: 0)
         
         for key in keys {
-            self.valueBox.remove(self.table, key: key)
+            self.valueBox.remove(self.table, key: key, secure: false)
         }
         
         let sharedKey = T.emptyKey()

@@ -39,6 +39,6 @@ final class MessageGloballyUniqueIdTable: Table {
     }
     
     func remove(peerId: PeerId, globallyUniqueId: Int64) {
-        self.valueBox.remove(self.table, key: self.key(peerId: peerId, id: globallyUniqueId))
+        self.valueBox.remove(self.table, key: self.key(peerId: peerId, id: globallyUniqueId), secure: false)
     }
 }

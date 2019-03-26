@@ -57,7 +57,7 @@ class MessageHistoryTagsTable: Table {
             assert(true)
         }
         for tag in tagMask {
-            self.valueBox.remove(self.table, key: self.key(tag, index: index, key: self.sharedKey))
+            self.valueBox.remove(self.table, key: self.key(tag, index: index, key: self.sharedKey), secure: false)
             
             if !isHole && self.summaryTags.contains(tag) {
                 self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: index.id.peerId, namespace: index.id.namespace), id: index.id.id, updatedSummaries: &updatedSummaries, invalidateSummaries: &invalidateSummaries)

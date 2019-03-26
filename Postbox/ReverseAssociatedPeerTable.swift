@@ -82,7 +82,7 @@ final class ReverseAssociatedPeerTable: Table {
             for peerId in self.updatedAssociations {
                 if let peerIds = self.cachedAssociations[peerId] {
                     if peerIds.isEmpty {
-                        self.valueBox.remove(self.table, key: self.key(peerId))
+                        self.valueBox.remove(self.table, key: self.key(peerId), secure: false)
                     } else {
                         buffer.reset()
                         writePeerIds(buffer, peerIds)

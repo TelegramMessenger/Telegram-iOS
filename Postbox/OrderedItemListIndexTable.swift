@@ -21,7 +21,7 @@ final class OrderedItemListIndexTable: Table {
     }
     
     func remove(collectionId: Int32, id: MemoryBuffer) {
-        self.valueBox.remove(self.table, key: self.key(collectionId: collectionId, id: id))
+        self.valueBox.remove(self.table, key: self.key(collectionId: collectionId, id: id), secure: false)
     }
     
     func set(collectionId: Int32, id: MemoryBuffer, content: PostboxCoding) {

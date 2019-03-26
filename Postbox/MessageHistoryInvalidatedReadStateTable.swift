@@ -100,7 +100,7 @@ final class MessageHistorySynchronizeReadStateTable: Table {
                     
                     self.valueBox.set(self.table, key: key, value: buffer)
                 } else {
-                    self.valueBox.remove(self.table, key: key)
+                    self.valueBox.remove(self.table, key: key, secure: false)
                 }
             }
             self.updatedPeerIds.removeAll()

@@ -41,7 +41,7 @@ final class AccountManagerRecordTable: Table {
                 self.valueBox.set(self.table, key: self.key(id), value: encoder.readBufferNoCopy())
             })
         } else {
-            self.valueBox.remove(self.table, key: self.key(id))
+            self.valueBox.remove(self.table, key: self.key(id), secure: false)
         }
         operations.append(.set(id: id, record: record))
     }

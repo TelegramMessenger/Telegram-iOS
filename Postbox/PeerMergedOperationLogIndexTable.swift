@@ -34,7 +34,7 @@ final class PeerMergedOperationLogIndexTable: Table {
     func remove(tag: PeerOperationLogTag, mergedIndices: [Int32]) {
         for index in mergedIndices {
             assert(self.valueBox.exists(self.table, key: self.key(tag: tag, index: index)))
-            self.valueBox.remove(self.table, key: self.key(tag: tag, index: index))
+            self.valueBox.remove(self.table, key: self.key(tag: tag, index: index), secure: false)
         }
     }
     

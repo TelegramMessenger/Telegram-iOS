@@ -197,7 +197,7 @@ final class PeerNameIndexTable: Table {
                                 self.peerNameTokenIndexTable.remove(namespace: reverseIndexNamespace, reference: PeerIdReverseIndexReference(value: peerId.toInt64()), tokens: entryUpdate.initialTokens)
                             }
                             if !entryUpdate.initialCategories.isEmpty {
-                                self.valueBox.remove(self.table, key: self.key(peerId))
+                                self.valueBox.remove(self.table, key: self.key(peerId), secure: false)
                             }
                         } else {
                             let updatedTokens: [ValueBoxKey]

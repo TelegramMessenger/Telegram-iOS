@@ -254,7 +254,7 @@ final class ReverseIndexReferenceTable<T: ReverseIndexReference>: Table {
                     if let cachedNamespace = self.cachedEntriesByNamespace[namespace], let cached = cachedNamespace[token] {
                         cached.withMemoryBuffer { buffer in
                             if buffer.length == 0 {
-                                self.valueBox.remove(self.table, key: self.key(namespace: namespace, token: token))
+                                self.valueBox.remove(self.table, key: self.key(namespace: namespace, token: token), secure: false)
                             } else {
                                 self.valueBox.set(self.table, key: self.key(namespace: namespace, token: token), value: buffer)
                             }

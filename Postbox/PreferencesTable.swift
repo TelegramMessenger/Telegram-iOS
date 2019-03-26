@@ -60,7 +60,7 @@ final class PreferencesTable: Table {
                         self.valueBox.set(self.table, key: key, value: encoder.readBufferNoCopy())
                     })
                 } else {
-                    self.valueBox.remove(self.table, key: key)
+                    self.valueBox.remove(self.table, key: key, secure: false)
                 }
             }
             

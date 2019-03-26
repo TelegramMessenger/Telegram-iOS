@@ -214,7 +214,7 @@ final class GroupFeedReadStateTable: Table {
                 writeSyncOperation(operation, to: buffer)
                 self.valueBox.set(self.table, key: self.key(space: .sync, id: id), value: buffer.readBufferNoCopy())
             } else {
-                self.valueBox.remove(self.table, key: self.key(space: .sync, id: id))
+                self.valueBox.remove(self.table, key: self.key(space: .sync, id: id), secure: false)
             }
             context.updatedOperations[id] = GroupFeedReadStateSyncOperationEntry(operation)
         }
@@ -299,7 +299,7 @@ final class GroupFeedReadStateTable: Table {
                     buffer.write(&idId, offset: 0, length: 4)
                     self.valueBox.set(self.table, key: self.key(space: .state, id: id), value: buffer.readBufferNoCopy())
                 } else {
-                    self.valueBox.remove(self.table, key: self.key(space: .state, id: id))
+                    self.valueBox.remove(self.table, key: self.key(space: .state, id: id), secure: false)
                 }
             }
             self.updatedGroupIds.removeAll()

@@ -97,7 +97,7 @@ final class PeerChatTopTaggedMessageIdsTable: Table {
                         var messageIdId: Int32 = maybeMessageId.id
                         self.valueBox.set(self.table, key: self.key(peerId: record.peerId, namespace: record.namespace), value: MemoryBuffer(memory: &messageIdId, capacity: 4, length: 4, freeWhenDone: false))
                     } else {
-                        self.valueBox.remove(self.table, key: self.key(peerId: record.peerId, namespace: record.namespace))
+                        self.valueBox.remove(self.table, key: self.key(peerId: record.peerId, namespace: record.namespace), secure: false)
                     }
                 }
             }

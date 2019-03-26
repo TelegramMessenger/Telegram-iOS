@@ -1650,7 +1650,7 @@ final class MessageHistoryTable: Table {
                     resultGlobalTags = GlobalMessageTags()
             }
             
-            self.valueBox.remove(self.table, key: key)
+            self.valueBox.remove(self.table, key: key, secure: true)
             return (resultTags, resultGlobalTags)
         } else {
             return nil
@@ -1800,7 +1800,7 @@ final class MessageHistoryTable: Table {
                 }
             }
             
-            self.valueBox.remove(self.table, key: self.key(index))
+            self.valueBox.remove(self.table, key: self.key(index), secure: false)
             
             let updatedIndex = MessageIndex(message)
             
@@ -2154,7 +2154,7 @@ final class MessageHistoryTable: Table {
             return (previousMessage.tags, previousMessage.globalTags)
             
             
-            self.valueBox.remove(self.table, key: self.key(index))
+            self.valueBox.remove(self.table, key: self.key(index), secure: false)
             //TODO changed updatedIndex -> index
             #if os(iOS)
                 //assert(false)

@@ -123,7 +123,7 @@ class GlobalMessageHistoryTagsTable: Table {
     
     func remove(_ tagMask: GlobalMessageTags, index: MessageIndex) {
         assert(tagMask.isSingleTag)
-        self.valueBox.remove(self.table, key: self.key(tagMask, index: index, key: self.sharedKey))
+        self.valueBox.remove(self.table, key: self.key(tagMask, index: index, key: self.sharedKey), secure: false)
     }
     
     func get(_ tagMask: GlobalMessageTags, index: MessageIndex) -> GlobalMessageHistoryTagsTableEntry? {

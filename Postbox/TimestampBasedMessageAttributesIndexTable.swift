@@ -30,6 +30,6 @@ final class TimestampBasedMessageAttributesIndexTable: Table {
     }
     
     func remove(tag: UInt16, id: MessageId) {
-        self.valueBox.remove(self.table, key: self.key(tag: tag, id: id))
+        self.valueBox.remove(self.table, key: self.key(tag: tag, id: id), secure: false)
     }
 }

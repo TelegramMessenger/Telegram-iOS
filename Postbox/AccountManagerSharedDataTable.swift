@@ -23,7 +23,7 @@ final class AccountManagerSharedDataTable: Table {
             self.valueBox.set(self.table, key: key, value: encoder.makeReadBufferAndReset())
             updatedKeys.insert(key)
         } else if self.get(key: key) != nil {
-            self.valueBox.remove(self.table, key: key)
+            self.valueBox.remove(self.table, key: key, secure: false)
             updatedKeys.insert(key)
         }
     }

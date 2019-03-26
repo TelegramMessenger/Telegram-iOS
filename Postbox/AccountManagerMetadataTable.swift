@@ -204,7 +204,7 @@ final class AccountManagerMetadataTable: Table {
                 self.valueBox.set(self.table, key: self.key(.currentAuthAccount), value: encoder.readBufferNoCopy())
             })
         } else {
-            self.valueBox.remove(self.table, key: self.key(.currentAuthAccount))
+            self.valueBox.remove(self.table, key: self.key(.currentAuthAccount), secure: false)
         }
         operations.append(.updateCurrentAuthAccountRecord(record))
     }

@@ -148,7 +148,7 @@ final class ItemCollectionInfoTable: Table {
         }, limit: 0)
         
         for key in currentCollectionKeys {
-            self.valueBox.remove(self.table, key: key)
+            self.valueBox.remove(self.table, key: key, secure: false)
         }
         
         var index: Int32 = 0

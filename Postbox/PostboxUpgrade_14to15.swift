@@ -89,7 +89,7 @@ func postboxUpgrade_14to15(metadataTable: MetadataTable, valueBox: ValueBox) {
     })
     
     for (previous, _, _) in values {
-        valueBox.remove(chatListTable, key: previous)
+        valueBox.remove(chatListTable, key: previous, secure: false)
     }
     
     for (_, updatedKey, updatedValue) in values {

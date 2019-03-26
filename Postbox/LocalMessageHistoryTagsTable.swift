@@ -47,7 +47,7 @@ final class LocalMessageHistoryTagsTable: Table {
             operations.append(.Insert(tag, id))
         }
         for tag in removedTags {
-            self.valueBox.remove(self.table, key: self.key(id, tag: tag))
+            self.valueBox.remove(self.table, key: self.key(id, tag: tag), secure: false)
             operations.append(.Remove(tag, id))
         }
     }

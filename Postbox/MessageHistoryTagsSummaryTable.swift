@@ -164,7 +164,7 @@ class MessageHistoryTagsSummaryTable: Table {
                         self.valueBox.set(self.table, key: self.key(key: key, sharedKey: self.sharedKey), value: buffer)
                     } else {
                         assertionFailure()
-                        self.valueBox.remove(self.table, key: self.key(key: key, sharedKey: self.sharedKey))
+                        self.valueBox.remove(self.table, key: self.key(key: key, sharedKey: self.sharedKey), secure: false)
                     }
                 } else {
                     assertionFailure()

@@ -167,7 +167,7 @@ final class MessageMediaTable: Table {
                 sharedWriteBuffer.write(&messageReferenceCount, offset: 0, length: 4)
                 
                 if messageReferenceCount <= 0 {
-                    self.valueBox.remove(self.table, key: self.key(id))
+                    self.valueBox.remove(self.table, key: self.key(id), secure: false)
                 } else {
                     withExtendedLifetime(sharedWriteBuffer, {
                         self.valueBox.set(self.table, key: self.key(id), value: sharedWriteBuffer.readBufferNoCopy())
@@ -187,7 +187,7 @@ final class MessageMediaTable: Table {
                 
                 let referencedMessageIndex = MessageIndex(id: MessageId(peerId: PeerId(idPeerId), namespace: idNamespace, id: idId), timestamp: idTimestamp)
                 
-                self.valueBox.remove(self.table, key: self.key(id))
+                self.valueBox.remove(self.table, key: self.key(id), secure: false)
                 
                 return .Embedded(referencedMessageIndex)
             } else {
@@ -199,7 +199,7 @@ final class MessageMediaTable: Table {
     
     func removeEmbeddedMedia(_ media: Media) {
         if let id = media.id {
-            self.valueBox.remove(self.table, key: self.key(id))
+            self.valueBox.remove(self.table, key: self.key(id), secure: false)
         }
     }
     
@@ -230,7 +230,7 @@ final class MessageMediaTable: Table {
                     sharedWriteBuffer.write(&messageReferenceCount, offset: 0, length: 4)
                     
                     if id != updatedId {
-                        self.valueBox.remove(self.table, key: self.key(id))
+                        self.valueBox.remove(self.table, key: self.key(id), secure: false)
                     }
                     withExtendedLifetime(sharedWriteBuffer, {
                         self.valueBox.set(self.table, key: self.key(updatedId), value: sharedWriteBuffer.readBufferNoCopy())

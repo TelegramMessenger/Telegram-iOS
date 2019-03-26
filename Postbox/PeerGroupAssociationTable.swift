@@ -119,7 +119,7 @@ final class PeerGroupAssociationTable: Table {
                         var groupIdValue: Int32 = groupId.rawValue
                         self.valueBox.set(self.table, key: sharedKey, value: MemoryBuffer(memory: &groupIdValue, capacity: 4, length: 4, freeWhenDone: false))
                     } else {
-                        self.valueBox.remove(self.table, key: sharedKey)
+                        self.valueBox.remove(self.table, key: sharedKey, secure: false)
                     }
                 }
             } else {
