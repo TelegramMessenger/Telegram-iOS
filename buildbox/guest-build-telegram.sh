@@ -5,13 +5,14 @@ if [ "$1" == "hockeyapp" ]; then
 elif [ "$1" == "appstore" ]; then
 	FASTLANE_BUILD_CONFIGURATION="testflight_llc"
 elif [ "$1" == "verify" ]; then
-	FASTLANE_BUILD_CONFIGURATION="testflight_llc"
+	FASTLANE_BUILD_CONFIGURATION="build_for_appstore"
 else
 	echo "Unknown configuration $1"
 	exit 1
 fi
 
 security unlock-keychain -p telegram
+security set-keychain-settings -lut 7200
 
 CERTS_PATH="codesigning_data/certs"
 for f in $(ls "$CERTS_PATH"); do
@@ -27,17 +28,15 @@ for f in $(ls "$PROFILES_PATH"); do
 	cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$uuid.mobileprovision"
 done
 
-SOURCE_PATH="source"
+SOURCE_PATH="telegram-ios"
 
 if [ -d "$SOURCE_PATH" ]; then
 	echo "$SOURCE_PATH must not exist"
 	exit 1
 fi
 
-mkdir -p "$SOURCE_PATH"
-
 echo "Unpacking files..."
-tar -xzf "source.tar.gz" -C "$SOURCE_PATH"
+tar -xf "source.tar"
 
 cd "$SOURCE_PATH"
 fastlane "$FASTLANE_BUILD_CONFIGURATION"

@@ -25,7 +25,11 @@ if [ ! -d "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" ]; then
 	exit 1
 fi
 
-tar czf "$BUILDBOX_DIR/transient-data/source.tar.gz" --exclude "$BUILDBOX_DIR" .
+BASE_DIR=$(pwd)
+SOURCE_DIR=$(basename "$BASE_DIR")
+cd ..
+tar cf "$SOURCE_DIR/$BUILDBOX_DIR/transient-data/source.tar" --exclude "$SOURCE_DIR/$BUILDBOX_DIR" "$SOURCE_DIR"
+cd "$BASE_DIR"
 
 VM_BASE_NAME="macos10_14_3_Xcode10_1"
 
@@ -44,8 +48,13 @@ prlctl snapshot-switch "$VM_NAME" -i "$SNAPSHOT_ID"
 VM_IP=$(prlctl exec "$VM_NAME" "ifconfig | grep inet | grep broadcast | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1 | tr '\n' '\0'")
 
 scp -pr "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" telegram@"$VM_IP":codesigning_data
-scp -pr "$BUILDBOX_DIR/transient-data/telegram-ios-shared" telegram@"$VM_IP":telegram-ios-shared
-scp -pr "$BUILDBOX_DIR/guest-build-telegram.sh" "$BUILDBOX_DIR/transient-data/source.tar.gz" telegram@"$VM_IP":
+
+if [ "$BUILD_CONFIGURATION" == "verify" ]; then
+	scp -pr "$BUILDBOX_DIR/fake-shared" telegram@"$VM_IP":telegram-ios-shared
+else
+	scp -pr "$BUILDBOX_DIR/transient-data/telegram-ios-shared" telegram@"$VM_IP":telegram-ios-shared
+fi
+scp -pr "$BUILDBOX_DIR/guest-build-telegram.sh" "$BUILDBOX_DIR/transient-data/source.tar" telegram@"$VM_IP":
 
 ssh telegram@"$VM_IP" -o ServerAliveInterval=60 -t "bash -l guest-build-telegram.sh $BUILD_CONFIGURATION"
 
