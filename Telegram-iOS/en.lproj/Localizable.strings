@@ -3928,6 +3928,7 @@ Unused sets are archived when you add more.";
 "Undo.Undo" = "Undo";
 "Undo.ChatDeleted" = "Chat deleted";
 "Undo.ChatCleared" = "Chat cleared";
+"Undo.ChatClearedForBothSides" = "Chat cleared for both sides";
 "Undo.SecretChatDeleted" = "Secret Chat deleted";
 "Undo.LeftChannel" = "Left channel";
 "Undo.LeftGroup" = "Left group";
@@ -4202,4 +4203,3 @@ Unused sets are archived when you add more.";
 "Settings.ChangePhoneNumber" = "Change Number";
 
 "Undo.ChatDeletedForBothSides" = "Chat deleted for both sides";
-"Undo.MessagesDeletedForBothSides" = "Chat cleared for both sides";
