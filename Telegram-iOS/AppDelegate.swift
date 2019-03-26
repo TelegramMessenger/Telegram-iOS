@@ -120,7 +120,7 @@ private enum QueuedWakeup: Int32 {
     case backgroundLocation
 }
 
-private final class SharedApplicationContext {
+final class SharedApplicationContext {
     let sharedContext: SharedAccountContext
     let notificationManager: SharedNotificationManager
     let wakeupManager: SharedWakeupManager
@@ -571,125 +571,131 @@ private final class SharedApplicationContext {
             self.window?.rootViewController?.dismiss(animated: true, completion: nil)
         })
         
-        // Move back to signal
-        let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
-        let upgradeSemaphore = DispatchSemaphore(value: 0)
-        let _ = upgradedAccounts(accountManager: accountManager, rootPath: rootPath).start(completed: {
-            upgradeSemaphore.signal()
-        })
-        upgradeSemaphore.wait()
-        
-        var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
-        let semaphore = DispatchSemaphore(value: 0)
-        let _ = currentPresentationDataAndSettings(accountManager: accountManager).start(next: { value in
-            initialPresentationDataAndSettings = value
-            semaphore.signal()
-        })
-        semaphore.wait()
-        
-        let legacyBasePath = appGroupUrl.path
-        let legacyCache = LegacyCache(path: legacyBasePath + "/Caches")
-        
-        var setPresentationCall: ((PresentationCall?) -> Void)?
-        let sharedContext = SharedAccountContext(mainWindow: self.mainWindow, basePath: rootPath, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
-            setPresentationCall?(call)
-        }, navigateToChat: { accountId, peerId, messageId in
-            self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
-        })
-        
-        let rawAccounts = sharedContext.activeAccounts
-        |> map { _, accounts, _ -> [Account] in
-            return accounts.map({ $0.1 })
+        let accountManagerSignal = Signal<AccountManager, NoError> { subscriber in
+            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
+            return upgradedAccounts(accountManager: accountManager, rootPath: rootPath).start(completed: {
+                subscriber.putNext(accountManager)
+                subscriber.putCompletion()
+            })
+            return EmptyDisposable
         }
-        let _ = (sharedAccountInfos(accountManager: sharedContext.accountManager, accounts: rawAccounts)
-        |> deliverOn(Queue())).start(next: { infos in
-            storeAccountsData(rootPath: rootPath, accounts: infos)
-        })
         
-        sharedContext.presentGlobalController = { [weak self] c, a in
-            guard let strongSelf = self else {
-                return
+        let sharedContextSignal = accountManagerSignal
+        |> deliverOnMainQueue
+        |> mapToSignal { accountManager -> Signal<(SharedApplicationContext, LoggingSettings), NoError> in
+            var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
+            let semaphore = DispatchSemaphore(value: 0)
+            let _ = currentPresentationDataAndSettings(accountManager: accountManager).start(next: { value in
+                initialPresentationDataAndSettings = value
+                semaphore.signal()
+            })
+            semaphore.wait()
+            
+            let legacyBasePath = appGroupUrl.path
+            let legacyCache = LegacyCache(path: legacyBasePath + "/Caches")
+            
+            var setPresentationCall: ((PresentationCall?) -> Void)?
+            let sharedContext = SharedAccountContext(mainWindow: self.mainWindow, basePath: rootPath, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
+                setPresentationCall?(call)
+            }, navigateToChat: { accountId, peerId, messageId in
+                self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
+            })
+            
+            let rawAccounts = sharedContext.activeAccounts
+            |> map { _, accounts, _ -> [Account] in
+                return accounts.map({ $0.1 })
             }
-            strongSelf.mainWindow.present(c, on: .root)
-        }
-        sharedContext.presentCrossfadeController = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            var exists = false
-            strongSelf.mainWindow.forEachViewController { controller in
-                if controller is ThemeSettingsCrossfadeController {
-                    exists = true
+            let _ = (sharedAccountInfos(accountManager: sharedContext.accountManager, accounts: rawAccounts)
+            |> deliverOn(Queue())).start(next: { infos in
+                storeAccountsData(rootPath: rootPath, accounts: infos)
+            })
+            
+            sharedContext.presentGlobalController = { [weak self] c, a in
+                guard let strongSelf = self else {
+                    return
                 }
-                return true
+                strongSelf.mainWindow.present(c, on: .root)
+            }
+            sharedContext.presentCrossfadeController = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                var exists = false
+                strongSelf.mainWindow.forEachViewController { controller in
+                    if controller is ThemeSettingsCrossfadeController {
+                        exists = true
+                    }
+                    return true
+                }
+                
+                if !exists {
+                    strongSelf.mainWindow.present(ThemeSettingsCrossfadeController(), on: .root)
+                }
             }
             
-            if !exists {
-                strongSelf.mainWindow.present(ThemeSettingsCrossfadeController(), on: .root)
-            }
-        }
-        
-        let notificationManager = SharedNotificationManager(episodeId: self.episodeId, application: application, clearNotificationsManager: clearNotificationsManager, inForeground: applicationBindings.applicationInForeground, accounts: sharedContext.activeAccounts |> map { primary, accounts, _ in accounts.map({ ($0.1, $0.1.id == primary?.id) }) }, pollLiveLocationOnce: { accountId in
-            let _ = (self.context.get()
-            |> filter {
-                return $0 != nil
-            }
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { context in
-                if let context = context, context.context.account.id == accountId {
-                    context.context.liveLocationManager?.pollOnce()
+            let notificationManager = SharedNotificationManager(episodeId: self.episodeId, application: application, clearNotificationsManager: clearNotificationsManager, inForeground: applicationBindings.applicationInForeground, accounts: sharedContext.activeAccounts |> map { primary, accounts, _ in accounts.map({ ($0.1, $0.1.id == primary?.id) }) }, pollLiveLocationOnce: { accountId in
+                let _ = (self.context.get()
+                |> filter {
+                    return $0 != nil
                 }
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { context in
+                    if let context = context, context.context.account.id == accountId {
+                        context.context.liveLocationManager?.pollOnce()
+                    }
+                })
             })
-        })
-        setPresentationCall = { call in
-            notificationManager.setNotificationCall(call, strings: sharedContext.currentPresentationData.with({ $0 }).strings)
-        }
-        let liveLocationPolling = self.context.get()
-        |> mapToSignal { context -> Signal<AccountRecordId?, NoError> in
-            if let context = context, let liveLocationManager = context.context.liveLocationManager {
-                let accountId = context.context.account.id
-                return liveLocationManager.isPolling
-                |> distinctUntilChanged
-                |> map { value -> AccountRecordId? in
-                    if value {
-                        return accountId
-                    } else {
-                        return nil
+            setPresentationCall = { call in
+                notificationManager.setNotificationCall(call, strings: sharedContext.currentPresentationData.with({ $0 }).strings)
+            }
+            let liveLocationPolling = self.context.get()
+            |> mapToSignal { context -> Signal<AccountRecordId?, NoError> in
+                if let context = context, let liveLocationManager = context.context.liveLocationManager {
+                    let accountId = context.context.account.id
+                    return liveLocationManager.isPolling
+                    |> distinctUntilChanged
+                    |> map { value -> AccountRecordId? in
+                        if value {
+                            return accountId
+                        } else {
+                            return nil
+                        }
                     }
+                } else {
+                    return .single(nil)
                 }
-            } else {
-                return .single(nil)
+            }
+            let watchTasks = self.context.get()
+            |> mapToSignal { context -> Signal<AccountRecordId?, NoError> in
+                if let context = context, let watchManager = context.context.watchManager {
+                    let accountId = context.context.account.id
+                    let runningTasks: Signal<WatchRunningTasks?, NoError> = .single(nil)
+                    |> then(watchManager.runningTasks)
+                    return runningTasks
+                    |> distinctUntilChanged
+                    |> map { value -> AccountRecordId? in
+                        if let value = value, value.running {
+                            return accountId
+                        } else {
+                            return nil
+                        }
+                    }
+                    |> distinctUntilChanged
+                } else {
+                    return .single(nil)
+                }
+            }
+            let wakeupManager = SharedWakeupManager(beginBackgroundTask: { name, expiration in application.beginBackgroundTask(withName: name, expirationHandler: expiration) }, endBackgroundTask: { id in application.endBackgroundTask(id) }, backgroundTimeRemaining: { application.backgroundTimeRemaining }, activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1.map { ($0.0, $0.1) }) }, liveLocationPolling: liveLocationPolling, watchTasks: watchTasks, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: self.hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
+                return sharedContext.accountUserInterfaceInUse(id)
+            })
+            let sharedApplicationContext = SharedApplicationContext(sharedContext: sharedContext, notificationManager: notificationManager, wakeupManager: wakeupManager)
+            sharedApplicationContext.sharedContext.mediaManager.overlayMediaManager.attachOverlayMediaController(sharedApplicationContext.overlayMediaController)
+            
+            return accountManager.transaction { transaction -> (SharedApplicationContext, LoggingSettings) in
+                return (sharedApplicationContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
             }
         }
-        let watchTasks = self.context.get()
-        |> mapToSignal { context -> Signal<AccountRecordId?, NoError> in
-            if let context = context, let watchManager = context.context.watchManager {
-                let accountId = context.context.account.id
-                let runningTasks: Signal<WatchRunningTasks?, NoError> = .single(nil)
-                |> then(watchManager.runningTasks)
-                return runningTasks
-                |> distinctUntilChanged
-                |> map { value -> AccountRecordId? in
-                    if let value = value, value.running {
-                        return accountId
-                    } else {
-                        return nil
-                    }
-                }
-                |> distinctUntilChanged
-            } else {
-                return .single(nil)
-            }
-        }
-        let wakeupManager = SharedWakeupManager(beginBackgroundTask: { name, expiration in application.beginBackgroundTask(withName: name, expirationHandler: expiration) }, endBackgroundTask: { id in application.endBackgroundTask(id) }, backgroundTimeRemaining: { application.backgroundTimeRemaining }, activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1.map { ($0.0, $0.1) }) }, liveLocationPolling: liveLocationPolling, watchTasks: watchTasks, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
-            return sharedContext.accountUserInterfaceInUse(id)
-        })
-        let sharedApplicationContext = SharedApplicationContext(sharedContext: sharedContext, notificationManager: notificationManager, wakeupManager: wakeupManager)
-        sharedApplicationContext.sharedContext.mediaManager.overlayMediaManager.attachOverlayMediaController(sharedApplicationContext.overlayMediaController)
-        self.sharedContextPromise.set(
-        accountManager.transaction { transaction -> (SharedApplicationContext, LoggingSettings) in
-            return (sharedApplicationContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
-        }
+        self.sharedContextPromise.set(sharedContextSignal
         |> mapToSignal { sharedApplicationContext, loggingSettings -> Signal<SharedApplicationContext, NoError> in
             Logger.shared.logToFile = loggingSettings.logToFile
             Logger.shared.logToConsole = loggingSettings.logToConsole
@@ -793,7 +799,7 @@ private final class SharedApplicationContext {
             |> map { accountAndSettings -> AuthorizedApplicationContext? in
                 return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings in
                     let context = AccountContext(sharedContext: sharedApplicationContext.sharedContext, account: account, limitsConfiguration: limitsConfiguration)
-                    return AuthorizedApplicationContext(mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
+                    return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
                         let _ = (self.context.get()
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { context in
@@ -932,7 +938,7 @@ private final class SharedApplicationContext {
                         }
                         return true
                     })
-                    self.mainWindow.topLevelOverlayControllers = [sharedApplicationContext.overlayMediaController, context.notificationController]
+                    self.mainWindow.topLevelOverlayControllers = [context.sharedApplicationContext.overlayMediaController, context.notificationController]
                     var authorizeNotifications = true
                     if #available(iOS 10.0, *) {
                         authorizeNotifications = false
@@ -979,7 +985,10 @@ private final class SharedApplicationContext {
         }))
         
         self.watchCommunicationManagerPromise.set(watchCommunicationManager(context: self.context, allowBackgroundTimeExtension: { timeout in
-            wakeupManager.allowBackgroundTimeExtension(timeout: timeout)
+            let _ = (self.sharedContextPromise.get()
+            |> take(1)).start(next: { sharedContext in
+                sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: timeout)
+            })
         }))
         let _ = self.watchCommunicationManagerPromise.get().start(next: { manager in
             if let manager = manager {
@@ -1059,8 +1068,10 @@ private final class SharedApplicationContext {
                         }
                     }))
                 }
-                let presentationData = sharedContext.currentPresentationData.with { $0 }
-                strongSelf.mainWindow.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: alert.title, text: alert.message ?? "", actions: actions), on: .root)
+                if let sharedContext = strongSelf.contextValue?.context.sharedContext {
+                    let presentationData = sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.mainWindow.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: alert.title, text: alert.message ?? "", actions: actions), on: .root)
+                }
             }
         })
         

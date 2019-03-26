@@ -13,6 +13,7 @@ app_identifier_llc = [
   base_app_identifier_llc + ".watchkitapp.watchkitextension",
   base_app_identifier_llc + ".NotificationService"
 ]
+signing_identity_llc = "iPhone Distribution: Digital Fortress LLC (C67CF9S4VU)"
 
 lane :do_build_app do |options|
   gym(
@@ -31,7 +32,8 @@ lane :do_build_app do |options|
       iCloudContainerEnvironment: "Production",
       provisioningProfiles: options[:provisioningProfiles],
       stripSwiftSymbols: true,
-      uploadBitcode: false
+      uploadBitcode: false,
+      signingCertificate: options[:signingCertificate]
     }
   )
 end
@@ -47,6 +49,7 @@ lane :build_for_appstore do |options|
     export_method: "app-store",
     build_number: commit_count_string,
     commit_id: commit[:commit_hash],
+    signingCertificate: signing_identity_llc,
     provisioningProfiles: { 
       base_app_identifier_llc => "match AppStore " + base_app_identifier_llc,
       base_app_identifier_llc + ".Share" => "match AppStore " + base_app_identifier_llc + ".Share",

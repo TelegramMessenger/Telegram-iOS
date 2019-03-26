@@ -3926,8 +3926,9 @@ Unused sets are archived when you add more.";
 "ChatList.DeleteSavedMessagesConfirmation" = "Are you sure you want to delete\nSaved Messages?";
 
 "Undo.Undo" = "Undo";
-"Undo.MessagesDeleted" = "Messages deleted";
 "Undo.ChatDeleted" = "Chat deleted";
+"Undo.ChatCleared" = "Chat cleared";
+"Undo.ChatClearedForBothSides" = "Chat cleared for both sides";
 "Undo.SecretChatDeleted" = "Secret Chat deleted";
 "Undo.LeftChannel" = "Left channel";
 "Undo.LeftGroup" = "Left group";
@@ -4200,3 +4201,5 @@ Unused sets are archived when you add more.";
 "Settings.CheckPhoneNumberText" = "Keep your number up to date to ensure you can always log in to Telegram. [Learn more]()";
 "Settings.KeepPhoneNumber" = "Keep %@";
 "Settings.ChangePhoneNumber" = "Change Number";
+
+"Undo.ChatDeletedForBothSides" = "Chat deleted for both sides";
