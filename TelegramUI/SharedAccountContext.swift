@@ -330,6 +330,8 @@ public final class SharedAccountContext {
                                     }
                                 })
                                 return (id, account, attributes.sortIndex)
+                            case let .upgrading(progress):
+                                return (id, nil, attributes.sortIndex)
                             default:
                                 return (id, nil, attributes.sortIndex)
                         }

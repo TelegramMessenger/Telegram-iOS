@@ -443,7 +443,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                                     state.pendingClearHistoryPeerIds.insert(peer.peerId)
                                     return state
                                 })
-                                strongSelf.present(UndoOverlayController(context: strongSelf.context, text: strongSelf.presentationData.strings.Undo_MessagesDeleted, action: { shouldCommit in
+                                strongSelf.present(UndoOverlayController(context: strongSelf.context, text: strongSelf.presentationData.strings.Undo_ChatCleared, action: { shouldCommit in
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -1292,7 +1292,11 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         } else if let _ = chatPeer as? TelegramSecretChat {
             statusText = self.presentationData.strings.Undo_SecretChatDeleted
         } else {
-            statusText = self.presentationData.strings.Undo_ChatDeleted
+            if case .forEveryone = type {
+                statusText = self.presentationData.strings.Undo_ChatDeletedForBothSides
+            } else {
+                statusText = self.presentationData.strings.Undo_ChatDeleted
+            }
         }
         self.present(UndoOverlayController(context: self.context, text: statusText, action: { [weak self] shouldCommit in
             guard let strongSelf = self else {
