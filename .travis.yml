@@ -1,0 +1,42 @@
+dist: trusty
+
+sudo: false
+
+language: cpp
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-5
+
+matrix:
+  include:
+    - os: linux
+      compiler: clang
+      env:
+        build_type=debug
+        options=""
+
+    - os: linux
+      compiler: clang
+      env:
+        build_type=release
+        options=""
+
+    - os: linux
+      compiler: gcc
+      env:
+        build_type=debug
+        options=""
+
+    - os: linux
+      compiler: gcc
+      env:
+        build_type=release
+        options=""
+
+script:
+  - CXX=/usr/bin/g++-5 CC=/usr/bin/gcc-5  cmake -DLIB_INSTALL_DIR=/usr/lib .
+  - cmake --build . -- -j2
