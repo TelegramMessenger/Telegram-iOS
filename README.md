@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/Samsung/rlottie.svg?branch=master)](https://travis-ci.org/Samsung/rlottie)
+
 # rlottie
 A platform independent standalone library that plays Lottie Animation.
 
