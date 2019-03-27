@@ -225,35 +225,36 @@ void LOTLayerItem::buildLayerNode()
     }
     if (mLayerMask) {
         mMasksCNode.clear();
+        mMasksCNode.resize(mLayerMask->mMasks.size());
+        size_t i = 0;
         for (const auto &mask : mLayerMask->mMasks) {
-            LOTMask cNode;
+            LOTMask *cNode = &mMasksCNode[i++];
             const std::vector<VPath::Element> &elm = mask.mFinalPath.elements();
             const std::vector<VPointF> &       pts = mask.mFinalPath.points();
             const float *ptPtr = reinterpret_cast<const float *>(pts.data());
             const char * elmPtr = reinterpret_cast<const char *>(elm.data());
-            cNode.mPath.ptPtr = ptPtr;
-            cNode.mPath.ptCount = pts.size();
-            cNode.mPath.elmPtr = elmPtr;
-            cNode.mPath.elmCount = elm.size();
-            cNode.mAlpha = mask.mCombinedAlpha * 255;
+            cNode->mPath.ptPtr = ptPtr;
+            cNode->mPath.ptCount = pts.size();
+            cNode->mPath.elmPtr = elmPtr;
+            cNode->mPath.elmCount = elm.size();
+            cNode->mAlpha = mask.mCombinedAlpha * 255;
             switch (mask.maskMode()) {
             case LOTMaskData::Mode::Add:
-                cNode.mMode = MaskAdd;
+                cNode->mMode = MaskAdd;
                 break;
             case LOTMaskData::Mode::Substarct:
-                cNode.mMode = MaskSubstract;
+                cNode->mMode = MaskSubstract;
                 break;
             case LOTMaskData::Mode::Intersect:
-                cNode.mMode = MaskIntersect;
+                cNode->mMode = MaskIntersect;
                 break;
             case LOTMaskData::Mode::Difference:
-                cNode.mMode = MaskDifference;
+                cNode->mMode = MaskDifference;
                 break;
             default:
-                cNode.mMode = MaskAdd;
+                cNode->mMode = MaskAdd;
                 break;
             }
-            mMasksCNode.push_back(std::move(cNode));
         }
         mLayerCNode->mMaskList.ptr = mMasksCNode.data();
         mLayerCNode->mMaskList.size = mMasksCNode.size();
