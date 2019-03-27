@@ -116,11 +116,11 @@ typedef struct LOTGradientStop
 
 typedef enum
 {
-    MaskModeAdd = 0,
-    MaskModeSubstract,
-    MaskModeIntersect,
-    MaskModeDifference
-} LOTMaskMode;
+    MaskAdd = 0,
+    MaskSubstract,
+    MaskIntersect,
+    MaskDifference
+} LOTMaskType;
 
 typedef struct LOTMask {
     struct {
@@ -129,8 +129,7 @@ typedef struct LOTMask {
         const char*  elmPtr;
         int          elmCount;
     } mPath;
-    LOTMaskMode mMode;
-
+    LOTMaskType mMode;
     int mAlpha;
 }LOTMask;
 
@@ -209,7 +208,7 @@ typedef struct LOTLayerNode {
     } mLayerList;
 
     struct {
-        LOTNode       **ptr;
+        LOTNode        **ptr;
         unsigned int   size;
     } mNodeList;
 

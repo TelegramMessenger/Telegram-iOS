@@ -238,19 +238,19 @@ void LOTLayerItem::buildLayerNode()
             cNode.mAlpha = mask.mCombinedAlpha * 255;
             switch (mask.maskMode()) {
             case LOTMaskData::Mode::Add:
-                cNode.mMode = MaskModeAdd;
+                cNode.mMode = MaskAdd;
                 break;
             case LOTMaskData::Mode::Substarct:
-                cNode.mMode = MaskModeSubstract;
+                cNode.mMode = MaskSubstract;
                 break;
             case LOTMaskData::Mode::Intersect:
-                cNode.mMode = MaskModeIntersect;
+                cNode.mMode = MaskIntersect;
                 break;
             case LOTMaskData::Mode::Difference:
-                cNode.mMode = MaskModeDifference;
+                cNode.mMode = MaskDifference;
                 break;
             default:
-                cNode.mMode = MaskModeAdd;
+                cNode.mMode = MaskAdd;
                 break;
             }
             mMasksCNode.push_back(std::move(cNode));
