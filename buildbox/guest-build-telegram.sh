@@ -4,6 +4,11 @@ if [ "$1" == "hockeyapp" ]; then
 	FASTLANE_BUILD_CONFIGURATION="internalhockeyapp"
 elif [ "$1" == "appstore" ]; then
 	FASTLANE_BUILD_CONFIGURATION="testflight_llc"
+	if [ -z "$TELEGRAM_BUILD_APPSTORE_PASSWORD" ]; then
+		echo "TELEGRAM_BUILD_APPSTORE_PASSWORD is not set"
+		exit 1
+	fi
+	FASTLANE_PASSWORD="$TELEGRAM_BUILD_APPSTORE_PASSWORD"
 elif [ "$1" == "verify" ]; then
 	FASTLANE_BUILD_CONFIGURATION="build_for_appstore"
 else
@@ -11,12 +16,17 @@ else
 	exit 1
 fi
 
-security unlock-keychain -p telegram
-security set-keychain-settings -lut 7200
+MY_KEYCHAIN="temp.keychain"
+MY_KEYCHAIN_PASSWORD="secret"
+
+security create-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
+security list-keychains -d user -s "$MY_KEYCHAIN" $(security list-keychains -d user | sed s/\"//g)
+security set-keychain-settings "$MY_KEYCHAIN"
+security unlock-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
 
 CERTS_PATH="codesigning_data/certs"
 for f in $(ls "$CERTS_PATH"); do
-	fastlane run import_certificate "certificate_path:$CERTS_PATH/$f" keychain_name:login keychain_password:telegram log_output:true
+	fastlane run import_certificate "certificate_path:$CERTS_PATH/$f" keychain_name:"$MY_KEYCHAIN" keychain_password:"$MY_KEYCHAIN_PASSWORD" log_output:true
 done
 
 mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
@@ -39,4 +49,4 @@ echo "Unpacking files..."
 tar -xf "source.tar"
 
 cd "$SOURCE_PATH"
-fastlane "$FASTLANE_BUILD_CONFIGURATION"
+FASTLANE_PASSWORD="$FASTLANE_PASSWORD" fastlane "$FASTLANE_BUILD_CONFIGURATION"

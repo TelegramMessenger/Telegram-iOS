@@ -3,6 +3,10 @@
 set -e
 set -x
 
+if [ `which cleanup-telegram-build-vms.sh` ]; then
+	cleanup-telegram-build-vms.sh
+fi
+
 BUILDBOX_DIR="buildbox"
 
 mkdir -p "$BUILDBOX_DIR/transient-data"
@@ -20,14 +24,35 @@ else
 	exit 1
 fi
 
+BASE_DIR=$(pwd)
+
+if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appstore" ]; then
+	if [ ! `which setup-telegram-build.sh` ]; then
+		echo "setup-telegram-build.sh not found in PATH $PATH"
+		exit 1
+	fi
+	source `which setup-telegram-build.sh`
+	setup_telegram_build "$BUILD_CONFIGURATION" "$BASE_DIR/$BUILDBOX_DIR/transient-data"
+	if [ "$SETUP_TELEGRAM_BUILD_VERSION" != "$BUILD_TELEGRAM_VERSION" ]; then
+		echo "setup-telegram-build.sh script version doesn't match"
+		exit 1
+	fi
+	if [ "$BUILD_CONFIGURATION" == "appstore" ]; then
+		if [ -z "$TELEGRAM_BUILD_APPSTORE_PASSWORD" ]; then
+			echo "TELEGRAM_BUILD_APPSTORE_PASSWORD is not set"
+			exit 1
+		fi
+	fi
+fi
+
 if [ ! -d "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" ]; then
 	echo "$BUILDBOX_DIR/$CODESIGNING_SUBPATH does not exist"
 	exit 1
 fi
 
-BASE_DIR=$(pwd)
 SOURCE_DIR=$(basename "$BASE_DIR")
 cd ..
+rm -f "$SOURCE_DIR/$BUILDBOX_DIR/transient-data/source.tar"
 tar cf "$SOURCE_DIR/$BUILDBOX_DIR/transient-data/source.tar" --exclude "$SOURCE_DIR/$BUILDBOX_DIR" "$SOURCE_DIR"
 cd "$BASE_DIR"
 
@@ -40,7 +65,8 @@ if [ -z "$SNAPSHOT_ID" ]; then
 	exit 1
 fi
 
-VM_NAME="$VM_BASE_NAME-$(openssl rand -hex 10)"
+PROCESS_ID="$$"
+VM_NAME="$VM_BASE_NAME-$(openssl rand -hex 10)-build-telegram-$PROCESS_ID"
 
 prlctl clone "$VM_BASE_NAME" --name "$VM_NAME"
 prlctl snapshot-switch "$VM_NAME" -i "$SNAPSHOT_ID"
@@ -56,7 +82,9 @@ else
 fi
 scp -pr "$BUILDBOX_DIR/guest-build-telegram.sh" "$BUILDBOX_DIR/transient-data/source.tar" telegram@"$VM_IP":
 
-ssh telegram@"$VM_IP" -o ServerAliveInterval=60 -t "bash -l guest-build-telegram.sh $BUILD_CONFIGURATION"
+ssh telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=$TELEGRAM_BUILD_APPSTORE_PASSWORD; bash -l guest-build-telegram.sh $BUILD_CONFIGURATION"
 
-#prlctl stop "$VM_NAME" --kill
-#prlctl delete "$VM_NAME"
+scp -pr telegram@"$VM_IP":telegram-ios/Telegram-iOS-AppStoreLLC.ipa ./
+
+prlctl stop "$VM_NAME" --kill
+prlctl delete "$VM_NAME"
