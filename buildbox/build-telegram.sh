@@ -85,7 +85,11 @@ scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/nul
 
 ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=$TELEGRAM_BUILD_APPSTORE_PASSWORD; bash -l guest-build-telegram.sh $BUILD_CONFIGURATION"
 
-scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":telegram-ios/Telegram-iOS-AppStoreLLC.ipa ./
+if [ "$BUILD_CONFIGURATION" == "verify" ]; then
+	VERIFY_IPA="Telegram-Verify-Build.ipa"
+	rm -f "$VERIFY_IPA"
+	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":telegram-ios/Telegram-iOS-AppStoreLLC.ipa "./$VERIFY_IPA"
+fi
 
 prlctl stop "$VM_NAME" --kill
 prlctl delete "$VM_NAME"
