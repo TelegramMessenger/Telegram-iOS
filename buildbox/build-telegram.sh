@@ -1,7 +1,8 @@
 #!/bin/sh
 
 set -e
-set -x
+
+BUILD_TELEGRAM_VERSION="1"
 
 if [ `which cleanup-telegram-build-vms.sh` ]; then
 	cleanup-telegram-build-vms.sh
