@@ -614,7 +614,8 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
     if let birthday = contactData.birthdayDate {
         let dateText: String
         let calendar = Calendar(identifier: .gregorian)
-        let components = calendar.dateComponents(Set([.era, .year, .month, .day]), from: birthday)
+        var components = calendar.dateComponents(Set([.era, .year, .month, .day]), from: birthday)
+        components.hour = 12
         if let year = components.year, year > 1 {
             dateText = stringForDate(timestamp: Int32(birthday.timeIntervalSince1970), strings: presentationData.strings)
         } else {

@@ -84,6 +84,7 @@ public final class AccountContext {
     public var watchManager: WatchManager?
     
     private var storedPassword: (String, CFAbsoluteTime, SwiftSignalKit.Timer)?
+    private var limitsConfigurationDisposable: Disposable?
     
     public init(sharedContext: SharedAccountContext, account: Account, limitsConfiguration: LimitsConfiguration) {
         self.sharedContext = sharedContext
@@ -105,10 +106,23 @@ public final class AccountContext {
             self.wallpaperUploadManager = nil
         }
         
+        let updatedLimitsConfiguration = account.postbox.preferencesView(keys: [PreferencesKeys.limitsConfiguration])
+        |> map { preferences -> LimitsConfiguration in
+            return preferences.values[PreferencesKeys.limitsConfiguration] as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+        }
+        
         self.currentLimitsConfiguration = Atomic(value: limitsConfiguration)
+        self._limitsConfiguration.set(.single(limitsConfiguration) |> then(updatedLimitsConfiguration))
+        
+        let currentLimitsConfiguration = self.currentLimitsConfiguration
+        self.limitsConfigurationDisposable = (self._limitsConfiguration.get()
+        |> deliverOnMainQueue).start(next: { value in
+            let _ = currentLimitsConfiguration.swap(value)
+        })
     }
     
     deinit {
+        self.limitsConfigurationDisposable?.dispose()
     }
     
     public func storeSecureIdPassword(password: String) {

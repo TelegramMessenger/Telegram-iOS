@@ -220,133 +220,156 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, presentController: { _, _ in
         }, navigationController: { [weak self] in
             return self?.getNavigationController()
-        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { [weak self] action in
+        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { [weak self] action, message in
             if let strongSelf = self {
                 switch action {
-                case let .url(url):
-                    var cleanUrl = url
-                    let canOpenIn = availableOpenInOptions(context: strongSelf.context, item: .url(url: url)).count > 1
-                    var canAddToReadingList = true
-                    let mailtoString = "mailto:"
-                    let telString = "tel:"
-                    var openText = strongSelf.presentationData.strings.Conversation_LinkDialogOpen
-                    if cleanUrl.hasPrefix(mailtoString) {
-                        canAddToReadingList = false
-                        cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: mailtoString.distance(from: mailtoString.startIndex, to: mailtoString.endIndex))...])
-                    } else if cleanUrl.hasPrefix(telString) {
-                        canAddToReadingList = false
-                        cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: telString.distance(from: telString.startIndex, to: telString.endIndex))...])
-                        openText = strongSelf.presentationData.strings.Conversation_Call
-                    } else if canOpenIn {
-                        openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
-                    }
-                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                    
-                    var items: [ActionSheetItem] = []
-                    items.append(ActionSheetTextItem(title: cleanUrl))
-                    items.append(ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        if let strongSelf = self {
-                            strongSelf.openUrl(url)
+                    case let .url(url):
+                        var cleanUrl = url
+                        let canOpenIn = availableOpenInOptions(context: strongSelf.context, item: .url(url: url)).count > 1
+                        var canAddToReadingList = true
+                        let mailtoString = "mailto:"
+                        let telString = "tel:"
+                        var openText = strongSelf.presentationData.strings.Conversation_LinkDialogOpen
+                        if cleanUrl.hasPrefix(mailtoString) {
+                            canAddToReadingList = false
+                            cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: mailtoString.distance(from: mailtoString.startIndex, to: mailtoString.endIndex))...])
+                        } else if cleanUrl.hasPrefix(telString) {
+                            canAddToReadingList = false
+                            cleanUrl = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: telString.distance(from: telString.startIndex, to: telString.endIndex))...])
+                            openText = strongSelf.presentationData.strings.Conversation_Call
+                        } else if canOpenIn {
+                            openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
                         }
-                    }))
-                    items.append(ActionSheetButtonItem(title: canAddToReadingList ? strongSelf.presentationData.strings.ShareMenu_CopyShareLink : strongSelf.presentationData.strings.Conversation_ContextMenuCopy, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        UIPasteboard.general.string = cleanUrl
-                    }))
-                    if canAddToReadingList {
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            if let link = URL(string: url) {
-                                let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
-                            }
-                        }))
-                    }
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                        ])])
-                    strongSelf.presentController(actionSheet, nil)
-                case let .peerMention(peerId, mention):
-                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                    var items: [ActionSheetItem] = []
-                    if !mention.isEmpty {
-                        items.append(ActionSheetTextItem(title: mention))
-                    }
-                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        if let strongSelf = self {
-                            strongSelf.openPeer(peerId: peerId, peer: nil)
-                        }
-                    }))
-                    if !mention.isEmpty {
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            UIPasteboard.general.string = mention
-                        }))
-                    }
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items:items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                        ])])
-                    strongSelf.presentController(actionSheet, nil)
-                case let .mention(mention):
-                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                        ActionSheetTextItem(title: mention),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        
+                        var items: [ActionSheetItem] = []
+                        items.append(ActionSheetTextItem(title: cleanUrl))
+                        items.append(ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
-                                strongSelf.openPeerMention(mention)
+                                strongSelf.openUrl(url)
                             }
-                        }),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                        }))
+                        items.append(ActionSheetButtonItem(title: canAddToReadingList ? strongSelf.presentationData.strings.ShareMenu_CopyShareLink : strongSelf.presentationData.strings.Conversation_ContextMenuCopy, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
-                            UIPasteboard.general.string = mention
-                        })
-                        ]), ActionSheetItemGroup(items: [
+                            UIPasteboard.general.string = cleanUrl
+                        }))
+                        if canAddToReadingList {
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let link = URL(string: url) {
+                                    let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
+                                }
+                            }))
+                        }
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
-                            ])])
-                    strongSelf.presentController(actionSheet, nil)
-                case let .command(command):
-                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                        ActionSheetTextItem(title: command),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            UIPasteboard.general.string = command
-                        })
-                        ]), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                            })
-                            ])])
-                    strongSelf.presentController(actionSheet, nil)
-                case let .hashtag(hashtag):
-                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                        ActionSheetTextItem(title: hashtag),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                        ])])
+                        strongSelf.presentController(actionSheet, nil)
+                    case let .peerMention(peerId, mention):
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        var items: [ActionSheetItem] = []
+                        if !mention.isEmpty {
+                            items.append(ActionSheetTextItem(title: mention))
+                        }
+                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
-                                let searchController = HashtagSearchController(context: strongSelf.context, peer: strongSelf.peer, query: hashtag)
-                                strongSelf.pushController(searchController)
+                                strongSelf.openPeer(peerId: peerId, peer: nil)
                             }
-                        }),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            UIPasteboard.general.string = hashtag
-                        })
-                        ]), ActionSheetItemGroup(items: [
+                        }))
+                        if !mention.isEmpty {
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                UIPasteboard.general.string = mention
+                            }))
+                        }
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items:items), ActionSheetItemGroup(items: [
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
+                        ])])
+                        strongSelf.presentController(actionSheet, nil)
+                    case let .mention(mention):
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                            ActionSheetTextItem(title: mention),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let strongSelf = self {
+                                    strongSelf.openPeerMention(mention)
+                                }
+                            }),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                UIPasteboard.general.string = mention
+                            })
+                            ]), ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
                             ])])
-                    strongSelf.presentController(actionSheet, nil)
+                        strongSelf.presentController(actionSheet, nil)
+                    case let .command(command):
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                            ActionSheetTextItem(title: command),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                UIPasteboard.general.string = command
+                            })
+                            ]), ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])])
+                        strongSelf.presentController(actionSheet, nil)
+                    case let .hashtag(hashtag):
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                            ActionSheetTextItem(title: hashtag),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let strongSelf = self {
+                                    let searchController = HashtagSearchController(context: strongSelf.context, peer: strongSelf.peer, query: hashtag)
+                                    strongSelf.pushController(searchController)
+                                }
+                            }),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                UIPasteboard.general.string = hashtag
+                            })
+                            ]), ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])])
+                        strongSelf.presentController(actionSheet, nil)
+                    case let .timecode(timecode, text):
+                        guard let message = message else {
+                            return
+                        }
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                            ActionSheetTextItem(title: text),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let strongSelf = self {
+                                    strongSelf.controllerInteraction?.seekToTimecode(message, timecode, true)
+                                }
+                            }),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                UIPasteboard.general.string = text
+                            })
+                            ]), ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])])
+                        strongSelf.presentController(actionSheet, nil)
                 }
             }
         }, openCheckoutOrReceipt: { _ in
@@ -364,6 +387,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 strongSelf.context.sharedContext.applicationBindings.openAppStorePage()
             }
         }, displayMessageTooltip: { _, _, _, _ in
+        }, seekToTimecode: { _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,

@@ -749,7 +749,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
     }
     
-    func playMediaWithSound() -> (action: () -> Void, soundEnabled: Bool, isVideoMessage: Bool, isUnread: Bool, badgeNode: ASDisplayNode?)? {
+    func playMediaWithSound() -> (action: (Double?) -> Void, soundEnabled: Bool, isVideoMessage: Bool, isUnread: Bool, badgeNode: ASDisplayNode?)? {
         if let item = self.item {
             var isUnconsumed = false
             for attribute in item.message.attributes {
@@ -761,7 +761,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 }
             }
             
-            return ({
+            return ({ _ in
                 if !self.infoBackgroundNode.alpha.isZero {
                     let _ = (item.context.sharedContext.mediaManager.globalMediaPlayerState
                     |> take(1)

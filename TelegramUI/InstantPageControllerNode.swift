@@ -203,6 +203,10 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.updateNavigationBar()
                 
                 self.recursivelyEnsureDisplaySynchronously(true)
+                
+                if let layout = self.containerLayout {
+                    self.containerLayoutUpdated(layout, navigationBarHeight: 0.0, transition: .immediate)
+                }
             }
         }
     }
@@ -359,7 +363,9 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if didSetScrollOffset {
                 self.previousContentOffset = contentOffset
                 self.updateNavigationBar()
-                self.setupScrollOffsetOnLayout = false
+                if self.currentLayout != nil {
+                    self.setupScrollOffsetOnLayout = false
+                }
             }
         }
         if shouldUpdateVisibleItems {

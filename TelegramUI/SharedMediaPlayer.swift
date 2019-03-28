@@ -402,6 +402,7 @@ final class SharedMediaPlayer {
     private var playbackItem: SharedMediaPlaybackItem?
     private var currentPlayedToEnd = false
     private var scheduledPlaybackAction: SharedMediaPlayerPlaybackControlAction?
+    private var scheduledStartTime: Double?
     
     private let markItemAsPlayedDisposable = MetaDisposable()
     
@@ -507,11 +508,19 @@ final class SharedMediaPlayer {
                         
                         if let scheduledPlaybackAction = strongSelf.scheduledPlaybackAction {
                             strongSelf.scheduledPlaybackAction = nil
+                            let scheduledStartTime = strongSelf.scheduledStartTime
+                            strongSelf.scheduledStartTime = nil
+                            
                             switch scheduledPlaybackAction {
                                 case .play:
                                     switch playbackItem {
                                         case let .audio(player):
-                                            player.play()
+                                            if let scheduledStartTime = scheduledStartTime {
+                                                player.seek(timestamp: scheduledStartTime)
+                                                player.play()
+                                            } else {
+                                                player.play()
+                                            }
                                         case let .instantVideo(node):
                                             node.playOnceWithSound(playAndRecord: controlPlaybackWithProximity)
                                     }
@@ -654,6 +663,9 @@ final class SharedMediaPlayer {
             case let .seek(timestamp):
                 if let playbackItem = self.playbackItem {
                     playbackItem.seek(timestamp)
+                } else {
+                    self.scheduledPlaybackAction = .play
+                    self.scheduledStartTime = timestamp
                 }
             case let .setOrder(order):
                 self.playlist.setOrder(order)

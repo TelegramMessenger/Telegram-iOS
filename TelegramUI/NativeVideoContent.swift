@@ -261,7 +261,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.player.seek(timestamp: timestamp)
     }
     
-    func playOnceWithSound(playAndRecord: Bool, seekToStart: MediaPlayerPlayOnceWithSoundSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
+    func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
         assert(Queue.mainQueue().isCurrent())
         let action = { [weak self] in
             Queue.mainQueue().async {
@@ -295,7 +295,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
                 })
         }
         
-        self.player.playOnceWithSound(playAndRecord: playAndRecord, seekToStart: seekToStart)
+        self.player.playOnceWithSound(playAndRecord: playAndRecord, seek: seek)
     }
     
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {

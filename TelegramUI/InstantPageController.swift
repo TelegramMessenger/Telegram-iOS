@@ -22,6 +22,7 @@ final class InstantPageController: ViewController {
     }
     
     private var webpageDisposable: Disposable?
+    private var storedStateDisposable: Disposable?
     
     private var settings: InstantPagePresentationSettings?
     private var settingsDisposable: Disposable?
@@ -48,7 +49,7 @@ final class InstantPageController: ViewController {
             }
         })
         
-        self.settingsDisposable = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.instantPagePresentationSettings,  ApplicationSpecificSharedDataKeys.presentationThemeSettings])
+        self.settingsDisposable = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.instantPagePresentationSettings, ApplicationSpecificSharedDataKeys.presentationThemeSettings])
         |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             if let strongSelf = self {
                 let settings: InstantPagePresentationSettings
@@ -79,6 +80,7 @@ final class InstantPageController: ViewController {
     
     deinit {
         self.webpageDisposable?.dispose()
+        self.storedStateDisposable?.dispose()
         self.settingsDisposable?.dispose()
     }
     
@@ -109,7 +111,7 @@ final class InstantPageController: ViewController {
             }
         })
         
-        let _ = (instantPageStoredState(postbox: self.context.account.postbox, webPage: self.webPage)
+        self.storedStateDisposable = (instantPageStoredState(postbox: self.context.account.postbox, webPage: self.webPage)
         |> deliverOnMainQueue).start(next: { [weak self] state in
             if let strongSelf = self {
                 strongSelf.controllerNode.updateWebPage(strongSelf.webPage, anchor: strongSelf.anchor, state: state)

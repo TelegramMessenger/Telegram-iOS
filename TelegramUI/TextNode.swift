@@ -23,10 +23,21 @@ final class TelegramPeerMention {
     }
 }
 
+final class TelegramTimecode {
+    let time: Double
+    let text: String
+    
+    init(time: Double, text: String) {
+        self.time = time
+        self.text = text
+    }
+}
+
 struct TelegramTextAttributes {
     static let URL = "UrlAttributeT"
     static let PeerMention = "TelegramPeerMention"
     static let PeerTextMention = "TelegramPeerTextMention"
     static let BotCommand = "TelegramBotCommand"
     static let Hashtag = "TelegramHashtag"
+    static let Timecode = "TelegramTimecode"
 }

@@ -139,9 +139,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let attributedText: NSAttributedString
                 var messageEntities: [MessageTextEntity]?
                 
+                var mediaDuration: Double? = nil
                 var isUnsupportedMedia = false
                 for media in item.message.media {
-                    if let _ = media as? TelegramMediaUnsupported {
+                    if let file = media as? TelegramMediaFile, let duration = file.duration {
+                        mediaDuration = Double(duration)
+                    }
+                    else if media is TelegramMediaUnsupported {
                         isUnsupportedMedia = true
                     }
                 }
@@ -154,7 +158,15 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     for attribute in item.message.attributes {
                         if let attribute = attribute as? TextEntitiesMessageAttribute {
                             messageEntities = attribute.entities
-                            break
+                        } else if mediaDuration == nil, let attribute = attribute as? ReplyMessageAttribute {
+                            if let replyMessage = item.message.associatedMessages[attribute.messageId] {
+                                for media in replyMessage.media {
+                                    if let file = media as? TelegramMediaFile, let duration = file.duration {
+                                        mediaDuration = Double(duration)
+                                        break
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -166,8 +178,17 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     entities = cached.entities
                 } else {
                     entities = messageEntities
+                    
+                    if entities == nil && mediaDuration != nil {
+                        entities = []
+                    }
+                    
                     if let entitiesValue = entities {
-                        if let result = addLocallyGeneratedEntities(rawText, enabledTypes: .all, entities: entitiesValue) {
+                        var enabledTypes: EnabledEntityTypes = .all
+                        if mediaDuration != nil {
+                            enabledTypes.insert(.timecode)
+                        }
+                        if let result = addLocallyGeneratedEntities(rawText, enabledTypes: enabledTypes, entities: entitiesValue, mediaDuration: mediaDuration) {
                             entities = result
                         }
                     } else {
@@ -257,7 +278,10 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     var adjustedStatusFrame: CGRect?
                     
                     if let statusFrame = statusFrame {
-                        if !forceStatusNewline || boundingWidth < statusFrame.width + textFrame.width {
+                        let centeredTextFrame = CGRect(origin: CGPoint(x: floor((boundingWidth - textFrame.size.width) / 2.0), y: 0.0), size: textFrame.size)
+                        let statusOverlapsCenteredText = CGRect(origin: CGPoint(), size: statusFrame.size).intersects(centeredTextFrame)
+                        
+                        if !forceStatusNewline || statusOverlapsCenteredText {
                             boundingSize = textFrameWithoutInsets.union(statusFrame).size
                             boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                             boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
@@ -372,6 +396,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 return .botCommand(botCommand)
             } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
                 return .hashtag(hashtag.peerName, hashtag.hashtag)
+            } else if let timecode = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Timecode)] as? TelegramTimecode {
+                return .timecode(timecode.time, timecode.text)
             } else {
                 return .none
             }
@@ -391,7 +417,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         TelegramTextAttributes.PeerMention,
                         TelegramTextAttributes.PeerTextMention,
                         TelegramTextAttributes.BotCommand,
-                        TelegramTextAttributes.Hashtag
+                        TelegramTextAttributes.Hashtag,
+                        TelegramTextAttributes.Timecode
                     ]
                     for name in possibleNames {
                         if let _ = attributes[NSAttributedStringKey(rawValue: name)] {

@@ -55,10 +55,11 @@ enum MediaPlayerPlayOnceWithSoundActionAtEnd {
     case repeatIfNeeded
 }
 
-enum MediaPlayerPlayOnceWithSoundSeek {
+enum MediaPlayerSeek {
     case none
     case start
     case automatic
+    case timecode(Double)
 }
 
 enum MediaPlayerStreaming {
@@ -483,7 +484,7 @@ private final class MediaPlayerContext {
         }
     }
     
-    fileprivate func playOnceWithSound(playAndRecord: Bool, seekToStart: MediaPlayerPlayOnceWithSoundSeek = .start) {
+    fileprivate func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek = .start) {
         assert(self.queue.isCurrent())
         
         if !self.enableSound {
@@ -506,9 +507,12 @@ private final class MediaPlayerContext {
             }
             
             var timestamp: Double
-            if let loadedState = loadedState, seekToStart == .none {
+            if case let .timecode(time) = seek {
+                timestamp = time
+            }
+            else if let loadedState = loadedState, case .none = seek {
                 timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
-                if let duration = currentDuration() {
+                if let duration = self.currentDuration() {
                     if timestamp > duration - 2.0 {
                         timestamp = 0.0
                     }
@@ -518,7 +522,10 @@ private final class MediaPlayerContext {
             }
             self.seek(timestamp: timestamp, action: .play)
         } else {
-            if case .playing = self.state {
+            if case let .timecode(time) = seek {
+                self.seek(timestamp: Double(time), action: .play)
+            }
+            else if case .playing = self.state {
             } else {
                 self.play()
             }
@@ -551,7 +558,7 @@ private final class MediaPlayerContext {
                 self.playAndRecord = false
                 
                 var timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
-                if let duration = currentDuration(), timestamp > duration - 2.0 {
+                if let duration = self.currentDuration(), timestamp > duration - 2.0 {
                     timestamp = 0.0
                 }
                 self.seek(timestamp: timestamp, action: .play)
@@ -644,7 +651,7 @@ private final class MediaPlayerContext {
                 }
             case .paused:
                 if !self.enableSound {
-                    self.playOnceWithSound(playAndRecord: false, seekToStart: .none)
+                    self.playOnceWithSound(playAndRecord: false, seek: .none)
                 } else {
                     self.play()
                 }
@@ -969,10 +976,10 @@ final class MediaPlayer {
         }
     }
     
-    func playOnceWithSound(playAndRecord: Bool, seekToStart: MediaPlayerPlayOnceWithSoundSeek = .start) {
+    func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek = .start) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
-                context.playOnceWithSound(playAndRecord: playAndRecord, seekToStart: seekToStart)
+                context.playOnceWithSound(playAndRecord: playAndRecord, seek: seek)
             }
         }
     }
@@ -1025,10 +1032,14 @@ final class MediaPlayer {
         }
     }
     
-    func seek(timestamp: Double) {
+    func seek(timestamp: Double, play: Bool? = nil) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
-                context.seek(timestamp: timestamp)
+                if let play = play {
+                    context.seek(timestamp: timestamp, action: play ? .play : .pause)
+                } else {
+                    context.seek(timestamp: timestamp)
+                }
             }
         }
     }

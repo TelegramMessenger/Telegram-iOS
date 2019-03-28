@@ -1488,43 +1488,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.historyNode.prefetchManager.updateAutoDownloadSettings(settings)
     }
     
-    func playFirstMediaWithSound() {
-        var actions: [(CGFloat, Bool, () -> Void)] = []
-        var hasUnconsumed = false
-        self.historyNode.forEachVisibleItemNode { itemNode in
-            if let itemNode = itemNode as? ChatMessageItemView, let (action, _, _, isUnconsumed, _) = itemNode.playMediaWithSound() {
-                if case let .visible(fraction) = itemNode.visibility, fraction > 0.7 {
-                    actions.insert((fraction, isUnconsumed, action), at: 0)
-                    if !hasUnconsumed && isUnconsumed {
-                        hasUnconsumed = true
-                    }
-                }
-            }
-        }
-        for (_, isUnconsumed, action) in actions {
-            if (!hasUnconsumed || isUnconsumed) {
-                action()
-                break
-            }
-        }
-    }
-    
-    func openCurrentPlayingWithSoundMedia() {
-        var result: (Message?, ListViewItemNode)?
-        self.historyNode.forEachVisibleItemNode { itemNode in
-            if let itemNode = itemNode as? ChatMessageItemView, let (_, soundEnabled, _, _, _) = itemNode.playMediaWithSound(), soundEnabled {
-                if case let .visible(fraction) = itemNode.visibility, fraction > 0.7 {
-                    result = (itemNode.item?.message, itemNode)
-                }
-            }
-        }
-        if let (message, _) = result {
-            if let message = message {
-                let _ = self.controllerInteraction.openMessage(message, .landscape)
-            }
-        }
-    }
-    
     var isInputViewFocused: Bool {
         if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
             return inputPanelNode.isFocused

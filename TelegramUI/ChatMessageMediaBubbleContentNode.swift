@@ -320,7 +320,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         return mediaHidden
     }
     
-    override func playMediaWithSound() -> (() -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
+    override func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         return self.interactiveImageNode.playMediaWithSound()
     }
     

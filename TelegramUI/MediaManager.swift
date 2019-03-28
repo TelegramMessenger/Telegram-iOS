@@ -407,7 +407,7 @@ public final class MediaManager: NSObject {
         }
     }
     
-    func setPlaylist(_ playlist: (Account, SharedMediaPlaylist)?, type: MediaManagerPlayerType) {
+    func setPlaylist(_ playlist: (Account, SharedMediaPlaylist)?, type: MediaManagerPlayerType, control: SharedMediaPlayerControlAction = .playback(.play)) {
         assert(Queue.mainQueue().isCurrent())
         let inputData: Signal<(Account, SharedMediaPlaylist, MusicPlaybackSettings)?, NoError>
         if let (account, playlist) = playlist {
@@ -444,7 +444,7 @@ public final class MediaManager: NSObject {
                                     strongSelf.voiceMediaPlayer = nil
                                 }
                             }
-                            voiceMediaPlayer.control(.playback(.play))
+                            voiceMediaPlayer.control(control)
                         } else {
                             strongSelf.voiceMediaPlayer = nil
                         }
@@ -460,7 +460,7 @@ public final class MediaManager: NSObject {
                                     strongSelf.musicMediaPlayer = nil
                                 }
                             }
-                            strongSelf.musicMediaPlayer?.control(.playback(.play))
+                            strongSelf.musicMediaPlayer?.control(control)
                         } else {
                             strongSelf.musicMediaPlayer = nil
                         }

@@ -982,6 +982,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                     if deleted {
                         navigationController?.popToRoot(animated: true)
                     }
+                }, removed: {
                 })
                 break
             }

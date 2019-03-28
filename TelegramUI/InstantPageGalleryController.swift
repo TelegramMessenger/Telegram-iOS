@@ -163,7 +163,7 @@ class InstantPageGalleryController: ViewController {
     private var innerOpenUrl: (InstantPageUrlItem) -> Void
     private var openUrlOptions: (InstantPageUrlItem) -> Void
     
-    init(context: AccountContext, webPage: TelegramMediaWebpage, message: Message? = nil, entries: [InstantPageGalleryEntry], centralIndex: Int, fromPlayingVideo: Bool = false, landscape: Bool = false, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
+    init(context: AccountContext, webPage: TelegramMediaWebpage, message: Message? = nil, entries: [InstantPageGalleryEntry], centralIndex: Int, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, replaceRootController: @escaping (ViewController, ValuePromise<Bool>?) -> Void, baseNavigationController: NavigationController?) {
         self.context = context
         self.webPage = webPage
         self.message = message

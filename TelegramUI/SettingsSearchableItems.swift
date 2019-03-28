@@ -138,6 +138,7 @@ enum SettingsSearchableItemPresentation {
     case push
     case modal
     case immediate
+    case dismiss
 }
 
 struct SettingsSearchableItem {
@@ -146,7 +147,7 @@ struct SettingsSearchableItem {
     let alternate: [String]
     let icon: SettingsSearchableItemIcon
     let breadcrumbs: [String]
-    let present: (AccountContext, NavigationController?, @escaping (SettingsSearchableItemPresentation, ViewController) -> Void) -> Void
+    let present: (AccountContext, NavigationController?, @escaping (SettingsSearchableItemPresentation, ViewController?) -> Void) -> Void
 }
 
 private func synonyms(_ string: String?) -> [String] {
@@ -161,7 +162,7 @@ private func profileSearchableItems(context: AccountContext, canAddAccount: Bool
     let icon: SettingsSearchableItemIcon = .profile
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
-    let presentProfileSettings: (AccountContext, @escaping  (SettingsSearchableItemPresentation, ViewController) -> Void, EditSettingsEntryTag?) -> Void = { context, present, itemTag in
+    let presentProfileSettings: (AccountContext, @escaping  (SettingsSearchableItemPresentation, ViewController?) -> Void, EditSettingsEntryTag?) -> Void = { context, present, itemTag in
         let _ = openEditSettings(context: context, accountsAndPeers: activeAccountsAndPeers(context: context), focusOnItemTag: itemTag, presentController: { controller, _ in
             present(.immediate, controller)
         }, pushController: { controller in
@@ -211,7 +212,7 @@ private func callSearchableItems(context: AccountContext) -> [SettingsSearchable
     let icon: SettingsSearchableItemIcon = .calls
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
-    let presentCallSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void) -> Void = { context, present in
+    let presentCallSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController?) -> Void) -> Void = { context, present in
         present(.push, CallListController(context: context, mode: .navigation))
     }
     
@@ -229,7 +230,7 @@ private func stickerSearchableItems(context: AccountContext, archivedStickerPack
     let icon: SettingsSearchableItemIcon = .stickers
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
-    let presentStickerSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void, InstalledStickerPacksEntryTag?) -> Void = { context, present, itemTag in
+    let presentStickerSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController?) -> Void, InstalledStickerPacksEntryTag?) -> Void = { context, present, itemTag in
         present(.push, installedStickerPacksController(context: context, mode: .general, archivedPacks: archivedStickerPacks, updatedPacks: { _ in }, focusOnItemTag: itemTag))
     }
     
@@ -259,7 +260,7 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
     let icon: SettingsSearchableItemIcon = .notifications
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
-    let presentNotificationSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void, NotificationsAndSoundsEntryTag?) -> Void = { context, present, itemTag in
+    let presentNotificationSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController?) -> Void, NotificationsAndSoundsEntryTag?) -> Void = { context, present, itemTag in
         present(.push, notificationsAndSoundsController(context: context, exceptionsList: exceptionsList, focusOnItemTag: itemTag))
     }
     
@@ -269,40 +270,39 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
         var channels:[PeerId : NotificationExceptionWrapper] = [:]
         if let list = exceptionsList {
             for (key, value) in list.settings {
-                if  let peer = list.peers[key], !peer.debugDisplayTitle.isEmpty, peer.id != context.account.peerId {
+                if let peer = list.peers[key], !peer.debugDisplayTitle.isEmpty, peer.id != context.account.peerId {
                     switch value.muteState {
-                    case .default:
-                        switch value.messageSound {
                         case .default:
-                            break
+                            switch value.messageSound {
+                                case .default:
+                                    break
+                                default:
+                                    switch key.namespace {
+                                        case Namespaces.Peer.CloudUser:
+                                            users[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                        default:
+                                            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                                channels[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                            } else {
+                                                groups[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                            }
+                                    }
+                            }
                         default:
                             switch key.namespace {
-                            case Namespaces.Peer.CloudUser:
-                                users[key] = NotificationExceptionWrapper(settings: value, peer: peer)
-                            default:
-                                if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                                    channels[key] = NotificationExceptionWrapper(settings: value, peer: peer)
-                                } else {
-                                    groups[key] = NotificationExceptionWrapper(settings: value, peer: peer)
-                                }
+                                case Namespaces.Peer.CloudUser:
+                                    users[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                default:
+                                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                        channels[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                    } else {
+                                        groups[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                    }
                             }
-                        }
-                    default:
-                        switch key.namespace {
-                        case Namespaces.Peer.CloudUser:
-                            users[key] = NotificationExceptionWrapper(settings: value, peer: peer)
-                        default:
-                            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                                channels[key] = NotificationExceptionWrapper(settings: value, peer: peer)
-                            } else {
-                                groups[key] = NotificationExceptionWrapper(settings: value, peer: peer)
-                            }
-                        }
                     }
                 }
             }
         }
-        
         return (.users(users), .groups(groups), .channels(channels))
     }
     
@@ -413,11 +413,11 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
     let icon: SettingsSearchableItemIcon = .privacy
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
-    let presentPrivacySettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void, PrivacyAndSecurityEntryTag?) -> Void = { context, present, itemTag in
+    let presentPrivacySettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController?) -> Void, PrivacyAndSecurityEntryTag?) -> Void = { context, present, itemTag in
         present(.push, privacyAndSecurityController(context: context, focusOnItemTag: itemTag))
     }
     
-    let presentSelectivePrivacySettings: (AccountContext, SelectivePrivacySettingsKind, @escaping (SettingsSearchableItemPresentation, ViewController) -> Void) -> Void = { context, kind, present in
+    let presentSelectivePrivacySettings: (AccountContext, SelectivePrivacySettingsKind, @escaping (SettingsSearchableItemPresentation, ViewController?) -> Void) -> Void = { context, kind, present in
         let privacySignal: Signal<AccountPrivacySettings, NoError>
         if let privacySettings = privacySettings {
             privacySignal = .single(privacySettings)
@@ -463,7 +463,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
         })
     }
     
-    let presentDataPrivacySettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void) -> Void = { context, present in
+    let presentDataPrivacySettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController?) -> Void) -> Void = { context, present in
         present(.push, dataPrivacyController(context: context))
     }
     
@@ -557,7 +557,7 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
     let icon: SettingsSearchableItemIcon = .data
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
-    let presentDataSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void, DataAndStorageEntryTag?) -> Void = { context, present, itemTag in
+    let presentDataSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController?) -> Void, DataAndStorageEntryTag?) -> Void = { context, present, itemTag in
         present(.push, dataAndStorageController(context: context, focusOnItemTag: itemTag))
     }
     
@@ -611,7 +611,7 @@ private func proxySearchableItems(context: AccountContext, servers: [ProxyServer
     let icon: SettingsSearchableItemIcon = .proxy
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
-    let presentProxySettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void) -> Void = { context, present in
+    let presentProxySettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController?) -> Void) -> Void = { context, present in
         present(.push, proxySettingsController(context: context))
     }
     
@@ -642,7 +642,7 @@ private func appearanceSearchableItems(context: AccountContext) -> [SettingsSear
     let icon: SettingsSearchableItemIcon = .appearance
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     
-    let presentAppearanceSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController) -> Void, ThemeSettingsEntryTag?) -> Void = { context, present, itemTag in
+    let presentAppearanceSettings: (AccountContext, (SettingsSearchableItemPresentation, ViewController?) -> Void, ThemeSettingsEntryTag?) -> Void = { context, present, itemTag in
         present(.push, themeSettingsController(context: context, focusOnItemTag: itemTag))
     }
     
@@ -674,6 +674,36 @@ private func appearanceSearchableItems(context: AccountContext) -> [SettingsSear
             presentAppearanceSettings(context, present, .animations)
         }),
     ]
+}
+
+private func languageSearchableItems(context: AccountContext, localizations: [LocalizationInfo]) -> [SettingsSearchableItem] {
+    let icon: SettingsSearchableItemIcon = .language
+    let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
+    
+    let applyLocalization: (AccountContext, @escaping (SettingsSearchableItemPresentation, ViewController?) -> Void, String) -> Void = { context, present, languageCode in
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+        present(.immediate, controller)
+        
+        let _ = (downloadAndApplyLocalization(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, languageCode: languageCode)
+        |> deliverOnMainQueue).start(completed: { [weak controller] in
+            controller?.dismiss()
+            present(.dismiss, nil)
+        })
+    }
+    
+    var items: [SettingsSearchableItem] = []
+    items.append(SettingsSearchableItem(id: .language(0), title: strings.Settings_AppLanguage, alternate: synonyms(strings.SettingsSearch_Synonyms_AppLanguage), icon: icon, breadcrumbs: [], present: { context, _, present in
+        present(.push, LocalizationListController(context: context))
+    }))
+    var index: Int32 = 1
+    for localization in localizations {
+        items.append(SettingsSearchableItem(id: .language(index), title: localization.localizedTitle, alternate: [localization.title], icon: icon, breadcrumbs: [strings.Settings_AppLanguage], present: { context, _, present in
+            applyLocalization(context, present, localization.languageCode)
+        }))
+        index += 1
+    }
+    return items
 }
 
 func settingsSearchableItems(context: AccountContext, notificationExceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>) -> Signal<[SettingsSearchableItem], NoError> {
@@ -716,8 +746,45 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         return settings.servers
     }
     
-    return combineLatest(watchAppInstalled, canAddAccount, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings)
-    |> map { watchAppInstalled, canAddAccount, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings in
+    let localizationPreferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.localizationListState]))
+    let localizations = combineLatest(context.account.postbox.combinedView(keys: [localizationPreferencesKey]), context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.localizationSettings]))
+    |> map { view, sharedData -> [LocalizationInfo] in
+        if let localizationListState = (view.views[localizationPreferencesKey] as? PreferencesView)?.values[PreferencesKeys.localizationListState] as? LocalizationListState, !localizationListState.availableOfficialLocalizations.isEmpty {
+            
+            var existingIds = Set<String>()
+            let availableSavedLocalizations = localizationListState.availableSavedLocalizations.filter({ info in !localizationListState.availableOfficialLocalizations.contains(where: { $0.languageCode == info.languageCode }) })
+            
+            var activeLanguageCode: String?
+            if let localizationSettings = sharedData.entries[SharedDataKeys.localizationSettings] as? LocalizationSettings {
+                activeLanguageCode = localizationSettings.primaryComponent.languageCode
+            }
+            
+            var localizationItems: [LocalizationInfo] = []
+            if !availableSavedLocalizations.isEmpty {
+                for info in availableSavedLocalizations {
+                    if existingIds.contains(info.languageCode) || info.languageCode == activeLanguageCode {
+                        continue
+                    }
+                    existingIds.insert(info.languageCode)
+                    localizationItems.append(info)
+                }
+            }
+            for info in localizationListState.availableOfficialLocalizations {
+                if existingIds.contains(info.languageCode) || info.languageCode == activeLanguageCode {
+                    continue
+                }
+                existingIds.insert(info.languageCode)
+                localizationItems.append(info)
+            }
+            
+            return localizationItems
+        } else {
+            return []
+        }
+    }
+    
+    return combineLatest(watchAppInstalled, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings)
+    |> map { watchAppInstalled, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings in
         let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
         
         var allItems: [SettingsSearchableItem] = []
@@ -751,10 +818,8 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         let appearanceItems = appearanceSearchableItems(context: context)
         allItems.append(contentsOf: appearanceItems)
         
-        let language = SettingsSearchableItem(id: .language(0), title: strings.Settings_AppLanguage, alternate: synonyms(strings.SettingsSearch_Synonyms_AppLanguage), icon: .language, breadcrumbs: [], present: { context, _, present in
-            present(.push, LocalizationListController(context: context))
-        })
-        allItems.append(language)
+        let languageItems = languageSearchableItems(context: context, localizations: localizations)
+        allItems.append(contentsOf: languageItems)
         
         if watchAppInstalled {
             let watch = SettingsSearchableItem(id: .watch(0), title: strings.Settings_AppleWatch, alternate: synonyms(strings.SettingsSearch_Synonyms_Watch), icon: .watch, breadcrumbs: [], present: { context, _, present in

@@ -276,7 +276,7 @@ func stringForRelativeLiveLocationUpdateTimestamp(strings: PresentationStrings, 
     }
 }
 
-func stringAndActivityForUserPresence(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, presence: TelegramUserPresence, relativeTo timestamp: Int32) -> (String, Bool) {
+func stringAndActivityForUserPresence(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, presence: TelegramUserPresence, relativeTo timestamp: Int32, expanded: Bool = false) -> (String, Bool) {
     switch presence.status {
         case .none:
             return (strings.LastSeen_Offline, false)
@@ -287,7 +287,7 @@ func stringAndActivityForUserPresence(strings: PresentationStrings, dateTimeForm
                 let difference = timestamp - statusTimestamp
                 if difference < 60 {
                     return (strings.LastSeen_JustNow, false)
-                } else if difference < 60 * 60 {
+                } else if difference < 60 * 60 && !expanded {
                     let minutes = difference / 60
                     return (strings.LastSeen_MinutesAgo(minutes), false)
                 } else {
@@ -307,8 +307,12 @@ func stringAndActivityForUserPresence(strings: PresentationStrings, dateTimeForm
                     if dayDifference == 0 || dayDifference == -1 {
                         let day: RelativeTimestampFormatDay
                         if dayDifference == 0 {
-                            let minutes = difference / (60 * 60)
-                            return (strings.LastSeen_HoursAgo(minutes), false)
+                            if expanded {
+                                day = .today
+                            } else {
+                                let minutes = difference / (60 * 60)
+                                return (strings.LastSeen_HoursAgo(minutes), false)
+                            }
                         } else {
                             day = .yesterday
                         }

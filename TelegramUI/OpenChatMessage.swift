@@ -70,18 +70,22 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
     }
     
     var stream = false
-    var fromPlayingVideo = false
+    var autoplayingVideo = false
     var landscape = false
+    var timecode: Double? = nil
     
-    if case .stream = mode {
-        stream = true
-    }
-    if case .automaticPlayback = mode {
-        fromPlayingVideo = true
-    }
-    if case .landscape = mode {
-        fromPlayingVideo = true
-        landscape = true
+    switch mode {
+        case .stream:
+            stream = true
+        case .automaticPlayback:
+            autoplayingVideo = true
+        case .landscape:
+            autoplayingVideo = true
+            landscape = true
+        case let .timecode(time):
+            timecode = time
+        default:
+            break
     }
     
     if let (webPage, instantPageMedia) = instantPageMedia, let galleryMedia = galleryMedia {
@@ -93,7 +97,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
             }
         }
         
-        let gallery = InstantPageGalleryController(context: context, webPage: webPage, message: message, entries: instantPageMedia, centralIndex: centralIndex, fromPlayingVideo: fromPlayingVideo, landscape: landscape, replaceRootController: { [weak navigationController] controller, ready in
+        let gallery = InstantPageGalleryController(context: context, webPage: webPage, message: message, entries: instantPageMedia, centralIndex: centralIndex, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, replaceRootController: { [weak navigationController] controller, ready in
             if let navigationController = navigationController {
                 navigationController.replaceTopController(controller, animated: false, ready: ready)
             }
@@ -124,7 +128,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                     }
                     #if DEBUG
                     if ext == "mkv" {
-                        let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: fromPlayingVideo, landscape: landscape, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                        let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                             navigationController?.replaceTopController(controller, animated: false, ready: ready)
                             }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
                         return .gallery(gallery)
@@ -141,10 +145,10 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                 let gallery = SecretMediaPreviewController(context: context, messageId: message.id)
                 return .secretGallery(gallery)
             } else {
-                let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: fromPlayingVideo, landscape: landscape, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                     navigationController?.replaceTopController(controller, animated: false, ready: ready)
                     }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
-                gallery.temporaryDoNotWaitForReady = fromPlayingVideo
+                gallery.temporaryDoNotWaitForReady = autoplayingVideo
                 return .gallery(gallery)
             }
         }
@@ -251,6 +255,10 @@ func openChatMessage(context: AccountContext, message: Message, standalone: Bool
             case let .audio(file):
                 let location: PeerMessagesPlaylistLocation
                 let playerType: MediaManagerPlayerType
+                var control = SharedMediaPlayerControlAction.playback(.play)
+                if case let .timecode(time) = mode {
+                    control = .seek(time)
+                }
                 if (file.isVoice || file.isInstantVideo) && message.tags.contains(.voiceOrInstantVideo) {
                     if standalone {
                         location = .recentActions(message)
@@ -273,7 +281,7 @@ func openChatMessage(context: AccountContext, message: Message, standalone: Bool
                     }
                     playerType = (file.isVoice || file.isInstantVideo) ? .voice : .music
                 }
-                context.sharedContext.mediaManager.setPlaylist((context.account, PeerMessagesMediaPlaylist(postbox: context.account.postbox, network: context.account.network, location: location)), type: playerType)
+                context.sharedContext.mediaManager.setPlaylist((context.account, PeerMessagesMediaPlaylist(postbox: context.account.postbox, network: context.account.network, location: location)), type: playerType, control: control)
                 return true
             case let .gallery(gallery):
                 dismissInput()
@@ -312,45 +320,6 @@ func openChatMessage(context: AccountContext, message: Message, standalone: Bool
                         }
                         let controller = deviceContactInfoController(context: context, subject: .vcard(peer, nil, contactData))
                         navigationController?.pushViewController(controller)
-                        
-                        guard let peer = peer else {
-                            return
-                        }
-                        
-                        /*let presentationData = account.telegramApplicationContext.currentPresentationData.with { $0 }
-                        let controller = ActionSheetController(presentationTheme: presentationData.theme)
-                        let dismissAction: () -> Void = { [weak controller] in
-                            controller?.dismissAnimated()
-                        }
-                        var items: [ActionSheetItem] = []
-                        
-                        if let peerId = contact.peerId {
-                            items.append(ActionSheetButtonItem(title: presentationData.strings.Conversation_SendMessage, action: {
-                                dismissAction()
-                                
-                                openPeer(peer, .chat(textInputState: nil, messageId: nil))
-                            }))
-                            if let isContact = isContact, !isContact {
-                                items.append(ActionSheetButtonItem(title: presentationData.strings.Conversation_AddContact, action: {
-                                    dismissAction()
-                                    let _ = addContactPeerInteractively(account: account, peerId: peerId, phone: contact.phoneNumber).start()
-                                }))
-                            }
-                            items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_TelegramCall, action: {
-                                dismissAction()
-                                callPeer(peerId)
-                            }))
-                        }
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.UserInfo_PhoneCall, action: {
-                            dismissAction()
-                            account.telegramApplicationcontext.sharedContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(contact.phoneNumber).replacingOccurrences(of: " ", with: ""))")
-                        }))
-                        controller.setItemGroups([
-                            ActionSheetItemGroup(items: items),
-                            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-                            ])
-                        dismissInput()
-                        present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))*/
                     })
                     return true
                 }

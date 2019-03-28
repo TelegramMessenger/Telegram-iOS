@@ -265,14 +265,23 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             let message = messages[0]
             
             var hasEditRights = false
+            var unlimitedInterval = false
             if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                 hasEditRights = false
             } else if let author = message.author, author.id == context.account.peerId {
                 hasEditRights = true
             } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
-                if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                    if peer.hasPermission(.editAllMessages) {
-                        hasEditRights = true
+                if let peer = peer as? TelegramChannel {
+                    switch peer.info {
+                        case .broadcast:
+                            if peer.hasPermission(.editAllMessages) {
+                                hasEditRights = true
+                            }
+                        case .group:
+                            if peer.hasPermission(.pinMessages) {
+                                unlimitedInterval = true
+                                hasEditRights = true
+                            }
                     }
                 }
             }
@@ -318,7 +327,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 }
                 
                 if !hasUneditableAttributes {
-                    if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: context.account.peerId, message: message) {
+                    if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: context.account.peerId, message: message, unlimitedInterval: unlimitedInterval) {
                         canEdit = true
                     }
                 }
@@ -578,8 +587,12 @@ struct ChatAvailableMessageActions {
     let banAuthor: Peer?
 }
 
-private func canPerformEditingActions(limits: LimitsConfiguration, accountPeerId: PeerId, message: Message) -> Bool {
+private func canPerformEditingActions(limits: LimitsConfiguration, accountPeerId: PeerId, message: Message, unlimitedInterval: Bool) -> Bool {
     if message.id.peerId == accountPeerId {
+        return true
+    }
+    
+    if unlimitedInterval {
         return true
     }
     

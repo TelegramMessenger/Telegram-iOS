@@ -69,6 +69,9 @@ open class GalleryItemNode: ASDisplayNode {
     open func activateAsInitial() {
     }
     
+    open func processAction(_ action: GalleryControllerItemNodeAction) {
+    }
+    
     open func visibilityUpdated(isVisible: Bool) {
     }
     

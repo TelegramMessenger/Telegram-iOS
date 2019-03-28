@@ -141,7 +141,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
         self.playerNode.seek(timestamp: timestamp)
     }
     
-    func playOnceWithSound(playAndRecord: Bool, seekToStart: MediaPlayerPlayOnceWithSoundSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
+    func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
     }
     
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {
