@@ -276,7 +276,7 @@
         
         SSignal *alphacodeListSignal = nil;
         if (self.suggestionContext.alphacodeSignal != nil)
-            alphacodeListSignal = self.suggestionContext.alphacodeSignal(alphacode);
+            alphacodeListSignal = self.suggestionContext.alphacodeSignal(alphacode, inputTextPanel.inputField.textInputMode.primaryLanguage);
         
         [panel setAlphacodeListSignal:alphacodeListSignal];
     }
