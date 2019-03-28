@@ -28,7 +28,7 @@ enum ChatPresentationInputQuery: Hashable, Equatable {
     case hashtag(String)
     case mention(query: String, types: ChatInputQueryMentionTypes)
     case command(String)
-    case emojiSearch(String)
+    case emojiSearch(query: String, languageCode: String)
     case contextRequest(addressName: String, query: String)
     
     var kind: ChatPresentationInputQueryKind {
@@ -60,8 +60,8 @@ enum ChatPresentationInputQuery: Hashable, Equatable {
                 return 4 &+ value.hashValue
             case let .contextRequest(addressName, query):
                 return 5 &+ addressName.hashValue &* 31 &+ query.hashValue
-            case let .emojiSearch(value):
-                return 6 &+ value.hashValue
+            case let .emojiSearch(value, languageCode):
+                return 6 &+ value.hashValue &* 31 &+ languageCode.hashValue
         }
     }
 }

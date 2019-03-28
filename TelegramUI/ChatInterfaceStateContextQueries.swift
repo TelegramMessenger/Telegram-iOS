@@ -262,17 +262,16 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 }
             
             return signal |> then(contextBot)
-        case let .emojiSearch(query):            
-            let foundEmojis: Signal<[(String, String)], NoError> = Signal { subscriber in
+        case let .emojiSearch(query, languageCode):
+            let foundEmojis = searchEmojiKeywords(postbox: context.account.postbox, inputLanguageCode: languageCode, query: query, completeMatch: query.count < 3)
+            |> map { keywords -> [(String, String)] in
                 var result: [(String, String)] = []
-                for entry in TGEmojiSuggestions.suggestions(forQuery: query.lowercased()) {
-                    if let entry = entry as? TGAlphacodeEntry {
-                        result.append((entry.emoji, entry.code))
+                for keyword in keywords {
+                    for emoticon in keyword.emoticons {
+                        result.append((emoticon, keyword.keyword))
                     }
                 }
-                subscriber.putNext(result)
-                subscriber.putCompletion()
-                return EmptyDisposable
+                return result
             }
             
             let emojis: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = foundEmojis |> map { result -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in

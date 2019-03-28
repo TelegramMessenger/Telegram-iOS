@@ -515,6 +515,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
         
         var textFrame = CGRect()
+        var visibleTextHeight: CGFloat = 0.0
         if !self.textNode.isHidden {
             let sideInset: CGFloat = 8.0 + leftInset
             let topInset: CGFloat = 8.0
@@ -523,7 +524,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             
             var textOffset: CGFloat = 0.0
             if displayCaption {
-                var visibleTextHeight = textSize.height
+                visibleTextHeight = textSize.height
                 if visibleTextHeight > 100.0 {
                     visibleTextHeight = 80.0
                     self.scrollNode.view.isScrollEnabled = true
@@ -561,7 +562,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 let scrollWrapperNodeFrame = CGRect(x: 0.0, y: 0.0, width: width, height: max(0.0, visibleTextPanelHeight + textOffset))
                 if self.scrollWrapperNode.frame != scrollWrapperNodeFrame {
                     self.scrollWrapperNode.frame = scrollWrapperNodeFrame
-                    self.scrollWrapperNode.layer.mask?.frame = self.scrollWrapperNode.bounds //.offsetBy(dx: 0.0, dy: textOffset)
+                    self.scrollWrapperNode.layer.mask?.frame = self.scrollWrapperNode.bounds
                     self.scrollWrapperNode.layer.mask?.removeAllAnimations()
                 }
             }
@@ -572,21 +573,21 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
         
         if let scrubberView = self.scrubberView, scrubberView.superview == self.view {
-            var topInset: CGFloat = 8.0
-            let bottomInset: CGFloat = 2.0
-            panelHeight += topInset + bottomInset
+            panelHeight += 8.0 + 2.0
             if isLandscape {
                 panelHeight += 14.0
             } else {
                 panelHeight += 34.0
             }
+            
+            var scrubberY: CGFloat = 8.0
             if self.textNode.isHidden || !displayCaption {
                 panelHeight += 8.0
             } else {
-                topInset += textFrame.maxY
+                scrubberY = panelHeight - bottomInset - 44.0 - 41.0
             }
             
-            let scrubberFrame = CGRect(origin: CGPoint(x: leftInset, y: topInset), size: CGSize(width: width - leftInset - rightInset, height: 34.0))
+            let scrubberFrame = CGRect(origin: CGPoint(x: leftInset, y: scrubberY), size: CGSize(width: width - leftInset - rightInset, height: 34.0))
             scrubberView.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
             transition.updateFrame(layer: scrubberView.layer, frame: scrubberFrame)
         }

@@ -81,11 +81,30 @@ func legacySuggestionContext(account: Account, peerId: PeerId) -> TGSuggestionCo
             }
         }
     }
-    context.alphacodeSignal = { query in
+    context.alphacodeSignal = { query, inputLanguageCode in
+        guard let query = query, let inputLanguageCode = inputLanguageCode else {
+            return SSignal.complete()
+        }
         return SSignal { subscriber in
-            subscriber?.putNext(TGEmojiSuggestions.suggestions(forQuery: query?.lowercased()))
-            subscriber?.putCompletion()
-            return nil
+            let disposable = (searchEmojiKeywords(postbox: account.postbox, inputLanguageCode: inputLanguageCode, query: query, completeMatch: query.count < 3)
+            |> map { keywords -> [TGAlphacodeEntry] in
+                var result: [TGAlphacodeEntry] = []
+                for keyword in keywords {
+                    for emoticon in keyword.emoticons {
+                        result.append(TGAlphacodeEntry(emoji: emoticon, code: keyword.keyword))
+                    }
+                }
+                return result
+            }).start(next: { result in
+                subscriber?.putNext(result)
+                subscriber?.putCompletion()
+            }, error: nil, completed: {
+                subscriber?.putCompletion()
+            })
+            
+            return SBlockDisposable {
+                disposable.dispose()
+            }
         }
     }
     return context

@@ -188,8 +188,8 @@ func inputContextQueriesForChatPresentationIntefaceState(_ chatPresentationInter
         } else if possibleTypes == [.contextRequest], let additionalStringRange = additionalStringRange {
             let additionalString = inputString.substring(with: additionalStringRange)
             result.append(.contextRequest(addressName: query, query: additionalString))
-        } else if possibleTypes == [.emojiSearch], !query.isEmpty {
-            result.append(.emojiSearch(query))
+        } else if possibleTypes == [.emojiSearch], !query.isEmpty, let inputLanguage = chatPresentationInterfaceState.interfaceState.inputLanguage {
+            result.append(.emojiSearch(query: query, languageCode: inputLanguage))
         }
     }
     return result
