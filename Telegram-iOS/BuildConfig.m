@@ -382,4 +382,17 @@ static MTPKCS * _Nullable checkSignature(const char *filename) {
     return @(APP_SPECIFIC_URL_SCHEME);
 }
 
++ (NSData * _Nonnull)encryptionKey:(NSString * _Nonnull)rootPath {
+    NSString *filePath = [rootPath stringByAppendingPathComponent:@".tempkey"];
+    NSData *data = [NSData dataWithContentsOfFile:filePath];
+    if (data != nil) {
+        return data;
+    }
+    NSMutableData *randomData = [[NSMutableData alloc] initWithLength:32];
+    int result = SecRandomCopyBytes(kSecRandomDefault, randomData.length, [randomData mutableBytes]);
+    assert(result == 0);
+    [randomData writeToFile:filePath atomically:false];
+    return randomData;
+}
+
 @end

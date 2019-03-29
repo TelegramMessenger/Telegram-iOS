@@ -46,6 +46,7 @@ private struct PasscodeState: Equatable {
 }
 
 final class AuthorizedApplicationContext {
+    let sharedApplicationContext: SharedApplicationContext
     let mainWindow: Window1
     let lockedCoveringView: LockedWindowCoveringView
     
@@ -99,7 +100,9 @@ final class AuthorizedApplicationContext {
     private var showCallsTabDisposable: Disposable?
     private var enablePostboxTransactionsDiposable: Disposable?
     
-    init(mainWindow: Window1, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, context: AccountContext, accountManager: AccountManager, showCallsTab: Bool, reinitializedNotificationSettings: @escaping () -> Void) {
+    init(sharedApplicationContext: SharedApplicationContext, mainWindow: Window1, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, context: AccountContext, accountManager: AccountManager, showCallsTab: Bool, reinitializedNotificationSettings: @escaping () -> Void) {
+        self.sharedApplicationContext = sharedApplicationContext
+        
         setupLegacyComponents(context: context)
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -121,6 +124,9 @@ final class AuthorizedApplicationContext {
         if KeyShortcutsController.isAvailable {
             let keyShortcutsController = KeyShortcutsController { [weak self] f in
                 if let strongSelf = self {
+                    if strongSelf.isLocked {
+                        return
+                    }
                     if let tabController = strongSelf.rootController.rootTabController {
                         let controller = tabController.controllers[tabController.selectedIndex]
                         if !f(controller) {
@@ -695,10 +701,20 @@ final class AuthorizedApplicationContext {
         
         self.displayAlertsDisposable = (context.account.stateManager.displayAlerts
         |> deliverOnMainQueue).start(next: { [weak self] alerts in
-            if let strongSelf = self{
-                for text in alerts {
+            if let strongSelf = self {
+                for (text, isDropAuth) in alerts {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                    let actions: [TextAlertAction]
+                    if isDropAuth {
+                        actions = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.LogoutOptions_LogOut, action: {
+                            if let strongSelf = self {
+                                let _ = logoutFromAccount(id: strongSelf.context.account.id, accountManager: strongSelf.context.sharedContext.accountManager).start()
+                            }
+                        })]
+                    } else {
+                        actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
+                    }
+                    let controller = textAlertController(context: strongSelf.context, title: nil, text: text, actions: actions)
                     (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                 }
             }

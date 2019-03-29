@@ -13,4 +13,6 @@
 @property (nonatomic, readonly) int64_t appStoreId;
 @property (nonatomic, strong, readonly) NSString * _Nonnull appSpecificUrlScheme;
 
++ (NSData * _Nonnull)encryptionKey:(NSString * _Nonnull)rootPath;
+
 @end

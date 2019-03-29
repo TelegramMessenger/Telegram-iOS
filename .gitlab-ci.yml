@@ -8,28 +8,26 @@ variables:
 
 internal:
   tags:
-    - ios
+    - ios_internal
   stage: build
   only:
     - master
   except:
     - tags
   script:
-    - sh ~/ios-prepare-build.sh $CI_PROJECT_DIR/..
-    - fastlane internalhockeyapp
+    - sh buildbox/build-telegram.sh hockeyapp
   environment:
     name: internal
 
 beta_testflight:
   tags:
-    - ios
+    - ios_beta
   stage: build
   only:
     - beta
   except:
     - tags
   script:
-    - sh ~/ios-prepare-build.sh $CI_PROJECT_DIR/..
-    - fastlane testflight_llc
+    - sh buildbox/build-telegram.sh appstore
   environment:
     name: testflight_llc
