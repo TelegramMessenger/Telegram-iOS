@@ -1515,11 +1515,13 @@ final class MutableMessageHistoryView {
                             } else {
                                 updatedIndices.remove(integersIn: 0 ... Int(bounds.upperBound))
                             }
-                            let hole = MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, indices: updatedIndices)
-                            if toLower {
-                                return (.peer(hole), .UpperToLower)
-                            } else {
-                                return (.peer(hole), .LowerToUpper)
+                            if !updatedIndices.isEmpty {
+                                let hole = MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, indices: updatedIndices)
+                                if toLower {
+                                    return (.peer(hole), .UpperToLower)
+                                } else {
+                                    return (.peer(hole), .LowerToUpper)
+                                }
                             }
                         } else {
                             let hole = MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, indices: indices)
