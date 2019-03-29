@@ -56,7 +56,7 @@ struct ItemCollectionItemReverseIndexReference: Equatable, Hashable, ReverseInde
 
 final class ItemCollectionItemTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: false)
     }
     
     private let reverseIndexTable: ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>
@@ -202,7 +202,7 @@ final class ItemCollectionItemTable: Table {
         let removedIndices = currentIndices.subtracting(updatedIndices)
         
         for index in removedIndices {
-            self.valueBox.remove(self.table, key: self.key(collectionId: collectionId, index: index))
+            self.valueBox.remove(self.table, key: self.key(collectionId: collectionId, index: index), secure: false)
             if let indexKeys = removedIndexKeys[index] {
                 self.reverseIndexTable.remove(namespace: ReverseIndexNamespace(collectionId.namespace), reference: ItemCollectionItemReverseIndexReference(collectionId: collectionId, itemIndex: index), tokens: indexKeys.map({ ValueBoxKey($0) }))
             }

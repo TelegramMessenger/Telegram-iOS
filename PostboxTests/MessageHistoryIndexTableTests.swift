@@ -35,7 +35,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         var randomId: Int64 = 0
         arc4random_buf(&randomId, 8)
         path = NSTemporaryDirectory() + "\(randomId)"
-        self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue())
+        self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue(), encryptionKey: "secret".data(using: .utf8)!)
         
         let messageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]] = [
             peerId.namespace: [
@@ -43,9 +43,9 @@ class MessageHistoryIndexTableTests: XCTestCase {
             ]
         ]
         
-        let seedConfiguration = SeedConfiguration(initializeChatListWithHole: (topLevel: nil, groups: nil), messageHoles: messageHoles, messageTagsWithSummary: [], existingGlobalMessageTags: [], peerNamespacesRequiringMessageTextIndex: [], peerSummaryCounterTags: { _ in PeerSummaryCounterTags(rawValue: 0) }, additionalChatListIndexNamespace: nil)
+        let seedConfiguration = SeedConfiguration(globalMessageIdsPeerIdNamespaces: Set(), initializeChatListWithHole: (topLevel: nil, groups: nil), messageHoles: messageHoles, existingMessageTags: [.media], messageTagsWithSummary: [], existingGlobalMessageTags: [], peerNamespacesRequiringMessageTextIndex: [], peerSummaryCounterTags: { _ in PeerSummaryCounterTags(rawValue: 0) }, additionalChatListIndexNamespace: nil)
         
-        self.postbox = Postbox(queue: Queue.mainQueue(), basePath: path!, globalMessageIdsNamespace: namespace, seedConfiguration: seedConfiguration, valueBox: self.valueBox!)
+        self.postbox = Postbox(queue: Queue.mainQueue(), basePath: path!, seedConfiguration: seedConfiguration, valueBox: self.valueBox!)
     }
     
     override func tearDown() {
@@ -107,6 +107,8 @@ class MessageHistoryIndexTableTests: XCTestCase {
     }
     
     func testSimpleHoles() {
+        removeHole(1 ... Int32.max, space: .everywhere)
+        
         addHole(3 ... 10, space: .everywhere)
         expectHoles(space: .everywhere, [3 ... 10])
         
@@ -202,6 +204,11 @@ class MessageHistoryIndexTableTests: XCTestCase {
         }
         
         var verificationSet = IndexSet()
+        for (_, holesByMessageNamespace) in self.postbox!.seedConfiguration.messageHoles {
+            for (_, _) in holesByMessageNamespace{
+                verificationSet.insert(integersIn: 1 ... Int(Int32.max))
+            }
+        }
         for i in 0 ..< operations.count {
             let operation = operations[i]
             if operation.add {
@@ -211,7 +218,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
                 verificationSet.remove(integersIn: Int(operation.range.lowerBound) ... Int(operation.range.upperBound))
                 removeHole(operation.range, space: .everywhere)
             }
-            let testRanges = verificationSet.rangeView.map({ ClosedRange(Int32($0.lowerBound) ..< Int32($0.upperBound)) })
+            let testRanges = verificationSet.rangeView.map({ ClosedRange(Int32($0.lowerBound) ... Int32($0.upperBound - 1)) })
             expectHoles(space: .everywhere, testRanges)
             expectHoles(space: .tag(.media), testRanges)
         }
@@ -302,6 +309,12 @@ class MessageHistoryIndexTableTests: XCTestCase {
         
         var everywhereVerificationSet = IndexSet()
         var mediaVerificationSet = IndexSet()
+        for (_, holesByMessageNamespace) in self.postbox!.seedConfiguration.messageHoles {
+            for (_, _) in holesByMessageNamespace{
+                everywhereVerificationSet.insert(integersIn: 1 ... Int(Int32.max))
+                mediaVerificationSet.insert(integersIn: 1 ... Int(Int32.max))
+            }
+        }
         for i in 0 ..< operations.count {
             let operation = operations[i]
             let intRange = Int(operation.range.lowerBound) ... Int(operation.range.upperBound)
@@ -324,11 +337,249 @@ class MessageHistoryIndexTableTests: XCTestCase {
                 }
                 removeHole(operation.range, space: operation.space)
             }
-            let everywhereTestRanges = everywhereVerificationSet.rangeView.map({ ClosedRange(Int32($0.lowerBound) ..< Int32($0.upperBound)) })
-            let mediaTestRanges = mediaVerificationSet.rangeView.map({ ClosedRange(Int32($0.lowerBound) ..< Int32($0.upperBound)) })
+            let everywhereTestRanges = everywhereVerificationSet.rangeView.map({ ClosedRange(Int32($0.lowerBound) ... Int32($0.upperBound - 1)) })
+            let mediaTestRanges = mediaVerificationSet.rangeView.map({ ClosedRange(Int32($0.lowerBound) ... Int32($0.upperBound - 1)) })
             expectHoles(space: .everywhere, everywhereTestRanges)
             expectHoles(space: .tag(.media), mediaTestRanges)
         }
+    }
+    
+    func testDirectAccessPerformance() {
+        self.beginTestDirectAccessPerformance(compactValuesOnCreation: false)
+    }
+    
+    func testDirectAccessPerformanceCompact() {
+        self.beginTestDirectAccessPerformance(compactValuesOnCreation: true)
+    }
+    
+    func testBlobExtractPerformance() {
+        let table = ValueBoxTable(id: 1000, keyType: .binary, compactValuesOnCreation: false)
+        
+        let valueBox = self.postbox!.valueBox
+        let memory = malloc(4000)!
+        let value = MemoryBuffer(memory: memory, capacity: 4000, length: 4000, freeWhenDone: true)
+        var keys: [ValueBoxKey] = []
+        for _ in 0 ... 1000 {
+            let key = ValueBoxKey(length: 16)
+            arc4random_buf(key.memory, 16)
+            keys.append(key)
+            valueBox.set(table, key: key, value: value)
+        }
+        self.measureMetrics([XCTPerformanceMetric_WallClockTime], automaticallyStartMeasuring: false, for: {
+            self.startMeasuring()
+            for key in keys.shuffled() {
+                if let value = valueBox.get(table, key: key) {
+                    var i = 0
+                    let length = value.length
+                    if i < length {
+                        var output: Int32 = 0
+                        value.read(&output, offset: i, length: 4)
+                        i += 4
+                    }
+                }
+            }
+            self.stopMeasuring()
+        })
+    }
+    
+    func testIncrementalBlobExtractPerformance() {
+        let table = ValueBoxTable(id: 1000, keyType: .binary, compactValuesOnCreation: false)
+        
+        let valueBox = self.postbox!.valueBox
+        let memory = malloc(4000)!
+        let value = MemoryBuffer(memory: memory, capacity: 4000, length: 4000, freeWhenDone: true)
+        var keys: [ValueBoxKey] = []
+        for _ in 0 ... 100000 {
+            let key = ValueBoxKey(length: 16)
+            arc4random_buf(key.memory, 16)
+            keys.append(key)
+            valueBox.set(table, key: key, value: value)
+        }
+        self.measureMetrics([XCTPerformanceMetric_WallClockTime], automaticallyStartMeasuring: false, for: {
+            self.startMeasuring()
+            for key in keys.shuffled() {
+                valueBox.read(table, key: key, { length, read in
+                    var i = 0
+                    if i < length {
+                        var output: Int32 = 0
+                        read(&output, i, 4)
+                        i += 4
+                    }
+                })
+            }
+            self.stopMeasuring()
+        })
+    }
+    
+    private func beginTestDirectAccessPerformance(compactValuesOnCreation: Bool) {
+        let table = ValueBoxTable(id: 1000, keyType: .binary, compactValuesOnCreation: compactValuesOnCreation)
+        
+        let valueBox = self.postbox!.valueBox
+        let memory = malloc(250)!
+        let value = MemoryBuffer(memory: memory, capacity: 250, length: 250, freeWhenDone: true)
+        var keys: [ValueBoxKey] = []
+        for _ in 0 ... 100000 {
+            let key = ValueBoxKey(length: 16)
+            arc4random_buf(key.memory, 16)
+            keys.append(key)
+            valueBox.set(table, key: key, value: value)
+        }
+        
+        self.measureMetrics([XCTPerformanceMetric_WallClockTime], automaticallyStartMeasuring: false, for: {
+            self.startMeasuring()
+            for key in keys.shuffled() {
+                let _ = valueBox.get(table, key: key)
+            }
+            self.stopMeasuring()
+        })
+    }
+    
+    func testRangeAccessPerformance() {
+        self.beginTestRangeAccessPerformance(compactValuesOnCreation: false)
+    }
+    
+    func testRangeAccessPerformanceCompact() {
+        self.beginTestRangeAccessPerformance(compactValuesOnCreation: true)
+    }
+    
+    func testBinarySearchAccessPerformance() {
+        let table = ValueBoxTable(id: 1000, keyType: .binary, compactValuesOnCreation: true)
+        
+        let valueBox = self.postbox!.valueBox
+        let memory = malloc(250)!
+        let value = MemoryBuffer(memory: memory, capacity: 250, length: 250, freeWhenDone: true)
+        var keys: [ValueBoxKey] = []
+        
+        var randomSpacedKeys: [Int32] = []
+        for _ in 0 ... 1000000 {
+            randomSpacedKeys.append(Int32(arc4random_uniform(100_000_000)))
+        }
+        randomSpacedKeys.sort()
+        
+        for i in 0 ..< randomSpacedKeys.count {
+            let key = ValueBoxKey(length: 16)
+            key.setUInt32(0, value: 200)
+            key.setUInt32(4, value: 300)
+            key.setInt32(8, value: Int32(randomSpacedKeys[i]))
+            key.setInt32(12, value: Int32(i))
+            keys.append(key)
+            valueBox.set(table, key: key, value: value)
+        }
+        
+        let lowerBound = ValueBoxKey(length: 8)
+        lowerBound.setUInt32(0, value: 200)
+        lowerBound.setUInt32(4, value: 300)
+        
+        let upperBound = ValueBoxKey(length: 16)
+        upperBound.setUInt32(0, value: 200)
+        upperBound.setUInt32(4, value: 301)
+        upperBound.setUInt32(8, value: UInt32.max)
+        upperBound.setUInt32(12, value: UInt32.max)
+        
+        self.measureMetrics([XCTPerformanceMetric_WallClockTime], automaticallyStartMeasuring: false, for: {
+            self.startMeasuring()
+            for i in 0 ... 1000 {
+                var startingLowerIndexValue: Int32?
+                valueBox.range(table, start: lowerBound, end: upperBound, keys: { key in
+                    startingLowerIndexValue = key.getInt32(8)
+                    return false
+                }, limit: 1)
+                
+                var startingUpperIndexValue: Int32?
+                valueBox.range(table, start: upperBound, end: lowerBound, keys: { key in
+                    startingUpperIndexValue = key.getInt32(8)
+                    return false
+                }, limit: 1)
+                
+                guard let startingLowerIndex = startingLowerIndexValue, let startingUpperIndex = startingUpperIndexValue else {
+                    XCTAssert(false)
+                    continue
+                }
+                
+                var lowerIndex: Int32 = startingLowerIndex
+                var upperIndex: Int32 = startingUpperIndex
+                var rangeToLower = false
+                
+                var readCount = 0
+                
+                var found = false
+                while true {
+                    readCount += 1
+                    let currentIndex = Int32((Int64(lowerIndex) + Int64(upperIndex)) / 2)
+                    let key = ValueBoxKey(length: 12)
+                    key.setUInt32(0, value: 200)
+                    key.setUInt32(4, value: 300)
+                    key.setInt32(8, value: currentIndex)
+                    
+                    var foundValue: (Int32, Int32)?
+                    if !rangeToLower {
+                        valueBox.range(table, start: key, end: upperBound, keys: { key in
+                            foundValue = (key.getInt32(8), key.getInt32(12))
+                            return false
+                        }, limit: 1)
+                    } else {
+                        valueBox.range(table, start: key, end: lowerBound, keys: { key in
+                            foundValue = (key.getInt32(8), key.getInt32(12))
+                            return false
+                        }, limit: 1)
+                    }
+                    
+                    if let (foundKey, foundValue) = foundValue {
+                        if foundValue == Int32(i) {
+                            found = true
+                            break
+                        } else if lowerIndex > upperIndex {
+                            break
+                        } else {
+                            if foundValue > Int(i) {
+                                upperIndex = foundKey - 1
+                                rangeToLower = true
+                            } else {
+                                lowerIndex = foundKey + 1
+                                rangeToLower = false
+                            }
+                        }
+                    } else {
+                        break
+                    }
+                }
+                if !found {
+                    XCTAssert(false)
+                }
+            }
+            self.stopMeasuring()
+        })
+    }
+    
+    func beginTestRangeAccessPerformance(compactValuesOnCreation: Bool) {
+        let table = ValueBoxTable(id: 1000, keyType: .binary, compactValuesOnCreation: compactValuesOnCreation)
+        
+        let valueBox = self.postbox!.valueBox
+        let memory = malloc(250)!
+        let value = MemoryBuffer(memory: memory, capacity: 250, length: 250, freeWhenDone: true)
+        var keys: [ValueBoxKey] = []
+        for _ in 0 ... 100000 {
+            let key = ValueBoxKey(length: 16)
+            arc4random_buf(key.memory, 16)
+            keys.append(key)
+            valueBox.set(table, key: key, value: value)
+        }
+        let upperBound = ValueBoxKey(length: 16)
+        upperBound.setUInt32(0, value: UInt32.max)
+        upperBound.setUInt32(4, value: UInt32.max)
+        upperBound.setUInt32(8, value: UInt32.max)
+        upperBound.setUInt32(12, value: UInt32.max)
+        
+        self.measureMetrics([XCTPerformanceMetric_WallClockTime], automaticallyStartMeasuring: false, for: {
+            self.startMeasuring()
+            for key in keys.shuffled() {
+                valueBox.range(table, start: key.prefix(12), end: upperBound, keys: { _ in
+                    return false
+                }, limit: 1)
+                let _ = valueBox.get(table, key: key)
+            }
+            self.stopMeasuring()
+        })
     }
     
     /*func addMessagesUpperBlock(_ messages: [(Int32, Int32)]) {

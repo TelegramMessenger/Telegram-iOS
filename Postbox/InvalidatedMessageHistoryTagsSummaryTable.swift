@@ -24,7 +24,7 @@ enum InvalidatedMessageHistoryTagsSummaryEntryOperation {
 
 final class InvalidatedMessageHistoryTagsSummaryTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private func key(_ key: InvalidatedMessageHistoryTagsSummaryKey) -> ValueBoxKey {
@@ -79,7 +79,7 @@ final class InvalidatedMessageHistoryTagsSummaryTable: Table {
     
     func remove(_ entry: InvalidatedMessageHistoryTagsSummaryEntry, operations: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
         if let current = self.get(entry.key), current.version == entry.version {
-            self.valueBox.remove(self.table, key: self.key(entry.key))
+            self.valueBox.remove(self.table, key: self.key(entry.key), secure: false)
             operations.append(.remove(entry.key))
         }
     }

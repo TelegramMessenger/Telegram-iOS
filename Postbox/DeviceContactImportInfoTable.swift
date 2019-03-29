@@ -2,7 +2,7 @@ import Foundation
 
 final class DeviceContactImportInfoTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     func get(_ identifier: ValueBoxKey) -> PostboxCoding? {
@@ -21,7 +21,7 @@ final class DeviceContactImportInfoTable: Table {
                 self.valueBox.set(self.table, key: identifier, value: encoder.readBufferNoCopy())
             })
         } else {
-            self.valueBox.remove(self.table, key: identifier)
+            self.valueBox.remove(self.table, key: identifier, secure: false)
         }
     }
     

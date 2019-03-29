@@ -37,14 +37,16 @@ private func modifyHistoryIndexEntryTimestamp(value: ReadBuffer, timestamp: Int3
 
 final class MessageHistoryIndexTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
+    let messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable
     let globalMessageIdsTable: GlobalMessageIdsTable
     let metadataTable: MessageHistoryMetadataTable
     let seedConfiguration: SeedConfiguration
     
-    init(valueBox: ValueBox, table: ValueBoxTable, globalMessageIdsTable: GlobalMessageIdsTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
+    init(valueBox: ValueBox, table: ValueBoxTable, messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable, globalMessageIdsTable: GlobalMessageIdsTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
+        self.messageHistoryHoleIndexTable = messageHistoryHoleIndexTable
         self.globalMessageIdsTable = globalMessageIdsTable
         self.seedConfiguration = seedConfiguration
         self.metadataTable = metadataTable
@@ -138,7 +140,7 @@ final class MessageHistoryIndexTable: Table {
     func updateTimestamp(_ id: MessageId, timestamp: Int32, operations: inout [MessageHistoryIndexOperation]) {
         if let previousData = self.valueBox.get(self.table, key: self.key(id)), let previousIndex = self.getIndex(id), previousIndex.timestamp != timestamp {
             let updatedEntry = modifyHistoryIndexEntryTimestamp(value: previousData, timestamp: timestamp)
-            self.valueBox.remove(self.table, key: self.key(id))
+            self.valueBox.remove(self.table, key: self.key(id), secure: false)
             self.valueBox.set(self.table, key: self.key(id), value: updatedEntry)
             
             operations.append(.UpdateTimestamp(MessageIndex(id: id, timestamp: previousIndex.timestamp), timestamp))
@@ -166,7 +168,7 @@ final class MessageHistoryIndexTable: Table {
     }
     
     private func justRemove(_ index: MessageIndex, operations: inout [MessageHistoryIndexOperation]) {
-        self.valueBox.remove(self.table, key: self.key(index.id))
+        self.valueBox.remove(self.table, key: self.key(index.id), secure: false)
         
         operations.append(.Remove(index: index))
         if self.seedConfiguration.globalMessageIdsPeerIdNamespaces.contains(GlobalMessageIdsNamespace(peerIdNamespace: index.id.peerId.namespace, messageIdNamespace: index.id.namespace)) {
@@ -210,6 +212,8 @@ final class MessageHistoryIndexTable: Table {
             }, limit: 0)
         }
         
+        holes = !self.messageHistoryHoleIndexTable.closest(peerId: peerId, namespace: namespace, space: .everywhere, range: minId ... maxId).isEmpty
+        
         return (count, holes)
     }
     
@@ -223,6 +227,9 @@ final class MessageHistoryIndexTable: Table {
                 value.read(&flags, offset: 0, length: 1)
                 if (flags & HistoryEntryMessageFlagIncoming) != 0 {
                     count += 1
+                }
+                if !self.messageHistoryHoleIndexTable.containing(id: MessageId(peerId: peerId, namespace: namespace, id: id)).isEmpty {
+                    holes = true
                 }
             }
         }

@@ -2,7 +2,7 @@ import Foundation
 
 final class PeerChatInterfaceStateTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64)
+        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
     }
     
     private var states: [PeerId: PeerChatInterfaceState?] = [:]
@@ -68,7 +68,7 @@ final class PeerChatInterfaceStateTable: Table {
                     sharedEncoder.encodeRootObject(state)
                     self.valueBox.set(self.table, key: self.key(peerId, sharedKey: self.sharedKey), value: sharedEncoder.readBufferNoCopy())
                     } else {
-                        self.valueBox.remove(self.table, key: self.key(peerId, sharedKey: self.sharedKey))
+                        self.valueBox.remove(self.table, key: self.key(peerId, sharedKey: self.sharedKey), secure: false)
                     }
                 }
             }

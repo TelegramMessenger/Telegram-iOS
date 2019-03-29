@@ -1,7 +1,13 @@
 import Foundation
+#if os(macOS)
+import SwiftSignalKitMac
+#else
+import SwiftSignalKit
+#endif
 
 enum PostboxUpgradeOperation {
-    case inplace((MetadataTable, ValueBox) -> Void)
+    case inplace((MetadataTable, ValueBox, (Float) -> Void) -> Void)
+    case standalone((Queue, String, ValueBox, Data, (Float) -> Void) -> String)
 }
 
 func registeredUpgrades() -> [Int32: PostboxUpgradeOperation] {
@@ -13,5 +19,8 @@ func registeredUpgrades() -> [Int32: PostboxUpgradeOperation] {
     dict[16] = .inplace(postboxUpgrade_16to17)
     dict[17] = .inplace(postboxUpgrade_17to18)
     dict[18] = .inplace(postboxUpgrade_18to19)
+    dict[19] = .inplace(postboxUpgrade_19to20)
+    dict[20] = .inplace(postboxUpgrade_20to21)
+    dict[21] = .standalone(postboxUpgrade_21to22)
     return dict
 }

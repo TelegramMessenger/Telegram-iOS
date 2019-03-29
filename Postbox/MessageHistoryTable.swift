@@ -273,10 +273,11 @@ enum EntriesInRangeBoundary: Comparable {
 
 final class MessageHistoryTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: false)
     }
     
     let messageHistoryIndexTable: MessageHistoryIndexTable
+    let messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable
     let messageMediaTable: MessageMediaTable
     let historyMetadataTable: MessageHistoryMetadataTable
     let globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable
@@ -290,8 +291,9 @@ final class MessageHistoryTable: Table {
     let summaryTable: MessageHistoryTagsSummaryTable
     let pendingActionsTable: PendingMessageActionsTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, messageHistoryIndexTable: MessageHistoryIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, tagsTable: MessageHistoryTagsTable, globalTagsTable: GlobalMessageHistoryTagsTable, localTagsTable: LocalMessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable, textIndexTable: MessageHistoryTextIndexTable, summaryTable: MessageHistoryTagsSummaryTable, pendingActionsTable: PendingMessageActionsTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, messageHistoryIndexTable: MessageHistoryIndexTable, messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, tagsTable: MessageHistoryTagsTable, globalTagsTable: GlobalMessageHistoryTagsTable, localTagsTable: LocalMessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable, textIndexTable: MessageHistoryTextIndexTable, summaryTable: MessageHistoryTagsSummaryTable, pendingActionsTable: PendingMessageActionsTable) {
         self.messageHistoryIndexTable = messageHistoryIndexTable
+        self.messageHistoryHoleIndexTable = messageHistoryHoleIndexTable
         self.messageMediaTable = messageMediaTable
         self.historyMetadataTable = historyMetadataTable
         self.globallyUniqueMessageIdsTable = globallyUniqueMessageIdsTable
@@ -1488,7 +1490,7 @@ final class MessageHistoryTable: Table {
                 }
             }*/
             
-            self.valueBox.remove(self.table, key: key)
+            self.valueBox.remove(self.table, key: key, secure: true)
             return (resultTags, resultGlobalTags)
         } else {
             return nil
@@ -1638,7 +1640,7 @@ final class MessageHistoryTable: Table {
                 }
             }
             
-            self.valueBox.remove(self.table, key: self.key(index))
+            self.valueBox.remove(self.table, key: self.key(index), secure: false)
             
             let updatedIndex = message.index
             
@@ -1992,7 +1994,7 @@ final class MessageHistoryTable: Table {
             return (previousMessage.tags, previousMessage.globalTags)
             
             
-            self.valueBox.remove(self.table, key: self.key(index))
+            self.valueBox.remove(self.table, key: self.key(index), secure: false)
             //TODO changed updatedIndex -> index
             #if os(iOS)
                 //assert(false)

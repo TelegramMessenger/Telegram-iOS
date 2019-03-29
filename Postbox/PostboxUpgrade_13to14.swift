@@ -1,9 +1,9 @@
 import Foundation
 
-func postboxUpgrade_13to14(metadataTable: MetadataTable, valueBox: ValueBox) {
+func postboxUpgrade_13to14(metadataTable: MetadataTable, valueBox: ValueBox, progress: (Float) -> Void) {
     var peerSettings: [PeerId: Data] = [:]
     
-    let peerNotificationSettingsTable = ValueBoxTable(id: 19, keyType: .int64)
+    let peerNotificationSettingsTable = ValueBoxTable(id: 19, keyType: .int64, compactValuesOnCreation: false)
     valueBox.scanInt64(peerNotificationSettingsTable, values: { key, value in
         let peerId = PeerId(key)
         peerSettings[peerId] = value.makeData()

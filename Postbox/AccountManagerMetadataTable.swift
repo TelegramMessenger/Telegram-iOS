@@ -148,7 +148,7 @@ private enum MetadataKey: Int64 {
 
 final class AccountManagerMetadataTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64)
+        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
     }
     
     private func key(_ key: MetadataKey) -> ValueBoxKey {
@@ -204,7 +204,7 @@ final class AccountManagerMetadataTable: Table {
                 self.valueBox.set(self.table, key: self.key(.currentAuthAccount), value: encoder.readBufferNoCopy())
             })
         } else {
-            self.valueBox.remove(self.table, key: self.key(.currentAuthAccount))
+            self.valueBox.remove(self.table, key: self.key(.currentAuthAccount), secure: false)
         }
         operations.append(.updateCurrentAuthAccountRecord(record))
     }

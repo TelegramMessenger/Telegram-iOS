@@ -43,7 +43,7 @@ private func decodeValue(value: ReadBuffer, peerId: PeerId, namespace: MessageId
 
 final class MessageHistoryHoleIndexTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     let metadataTable: MessageHistoryMetadataTable
@@ -257,7 +257,7 @@ final class MessageHistoryHoleIndexTable: Table {
             if range.lowerBound >= holeRange.lowerBound && range.upperBound <= holeRange.upperBound {
                 alreadyMapped = true
                 return
-            } else if range.overlaps(holeRange) || range.lowerBound == holeRange.upperBound + 1 || range.upperBound == holeRange.lowerBound - 1 {
+            } else if range.overlaps(holeRange) || (holeRange.upperBound != Int32.max && range.lowerBound == holeRange.upperBound + 1) || range.upperBound == holeRange.lowerBound - 1 {
                 removeKeys.append(upperId.id)
                 let unionRange: ClosedRange = min(range.lowerBound, holeRange.lowerBound) ... max(range.upperBound, holeRange.upperBound)
                 insertRanges.insert(integersIn: Int(unionRange.lowerBound) ... Int(unionRange.upperBound))
@@ -292,7 +292,7 @@ final class MessageHistoryHoleIndexTable: Table {
         insertedIndices.insert(integersIn: Int(range.lowerBound) ... Int(range.upperBound))
         
         for id in removeKeys {
-            self.valueBox.remove(self.table, key: self.key(id: MessageId(peerId: peerId, namespace: namespace, id: id), space: space))
+            self.valueBox.remove(self.table, key: self.key(id: MessageId(peerId: peerId, namespace: namespace, id: id), space: space), secure: false)
         }
         
         for insertRange in insertRanges.rangeView {
@@ -357,7 +357,7 @@ final class MessageHistoryHoleIndexTable: Table {
         }, limit: 1)
         
         for id in removeKeys {
-            self.valueBox.remove(self.table, key: self.key(id: MessageId(peerId: peerId, namespace: namespace, id: id), space: space))
+            self.valueBox.remove(self.table, key: self.key(id: MessageId(peerId: peerId, namespace: namespace, id: id), space: space), secure: false)
         }
         
         for insertRange in insertRanges.rangeView {

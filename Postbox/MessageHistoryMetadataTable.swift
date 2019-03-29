@@ -8,7 +8,8 @@ private enum MetadataPrefix: Int8 {
     case NextPeerOperationLogIndex = 5
     case ChatListGroupInitialized = 6
     case GroupFeedIndexInitialized = 7
-    case PeerHistoryInitialized = 8
+    case ShouldReindexUnreadCounts = 8
+    case PeerHistoryInitialized = 9
 }
 
 public struct ChatListTotalUnreadCounters: PostboxCoding, Equatable {
@@ -119,7 +120,7 @@ private enum InitializedChatListKey: Hashable {
 
 final class MessageHistoryMetadataTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     let sharedPeerHistoryInitializedKey = ValueBoxKey(length: 8 + 1)
@@ -208,6 +209,22 @@ final class MessageHistoryMetadataTable: Table {
                     return false
                 }
             }
+        }
+    }
+    
+    func setShouldReindexUnreadCounts(value: Bool) {
+        if value {
+            self.valueBox.set(self.table, key: self.key(MetadataPrefix.ShouldReindexUnreadCounts), value: MemoryBuffer())
+        } else {
+            self.valueBox.remove(self.table, key: self.key(MetadataPrefix.ShouldReindexUnreadCounts), secure: false)
+        }
+    }
+    
+    func shouldReindexUnreadCounts() -> Bool {
+        if self.valueBox.exists(self.table, key: self.key(MetadataPrefix.ShouldReindexUnreadCounts)) {
+            return true
+        } else {
+            return false
         }
     }
     
@@ -376,7 +393,7 @@ final class MessageHistoryMetadataTable: Table {
                     sharedBuffer.write(&mutableMaxId, offset: 0, length: 4)
                     self.valueBox.set(self.table, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace), value: sharedBuffer)
                 } else {
-                    self.valueBox.remove(self.table, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace))
+                    self.valueBox.remove(self.table, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace), secure: false)
                 }
             }
         }

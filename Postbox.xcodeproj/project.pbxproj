@@ -44,6 +44,8 @@
 		D01C7EDF1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7EDD1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift */; };
 		D01C7F071EFC1ED3008305F1 /* UnorderedItemListTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7F061EFC1ED3008305F1 /* UnorderedItemListTable.swift */; };
 		D01C7F081EFC1ED3008305F1 /* UnorderedItemListTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7F061EFC1ED3008305F1 /* UnorderedItemListTable.swift */; };
+		D01E79E82248F661005237FE /* PostboxUpgrade_19to20.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01E79E72248F661005237FE /* PostboxUpgrade_19to20.swift */; };
+		D01E79E92248F661005237FE /* PostboxUpgrade_19to20.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01E79E72248F661005237FE /* PostboxUpgrade_19to20.swift */; };
 		D01F7D9B1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F7D9A1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift */; };
 		D01F7D9D1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F7D9C1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift */; };
 		D021E0D41DB4FAE100C6B04F /* ItemCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0D31DB4FAE100C6B04F /* ItemCollection.swift */; };
@@ -144,6 +146,10 @@
 		D07CFF811DCA765D00761F81 /* PeerChatInterfaceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07CFF801DCA765D00761F81 /* PeerChatInterfaceState.swift */; };
 		D07CFF831DCA909100761F81 /* PeerChatInterfaceStateTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07CFF821DCA909100761F81 /* PeerChatInterfaceStateTable.swift */; };
 		D07CFF851DCA99C400761F81 /* InitialMessageHistoryData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07CFF841DCA99C400761F81 /* InitialMessageHistoryData.swift */; };
+		D07E7B45224E227100BB053B /* PostboxUpgrade_20to21.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07E7B44224E227100BB053B /* PostboxUpgrade_20to21.swift */; };
+		D07E7B46224E227100BB053B /* PostboxUpgrade_20to21.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07E7B44224E227100BB053B /* PostboxUpgrade_20to21.swift */; };
+		D07E7B48224E562C00BB053B /* PostboxUpgrade_21to22.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07E7B47224E562C00BB053B /* PostboxUpgrade_21to22.swift */; };
+		D07E7B49224E562C00BB053B /* PostboxUpgrade_21to22.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07E7B47224E562C00BB053B /* PostboxUpgrade_21to22.swift */; };
 		D08775001E3E3D9F00A97350 /* PreferencesTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FF1E3E3D9F00A97350 /* PreferencesTable.swift */; };
 		D08775011E3E3D9F00A97350 /* PreferencesTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08774FF1E3E3D9F00A97350 /* PreferencesTable.swift */; };
 		D08775031E3E3E7400A97350 /* PreferencesEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08775021E3E3E7400A97350 /* PreferencesEntry.swift */; };
@@ -407,6 +413,7 @@
 		D01BAA541ED1D70C00295217 /* ManagedFile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedFile.swift; sourceTree = "<group>"; };
 		D01C7EDD1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTextIndexTable.swift; sourceTree = "<group>"; };
 		D01C7F061EFC1ED3008305F1 /* UnorderedItemListTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UnorderedItemListTable.swift; sourceTree = "<group>"; };
+		D01E79E72248F661005237FE /* PostboxUpgrade_19to20.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostboxUpgrade_19to20.swift; sourceTree = "<group>"; };
 		D01F7D9A1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryInvalidatedReadStateTable.swift; sourceTree = "<group>"; };
 		D01F7D9C1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizePeerReadStatesView.swift; sourceTree = "<group>"; };
 		D021E0D31DB4FAE100C6B04F /* ItemCollection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemCollection.swift; sourceTree = "<group>"; };
@@ -469,6 +476,8 @@
 		D07CFF801DCA765D00761F81 /* PeerChatInterfaceState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerChatInterfaceState.swift; sourceTree = "<group>"; };
 		D07CFF821DCA909100761F81 /* PeerChatInterfaceStateTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerChatInterfaceStateTable.swift; sourceTree = "<group>"; };
 		D07CFF841DCA99C400761F81 /* InitialMessageHistoryData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InitialMessageHistoryData.swift; sourceTree = "<group>"; };
+		D07E7B44224E227100BB053B /* PostboxUpgrade_20to21.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostboxUpgrade_20to21.swift; sourceTree = "<group>"; };
+		D07E7B47224E562C00BB053B /* PostboxUpgrade_21to22.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostboxUpgrade_21to22.swift; sourceTree = "<group>"; };
 		D08774FF1E3E3D9F00A97350 /* PreferencesTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PreferencesTable.swift; sourceTree = "<group>"; };
 		D08775021E3E3E7400A97350 /* PreferencesEntry.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PreferencesEntry.swift; sourceTree = "<group>"; };
 		D08775051E3E3F2100A97350 /* PreferencesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
@@ -715,6 +724,9 @@
 				D001388520BD942B007C9721 /* PostboxUpgrade_16to17.swift */,
 				D0119CAC20C9E7A100895300 /* PostboxUpgrade_17to18.swift */,
 				D03387512242E32A007A2CE4 /* PostboxUpgrade_18to19.swift */,
+				D01E79E72248F661005237FE /* PostboxUpgrade_19to20.swift */,
+				D07E7B44224E227100BB053B /* PostboxUpgrade_20to21.swift */,
+				D07E7B47224E562C00BB053B /* PostboxUpgrade_21to22.swift */,
 			);
 			name = Upgrade;
 			sourceTree = "<group>";
@@ -1193,6 +1205,7 @@
 				D037178C20D923CA004773C8 /* CachedItemView.swift in Sources */,
 				D0A352F91F549D95001423DC /* InvalidatedMessageHistoryTagSummariesView.swift in Sources */,
 				D018BE56218B9AA900C02DDC /* TimeBasedCleanup.swift in Sources */,
+				D07E7B46224E227100BB053B /* PostboxUpgrade_20to21.swift in Sources */,
 				D073CE791DCBF3B4007511FD /* ChatListHole.swift in Sources */,
 				D0F53BF41E794C6700117362 /* PeerChatStateView.swift in Sources */,
 				D0B4181C1D7DFDF1004562A4 /* SQLite-Bridging.m in Sources */,
@@ -1247,6 +1260,7 @@
 				D04614312004E24600EC0EF2 /* LocalMessageHistoryTagsTable.swift in Sources */,
 				D0F7B1DD1E045C6A007EB8A5 /* PeerChatInterfaceStateTable.swift in Sources */,
 				D098C6F21D7E1201007784E4 /* Database.swift in Sources */,
+				D07E7B49224E562C00BB053B /* PostboxUpgrade_21to22.swift in Sources */,
 				D0B844061DAB91B5005F29E1 /* MediaResourceStatus.swift in Sources */,
 				D0F7B1DB1E045C6A007EB8A5 /* ItemCollectionInfoTable.swift in Sources */,
 				D0F7B1D41E045C6A007EB8A5 /* PeerPresenceTable.swift in Sources */,
@@ -1297,6 +1311,7 @@
 				D0F7B1D01E045C6A007EB8A5 /* KeychainTable.swift in Sources */,
 				D0BEAF6E1E54B77900BD963D /* AccountManagerRecordTable.swift in Sources */,
 				D0B4184F1D7DFE20004562A4 /* ChatListHolesView.swift in Sources */,
+				D01E79E92248F661005237FE /* PostboxUpgrade_19to20.swift in Sources */,
 				D0105D6C218362F2007C04A7 /* TempBox.swift in Sources */,
 				D0F7B1D81E045C6A007EB8A5 /* MessageHistoryInvalidatedReadStateTable.swift in Sources */,
 				D0B418581D7DFE29004562A4 /* SeedConfiguration.swift in Sources */,
@@ -1373,6 +1388,7 @@
 				D0F9E85B1C565EBB00037222 /* MessageMediaTable.swift in Sources */,
 				D037178B20D923CA004773C8 /* CachedItemView.swift in Sources */,
 				D049EAF01E44D9B900A2CD3A /* PostboxStateView.swift in Sources */,
+				D07E7B45224E227100BB053B /* PostboxUpgrade_20to21.swift in Sources */,
 				D018BE55218B9AA900C02DDC /* TimeBasedCleanup.swift in Sources */,
 				D0079F631D5A242500A27A2C /* ContactPeerIdsView.swift in Sources */,
 				D0E23DE21E808A9400B9B6D2 /* ItemCollectionIdsView.swift in Sources */,
@@ -1427,6 +1443,7 @@
 				D0C26D6F1FE2E737004ABF18 /* GroupFeedReadState.swift in Sources */,
 				D0FA0AC71E77F0A2005BB9B7 /* ItemCollectionInfosView.swift in Sources */,
 				D0F019FD1E1DA0CC00F05AB3 /* PeerMergedOperationLogView.swift in Sources */,
+				D07E7B48224E562C00BB053B /* PostboxUpgrade_21to22.swift in Sources */,
 				D048B33D203C838500038D05 /* PostboxUpgrade_15to16.swift in Sources */,
 				D0F9E8651C58CB7F00037222 /* ChatListTable.swift in Sources */,
 				D0E1D30C1ECA1F5500FCEEF1 /* GlobalMessageHistoryTagsTable.swift in Sources */,
@@ -1476,6 +1493,7 @@
 				D04614302004E24600EC0EF2 /* LocalMessageHistoryTagsTable.swift in Sources */,
 				D00EED1E1C81F28D00341DFF /* MessageHistoryTagsTable.swift in Sources */,
 				D044CA2C1C617E2D002160FF /* MessageHistoryMetadataTable.swift in Sources */,
+				D01E79E82248F661005237FE /* PostboxUpgrade_19to20.swift in Sources */,
 				D0105D6B218362F2007C04A7 /* TempBox.swift in Sources */,
 				D0FC194A201E8EAF00FEDBB2 /* MediaBoxFile.swift in Sources */,
 				D03120FC1DA55427006A2A60 /* PeerNotificationSettings.swift in Sources */,
@@ -1588,6 +1606,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1645,6 +1664,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.PostboxMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1729,6 +1749,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
@@ -1792,6 +1813,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.PostboxMac;
@@ -1877,6 +1899,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
@@ -1940,6 +1963,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.PostboxMac;
@@ -2017,6 +2041,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -2112,6 +2137,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -2169,6 +2195,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.PostboxMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -2253,6 +2280,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
@@ -2316,6 +2344,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.PostboxMac;
@@ -2355,6 +2384,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.PostboxMac;
@@ -2392,6 +2422,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.PostboxMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -2468,6 +2499,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -2523,6 +2555,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.PostboxMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -2607,6 +2640,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS5",
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
+					"-DNDEBUG",
 				);
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";

@@ -22,11 +22,11 @@ private struct PrivatePeerId: Hashable {
     }
 }
 
-func postboxUpgrade_18to19(metadataTable: MetadataTable, valueBox: ValueBox) {
+func postboxUpgrade_18to19(metadataTable: MetadataTable, valueBox: ValueBox, progress: (Float) -> Void) {
     let startTime = CFAbsoluteTimeGetCurrent()
     
-    let globalMessageIdsTable = ValueBoxTable(id: 3, keyType: .int64)
-    let messageHistoryIndexTable = ValueBoxTable(id: 4, keyType: .binary)
+    let globalMessageIdsTable = ValueBoxTable(id: 3, keyType: .int64, compactValuesOnCreation: false)
+    let messageHistoryIndexTable = ValueBoxTable(id: 4, keyType: .binary, compactValuesOnCreation: true)
     
     valueBox.dropTable(globalMessageIdsTable)
     
@@ -51,7 +51,7 @@ func postboxUpgrade_18to19(metadataTable: MetadataTable, valueBox: ValueBox) {
     absoluteLowerBound.setInt64(0, value: 0)
     
     let absoluteUpperBound = ValueBoxKey(length: 8)
-    absoluteUpperBound.setInt64(0, value: Int64.max)
+    absoluteUpperBound.setInt64(0, value: Int64.max - 1)
     
     let sharedGlobalIdsKey = ValueBoxKey(length: 8)
     let sharedGlobalIdsBuffer = WriteBuffer()
@@ -77,26 +77,34 @@ func postboxUpgrade_18to19(metadataTable: MetadataTable, valueBox: ValueBox) {
                 
                 let sharedIdPeerId = currentPeerId.toInt64()
                 
-                valueBox.range(messageHistoryIndexTable, start: peerCloudLowerBound, end: peerCloudLowerBound.successor, keys: { key in
+                valueBox.range(messageHistoryIndexTable, start: peerCloudLowerBound, end: peerCloudLowerBound.successor, values: { key, value in
                     //assert(key.getInt64(0) == currentPeerId.toInt64())
                     //assert(key.getInt32(8) == 0)
                     
                     totalMessageCount += 1
                     
-                    let id = key.getInt32(8 + 4)
+                    let HistoryEntryTypeMask: Int8 = 1
+                    let HistoryEntryTypeMessage: Int8 = 0
                     
-                    /*let res = checkMessageIds.insert(MessageId(peerId: PeerId(currentPeerId.toInt64()), namespace: 0, id: id))
-                    assert(res.inserted)*/
+                    var flags: Int8 = 0
+                    value.read(&flags, offset: 0, length: 1)
                     
-                    sharedGlobalIdsKey.setInt64(0, value: Int64(id))
-                    
-                    sharedGlobalIdsBuffer.reset()
-                    var idPeerId: Int64 = sharedIdPeerId
-                    var idNamespace: Int32 = 0
-                    sharedGlobalIdsBuffer.write(&idPeerId, offset: 0, length: 8)
-                    sharedGlobalIdsBuffer.write(&idNamespace, offset: 0, length: 4)
-                    
-                    valueBox.set(globalMessageIdsTable, key: sharedGlobalIdsKey, value: sharedGlobalIdsBuffer)
+                    if (flags & HistoryEntryTypeMask) == HistoryEntryTypeMessage {
+                        let id = key.getInt32(8 + 4)
+                        
+                        /*let res = checkMessageIds.insert(MessageId(peerId: PeerId(currentPeerId.toInt64()), namespace: 0, id: id))
+                        assert(res.inserted)*/
+                        
+                        sharedGlobalIdsKey.setInt64(0, value: Int64(id))
+                        
+                        sharedGlobalIdsBuffer.reset()
+                        var idPeerId: Int64 = sharedIdPeerId
+                        var idNamespace: Int32 = 0
+                        sharedGlobalIdsBuffer.write(&idPeerId, offset: 0, length: 8)
+                        sharedGlobalIdsBuffer.write(&idNamespace, offset: 0, length: 4)
+                        
+                        valueBox.set(globalMessageIdsTable, key: sharedGlobalIdsKey, value: sharedGlobalIdsBuffer)
+                    }
                     return true
                 }, limit: 0)
             }

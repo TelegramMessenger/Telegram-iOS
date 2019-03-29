@@ -52,4 +52,12 @@ public final class Database {
             return false
         }
     }
+    
+    public func currentError() -> String? {
+        if let error = sqlite3_errmsg(self.handle), let str = NSString(utf8String: error) {
+            return "SQL error \(str)"
+        } else {
+            return nil
+        }
+    }
 }

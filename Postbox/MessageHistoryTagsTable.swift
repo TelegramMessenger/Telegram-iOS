@@ -2,7 +2,7 @@ import Foundation
 
 class MessageHistoryTagsTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private let sharedKey = ValueBoxKey(length: 8 + 4 + 4 + 4 + 4)
@@ -51,7 +51,7 @@ class MessageHistoryTagsTable: Table {
     
     func remove(_ tagMask: MessageTags, index: MessageIndex, updatedSummaries: inout[MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
         for tag in tagMask {
-            self.valueBox.remove(self.table, key: self.key(tag, index: index, key: self.sharedKey))
+            self.valueBox.remove(self.table, key: self.key(tag, index: index, key: self.sharedKey), secure: false)
             
             if self.summaryTags.contains(tag) {
                 self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: index.id.peerId, namespace: index.id.namespace), id: index.id.id, updatedSummaries: &updatedSummaries, invalidateSummaries: &invalidateSummaries)

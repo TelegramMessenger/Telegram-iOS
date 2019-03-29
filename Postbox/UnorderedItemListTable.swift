@@ -51,7 +51,7 @@ private func extractEntryInfo(_ value: ReadBuffer) -> UnorderedItemListEntryInfo
 
 final class UnorderedItemListTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: false)
     }
     
     private func metaInfoKey(tag: UnorderedItemListEntryTag) -> ValueBoxKey {
@@ -232,7 +232,7 @@ final class UnorderedItemListTable: Table {
         }
         
         for id in removeItemIds {
-            self.valueBox.remove(self.table, key: self.entryKey(tag: tag, id: id))
+            self.valueBox.remove(self.table, key: self.entryKey(tag: tag, id: id), secure: false)
         }
         
         return true

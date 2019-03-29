@@ -130,7 +130,7 @@ private let reverseIndexNamespace = ReverseIndexNamespace(nil)
 
 final class PeerNameIndexTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64)
+        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
     }
     
     private let peerTable: PeerTable
@@ -197,7 +197,7 @@ final class PeerNameIndexTable: Table {
                                 self.peerNameTokenIndexTable.remove(namespace: reverseIndexNamespace, reference: PeerIdReverseIndexReference(value: peerId.toInt64()), tokens: entryUpdate.initialTokens)
                             }
                             if !entryUpdate.initialCategories.isEmpty {
-                                self.valueBox.remove(self.table, key: self.key(peerId))
+                                self.valueBox.remove(self.table, key: self.key(peerId), secure: false)
                             }
                         } else {
                             let updatedTokens: [ValueBoxKey]

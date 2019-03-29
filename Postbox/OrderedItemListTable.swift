@@ -14,7 +14,7 @@ private enum OrderedItemListKeyNamespace: UInt8 {
 
 final class OrderedItemListTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: false)
     }
     
     private let indexTable: OrderedItemListIndexTable
@@ -112,10 +112,10 @@ final class OrderedItemListTable: Table {
         }, limit: 0)
         
         for index in currentIndices {
-            self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: index))
+            self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: index), secure: false)
         }
         for id in currentIds {
-            self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: id))
+            self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: id), secure: false)
             self.indexTable.remove(collectionId: collectionId, id: id)
         }
         
@@ -146,12 +146,12 @@ final class OrderedItemListTable: Table {
         let offsetUntilIndex: Int
         if let index = orderedIds.index(of: item.id) {
             offsetUntilIndex = index
-            self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: UInt32(index)))
+            self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: UInt32(index)), secure: false)
         } else {
             if let removeTailIfCountExceeds = removeTailIfCountExceeds, orderedIds.count + 1 > removeTailIfCountExceeds {
                 self.indexTable.remove(collectionId: collectionId, id: orderedIds[orderedIds.count - 1])
-                self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: orderedIds[orderedIds.count - 1]))
-                self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: UInt32(orderedIds.count - 1)))
+                self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: orderedIds[orderedIds.count - 1]), secure: false)
+                self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: UInt32(orderedIds.count - 1)), secure: false)
                 orderedIds.removeLast()
             }
             
@@ -178,11 +178,11 @@ final class OrderedItemListTable: Table {
             var orderedIds = self.getItemIds(collectionId: collectionId)
             
             if !orderedIds.isEmpty {
-                self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: itemId))
-                self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: index))
+                self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: itemId), secure: false)
+                self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: index), secure: false)
                 
-                self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: orderedIds[orderedIds.count - 1]))
-                self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: UInt32(orderedIds.count - 1)))
+                self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: orderedIds[orderedIds.count - 1]), secure: false)
+                self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: UInt32(orderedIds.count - 1)), secure: false)
                 
                 for i in (Int(index) + 1) ..< orderedIds.count {
                     var updatedIndex: UInt32 = UInt32(i - 1)

@@ -2,7 +2,7 @@ import Foundation
 
 final class TimestampBasedMessageAttributesIndexTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private func key(tag: UInt16, id: MessageId) -> ValueBoxKey {
@@ -30,6 +30,6 @@ final class TimestampBasedMessageAttributesIndexTable: Table {
     }
     
     func remove(tag: UInt16, id: MessageId) {
-        self.valueBox.remove(self.table, key: self.key(tag: tag, id: id))
+        self.valueBox.remove(self.table, key: self.key(tag: tag, id: id), secure: false)
     }
 }

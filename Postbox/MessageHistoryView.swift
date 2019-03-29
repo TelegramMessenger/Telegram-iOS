@@ -1435,17 +1435,7 @@ final class MutableMessageHistoryView {
                     let hole = MessageHistoryViewPeerHole(peerId: id.peerId, namespace: id.namespace, indices: holeIndices)
                     switch self.anchorIndex {
                         case let .message(index, _) where index.id.peerId == id.peerId && index.id.namespace == id.namespace && holeIndices.contains(Int(index.id.id)):
-                            /*if case let .group(groupId) = self.peerIds {
-                             if let lowerIndex = lowerIndex {
-                             if index >= lowerIndex && index <= hole.maxIndex {
-                             return (.groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.maxIndex), .AroundIndex(index))
-                             }
-                             } else {
-                             assertionFailure()
-                             }
-                             } else {*/
                             return (.peer(hole), .AroundId(index.id))
-                            //}
                         default:
                             if toLower {
                                 return (.peer(hole), .UpperToLower)
@@ -1453,7 +1443,6 @@ final class MutableMessageHistoryView {
                                 return (.peer(hole), .LowerToUpper)
                             }
                     }
-                    //return (.peer(hole), self.anchorIndex.isLessOrEqual(to: hole.maxIndex) ? .LowerToUpper : .UpperToLower)
                 }
             }
             return nil
@@ -1470,54 +1459,6 @@ final class MutableMessageHistoryView {
                 if let result = processId(entries[i].index.id, toLower: true) {
                     return result
                 }
-                /*if case let .HoleEntry(hole, _, lowerIndex) = self.entries[i] {
-                    switch self.anchorIndex {
-                        case let .message(index, _):
-                            /*if case let .group(groupId) = self.peerIds {
-                                if let lowerIndex = lowerIndex {
-                                    if index >= lowerIndex && index <= hole.maxIndex {
-                                        return (.groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.maxIndex), .AroundIndex(index))
-                                    }
-                                    
-                                    if hole.maxIndex.timestamp >= Int32.max - 1 && index.timestamp >= Int32.max - 1 {
-                                        return (.groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.maxIndex), .UpperToLower)
-                                    }
-                                } else {
-                                    assertionFailure()
-                                }
-                            } else {*/
-                                if index.id.peerId == hole.maxIndex.id.peerId && index.id.namespace == hole.id.namespace {
-                                    if index.id.id >= hole.min && index.id.id <= hole.maxIndex.id.id {
-                                        return (.peer(hole), .AroundId(index.id))
-                                    }
-                                }
-                            
-                                if hole.maxIndex.timestamp == Int32.max && index.timestamp == Int32.max {
-                                    return (.peer(hole), .UpperToLower)
-                                }
-                            //}
-                        default:
-                            break
-                    }
-                    
-                    if case .upperBound = self.anchorIndex, hole.maxIndex.timestamp >= Int32.max - 1 {
-                        /*if case let .group(groupId) = self.peerIds {
-                            if let lowerIndex = lowerIndex {
-                                return (.groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.maxIndex), .UpperToLower)
-                            }
-                        } else {*/
-                            return (.peer(hole), .UpperToLower)
-                        //}
-                    } else {
-                        /*if case let .group(groupId) = self.peerIds {
-                            if let lowerIndex = lowerIndex {
-                                return (.groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.maxIndex), self.anchorIndex.isLessOrEqual(to: hole.maxIndex) ? .LowerToUpper : .UpperToLower)
-                            }
-                        } else {*/
-                            return (.peer(hole), self.anchorIndex.isLessOrEqual(to: hole.maxIndex) ? .LowerToUpper : .UpperToLower)
-                        //}
-                    }
-                }*/
             }
             
             if i == -1 || j == self.entries.count {
@@ -1564,14 +1505,29 @@ final class MutableMessageHistoryView {
                     }
                 }
                 
-                for (peerId, namespace, _) in namespaceBounds {
+                for (peerId, namespace, bounds) in namespaceBounds {
                     if let indices = self.holes[HoleKey(peerId: peerId, namespace: namespace)] {
                         assert(!indices.isEmpty)
-                        let hole = MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, indices: indices)
-                        if toLower {
-                            return (.peer(hole), .UpperToLower)
+                        if let bounds = bounds {
+                            var updatedIndices = indices
+                            if toLower {
+                                updatedIndices.remove(integersIn: Int(bounds.lowerBound) ... Int(Int32.max))
+                            } else {
+                                updatedIndices.remove(integersIn: 0 ... Int(bounds.upperBound))
+                            }
+                            let hole = MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, indices: updatedIndices)
+                            if toLower {
+                                return (.peer(hole), .UpperToLower)
+                            } else {
+                                return (.peer(hole), .LowerToUpper)
+                            }
                         } else {
-                            return (.peer(hole), .LowerToUpper)
+                            let hole = MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, indices: indices)
+                            if toLower {
+                                return (.peer(hole), .UpperToLower)
+                            } else {
+                                return (.peer(hole), .LowerToUpper)
+                            }
                         }
                     }
                 }

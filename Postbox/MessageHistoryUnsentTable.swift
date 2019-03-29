@@ -7,7 +7,7 @@ enum IntermediateMessageHistoryUnsentOperation {
 
 final class MessageHistoryUnsentTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private let sharedKey = ValueBoxKey(length: 4 + 4 + 8)
@@ -38,7 +38,7 @@ final class MessageHistoryUnsentTable: Table {
     }
     
     func remove(_ id: MessageId, operations: inout [IntermediateMessageHistoryUnsentOperation]) {
-        self.valueBox.remove(self.table, key: self.key(id))
+        self.valueBox.remove(self.table, key: self.key(id), secure: false)
         operations.append(.Remove(id))
     }
     

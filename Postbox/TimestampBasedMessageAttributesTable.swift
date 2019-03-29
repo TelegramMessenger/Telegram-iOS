@@ -17,7 +17,7 @@ enum TimestampBasedMessageAttributesOperation {
 
 final class TimestampBasedMessageAttributesTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private let indexTable: TimestampBasedMessageAttributesIndexTable
@@ -57,7 +57,7 @@ final class TimestampBasedMessageAttributesTable: Table {
             if previousTimestamp == timestamp {
                 return
             } else {
-                self.valueBox.remove(self.table, key: self.key(tag: tag, timestamp: previousTimestamp, id: id))
+                self.valueBox.remove(self.table, key: self.key(tag: tag, timestamp: previousTimestamp, id: id), secure: false)
                 operations.append(.remove(TimestampBasedMessageAttributesEntry(tag: tag, timestamp: previousTimestamp, messageId: id)))
             }
         }
@@ -68,7 +68,7 @@ final class TimestampBasedMessageAttributesTable: Table {
     
     func remove(tag: UInt16, id: MessageId, operations: inout [TimestampBasedMessageAttributesOperation]) {
         if let previousTimestamp = self.indexTable.get(tag: tag, id: id) {
-            self.valueBox.remove(self.table, key: self.key(tag: tag, timestamp: previousTimestamp, id: id))
+            self.valueBox.remove(self.table, key: self.key(tag: tag, timestamp: previousTimestamp, id: id), secure: false)
             self.indexTable.remove(tag: tag, id: id)
             operations.append(.remove(TimestampBasedMessageAttributesEntry(tag: tag, timestamp: previousTimestamp, messageId: id)))
         }

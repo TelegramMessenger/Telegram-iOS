@@ -2,7 +2,7 @@ import Foundation
 
 final class PeerPresenceTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64)
+        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
     }
     
     private let sharedEncoder = PostboxEncoder()

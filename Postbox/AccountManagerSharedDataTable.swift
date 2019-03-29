@@ -2,7 +2,7 @@ import Foundation
 
 final class AccountManagerSharedDataTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: false)
     }
     
     func get(key: ValueBoxKey) -> PreferencesEntry? {
@@ -23,7 +23,7 @@ final class AccountManagerSharedDataTable: Table {
             self.valueBox.set(self.table, key: key, value: encoder.makeReadBufferAndReset())
             updatedKeys.insert(key)
         } else if self.get(key: key) != nil {
-            self.valueBox.remove(self.table, key: key)
+            self.valueBox.remove(self.table, key: key, secure: false)
             updatedKeys.insert(key)
         }
     }

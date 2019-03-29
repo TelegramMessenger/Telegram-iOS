@@ -31,17 +31,6 @@ private func extractPreviousKey(_ key: ValueBoxKey) -> (pinningIndex: UInt16?, i
     )
 }
 
-/*
- let key = ValueBoxKey(length: 4 + 2 + 4 + 1 + 4 + 8 + 1)
- key.setInt32(0, value: groupId?.rawValue ?? 0)
- key.setUInt16(4, value: keyValueForChatListPinningIndex(index.pinningIndex))
- key.setInt32(4 + 2, value: index.messageIndex.timestamp)
- key.setInt8(4 + 2 + 4, value: Int8(index.messageIndex.id.namespace))
- key.setInt32(4 + 2 + 4 + 1, value: index.messageIndex.id.id)
- key.setInt64(4 + 2 + 4 + 1 + 4, value: index.messageIndex.id.peerId.toInt64())
- key.setInt8(4 + 2 + 4 + 1 + 4 + 8, value: type.rawValue)
- */
-
 private func makeKey(groupId: Int32?, index: ChatListIndex, type: Int8) -> ValueBoxKey {
     let key = ValueBoxKey(length: 4 + 2 + 4 + 1 + 4 + 8 + 1)
     key.setInt32(0, value: groupId ?? 0)
@@ -71,8 +60,8 @@ private func extractNewKey(_ key: ValueBoxKey) -> (groupId: PeerGroupId?, pinnin
     )
 }
 
-func postboxUpgrade_14to15(metadataTable: MetadataTable, valueBox: ValueBox) {
-    let chatListTable = ValueBoxTable(id: 9, keyType: .binary)
+func postboxUpgrade_14to15(metadataTable: MetadataTable, valueBox: ValueBox, progress: (Float) -> Void) {
+    let chatListTable = ValueBoxTable(id: 9, keyType: .binary, compactValuesOnCreation: true)
     
     var values: [(ValueBoxKey, ValueBoxKey, Data)] = []
     
@@ -89,7 +78,7 @@ func postboxUpgrade_14to15(metadataTable: MetadataTable, valueBox: ValueBox) {
     })
     
     for (previous, _, _) in values {
-        valueBox.remove(chatListTable, key: previous)
+        valueBox.remove(chatListTable, key: previous, secure: false)
     }
     
     for (_, updatedKey, updatedValue) in values {

@@ -50,7 +50,7 @@ private func parseEntry(key: ValueBoxKey, value: ReadBuffer) -> GlobalMessageHis
 
 class GlobalMessageHistoryTagsTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private let sharedKey = ValueBoxKey(length: 4 + 4 + 4 + 4 + 8)
@@ -123,7 +123,7 @@ class GlobalMessageHistoryTagsTable: Table {
     
     func remove(_ tagMask: GlobalMessageTags, index: MessageIndex) {
         assert(tagMask.isSingleTag)
-        self.valueBox.remove(self.table, key: self.key(tagMask, index: index, key: self.sharedKey))
+        self.valueBox.remove(self.table, key: self.key(tagMask, index: index, key: self.sharedKey), secure: false)
     }
     
     func get(_ tagMask: GlobalMessageTags, index: MessageIndex) -> GlobalMessageHistoryTagsTableEntry? {

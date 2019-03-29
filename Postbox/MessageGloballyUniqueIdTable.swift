@@ -2,7 +2,7 @@ import Foundation
 
 final class MessageGloballyUniqueIdTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private let sharedKey = ValueBoxKey(length: 8 + 8)
@@ -39,6 +39,6 @@ final class MessageGloballyUniqueIdTable: Table {
     }
     
     func remove(peerId: PeerId, globallyUniqueId: Int64) {
-        self.valueBox.remove(self.table, key: self.key(peerId: peerId, id: globallyUniqueId))
+        self.valueBox.remove(self.table, key: self.key(peerId: peerId, id: globallyUniqueId), secure: false)
     }
 }

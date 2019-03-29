@@ -2,7 +2,7 @@ import Foundation
 
 final class GlobalMessageIdsTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64)
+        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
     }
     
     private let seedConfiguration: SeedConfiguration
@@ -46,6 +46,6 @@ final class GlobalMessageIdsTable: Table {
     }
     
     func remove(_ globalId: Int32) {
-        self.valueBox.remove(self.table, key: self.key(globalId))
+        self.valueBox.remove(self.table, key: self.key(globalId), secure: false)
     }
 }

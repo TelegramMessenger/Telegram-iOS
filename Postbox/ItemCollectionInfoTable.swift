@@ -6,7 +6,7 @@ enum ItemCollectionInfosOperation {
 
 final class ItemCollectionInfoTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: false)
     }
     
     private let sharedKey = ValueBoxKey(length: 4 + 4 + 8)
@@ -148,7 +148,7 @@ final class ItemCollectionInfoTable: Table {
         }, limit: 0)
         
         for key in currentCollectionKeys {
-            self.valueBox.remove(self.table, key: key)
+            self.valueBox.remove(self.table, key: key, secure: false)
         }
         
         var index: Int32 = 0

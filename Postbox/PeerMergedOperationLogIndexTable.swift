@@ -2,7 +2,7 @@ import Foundation
 
 final class PeerMergedOperationLogIndexTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private let metadataTable: PeerOperationLogMetadataTable
@@ -34,7 +34,7 @@ final class PeerMergedOperationLogIndexTable: Table {
     func remove(tag: PeerOperationLogTag, mergedIndices: [Int32]) {
         for index in mergedIndices {
             assert(self.valueBox.exists(self.table, key: self.key(tag: tag, index: index)))
-            self.valueBox.remove(self.table, key: self.key(tag: tag, index: index))
+            self.valueBox.remove(self.table, key: self.key(tag: tag, index: index), secure: false)
         }
     }
     

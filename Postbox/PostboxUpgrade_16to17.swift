@@ -205,11 +205,11 @@ private func getReadStateCount(valueBox: ValueBox, table: ValueBoxTable, peerId:
     return totalCount
 }
 
-func postboxUpgrade_16to17(metadataTable: MetadataTable, valueBox: ValueBox) {
-    let chatListIndexTable = ValueBoxTable(id: 8, keyType: .int64)
-    let notificationSettingsTable = ValueBoxTable(id: 19, keyType: .int64)
-    let readStateTable = ValueBoxTable(id: 14, keyType: .int64)
-    let messageHistoryMetadataTable = ValueBoxTable(id: 10, keyType: .binary)
+func postboxUpgrade_16to17(metadataTable: MetadataTable, valueBox: ValueBox, progress: (Float) -> Void) {
+    let chatListIndexTable = ValueBoxTable(id: 8, keyType: .int64, compactValuesOnCreation: false)
+    let notificationSettingsTable = ValueBoxTable(id: 19, keyType: .int64, compactValuesOnCreation: false)
+    let readStateTable = ValueBoxTable(id: 14, keyType: .int64, compactValuesOnCreation: false)
+    let messageHistoryMetadataTable = ValueBoxTable(id: 10, keyType: .binary, compactValuesOnCreation: true)
     
     var includedPeerIds: [PeerId] = []
     
