@@ -2366,7 +2366,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                     let (updatedInputMode, updatedClosedButtonKeyboardMessageId) = f($0)
-                    return $0.updatedInputMode({ _ in return updatedInputMode }).updatedInterfaceState({ $0.withUpdatedMessageActionsState({ $0.withUpdatedClosedButtonKeyboardMessageId(updatedClosedButtonKeyboardMessageId) }) })
+                    return $0.updatedInputMode({ _ in return updatedInputMode }).updatedInterfaceState({
+                        $0.withUpdatedMessageActionsState({ value in
+                            var value = value
+                            value.closedButtonKeyboardMessageId = updatedClosedButtonKeyboardMessageId
+                            return value
+                        })
+                    })
                 })
             }
         }, openStickers: { [weak self] in
@@ -2907,7 +2913,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     } else {
                         if let pinnedMessageId = strongSelf.presentationInterfaceState.pinnedMessage?.id {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                return $0.updatedInterfaceState({ $0.withUpdatedMessageActionsState({ $0.withUpdatedClosedPinnedMessageId(pinnedMessageId) }) })
+                                return $0.updatedInterfaceState({ $0.withUpdatedMessageActionsState({ value in
+                                    var value = value
+                                    value.closedPinnedMessageId = pinnedMessageId
+                                    return value
+                                    })
+                                })
                             })
                         }
                     }
@@ -2950,7 +2961,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     } else {
                         if let pinnedMessage = strongSelf.presentationInterfaceState.pinnedMessage {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                return $0.updatedInterfaceState({ $0.withUpdatedMessageActionsState({ $0.withUpdatedClosedPinnedMessageId(pinnedMessage.id) }) })
+                                return $0.updatedInterfaceState({ $0.withUpdatedMessageActionsState({ value in
+                                    var value = value
+                                    value.closedPinnedMessageId = pinnedMessage.id
+                                    return value
+                                }) })
                             })
                         }
                     }
@@ -3595,7 +3610,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                 
                 if case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel || peerId.namespace == Namespaces.Peer.CloudGroup {
                     if temporaryChatPresentationInterfaceState.interfaceState.replyMessageId == nil && temporaryChatPresentationInterfaceState.interfaceState.messageActionsState.processedSetupReplyMessageId != keyboardButtonsMessage.id  {
-                        temporaryChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInterfaceState({ $0.withUpdatedReplyMessageId(keyboardButtonsMessage.id).withUpdatedMessageActionsState({ $0.withUpdatedProcessedSetupReplyMessageId(keyboardButtonsMessage.id) }) })
+                        temporaryChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInterfaceState({ $0.withUpdatedReplyMessageId(keyboardButtonsMessage.id).withUpdatedMessageActionsState({ value in
+                            var value = value
+                            value.processedSetupReplyMessageId = keyboardButtonsMessage.id
+                            return value
+                        }) })
                     }
                 }
             } else {
@@ -3611,7 +3630,11 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         
         if let keyboardButtonsMessage = temporaryChatPresentationInterfaceState.keyboardButtonsMessage, keyboardButtonsMessage.requestsSetupReply {
             if temporaryChatPresentationInterfaceState.interfaceState.replyMessageId == nil && temporaryChatPresentationInterfaceState.interfaceState.messageActionsState.processedSetupReplyMessageId != keyboardButtonsMessage.id  {
-                temporaryChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInterfaceState({ $0.withUpdatedReplyMessageId(keyboardButtonsMessage.id).withUpdatedMessageActionsState({ $0.withUpdatedProcessedSetupReplyMessageId(keyboardButtonsMessage.id) }) })
+                temporaryChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInterfaceState({ $0.withUpdatedReplyMessageId(keyboardButtonsMessage.id).withUpdatedMessageActionsState({ value in
+                    var value = value
+                    value.processedSetupReplyMessageId = keyboardButtonsMessage.id
+                    return value
+                }) })
             }
         }
         

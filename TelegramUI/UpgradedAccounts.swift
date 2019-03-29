@@ -107,7 +107,7 @@ private func upgradedSharedDataValue(_ value: PreferencesEntry?) -> PreferencesE
     }
 }
 
-public func upgradedAccounts(accountManager: AccountManager, rootPath: String) -> Signal<Never, NoError> {
+public func upgradedAccounts(accountManager: AccountManager, rootPath: String, encryptionKey: Data) -> Signal<Never, NoError> {
     return accountManager.transaction { transaction -> (Int32, AccountRecordId?) in
         return (transaction.getVersion(), transaction.getCurrent()?.0)
     }
@@ -115,7 +115,7 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String) -
         var signal: Signal<Never, NoError> = .complete()
         if version < 1 {
             if let currentId = currentId {
-                let upgradePreferences = accountPreferenceEntries(rootPath: rootPath, id: currentId, keys: Set(preferencesKeyMapping.keys.map({ $0.key }) + applicationSpecificPreferencesKeyMapping.keys.map({ $0.key })))
+                let upgradePreferences = accountPreferenceEntries(rootPath: rootPath, id: currentId, keys: Set(preferencesKeyMapping.keys.map({ $0.key }) + applicationSpecificPreferencesKeyMapping.keys.map({ $0.key })), encryptionKey: encryptionKey)
                 |> mapToSignal { path, values -> Signal<Void, NoError> in
                     return accountManager.transaction { transaction -> Void in
                         for (key, value) in values {
@@ -187,7 +187,7 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String) -
         }
         if version < 2 {
             if let currentId = currentId {
-                let upgradeNotices = accountNoticeEntries(rootPath: rootPath, id: currentId)
+                let upgradeNotices = accountNoticeEntries(rootPath: rootPath, id: currentId, encryptionKey: encryptionKey)
                 |> mapToSignal { path, values -> Signal<Void, NoError> in
                     return accountManager.transaction { transaction -> Void in
                         for (key, value) in values {
@@ -221,7 +221,7 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String) -
         }
         if version < 3 {
             if let currentId = currentId {
-                let upgradeAccessChallengeData = accountLegacyAccessChallengeData(rootPath: rootPath, id: currentId)
+                let upgradeAccessChallengeData = accountLegacyAccessChallengeData(rootPath: rootPath, id: currentId, encryptionKey: encryptionKey)
                 |> mapToSignal { accessChallengeData -> Signal<Void, NoError> in
                     return accountManager.transaction { transaction -> Void in
                         if case .none = transaction.getAccessChallengeData() {
@@ -248,7 +248,7 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String) -
             |> mapToSignal { globalSettings, ids -> Signal<Never, NoError> in
                 var importSignal: Signal<Never, NoError> = .complete()
                 for id in ids {
-                    let importInfoAccounttSignal = accountTransaction(rootPath: rootPath, id: id, transaction: { transaction -> Void in
+                    let importInfoAccounttSignal = accountTransaction(rootPath: rootPath, id: id, encryptionKey: encryptionKey, transaction: { transaction -> Void in
                         transaction.updatePreferencesEntry(key: PreferencesKeys.contactsSettings, { current in
                             var settings = current as? ContactsSettings ?? ContactsSettings.defaultSettings
                             settings.synchronizeContacts = globalSettings._legacySynchronizeDeviceContacts

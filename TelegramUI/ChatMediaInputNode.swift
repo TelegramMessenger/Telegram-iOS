@@ -1592,7 +1592,11 @@ final class ChatMediaInputNode: ChatInputNode {
         let _ = (self.context.account.postbox.transaction { transaction -> Void in
             transaction.updatePeerChatInterfaceState(peerId, update: { current in
                 if let current = current as? ChatInterfaceState {
-                    return current.withUpdatedMessageActionsState({ $0.withUpdatedClosedPeerSpecificPackSetup(true) })
+                    return current.withUpdatedMessageActionsState({ value in
+                        var value = value
+                        value.closedPeerSpecificPackSetup = true
+                        return value
+                    })
                 } else {
                     return current
                 }

@@ -296,13 +296,14 @@ final class ChatEmbeddedInterfaceState: PeerChatListEmbeddedInterfaceState {
 }
 
 struct ChatInterfaceMessageActionsState: PostboxCoding, Equatable {
-    let closedButtonKeyboardMessageId: MessageId?
-    let processedSetupReplyMessageId: MessageId?
-    let closedPinnedMessageId: MessageId?
-    let closedPeerSpecificPackSetup: Bool
+    var closedButtonKeyboardMessageId: MessageId?
+    var processedSetupReplyMessageId: MessageId?
+    var closedPinnedMessageId: MessageId?
+    var closedPeerSpecificPackSetup: Bool = false
+    var dismissedAddContactPhoneNumber: String?
     
     var isEmpty: Bool {
-        return self.closedButtonKeyboardMessageId == nil && self.processedSetupReplyMessageId == nil && self.closedPinnedMessageId == nil && self.closedPeerSpecificPackSetup == false
+        return self.closedButtonKeyboardMessageId == nil && self.processedSetupReplyMessageId == nil && self.closedPinnedMessageId == nil && self.closedPeerSpecificPackSetup == false && self.dismissedAddContactPhoneNumber == nil
     }
     
     init() {
@@ -310,13 +311,15 @@ struct ChatInterfaceMessageActionsState: PostboxCoding, Equatable {
         self.processedSetupReplyMessageId = nil
         self.closedPinnedMessageId = nil
         self.closedPeerSpecificPackSetup = false
+        self.dismissedAddContactPhoneNumber = nil
     }
     
-    init(closedButtonKeyboardMessageId: MessageId?, processedSetupReplyMessageId: MessageId?, closedPinnedMessageId: MessageId?, closedPeerSpecificPackSetup: Bool) {
+    init(closedButtonKeyboardMessageId: MessageId?, processedSetupReplyMessageId: MessageId?, closedPinnedMessageId: MessageId?, closedPeerSpecificPackSetup: Bool, dismissedAddContactPhoneNumber: String?) {
         self.closedButtonKeyboardMessageId = closedButtonKeyboardMessageId
         self.processedSetupReplyMessageId = processedSetupReplyMessageId
         self.closedPinnedMessageId = closedPinnedMessageId
         self.closedPeerSpecificPackSetup = closedPeerSpecificPackSetup
+        self.dismissedAddContactPhoneNumber = dismissedAddContactPhoneNumber
     }
     
     init(decoder: PostboxDecoder) {
@@ -373,26 +376,12 @@ struct ChatInterfaceMessageActionsState: PostboxCoding, Equatable {
         }
         
         encoder.encodeInt32(self.closedPeerSpecificPackSetup ? 1 : 0, forKey: "cpss")
-    }
-    
-    static func ==(lhs: ChatInterfaceMessageActionsState, rhs: ChatInterfaceMessageActionsState) -> Bool {
-        return lhs.closedButtonKeyboardMessageId == rhs.closedButtonKeyboardMessageId && lhs.processedSetupReplyMessageId == rhs.processedSetupReplyMessageId && lhs.closedPinnedMessageId == rhs.closedPinnedMessageId && lhs.closedPeerSpecificPackSetup == rhs.closedPeerSpecificPackSetup
-    }
-    
-    func withUpdatedClosedButtonKeyboardMessageId(_ closedButtonKeyboardMessageId: MessageId?) -> ChatInterfaceMessageActionsState {
-        return ChatInterfaceMessageActionsState(closedButtonKeyboardMessageId: closedButtonKeyboardMessageId, processedSetupReplyMessageId: self.processedSetupReplyMessageId, closedPinnedMessageId: self.closedPinnedMessageId, closedPeerSpecificPackSetup: self.closedPeerSpecificPackSetup)
-    }
-    
-    func withUpdatedProcessedSetupReplyMessageId(_ processedSetupReplyMessageId: MessageId?) -> ChatInterfaceMessageActionsState {
-        return ChatInterfaceMessageActionsState(closedButtonKeyboardMessageId: self.closedButtonKeyboardMessageId, processedSetupReplyMessageId: processedSetupReplyMessageId, closedPinnedMessageId: self.closedPinnedMessageId, closedPeerSpecificPackSetup: self.closedPeerSpecificPackSetup)
-    }
-    
-    func withUpdatedClosedPinnedMessageId(_ closedPinnedMessageId: MessageId?) -> ChatInterfaceMessageActionsState {
-        return ChatInterfaceMessageActionsState(closedButtonKeyboardMessageId: self.closedButtonKeyboardMessageId, processedSetupReplyMessageId: self.processedSetupReplyMessageId, closedPinnedMessageId: closedPinnedMessageId, closedPeerSpecificPackSetup: self.closedPeerSpecificPackSetup)
-    }
-    
-    func withUpdatedClosedPeerSpecificPackSetup(_ closedPeerSpecificPackSetup: Bool) -> ChatInterfaceMessageActionsState {
-        return ChatInterfaceMessageActionsState(closedButtonKeyboardMessageId: self.closedButtonKeyboardMessageId, processedSetupReplyMessageId: self.processedSetupReplyMessageId, closedPinnedMessageId: self.closedPinnedMessageId, closedPeerSpecificPackSetup: closedPeerSpecificPackSetup)
+        
+        if let dismissedAddContactPhoneNumber = self.dismissedAddContactPhoneNumber {
+            encoder.encodeString(dismissedAddContactPhoneNumber, forKey: "dismissedAddContactPhoneNumber")
+        } else {
+            encoder.encodeNil(forKey: "dismissedAddContactPhoneNumber")
+        }
     }
 }
 

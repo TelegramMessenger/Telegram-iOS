@@ -132,82 +132,79 @@ private func galleryMessageCaptionText(_ message: Message) -> String {
 }
 
 func galleryItemForEntry(context: AccountContext, presentationData: PresentationData, entry: MessageHistoryEntry, isCentral: Bool = false, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, tempFilePath: String? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }) -> GalleryItem? {
-    switch entry {
-        case let .MessageEntry(message, _, location, _, _):
-            if let (media, mediaImage) = mediaForMessage(message: message) {
-                if let _ = media as? TelegramMediaImage {
-                    return ChatImageGalleryItem(context: context, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions)
-                } else if let file = media as? TelegramMediaFile {
-                    if file.isVideo {
-                        let content: UniversalVideoContent
-                        if file.isAnimated {
-                            content = NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), loopVideo: true, enableSound: false, tempFilePath: tempFilePath)
-                        } else {
-                            if true || (file.mimeType == "video/mpeg4" || file.mimeType == "video/mov" || file.mimeType == "video/mp4") {
-                                content = NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, loopVideo: loopVideos, tempFilePath: tempFilePath)
-                            } else {
-                                content = PlatformVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: streamVideos, loopVideo: loopVideos)
-                            }
-                        }
-                        
-                        var entities: [MessageTextEntity] = []
-                        for attribute in message.attributes {
-                            if let attribute = attribute as? TextEntitiesMessageAttribute {
-                                entities = attribute.entities
-                                break
-                            }
-                        }
-                        
-                        let text = galleryMessageCaptionText(message)
-                        if let result = addLocallyGeneratedEntities(text, enabledTypes: [.timecode], entities: entities, mediaDuration: file.duration.flatMap(Double.init)) {
-                            entities = result
-                        }
-                        
-                        let caption = galleryCaptionStringWithAppliedEntities(text, entities: entities)
-                        return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, hideControls: hideControls, fromPlayingVideo: fromPlayingVideo, landscape: landscape, timecode: timecode, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions)
+    let message = entry.message
+    let location = entry.location
+    if let (media, mediaImage) = mediaForMessage(message: message) {
+        if let _ = media as? TelegramMediaImage {
+            return ChatImageGalleryItem(context: context, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions)
+        } else if let file = media as? TelegramMediaFile {
+            if file.isVideo {
+                let content: UniversalVideoContent
+                if file.isAnimated {
+                    content = NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), loopVideo: true, enableSound: false, tempFilePath: tempFilePath)
+                } else {
+                    if true || (file.mimeType == "video/mpeg4" || file.mimeType == "video/mov" || file.mimeType == "video/mp4") {
+                        content = NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, loopVideo: loopVideos, tempFilePath: tempFilePath)
                     } else {
-                        if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
-                            var pixelsCount: Int = 0
-                            if let dimensions = file.dimensions {
-                                pixelsCount = Int(dimensions.width) * Int(dimensions.height)
-                            }
-                            if (file.size == nil || file.size! < 4 * 1024 * 1024) && pixelsCount < 4096 * 4096 {
-                                return ChatImageGalleryItem(context: context, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions)
-                            } else {
-                                return ChatDocumentGalleryItem(context: context, presentationData: presentationData, message: message, location: location)
-                            }
-                        } else if internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName) {
-                            return ChatDocumentGalleryItem(context: context, presentationData: presentationData, message: message, location: location)
-                        } else {
-                            return ChatExternalFileGalleryItem(context: context, presentationData: presentationData, message: message, location: location)
-                        }
-                    }
-                } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(webpageContent) = webpage.content {
-                    var content: UniversalVideoContent?
-                    switch websiteType(of: webpageContent) {
-                        case .instagram where webpageContent.file != nil && webpageContent.image != nil && webpageContent.file!.isVideo:
-                            content = NativeVideoContent(id: .message(message.id, message.stableId, webpageContent.file?.id ?? webpage.webpageId), fileReference: .message(message: MessageReference(message), media: webpageContent.file!), imageReference: webpageContent.image.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, enableSound: true)
-                        default:
-                            if let embedUrl = webpageContent.embedUrl, let image = webpageContent.image {
-                                if let file = webpageContent.file, file.isVideo {
-                                    content = NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, loopVideo: loopVideos, tempFilePath: tempFilePath)
-                                } else if URL(string: embedUrl)?.pathExtension == "mp4" {
-                                    content = SystemVideoContent(url: embedUrl, imageReference: .webPage(webPage: WebpageReference(webpage), media: image), dimensions: webpageContent.embedSize ?? CGSize(width: 640.0, height: 640.0), duration: Int32(webpageContent.duration ?? 0))
-                                }
-                            }
-                            if content == nil, let webEmbedContent = WebEmbedVideoContent(webPage: webpage, webpageContent: webpageContent) {
-                                content = webEmbedContent
-                            }
-                    }
-                    if let content = content {
-                        return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, timecode: timecode, performAction: performAction, openActionOptions: openActionOptions)
-                    } else {
-                        return nil
+                        content = PlatformVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: streamVideos, loopVideo: loopVideos)
                     }
                 }
+                
+                var entities: [MessageTextEntity] = []
+                for attribute in message.attributes {
+                    if let attribute = attribute as? TextEntitiesMessageAttribute {
+                        entities = attribute.entities
+                        break
+                    }
+                }
+                
+                let text = galleryMessageCaptionText(message)
+                if let result = addLocallyGeneratedEntities(text, enabledTypes: [.timecode], entities: entities, mediaDuration: file.duration.flatMap(Double.init)) {
+                    entities = result
+                }
+                
+                let caption = galleryCaptionStringWithAppliedEntities(text, entities: entities)
+                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, hideControls: hideControls, fromPlayingVideo: fromPlayingVideo, landscape: landscape, timecode: timecode, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions)
+            } else {
+                if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
+                    var pixelsCount: Int = 0
+                    if let dimensions = file.dimensions {
+                        pixelsCount = Int(dimensions.width) * Int(dimensions.height)
+                    }
+                    if (file.size == nil || file.size! < 4 * 1024 * 1024) && pixelsCount < 4096 * 4096 {
+                        return ChatImageGalleryItem(context: context, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions)
+                    } else {
+                        return ChatDocumentGalleryItem(context: context, presentationData: presentationData, message: message, location: location)
+                    }
+                } else if internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName) {
+                    return ChatDocumentGalleryItem(context: context, presentationData: presentationData, message: message, location: location)
+                } else {
+                    return ChatExternalFileGalleryItem(context: context, presentationData: presentationData, message: message, location: location)
+                }
             }
-        default:
-            break
+        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(webpageContent) = webpage.content {
+            var content: UniversalVideoContent?
+            switch websiteType(of: webpageContent) {
+                case .instagram where webpageContent.file != nil && webpageContent.image != nil && webpageContent.file!.isVideo:
+                    content = NativeVideoContent(id: .message(message.id, message.stableId, webpageContent.file?.id ?? webpage.webpageId), fileReference: .message(message: MessageReference(message), media: webpageContent.file!), imageReference: webpageContent.image.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, enableSound: true)
+                default:
+                    if let embedUrl = webpageContent.embedUrl, let image = webpageContent.image {
+                        if let file = webpageContent.file, file.isVideo {
+                            content = NativeVideoContent(id: .message(message.id, message.stableId, file.fileId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, loopVideo: loopVideos, tempFilePath: tempFilePath)
+                        } else if URL(string: embedUrl)?.pathExtension == "mp4" {
+                            content = SystemVideoContent(url: embedUrl, imageReference: .webPage(webPage: WebpageReference(webpage), media: image), dimensions: webpageContent.embedSize ?? CGSize(width: 640.0, height: 640.0), duration: Int32(webpageContent.duration ?? 0))
+                        }
+                    }
+                    if content == nil, let webEmbedContent = WebEmbedVideoContent(webPage: webpage, webpageContent: webpageContent) {
+                        content = webEmbedContent
+                    }
+            }
+            if let content = content {
+                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.author?.displayTitle, timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, timecode: timecode, performAction: performAction, openActionOptions: openActionOptions)
+            } else {
+                return nil
+            }
+        }
     }
     return nil
 }
@@ -846,7 +843,7 @@ class GalleryController: ViewController {
         var centralItemIndex: Int?
         for entry in self.entries {
             var isCentral = false
-            if case let .MessageEntry(message, _, _, _, _) = entry, message.stableId == self.centralEntryStableId {
+            if entry.message.stableId == self.centralEntryStableId {
                 isCentral = true
             }
             if let item = galleryItemForEntry(context: context, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, fromPlayingVideo: isCentral && self.fromPlayingVideo, landscape: isCentral && self.landscape, timecode: isCentral ? self.timecode : nil, performAction: self.performAction, openActionOptions: self.openActionOptions) {
