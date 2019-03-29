@@ -353,13 +353,13 @@ public class PeerMediaCollectionController: TelegramController {
         }, toggleSilentPost: {
         }, requestUnvoteInMessage: { _ in
         }, requestStopPollInMessage: { _ in
-        }, statuses: nil)
+        }, updateInputLanguage: { _ in }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })
         
         self.peer.set(context.account.postbox.peerView(id: peerId) |> map { $0.peers[$0.peerId] })
         
-        peerDisposable.set((self.peer.get()
+        self.peerDisposable.set((self.peer.get()
             |> deliverOnMainQueue).start(next: { [weak self] peer in
                 if let strongSelf = self {
                     strongSelf.updateInterfaceState(animated: false, { return $0.withUpdatedPeer(peer) })

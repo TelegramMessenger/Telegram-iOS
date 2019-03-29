@@ -3142,6 +3142,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
             
             strongSelf.chatDisplayNode.dismissInput()
             strongSelf.present(actionSheet, in: .window(.root))
+        }, updateInputLanguage: { [weak self] f in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                    return $0.updatedInterfaceState({ $0.withUpdatedInputLanguage(f($0.inputLanguage)) })
+                })
+            }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
         
         switch self.chatLocation {

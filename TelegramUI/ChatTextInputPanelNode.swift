@@ -241,6 +241,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var inputTextState: ChatTextInputState {
         if let textInputNode = self.textInputNode {
             let selectionRange: Range<Int> = textInputNode.selectedRange.location ..< (textInputNode.selectedRange.location + textInputNode.selectedRange.length)
+            textInputNode.textInputMode.primaryLanguage
             return ChatTextInputState(inputText: stateAttributedStringForText(textInputNode.attributedText ?? NSAttributedString()), selectionRange: selectionRange)
         } else {
             return ChatTextInputState()
@@ -1123,6 +1124,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             let inputTextState = self.inputTextState
             
             self.interfaceInteraction?.updateTextInputStateAndMode({ _, inputMode in return (inputTextState, inputMode) })
+            self.interfaceInteraction?.updateInputLanguage({ _ in return textInputNode.textInputMode.primaryLanguage })
             self.updateTextNodeText(animated: true)
         }
     }
@@ -1316,24 +1318,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     @objc func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
-        var activateGifInput = false
-//        if let presentationInterfaceState = self.presentationInterfaceState {
-//            if case .media(.gif, _) = presentationInterfaceState.inputMode {
-//                activateGifInput = true
-//            }
-//        }
         self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
             return (.text, state.keyboardButtonsMessage?.id)
         })
-        if activateGifInput {
-            self.interfaceInteraction?.updateTextInputStateAndMode { state, inputMode in
-                if state.inputText.length == 0 {
-                    return (ChatTextInputState(inputText: NSAttributedString(string: "@gif ")), inputMode)
-                } else {
-                    return (state, inputMode)
-                }
-            }
-        }
         self.inputMenu.activate()
     }
     
