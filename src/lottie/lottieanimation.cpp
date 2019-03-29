@@ -333,6 +333,9 @@ void Surface::setDrawRegion(size_t x, size_t y, size_t width, size_t height)
     mDrawArea.w = width;
     mDrawArea.h = height;
 }
+
+
+#ifdef LOTTIE_LOGGING_SUPPORT
 void initLogging()
 {
 #if defined(__ARM_NEON__)
@@ -344,3 +347,4 @@ void initLogging()
 }
 
 V_CONSTRUCTOR_FUNCTION(initLogging)
+#endif
