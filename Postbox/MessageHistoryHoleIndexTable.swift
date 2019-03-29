@@ -122,7 +122,7 @@ final class MessageHistoryHoleIndexTable: Table {
             if let tagsByNamespace = self.seedConfiguration.messageHoles[peerId.namespace] {
                 for (namespace, _) in tagsByNamespace {
                     var operations: [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]] = [:]
-                    self.add(peerId: peerId, namespace: namespace, space: .everywhere, range: 1 ... Int32.max, operations: &operations)
+                    self.add(peerId: peerId, namespace: namespace, space: .everywhere, range: 1 ... (Int32.max - 1), operations: &operations)
                 }
             }
         }
@@ -240,6 +240,13 @@ final class MessageHistoryHoleIndexTable: Table {
     }
     
     private func addInternal(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>, operations: inout [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]]) {
+        let clippedLowerBound = max(1, range.lowerBound)
+        let clippedUpperBound = min(Int32.max - 1, range.upperBound)
+        if clippedLowerBound > clippedUpperBound {
+            return
+        }
+        let clippedRange = clippedLowerBound ... clippedUpperBound
+        
         var removedIndices = IndexSet()
         var insertedIndices = IndexSet()
         var removeKeys: [Int32] = []
@@ -254,19 +261,19 @@ final class MessageHistoryHoleIndexTable: Table {
             assert(upperId.namespace == namespace)
             let lowerId = decodeValue(value: value, peerId: peerId, namespace: namespace)
             let holeRange: ClosedRange<Int32> = lowerId.id ... upperId.id
-            if range.lowerBound >= holeRange.lowerBound && range.upperBound <= holeRange.upperBound {
+            if clippedRange.lowerBound >= holeRange.lowerBound && clippedRange.upperBound <= holeRange.upperBound {
                 alreadyMapped = true
                 return
-            } else if range.overlaps(holeRange) || (holeRange.upperBound != Int32.max && range.lowerBound == holeRange.upperBound + 1) || range.upperBound == holeRange.lowerBound - 1 {
+            } else if clippedRange.overlaps(holeRange) || (holeRange.upperBound != Int32.max && clippedRange.lowerBound == holeRange.upperBound + 1) || clippedRange.upperBound == holeRange.lowerBound - 1 {
                 removeKeys.append(upperId.id)
-                let unionRange: ClosedRange = min(range.lowerBound, holeRange.lowerBound) ... max(range.upperBound, holeRange.upperBound)
+                let unionRange: ClosedRange = min(clippedRange.lowerBound, holeRange.lowerBound) ... max(clippedRange.upperBound, holeRange.upperBound)
                 insertRanges.insert(integersIn: Int(unionRange.lowerBound) ... Int(unionRange.upperBound))
             }
         }
         
-        let lowerScanBound = max(0, range.lowerBound - 2)
+        let lowerScanBound = max(0, clippedRange.lowerBound - 2)
         
-        self.valueBox.range(self.table, start: self.key(id: MessageId(peerId: peerId, namespace: namespace, id: lowerScanBound), space: space), end: self.key(id: MessageId(peerId: peerId, namespace: namespace, id: range.upperBound), space: space).successor, values: { key, value in
+        self.valueBox.range(self.table, start: self.key(id: MessageId(peerId: peerId, namespace: namespace, id: lowerScanBound), space: space), end: self.key(id: MessageId(peerId: peerId, namespace: namespace, id: clippedRange.upperBound), space: space).successor, values: { key, value in
             processRange(key, value)
             if alreadyMapped {
                 return false
@@ -275,7 +282,7 @@ final class MessageHistoryHoleIndexTable: Table {
         }, limit: 0)
         
         if !alreadyMapped {
-            self.valueBox.range(self.table, start: self.key(id: MessageId(peerId: peerId, namespace: namespace, id: range.upperBound), space: space), end: self.upperBound(peerId: peerId, namespace: namespace, space: space), values: { key, value in
+            self.valueBox.range(self.table, start: self.key(id: MessageId(peerId: peerId, namespace: namespace, id: clippedRange.upperBound), space: space), end: self.upperBound(peerId: peerId, namespace: namespace, space: space), values: { key, value in
                 processRange(key, value)
                 if alreadyMapped {
                     return false
@@ -288,8 +295,8 @@ final class MessageHistoryHoleIndexTable: Table {
             return
         }
         
-        insertRanges.insert(integersIn: Int(range.lowerBound) ... Int(range.upperBound))
-        insertedIndices.insert(integersIn: Int(range.lowerBound) ... Int(range.upperBound))
+        insertRanges.insert(integersIn: Int(clippedRange.lowerBound) ... Int(clippedRange.upperBound))
+        insertedIndices.insert(integersIn: Int(clippedRange.lowerBound) ... Int(clippedRange.upperBound))
         
         for id in removeKeys {
             self.valueBox.remove(self.table, key: self.key(id: MessageId(peerId: peerId, namespace: namespace, id: id), space: space), secure: false)
@@ -301,7 +308,7 @@ final class MessageHistoryHoleIndexTable: Table {
             self.valueBox.set(self.table, key: self.key(id: MessageId(peerId: peerId, namespace: namespace, id: closedRange.upperBound), space: space), value: MemoryBuffer(memory: &lowerBound, capacity: 4, length: 4, freeWhenDone: false))
         }
         
-        addOperation(.insert(range), peerId: peerId, namespace: namespace, space: space, to: &operations)
+        addOperation(.insert(clippedRange), peerId: peerId, namespace: namespace, space: space, to: &operations)
     }
     
     func remove(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>, operations: inout [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]]) {

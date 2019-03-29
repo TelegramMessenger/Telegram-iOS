@@ -29,6 +29,7 @@ protocol ValueBox {
     func scanInt64(_ table: ValueBoxTable, values: (Int64, ReadBuffer) -> Bool)
     func get(_ table: ValueBoxTable, key: ValueBoxKey) -> ReadBuffer?
     func read(_ table: ValueBoxTable, key: ValueBoxKey, _ process: (Int, (UnsafeMutableRawPointer, Int, Int) -> Void) -> Void)
+    func readWrite(_ table: ValueBoxTable, key: ValueBoxKey, _ process: (Int, (UnsafeMutableRawPointer, Int, Int) -> Void, (UnsafeRawPointer, Int, Int) -> Void) -> Void)
     func exists(_ table: ValueBoxTable, key: ValueBoxKey) -> Bool
     func set(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer)
     func remove(_ table: ValueBoxTable, key: ValueBoxKey, secure: Bool)

@@ -206,7 +206,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         var verificationSet = IndexSet()
         for (_, holesByMessageNamespace) in self.postbox!.seedConfiguration.messageHoles {
             for (_, _) in holesByMessageNamespace{
-                verificationSet.insert(integersIn: 1 ... Int(Int32.max))
+                verificationSet.insert(integersIn: 1 ... Int(Int32.max - 1))
             }
         }
         for i in 0 ..< operations.count {
@@ -311,8 +311,8 @@ class MessageHistoryIndexTableTests: XCTestCase {
         var mediaVerificationSet = IndexSet()
         for (_, holesByMessageNamespace) in self.postbox!.seedConfiguration.messageHoles {
             for (_, _) in holesByMessageNamespace{
-                everywhereVerificationSet.insert(integersIn: 1 ... Int(Int32.max))
-                mediaVerificationSet.insert(integersIn: 1 ... Int(Int32.max))
+                everywhereVerificationSet.insert(integersIn: 1 ... Int(Int32.max - 1))
+                mediaVerificationSet.insert(integersIn: 1 ... Int(Int32.max - 1))
             }
         }
         for i in 0 ..< operations.count {
@@ -411,6 +411,63 @@ class MessageHistoryIndexTableTests: XCTestCase {
         })
     }
     
+    func testBlobUpdatePerformance() {
+        let table = ValueBoxTable(id: 1000, keyType: .binary, compactValuesOnCreation: false)
+        
+        let valueBox = self.postbox!.valueBox
+        let memory = malloc(250)!
+        let value = MemoryBuffer(memory: memory, capacity: 250, length: 250, freeWhenDone: true)
+        var keys: [ValueBoxKey] = []
+        for _ in 0 ... 100000 {
+            let key = ValueBoxKey(length: 16)
+            arc4random_buf(key.memory, 16)
+            keys.append(key)
+            valueBox.set(table, key: key, value: value)
+        }
+        self.measureMetrics([XCTPerformanceMetric_WallClockTime], automaticallyStartMeasuring: false, for: {
+            let buffer = WriteBuffer()
+            self.startMeasuring()
+            for key in keys.shuffled() {
+                if let value = valueBox.get(table, key: key) {
+                    var output: Int32 = 0
+                    value.read(&output, offset: 0, length: 4)
+                    output += 1
+                    buffer.reset()
+                    buffer.write(&output, offset: 0, length: 4)
+                    valueBox.set(table, key: key, value: buffer)
+                }
+            }
+            self.stopMeasuring()
+        })
+    }
+    
+    func testBlobIncrementalUpdatePerformance() {
+        let table = ValueBoxTable(id: 1000, keyType: .binary, compactValuesOnCreation: false)
+        
+        let valueBox = self.postbox!.valueBox
+        let memory = malloc(250)!
+        let value = MemoryBuffer(memory: memory, capacity: 250, length: 250, freeWhenDone: true)
+        var keys: [ValueBoxKey] = []
+        for _ in 0 ... 100000 {
+            let key = ValueBoxKey(length: 16)
+            arc4random_buf(key.memory, 16)
+            keys.append(key)
+            valueBox.set(table, key: key, value: value)
+        }
+        self.measureMetrics([XCTPerformanceMetric_WallClockTime], automaticallyStartMeasuring: false, for: {
+            self.startMeasuring()
+            for key in keys.shuffled() {
+                valueBox.readWrite(table, key: key, { size, read, write in
+                    var output: Int32 = 0
+                    read(&output, 0, 4)
+                    output += 1
+                    write(&output, 0, 4)
+                })
+            }
+            self.stopMeasuring()
+        })
+    }
+    
     private func beginTestDirectAccessPerformance(compactValuesOnCreation: Bool) {
         let table = ValueBoxTable(id: 1000, keyType: .binary, compactValuesOnCreation: compactValuesOnCreation)
         
@@ -431,6 +488,39 @@ class MessageHistoryIndexTableTests: XCTestCase {
                 let _ = valueBox.get(table, key: key)
             }
             self.stopMeasuring()
+        })
+    }
+    
+    func testDirectWritePerformance() {
+        self.beginTestDirectWritePerformance(compactValuesOnCreation: false)
+    }
+    
+    func testDirectWritePerformanceCompact() {
+        self.beginTestDirectWritePerformance(compactValuesOnCreation: true)
+    }
+    
+    private func beginTestDirectWritePerformance(compactValuesOnCreation: Bool) {
+        self.measureMetrics([XCTPerformanceMetric_WallClockTime], automaticallyStartMeasuring: false, for: {
+            let table = ValueBoxTable(id: 1000, keyType: .binary, compactValuesOnCreation: compactValuesOnCreation)
+            let valueBox = self.postbox!.valueBox
+            
+            self.startMeasuring()
+            
+            let memory = malloc(4)!
+            let value = MemoryBuffer(memory: memory, capacity: 4, length: 4, freeWhenDone: true)
+            var keys: [ValueBoxKey] = []
+            for _ in 0 ... 40000 {
+                let key = ValueBoxKey(length: 16)
+                arc4random_buf(key.memory, 16)
+                keys.append(key)
+                valueBox.set(table, key: key, value: value)
+            }
+            for key in keys.shuffled() {
+                let _ = valueBox.get(table, key: key)
+            }
+            self.stopMeasuring()
+            
+            valueBox.dropTable(table)
         })
     }
     

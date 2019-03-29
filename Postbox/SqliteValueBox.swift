@@ -1166,6 +1166,28 @@ final class SqliteValueBox: ValueBox {
         }
     }
     
+    func readWrite(_ table: ValueBoxTable, key: ValueBoxKey, _ process: (Int, (UnsafeMutableRawPointer, Int, Int) -> Void, (UnsafeRawPointer, Int, Int) -> Void) -> Void) {
+        if let _ = self.tables[table.id] {
+            let statement = self.getRowIdStatement(table, key: key)
+            
+            if statement.step(handle: self.database.handle, path: self.databasePath) {
+                let rowId = statement.int64At(0)
+                var blobHandle: OpaquePointer?
+                sqlite3_blob_open(database.handle, "main", "t\(table.id)", "value", rowId, 1, &blobHandle)
+                if let blobHandle = blobHandle {
+                    let length = sqlite3_blob_bytes(blobHandle)
+                    process(Int(length), { buffer, offset, length in
+                        sqlite3_blob_read(blobHandle, buffer, Int32(length), Int32(offset))
+                    }, { buffer, offset, length in
+                        sqlite3_blob_write(blobHandle, buffer, Int32(length), Int32(offset))
+                    })
+                    sqlite3_blob_close(blobHandle)
+                }
+            }
+            statement.reset()
+        }
+    }
+    
     public func exists(_ table: ValueBoxTable, key: ValueBoxKey) -> Bool {
         assert(self.queue.isCurrent())
         if let _ = self.get(table, key: key) {
