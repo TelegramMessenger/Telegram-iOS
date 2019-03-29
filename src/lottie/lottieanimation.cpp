@@ -15,7 +15,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
-
+#include "config.h"
 #include "rlottie.h"
 #include "lottieitem.h"
 #include "lottieloader.h"
@@ -105,6 +105,11 @@ void AnimationImpl::init(const std::shared_ptr<LOTModel> &model)
     mRenderInProgress = false;
 }
 
+#ifdef LOTTIE_THREAD_SUPPORT
+
+#include "vtaskqueue.h"
+#include <thread>
+
 /*
  * Implement a task stealing schduler to perform render task
  * As each player draws into its own buffer we can delegate this
@@ -116,8 +121,6 @@ void AnimationImpl::init(const std::shared_ptr<LOTModel> &model)
  * one it steals the task from it and executes. if it couldn't find one then it
  * just waits for new task on its own queue.
  */
-
-#include <vtaskqueue.h>
 class RenderTaskScheduler {
     const unsigned           _count{std::thread::hardware_concurrency()};
     std::vector<std::thread> _threads;
@@ -163,7 +166,7 @@ public:
         for (auto &e : _threads) e.join();
     }
 
-    std::future<Surface> async(SharedRenderTask task)
+    std::future<Surface> process(SharedRenderTask task)
     {
         auto receiver = std::move(task->receiver);
         auto i = _index++;
@@ -178,6 +181,24 @@ public:
     }
 };
 
+#else
+class RenderTaskScheduler {
+public:
+    static RenderTaskScheduler& instance()
+    {
+         static RenderTaskScheduler singleton;
+         return singleton;
+    }
+
+    std::future<Surface> process(SharedRenderTask task)
+    {
+        auto result = task->playerImpl->render(task->frameNo, task->surface);
+        task->sender.set_value(result);
+        return std::move(task->receiver);
+    }
+};
+#endif
+
 
 std::future<Surface> AnimationImpl::renderAsync(size_t frameNo, Surface &&surface)
 {
@@ -191,7 +212,7 @@ std::future<Surface> AnimationImpl::renderAsync(size_t frameNo, Surface &&surfac
     mTask->frameNo = frameNo;
     mTask->surface = std::move(surface);
 
-    return RenderTaskScheduler::instance().async(mTask);
+    return RenderTaskScheduler::instance().process(mTask);
 }
 
 /**

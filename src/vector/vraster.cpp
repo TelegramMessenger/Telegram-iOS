@@ -18,14 +18,13 @@
 
 #include "vraster.h"
 #include <cstring>
-#include <thread>
 #include "v_ft_raster.h"
 #include "v_ft_stroker.h"
 #include "vdebug.h"
 #include "vmatrix.h"
 #include "vpath.h"
-#include "vtaskqueue.h"
 #include "vrle.h"
+#include "config.h"
 
 V_BEGIN_NAMESPACE
 
@@ -274,6 +273,30 @@ struct RleTask {
     bool               stroke;
     VRle               operator()(FTOutline &outRef, SW_FT_Stroker &stroker);
     void               render(FTOutline &outRef);
+    RleTask() {}
+    RleTask(RleShare &apromise, VPath &&apath, VRle &&arle, FillRule afillRule, const VRect &aclip)
+    {
+        path = std::move(apath);
+        rle = std::move(arle);
+        fillRule = afillRule;
+        clip = aclip;
+        stroke = false;
+        mRlePromise = apromise;
+    }
+    RleTask(RleShare &apromise, VPath &&apath, VRle &&arle, CapStyle acap, JoinStyle ajoin,
+            float awidth, float ameterLimit, const VRect &aclip)
+    {
+        stroke = true;
+        path = std::move(apath);
+        rle = std::move(arle);
+        cap = acap;
+        join = ajoin;
+        width = awidth;
+        meterLimit = ameterLimit;
+        clip = aclip;
+        mRlePromise = apromise;
+    }
+
 };
 
 void RleTask::render(FTOutline &outRef)
@@ -337,6 +360,11 @@ VRle RleTask::operator()(FTOutline &outRef, SW_FT_Stroker &stroker)
     return std::move(rle);
 }
 
+#ifdef LOTTIE_THREAD_SUPPORT
+
+#include "vtaskqueue.h"
+#include <thread>
+
 class RleTaskScheduler {
     const unsigned                  _count{std::thread::hardware_concurrency()};
     std::vector<std::thread>        _threads;
@@ -393,7 +421,7 @@ public:
         for (auto &e : _threads) e.join();
     }
 
-    void async(RleTask &&task)
+    void process(RleTask &&task)
     {
         auto i = _index++;
 
@@ -403,37 +431,37 @@ public:
 
         _q[i % _count].push(std::move(task));
     }
+};
 
-    void strokeRle(RleShare &promise, VPath &&path, VRle &&rle, CapStyle cap, JoinStyle join,
-                                float width, float meterLimit, const VRect &clip)
+#else
+
+class RleTaskScheduler {
+public:
+    FTOutline     outlineRef;
+    SW_FT_Stroker stroker;
+public:
+    static RleTaskScheduler& instance()
     {
-        RleTask task;
-        task.stroke = true;
-        task.path = std::move(path);
-        task.rle = std::move(rle);
-        task.cap = cap;
-        task.join = join;
-        task.width = width;
-        task.meterLimit = meterLimit;
-        task.clip = clip;
-        task.mRlePromise = promise;
-
-        async(std::move(task));
+         static RleTaskScheduler singleton;
+         return singleton;
     }
 
-    void fillRle(RleShare &promise, VPath &&path, VRle &&rle, FillRule fillRule, const VRect &clip)
+    RleTaskScheduler()
     {
-        RleTask task;
-        task.path = std::move(path);
-        task.rle = std::move(rle);
-        task.fillRule = fillRule;
-        task.clip = clip;
-        task.stroke = false;
-        task.mRlePromise = promise;
+        SW_FT_Stroker_New(&stroker);
+    }
 
-        async(std::move(task));
+    ~RleTaskScheduler()
+    {
+        SW_FT_Stroker_Done(stroker);
+    }
+
+    void process(RleTask &&task)
+    {
+        task.mRlePromise->set_value((task)(outlineRef, stroker));
     }
 };
+#endif
 
 void VRaster::generateFillInfo(RleShare &promise, VPath &&path, VRle &&rle,
                                             FillRule fillRule, const VRect &clip)
@@ -442,7 +470,7 @@ void VRaster::generateFillInfo(RleShare &promise, VPath &&path, VRle &&rle,
         promise->set_value(VRle());
         return;
     }
-    return RleTaskScheduler::instance().fillRle(promise, std::move(path), std::move(rle), fillRule, clip);
+    return RleTaskScheduler::instance().process(RleTask(promise, std::move(path), std::move(rle), fillRule, clip));
 }
 
 void VRaster::generateStrokeInfo(RleShare &promise, VPath &&path, VRle &&rle, CapStyle cap,
@@ -453,7 +481,7 @@ void VRaster::generateStrokeInfo(RleShare &promise, VPath &&path, VRle &&rle, Ca
         promise->set_value(VRle());
         return;
     }
-    return RleTaskScheduler::instance().strokeRle(promise, std::move(path), std::move(rle), cap, join, width, meterLimit, clip);
+    return RleTaskScheduler::instance().process(RleTask(promise, std::move(path), std::move(rle), cap, join, width, meterLimit, clip));
 }
 
 V_END_NAMESPACE
