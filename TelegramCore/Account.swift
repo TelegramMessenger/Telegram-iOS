@@ -267,9 +267,9 @@ let telegramPostboxSeedConfiguration: SeedConfiguration = {
     }, additionalChatListIndexNamespace: Namespaces.Message.Cloud)
 }()
 
-public func accountPreferenceEntries(rootPath: String, id: AccountRecordId, keys: Set<ValueBoxKey>) -> Signal<(String, [ValueBoxKey: PreferencesEntry]), NoError> {
+public func accountPreferenceEntries(rootPath: String, id: AccountRecordId, keys: Set<ValueBoxKey>, encryptionKey: Data) -> Signal<(String, [ValueBoxKey: PreferencesEntry]), NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration)
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionKey: encryptionKey)
     return postbox
     |> mapToSignal { value -> Signal<(String, [ValueBoxKey: PreferencesEntry]), NoError> in
         switch value {
@@ -289,9 +289,9 @@ public func accountPreferenceEntries(rootPath: String, id: AccountRecordId, keys
     }
 }
 
-public func accountNoticeEntries(rootPath: String, id: AccountRecordId) -> Signal<(String, [ValueBoxKey: NoticeEntry]), NoError> {
+public func accountNoticeEntries(rootPath: String, id: AccountRecordId, encryptionKey: Data) -> Signal<(String, [ValueBoxKey: NoticeEntry]), NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration)
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionKey: encryptionKey)
     return postbox
     |> mapToSignal { value -> Signal<(String, [ValueBoxKey: NoticeEntry]), NoError> in
         switch value {
@@ -305,9 +305,9 @@ public func accountNoticeEntries(rootPath: String, id: AccountRecordId) -> Signa
     }
 }
 
-public func accountLegacyAccessChallengeData(rootPath: String, id: AccountRecordId) -> Signal<PostboxAccessChallengeData, NoError> {
+public func accountLegacyAccessChallengeData(rootPath: String, id: AccountRecordId, encryptionKey: Data) -> Signal<PostboxAccessChallengeData, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration)
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionKey: encryptionKey)
     return postbox
     |> mapToSignal { value -> Signal<PostboxAccessChallengeData, NoError> in
         switch value {
@@ -321,9 +321,9 @@ public func accountLegacyAccessChallengeData(rootPath: String, id: AccountRecord
     }
 }
 
-public func accountTransaction<T>(rootPath: String, id: AccountRecordId, transaction: @escaping (Transaction) -> T) -> Signal<T, NoError> {
+public func accountTransaction<T>(rootPath: String, id: AccountRecordId, encryptionKey: Data, transaction: @escaping (Transaction) -> T) -> Signal<T, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration)
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionKey: encryptionKey)
     return postbox
     |> mapToSignal { value -> Signal<T, NoError> in
         switch value {
@@ -335,10 +335,10 @@ public func accountTransaction<T>(rootPath: String, id: AccountRecordId, transac
     }
 }
 
-public func accountWithId(accountManager: AccountManager, networkArguments: NetworkInitializationArguments, id: AccountRecordId, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
+public func accountWithId(accountManager: AccountManager, networkArguments: NetworkInitializationArguments, id: AccountRecordId, encryptionKey: Data, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration)
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionKey: encryptionKey)
     
     return postbox
     |> mapToSignal { result -> Signal<AccountResult, NoError> in
