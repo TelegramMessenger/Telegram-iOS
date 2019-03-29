@@ -4205,3 +4205,9 @@ Unused sets are archived when you add more.";
 "Undo.ChatDeletedForBothSides" = "Chat deleted for both sides";
 
 "DataUpgrade.Running" = "Optimizing...";
+
+"Call.Mute" = "mute";
+"Call.Camera" = "camera";
+"Call.Flip" = "flip";
+"Call.End" = "end";
+"Call.Speaker" = "speaker";
