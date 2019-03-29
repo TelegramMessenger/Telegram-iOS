@@ -210,9 +210,9 @@ final class MessageHistoryIndexTable: Table {
                 }
                 return true
             }, limit: 0)
+            
+            holes = !self.messageHistoryHoleIndexTable.closest(peerId: peerId, namespace: namespace, space: .everywhere, range: minId ... maxId).isEmpty
         }
-        
-        holes = !self.messageHistoryHoleIndexTable.closest(peerId: peerId, namespace: namespace, space: .everywhere, range: minId ... maxId).isEmpty
         
         return (count, holes)
     }
