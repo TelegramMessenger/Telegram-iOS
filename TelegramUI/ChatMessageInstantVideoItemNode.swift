@@ -14,6 +14,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     private let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
     
     private var selectionNode: ChatMessageSelectionNode?
+    private var deliveryFailedNode: ChatMessageDeliveryFailedNode?
     private var shareButtonNode: HighlightableButtonNode?
     
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
@@ -174,6 +175,11 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 layoutInsets.top += layoutConstants.timestampHeaderHeight
             }
             
+            var deliveryFailedInset: CGFloat = 0.0
+            if item.content.firstMessage.flags.contains(.Failed) {
+                deliveryFailedInset += 24.0
+            }
+            
             let displaySize = CGSize(width: 212.0, height: 212.0)
             
             var automaticDownload = true
@@ -185,7 +191,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             
             let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, presentationData: item.presentationData, associatedData: item.associatedData), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, .free, automaticDownload)
             
-            let videoFrame = CGRect(origin: CGPoint(x: (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - videoLayout.contentSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left)), y: 0.0), size: videoLayout.contentSize)
+            let videoFrame = CGRect(origin: CGPoint(x: (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - videoLayout.contentSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: videoLayout.contentSize)
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
@@ -414,6 +420,37 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     } else if let replyInfoNode = strongSelf.replyInfoNode {
                         replyInfoNode.removeFromSupernode()
                         strongSelf.replyInfoNode = nil
+                    }
+                    
+                    if item.content.firstMessage.flags.contains(.Failed) {
+                        let deliveryFailedNode: ChatMessageDeliveryFailedNode
+                        var isAppearing = false
+                        if let current = strongSelf.deliveryFailedNode {
+                            deliveryFailedNode = current
+                        } else {
+                            isAppearing = true
+                            deliveryFailedNode = ChatMessageDeliveryFailedNode(tapped: {
+                                if let item = self?.item {
+                                    item.controllerInteraction.requestRedeliveryOfFailedMessages(item.content.firstMessage.id)
+                                }
+                            })
+                            strongSelf.deliveryFailedNode = deliveryFailedNode
+                            strongSelf.addSubnode(deliveryFailedNode)
+                        }
+                        let deliveryFailedSize = deliveryFailedNode.updateLayout(theme: item.presentationData.theme.theme)
+                        let deliveryFailedFrame = CGRect(origin: CGPoint(x: videoFrame.maxX + deliveryFailedInset - deliveryFailedSize.width, y: videoFrame.maxY - deliveryFailedSize.height), size: deliveryFailedSize)
+                        if isAppearing {
+                            deliveryFailedNode.frame = deliveryFailedFrame
+                            transition.animatePositionAdditive(node: deliveryFailedNode, offset: CGPoint(x: deliveryFailedInset, y: 0.0))
+                        } else {
+                            transition.updateFrame(node: deliveryFailedNode, frame: deliveryFailedFrame)
+                        }
+                    } else if let deliveryFailedNode = strongSelf.deliveryFailedNode {
+                        strongSelf.deliveryFailedNode = nil
+                        transition.updateAlpha(node: deliveryFailedNode, alpha: 0.0)
+                        transition.updateFrame(node: deliveryFailedNode, frame: deliveryFailedNode.frame.offsetBy(dx: 24.0, dy: 0.0), completion: { [weak deliveryFailedNode] _ in
+                            deliveryFailedNode?.removeFromSupernode()
+                        })
                     }
                     
                     if let updatedForwardBackgroundNode = updatedForwardBackgroundNode {
