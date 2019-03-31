@@ -751,7 +751,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         }
                     }
                     
-                    mosaicStatusSizeAndApply = mosaicStatusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude))
+                    mosaicStatusSizeAndApply = mosaicStatusLayout(item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude))
                 }
             }
             
@@ -1620,7 +1620,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                 mediaMessage = item.message
                             }
                         }
-                        var forceOpen = false
                         if mediaMessage == nil {
                             for attribute in item.message.attributes {
                                 if let attribute = attribute as? ReplyMessageAttribute {
