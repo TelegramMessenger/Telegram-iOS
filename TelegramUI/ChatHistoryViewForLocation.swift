@@ -111,6 +111,9 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                             fadeIn = true
                             return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
                         }
+                    } else if view.holeEarlier || view.holeLater {
+                        fadeIn = true
+                        return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
                     }
                     
                     preloaded = true
