@@ -7,7 +7,7 @@ import SwiftSignalKit
 
 enum PostboxUpgradeOperation {
     case inplace((MetadataTable, ValueBox, (Float) -> Void) -> Void)
-    case standalone((Queue, String, ValueBox, Data, (Float) -> Void) -> String)
+    case standalone((Queue, String, ValueBox, ValueBoxEncryptionParameters, (Float) -> Void) -> String)
 }
 
 func registeredUpgrades() -> [Int32: PostboxUpgradeOperation] {

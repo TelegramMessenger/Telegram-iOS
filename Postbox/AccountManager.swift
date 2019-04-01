@@ -55,7 +55,7 @@ final class AccountManagerImpl {
         self.basePath = basePath
         self.temporarySessionId = temporarySessionId
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
-        self.valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionKey: nil)
+        self.valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: nil)
         
         self.metadataTable = AccountManagerMetadataTable(valueBox: self.valueBox, table: AccountManagerMetadataTable.tableSpec(0))
         self.recordTable = AccountManagerRecordTable(valueBox: self.valueBox, table: AccountManagerRecordTable.tableSpec(1))

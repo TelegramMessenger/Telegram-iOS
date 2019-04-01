@@ -6,12 +6,12 @@ import SwiftSignalKitMac
 import SwiftSignalKit
 #endif
 
-func postboxUpgrade_21to22(queue: Queue, basePath: String, valueBox: ValueBox, encryptionKey: Data, progress: (Float) -> Void) -> String {
+func postboxUpgrade_21to22(queue: Queue, basePath: String, valueBox: ValueBox, encryptionParameters: ValueBoxEncryptionParameters, progress: (Float) -> Void) -> String {
     let exportPath = "\(basePath)/version22"
     let _ = try? FileManager.default.removeItem(atPath: exportPath)
-    valueBox.exportEncrypted(to: exportPath, encryptionKey: encryptionKey)
+    valueBox.exportEncrypted(to: exportPath, encryptionParameters: encryptionParameters)
     
-    let updatedValueBox = SqliteValueBox(basePath: exportPath, queue: queue, encryptionKey: encryptionKey)
+    let updatedValueBox = SqliteValueBox(basePath: exportPath, queue: queue, encryptionParameters: encryptionParameters)
     let metadataTable = MetadataTable(valueBox: updatedValueBox, table: MetadataTable.tableSpec(0))
     updatedValueBox.begin()
     metadataTable.setUserVersion(22)

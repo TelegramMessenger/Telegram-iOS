@@ -984,7 +984,7 @@ func debugRestoreState(basePath:String, name: String) {
     }
 }
 
-public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionKey: Data) -> Signal<PostboxResult, NoError> {
+public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<PostboxResult, NoError> {
     let queue = Queue(name: "org.telegram.postbox.Postbox")
     return Signal { subscriber in
         queue.async {
@@ -992,13 +992,13 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
 
             #if DEBUG
             //debugSaveState(basePath: basePath, name: "previous1")
-            //debugRestoreState(basePath: basePath, name: "previous1")
+            debugRestoreState(basePath: basePath, name: "previous1")
             #endif
             
             let startTime = CFAbsoluteTimeGetCurrent()
             
             loop: while true {
-                let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionKey: encryptionKey)
+                let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionParameters: encryptionParameters)
                 
                 let metadataTable = MetadataTable(valueBox: valueBox, table: MetadataTable.tableSpec(0))
                 
@@ -1021,7 +1021,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                                         })
                                         valueBox.commit()
                                     case let .standalone(f):
-                                        let updatedPath = f(queue, basePath, valueBox, encryptionKey, { progress in
+                                        let updatedPath = f(queue, basePath, valueBox, encryptionParameters, { progress in
                                             subscriber.putNext(.upgrading(progress))
                                         })
                                         let _ = try? FileManager.default.removeItem(atPath: basePath + "/db")
@@ -1450,10 +1450,32 @@ public final class Postbox {
     
     fileprivate func addMessages(transaction: Transaction, messages: [StoreMessage], location: AddMessagesLocation) -> [Int64: MessageId] {
         var addedMessagesByPeerId: [PeerId: [StoreMessage]] = [:]
-        let addResult = self.messageHistoryTable.addMessages(messages: messages, location: location, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, processMessages: { messagesByPeerId in
+        let addResult = self.messageHistoryTable.addMessages(messages: messages, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, processMessages: { messagesByPeerId in
             addedMessagesByPeerId = messagesByPeerId
         })
+        
         for (peerId, peerMessages) in addedMessagesByPeerId {
+            switch location {
+                case .Random:
+                    break
+                case .UpperHistoryBlock:
+                    var earliestByNamespace: [MessageId.Namespace: MessageId] = [:]
+                    for message in peerMessages {
+                        if case let .Id(id) = message.id {
+                            if let currentEarliestId = earliestByNamespace[id.namespace] {
+                                if id < currentEarliestId {
+                                    earliestByNamespace[id.namespace] = id
+                                }
+                            } else {
+                                earliestByNamespace[id.namespace] = id
+                            }
+                        }
+                    }
+                    for (_, id) in earliestByNamespace {
+                        self.messageHistoryHoleIndexTable.remove(peerId: id.peerId, namespace: id.namespace, space: .everywhere, range: id.id ... (Int32.max - 1), operations: &self.currentPeerHoleOperations)
+                    }
+            }
+            
             if let bag = self.installedMessageActionsByPeerId[peerId] {
                 for f in bag.copyItems() {
                     f(peerMessages, transaction)
@@ -1462,10 +1484,6 @@ public final class Postbox {
         }
         
         return addResult
-    }
-    
-    func insertMessageInternal(message: InternalStoreMessage) {
-        let _ = self.messageHistoryTable.addMessagesInternal(messages: [message], location: .Random, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations)
     }
     
     fileprivate func addHole(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>) {

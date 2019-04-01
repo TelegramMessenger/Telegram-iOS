@@ -15,6 +15,40 @@ struct ValueBoxFullTextTable {
     let id: Int32
 }
 
+public struct ValueBoxEncryptionParameters {
+    public struct Key {
+        public let data: Data
+        
+        public init?(data: Data) {
+            if data.count == 32 {
+                self.data = data
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public struct Salt {
+        public let data: Data
+        
+        public init?(data: Data) {
+            if data.count == 16 {
+                self.data = data
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public let key: Key
+    public let salt: Salt
+    
+    public init(key: Key, salt: Salt) {
+        self.key = key
+        self.salt = salt
+    }
+}
+
 protocol ValueBox {
     func begin()
     func commit()
@@ -42,5 +76,5 @@ protocol ValueBox {
     func drop()
     func count(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey) -> Int
     
-    func exportEncrypted(to exportBasePath: String, encryptionKey: Data)
+    func exportEncrypted(to exportBasePath: String, encryptionParameters: ValueBoxEncryptionParameters)
 }

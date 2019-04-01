@@ -572,6 +572,15 @@ public enum StoreMessageId {
                 return peerId
         }
     }
+    
+    public var namespace: MessageId.Namespace {
+        switch self {
+            case let .Id(id):
+                return id.namespace
+            case let .Partial(_, namespace):
+                return namespace
+        }
+    }
 }
 
 public final class StoreMessage {

@@ -135,11 +135,17 @@ struct SqlitePreparedStatement {
     }
 }
 
+private let dabaseFileNames: [String] = [
+    "db_sqlite",
+    "db_sqlite-shm",
+    "db_sqlite-wal"
+]
+
 final class SqliteValueBox: ValueBox {
     private let lock = NSRecursiveLock()
     
     fileprivate let basePath: String
-    private let encryptionKey: Data?
+    private let encryptionParameters: ValueBoxEncryptionParameters?
     private let databasePath: String
     private var database: Database!
     private var tables: [Int32: ValueBoxTable] = [:]
@@ -174,12 +180,12 @@ final class SqliteValueBox: ValueBox {
     
     private let queue: Queue
     
-    public init(basePath: String, queue: Queue, encryptionKey: Data?) {
+    public init(basePath: String, queue: Queue, encryptionParameters: ValueBoxEncryptionParameters?) {
         self.basePath = basePath
-        self.encryptionKey = encryptionKey
+        self.encryptionParameters = encryptionParameters
         self.databasePath = basePath + "/db_sqlite"
         self.queue = queue
-        self.database = self.openDatabase(encryptionKey: encryptionKey)
+        self.database = self.openDatabase(encryptionParameters: encryptionParameters)
     }
     
     deinit {
@@ -188,7 +194,7 @@ final class SqliteValueBox: ValueBox {
         checkpoints.dispose()
     }
     
-    private func openDatabase(encryptionKey: Data?) -> Database {
+    private func openDatabase(encryptionParameters: ValueBoxEncryptionParameters?) -> Database {
         assert(self.queue.isCurrent())
         
         checkpoints.set(nil)
@@ -208,38 +214,51 @@ final class SqliteValueBox: ValueBox {
         
         var resultCode: Bool = true
         
+        resultCode = database.execute("PRAGMA cipher_plaintext_header_size=32")
+        assert(resultCode)
+        resultCode = database.execute("PRAGMA cipher_default_plaintext_header_size=32")
+        assert(resultCode)
+        
         if self.isEncrypted(database) {
-            resultCode = database.execute("PRAGMA cipher_plaintext_header_size=32")
-            assert(resultCode)
-            
-            if let encryptionKey = encryptionKey {
-                let hexKey = hexString(encryptionKey)
+            if let encryptionParameters = encryptionParameters {
+                precondition(encryptionParameters.salt.data.count == 16)
+                precondition(encryptionParameters.key.data.count == 32)
                 
-                if encryptionKey.count == 32 {
-                    resultCode = database.execute("PRAGMA key=\"x'\(hexKey)'\"")
+                let hexKey = hexString(encryptionParameters.key.data + encryptionParameters.salt.data)
+                
+                resultCode = database.execute("PRAGMA key=\"x'\(hexKey)'\"")
+                assert(resultCode)
+                
+                /*if self.isEncrypted(database) {
+                    let salt = self.getSalt(database)
+                    // Temporary for beta users
+                    
+                    //resultCode = database.execute("PRAGMA cipher_plaintext_header_size=0")
+                    //assert(resultCode)
+                    
+                    let hexKeyWithoutSalt = hexString(encryptionParameters.key.data)
+                    
+                    resultCode = database.execute("PRAGMA key='\(hexKeyWithoutSalt)'")
                     assert(resultCode)
                     
-                    if self.isEncrypted(database) {
-                        resultCode = database.execute("PRAGMA key=\"\(hexKey)\"")
-                        assert(resultCode)
-                        
-                        if !self.isEncrypted(database) {
-                            resultCode = database.execute("PRAGMA rekey=\"x'\(hexKey)'\"")
-                            assert(resultCode)
-                        }
+                    if !self.isEncrypted(database) {
+                        database = self.reencryptInPlace(database: database, encryptionParameters: encryptionParameters)
                     }
-                } else {
-                    assert(false)
-                    resultCode = database.execute("PRAGMA key=\"\(hexKey)")
-                    assert(resultCode)
-                }
+                }*/
                 
                 if self.isEncrypted(database) {
                     postboxLog("Encryption key is invalid")
-                    assert(false)
+                    //assert(false)
                     
-                    let _ = try? FileManager.default.removeItem(atPath: path)
+                    for fileName in dabaseFileNames {
+                        let _ = try? FileManager.default.removeItem(atPath: basePath + "/\(fileName)")
+                    }
                     database = Database(path)!
+                    
+                    resultCode = database.execute("PRAGMA cipher_plaintext_header_size=32")
+                    assert(resultCode)
+                    resultCode = database.execute("PRAGMA cipher_default_plaintext_header_size=32")
+                    assert(resultCode)
                     
                     resultCode = database.execute("PRAGMA key=\"x'\(hexKey)'\"")
                     assert(resultCode)
@@ -247,8 +266,62 @@ final class SqliteValueBox: ValueBox {
             } else {
                 postboxLog("Encryption key is required")
                 assert(false)
-                let _ = try? FileManager.default.removeItem(atPath: path)
+                for fileName in dabaseFileNames {
+                    let _ = try? FileManager.default.removeItem(atPath: basePath + "/\(fileName)")
+                }
                 database = Database(path)!
+                
+                resultCode = database.execute("PRAGMA cipher_plaintext_header_size=32")
+                assert(resultCode)
+                resultCode = database.execute("PRAGMA cipher_default_plaintext_header_size=32")
+                assert(resultCode)
+            }
+        } else if let encryptionParameters = encryptionParameters {
+            let hexKey = hexString(encryptionParameters.key.data + encryptionParameters.salt.data)
+            
+            if FileManager.default.fileExists(atPath: path) {
+                postboxLog("Reencrypting database")
+                database = self.reencryptInPlace(database: database, encryptionParameters: encryptionParameters)
+                
+                if self.isEncrypted(database) {
+                    postboxLog("Reencryption failed")
+                    
+                    for fileName in dabaseFileNames {
+                        let _ = try? FileManager.default.removeItem(atPath: basePath + "/\(fileName)")
+                    }
+                    database = Database(path)!
+                    
+                    resultCode = database.execute("PRAGMA cipher_plaintext_header_size=32")
+                    assert(resultCode)
+                    resultCode = database.execute("PRAGMA cipher_default_plaintext_header_size=32")
+                    assert(resultCode)
+                    
+                    resultCode = database.execute("PRAGMA key=\"x'\(hexKey)'\"")
+                    assert(resultCode)
+                }
+            } else {
+                precondition(encryptionParameters.salt.data.count == 16)
+                precondition(encryptionParameters.key.data.count == 32)
+                resultCode = database.execute("PRAGMA key=\"x'\(hexKey)'\"")
+                assert(resultCode)
+                
+                if self.isEncrypted(database) {
+                    postboxLog("Encryption setup failed")
+                    //assert(false)
+                    
+                    for fileName in dabaseFileNames {
+                        let _ = try? FileManager.default.removeItem(atPath: basePath + "/\(fileName)")
+                    }
+                    database = Database(path)!
+                    
+                    resultCode = database.execute("PRAGMA cipher_plaintext_header_size=32")
+                    assert(resultCode)
+                    resultCode = database.execute("PRAGMA cipher_default_plaintext_header_size=32")
+                    assert(resultCode)
+                    
+                    resultCode = database.execute("PRAGMA key=\"x'\(hexKey)'\"")
+                    assert(resultCode)
+                }
             }
         }
         
@@ -262,6 +335,8 @@ final class SqliteValueBox: ValueBox {
         resultCode = database.execute("PRAGMA temp_store=MEMORY")
         assert(resultCode)
         resultCode = database.execute("PRAGMA journal_mode=WAL")
+        assert(resultCode)
+        resultCode = database.execute("PRAGMA cipher_memory_security = OFF")
         assert(resultCode)
         //resultCode = database.execute("PRAGMA wal_autocheckpoint=500")
         //database.execute("PRAGMA journal_size_limit=1536")
@@ -389,6 +464,18 @@ final class SqliteValueBox: ValueBox {
         let value = preparedStatement.int64At(0)
         preparedStatement.destroy()
         return value
+    }
+    
+    private func getSalt(_ database: Database) -> Data {
+        assert(self.queue.isCurrent())
+        var statement: OpaquePointer? = nil
+        let status = sqlite3_prepare_v2(database.handle, "PRAGMA cipher_salt", -1, &statement, nil)
+        assert(status == SQLITE_OK)
+        let preparedStatement = SqlitePreparedStatement(statement: statement)
+        let _ = preparedStatement.step(handle: database.handle, path: self.databasePath)
+        let value = preparedStatement.valueAt(0)
+        preparedStatement.destroy()
+        return value.makeData()
     }
     
     private func runPragma(_ database: Database, _ pragma: String) -> String {
@@ -1695,8 +1782,12 @@ final class SqliteValueBox: ValueBox {
         self.lock.unlock()
         
         postboxLog("dropping DB")
-        let _ = try? FileManager.default.removeItem(atPath: self.databasePath)
-        self.database = self.openDatabase(encryptionKey: self.encryptionKey)
+        
+        for fileName in dabaseFileNames {
+            let _ = try? FileManager.default.removeItem(atPath: self.basePath + "/\(fileName)")
+        }
+        
+        self.database = self.openDatabase(encryptionParameters: self.encryptionParameters)
         
         tables.removeAll()
     }
@@ -1707,11 +1798,19 @@ final class SqliteValueBox: ValueBox {
         }
     }
     
-    func exportEncrypted(to exportBasePath: String, encryptionKey: Data) {
+    func exportEncrypted(to exportBasePath: String, encryptionParameters: ValueBoxEncryptionParameters) {
+    }
+        
+    private func exportEncrypted(database: Database, to exportBasePath: String, encryptionParameters: ValueBoxEncryptionParameters) {
         let _ = try? FileManager.default.createDirectory(atPath: exportBasePath, withIntermediateDirectories: true, attributes: nil)
         let exportFilePath = "\(exportBasePath)/db_sqlite"
-        let hexKey = hexString(encryptionKey)
-        var resultCode = database.execute("ATTACH DATABASE '\(exportFilePath)' AS encrypted KEY \"\(hexKey)\"")
+        
+        let hexKey = hexString(encryptionParameters.key.data + encryptionParameters.salt.data)
+        
+        precondition(encryptionParameters.salt.data.count == 16)
+        precondition(encryptionParameters.key.data.count == 32)
+        
+        var resultCode = database.execute("ATTACH DATABASE '\(exportFilePath)' AS encrypted KEY \"x'\(hexKey)'\"")
         assert(resultCode)
         resultCode = database.execute("SELECT sqlcipher_export('encrypted')")
         assert(resultCode)
@@ -1719,6 +1818,33 @@ final class SqliteValueBox: ValueBox {
         resultCode = database.execute("PRAGMA encrypted.user_version=\(userVersion)")
         resultCode = database.execute("DETACH DATABASE encrypted")
         assert(resultCode)
+    }
+    
+    private func reencryptInPlace(database: Database, encryptionParameters: ValueBoxEncryptionParameters) -> Database {
+        let targetPath = self.basePath + "/db_export"
+        let _ = try? FileManager.default.removeItem(atPath: targetPath)
+        
+        self.exportEncrypted(database: database, to: targetPath, encryptionParameters: encryptionParameters)
+        
+        for name in dabaseFileNames {
+            let _ = try? FileManager.default.removeItem(atPath: self.basePath + "/\(name)")
+            let _ = try? FileManager.default.moveItem(atPath: targetPath + "/\(name)", toPath: self.basePath + "/\(name)")
+        }
+        let _ = try? FileManager.default.removeItem(atPath: targetPath)
+        
+        let updatedDatabase = Database(self.databasePath)!
+        
+        var resultCode = updatedDatabase.execute("PRAGMA cipher_plaintext_header_size=32")
+        assert(resultCode)
+        resultCode = updatedDatabase.execute("PRAGMA cipher_default_plaintext_header_size=32")
+        assert(resultCode)
+        
+        let hexKey = hexString(encryptionParameters.key.data + encryptionParameters.salt.data)
+        
+        resultCode = updatedDatabase.execute("PRAGMA key=\"x'\(hexKey)'\"")
+        assert(resultCode)
+        
+        return updatedDatabase
     }
 }
 
