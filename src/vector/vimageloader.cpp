@@ -1,5 +1,6 @@
 #include "vimageloader.h"
 #include "vdebug.h"
+#include "config.h"
 #ifndef WIN32
 #include <dlfcn.h>
 #else
@@ -11,62 +12,97 @@ using lottie_image_load_f = unsigned char* (*)(const char *filename, int *x, int
 using lottie_image_load_data_f = unsigned char* (*)(const char  *data, int len, int *x, int *y, int *comp, int req_comp);
 using lottie_image_free_f = void (*)(unsigned char *);
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern unsigned char * lottie_image_load(char const *filename, int *x, int *y, int *comp, int req_comp);
+extern unsigned char * lottie_image_load_from_data(const char *imageData, int len, int *x, int *y, int *comp, int req_comp);
+extern void lottie_image_free(unsigned char *data);
+
+#ifdef __cplusplus
+}
+#endif
+
+
 struct VImageLoader::Impl
 {
+    lottie_image_load_f      imageLoad{nullptr};
+    lottie_image_free_f      imageFree{nullptr};
+    lottie_image_load_data_f imageFromData{nullptr};
+
+#ifndef LOTTIE_STATIC_IMAGE_LOADER
 #ifdef WIN32
-	HMODULE dl_handle{ nullptr };
+    HMODULE                  dl_handle{ nullptr };
+    bool moduleLoad() {
+        dl_handle = LoadLibraryA("librlottie-image-loader.dll");
+        return (dl_handle == nullptr);
+    }
+    void moduleFree() {
+        if (dl_handle) FreeLibrary(dl_handle);
+    }
+    void init() {
+        imageLoad = (lottie_image_load_f)GetProcAddress(dl_handle, "lottie_image_load");
+        imageFree = (lottie_image_free_f)GetProcAddress(dl_handle, "lottie_image_free");
+        imageFromData = (lottie_image_load_data_f)GetProcAddress(dl_handle, "lottie_image_load_from_data");
+    }
 #else
     void                    *dl_handle{nullptr};
+    void init() {
+        imageLoad = (lottie_image_load_f) dlsym(dl_handle, "lottie_image_load");
+        imageFree = (lottie_image_free_f) dlsym(dl_handle, "lottie_image_free");
+        imageFromData = (lottie_image_load_data_f) dlsym(dl_handle, "lottie_image_load_from_data");
+    }
+
+    void moduleFree() {
+        if (dl_handle) dlclose(dl_handle);
+    }
+#ifdef __APPLE__
+    bool moduleLoad() {
+        dl_handle = dlopen("librlottie-image-loader.dylib", RTLD_LAZY);
+        return (dl_handle == nullptr);
+    }
+#else
+    bool moduleLoad() {
+        dl_handle = dlopen("librlottie-image-loader.so", RTLD_LAZY);
+        return (dl_handle == nullptr);
+    }
+#endif 
 #endif
-    lottie_image_load_f      lottie_image_load{nullptr};
-    lottie_image_free_f      lottie_image_free{nullptr};
-    lottie_image_load_data_f lottie_image_load_data{nullptr};
+#else
+    void *dl_handle{nullptr};
+    void init() {
+        imageLoad = lottie_image_load;
+        imageFree = lottie_image_free;
+        imageFromData = lottie_image_load_from_data;
+    }
+    void moduleFree() {}
+    bool moduleLoad() {return false;}
+#endif
+
 
     Impl()
     {
-        #ifdef __APPLE__
-            dl_handle = dlopen("librlottie-image-loader.dylib", RTLD_LAZY);
-        #elif WIN32
-		dl_handle = LoadLibraryA("librlottie-image-loader.dll");
-		#else
-            dl_handle = dlopen("librlottie-image-loader.so", RTLD_LAZY);
-        #endif
-        if (!dl_handle)
+        if (moduleLoad()) {
             vWarning<<"Failed to dlopen librlottie-image-loader library";
-
-#ifdef WIN32
-		lottie_image_load = (lottie_image_load_f)GetProcAddress(dl_handle, "lottie_image_load");
-#else
-		lottie_image_load = (lottie_image_load_f) dlsym(dl_handle, "lottie_image_load");
-#endif
+            return;
+        }
+        
+        init();
 		
-        if (!lottie_image_load)
+        if (!imageLoad)
             vWarning<<"Failed to find symbol lottie_image_load in librlottie-image-loader library";
-#ifdef WIN32
-		lottie_image_free = (lottie_image_free_f)GetProcAddress(dl_handle, "lottie_image_free");
-#else
-        lottie_image_free = (lottie_image_free_f) dlsym(dl_handle, "lottie_image_free");
-#endif
-        if (!lottie_image_free)
+
+        if (!imageFree)
             vWarning<<"Failed to find symbol lottie_image_free in librlottie-image-loader library";
-#ifdef WIN32
-		lottie_image_load_data = (lottie_image_load_data_f)GetProcAddress(dl_handle, "lottie_image_load_from_data");
-#else
-        lottie_image_load_data = (lottie_image_load_data_f) dlsym(dl_handle, "lottie_image_load_from_data");
-#endif
-        if (!lottie_image_load_data)
+
+        if (!imageFromData)
             vWarning<<"Failed to find symbol lottie_image_load_data in librlottie-image-loader library";
     }
+
     ~Impl()
     {	
-		if (dl_handle)
-		{
-#ifdef WIN32
-		FreeLibrary(dl_handle);
-#else
-		dlclose(dl_handle); 
-#endif
-		}
+        moduleFree();
     }
 
     VBitmap createBitmap(unsigned char *data, int width, int height, int channel)
@@ -84,17 +120,17 @@ struct VImageLoader::Impl
         memcpy(result.data(), data, width * height * 4);
 
         // free the image data
-        lottie_image_free(data);
+        imageFree(data);
 
         return result;
     }
 
     VBitmap load(const char *fileName)
     {
-        if (!lottie_image_load) return VBitmap();
+        if (!imageLoad) return VBitmap();
 
         int width, height, n;
-        unsigned char *data = lottie_image_load(fileName, &width, &height, &n, 4);
+        unsigned char *data = imageLoad(fileName, &width, &height, &n, 4);
 
         if (!data) {
             return VBitmap();
@@ -105,10 +141,10 @@ struct VImageLoader::Impl
 
     VBitmap load(const char *imageData, int len)
     {
-        if (!lottie_image_load_data) return VBitmap();
+        if (!imageFromData) return VBitmap();
 
         int width, height, n;
-        unsigned char *data = lottie_image_load_data(imageData, len, &width, &height, &n, 4);
+        unsigned char *data = imageFromData(imageData, len, &width, &height, &n, 4);
 
         if (!data) {
             return VBitmap();
