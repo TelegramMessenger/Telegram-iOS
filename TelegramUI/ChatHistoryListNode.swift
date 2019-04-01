@@ -55,7 +55,7 @@ public struct ChatHistoryCombinedInitialData {
 }
 
 enum ChatHistoryViewUpdate {
-    case Loading(initialData: ChatHistoryCombinedInitialData?)
+    case Loading(initialData: ChatHistoryCombinedInitialData?, type: ChatHistoryViewUpdateType)
     case HistoryView(view: MessageHistoryView, type: ChatHistoryViewUpdateType, scrollPosition: ChatHistoryViewScrollPosition?, originalScrollPosition: ChatHistoryViewScrollPosition?, initialData: ChatHistoryCombinedInitialData, id: Int32)
 }
 
@@ -483,9 +483,30 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let historyViewTransition = combineLatest(historyViewUpdate, self.chatPresentationDataPromise.get(), selectedMessages, automaticDownloadNetworkType, self.historyAppearsClearedPromise.get())
         |> introduceError(Void.self)
         |> mapToQueue { [weak self] update, chatPresentationData, selectedMessages, networkType, historyAppearsCleared -> Signal<ChatHistoryListViewTransition, Void> in
+            func applyHole() {
+                Queue.mainQueue().async {
+                    if let strongSelf = self {
+                        let historyView = (strongSelf.opaqueTransactionState as? ChatHistoryTransactionOpaqueState)?.historyView
+                        let displayRange = strongSelf.displayedItemRange
+                        if let filteredEntries = historyView?.filteredEntries, let visibleRange = displayRange.visibleRange {
+                            let lastEntry = filteredEntries[filteredEntries.count - 1 - visibleRange.lastIndex]
+                            
+                            strongSelf.chatHistoryLocation.set(ChatHistoryLocationInput(content: .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount), id: 0))
+                        } else {
+                            strongSelf.chatHistoryLocation.set(ChatHistoryLocationInput(content: .Initial(count: 60), id: 0))
+                        }
+                    }
+                }
+            }
+            
             let initialData: ChatHistoryCombinedInitialData?
             switch update {
-                case let .Loading(combinedInitialData):
+                case let .Loading(combinedInitialData, type):
+                    if case .Generic(.FillHole) = type {
+                        applyHole()
+                        return .fail(Void())
+                    }
+                    
                     initialData = combinedInitialData
                     Queue.mainQueue().async {
                         if let strongSelf = self {
@@ -512,19 +533,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     return .complete()
                 case let .HistoryView(view, type, scrollPosition, originalScrollPosition, data, id):
                     if case .Generic(.FillHole) = type {
-                        Queue.mainQueue().async {
-                            if let strongSelf = self {
-                                let historyView = (strongSelf.opaqueTransactionState as? ChatHistoryTransactionOpaqueState)?.historyView
-                                let displayRange = strongSelf.displayedItemRange
-                                if let filteredEntries = historyView?.filteredEntries, let visibleRange = displayRange.visibleRange {
-                                    let lastEntry = filteredEntries[filteredEntries.count - 1 - visibleRange.lastIndex]
-                                    
-                                    strongSelf.chatHistoryLocation.set(ChatHistoryLocationInput(content: .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount), id: 0))
-                                } else {
-                                    strongSelf.chatHistoryLocation.set(ChatHistoryLocationInput(content: .Initial(count: 60), id: 0))
-                                }
-                            }
-                        }
+                        applyHole()
                         return .fail(Void())
                     }
                     
@@ -630,7 +639,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 if apply {
                     switch chatLocation {
                         case .peer:
-                            let _ = applyMaxReadIndexInteractively(postbox: context.account.postbox, stateManager: context.account.stateManager, index: messageIndex).start()
+                            if !context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                                let _ = applyMaxReadIndexInteractively(postbox: context.account.postbox, stateManager: context.account.stateManager, index: messageIndex).start()
+                        }
                         /*case let .group(groupId):
                             let _ = context.account.postbox.transaction({ transaction -> Void in
                                 transaction.applyGroupFeedInteractiveReadMaxIndex(groupId: groupId, index: messageIndex)
@@ -1270,7 +1281,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
             } else if self.interactiveReadActionDisposable == nil {
                 if case let .peer(peerId) = self.chatLocation {
-                    self.interactiveReadActionDisposable = installInteractiveReadMessagesAction(postbox: self.context.account.postbox, stateManager: self.context.account.stateManager, peerId: peerId)
+                    if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                        self.interactiveReadActionDisposable = installInteractiveReadMessagesAction(postbox: self.context.account.postbox, stateManager: self.context.account.stateManager, peerId: peerId)
+                    }
                 }
             }
         }

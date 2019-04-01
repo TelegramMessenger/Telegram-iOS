@@ -36,6 +36,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case redactSensitiveData(PresentationTheme, Bool)
     case enableRaiseToSpeak(PresentationTheme, Bool)
     case keepChatNavigationStack(PresentationTheme, Bool)
+    case skipReadHistory(PresentationTheme, Bool)
     case clearTips(PresentationTheme)
     case reimport(PresentationTheme)
     case resetData(PresentationTheme)
@@ -50,7 +51,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logs.rawValue
             case .logToFile, .logToConsole, .redactSensitiveData:
                 return DebugControllerSection.logging.rawValue
-            case .enableRaiseToSpeak, .keepChatNavigationStack:
+            case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory:
                 return DebugControllerSection.experiments.rawValue
             case .clearTips, .reimport, .resetData, .animatedStickers:
                 return DebugControllerSection.experiments.rawValue
@@ -79,6 +80,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 7
             case .keepChatNavigationStack:
                 return 8
+            case .skipReadHistory:
+                return 9
             case .clearTips:
                 return 10
             case .reimport:
@@ -208,6 +211,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         return settings
                     }).start()
                 })
+            case let .skipReadHistory(theme, value):
+                return ItemListSwitchItem(theme: theme, title: "Skip read history", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
+                        var settings = settings
+                        settings.skipReadHistory = value
+                        return settings
+                    }).start()
+                })
             case let .clearTips(theme):
                 return ItemListActionItem(theme: theme, title: "Clear Tips", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     let _ = (arguments.sharedContext.accountManager.transaction { transaction -> Void in
@@ -276,6 +287,9 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     
     entries.append(.enableRaiseToSpeak(presentationData.theme, mediaInputSettings.enableRaiseToSpeak))
     entries.append(.keepChatNavigationStack(presentationData.theme, experimentalSettings.keepChatNavigationStack))
+    #if DEBUG
+    entries.append(.skipReadHistory(presentationData.theme, experimentalSettings.skipReadHistory))
+    #endif
     entries.append(.clearTips(presentationData.theme))
     if hasLegacyAppData {
         entries.append(.reimport(presentationData.theme))
