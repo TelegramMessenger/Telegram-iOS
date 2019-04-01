@@ -112,7 +112,7 @@ private final class MediaBoxFileMap {
     }
     
     fileprivate func fill(_ range: Range<Int32>) {
-        let intRange = Range(Int(range.lowerBound) ..< Int(range.upperBound))
+        let intRange: Range<Int> = Int(range.lowerBound) ..< Int(range.upperBound)
         let previousCount = self.ranges.count(in: intRange)
         self.ranges.insert(integersIn: intRange)
         self.sum += Int32(range.count - previousCount)
@@ -135,7 +135,7 @@ private final class MediaBoxFileMap {
         } else {
             maxValue = Int.max
         }
-        let intRange = Range(Int(range.lowerBound) ..< min(maxValue, Int(range.upperBound)))
+        let intRange: Range<Int> = Int(range.lowerBound) ..< min(maxValue, Int(range.upperBound))
         return self.ranges.contains(integersIn: intRange)
     }
 }
@@ -343,7 +343,7 @@ final class MediaBoxPartialFile {
                     assertionFailure()
                     removeIndices.append((index, request))
                 } else {
-                    let intRange = Range(Int(request.range.lowerBound) ..< Int(min(maxValue, request.range.upperBound)))
+                    let intRange: Range<Int> = Int(request.range.lowerBound) ..< Int(min(maxValue, request.range.upperBound))
                     if self.fileMap.ranges.contains(integersIn: intRange) {
                         removeIndices.append((index, request))
                     }
@@ -684,7 +684,7 @@ private final class MediaBoxFileMissingRange {
     init(range: Range<Int32>, priority: MediaBoxFetchPriority, error: @escaping (MediaResourceDataFetchError) -> Void, completion: @escaping () -> Void) {
         self.range = range
         self.priority = priority
-        let intRange = Range(Int(range.lowerBound) ..< Int(range.upperBound))
+        let intRange: Range<Int> = Int(range.lowerBound) ..< Int(range.upperBound)
         self.remainingRanges = IndexSet(integersIn: intRange)
         self.error = error
         self.completion = completion
@@ -790,7 +790,7 @@ private final class MediaBoxFileMissingRanges {
     }
     
     func fill(_ range: Range<Int32>) -> ([(Range<Int>, MediaBoxFetchPriority)], [() -> Void])? {
-        let intRange = Range(Int(range.lowerBound) ..< Int(range.upperBound))
+        let intRange: Range<Int> = Int(range.lowerBound) ..< Int(range.upperBound)
         if self.missingRanges.intersects(integersIn: intRange) {
             self.missingRanges.remove(integersIn: intRange)
             var completions: [() -> Void] = []
@@ -824,7 +824,7 @@ private final class MediaBoxFileMissingRanges {
     private func update(fileMap: MediaBoxFileMap) -> [(Range<Int>, MediaBoxFetchPriority)]? {
         var requested = IndexSet()
         for item in self.requestedRanges.copyItems() {
-            let intRange = Range(Int(item.range.lowerBound) ..< Int(item.range.upperBound))
+            let intRange: Range<Int> = Int(item.range.lowerBound) ..< Int(item.range.upperBound)
             requested.insert(integersIn: intRange)
         }
         requested.subtract(fileMap.ranges)

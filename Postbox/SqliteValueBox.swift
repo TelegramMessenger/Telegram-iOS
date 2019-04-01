@@ -47,9 +47,9 @@ struct SqlitePreparedStatement {
         let res = sqlite3_step(statement)
         if res != SQLITE_ROW && res != SQLITE_DONE {
             if let error = sqlite3_errmsg(handle), let str = NSString(utf8String: error) {
-                print("SQL error \(res): \(str) on step")
+                postboxLog("SQL error \(res): \(str) on step")
             } else {
-                print("SQL error \(res) on step")
+                postboxLog("SQL error \(res) on step")
             }
             
             if res == SQLITE_CORRUPT {
@@ -61,6 +61,26 @@ struct SqlitePreparedStatement {
             }
         }
         return res == SQLITE_ROW
+    }
+    
+    func tryStep(handle: OpaquePointer?, _ initial: Bool = false, path: String?) -> Bool {
+        let res = sqlite3_step(statement)
+        if res != SQLITE_ROW && res != SQLITE_DONE {
+            if let error = sqlite3_errmsg(handle), let str = NSString(utf8String: error) {
+                postboxLog("SQL error \(res): \(str) on step")
+            } else {
+                postboxLog("SQL error \(res) on step")
+            }
+            
+            if res == SQLITE_CORRUPT {
+                if let path = path {
+                    postboxLog("Corrupted DB at step, dropping")
+                    try? FileManager.default.removeItem(atPath: path)
+                    preconditionFailure()
+                }
+            }
+        }
+        return res == SQLITE_ROW || res == SQLITE_DONE
     }
     
     func int32At(_ index: Int) -> Int32 {
@@ -194,19 +214,39 @@ final class SqliteValueBox: ValueBox {
             
             if let encryptionKey = encryptionKey {
                 let hexKey = hexString(encryptionKey)
-                resultCode = database.execute("PRAGMA key='\(hexKey)'")
-                assert(resultCode)
+                
+                if encryptionKey.count == 32 {
+                    resultCode = database.execute("PRAGMA key=\"x'\(hexKey)'\"")
+                    assert(resultCode)
+                    
+                    if self.isEncrypted(database) {
+                        resultCode = database.execute("PRAGMA key=\"\(hexKey)\"")
+                        assert(resultCode)
+                        
+                        if !self.isEncrypted(database) {
+                            resultCode = database.execute("PRAGMA rekey=\"x'\(hexKey)'\"")
+                            assert(resultCode)
+                        }
+                    }
+                } else {
+                    assert(false)
+                    resultCode = database.execute("PRAGMA key=\"\(hexKey)")
+                    assert(resultCode)
+                }
                 
                 if self.isEncrypted(database) {
                     postboxLog("Encryption key is invalid")
+                    assert(false)
+                    
                     let _ = try? FileManager.default.removeItem(atPath: path)
                     database = Database(path)!
                     
-                    resultCode = database.execute("PRAGMA key='\(hexKey)'")
+                    resultCode = database.execute("PRAGMA key=\"x'\(hexKey)'\"")
                     assert(resultCode)
                 }
             } else {
                 postboxLog("Encryption key is required")
+                assert(false)
                 let _ = try? FileManager.default.removeItem(atPath: path)
                 database = Database(path)!
             }
@@ -323,15 +363,18 @@ final class SqliteValueBox: ValueBox {
     
     private func isEncrypted(_ database: Database) -> Bool {
         var statement: OpaquePointer? = nil
-        let status = sqlite3_prepare_v2(database.handle, "SELECT count(*) FROM sqlite_master", -1, &statement, nil)
+        let startTime = CFAbsoluteTimeGetCurrent()
+        let status = sqlite3_prepare_v2(database.handle, "SELECT * FROM sqlite_master LIMIT 1", -1, &statement, nil)
         if status == SQLITE_NOTADB {
             return true
         }
         let preparedStatement = SqlitePreparedStatement(statement: statement)
-        if !preparedStatement.step(handle: database.handle, path: self.databasePath) {
+        if !preparedStatement.tryStep(handle: database.handle, path: self.databasePath) {
             preparedStatement.destroy()
             return true
         }
+        let endTime = CFAbsoluteTimeGetCurrent()
+        print("sqlite_master select took \((endTime - startTime) * 1000.0) ms")
         preparedStatement.destroy()
         return status == SQLITE_NOTADB
     }

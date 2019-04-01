@@ -4,6 +4,12 @@ public struct MessageHistoryHolesViewEntry: Equatable, Hashable {
     public let hole: MessageHistoryViewHole
     public let direction: MessageHistoryViewRelativeHoleDirection
     public let space: MessageHistoryHoleSpace
+    
+    public init(hole: MessageHistoryViewHole, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace) {
+        self.hole = hole
+        self.direction = direction
+        self.space = space
+    }
 }
 
 final class MutableMessageHistoryHolesView {

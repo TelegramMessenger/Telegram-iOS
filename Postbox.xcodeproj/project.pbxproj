@@ -231,8 +231,6 @@
 		D0B4185A1D7DFE29004562A4 /* ViewTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E1DE141C5E1C6900C7826E /* ViewTracker.swift */; };
 		D0B4185B1D7DFE2C004562A4 /* MurMurHash32.h in Headers */ = {isa = PBXBuildFile; fileRef = D044E1611B2AD667001EE087 /* MurMurHash32.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0B4185C1D7DFE2F004562A4 /* MurMurHash32.m in Sources */ = {isa = PBXBuildFile; fileRef = D044E1621B2AD677001EE087 /* MurMurHash32.m */; };
-		D0B4185D1D7DFE35004562A4 /* IpcNotifier.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D511031D64D75200A97B8A /* IpcNotifier.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		D0B4185E1D7DFE54004562A4 /* IpcNotifier.mm in Sources */ = {isa = PBXBuildFile; fileRef = D0D511011D64D73D00A97B8A /* IpcNotifier.mm */; };
 		D0B418611D7DFE95004562A4 /* SwiftSignalKitMac.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B418601D7DFE95004562A4 /* SwiftSignalKitMac.framework */; };
 		D0B844031DAB91A7005F29E1 /* PeerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0C8E1D81A350008AEB01 /* PeerView.swift */; };
 		D0B844051DAB91B5005F29E1 /* MediaBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D055BD321B7D3D2D00F06C0A /* MediaBox.swift */; };
@@ -286,8 +284,6 @@
 		D0D510F61D63BBE100A97B8A /* MessageHistoryOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D510F51D63BBE100A97B8A /* MessageHistoryOperation.swift */; };
 		D0D510F91D63BCC200A97B8A /* IntermediateMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D510F81D63BCC200A97B8A /* IntermediateMessage.swift */; };
 		D0D511001D64A58900A97B8A /* IpcPipe.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D510FF1D64A58900A97B8A /* IpcPipe.swift */; };
-		D0D511021D64D73D00A97B8A /* IpcNotifier.mm in Sources */ = {isa = PBXBuildFile; fileRef = D0D511011D64D73D00A97B8A /* IpcNotifier.mm */; };
-		D0D511041D64D91C00A97B8A /* IpcNotifier.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D511031D64D75200A97B8A /* IpcNotifier.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D949F51D35353900740E02 /* MappedFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D949F41D35353900740E02 /* MappedFile.swift */; };
 		D0DA1D2F1F70419D0034E892 /* PendingPeerNotificationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA1D2E1F70419D0034E892 /* PendingPeerNotificationSettingsView.swift */; };
 		D0DA1D301F70419D0034E892 /* PendingPeerNotificationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DA1D2E1F70419D0034E892 /* PendingPeerNotificationSettingsView.swift */; };
@@ -1001,7 +997,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0B418201D7DFDFD004562A4 /* sqlite3ext.h in Headers */,
-				D0B4185D1D7DFE35004562A4 /* IpcNotifier.h in Headers */,
 				D0FC195120208E8800FEDBB2 /* Crc32.h in Headers */,
 				D050F2651E4A5B4800988324 /* fts3_tokenizer.h in Headers */,
 				D0B4185B1D7DFE2C004562A4 /* MurMurHash32.h in Headers */,
@@ -1018,7 +1013,6 @@
 				D07516771B2EC90400AE42E0 /* fts3_tokenizer.h in Headers */,
 				D07516451B2D9CEF00AE42E0 /* sqlite3.h in Headers */,
 				D0FC195020208E8800FEDBB2 /* Crc32.h in Headers */,
-				D0D511041D64D91C00A97B8A /* IpcNotifier.h in Headers */,
 				D07516781B2EC90400AE42E0 /* SQLite-Bridging.h in Headers */,
 				D0E3A7501B28A7E300A402D9 /* Postbox.h in Headers */,
 				D07516461B2D9CEF00AE42E0 /* sqlite3ext.h in Headers */,
@@ -1113,6 +1107,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = D0E3A7401B28A7E300A402D9;
@@ -1227,7 +1222,6 @@
 				D08775011E3E3D9F00A97350 /* PreferencesTable.swift in Sources */,
 				D0F7B1CC1E045C6A007EB8A5 /* ChatListIndexTable.swift in Sources */,
 				D07047A61F3CF63800F6A8D4 /* MessageHistoryTagSummaryView.swift in Sources */,
-				D0B4185E1D7DFE54004562A4 /* IpcNotifier.mm in Sources */,
 				D0F7B1D31E045C6A007EB8A5 /* CachedPeerDataTable.swift in Sources */,
 				D079FCE71F06A31C0038FADE /* NoticeTable.swift in Sources */,
 				D0F7B1D51E045C6A007EB8A5 /* PeerChatStateTable.swift in Sources */,
@@ -1459,7 +1453,6 @@
 				D033A6F71C73D512006A2EAB /* MessageHistoryUnsentTable.swift in Sources */,
 				D00C7CD41E365C4E0080C3D5 /* PeerChatListInclusion.swift in Sources */,
 				D0A18D671E16874D004C6734 /* UnreadMessageCountsView.swift in Sources */,
-				D0D511021D64D73D00A97B8A /* IpcNotifier.mm in Sources */,
 				D0B844511DAC04FE005F29E1 /* PeerPresence.swift in Sources */,
 				D07827C11E0079CB00071108 /* StringIndexTokens.swift in Sources */,
 				D0F3CC721DDE1CDC008148FA /* ItemCacheTable.swift in Sources */,
@@ -1591,6 +1584,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				CODE_SIGN_STYLE = Manual;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -1601,6 +1595,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = mh_dylib;
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
@@ -1608,13 +1603,15 @@
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
 					"-DNDEBUG",
 				);
+				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
+				STRIP_SWIFT_SYMBOLS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = ReleaseHockeyapp;
 		};
@@ -1671,7 +1668,7 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = ReleaseHockeyapp;
 		};
@@ -1734,6 +1731,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				CODE_SIGN_STYLE = Manual;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -1744,6 +1742,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = mh_dylib;
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
@@ -1752,13 +1751,15 @@
 					"-DNDEBUG",
 				);
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
+				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
+				STRIP_SWIFT_SYMBOLS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = DebugFork;
 		};
@@ -1821,7 +1822,7 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = DebugFork;
 		};
@@ -1884,6 +1885,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				CODE_SIGN_STYLE = Manual;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -1894,6 +1896,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = mh_dylib;
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
@@ -1902,13 +1905,15 @@
 					"-DNDEBUG",
 				);
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
+				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
+				STRIP_SWIFT_SYMBOLS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = DebugAppStore;
 		};
@@ -1971,7 +1976,7 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = DebugAppStore;
 		};
@@ -2026,6 +2031,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				CODE_SIGN_STYLE = Manual;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -2036,6 +2042,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = mh_dylib;
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
@@ -2043,13 +2050,15 @@
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
 					"-DNDEBUG",
 				);
+				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
+				STRIP_SWIFT_SYMBOLS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = ReleaseAppStore;
 		};
@@ -2122,6 +2131,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				CODE_SIGN_STYLE = Manual;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -2132,6 +2142,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = mh_dylib;
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
@@ -2139,13 +2150,15 @@
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
 					"-DNDEBUG",
 				);
+				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
+				STRIP_SWIFT_SYMBOLS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = ReleaseHockeyappInternal;
 		};
@@ -2202,7 +2215,7 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = ReleaseHockeyappInternal;
 		};
@@ -2265,6 +2278,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				CODE_SIGN_STYLE = Manual;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -2275,6 +2289,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = mh_dylib;
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
@@ -2283,13 +2298,15 @@
 					"-DNDEBUG",
 				);
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
+				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
+				STRIP_SWIFT_SYMBOLS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = DebugAppStoreLLC;
 		};
@@ -2352,7 +2369,7 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = DebugAppStoreLLC;
 		};
@@ -2392,7 +2409,7 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = DebugHockeyapp;
 		};
@@ -2429,7 +2446,7 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = ReleaseAppStore;
 		};
@@ -2484,6 +2501,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				CODE_SIGN_STYLE = Manual;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -2494,6 +2512,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = mh_dylib;
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
@@ -2501,13 +2520,15 @@
 					"-DSQLITE_DEFAULT_MEMSTATUS=0",
 					"-DNDEBUG",
 				);
+				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
+				STRIP_SWIFT_SYMBOLS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = ReleaseAppStoreLLC;
 		};
@@ -2562,7 +2583,7 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = ReleaseAppStoreLLC;
 		};
@@ -2625,6 +2646,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				CODE_SIGN_STYLE = Manual;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -2635,6 +2657,7 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = mh_dylib;
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
 					"-DSQLCIPHER_CRYPTO_CC=1",
@@ -2643,13 +2666,16 @@
 					"-DNDEBUG",
 				);
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
+				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
+				STRIP_SWIFT_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = singlefile;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = all;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = DebugHockeyapp;
 		};

@@ -936,7 +936,7 @@ public final class Transaction {
     }
 }
 
-fileprivate class PipeNotifier: NSObject {
+/*fileprivate class PipeNotifier: NSObject {
     let notifier: RLMNotifier
     let thread: Thread
     
@@ -953,7 +953,7 @@ fileprivate class PipeNotifier: NSObject {
     func notify() {
         notifier.notifyOtherRealms()
     }
-}
+}*/
 
 public enum PostboxResult {
     case upgrading(Float)
@@ -994,6 +994,8 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
             //debugSaveState(basePath: basePath, name: "previous1")
             //debugRestoreState(basePath: basePath, name: "previous1")
             #endif
+            
+            let startTime = CFAbsoluteTimeGetCurrent()
             
             loop: while true {
                 let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, encryptionKey: encryptionKey)
@@ -1036,6 +1038,9 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                 } else {
                     metadataTable.setUserVersion(currentUserVersion)
                 }
+                
+                let endTime = CFAbsoluteTimeGetCurrent()
+                print("Postbox load took \((endTime - startTime) * 1000.0) ms")
                 
                 subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, seedConfiguration: seedConfiguration, valueBox: valueBox)))
                 subscriber.putCompletion()
