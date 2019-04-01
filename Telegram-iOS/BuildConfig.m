@@ -236,6 +236,19 @@ static MTPKCS * _Nullable checkSignature(const char *filename) {
 
 @end
 
+@implementation DeviceSpecificEncryptionParameters
+
+- (instancetype)initWithKey:(NSData * _Nonnull)key salt:(NSData * _Nonnull)salt {
+    self = [super init];
+    if (self != nil) {
+        _key = key;
+        _salt = salt;
+    }
+    return self;
+}
+
+@end
+
 @implementation BuildConfig
 
 + (NSString *)bundleId {
@@ -382,17 +395,24 @@ static MTPKCS * _Nullable checkSignature(const char *filename) {
     return @(APP_SPECIFIC_URL_SCHEME);
 }
 
-+ (NSData * _Nonnull)encryptionKey:(NSString * _Nonnull)rootPath {
++ (DeviceSpecificEncryptionParameters * _Nonnull)deviceSpecificEncryptionParameters:(NSString * _Nonnull)rootPath {
     NSString *filePath = [rootPath stringByAppendingPathComponent:@".tempkey"];
     NSData *data = [NSData dataWithContentsOfFile:filePath];
-    if (data != nil) {
-        return data;
+    if (data != nil && data.length == 32 + 16) {
+        NSData *key = [data subdataWithRange:NSMakeRange(0, 32)];
+        NSData *salt = [data subdataWithRange:NSMakeRange(32, 16)];
+        return [[DeviceSpecificEncryptionParameters alloc] initWithKey:key salt:salt];
     }
-    NSMutableData *randomData = [[NSMutableData alloc] initWithLength:32];
+    NSMutableData *randomData = [[NSMutableData alloc] initWithLength:32 + 16];
     int result = SecRandomCopyBytes(kSecRandomDefault, randomData.length, [randomData mutableBytes]);
+    if (data != nil && data.length == 32) { // upgrade key with salt
+        [data getBytes:randomData.mutableBytes length:32];
+    }
     assert(result == 0);
     [randomData writeToFile:filePath atomically:false];
-    return randomData;
+    NSData *key = [randomData subdataWithRange:NSMakeRange(0, 32)];
+    NSData *salt = [randomData subdataWithRange:NSMakeRange(32, 16)];
+    return [[DeviceSpecificEncryptionParameters alloc] initWithKey:key salt:salt];
 }
 
 @end

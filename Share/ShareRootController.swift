@@ -160,7 +160,10 @@ class ShareRootController: UIViewController {
                 })
                 semaphore.wait()
                 
-                let sharedContext = SharedAccountContext(mainWindow: nil, basePath: rootPath, encryptionKey: BuildConfig.encryptionKey(rootPath), accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, appData: BuildConfig.shared().bundleData), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
+                let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath)
+                let encryptionParameters = ValueBoxEncryptionParameters(key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
+                
+                let sharedContext = SharedAccountContext(mainWindow: nil, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, appData: BuildConfig.shared().bundleData), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
                 sharedExtensionContext = SharedExtensionContext(sharedContext: sharedContext)
                 globalSharedExtensionContext = sharedExtensionContext
             }

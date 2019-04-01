@@ -372,7 +372,8 @@ final class SharedApplicationContext {
         let rootPath = rootPathForBasePath(appGroupUrl.path)
         performAppGroupUpgrades(appGroupPath: appGroupUrl.path, rootPath: rootPath)
         
-        let encryptionKey = BuildConfig.encryptionKey(rootPath)
+        let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath)
+        let encryptionParameters = ValueBoxEncryptionParameters(key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
         
         TempBox.initializeShared(basePath: rootPath, processType: "app", launchSpecificId: arc4random64())
         
@@ -575,11 +576,10 @@ final class SharedApplicationContext {
         
         let accountManagerSignal = Signal<AccountManager, NoError> { subscriber in
             let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
-            return upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionKey: encryptionKey).start(completed: {
+            return upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters).start(completed: {
                 subscriber.putNext(accountManager)
                 subscriber.putCompletion()
             })
-            return EmptyDisposable
         }
         
         let sharedContextSignal = accountManagerSignal
@@ -601,7 +601,7 @@ final class SharedApplicationContext {
             let legacyCache = LegacyCache(path: legacyBasePath + "/Caches")
             
             var setPresentationCall: ((PresentationCall?) -> Void)?
-            let sharedContext = SharedAccountContext(mainWindow: self.mainWindow, basePath: rootPath, encryptionKey: encryptionKey, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
+            let sharedContext = SharedAccountContext(mainWindow: self.mainWindow, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
                 setPresentationCall?(call)
             }, navigateToChat: { accountId, peerId, messageId in
                 self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
@@ -720,7 +720,7 @@ final class SharedApplicationContext {
             Logger.shared.logToConsole = loggingSettings.logToConsole
             Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
             
-            return importedLegacyAccount(basePath: appGroupUrl.path, accountManager: sharedApplicationContext.sharedContext.accountManager, encryptionKey: encryptionKey, present: { controller in
+            return importedLegacyAccount(basePath: appGroupUrl.path, accountManager: sharedApplicationContext.sharedContext.accountManager, encryptionParameters: encryptionParameters, present: { controller in
                 self.window?.rootViewController?.present(controller, animated: true, completion: nil)
             })
             |> `catch` { _ -> Signal<ImportedLegacyAccountEvent, NoError> in

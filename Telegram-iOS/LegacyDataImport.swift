@@ -106,7 +106,7 @@ enum ImportedLegacyAccountEvent {
     case result(AccountRecordId?)
 }
 
-func importedLegacyAccount(basePath: String, accountManager: AccountManager, encryptionKey: Data, present: @escaping (UIViewController) -> Void) -> Signal<ImportedLegacyAccountEvent, AccountImportError> {
+func importedLegacyAccount(basePath: String, accountManager: AccountManager, encryptionParameters: ValueBoxEncryptionParameters, present: @escaping (UIViewController) -> Void) -> Signal<ImportedLegacyAccountEvent, AccountImportError> {
     let queue = Queue()
     return deferred { () -> Signal<ImportedLegacyAccountEvent, AccountImportError> in
         let documentsPath = basePath + "/Documents"
@@ -218,7 +218,7 @@ func importedLegacyAccount(basePath: String, accountManager: AccountManager, enc
                 }
             }
             
-            return temporaryAccount(manager: accountManager, rootPath: rootPathForBasePath(basePath), encryptionKey: encryptionKey)
+            return temporaryAccount(manager: accountManager, rootPath: rootPathForBasePath(basePath), encryptionParameters: encryptionParameters)
             |> introduceError(AccountImportError.self)
             |> mapToSignal { account -> Signal<ImportedLegacyAccountEvent, AccountImportError> in
                 let actions = importedAccountData(basePath: basePath, documentsPath: documentsPath, accountManager: accountManager, account: account, database: database)
