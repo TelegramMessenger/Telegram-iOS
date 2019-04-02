@@ -2051,7 +2051,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             stationaryItemRange = (maxInsertedItem + 1, Int.max)
                         }
                         
-                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false, reason: transition.reason), updateSizeAndInsets)
+                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false, reason: transition.reason, flashIndicators: transition.flashIndicators), updateSizeAndInsets)
                     })
                     
                     if let mappedTransition = mappedTransition {
@@ -5129,7 +5129,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             switch historyView {
                                 case .Loading:
                                     return .single((nil, true))
-                                case let .HistoryView(view, _, _, _, _, _):
+                                case let .HistoryView(view, _, _, _, _, _, _):
                                     for entry in view.entries {
                                         if entry.message.id == messageLocation.messageId {
                                             return .single((entry.message.index, false))
@@ -5218,7 +5218,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             switch historyView {
                                 case .Loading:
                                     return .complete()
-                                case let .HistoryView(view, _, _, _, _, _):
+                                case let .HistoryView(view, _, _, _, _, _, _):
                                     for entry in view.entries {
                                         if entry.message.id == messageLocation.messageId {
                                             return .single(entry.message.index)

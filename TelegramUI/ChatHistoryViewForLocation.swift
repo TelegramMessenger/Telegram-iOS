@@ -41,7 +41,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                 let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
                 
                 if preloaded {
-                    return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
+                    return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
                 } else {
                     if view.isLoading {
                         return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
@@ -86,7 +86,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                     }
                     
                     preloaded = true
-                    return .HistoryView(view: view, type: .Initial(fadeIn: fadeIn), scrollPosition: scrollPosition, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
+                    return .HistoryView(view: view, type: .Initial(fadeIn: fadeIn), scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
                 }
             }
         case let .InitialSearch(searchLocation, count):
@@ -107,7 +107,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                 let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
                 
                 if preloaded {
-                    return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
+                    return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
                 } else {
                     let anchorIndex = view.anchorIndex
                     
@@ -141,7 +141,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                     }
                     
                     preloaded = true
-                    return .HistoryView(view: view, type: reportUpdateType, scrollPosition: .index(index: anchorIndex, position: .center(.bottom), directionHint: .Down, animated: false), originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
+                    return .HistoryView(view: view, type: reportUpdateType, scrollPosition: .index(index: anchorIndex, position: .center(.bottom), directionHint: .Down, animated: false), flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
                 }
             }
         case let .Navigation(index, anchorIndex, count):
@@ -156,7 +156,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                 } else {
                     genericType = updateType
                 }
-                return .HistoryView(view: view, type: .Generic(type: genericType), scrollPosition: nil, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
+                return .HistoryView(view: view, type: .Generic(type: genericType), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
             }
         case let .Scroll(index, anchorIndex, sourceIndex, scrollPosition, animated):
             let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
@@ -174,7 +174,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                 } else {
                     genericType = updateType
                 }
-                return .HistoryView(view: view, type: .Generic(type: genericType), scrollPosition: scrollPosition, originalScrollPosition: chatScrollPosition, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
+                return .HistoryView(view: view, type: .Generic(type: genericType), scrollPosition: scrollPosition, flashIndicators: animated, originalScrollPosition: chatScrollPosition, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
             }
         }
 }

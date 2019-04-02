@@ -509,7 +509,7 @@ public class TelegramController: ViewController {
                                 switch historyView {
                                     case .Loading:
                                         return .single((nil, true))
-                                    case let .HistoryView(view, _, _, _, _, _):
+                                    case let .HistoryView(view, _, _, _, _, _, _):
                                         for entry in view.entries {
                                             if entry.message.id == id.messageId {
                                                 return .single((entry.message.index, false))
