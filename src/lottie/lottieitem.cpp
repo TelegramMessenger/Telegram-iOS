@@ -343,6 +343,8 @@ VRle LOTLayerMaskItem::maskRle(const VRect &clipRect)
             break;
         }
         case LOTMaskData::Mode::Intersect: {
+            if (rle.empty() && !clipRect.empty())
+                rle = VRle::toRle(clipRect);
             rle = rle & i.rle();
             break;
         }
