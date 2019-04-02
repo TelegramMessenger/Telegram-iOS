@@ -1306,7 +1306,23 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     peerView.set(context.account.viewTracker.peerView(peerId))
                     var onlineMemberCount: Signal<Int32?, NoError> = .single(nil)
                     if peerId.namespace == Namespaces.Peer.CloudChannel {
-                        onlineMemberCount = context.peerChannelMemberCategoriesContextsManager.recentOnline(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                        let recentOnlineSignal: Signal<Int32, NoError> = context.account.viewTracker.peerView(peerId)
+                        |> map { view -> Bool in
+                            if let cachedData = view.cachedData as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount, memberCount > 50 {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        |> distinctUntilChanged
+                        |> mapToSignal { isLarge -> Signal<Int32, NoError> in
+                            if isLarge {
+                                return context.peerChannelMemberCategoriesContextsManager.recentOnline(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                            } else {
+                                return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                            }
+                        }
+                        onlineMemberCount = recentOnlineSignal
                         |> map(Optional.init)
                     }
                     self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount)
