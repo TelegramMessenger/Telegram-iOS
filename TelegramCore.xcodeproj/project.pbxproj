@@ -410,6 +410,8 @@
 		D0613FD01E60520700202CDB /* ChannelMembers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0613FCE1E60520700202CDB /* ChannelMembers.swift */; };
 		D0613FD71E606B3B00202CDB /* ConvertGroupToSupergroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0613FD61E606B3B00202CDB /* ConvertGroupToSupergroup.swift */; };
 		D0613FD81E606B3B00202CDB /* ConvertGroupToSupergroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0613FD61E606B3B00202CDB /* ConvertGroupToSupergroup.swift */; };
+		D0633CD22253A528003DD95F /* ChatOnlineMembers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0633CD12253A528003DD95F /* ChatOnlineMembers.swift */; };
+		D0633CD32253A528003DD95F /* ChatOnlineMembers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0633CD12253A528003DD95F /* ChatOnlineMembers.swift */; };
 		D0642EF91F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0642EF81F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift */; };
 		D0642EFA1F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0642EF81F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift */; };
 		D067066C1D512ADB00DED3E3 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06706671D512ADB00DED3E3 /* Postbox.framework */; };
@@ -1025,6 +1027,7 @@
 		D0613FC91E60440600202CDB /* InvitationLinks.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InvitationLinks.swift; sourceTree = "<group>"; };
 		D0613FCE1E60520700202CDB /* ChannelMembers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelMembers.swift; sourceTree = "<group>"; };
 		D0613FD61E606B3B00202CDB /* ConvertGroupToSupergroup.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConvertGroupToSupergroup.swift; sourceTree = "<group>"; };
+		D0633CD12253A528003DD95F /* ChatOnlineMembers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatOnlineMembers.swift; sourceTree = "<group>"; };
 		D0642EF81F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EarliestUnseenPersonalMentionMessage.swift; sourceTree = "<group>"; };
 		D06706641D512ADB00DED3E3 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D06706651D512ADB00DED3E3 /* Display.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1980,6 +1983,7 @@
 				D018EE042045E95000CBB130 /* CheckPeerChatServiceActions.swift */,
 				9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */,
 				D0F760D722202FE20074F7E5 /* ChannelStats.swift */,
+				D0633CD12253A528003DD95F /* ChatOnlineMembers.swift */,
 			);
 			name = Peers;
 			sourceTree = "<group>";
@@ -2459,6 +2463,7 @@
 				D03B0CE81D6224AD00955575 /* ViewCountMessageAttribute.swift in Sources */,
 				D0FA35051EA6135D00E56FFA /* CacheStorageSettings.swift in Sources */,
 				D03B0D0C1D62255C00955575 /* AccountStateManagementUtils.swift in Sources */,
+				D0633CD22253A528003DD95F /* ChatOnlineMembers.swift in Sources */,
 				D0C26D7B1FE31DAC004ABF18 /* ManagedGroupFeedReadStateSyncOperations.swift in Sources */,
 				D073CE5D1DCB97F6007511FD /* ForwardSourceInfoAttribute.swift in Sources */,
 				D0FA8B9E1E1F973B001E855B /* SecretChatIncomingEncryptedOperation.swift in Sources */,
@@ -2857,6 +2862,7 @@
 				D0561DEB1E5754FA00E6B9E9 /* ChannelAdmins.swift in Sources */,
 				D0AD02E41FFFA14800C1DCFF /* PeerLiveLocationsContext.swift in Sources */,
 				D0613FCB1E60440600202CDB /* InvitationLinks.swift in Sources */,
+				D0633CD32253A528003DD95F /* ChatOnlineMembers.swift in Sources */,
 				D08984FC2118816A00918162 /* Reachability.m in Sources */,
 				D0B844471DAB91FD005F29E1 /* ManagedServiceViews.swift in Sources */,
 				D0F3A8A91E82CD7D00B4C64C /* UpdatePeerChatInterfaceState.swift in Sources */,
