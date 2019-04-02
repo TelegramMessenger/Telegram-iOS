@@ -10,6 +10,7 @@ public final class CollectionIndexNode: ASDisplayNode {
     private var currentSections: [String] = []
     private var currentColor: UIColor?
     private var titleNodes: [String: (node: ImmediateTextNode, size: CGSize)] = [:]
+    private var scrollFeedback: HapticFeedback?
     
     private var currentSelectedIndex: String?
     public var indexSelected: ((String) -> Void)?
@@ -148,6 +149,11 @@ public final class CollectionIndexNode: ASDisplayNode {
                     self.currentSelectedIndex = locationTitle
                     if let locationTitle = locationTitle {
                         self.indexSelected?(locationTitle)
+                        
+                        if self.scrollFeedback == nil {
+                            self.scrollFeedback = HapticFeedback()
+                        }
+                        self.scrollFeedback?.tap()
                     }
                 }
             case .cancelled, .ended:
