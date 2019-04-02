@@ -312,6 +312,12 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                 self.earlier = nil
                 self.later = nil
             }
+            
+            switch self.location {
+                case let .peer(peerId):
+                    self.holes = fetchHoles(postbox: postbox, peerIds: .single(peerId), tagMask: nil, entries: self.entries, hasEarlier: self.earlier != nil, hasLater: self.later != nil)
+            }
+            
             updated = true
         } else {
             var invalidEarlier = false
@@ -435,17 +441,15 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                     self.earlier = nil
                     self.later = nil
                 }
-            }
-        }
-        
-        if updated {
-            if updated {
+                
                 switch self.location {
                     case let .peer(peerId):
                         self.holes = fetchHoles(postbox: postbox, peerIds: .single(peerId), tagMask: nil, entries: self.entries, hasEarlier: self.earlier != nil, hasLater: self.later != nil)
                 }
             }
-            
+        }
+        
+        if updated {
             var updatedResult = false
             let closestHole = self.firstHole()
             if closestHole != self.closestHole {
