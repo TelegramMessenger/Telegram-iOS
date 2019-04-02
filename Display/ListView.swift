@@ -512,14 +512,18 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
-    private func resetHeaderItemsFlashTimer(start: Bool) {
+    public func flashHeaderItems(duration: Double = 2.0) {
+        self.resetHeaderItemsFlashTimer(start: true, duration: duration)
+    }
+    
+    private func resetHeaderItemsFlashTimer(start: Bool, duration: Double = 0.3) {
         if let flashNodesDelayTimer = self.flashNodesDelayTimer {
             flashNodesDelayTimer.invalidate()
             self.flashNodesDelayTimer = nil
         }
         
         if start {
-            let timer = Timer(timeInterval: 0.3, target: ListViewTimerProxy { [weak self] in
+            let timer = Timer(timeInterval: duration, target: ListViewTimerProxy { [weak self] in
                 if let strongSelf = self {
                     if let flashNodesDelayTimer = strongSelf.flashNodesDelayTimer {
                         flashNodesDelayTimer.invalidate()
