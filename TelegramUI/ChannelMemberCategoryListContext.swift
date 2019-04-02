@@ -159,7 +159,6 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
         }
     }
     
-    
     private func loadSignal(offset: Int32, count: Int32, hash: Int32) -> Signal<[RenderedChannelParticipant]?, NoError> {
         let requestCategory: ChannelMembersCategory
         var adminQuery: String? = nil

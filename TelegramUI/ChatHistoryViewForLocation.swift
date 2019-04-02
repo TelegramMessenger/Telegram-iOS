@@ -4,6 +4,25 @@ import TelegramCore
 import SwiftSignalKit
 import Display
 
+func preloadedShatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: Account, chatLocation: ChatLocation, fixedCombinedReadStates: MessageHistoryViewReadState?, tagMask: MessageTags?, additionalData: [AdditionalMessageHistoryViewData], orderStatistics: MessageHistoryViewOrderStatistics = []) -> Signal<ChatHistoryViewUpdate, NoError> {
+    return chatHistoryViewForLocation(location, account: account, chatLocation: chatLocation, fixedCombinedReadStates: fixedCombinedReadStates, tagMask: tagMask, additionalData: additionalData, orderStatistics: orderStatistics)
+    |> introduceError(Bool.self)
+    |> mapToSignal { update -> Signal<ChatHistoryViewUpdate, Bool> in
+        switch update {
+            case let .Loading(value):
+                if case .Generic(.FillHole) = value.type {
+                    return .fail(true)
+                }
+            case let .HistoryView(value):
+                if case .Generic(.FillHole) = value.type {
+                    return .fail(true)
+                }
+        }
+        return .single(update)
+    }
+    |> restartIfError
+}
+
 func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: Account, chatLocation: ChatLocation, fixedCombinedReadStates: MessageHistoryViewReadState?, tagMask: MessageTags?, additionalData: [AdditionalMessageHistoryViewData], orderStatistics: MessageHistoryViewOrderStatistics = []) -> Signal<ChatHistoryViewUpdate, NoError> {
     switch location.content {
         case let .Initial(count):
@@ -116,8 +135,13 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                         return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
                     }
                     
+                    var reportUpdateType: ChatHistoryViewUpdateType = .Initial(fadeIn: fadeIn)
+                    if case .FillHole = updateType {
+                        reportUpdateType = .Generic(type: updateType)
+                    }
+                    
                     preloaded = true
-                    return .HistoryView(view: view, type: .Initial(fadeIn: fadeIn), scrollPosition: .index(index: anchorIndex, position: .center(.bottom), directionHint: .Down, animated: false), originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
+                    return .HistoryView(view: view, type: reportUpdateType, scrollPosition: .index(index: anchorIndex, position: .center(.bottom), directionHint: .Down, animated: false), originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
                 }
             }
         case let .Navigation(index, anchorIndex, count):

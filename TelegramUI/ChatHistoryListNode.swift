@@ -493,7 +493,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             
                             strongSelf.chatHistoryLocation.set(ChatHistoryLocationInput(content: .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount), id: 0))
                         } else {
-                            strongSelf.chatHistoryLocation.set(ChatHistoryLocationInput(content: .Initial(count: 60), id: 0))
+                            if let messageId = messageId {
+                                strongSelf.chatHistoryLocation.set(ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60), id: 0))
+                            } else {
+                                strongSelf.chatHistoryLocation.set(ChatHistoryLocationInput(content: .Initial(count: 60), id: 0))
+                            }
                         }
                     }
                 }
