@@ -453,7 +453,7 @@ private func fetchHoles(postbox: Postbox, peerIds: MessageHistoryViewPeerIds, ta
     let space: MessageHistoryHoleSpace = tagMask.flatMap(MessageHistoryHoleSpace.tag) ?? .everywhere
     var result: [HoleKey: IndexSet] = [:]
     for (peerId, namespace, bounds) in namespaceBounds {
-        var indices = postbox.messageHistoryHoleIndexTable.closest(peerId: peerId, namespace: namespace, space: space, range: bounds ?? 1 ... Int32.max)
+        var indices = postbox.messageHistoryHoleIndexTable.closest(peerId: peerId, namespace: namespace, space: space, range: 1 ... Int32.max)
         if let bounds = bounds {
             if hasEarlier {
                 indices.remove(integersIn: 1 ... Int(bounds.lowerBound))
@@ -643,6 +643,10 @@ final class MutableMessageHistoryView {
     }
     
     func updateAnchorIndex(_ getIndex: (MessageId) -> InternalMessageHistoryAnchorIndex?) -> Bool {
+        if true {
+            return false
+        }
+        
         switch self.anchorIndex {
             case let .message(index, exact):
                 if !exact {
@@ -1608,77 +1612,52 @@ public final class MessageHistoryView {
                     holeLater = true
                 }
             } else {
-                var referenceIndex = entries.count - 1
-                for i in 0 ..< entries.count {
-                    if self.anchorIndex.isLessOrEqual(to: entries[i].index) {
-                        referenceIndex = i
-                        break
-                    }
-                }
-                var groupStart: (Int, MessageGroupInfo)?
-                for i in referenceIndex ..< entries.count {
-                    let id = entries[i].message.id
-                    if let holeIndices = mutableView.holes[HoleKey(peerId: id.peerId, namespace: id.namespace)] {
-                        if holeIndices.contains(Int(id.id)) {
-                            if let groupStart = groupStart {
-                                entries.removeSubrange(groupStart.0 ..< entries.count)
-                            } else {
-                                entries.removeSubrange(i ..< entries.count)
-                            }
+                var clearAllEntries = false
+                if case let .message(index) = self.anchorIndex {
+                    for (holeKey, indices) in mutableView.holes {
+                        if holeKey.peerId == index.id.peerId && holeKey.namespace == index.id.namespace && indices.contains(Int(index.id.id)) {
+                            entries.removeAll()
+                            earlierId = nil
+                            holeEarlier = true
                             laterId = nil
                             holeLater = true
+                            clearAllEntries = true
                             break
                         }
                     }
-                    /*if let groupStart = groupStart {
-                        entries.removeSubrange(groupStart.0 ..< entries.count)
-                        laterId = nil
-                    } else {
-                        if i != entries.count - 1 {
-                            entries.removeSubrange(i + 1 ..< entries.count)
-                            laterId = nil
+                }
+                if !clearAllEntries {
+                    var referenceIndex = entries.count - 1
+                    for i in 0 ..< entries.count {
+                        if self.anchorIndex.isLessOrEqual(to: entries[i].index) {
+                            referenceIndex = i
+                            break
                         }
-                    }*/
-                    if let groupInfo = entries[i].message.groupInfo {
-                        if let groupStart = groupStart, groupStart.1 == groupInfo {
-                        } else {
-                            groupStart = (i, groupInfo)
-                        }
-                    } else {
-                        groupStart = nil
                     }
-                }
-                if let groupStart = groupStart, laterId != nil {
-                    entries.removeSubrange(groupStart.0 ..< entries.count)
-                }
-                
-                groupStart = nil
-                if !entries.isEmpty {
-                    for i in (0 ... min(referenceIndex, entries.count - 1)).reversed() {
+                    var groupStart: (Int, MessageGroupInfo)?
+                    for i in referenceIndex ..< entries.count {
                         let id = entries[i].message.id
                         if let holeIndices = mutableView.holes[HoleKey(peerId: id.peerId, namespace: id.namespace)] {
                             if holeIndices.contains(Int(id.id)) {
                                 if let groupStart = groupStart {
-                                    entries.removeSubrange(0 ..< groupStart.0 + 1)
+                                    entries.removeSubrange(groupStart.0 ..< entries.count)
                                 } else {
-                                    entries.removeSubrange(0 ... i)
+                                    entries.removeSubrange(i ..< entries.count)
                                 }
-                                earlierId = nil
-                                holeEarlier = true
+                                laterId = nil
+                                holeLater = true
                                 break
                             }
                         }
                         /*if let groupStart = groupStart {
-                            entries.removeSubrange(0 ..< groupStart.0 + 1)
-                            earlierId = nil
+                            entries.removeSubrange(groupStart.0 ..< entries.count)
+                            laterId = nil
                         } else {
-                            if i != 0 {
-                                entries.removeSubrange(0 ..< i)
-                                earlierId = nil
+                            if i != entries.count - 1 {
+                                entries.removeSubrange(i + 1 ..< entries.count)
+                                laterId = nil
                             }
-                        }
-                        break
-                        */
+                        }*/
                         if let groupInfo = entries[i].message.groupInfo {
                             if let groupStart = groupStart, groupStart.1 == groupInfo {
                             } else {
@@ -1688,8 +1667,49 @@ public final class MessageHistoryView {
                             groupStart = nil
                         }
                     }
-                    if let groupStart = groupStart, earlierId != nil {
-                        entries.removeSubrange(0 ..< groupStart.0 + 1)
+                    if let groupStart = groupStart, laterId != nil {
+                        entries.removeSubrange(groupStart.0 ..< entries.count)
+                    }
+                    
+                    groupStart = nil
+                    if !entries.isEmpty {
+                        for i in (0 ... min(referenceIndex, entries.count - 1)).reversed() {
+                            let id = entries[i].message.id
+                            if let holeIndices = mutableView.holes[HoleKey(peerId: id.peerId, namespace: id.namespace)] {
+                                if holeIndices.contains(Int(id.id)) {
+                                    if let groupStart = groupStart {
+                                        entries.removeSubrange(0 ..< groupStart.0 + 1)
+                                    } else {
+                                        entries.removeSubrange(0 ... i)
+                                    }
+                                    earlierId = nil
+                                    holeEarlier = true
+                                    break
+                                }
+                            }
+                            /*if let groupStart = groupStart {
+                                entries.removeSubrange(0 ..< groupStart.0 + 1)
+                                earlierId = nil
+                            } else {
+                                if i != 0 {
+                                    entries.removeSubrange(0 ..< i)
+                                    earlierId = nil
+                                }
+                            }
+                            break
+                            */
+                            if let groupInfo = entries[i].message.groupInfo {
+                                if let groupStart = groupStart, groupStart.1 == groupInfo {
+                                } else {
+                                    groupStart = (i, groupInfo)
+                                }
+                            } else {
+                                groupStart = nil
+                            }
+                        }
+                        if let groupStart = groupStart, earlierId != nil {
+                            entries.removeSubrange(0 ..< groupStart.0 + 1)
+                        }
                     }
                 }
             }

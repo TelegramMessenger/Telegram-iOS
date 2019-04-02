@@ -4,6 +4,15 @@ private enum MessageOfInterestLocation: Equatable {
     case id(MessageId)
     case index(MessageIndex)
     
+    var messageId: MessageId {
+        switch self {
+            case let .id(id):
+                return id
+            case let .index(index):
+                return index.id
+        }
+    }
+    
     static func ==(lhs: MessageOfInterestLocation, rhs: MessageOfInterestLocation) -> Bool {
         switch lhs {
             case let .id(value):
@@ -37,6 +46,67 @@ private func getAnchorId(postbox: Postbox, location: MessageOfInterestViewLocati
             }
     }
     return nil
+}
+
+private struct HoleKey: Hashable {
+    let peerId: PeerId
+    let namespace: MessageId.Namespace
+}
+
+private func fetchHoles(postbox: Postbox, peerIds: MessageHistoryViewPeerIds, tagMask: MessageTags?, entries: [HolesViewEntry], hasEarlier: Bool, hasLater: Bool) -> [HoleKey: IndexSet] {
+    var peerIdsSet: [PeerId] = []
+    switch peerIds {
+        case let .single(peerId):
+            peerIdsSet.append(peerId)
+        case let .associated(peerId, associatedId):
+            peerIdsSet.append(peerId)
+            if let associatedId = associatedId {
+                peerIdsSet.append(associatedId.peerId)
+            }
+    }
+    var namespaceBounds: [(PeerId, MessageId.Namespace, ClosedRange<MessageId.Id>?)] = []
+    for peerId in peerIdsSet {
+        if let namespaces = postbox.seedConfiguration.messageHoles[peerId.namespace] {
+            for namespace in namespaces.keys {
+                var earlierId: MessageId.Id?
+                earlier: for entry in entries {
+                    if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace {
+                        earlierId = entry.index.id.id
+                        break earlier
+                    }
+                }
+                var laterId: MessageId.Id?
+                later: for entry in entries.reversed() {
+                    if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace {
+                        laterId = entry.index.id.id
+                        break later
+                    }
+                }
+                if let earlierId = earlierId, let laterId = laterId {
+                    namespaceBounds.append((peerId, namespace, earlierId ... laterId))
+                } else {
+                    namespaceBounds.append((peerId, namespace, nil))
+                }
+            }
+        }
+    }
+    let space: MessageHistoryHoleSpace = tagMask.flatMap(MessageHistoryHoleSpace.tag) ?? .everywhere
+    var result: [HoleKey: IndexSet] = [:]
+    for (peerId, namespace, bounds) in namespaceBounds {
+        var indices = postbox.messageHistoryHoleIndexTable.closest(peerId: peerId, namespace: namespace, space: space, range: 1 ... Int32.max)
+        if let bounds = bounds {
+            if hasEarlier {
+                indices.remove(integersIn: 1 ... Int(bounds.lowerBound))
+            }
+            if hasLater {
+                indices.remove(integersIn: Int(bounds.upperBound) ... Int(Int32.max))
+            }
+        }
+        if !indices.isEmpty {
+            result[HoleKey(peerId: peerId, namespace: namespace)] = indices
+        }
+    }
+    return result
 }
 
 private struct HolesViewEntryHole {
@@ -186,6 +256,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
     private var earlier: MessageIndex?
     private var later: MessageIndex?
     private var entries: [HolesViewEntry] = []
+    private var holes: [HoleKey: IndexSet] = [:]
     
     fileprivate var closestHole: MessageOfInterestHole?
     fileprivate var closestLaterMedia: [HolesViewMedia] = []
@@ -201,6 +272,11 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
             self.earlier = earlier
             self.later = later
             
+            switch self.location {
+                case let .peer(peerId):
+                    self.holes = fetchHoles(postbox: postbox, peerIds: .single(peerId), tagMask: nil, entries: self.entries, hasEarlier: self.earlier != nil, hasLater: self.later != nil)
+            }
+            
             self.closestHole = self.firstHole()
             self.closestLaterMedia = self.topLaterMedia(postbox: postbox)
         }
@@ -212,6 +288,11 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
         var anchorUpdated = false
         switch self.location {
             case let .peer(peerId):
+                for (key, _) in transaction.currentPeerHoleOperations {
+                    if key.peerId == peerId {
+                        anchorUpdated = true
+                    }
+                }
                 if transaction.alteredInitialPeerCombinedReadStates[peerId] != nil {
                     let anchorLocation = getAnchorId(postbox: postbox, location: self.location, namespace: self.namespace)
                     if self.anchorLocation != anchorLocation {
@@ -358,6 +439,13 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
         }
         
         if updated {
+            if updated {
+                switch self.location {
+                    case let .peer(peerId):
+                        self.holes = fetchHoles(postbox: postbox, peerIds: .single(peerId), tagMask: nil, entries: self.entries, hasEarlier: self.earlier != nil, hasLater: self.later != nil)
+                }
+            }
+            
             var updatedResult = false
             let closestHole = self.firstHole()
             if closestHole != self.closestHole {
@@ -532,60 +620,133 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
     
     private func firstHole() -> MessageOfInterestHole? {
         if self.entries.isEmpty {
-            return nil
-        }
-        guard let anchorLocation = self.anchorLocation else {
+            if let (key, holeIndices) = self.holes.first {
+                let hole = MessageHistoryViewPeerHole(peerId: key.peerId, namespace: key.namespace, indices: holeIndices)
+                if let location = self.anchorLocation {
+                    if location.messageId.peerId == key.peerId && location.messageId.namespace == key.namespace {
+                        return MessageOfInterestHole(hole: .peer(hole), direction: .AroundId(location.messageId))
+                    }
+                } else {
+                    return MessageOfInterestHole(hole: .peer(hole), direction: .UpperToLower)
+                }
+            }
             return nil
         }
         
         var referenceIndex = self.entries.count - 1
-        for i in 0 ..< self.entries.count {
-            if isGreaterOrEqual(index: self.entries[i].index, than: anchorLocation) {
+        /*for i in 0 ..< self.entries.count {
+            if self.anchorLocation.isLessOrEqual(to: self.entries[i].index) {
                 referenceIndex = i
                 break
             }
-        }
+        }*/
         
         var i = referenceIndex
         var j = referenceIndex + 1
         
-        let lowerI = max(0, referenceIndex - 50)
-        let upperJ = min(referenceIndex + 50, self.entries.count)
+        func processId(_ id: MessageId, toLower: Bool) -> MessageOfInterestHole? {
+            if let holeIndices = self.holes[HoleKey(peerId: id.peerId, namespace: id.namespace)] {
+                if holeIndices.contains(Int(id.id)) {
+                    let hole = MessageHistoryViewPeerHole(peerId: id.peerId, namespace: id.namespace, indices: holeIndices)
+                    if let anchorLocation = self.anchorLocation, anchorLocation.messageId.peerId == id.peerId && anchorLocation.messageId.namespace == id.namespace && holeIndices.contains(Int(anchorLocation.messageId.id)) {
+                        return MessageOfInterestHole(hole: .peer(hole), direction: .AroundId(anchorLocation.messageId))
+                    } else {
+                        if toLower {
+                            return MessageOfInterestHole(hole: .peer(hole), direction: .UpperToLower)
+                        } else {
+                            return MessageOfInterestHole(hole: .peer(hole), direction: .LowerToUpper)
+                        }
+                    }
+                }
+            }
+            return nil
+        }
         
-        /*switch self.location {
-            case .peer:
-                let anchorId: MessageId
-                switch anchorLocation {
-                    case let .id(id):
-                        anchorId = id
-                    case let .index(index):
-                        anchorId = index.id
+        while i >= -1 || j <= self.entries.count {
+            if j < self.entries.count {
+                if let result = processId(entries[j].index.id, toLower: false) {
+                    return result
                 }
-                while i >= lowerI || j < upperJ {
-                    if j < upperJ {
-                        if let hole = self.entries[j].hole {
-                            if anchorId.id >= hole.hole.min && anchorId.id <= hole.hole.maxIndex.id.id {
-                                return MessageOfInterestHole(hole: .peer(hole.hole), direction: .AroundId(anchorId))
-                            }
-                            
-                            return MessageOfInterestHole(hole: .peer(hole.hole), direction: hole.hole.maxIndex.id <= anchorId ? .UpperToLower : .LowerToUpper)
+            }
+            
+            if i >= 0 {
+                if let result = processId(entries[i].index.id, toLower: true) {
+                    return result
+                }
+            }
+            
+            if i == -1 || j == self.entries.count {
+                let toLower = i == -1
+                
+                var peerIdsSet: [PeerId] = []
+                switch self.location {
+                    case let .peer(peerId):
+                        peerIdsSet.append(peerId)
+                }
+                var namespaceBounds: [(PeerId, MessageId.Namespace, ClosedRange<MessageId.Id>?)] = []
+                for (key, hole) in self.holes {
+                    var earlierId: MessageId.Id?
+                    earlier: for entry in self.entries {
+                        if entry.index.id.peerId == key.peerId && entry.index.id.namespace == key.namespace {
+                            earlierId = entry.index.id.id
+                            break earlier
                         }
                     }
-                    
-                    if i >= lowerI {
-                        if let hole = self.entries[i].hole {
-                            if anchorId.id >= hole.hole.min && anchorId.id <= hole.hole.maxIndex.id.id {
-                                return MessageOfInterestHole(hole: .peer(hole.hole), direction: .AroundId(anchorId))
-                            }
-                            
-                            return MessageOfInterestHole(hole: .peer(hole.hole), direction: hole.hole.maxIndex.id <= anchorId ? .UpperToLower : .LowerToUpper)
+                    var laterId: MessageId.Id?
+                    later: for entry in self.entries.reversed() {
+                        if entry.index.id.peerId == key.peerId && entry.index.id.namespace == key.namespace {
+                            laterId = entry.index.id.id
+                            break later
                         }
                     }
-                    
-                    i -= 1
-                    j += 1
+                    if let earlierId = earlierId, let laterId = laterId {
+                        let validHole: Bool
+                        if toLower {
+                            validHole = hole.intersects(integersIn: 1 ... Int(earlierId))
+                        } else {
+                            validHole = hole.intersects(integersIn: Int(laterId) ... Int(Int32.max))
+                        }
+                        if validHole {
+                            namespaceBounds.append((key.peerId, key.namespace, earlierId ... laterId))
+                        }
+                    } else {
+                        namespaceBounds.append((key.peerId, key.namespace, nil))
+                    }
                 }
-        }*/
+                
+                for (peerId, namespace, bounds) in namespaceBounds {
+                    if let indices = self.holes[HoleKey(peerId: peerId, namespace: namespace)] {
+                        assert(!indices.isEmpty)
+                        if let bounds = bounds {
+                            var updatedIndices = indices
+                            if toLower {
+                                updatedIndices.remove(integersIn: Int(bounds.lowerBound) ... Int(Int32.max))
+                            } else {
+                                updatedIndices.remove(integersIn: 0 ... Int(bounds.upperBound))
+                            }
+                            if !updatedIndices.isEmpty {
+                                let hole = MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, indices: updatedIndices)
+                                if toLower {
+                                    return MessageOfInterestHole(hole: .peer(hole), direction: .UpperToLower)
+                                } else {
+                                    return MessageOfInterestHole(hole: .peer(hole), direction: .LowerToUpper)
+                                }
+                            }
+                        } else {
+                            let hole = MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, indices: indices)
+                            if toLower {
+                                return MessageOfInterestHole(hole: .peer(hole), direction: .UpperToLower)
+                            } else {
+                                return MessageOfInterestHole(hole: .peer(hole), direction: .LowerToUpper)
+                            }
+                        }
+                    }
+                }
+            }
+            
+            i -= 1
+            j += 1
+        }
         
         return nil
     }

@@ -2960,7 +2960,11 @@ final class MessageHistoryTable: Table {
     
     func anchorIndex(_ messageId: MessageId) -> InternalMessageHistoryAnchorIndex? {
         if let closestIndex = self.messageHistoryIndexTable.closestIndex(id: messageId) {
-            return .message(index: closestIndex, exact: closestIndex.id == messageId)
+            if closestIndex.id == messageId {
+                return .message(index: closestIndex, exact: true)
+            } else {
+                return .message(index: MessageIndex(id: messageId, timestamp: closestIndex.timestamp), exact: false)
+            }
         } else {
             return .message(index: MessageIndex(id: messageId, timestamp: 1), exact: false)
         }
