@@ -637,6 +637,16 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
             return nil
         }
         
+        if let location = self.anchorLocation {
+            let messageId = location.messageId
+            for (holeKey, indices) in self.holes {
+                if holeKey.peerId == messageId.peerId && holeKey.namespace == messageId.namespace && indices.contains(Int(messageId.id)) {
+                    let hole = MessageHistoryViewPeerHole(peerId: messageId.peerId, namespace: messageId.namespace, indices: indices)
+                    return MessageOfInterestHole(hole: .peer(hole), direction: .AroundId(messageId))
+                }
+            }
+        }
+        
         var referenceIndex = self.entries.count - 1
         /*for i in 0 ..< self.entries.count {
             if self.anchorLocation.isLessOrEqual(to: self.entries[i].index) {

@@ -1422,6 +1422,15 @@ final class MutableMessageHistoryView {
             return nil
         }
         
+        if case let .message(index, _) = self.anchorIndex {
+            for (holeKey, indices) in self.holes {
+                if holeKey.peerId == index.id.peerId && holeKey.namespace == index.id.namespace && indices.contains(Int(index.id.id)) {
+                    let hole = MessageHistoryViewPeerHole(peerId: index.id.peerId, namespace: index.id.namespace, indices: indices)
+                    return (.peer(hole), .AroundId(index.id))
+                }
+            }
+        }
+        
         var referenceIndex = self.entries.count - 1
         for i in 0 ..< self.entries.count {
             if self.anchorIndex.isLessOrEqual(to: self.entries[i].index) {
