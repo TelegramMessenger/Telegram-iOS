@@ -134,3 +134,35 @@ public func retry<T, E>(_ delayIncrement: Double, maxDelay: Double, onQueue queu
         }
     }
 }
+
+public func restartIfError<T, E>(_ signal: Signal<T, E>) -> Signal<T, NoError> {
+    return Signal<T, NoError> { subscriber in
+        let shouldRetry = Atomic(value: true)
+        let currentDisposable = MetaDisposable()
+        
+        let start = recursiveFunction { recurse in
+            let currentShouldRetry = shouldRetry.with { value in
+                return value
+            }
+            if currentShouldRetry {
+                let disposable = signal.start(next: { next in
+                    subscriber.putNext(next)
+                }, error: { error in
+                    recurse()
+                }, completed: {
+                    let _ = shouldRetry.swap(false)
+                    subscriber.putCompletion()
+                })
+                currentDisposable.set(disposable)
+            }
+        }
+        
+        start()
+        
+        return ActionDisposable {
+            currentDisposable.dispose()
+            let _ = shouldRetry.swap(false)
+        }
+    }
+}
+
