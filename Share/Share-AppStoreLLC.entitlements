@@ -6,5 +6,9 @@
 	<array>
 		<string>group.ph.telegra.Telegraph</string>
 	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)ph.telegra.Telegraph</string>
+	</array>
 </dict>
 </plist>

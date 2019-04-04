@@ -28,5 +28,9 @@
 	<array>
 		<string>group.org.telegram.Telegram-iOS</string>
 	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)org.telegram.Telegram-iOS</string>
+	</array>
 </dict>
 </plist>

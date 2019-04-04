@@ -57,7 +57,8 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         let apiId: Int32 = BuildConfig.shared().apiId
         let languagesCategory = "ios"
         
-        let appGroupName = "group.\(appBundleIdentifier[..<lastDotRange.lowerBound])"
+        let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
+        let appGroupName = "group.\(baseAppBundleId)"
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
         
         guard let appGroupUrl = maybeAppGroupUrl else {
@@ -79,7 +80,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         initializeAccountManagement()
         let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata")
         
-        let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath)
+        let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
         let encryptionParameters = ValueBoxEncryptionParameters(key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
         
         account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, appData: BuildConfig.shared().bundleData), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: auxiliaryMethods, encryptionParameters: encryptionParameters)

@@ -20,6 +20,6 @@
 @property (nonatomic, readonly) int64_t appStoreId;
 @property (nonatomic, strong, readonly) NSString * _Nonnull appSpecificUrlScheme;
 
-+ (DeviceSpecificEncryptionParameters * _Nonnull)deviceSpecificEncryptionParameters:(NSString * _Nonnull)rootPath;
++ (DeviceSpecificEncryptionParameters * _Nonnull)deviceSpecificEncryptionParameters:(NSString * _Nonnull)rootPath baseAppBundleId:(NSString * _Nonnull)baseAppBundleId;
 
 @end

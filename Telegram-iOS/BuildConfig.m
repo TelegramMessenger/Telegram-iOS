@@ -451,13 +451,43 @@ static MTPKCS * _Nullable checkSignature(const char *filename) {
     return @(APP_SPECIFIC_URL_SCHEME);
 }
 
-+ (LocalPrivateKey * _Nullable)getLocalPrivateKey {
++ (NSString * _Nullable)bundleSeedId {
+    NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
+       (__bridge NSString *)kSecClassGenericPassword, (__bridge NSString *)kSecClass,
+       @"bundleSeedID", kSecAttrAccount,
+       @"", kSecAttrService,
+       (id)kCFBooleanTrue, kSecReturnAttributes,
+    nil];
+    CFDictionaryRef result = nil;
+    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, (CFTypeRef *)&result);
+    if (status == errSecItemNotFound) {
+        status = SecItemAdd((__bridge CFDictionaryRef)query, (CFTypeRef *)&result);
+    }
+    if (status != errSecSuccess) {
+        return nil;
+    }
+    NSString *accessGroup = [(__bridge NSDictionary *)result objectForKey:(__bridge NSString *)kSecAttrAccessGroup];
+    NSArray *components = [accessGroup componentsSeparatedByString:@"."];
+    NSString *bundleSeedID = [[components objectEnumerator] nextObject];
+    CFRelease(result);
+    return bundleSeedID;
+}
+
++ (LocalPrivateKey * _Nullable)getLocalPrivateKey:(NSString * _Nonnull)baseAppBundleId {
+    NSString *bundleSeedId = [self bundleSeedId];
+    if (bundleSeedId == nil) {
+        return nil;
+    }
+    
+    NSString *accessGroup = [bundleSeedId stringByAppendingFormat:@".%@", baseAppBundleId];
+    
     NSData *applicationTag = [@"telegramLocalKey" dataUsingEncoding:NSUTF8StringEncoding];
     
     NSDictionary *query = @{
         (id)kSecClass: (id)kSecClassKey,
         (id)kSecAttrApplicationTag: applicationTag,
         (id)kSecAttrKeyType: (id)kSecAttrKeyTypeECSECPrimeRandom,
+        (id)kSecAttrAccessGroup: (id)accessGroup,
         (id)kSecReturnRef: @YES,
     };
     SecKeyRef privateKey = NULL;
@@ -486,11 +516,39 @@ static MTPKCS * _Nullable checkSignature(const char *filename) {
     return result;
 }
 
-+ (LocalPrivateKey * _Nullable)addLocalPrivateKey {
++ (bool)removeLocalPrivateKey:(NSString * _Nonnull)baseAppBundleId {
+    NSString *bundleSeedId = [self bundleSeedId];
+    if (bundleSeedId == nil) {
+        return nil;
+    }
+    
     NSData *applicationTag = [@"telegramLocalKey" dataUsingEncoding:NSUTF8StringEncoding];
+    NSString *accessGroup = [bundleSeedId stringByAppendingFormat:@".%@", baseAppBundleId];
+    
+    NSDictionary *query = @{
+        (id)kSecClass: (id)kSecClassKey,
+        (id)kSecAttrApplicationTag: applicationTag,
+        (id)kSecAttrKeyType: (id)kSecAttrKeyTypeECSECPrimeRandom,
+        (id)kSecAttrAccessGroup: (id)accessGroup
+    };
+    OSStatus status = SecItemDelete((__bridge CFDictionaryRef)query);
+    if (status != errSecSuccess) {
+        return false;
+    }
+    return true;
+}
+
++ (LocalPrivateKey * _Nullable)addLocalPrivateKey:(NSString * _Nonnull)baseAppBundleId {
+    NSString *bundleSeedId = [self bundleSeedId];
+    if (bundleSeedId == nil) {
+        return nil;
+    }
+    
+    NSData *applicationTag = [@"telegramLocalKey" dataUsingEncoding:NSUTF8StringEncoding];
+    NSString *accessGroup = [bundleSeedId stringByAppendingFormat:@".%@", baseAppBundleId];
     
     SecAccessControlRef access = SecAccessControlCreateWithFlags(kCFAllocatorDefault, kSecAttrAccessibleAlwaysThisDeviceOnly, kSecAccessControlPrivateKeyUsage, NULL);
-    NSDictionary* attributes = @{
+    NSDictionary *attributes = @{
         (id)kSecAttrKeyType: (id)kSecAttrKeyTypeECSECPrimeRandom,
         (id)kSecAttrKeySizeInBits: @256,
         (id)kSecAttrTokenID: (id)kSecAttrTokenIDSecureEnclave,
@@ -498,6 +556,7 @@ static MTPKCS * _Nullable checkSignature(const char *filename) {
             (id)kSecAttrIsPermanent: @YES,
             (id)kSecAttrApplicationTag: applicationTag,
             (id)kSecAttrAccessControl: (__bridge id)access,
+            (id)kSecAttrAccessGroup: (id)accessGroup,
         },
     };
     
@@ -540,7 +599,7 @@ static MTPKCS * _Nullable checkSignature(const char *filename) {
     return result;
 }
 
-+ (DeviceSpecificEncryptionParameters * _Nonnull)deviceSpecificEncryptionParameters:(NSString * _Nonnull)rootPath {
++ (DeviceSpecificEncryptionParameters * _Nonnull)deviceSpecificEncryptionParameters:(NSString * _Nonnull)rootPath baseAppBundleId:(NSString * _Nonnull)baseAppBundleId {
     CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
     
     NSString *filePath = [rootPath stringByAppendingPathComponent:@".tempkey"];
@@ -562,10 +621,10 @@ static MTPKCS * _Nullable checkSignature(const char *filename) {
         [resultData writeToFile:filePath atomically:false];
     }
     
-    LocalPrivateKey *localPrivateKey = [self getLocalPrivateKey];
+    LocalPrivateKey *localPrivateKey = [self getLocalPrivateKey:baseAppBundleId];
     
     if (localPrivateKey == nil) {
-        localPrivateKey = [self addLocalPrivateKey];
+        localPrivateKey = [self addLocalPrivateKey:baseAppBundleId];
     }
     
     NSData *currentEncryptedData = [NSData dataWithContentsOfFile:encryptedPath];
@@ -573,7 +632,12 @@ static MTPKCS * _Nullable checkSignature(const char *filename) {
     if (localPrivateKey != nil) {
         if (currentEncryptedData != nil) {
             NSData *decryptedData = [localPrivateKey decrypt:currentEncryptedData];
-            assert([resultData isEqualToData:decryptedData]);
+            
+            if (![resultData isEqualToData:decryptedData]) {
+                NSData *encryptedData = [localPrivateKey encrypt:resultData];
+                [encryptedData writeToFile:encryptedPath atomically:false];
+                assert(false);
+            }
         } else {
             NSData *encryptedData = [localPrivateKey encrypt:resultData];
             [encryptedData writeToFile:encryptedPath atomically:false];
