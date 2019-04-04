@@ -1799,6 +1799,7 @@ final class SqliteValueBox: ValueBox {
     }
     
     func exportEncrypted(to exportBasePath: String, encryptionParameters: ValueBoxEncryptionParameters) {
+        self.exportEncrypted(database: self.database, to: exportBasePath, encryptionParameters: encryptionParameters)
     }
         
     private func exportEncrypted(database: Database, to exportBasePath: String, encryptionParameters: ValueBoxEncryptionParameters) {

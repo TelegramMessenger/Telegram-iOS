@@ -899,6 +899,8 @@ final class MessageHistoryTable: Table {
                     }
                 }
                 return result
+            } else {
+                return [entry.message]
             }
         }
         return nil
