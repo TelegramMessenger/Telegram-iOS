@@ -363,7 +363,7 @@ public final class SharedAccountContext {
                 }
             }
             
-            let mappedAddedAccounts = combineLatest(addedSignals)
+            let mappedAddedAccounts = combineLatest(queue: .mainQueue(), addedSignals)
             |> map { results -> AddedAccountsResult in
                 var readyAccounts: [(AccountRecordId, Account?, Int32)] = []
                 var totalProgress: Float = 0.0
@@ -385,7 +385,7 @@ public final class SharedAccountContext {
                 }
             }
             
-            differenceDisposable.set((combineLatest(mappedAddedAccounts, addedAuthSignal)
+            differenceDisposable.set((combineLatest(queue: .mainQueue(), mappedAddedAccounts, addedAuthSignal)
             |> deliverOnMainQueue).start(next: { mappedAddedAccounts, authAccount in
                 var addedAccounts: [(AccountRecordId, Account?, Int32)] = []
                 switch mappedAddedAccounts {
@@ -622,7 +622,7 @@ public final class SharedAccountContext {
         }
         |> distinctUntilChanged
         
-        self.registeredNotificationTokensDisposable.set((combineLatest(allAccounts, self.activeAccounts)
+        self.registeredNotificationTokensDisposable.set((combineLatest(queue: .mainQueue(), allAccounts, self.activeAccounts)
         |> mapToSignal { allAccounts, activeAccountsAndInfo -> Signal<Never, NoError> in
             let (primary, activeAccounts, _) = activeAccountsAndInfo
             var applied: [Signal<Never, NoError>] = []
