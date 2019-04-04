@@ -412,6 +412,8 @@
 		D0613FD81E606B3B00202CDB /* ConvertGroupToSupergroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0613FD61E606B3B00202CDB /* ConvertGroupToSupergroup.swift */; };
 		D0633CD22253A528003DD95F /* ChatOnlineMembers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0633CD12253A528003DD95F /* ChatOnlineMembers.swift */; };
 		D0633CD32253A528003DD95F /* ChatOnlineMembers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0633CD12253A528003DD95F /* ChatOnlineMembers.swift */; };
+		D0633CDB2253C0D3003DD95F /* CloudMediaResourceParameters.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0633CDA2253C0D3003DD95F /* CloudMediaResourceParameters.swift */; };
+		D0633CDC2253C0D3003DD95F /* CloudMediaResourceParameters.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0633CDA2253C0D3003DD95F /* CloudMediaResourceParameters.swift */; };
 		D0642EF91F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0642EF81F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift */; };
 		D0642EFA1F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0642EF81F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift */; };
 		D067066C1D512ADB00DED3E3 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06706671D512ADB00DED3E3 /* Postbox.framework */; };
@@ -1028,6 +1030,7 @@
 		D0613FCE1E60520700202CDB /* ChannelMembers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelMembers.swift; sourceTree = "<group>"; };
 		D0613FD61E606B3B00202CDB /* ConvertGroupToSupergroup.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConvertGroupToSupergroup.swift; sourceTree = "<group>"; };
 		D0633CD12253A528003DD95F /* ChatOnlineMembers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatOnlineMembers.swift; sourceTree = "<group>"; };
+		D0633CDA2253C0D3003DD95F /* CloudMediaResourceParameters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudMediaResourceParameters.swift; sourceTree = "<group>"; };
 		D0642EF81F3E05D700792790 /* EarliestUnseenPersonalMentionMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EarliestUnseenPersonalMentionMessage.swift; sourceTree = "<group>"; };
 		D06706641D512ADB00DED3E3 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D06706651D512ADB00DED3E3 /* Display.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1594,6 +1597,7 @@
 				D0448CA41E29215A005A61A7 /* MediaResourceApiUtils.swift */,
 				D0E412E6206ABC7500BEE4A2 /* EncryptedMediaResource.swift */,
 				D0E412E0206AB24700BEE4A2 /* SecureFileMediaResource.swift */,
+				D0633CDA2253C0D3003DD95F /* CloudMediaResourceParameters.swift */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -2334,6 +2338,7 @@
 				D00422D321677F4500719B67 /* ManagedAccountPresence.swift in Sources */,
 				D03B0D0A1D62255C00955575 /* Holes.swift in Sources */,
 				D05464972073872C002ECC1E /* SecureIdBankStatementValue.swift in Sources */,
+				D0633CDB2253C0D3003DD95F /* CloudMediaResourceParameters.swift in Sources */,
 				0962E67521B6437600245FD9 /* SplitTest.swift in Sources */,
 				D0B843CB1DA7FF30005F29E1 /* NBPhoneNumberUtil.m in Sources */,
 				D03B0D5E1D631A6900955575 /* Network.swift in Sources */,
@@ -2908,6 +2913,7 @@
 				D0FA8BB41E201B02001E855B /* ProcessSecretChatIncomingEncryptedOperations.swift in Sources */,
 				D0F3A8A31E82C65E00B4C64C /* ManagedSynchronizeChatInputStateOperations.swift in Sources */,
 				D0448CA61E29215A005A61A7 /* MediaResourceApiUtils.swift in Sources */,
+				D0633CDC2253C0D3003DD95F /* CloudMediaResourceParameters.swift in Sources */,
 				D001F3F11E128A1C007A8C60 /* SynchronizePeerReadState.swift in Sources */,
 				D054648F20738626002ECC1E /* SecureIdDriversLicenseValue.swift in Sources */,
 				D0529D2821A4141800D7C3C4 /* ManagedSynchronizeRecentlyUsedMediaOperations.swift in Sources */,
