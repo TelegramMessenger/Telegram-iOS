@@ -202,11 +202,8 @@ final class SharedApplicationContext {
     }
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]? = nil) -> Bool {
-        if testIsLaunched {
-            return true
-        } else {
-            testIsLaunched = true
-        }
+        precondition(!testIsLaunched)
+        testIsLaunched = true
         
         let statusBarHost = ApplicationStatusBarHost()
         let (window, hostView) = nativeWindowHostView()
@@ -593,6 +590,7 @@ final class SharedApplicationContext {
         
         let sharedContextSignal = accountManagerSignal
         |> deliverOnMainQueue
+        |> take(1)
         |> mapToSignal { accountManager -> Signal<(SharedApplicationContext, LoggingSettings), NoError> in
             var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
             let semaphore = DispatchSemaphore(value: 0)
