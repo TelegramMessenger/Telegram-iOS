@@ -431,15 +431,6 @@ NSString *suffix = @"";
     if ([platform hasPrefix:@"iPad5"])              return UIDevice5GiPad;
     if ([platform hasPrefix:@"iPad6"])              return UIDevice6GiPad;
     
-    // Apple TV
-    if ([platform hasPrefix:@"AppleTV2"])           return UIDeviceAppleTV2;
-    if ([platform hasPrefix:@"AppleTV3"])           return UIDeviceAppleTV3;
-    
-    if ([platform hasPrefix:@"iPhone"])             return UIDeviceUnknowniPhone;
-    if ([platform hasPrefix:@"iPod"])               return UIDeviceUnknowniPod;
-    if ([platform hasPrefix:@"iPad"])               return UIDeviceUnknowniPad;
-    if ([platform hasPrefix:@"AppleTV"])            return UIDeviceUnknownAppleTV;
-    
     if ([platform isEqualToString:@"iPad8,5"] ||
         [platform isEqualToString:@"iPad8,6"] ||
         [platform isEqualToString:@"iPad8,7"] ||
@@ -468,6 +459,15 @@ NSString *suffix = @"";
         [platform isEqualToString:@"iPad7,2"]) {
         return UIDeviceiPadPro12_9;
     }
+    
+    // Apple TV
+    if ([platform hasPrefix:@"AppleTV2"])           return UIDeviceAppleTV2;
+    if ([platform hasPrefix:@"AppleTV3"])           return UIDeviceAppleTV3;
+    
+    if ([platform hasPrefix:@"iPhone"])             return UIDeviceUnknowniPhone;
+    if ([platform hasPrefix:@"iPod"])               return UIDeviceUnknowniPod;
+    if ([platform hasPrefix:@"iPad"])               return UIDeviceUnknowniPad;
+    if ([platform hasPrefix:@"AppleTV"])            return UIDeviceUnknownAppleTV;
     
 #define IPAD_PRO_3G_NAMESTRING  @"iPad Pro 12.9 (3rd gen)"
 #define IPAD_PRO_11_NAMESTRING  @"iPad Pro 11"
