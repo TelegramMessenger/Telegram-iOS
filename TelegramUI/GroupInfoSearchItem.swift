@@ -8,6 +8,7 @@ import SwiftSignalKit
 final class ChannelMembersSearchItem: ItemListControllerSearch {
     let context: AccountContext
     let peerId: PeerId
+    let searchContext: GroupMembersSearchContext?
     let cancel: () -> Void
     let openPeer: (Peer, RenderedChannelParticipant?) -> Void
     let present: (ViewController, Any?) -> Void
@@ -17,9 +18,10 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
     private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
     private let activityDisposable = MetaDisposable()
     
-    init(context: AccountContext, peerId: PeerId, searchMode: ChannelMembersSearchMode = .searchMembers, cancel: @escaping () -> Void, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, peerId: PeerId, searchContext: GroupMembersSearchContext?, searchMode: ChannelMembersSearchMode = .searchMembers, cancel: @escaping () -> Void, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.peerId = peerId
+        self.searchContext = searchContext
         self.cancel = cancel
         self.openPeer = openPeer
         self.present = present
@@ -66,7 +68,7 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
     }
     
     func node(current: ItemListControllerSearchNode?, titleContentNode: (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode)?) -> ItemListControllerSearchNode {
-        return ChannelMembersSearchItemNode(context: self.context, peerId: self.peerId, searchMode: self.searchMode, openPeer: self.openPeer, cancel: self.cancel, updateActivity: { [weak self] value in
+        return ChannelMembersSearchItemNode(context: self.context, peerId: self.peerId, searchMode: self.searchMode, searchContext: self.searchContext, openPeer: self.openPeer, cancel: self.cancel, updateActivity: { [weak self] value in
             self?.activity.set(value)
         }, present: { [weak self] c, a in
             self?.present(c, a)
@@ -77,8 +79,8 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
 private final class ChannelMembersSearchItemNode: ItemListControllerSearchNode {
     private let containerNode: ChannelMembersSearchContainerNode
     
-    init(context: AccountContext, peerId: PeerId, searchMode: ChannelMembersSearchMode, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
-        self.containerNode = ChannelMembersSearchContainerNode(context: context, peerId: peerId, mode: searchMode, filters: [], openPeer: { peer, participant in
+    init(context: AccountContext, peerId: PeerId, searchMode: ChannelMembersSearchMode, searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+        self.containerNode = ChannelMembersSearchContainerNode(context: context, peerId: peerId, mode: searchMode, filters: [], searchContext: searchContext, openPeer: { peer, participant in
             openPeer(peer, participant)
         }, updateActivity: updateActivity, present: present)
         self.containerNode.cancel = {
@@ -100,7 +102,7 @@ private final class ChannelMembersSearchItemNode: ItemListControllerSearchNode {
     
     override func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight)))
-        self.containerNode.containerLayoutUpdated(layout, navigationBarHeight: 0.0, transition: transition)
+        self.containerNode.containerLayoutUpdated(layout.withUpdatedSize(CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight)), navigationBarHeight: 0.0, transition: transition)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

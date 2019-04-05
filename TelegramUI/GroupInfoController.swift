@@ -1889,6 +1889,8 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     let previousStateValue = Atomic<GroupInfoState?>(value: nil)
     let previousChannelMembers = Atomic<[PeerId]?>(value: nil)
     
+    let searchContext = GroupMembersSearchContext(context: context, peerId: originalPeerId)
+    
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), peerView.get(), context.account.postbox.combinedView(keys: [globalNotificationsKey]), channelMembersPromise.get())
     |> map { presentationData, state, view, combinedView, channelMembers -> (ItemListControllerState, (ItemListNodeState<GroupInfoEntry>, GroupInfoEntry.ItemGenerationArguments)) in
@@ -2016,7 +2018,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
         
         var searchItem: ItemListControllerSearch?
         if state.searchingMembers {
-            searchItem = ChannelMembersSearchItem(context: context, peerId: view.peerId, cancel: {
+            searchItem = ChannelMembersSearchItem(context: context, peerId: view.peerId, searchContext: searchContext, cancel: {
                 updateState { state in
                     return state.withUpdatedSearchingMembers(false)
                 }

@@ -348,7 +348,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChannelMembersSearchContainerNode(context: self.context, peerId: self.peerId, mode: .banAndPromoteActions, filters: self.filters, openPeer: { [weak self] peer, participant in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChannelMembersSearchContainerNode(context: self.context, peerId: self.peerId, mode: .banAndPromoteActions, filters: self.filters, searchContext: nil, openPeer: { [weak self] peer, participant in
             self?.requestOpenPeerFromSearch?(peer, participant)
         }, updateActivity: { value in
             

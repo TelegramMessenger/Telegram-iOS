@@ -569,7 +569,7 @@ private final class SettingsControllerImpl: ItemListController<SettingsEntry>, S
     }
     
     func updateContext(context: AccountContext) {
-        self.contextValue.set(.single(context))
+        //self.contextValue.set(.single(context))
     }
     
     func presentTabBarPreviewingController(sourceNodes: [ASDisplayNode]) {
@@ -1338,11 +1338,12 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             }
         })
     }
-    switchToAccountImpl = { [weak controller] id in
+    switchToAccountImpl = { id in
         let _ = (contextValue.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { context in
-            context.sharedContext.switchToAccount(id: id, fromSettingsController: controller)
+            accountsAndPeers.set(.never())
+            context.sharedContext.switchToAccount(id: id)
         })
     }
     controller.didAppear = { _ in

@@ -609,7 +609,7 @@ public func channelPermissionsController(context: AccountContext, peerId: PeerId
         
         var searchItem: ItemListControllerSearch?
         if state.searchingMembers {
-            searchItem = ChannelMembersSearchItem(context: context, peerId: peerId, searchMode: .searchBanned, cancel: {
+            searchItem = ChannelMembersSearchItem(context: context, peerId: peerId, searchContext: nil, searchMode: .searchBanned, cancel: {
                 updateState { state in
                     var state = state
                     state.searchingMembers = false

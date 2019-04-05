@@ -446,7 +446,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
             
             var searchItem: ItemListControllerSearch?
             if state.searchingMembers {
-                searchItem = ChannelMembersSearchItem(context: context, peerId: peerId, cancel: {
+                searchItem = ChannelMembersSearchItem(context: context, peerId: peerId, searchContext: nil, cancel: {
                     updateState { state in
                         return state.withUpdatedSearchingMembers(false)
                     }

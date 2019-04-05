@@ -50,6 +50,8 @@ enum ChannelMemberListCategory {
     case recent
     case recentSearch(String)
     case admins(String?)
+    case contacts(String?)
+    case bots(String?)
     case restricted(String?)
     case banned(String?)
 }
@@ -170,19 +172,23 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
             case let .admins(query):
                 requestCategory = .admins
                 adminQuery = query
+            case let .contacts(query):
+                requestCategory = .contacts(query.flatMap(ChannelMembersCategoryFilter.search) ?? .all)
+            case let .bots(query):
+                requestCategory = .bots(query.flatMap(ChannelMembersCategoryFilter.search) ?? .all)
             case let .restricted(query):
-                requestCategory = .restricted(query != nil ? .search(query!) : .all)
+                requestCategory = .restricted(query.flatMap(ChannelMembersCategoryFilter.search) ?? .all)
             case let .banned(query):
-                requestCategory = .banned(query != nil ? .search(query!) : .all)
+                requestCategory = .banned(query.flatMap(ChannelMembersCategoryFilter.search) ?? .all)
         }
         return channelMembers(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: self.peerId, category: requestCategory, offset: offset, limit: count, hash: hash) |> map { members in
             switch requestCategory {
-            case .admins:
-                if let query = adminQuery {
-                    return members?.filter({$0.peer.displayTitle.lowercased().components(separatedBy: " ").contains(where: {$0.hasPrefix(query.lowercased())})})
-                }
-            default:
-                break
+                case .admins:
+                    if let query = adminQuery {
+                        return members?.filter({$0.peer.displayTitle.lowercased().components(separatedBy: " ").contains(where: {$0.hasPrefix(query.lowercased())})})
+                    }
+                default:
+                    break
             }
             return members
         }
@@ -380,6 +386,58 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                                 list.remove(at: i)
                                 updatedList = true
                                 break loop
+                            }
+                        }
+                    }
+                case let .contacts(query):
+                    if query == nil {
+                        if let updated = updated, isParticipantMember(updated.participant, infoIsMember: infoIsMember) {
+                            var found = false
+                            loop: for i in 0 ..< list.count {
+                                if list[i].peer.id == updated.peer.id {
+                                    list[i] = updated
+                                    found = true
+                                    updatedList = true
+                                    break loop
+                                }
+                            }
+                            if !found {
+                                //list.insert(updated, at: 0)
+                                //updatedList = true
+                            }
+                        } else if let previous = previous, isParticipantMember(previous, infoIsMember: nil) {
+                            loop: for i in 0 ..< list.count {
+                                if list[i].peer.id == previous.peerId {
+                                    list.remove(at: i)
+                                    updatedList = true
+                                    break loop
+                                }
+                            }
+                        }
+                    }
+                case let .bots(query):
+                    if query == nil {
+                        if let updated = updated, isParticipantMember(updated.participant, infoIsMember: infoIsMember) {
+                            var found = false
+                            loop: for i in 0 ..< list.count {
+                                if list[i].peer.id == updated.peer.id {
+                                    list[i] = updated
+                                    found = true
+                                    updatedList = true
+                                    break loop
+                                }
+                            }
+                            if !found {
+                                //list.insert(updated, at: 0)
+                                //updatedList = true
+                            }
+                        } else if let previous = previous, isParticipantMember(previous, infoIsMember: nil) {
+                            loop: for i in 0 ..< list.count {
+                                if list[i].peer.id == previous.peerId {
+                                    list.remove(at: i)
+                                    updatedList = true
+                                    break loop
+                                }
                             }
                         }
                     }
@@ -614,7 +672,7 @@ final class PeerChannelMemberCategoriesContext {
                 emptyTimeout = 0.0
         }
         switch key {
-            case .recent, .recentSearch, .admins:
+            case .recent, .recentSearch, .admins, .contacts, .bots:
                 let mappedCategory: ChannelMemberListCategory
                 switch key {
                     case .recent:
@@ -623,6 +681,10 @@ final class PeerChannelMemberCategoriesContext {
                         mappedCategory = .recentSearch(query)
                     case let .admins(query):
                         mappedCategory = .admins(query)
+                    case let .contacts(query):
+                        mappedCategory = .contacts(query)
+                    case let .bots(query):
+                        mappedCategory = .bots(query)
                     default:
                         mappedCategory = .recent
                 }

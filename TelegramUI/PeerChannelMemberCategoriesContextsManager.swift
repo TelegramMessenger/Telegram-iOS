@@ -7,26 +7,11 @@ enum PeerChannelMemberContextKey: Equatable, Hashable {
     case recent
     case recentSearch(String)
     case admins(String?)
+    case contacts(String?)
+    case bots(String?)
     case restrictedAndBanned(String?)
     case restricted(String?)
     case banned(String?)
-    
-    var hashValue: Int {
-        switch self {
-            case .recent:
-                return 1
-            case let .recentSearch(query):
-                return query.hashValue
-            case let .admins(query):
-                return query?.hashValue ?? 2
-            case let .restrictedAndBanned(query):
-                return query?.hashValue ?? 3
-            case let .restricted(query):
-                return query?.hashValue ?? 4
-            case let .banned(query):
-                return query?.hashValue ?? 5
-        }
-    }
 }
 
 private final class PeerChannelMembersOnlineContext {
@@ -188,6 +173,14 @@ final class PeerChannelMemberCategoriesContextsManager {
     
     func admins(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, searchQuery: String? = nil, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
         return self.getContext(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, key: .admins(searchQuery), requestUpdate: true, updated: updated)
+    }
+    
+    func contacts(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, searchQuery: String? = nil, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
+        return self.getContext(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, key: .contacts(searchQuery), requestUpdate: true, updated: updated)
+    }
+    
+    func bots(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, searchQuery: String? = nil, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
+        return self.getContext(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, key: .bots(searchQuery), requestUpdate: true, updated: updated)
     }
     
     func restricted(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, searchQuery: String? = nil, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {

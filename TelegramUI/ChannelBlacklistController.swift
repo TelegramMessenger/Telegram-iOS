@@ -464,7 +464,7 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
         
         var searchItem: ItemListControllerSearch?
         if state.searchingMembers {
-            searchItem = ChannelMembersSearchItem(context: context, peerId: peerId, searchMode: .searchKicked, cancel: {
+            searchItem = ChannelMembersSearchItem(context: context, peerId: peerId, searchContext: nil, searchMode: .searchKicked, cancel: {
                 updateState { state in
                     return state.withUpdatedSearchingMembers(false)
                 }

@@ -73,6 +73,8 @@ private enum AddedAccountsResult {
     case ready([(AccountRecordId, Account?, Int32)])
 }
 
+private var testHasInstance = false
+
 public final class SharedAccountContext {
     let mainWindow: Window1?
     public let applicationBindings: TelegramApplicationBindings
@@ -160,6 +162,10 @@ public final class SharedAccountContext {
     
     public init(mainWindow: Window1?, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
         assert(Queue.mainQueue().isCurrent())
+        
+        precondition(!testHasInstance)
+        testHasInstance = true
+        
         self.mainWindow = mainWindow
         self.applicationBindings = applicationBindings
         self.basePath = basePath
