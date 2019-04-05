@@ -449,7 +449,6 @@ final class SqliteValueBox: ValueBox {
             return true
         }
         let endTime = CFAbsoluteTimeGetCurrent()
-        print("sqlite_master select took \((endTime - startTime) * 1000.0) ms")
         preparedStatement.destroy()
         return status == SQLITE_NOTADB
     }
