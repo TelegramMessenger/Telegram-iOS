@@ -1,5 +1,12 @@
 #import <Foundation/Foundation.h>
 
+@interface DeviceSpecificEncryptionParameters : NSObject
+
+@property (nonatomic, strong) NSData * _Nonnull key;
+@property (nonatomic, strong) NSData * _Nonnull salt;
+
+@end
+
 @interface BuildConfig : NSObject
 
 + (instancetype _Nonnull)sharedBuildConfig;
@@ -13,6 +20,6 @@
 @property (nonatomic, readonly) int64_t appStoreId;
 @property (nonatomic, strong, readonly) NSString * _Nonnull appSpecificUrlScheme;
 
-+ (NSData * _Nonnull)encryptionKey:(NSString * _Nonnull)rootPath;
++ (DeviceSpecificEncryptionParameters * _Nonnull)deviceSpecificEncryptionParameters:(NSString * _Nonnull)rootPath baseAppBundleId:(NSString * _Nonnull)baseAppBundleId;
 
 @end

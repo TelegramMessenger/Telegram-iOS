@@ -389,6 +389,7 @@ public final class PresentationStrings {
     public let primaryComponent: PresentationStringsComponent
     public let secondaryComponent: PresentationStringsComponent?
     public let baseLanguageCode: String
+    public let groupingSeparator: String
         
     private let _s: [Int: String]
     private let _r: [Int: [(Int, NSRange)]]
@@ -490,7 +491,8 @@ public final class PresentationStrings {
 """
     public func \(escapedIdentifier(key))(_ value: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, value)
-        return String(format: self._ps[\(id) * \(PluralizationForm.formCount) + Int(form.rawValue)]!, \"\\(value)\")
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[\(id) * \(PluralizationForm.formCount) + Int(form.rawValue)]!, stringValue)
     }
 
 """
@@ -503,9 +505,10 @@ public final class PresentationStrings {
         result +=
 """
         
-    init(primaryComponent: PresentationStringsComponent, secondaryComponent: PresentationStringsComponent?) {
+    init(primaryComponent: PresentationStringsComponent, secondaryComponent: PresentationStringsComponent?, groupingSeparator: String) {
         self.primaryComponent = primaryComponent
         self.secondaryComponent = secondaryComponent
+        self.groupingSeparator = groupingSeparator
         
         self.baseLanguageCode = secondaryComponent?.languageCode ?? primaryComponent.languageCode
         

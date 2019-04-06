@@ -6,5 +6,9 @@
 	<array>
 		<string>group.org.telegram.TelegramHD</string>
 	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)org.telegram.TelegramHD</string>
+	</array>
 </dict>
 </plist>
