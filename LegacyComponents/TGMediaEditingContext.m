@@ -401,8 +401,8 @@
 
 - (void)setInitialCaption:(NSString *)caption entities:(NSArray *)entities
 {
-    _forcedCaption = caption;
-    _forcedEntities = entities;
+    _initialCaption = caption;
+    _initialEntities = entities;
 }
 
 - (SSignal *)captionSignalForItem:(NSObject<TGMediaEditableItem> *)item
