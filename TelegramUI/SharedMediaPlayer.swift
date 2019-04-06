@@ -207,15 +207,19 @@ final class SharedMediaPlayerItemPlaybackState: Equatable {
     let playlistId: SharedMediaPlaylistId
     let playlistLocation: SharedMediaPlaylistLocation
     let item: SharedMediaPlaylistItem
+    let previousItem: SharedMediaPlaylistItem?
+    let nextItem: SharedMediaPlaylistItem?
     let status: MediaPlayerStatus
     let order: MusicPlaybackSettingsOrder
     let looping: MusicPlaybackSettingsLooping
     let playerIndex: Int32
     
-    init(playlistId: SharedMediaPlaylistId, playlistLocation: SharedMediaPlaylistLocation, item: SharedMediaPlaylistItem, status: MediaPlayerStatus, order: MusicPlaybackSettingsOrder, looping: MusicPlaybackSettingsLooping, playerIndex: Int32) {
+    init(playlistId: SharedMediaPlaylistId, playlistLocation: SharedMediaPlaylistLocation, item: SharedMediaPlaylistItem, previousItem: SharedMediaPlaylistItem?, nextItem: SharedMediaPlaylistItem?, status: MediaPlayerStatus, order: MusicPlaybackSettingsOrder, looping: MusicPlaybackSettingsLooping, playerIndex: Int32) {
         self.playlistId = playlistId
         self.playlistLocation = playlistLocation
         self.item = item
+        self.previousItem = previousItem
+        self.nextItem = nextItem
         self.status = status
         self.order = order
         self.looping = looping
@@ -227,6 +231,12 @@ final class SharedMediaPlayerItemPlaybackState: Equatable {
             return false
         }
         if !arePlaylistItemsEqual(lhs.item, rhs.item) {
+            return false
+        }
+        if !arePlaylistItemsEqual(lhs.previousItem, rhs.previousItem) {
+            return false
+        }
+        if !arePlaylistItemsEqual(lhs.nextItem, rhs.nextItem) {
             return false
         }
         if lhs.status != rhs.status {
@@ -544,7 +554,6 @@ final class SharedMediaPlayer {
                                     node.setSoundEnabled(false)
                             }
                         }
-                        //strongSelf.playbackItem?.seek(0.0)
                         strongSelf.playedToEnd?()
                     }
                 }
@@ -559,7 +568,7 @@ final class SharedMediaPlayer {
                     if let playbackItem = strongSelf.playbackItem, let item = state.item {
                         strongSelf.playbackStateValue.set(playbackItem.playbackStatus
                         |> map { itemStatus in
-                            return .item(SharedMediaPlayerItemPlaybackState(playlistId: playlistId, playlistLocation: playlistLocation, item: item, status: itemStatus, order: state.order, looping: state.looping, playerIndex: playerIndex))
+                            return .item(SharedMediaPlayerItemPlaybackState(playlistId: playlistId, playlistLocation: playlistLocation, item: item, previousItem: state.previousItem, nextItem: state.nextItem, status: itemStatus, order: state.order, looping: state.looping, playerIndex: playerIndex))
                         })
                     strongSelf.markItemAsPlayedDisposable.set((playbackItem.playbackStatus
                         |> filter { status in

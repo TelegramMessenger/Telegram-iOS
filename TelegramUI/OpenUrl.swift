@@ -16,51 +16,14 @@ public struct ParsedSecureIdUrl {
 }
 
 public func parseProxyUrl(_ url: URL) -> ProxyServerSettings? {
-    guard let query = url.query, url.scheme == "tg" else {
+    guard let proxy = parseProxyUrl(url.absoluteString) else {
         return nil
     }
-    if url.host == "socks" || url.host == "proxy" {
-        if let components = URLComponents(string: "/?" + query) {
-            var server: String?
-            var port: String?
-            var user: String?
-            var pass: String?
-            var secret: String?
-            if let queryItems = components.queryItems {
-                for queryItem in queryItems {
-                    if let value = queryItem.value {
-                        if queryItem.name == "server" || queryItem.name == "proxy" {
-                            server = value
-                        } else if queryItem.name == "port" {
-                            port = value
-                        } else if queryItem.name == "user" {
-                            user = value
-                        } else if queryItem.name == "pass" {
-                            pass = value
-                        } else if queryItem.name == "secret" {
-                            secret = value
-                        }
-                    }
-                }
-            }
-            
-            if let server = server, !server.isEmpty, let port = port, let portValue = Int32(port), let _ = Int32(port) {
-                let connection: ProxyServerConnection
-                if let secret = secret {
-                    let data = dataWithHexString(secret)
-                    if data.count == 16 || (data.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(data)) {
-                        connection = .mtp(secret: data)
-                    } else {
-                        return nil
-                    }
-                } else {
-                    connection = .socks5(username: user, password: pass)
-                }
-                return ProxyServerSettings(host: server, port: portValue, connection: connection)
-            }
-        }
+    if let secret = proxy.secret, secret.count == 16 || (secret.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(secret)) {
+        return ProxyServerSettings(host: proxy.host, port: proxy.port, connection: .mtp(secret: secret))
+    } else {
+        return ProxyServerSettings(host: proxy.host, port: proxy.port, connection: .socks5(username: proxy.username, password: proxy.password))
     }
-    return nil
 }
 
 public func parseSecureIdUrl(_ url: URL) -> ParsedSecureIdUrl? {

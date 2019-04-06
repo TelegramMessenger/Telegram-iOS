@@ -674,7 +674,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             let offset: CGFloat = incoming ? 42.0 : 0.0
             
             if let selectionNode = self.selectionNode {
-                selectionNode.updateSelected(selected, animated: false)
+                selectionNode.updateSelected(selected, animated: animated)
                 selectionNode.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
             } else {

@@ -55,7 +55,7 @@ public class TelegramController: ViewController {
     private var mediaStatusDisposable: Disposable?
     private var locationBroadcastDisposable: Disposable?
     
-    private(set) var playlistStateAndType: (SharedMediaPlaylistItem, MusicPlaybackSettingsOrder, MediaManagerPlayerType, Account)?
+    private(set) var playlistStateAndType: (SharedMediaPlaylistItem, SharedMediaPlaylistItem?, SharedMediaPlaylistItem?, MusicPlaybackSettingsOrder, MediaManagerPlayerType, Account)?
     
     var tempVoicePlaylistEnded: (() -> Void)?
     var tempVoicePlaylistItemChanged: ((SharedMediaPlaylistItem?, SharedMediaPlaylistItem?) -> Void)?
@@ -124,9 +124,11 @@ public class TelegramController: ViewController {
                     return
                 }
                 if !arePlaylistItemsEqual(strongSelf.playlistStateAndType?.0, playlistStateAndType?.1.item) ||
-                    strongSelf.playlistStateAndType?.1 != playlistStateAndType?.1.order || strongSelf.playlistStateAndType?.2 != playlistStateAndType?.2 {
+                    !arePlaylistItemsEqual(strongSelf.playlistStateAndType?.1, playlistStateAndType?.1.previousItem) ||
+                    !arePlaylistItemsEqual(strongSelf.playlistStateAndType?.2, playlistStateAndType?.1.nextItem) ||
+                    strongSelf.playlistStateAndType?.3 != playlistStateAndType?.1.order || strongSelf.playlistStateAndType?.4 != playlistStateAndType?.2 {
                     var previousVoiceItem: SharedMediaPlaylistItem?
-                    if let playlistStateAndType = strongSelf.playlistStateAndType, playlistStateAndType.2 == .voice {
+                    if let playlistStateAndType = strongSelf.playlistStateAndType, playlistStateAndType.4 == .voice {
                         previousVoiceItem = playlistStateAndType.0
                     }
                     
@@ -137,10 +139,10 @@ public class TelegramController: ViewController {
                     
                     strongSelf.tempVoicePlaylistItemChanged?(previousVoiceItem, updatedVoiceItem)
                     if let playlistStateAndType = playlistStateAndType {
-                        strongSelf.playlistStateAndType = (playlistStateAndType.1.item, playlistStateAndType.1.order, playlistStateAndType.2, playlistStateAndType.0)
+                        strongSelf.playlistStateAndType = (playlistStateAndType.1.item, playlistStateAndType.1.previousItem, playlistStateAndType.1.nextItem, playlistStateAndType.1.order, playlistStateAndType.2, playlistStateAndType.0)
                     } else {
                         var voiceEnded = false
-                        if strongSelf.playlistStateAndType?.2 == .voice {
+                        if strongSelf.playlistStateAndType?.4 == .voice {
                             voiceEnded = true
                         }
                         strongSelf.playlistStateAndType = nil
@@ -417,13 +419,13 @@ public class TelegramController: ViewController {
                 mediaAccessoryPanelHidden = size != layout.metrics.widthClass
         }
         
-        if let (item, _, type, _) = self.playlistStateAndType, !mediaAccessoryPanelHidden {
+        if let (item, previousItem, nextItem, _, type, _) = self.playlistStateAndType, !mediaAccessoryPanelHidden {
             let panelHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
             let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight.isZero ? -panelHeight : (navigationHeight + additionalHeight + UIScreenPixel)), size: CGSize(width: layout.size.width, height: panelHeight))
             if let (mediaAccessoryPanel, mediaType) = self.mediaAccessoryPanel, mediaType == type {
                 transition.updateFrame(layer: mediaAccessoryPanel.layer, frame: panelFrame)
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
-                mediaAccessoryPanel.containerNode.headerNode.playbackItem = item
+                mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, previousItem, nextItem)
                
                 let delayedStatus = self.context.sharedContext.mediaManager.globalMediaPlayerState
                 |> mapToSignal { value -> Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> in
@@ -461,7 +463,7 @@ public class TelegramController: ViewController {
                 let mediaAccessoryPanel = MediaNavigationAccessoryPanel(context: self.context)
                 mediaAccessoryPanel.containerNode.headerNode.displayScrubber = type != .voice
                 mediaAccessoryPanel.close = { [weak self] in
-                    if let strongSelf = self, let (_, _, type, _) = strongSelf.playlistStateAndType {
+                    if let strongSelf = self, let (_, _, _, _, type, _) = strongSelf.playlistStateAndType {
                         strongSelf.context.sharedContext.mediaManager.setPlaylist(nil, type: type)
                     }
                 }
@@ -486,19 +488,29 @@ public class TelegramController: ViewController {
                         return nextRate
                     }
                     |> deliverOnMainQueue).start(next: { baseRate in
-                        guard let strongSelf = self, let (_, _, type, _) = strongSelf.playlistStateAndType else {
+                        guard let strongSelf = self, let (_, _, _, _, type, _) = strongSelf.playlistStateAndType else {
                             return
                         }
                         strongSelf.context.sharedContext.mediaManager.playlistControl(.setBaseRate(baseRate), type: type)
                     })
                 }
                 mediaAccessoryPanel.togglePlayPause = { [weak self] in
-                    if let strongSelf = self, let (_, _, type, _) = strongSelf.playlistStateAndType {
+                    if let strongSelf = self, let (_, _, _, _, type, _) = strongSelf.playlistStateAndType {
                         strongSelf.context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: type)
                     }
                 }
+                mediaAccessoryPanel.playPrevious = { [weak self] in
+                    if let strongSelf = self, let (_, _, _, _, type, _) = strongSelf.playlistStateAndType {
+                        strongSelf.context.sharedContext.mediaManager.playlistControl(.next, type: type)
+                    }
+                }
+                mediaAccessoryPanel.playNext = { [weak self] in
+                    if let strongSelf = self, let (_, _, _, _, type, _) = strongSelf.playlistStateAndType {
+                        strongSelf.context.sharedContext.mediaManager.playlistControl(.previous, type: type)
+                    }
+                }
                 mediaAccessoryPanel.tapAction = { [weak self] in
-                    guard let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController, let (state, order, type, account) = strongSelf.playlistStateAndType else {
+                    guard let strongSelf = self, let _ = strongSelf.navigationController as? NavigationController, let (state, _, _, order, type, account) = strongSelf.playlistStateAndType else {
                         return
                     }
                     if let id = state.id as? PeerMessagesMediaPlaylistItemId {
@@ -580,7 +592,7 @@ public class TelegramController: ViewController {
                 }
                 self.mediaAccessoryPanel = (mediaAccessoryPanel, type)
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate)
-                mediaAccessoryPanel.containerNode.headerNode.playbackItem = item
+                mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, previousItem, nextItem)
                 mediaAccessoryPanel.containerNode.headerNode.playbackStatus = self.context.sharedContext.mediaManager.globalMediaPlayerState
                 |> map { state -> MediaPlayerStatus in
                     if let stateOrLoading = state?.1, case let .state(state) = stateOrLoading {

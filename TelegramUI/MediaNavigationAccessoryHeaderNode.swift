@@ -7,15 +7,135 @@ import TelegramCore
 private let titleFont = Font.regular(12.0)
 private let subtitleFont = Font.regular(10.0)
 
-final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
+private class MediaHeaderItemNode: ASDisplayNode {
+    private let titleNode: TextNode
+    private let subtitleNode: TextNode
+    
+    override init() {
+        self.titleNode = TextNode()
+        self.titleNode.isUserInteractionEnabled = false
+        self.titleNode.displaysAsynchronously = false
+        self.subtitleNode = TextNode()
+        self.subtitleNode.isUserInteractionEnabled = false
+        self.subtitleNode.displaysAsynchronously = false
+        
+        super.init()
+        
+        self.isUserInteractionEnabled = false
+        
+        self.addSubnode(self.titleNode)
+        self.addSubnode(self.subtitleNode)
+    }
+    
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, playbackItem: SharedMediaPlaylistItem?, transition: ContainedViewLayoutTransition) -> (NSAttributedString?, NSAttributedString?, Bool) {
+        var rateButtonHidden = false
+        var titleString: NSAttributedString?
+        var subtitleString: NSAttributedString?
+        if let playbackItem = playbackItem, let displayData = playbackItem.displayData {
+            switch displayData {
+                case let .music(title, performer, _):
+                    rateButtonHidden = true
+                    let titleText: String = title ?? "Unknown Track"
+                    let subtitleText: String = performer ?? "Unknown Artist"
+                    
+                    titleString = NSAttributedString(string: titleText, font: titleFont, textColor: theme.rootController.navigationBar.primaryTextColor)
+                    subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: theme.rootController.navigationBar.secondaryTextColor)
+                case let .voice(author, peer):
+                    rateButtonHidden = false
+                    let titleText: String = author?.displayTitle ?? ""
+                    let subtitleText: String
+                    if let peer = peer {
+                        if peer is TelegramGroup || peer is TelegramChannel {
+                            subtitleText = peer.displayTitle
+                        } else {
+                            subtitleText = strings.MusicPlayer_VoiceNote
+                        }
+                    } else {
+                        subtitleText = strings.MusicPlayer_VoiceNote
+                    }
+                    
+                    titleString = NSAttributedString(string: titleText, font: titleFont, textColor: theme.rootController.navigationBar.primaryTextColor)
+                    subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: theme.rootController.navigationBar.secondaryTextColor)
+                case let .instantVideo(author, peer, timestamp):
+                    rateButtonHidden = false
+                    let titleText: String = author?.displayTitle ?? ""
+                    var subtitleText: String
+                    
+                    if let peer = peer {
+                        if peer is TelegramGroup || peer is TelegramChannel {
+                            subtitleText = peer.displayTitle
+                        } else {
+                            subtitleText = strings.Message_VideoMessage
+                        }
+                    } else {
+                        subtitleText = strings.Message_VideoMessage
+                    }
+                    
+                    if titleText == subtitleText {
+                        subtitleText = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: timestamp)
+                    }
+                    
+                    titleString = NSAttributedString(string: titleText, font: titleFont, textColor: theme.rootController.navigationBar.primaryTextColor)
+                    subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: theme.rootController.navigationBar.secondaryTextColor)
+            }
+        }
+        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
+        
+        var titleSideInset: CGFloat = 12.0
+        if !rateButtonHidden {
+            titleSideInset += 52.0
+        }
+        
+        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: size.width - titleSideInset, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: subtitleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: size.width - titleSideInset, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        
+        let _ = titleApply()
+        let _ = subtitleApply()
+        
+        let minimizedTitleOffset: CGFloat = subtitleString == nil ? 6.0 : 0.0
+        
+        let minimizedTitleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleLayout.size.width) / 2.0), y: 4.0 + minimizedTitleOffset), size: titleLayout.size)
+        let minimizedSubtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleLayout.size.width) / 2.0), y: 20.0), size: subtitleLayout.size)
+        
+        transition.updateFrame(node: self.titleNode, frame: minimizedTitleFrame)
+        transition.updateFrame(node: self.subtitleNode, frame: minimizedSubtitleFrame)
+        
+        return (titleString, subtitleString, rateButtonHidden)
+    }
+}
+
+private func generateMaskImage(color: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 12.0, height: 2.0), opaque: false, rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        
+        let gradientColors = [color.cgColor, color.withAlphaComponent(0.0).cgColor] as CFArray
+        
+        var locations: [CGFloat] = [0.0, 1.0]
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+        
+        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 12.0, y: 0.0), options: CGGradientDrawingOptions())
+    })
+}
+
+final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDelegate {
     static let minimizedHeight: CGFloat = 37.0
     
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private var dateTimeFormat: PresentationDateTimeFormat
     
-    private let titleNode: TextNode
-    private let subtitleNode: TextNode
+    private let scrollNode: ASScrollNode
+    private var initialContentOffset: CGFloat?
+    
+    private let leftMaskNode: ASImageNode
+    private let rightMaskNode: ASImageNode
+    
+    private let currentItemNode: MediaHeaderItemNode
+    private let previousItemNode: MediaHeaderItemNode
+    private let nextItemNode: MediaHeaderItemNode
     
     private let closeButton: HighlightableButtonNode
     private let actionButton: HighlightTrackingButtonNode
@@ -42,6 +162,8 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
     var close: (() -> Void)?
     var toggleRate: (() -> Void)?
     var togglePlayPause: (() -> Void)?
+    var playPrevious: (() -> Void)?
+    var playNext: (() -> Void)?
     
     var voiceBaseRate: AudioPlaybackRate? = nil {
         didSet {
@@ -69,9 +191,9 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         }
     }
     
-    var playbackItem: SharedMediaPlaylistItem? {
+    var playbackItems: (SharedMediaPlaylistItem?, SharedMediaPlaylistItem?, SharedMediaPlaylistItem?)? {
         didSet {
-            if !arePlaylistItemsEqual(self.playbackItem, oldValue), let layout = validLayout {
+            if !arePlaylistItemsEqual(self.playbackItems?.0, oldValue?.0) || !arePlaylistItemsEqual(self.playbackItems?.1, oldValue?.1) || !arePlaylistItemsEqual(self.playbackItems?.2, oldValue?.2), let layout = validLayout {
                 self.updateLayout(size: layout.0, leftInset: layout.1, rightInset: layout.2, transition: .immediate)
             }
         }
@@ -82,12 +204,20 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.strings = presentationData.strings
         self.dateTimeFormat = presentationData.dateTimeFormat
         
-        self.titleNode = TextNode()
-        self.titleNode.isUserInteractionEnabled = false
-        self.titleNode.displaysAsynchronously = false
-        self.subtitleNode = TextNode()
-        self.subtitleNode.isUserInteractionEnabled = false
-        self.subtitleNode.displaysAsynchronously = false
+        self.scrollNode = ASScrollNode()
+        
+        self.currentItemNode = MediaHeaderItemNode()
+        self.previousItemNode = MediaHeaderItemNode()
+        self.nextItemNode = MediaHeaderItemNode()
+        
+        self.leftMaskNode = ASImageNode()
+        self.leftMaskNode.contentMode = .scaleToFill
+        self.rightMaskNode = ASImageNode()
+        self.rightMaskNode.contentMode = .scaleToFill
+        
+        let maskImage = generateMaskImage(color: self.theme.rootController.navigationBar.backgroundColor)
+        self.leftMaskNode.image = maskImage
+        self.rightMaskNode.image = maskImage
         
         self.closeButton = HighlightableButtonNode()
         self.closeButton.accessibilityLabel = "Stop playback"
@@ -132,8 +262,13 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         
         self.clipsToBounds = true
         
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.subtitleNode)
+        self.addSubnode(self.scrollNode)
+        self.scrollNode.addSubnode(self.currentItemNode)
+        self.scrollNode.addSubnode(self.previousItemNode)
+        self.scrollNode.addSubnode(self.nextItemNode)
+        
+        self.addSubnode(self.leftMaskNode)
+        self.addSubnode(self.rightMaskNode)
         
         self.addSubnode(self.closeButton)
         self.addSubnode(self.rateButton)
@@ -205,6 +340,13 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
     override func didLoad() {
         super.didLoad()
         
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
+        self.scrollNode.view.alwaysBounceHorizontal = true
+        self.scrollNode.view.delegate = self
+        self.scrollNode.view.isPagingEnabled = true
+        self.scrollNode.view.showsHorizontalScrollIndicator = false
+        self.scrollNode.view.showsVerticalScrollIndicator = false
+        
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
         self.tapRecognizer = tapRecognizer
         self.view.addGestureRecognizer(tapRecognizer)
@@ -214,6 +356,10 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.dateTimeFormat = presentationData.dateTimeFormat
+        
+        let maskImage = generateMaskImage(color: self.theme.rootController.navigationBar.backgroundColor)
+        self.leftMaskNode.image = maskImage
+        self.rightMaskNode.image = maskImage
         
         self.closeButton.setImage(PresentationResourcesRootController.navigationPlayerCloseButton(self.theme), for: [])
         self.actionPlayNode.image = PresentationResourcesRootController.navigationPlayerPlayIcon(self.theme)
@@ -234,94 +380,77 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode {
         }
     }
     
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        self.changeTrack()
+    }
+    
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        guard !decelerate else {
+            return
+        }
+        self.changeTrack()
+    }
+    
+    private func changeTrack() {
+        guard let initialContentOffset = self.initialContentOffset else {
+            return
+        }
+        if self.scrollNode.view.contentOffset.x < initialContentOffset {
+            self.playPrevious?()
+        } else if self.scrollNode.view.contentOffset.x > initialContentOffset {
+            self.playNext?()
+        }
+    }
+    
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, leftInset, rightInset)
         
         let minHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
         
-        var titleString: NSAttributedString?
-        var subtitleString: NSAttributedString?
-        if let playbackItem = self.playbackItem, let displayData = playbackItem.displayData {
-            switch displayData {
-                case let .music(title, performer, _):
-                    self.rateButton.isHidden = true
-                    let titleText: String = title ?? "Unknown Track"
-                    let subtitleText: String = performer ?? "Unknown Artist"
-                    
-                    titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
-                    subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                case let .voice(author, peer):
-                    self.rateButton.isHidden = false
-                    let titleText: String = author?.displayTitle ?? ""
-                    let subtitleText: String
-                    if let peer = peer {
-                        if peer is TelegramGroup || peer is TelegramChannel {
-                            subtitleText = peer.displayTitle
-                        } else {
-                            subtitleText = self.strings.MusicPlayer_VoiceNote
-                        }
-                    } else {
-                        subtitleText = self.strings.MusicPlayer_VoiceNote
-                    }
-                    
-                    titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
-                    subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-                case let .instantVideo(author, peer, timestamp):
-                    self.rateButton.isHidden = false
-                    let titleText: String = author?.displayTitle ?? ""
-                    var subtitleText: String
-                    
-                    if let peer = peer {
-                        if peer is TelegramGroup || peer is TelegramChannel {
-                            subtitleText = peer.displayTitle
-                        } else {
-                            subtitleText = self.strings.Message_VideoMessage
-                        }
-                    } else {
-                        subtitleText = self.strings.Message_VideoMessage
-                    }
-                    
-                    if titleText == subtitleText {
-                        subtitleText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: timestamp)
-                    }
-                    
-                    titleString = NSAttributedString(string: titleText, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
-                    subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: self.theme.rootController.navigationBar.secondaryTextColor)
-            }
-        }
-        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
-        let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
-        
-        var titleSideInset: CGFloat = 80.0
-        if !self.rateButton.isHidden {
-            titleSideInset += 52.0
-        }
-        
-        let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: size.width - titleSideInset, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-        let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: subtitleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: size.width - titleSideInset, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-        
+        let inset: CGFloat = 40.0 + leftInset
+        let constrainedSize = CGSize(width: size.width - inset * 2.0, height: size.height)
+        let (titleString, subtitleString, rateButtonHidden) = self.currentItemNode.updateLayout(size: constrainedSize, leftInset: leftInset, rightInset: rightInset, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, playbackItem: self.playbackItems?.0, transition: transition)
         self.accessibilityAreaNode.accessibilityLabel = "\(titleString?.string ?? ""). \(subtitleString?.string ?? "")"
+        self.rateButton.isHidden = rateButtonHidden
         
-        let _ = titleApply()
-        let _ = subtitleApply()
+        let _ = self.previousItemNode.updateLayout(size: constrainedSize, leftInset: 0.0, rightInset: 0.0, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, playbackItem: self.playbackItems?.1, transition: transition)
+        let _ = self.nextItemNode.updateLayout(size: constrainedSize, leftInset: 0.0, rightInset: 0.0, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, playbackItem: self.playbackItems?.2, transition: transition)
         
-        let minimizedTitleOffset: CGFloat = subtitleString == nil ? 6.0 : 0.0
+        let constrainedBounds = CGRect(origin: CGPoint(), size: constrainedSize)
+        transition.updateFrame(node: self.scrollNode, frame: constrainedBounds.offsetBy(dx: inset, dy: 0.0))
         
-        let minimizedTitleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleLayout.size.width) / 2.0), y: 4.0 + minimizedTitleOffset), size: titleLayout.size)
-        let minimizedSubtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleLayout.size.width) / 2.0), y: 20.0), size: subtitleLayout.size)
+        var contentSize = constrainedSize
+        var contentOffset: CGFloat = 0.0
+        if self.playbackItems?.1 != nil {
+            contentSize.width += constrainedSize.width
+            contentOffset = constrainedSize.width
+        }
+        if self.playbackItems?.2 != nil {
+            contentSize.width += constrainedSize.width
+        }
         
-        transition.updateFrame(node: self.titleNode, frame: minimizedTitleFrame)
-        transition.updateFrame(node: self.subtitleNode, frame: minimizedSubtitleFrame)
+        self.previousItemNode.frame = constrainedBounds.offsetBy(dx: contentOffset - constrainedSize.width, dy: 0.0)
+        self.currentItemNode.frame = constrainedBounds.offsetBy(dx: contentOffset, dy: 0.0)
+        self.nextItemNode.frame = constrainedBounds.offsetBy(dx: contentOffset + constrainedSize.width, dy: 0.0)
         
+        self.leftMaskNode.frame = CGRect(x: inset, y: 0.0, width: 12.0, height: minHeight)
+        self.rightMaskNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+        self.rightMaskNode.frame = CGRect(x: size.width - inset - 12.0, y: 0.0, width: 12.0, height: minHeight)
+        
+        self.scrollNode.view.contentSize = contentSize
+        self.scrollNode.view.contentOffset = CGPoint(x: contentOffset, y: 0.0)
+        self.initialContentOffset = contentOffset
+        
+        let bounds = CGRect(origin: CGPoint(), size: size)
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 44.0 - rightInset, y: 0.0), size: CGSize(width: 44.0, height: minHeight)))
         let rateButtonSize = CGSize(width: 24.0, height: minHeight)
         transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width - 18.0 - rateButtonSize.width - rightInset, y: 0.0), size: rateButtonSize))
         transition.updateFrame(node: self.actionPlayNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
         transition.updateFrame(node: self.actionPauseNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
-        transition.updateFrame(node: self.actionButton, frame: CGRect(origin: CGPoint(x: leftInset, y: minimizedTitleFrame.minY - 4.0), size: CGSize(width: 40.0, height: 37.0)))
+        transition.updateFrame(node: self.actionButton, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
         transition.updateFrame(node: self.scrubbingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 37.0 - 2.0), size: CGSize(width: size.width, height: 2.0)))
-
+        
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: minHeight - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
         
         self.accessibilityAreaNode.frame = CGRect(origin: CGPoint(x: self.actionButton.frame.maxX, y: 0.0), size: CGSize(width: self.rateButton.frame.minX - self.actionButton.frame.maxX, height: minHeight))

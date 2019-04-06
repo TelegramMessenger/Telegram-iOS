@@ -108,7 +108,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                         break
                     case .ignore:
                         return .fail
-                    case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .call, .openMessage, .timecode:
+                    case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .call, .openMessage, .timecode, .tooltip:
                         return .waitForSingleTap
                 }
             }
