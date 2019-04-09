@@ -406,7 +406,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.currentPresentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        self.chatPresentationDataPromise = Promise(ChatPresentationData(theme: ChatPresentationThemeData(theme: self.currentPresentationData.theme, wallpaper: self.currentPresentationData.chatWallpaper), fontSize: self.currentPresentationData.fontSize, strings: self.currentPresentationData.strings, dateTimeFormat: self.currentPresentationData.dateTimeFormat, nameDisplayOrder: self.currentPresentationData.nameDisplayOrder, disableAnimations: self.currentPresentationData.disableAnimations))
+        self.chatPresentationDataPromise = Promise(ChatPresentationData(theme: ChatPresentationThemeData(theme: self.currentPresentationData.theme, wallpaper: self.currentPresentationData.chatWallpaper), fontSize: self.currentPresentationData.fontSize, strings: self.currentPresentationData.strings, dateTimeFormat: self.currentPresentationData.dateTimeFormat, nameDisplayOrder: self.currentPresentationData.nameDisplayOrder, disableAnimations: self.currentPresentationData.disableAnimations, largeEmoji: self.currentPresentationData.largeEmoji))
         
         self.prefetchManager = InChatPrefetchManager(context: context)
         
@@ -895,7 +895,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousWallpaper != presentationData.chatWallpaper || previousDisableAnimations != presentationData.disableAnimations {
                     let themeData = ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper)
-                    let chatPresentationData = ChatPresentationData(theme: themeData, fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)
+                    let chatPresentationData = ChatPresentationData(theme: themeData, fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations, largeEmoji: presentationData.largeEmoji)
                     
                     strongSelf.dynamicBounceEnabled = !presentationData.disableAnimations
                     

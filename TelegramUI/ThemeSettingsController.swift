@@ -11,15 +11,17 @@ private final class ThemeSettingsControllerArguments {
     let openWallpaperSettings: () -> Void
     let openAccentColor: (Int32) -> Void
     let openAutoNightTheme: () -> Void
+    let toggleLargeEmoji: (Bool) -> Void
     let disableAnimations: (Bool) -> Void
     
-    init(context: AccountContext, selectTheme: @escaping (Int32) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, openAccentColor: @escaping (Int32) -> Void, openAutoNightTheme: @escaping () -> Void, disableAnimations: @escaping (Bool) -> Void) {
+    init(context: AccountContext, selectTheme: @escaping (Int32) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, openAccentColor: @escaping (Int32) -> Void, openAutoNightTheme: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void) {
         self.context = context
         self.selectTheme = selectTheme
         self.selectFontSize = selectFontSize
         self.openWallpaperSettings = openWallpaperSettings
         self.openAccentColor = openAccentColor
         self.openAutoNightTheme = openAutoNightTheme
+        self.toggleLargeEmoji = toggleLargeEmoji
         self.disableAnimations = disableAnimations
     }
 }
@@ -28,12 +30,13 @@ private enum ThemeSettingsControllerSection: Int32 {
     case chatPreview
     case themeList
     case fontSize
-    case animations
+    case other
 }
 
 public enum ThemeSettingsEntryTag: ItemListItemTag {
     case fontSize
     case accentColor
+    case largeEmoji
     case animations
     
     func isEqual(to other: ItemListItemTag) -> Bool {
@@ -55,7 +58,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case autoNightTheme(PresentationTheme, String, String)
     case themeListHeader(PresentationTheme, String)
     case themeItem(PresentationTheme, String, Bool, Int32)
-    case animationsHeader(PresentationTheme, String)
+    case otherHeader(PresentationTheme, String)
+    case largeEmoji(PresentationTheme, String, Bool)
     case animations(PresentationTheme, String, Bool)
     case animationsInfo(PresentationTheme, String)
     
@@ -67,8 +71,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ThemeSettingsControllerSection.themeList.rawValue
             case .fontSizeHeader, .fontSize:
                 return ThemeSettingsControllerSection.fontSize.rawValue
-            case .animationsHeader, .animations, .animationsInfo:
-                return ThemeSettingsControllerSection.animations.rawValue
+            case .otherHeader, .largeEmoji, .animations, .animationsInfo:
+                return ThemeSettingsControllerSection.other.rawValue
         }
     }
     
@@ -92,12 +96,14 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return 7
             case let .themeItem(_, _, _, index):
                 return 8 + index
-            case .animationsHeader:
+            case .otherHeader:
                 return 100
-            case .animations:
+            case .largeEmoji:
                 return 101
-            case .animationsInfo:
+            case .animations:
                 return 102
+            case .animationsInfo:
+                return 103
         }
     }
     
@@ -157,8 +163,14 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .animationsHeader(lhsTheme, lhsText):
-                if case let .animationsHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .otherHeader(lhsTheme, lhsText):
+                if case let .otherHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .largeEmoji(lhsTheme, lhsTitle, lhsValue):
+                if case let .largeEmoji(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -212,8 +224,12 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.selectTheme(index)
                 })
-            case let .animationsHeader(theme, text):
+            case let .otherHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+            case let .largeEmoji(theme, title, value):
+                return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.toggleLargeEmoji(value)
+                }, tag: ThemeSettingsEntryTag.largeEmoji)
             case let .animations(theme, title, value):
                 return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.disableAnimations(value)
@@ -224,7 +240,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func themeSettingsControllerEntries(presentationData: PresentationData, theme: PresentationTheme, themeAccentColor: Int32?, autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, disableAnimations: Bool) -> [ThemeSettingsControllerEntry] {
+private func themeSettingsControllerEntries(presentationData: PresentationData, theme: PresentationTheme, themeAccentColor: Int32?, autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, largeEmoji: Bool, disableAnimations: Bool) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
     entries.append(.fontSizeHeader(presentationData.theme, strings.Appearance_TextSize.uppercased()))
@@ -254,7 +270,8 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeNight, theme.name == .builtin(.nightGrayscale), 2))
     entries.append(.themeItem(presentationData.theme, strings.Appearance_ThemeNightBlue, theme.name == .builtin(.nightAccent), 3))
     
-    entries.append(.animationsHeader(presentationData.theme, strings.Appearance_Animations.uppercased()))
+    entries.append(.otherHeader(presentationData.theme, strings.Appearance_Other.uppercased()))
+    entries.append(.largeEmoji(presentationData.theme, strings.Appearance_LargeEmoji, largeEmoji))
     entries.append(.animations(presentationData.theme, strings.Appearance_ReduceMotion, disableAnimations))
     entries.append(.animationsInfo(presentationData.theme, strings.Appearance_ReduceMotionInfo))
     
@@ -306,26 +323,30 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     }
                 }
                 
-                return PresentationThemeSettings(chatWallpaper: wallpaper, theme: theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                return PresentationThemeSettings(chatWallpaper: wallpaper, theme: theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
             })
         }).start()
     }, selectFontSize: { size in
         let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: size, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: size, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
         }).start()
     }, openWallpaperSettings: {
         pushControllerImpl?(ThemeGridController(context: context))
     }, openAccentColor: { color in
         presentControllerImpl?(ThemeAccentColorActionSheet(context: context, currentValue: color, applyValue: { color in
             let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-                return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: color, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: color, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
             }).start()
         }))
     }, openAutoNightTheme: {
         pushControllerImpl?(themeAutoNightSettingsController(context: context))
+    }, toggleLargeEmoji: { largeEmoji in
+        let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: largeEmoji,  disableAnimations: current.disableAnimations)
+        }).start()
     }, disableAnimations: { disabled in
         let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: disabled)
+            return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: disabled)
         }).start()
     })
     
@@ -338,6 +359,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         let fontSize: PresentationFontSize
         let wallpaper: TelegramWallpaper
         let dateTimeFormat: PresentationDateTimeFormat
+        let largeEmoji: Bool
         let disableAnimations: Bool
         
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
@@ -358,10 +380,11 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         fontSize = settings.fontSize
         
         dateTimeFormat = presentationData.dateTimeFormat
+        largeEmoji = settings.largeEmoji
         disableAnimations = settings.disableAnimations
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeAccentColor: settings.themeAccentColor, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, disableAnimations: disableAnimations), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeAccentColor: settings.themeAccentColor, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, largeEmoji: largeEmoji, disableAnimations: disableAnimations), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
         
         if previousTheme.swap(theme)?.name != theme.name {
             presentControllerImpl?(ThemeSettingsCrossfadeController())

@@ -92,12 +92,6 @@ struct PresentationResourcesChat {
         })
     }
     
-    static func chatServiceVerticalLineImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatServiceVerticalLineImage.rawValue, { theme in
-            return generateLineImage(color: theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText)
-        })
-    }
-    
     static func chatBubbleConsumableContentIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleConsumableContentIncomingIcon.rawValue, { theme in
             return generateFilledCircleImage(diameter: 4.0, color: theme.chat.bubble.incomingAccentControlColor)
@@ -167,12 +161,6 @@ struct PresentationResourcesChat {
         return theme.image(key.rawValue, { theme in
             let components: PresentationThemeBubbleColorComponents = wallpaper ? theme.chat.bubble.incoming.withWallpaper : theme.chat.bubble.incoming.withoutWallpaper
             return messageSingleBubbleLikeImage(fillColor: components.fill, strokeColor: components.stroke)
-        })
-    }
-    
-    static func chatEmptyItemIconImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatEmptyItemIconImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Empty Chat/Chat"), color: theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText)
         })
     }
     
@@ -265,13 +253,13 @@ struct PresentationResourcesChat {
     
     static func chatInputMediaPanelGridSetupImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelGridSetupImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GridSetupIcon"), color: theme.chat.inputMediaPanel.panelIconColor)
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GridSetupIcon"), color: theme.chat.inputMediaPanel.panelIconColor.withAlphaComponent(0.65))
         })
     }
     
     static func chatInputMediaPanelGridDismissImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelGridDismissImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GridDismissIcon"), color: theme.chat.inputMediaPanel.panelIconColor)
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GridDismissIcon"), color: theme.chat.inputMediaPanel.panelIconColor.withAlphaComponent(0.65))
         })
     }
     
@@ -867,23 +855,6 @@ struct PresentationResourcesChat {
         })
     }
     
-    static func chatEmptyItemLockIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatEmptyItemLockIcon.rawValue, { theme in
-            return generateImage(CGSize(width: 9.0, height: 13.0), rotatedContext: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                
-                context.translateBy(x: 0.0, y: 1.0)
-                
-                context.setFillColor(theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText.cgColor)
-                context.setStrokeColor(theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText.cgColor)
-                context.setLineWidth(1.32)
-                
-                let _ = try? drawSvgPath(context, path: "M4.5,0.600000024 C5.88071187,0.600000024 7,1.88484952 7,3.46979169 L7,7.39687502 C7,8.9818172 5.88071187,10.2666667 4.5,10.2666667 C3.11928813,10.2666667 2,8.9818172 2,7.39687502 L2,3.46979169 C2,1.88484952 3.11928813,0.600000024 4.5,0.600000024 S ")
-                let _ = try? drawSvgPath(context, path: "M1.32,5.65999985 L7.68,5.65999985 C8.40901587,5.65999985 9,6.25098398 9,6.97999985 L9,10.6733332 C9,11.4023491 8.40901587,11.9933332 7.68,11.9933332 L1.32,11.9933332 C0.59098413,11.9933332 1.11022302e-16,11.4023491 0,10.6733332 L2.22044605e-16,6.97999985 C1.11022302e-16,6.25098398 0.59098413,5.65999985 1.32,5.65999985 Z ")
-            })
-        })
-    }
-    
     static func chatBubbleFileCloudFetchMediaIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleFileCloudFetchMediaIcon.rawValue, { theme in
             guard let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FileCloudFetch"), color: theme.chat.bubble.mediaOverlayControlForegroundColor) else {
@@ -950,12 +921,6 @@ struct PresentationResourcesChat {
     static func groupInfoMembersIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.groupInfoMembersIcon.rawValue, { _ in
             return UIImage(bundleImageName: "Chat/Info/GroupMembersIcon")?.precomposed()
-        })
-    }
-    
-    static func emptyChatListCheckIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.emptyChatListCheckIcon.rawValue, { _ in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Empty Chat/ListCheckIcon"), color: theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText)
         })
     }
 }

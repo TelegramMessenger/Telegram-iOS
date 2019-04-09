@@ -217,7 +217,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 var textFont = item.presentationData.messageFont
                 var forceStatusNewline = false
-                if rawText.containsOnlyEmoji {
+                if rawText.containsOnlyEmoji && item.presentationData.largeEmoji {
                     let emojis = rawText.emojis
                     switch emojis.count {
                         case 1:

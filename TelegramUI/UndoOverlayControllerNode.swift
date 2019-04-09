@@ -10,8 +10,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let buttonTextNode: ImmediateTextNode
     private let buttonNode: HighlightTrackingButtonNode
     private let panelNode: ASDisplayNode
+    private let panelWrapperNode: ASDisplayNode
     private let action: (Bool) -> Void
     private let dismiss: () -> Void
+    
+    private let effectView: UIVisualEffectView
     
     private var remainingSeconds = 5
     private var timer: SwiftSignalKit.Timer?
@@ -39,16 +42,23 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.buttonNode = HighlightTrackingButtonNode()
         
         self.panelNode = ASDisplayNode()
-        self.panelNode.backgroundColor = UIColor(rgb: 0x2e2f30)
+        self.panelNode.backgroundColor = .clear
+        self.panelNode.clipsToBounds = true
+        self.panelNode.cornerRadius = 9.0
+        
+        self.panelWrapperNode = ASDisplayNode()
+        
+        self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
         
         super.init()
         
-        self.panelNode.addSubnode(self.timerTextNode)
-        self.panelNode.addSubnode(self.statusNode)
-        self.panelNode.addSubnode(self.textNode)
-        self.panelNode.addSubnode(self.buttonTextNode)
-        self.panelNode.addSubnode(self.buttonNode)
+        self.panelWrapperNode.addSubnode(self.timerTextNode)
+        self.panelWrapperNode.addSubnode(self.statusNode)
+        self.panelWrapperNode.addSubnode(self.textNode)
+        self.panelWrapperNode.addSubnode(self.buttonTextNode)
+        self.panelWrapperNode.addSubnode(self.buttonNode)
         self.addSubnode(self.panelNode)
+        self.addSubnode(self.panelWrapperNode)
         
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -64,6 +74,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
         self.checkTimer()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        self.panelNode.view.addSubview(self.effectView)
     }
     
     @objc private func buttonPressed() {
@@ -107,17 +122,21 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         let leftInset: CGFloat = 50.0
         let rightInset: CGFloat = 16.0
-        let contentHeight: CGFloat = 50.0
-        let panelHeight = contentHeight + layout.intrinsicInsets.bottom
+        let contentHeight: CGFloat = 49.0
+        let margin: CGFloat = 16.0
         
-        transition.updateFrame(node: self.panelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
+        let panelFrame = CGRect(origin: CGPoint(x: margin, y: layout.size.height - contentHeight - layout.intrinsicInsets.bottom - margin - 49.0), size: CGSize(width: layout.size.width - margin * 2.0, height: contentHeight))
+        let panelWrapperFrame = CGRect(origin: CGPoint(x: margin, y: layout.size.height - contentHeight - layout.intrinsicInsets.bottom - margin - 49.0), size: CGSize(width: layout.size.width - margin * 2.0 + margin, height: contentHeight))
+        transition.updateFrame(node: self.panelNode, frame: panelFrame)
+        transition.updateFrame(node: self.panelWrapperNode, frame: panelWrapperFrame)
+        self.effectView.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width - margin * 2.0, height: contentHeight)
         
         let buttonTextSize = self.buttonTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
-        let buttonTextFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - rightInset - buttonTextSize.width, y: floor((contentHeight - buttonTextSize.height) / 2.0)), size: buttonTextSize)
+        let buttonTextFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - rightInset - buttonTextSize.width - margin * 2.0, y: floor((contentHeight - buttonTextSize.height) / 2.0)), size: buttonTextSize)
         transition.updateFrame(node: self.buttonTextNode, frame: buttonTextFrame)
-        self.buttonNode.frame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - rightInset - buttonTextSize.width - 8.0, y: 0.0), size: CGSize(width: layout.safeInsets.right + rightInset + buttonTextSize.width + 8.0, height: contentHeight))
+        self.buttonNode.frame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - rightInset - buttonTextSize.width - 8.0 - margin, y: 0.0), size: CGSize(width: layout.safeInsets.right + rightInset + buttonTextSize.width + 8.0 + margin, height: contentHeight))
         
-        let textSize = self.textNode.updateLayout(CGSize(width: buttonTextFrame.minX - 8.0 - leftInset - layout.safeInsets.left - layout.safeInsets.right, height: .greatestFiniteMagnitude))
+        let textSize = self.textNode.updateLayout(CGSize(width: buttonTextFrame.minX - 8.0 - leftInset - layout.safeInsets.left - layout.safeInsets.right - margin * 2.0, height: .greatestFiniteMagnitude))
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + leftInset, y: floor((contentHeight - textSize.height) / 2.0)), size: textSize))
         
         let timerTextSize = self.timerTextNode.updateLayout(CGSize(width: 100.0, height: 100.0))
@@ -134,9 +153,10 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     }
     
     func animateOut(completion: @escaping () -> Void) {
-        self.panelNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.panelNode.bounds.height), duration: 0.25, timingFunction: kCAMediaTimingFunctionEaseOut, removeOnCompletion: false, additive: true, completion: { _ in
+        self.panelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, delay: 0.0, timingFunction: kCAMediaTimingFunctionEaseOut, removeOnCompletion: false, completion: { _ in })
+        self.panelWrapperNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, delay: 0.0, timingFunction: kCAMediaTimingFunctionEaseOut, removeOnCompletion: false) { _ in
             completion()
-        })
+        }
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

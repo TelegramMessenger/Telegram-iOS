@@ -32,6 +32,12 @@ private func generateBadgeBackgroundImage(theme: PresentationTheme, active: Bool
     })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 10)
 }
 
+enum RecentStatusOnlineIconState {
+    case regular
+    case highlighted
+    case pinned
+}
+
 struct PresentationResourcesChatList {
     static func pendingImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListPending.rawValue, { theme in
@@ -111,14 +117,33 @@ struct PresentationResourcesChatList {
         })
     }
     
-    static func recentStatusOnlineIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatListRecentStatusOnlineIcon.rawValue, { theme in
+    
+    
+    static func recentStatusOnlineIcon(_ theme: PresentationTheme, state: RecentStatusOnlineIconState) -> UIImage? {
+        let key: PresentationResourceKey
+        switch state {
+            case .regular:
+                key = PresentationResourceKey.chatListRecentStatusOnlineIcon
+            case .highlighted:
+                key = PresentationResourceKey.chatListRecentStatusOnlineHighlightedIcon
+            case .pinned:
+                key = PresentationResourceKey.chatListRecentStatusOnlinePinnedIcon
+        }
+        return theme.image(key.rawValue, { theme in
             return generateImage(CGSize(width: 14.0, height: 14.0), rotatedContext: { size, context in
                 let bounds = CGRect(origin: CGPoint(), size: size)
                 context.clear(bounds)
-                context.setFillColor(theme.chatList.backgroundColor.cgColor)
+                switch state {
+                    case .regular:
+                        context.setFillColor(theme.chatList.backgroundColor.cgColor)
+                    case .highlighted:
+                        context.setFillColor(theme.chatList.itemHighlightedBackgroundColor.cgColor)
+                    case .pinned:
+                        context.setFillColor(theme.chatList.pinnedItemBackgroundColor.cgColor)
+                }
+                
                 context.fillEllipse(in: bounds)
-                context.setFillColor(theme.chatList.unreadBadgeActiveBackgroundColor.cgColor)
+                context.setFillColor(theme.chatList.secretIconColor.cgColor)
                 context.fillEllipse(in: bounds.insetBy(dx: 2.0, dy: 2.0))
             })
         })

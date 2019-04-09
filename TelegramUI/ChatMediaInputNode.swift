@@ -325,18 +325,20 @@ final class ChatMediaInputNodeInteraction {
     let toggleSearch: (Bool, ChatMediaInputSearchMode?) -> Void
     let openPeerSpecificSettings: () -> Void
     let dismissPeerSpecificSettings: () -> Void
+    let clearRecentlyUsedStickers: () -> Void
     
     var highlightedStickerItemCollectionId: ItemCollectionId?
     var highlightedItemCollectionId: ItemCollectionId?
     var previewedStickerPackItem: StickerPreviewPeekItem?
     var appearanceTransition: CGFloat = 1.0
     
-    init(navigateToCollectionId: @escaping (ItemCollectionId) -> Void, openSettings: @escaping () -> Void, toggleSearch: @escaping (Bool, ChatMediaInputSearchMode?) -> Void, openPeerSpecificSettings: @escaping () -> Void, dismissPeerSpecificSettings: @escaping () -> Void) {
+    init(navigateToCollectionId: @escaping (ItemCollectionId) -> Void, openSettings: @escaping () -> Void, toggleSearch: @escaping (Bool, ChatMediaInputSearchMode?) -> Void, openPeerSpecificSettings: @escaping () -> Void, dismissPeerSpecificSettings: @escaping () -> Void, clearRecentlyUsedStickers: @escaping () -> Void) {
         self.navigateToCollectionId = navigateToCollectionId
         self.openSettings = openSettings
         self.toggleSearch = toggleSearch
         self.openPeerSpecificSettings = openPeerSpecificSettings
         self.dismissPeerSpecificSettings = dismissPeerSpecificSettings
+        self.clearRecentlyUsedStickers = clearRecentlyUsedStickers
     }
 }
 
@@ -569,6 +571,23 @@ final class ChatMediaInputNode: ChatInputNode {
             })
         }, dismissPeerSpecificSettings: { [weak self] in
             self?.dismissPeerSpecificPackSetup()
+        }, clearRecentlyUsedStickers: { [weak self] in
+            if let strongSelf = self {
+                let actionSheet = ActionSheetController(presentationTheme: strongSelf.theme)
+                var items: [ActionSheetItem] = []
+                items.append(ActionSheetButtonItem(title: strongSelf.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    let _ = (context.account.postbox.transaction { transaction in
+                        clearRecentlyUsedStickers(transaction: transaction)
+                    }).start()
+                }))
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                strongSelf.controllerInteraction.presentController(actionSheet, nil)
+            }
         })
         
         getItemIsPreviewedImpl = { [weak self] item in

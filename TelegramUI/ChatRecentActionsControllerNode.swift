@@ -97,7 +97,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         self.state = ChatRecentActionsControllerState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, fontSize: self.presentationData.fontSize)
         
-        self.chatPresentationDataPromise = Promise(ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper), fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations))
+        self.chatPresentationDataPromise = Promise(ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper), fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations, largeEmoji: self.presentationData.largeEmoji))
         
         self.eventLogContext = ChannelAdminEventLogContext(postbox: self.context.account.postbox, network: self.context.account.network, peerId: self.peer.id)
         
@@ -468,7 +468,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 let previousTheme = strongSelf.presentationData.theme
                 
                 strongSelf.presentationData = presentationData
-                strongSelf.chatPresentationDataPromise.set(.single(ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)))
+                strongSelf.chatPresentationDataPromise.set(.single(ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations, largeEmoji: presentationData.largeEmoji)))
                 
                 strongSelf.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
             }

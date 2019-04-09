@@ -10,6 +10,7 @@ private let subtitleFont = Font.regular(12.0)
 private struct SharePeerEntry: Comparable, Identifiable {
     let index: Int32
     let peer: RenderedPeer
+    let presence: PeerPresence?
     let theme: PresentationTheme
     let strings: PresentationStrings
     
@@ -24,6 +25,13 @@ private struct SharePeerEntry: Comparable, Identifiable {
         if lhs.peer != rhs.peer {
             return false
         }
+        if let lhsPresence = lhs.presence, let rhsPresence = rhs.presence {
+            if !lhsPresence.isEqual(to: rhsPresence) {
+                return false
+            }
+        } else if (lhs.presence != nil) != (rhs.presence != nil) {
+            return false
+        }
         return true
     }
     
@@ -32,7 +40,7 @@ private struct SharePeerEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, interfaceInteraction: ShareControllerInteraction) -> GridItem {
-        return ShareControllerPeerGridItem(account: account, theme: self.theme, strings: self.strings, peer: self.peer, controllerInteraction: interfaceInteraction, search: false)
+        return ShareControllerPeerGridItem(account: account, theme: self.theme, strings: self.strings, peer: self.peer, presence: self.presence, controllerInteraction: interfaceInteraction, search: false)
     }
 }
 
@@ -87,7 +95,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var validLayout: (CGSize, CGFloat)?
     private var overrideGridOffsetTransition: ContainedViewLayoutTransition?
     
-    init(sharedContext: SharedAccountContext, account: Account, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, peers: [RenderedPeer], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContext, account: Account, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void) {
         self.sharedContext = sharedContext
         self.account = account
         self.theme = theme
@@ -96,25 +104,25 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.accountPeer = accountPeer
         self.switchToAnotherAccount = switchToAnotherAccount
         
-        let items: Signal<[SharePeerEntry], NoError> = combineLatest(.single(peers), foundPeers.get())
+        let items: Signal<[SharePeerEntry], NoError> = combineLatest(.single(peers), self.foundPeers.get())
         |> map { initialPeers, foundPeers -> [SharePeerEntry] in
             var entries: [SharePeerEntry] = []
             var index: Int32 = 0
             
             var existingPeerIds: Set<PeerId> = Set()
             
-            entries.append(SharePeerEntry(index: index, peer: RenderedPeer(peer: accountPeer), theme: theme, strings: strings))
+            entries.append(SharePeerEntry(index: index, peer: RenderedPeer(peer: accountPeer), presence: nil, theme: theme, strings: strings))
             index += 1
             
             for peer in foundPeers.reversed() {
-                entries.append(SharePeerEntry(index: index, peer: peer, theme: theme, strings: strings))
+                entries.append(SharePeerEntry(index: index, peer: peer, presence: nil, theme: theme, strings: strings))
                 existingPeerIds.insert(peer.peerId)
                 index += 1
             }
             
-            for peer in initialPeers {
+            for (peer, presence) in initialPeers {
                 if !existingPeerIds.contains(peer.peerId) {
-                    entries.append(SharePeerEntry(index: index, peer: peer, theme: theme, strings: strings))
+                    entries.append(SharePeerEntry(index: index, peer: peer, presence: presence, theme: theme, strings: strings))
                     existingPeerIds.insert(peer.peerId)
                     index += 1
                 }

@@ -2340,6 +2340,13 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     strongSelf.forwardMessages(messageIds: forwardMessageIds)
                 }
             }
+        }, forwardCurrentForwardMessages: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.commitPurposefulAction()
+                if let forwardMessageIds = strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds {
+                    strongSelf.forwardMessages(messageIds: forwardMessageIds, resetCurrent: true)
+                }
+            }
         }, forwardMessages: { [weak self] messages in
             if let strongSelf = self, !messages.isEmpty {
                 strongSelf.commitPurposefulAction()
@@ -5266,11 +5273,15 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         }
     }
     
-    private func forwardMessages(messageIds: [MessageId]) {
+    private func forwardMessages(messageIds: [MessageId], resetCurrent: Bool = false) {
         let controller = PeerSelectionController(context: self.context, filter: .onlyWriteable)
         controller.peerSelected = { [weak self, weak controller] peerId in
             guard let strongSelf = self, let strongController = controller else {
                 return
+            }
+            
+            if resetCurrent {
+                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(nil) }) })
             }
             
             if case .peer(peerId) = strongSelf.chatLocation, strongSelf.parentController == nil {
@@ -5300,12 +5311,12 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             strongSelf.shareStatusDisposable = MetaDisposable()
                         }
                         strongSelf.shareStatusDisposable?.set((combineLatest(signals)
-                            |> deliverOnMainQueue).start(completed: {
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .success), in: .window(.root))
-                            }))
+                        |> deliverOnMainQueue).start(completed: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .success), in: .window(.root))
+                        }))
                     }
                 })
                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })

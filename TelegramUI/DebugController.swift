@@ -4,18 +4,21 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import MtProtoKitDynamic
+import MessageUI
 
 private final class DebugControllerArguments {
     let sharedContext: SharedAccountContext
     let context: AccountContext?
     let presentController: (ViewController, ViewControllerPresentationArguments?) -> Void
     let pushController: (ViewController) -> Void
+    let getRootController: () -> UIViewController?
     
-    init(sharedContext: SharedAccountContext, context: AccountContext?, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping (ViewController) -> Void) {
+    init(sharedContext: SharedAccountContext, context: AccountContext?, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping (ViewController) -> Void, getRootController: @escaping () -> UIViewController?) {
         self.sharedContext = sharedContext
         self.context = context
         self.presentController = presentController
         self.pushController = pushController
+        self.getRootController = getRootController
     }
 }
 
@@ -108,20 +111,46 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         guard let context = arguments.context else {
                             return
                         }
-                        let controller = PeerSelectionController(context: context)
-                        controller.peerSelected = { [weak controller] peerId in
-                            if let strongController = controller {
-                                strongController.dismiss()
+                        
+                        let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
                                 
-                                let messages = logs.map { (name, path) -> EnqueueMessage in
-                                    let id = arc4random64()
-                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
-                                    return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                let controller = PeerSelectionController(context: context)
+                                controller.peerSelected = { [weak controller] peerId in
+                                    if let strongController = controller {
+                                        strongController.dismiss()
+                                        
+                                        let messages = logs.map { (name, path) -> EnqueueMessage in
+                                            let id = arc4random64()
+                                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
+                                            return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                        }
+                                        let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
+                                    }
                                 }
-                                let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
-                            }
-                        }
-                        arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+                                arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+                            }),
+                            ActionSheetButtonItem(title: "Via Email", color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                
+                                let composeController = MFMailComposeViewController()
+                                composeController.setSubject("Telegram Logs")
+                                for (name, path) in logs {
+                                    if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe) {
+                                        composeController.addAttachmentData(data, mimeType: "application/text", fileName: name)
+                                    }
+                                }
+                                arguments.getRootController()?.present(composeController, animated: true, completion: nil)
+                            })
+                        ]), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        arguments.presentController(actionSheet, nil)
                     })
                 })
             case let .sendOneLog(theme):
@@ -131,6 +160,49 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         guard let context = arguments.context else {
                             return
                         }
+                        
+                        let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                
+                                let controller = PeerSelectionController(context: context)
+                                controller.peerSelected = { [weak controller] peerId in
+                                    if let strongController = controller {
+                                        strongController.dismiss()
+                                        
+                                        let messages = logs.map { (name, path) -> EnqueueMessage in
+                                            let id = arc4random64()
+                                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
+                                            return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                        }
+                                        let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
+                                    }
+                                }
+                                arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+                            }),
+                            ActionSheetButtonItem(title: "Via Email", color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                
+                                let composeController = MFMailComposeViewController()
+                                composeController.setSubject("Telegram Logs")
+                                for (name, path) in logs {
+                                    if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe) {
+                                        composeController.addAttachmentData(data, mimeType: "application/text", fileName: name)
+                                    }
+                                }
+                                arguments.getRootController()?.present(composeController, animated: true, completion: nil)
+                            })
+                            ]), ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])
+                        ])
+                        arguments.presentController(actionSheet, nil)
+                        
+                        
                         let controller = PeerSelectionController(context: context)
                         controller.peerSelected = { [weak controller] peerId in
                             if let strongController = controller {
@@ -305,11 +377,14 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
+    var getRootControllerImpl: (() -> UIViewController?)?
     
     let arguments = DebugControllerArguments(sharedContext: sharedContext, context: context, presentController: { controller, arguments in
         presentControllerImpl?(controller, arguments)
     }, pushController: { controller in
         pushControllerImpl?(controller)
+    }, getRootController: {
+        return getRootControllerImpl?()
     })
     
     let appGroupName = "group.\(Bundle.main.bundleIdentifier!)"
@@ -362,6 +437,9 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
     }
     dismissImpl = { [weak controller] in
         controller?.dismiss()
+    }
+    getRootControllerImpl = { [weak controller] in
+        return controller?.view.window?.rootViewController
     }
     return controller
 }

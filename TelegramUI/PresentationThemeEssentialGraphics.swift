@@ -207,6 +207,7 @@ public final class PrincipalThemeEssentialGraphics {
 
 public final class PrincipalThemeAdditionalGraphics {
     public let chatServiceBubbleFillImage: UIImage
+    public let chatServiceVerticalLineImage: UIImage
     public let chatFreeformContentAdditionalInfoBackgroundImage: UIImage
     public let chatEmptyItemBackgroundImage: UIImage
     public let chatLoadingIndicatorBackgroundImage: UIImage
@@ -234,6 +235,9 @@ public final class PrincipalThemeAdditionalGraphics {
     public let chatBubbleActionButtonOutgoingPhoneIconImage: UIImage
     public let chatBubbleActionButtonOutgoingLocationIconImage: UIImage
     
+    public let chatEmptyItemLockIcon: UIImage
+    public let emptyChatListCheckIcon: UIImage
+    
     init(_ theme: PresentationThemeChat, wallpaper: TelegramWallpaper) {
         let serviceColor = serviceMessageColorComponents(chatTheme: theme, wallpaper: wallpaper)
         self.chatServiceBubbleFillImage = generateImage(CGSize(width: 20.0, height: 20.0), contextGenerator: { size, context -> Void in
@@ -241,6 +245,14 @@ public final class PrincipalThemeAdditionalGraphics {
             context.setFillColor(serviceColor.fill.cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
         })!.stretchableImage(withLeftCapWidth: 8, topCapHeight: 8)
+        
+        self.chatServiceVerticalLineImage = generateImage(CGSize(width: 2.0, height: 3.0), contextGenerator: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(serviceColor.primaryText.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: 2.0, height: 2.0)))
+            context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 1.0), size: CGSize(width: 2.0, height: 2.0)))
+        })!.stretchableImage(withLeftCapWidth: 0, topCapHeight: 1)
+        
         self.chatFreeformContentAdditionalInfoBackgroundImage = generateStretchableFilledCircleImage(radius: 10.0, color: serviceColor.fill)!
         self.chatEmptyItemBackgroundImage = generateStretchableFilledCircleImage(radius: 14.0, color: serviceColor.fill)!
         self.chatLoadingIndicatorBackgroundImage = generateStretchableFilledCircleImage(diameter: 30.0, color: serviceColor.fill)!
@@ -265,5 +277,19 @@ public final class PrincipalThemeAdditionalGraphics {
         self.chatBubbleActionButtonOutgoingShareIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotShare"), color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingTextColor, wallpaper: wallpaper))!
         self.chatBubbleActionButtonOutgoingPhoneIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotPhone"), color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingTextColor, wallpaper: wallpaper))!
         self.chatBubbleActionButtonOutgoingLocationIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLocation"), color: bubbleVariableColor(variableColor: theme.bubble.actionButtonsOutgoingTextColor, wallpaper: wallpaper))!
+        
+        self.chatEmptyItemLockIcon = generateImage(CGSize(width: 9.0, height: 13.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            
+            context.translateBy(x: 0.0, y: 1.0)
+            
+            context.setFillColor(serviceColor.primaryText.cgColor)
+            context.setStrokeColor(serviceColor.primaryText.cgColor)
+            context.setLineWidth(1.32)
+            
+            let _ = try? drawSvgPath(context, path: "M4.5,0.600000024 C5.88071187,0.600000024 7,1.88484952 7,3.46979169 L7,7.39687502 C7,8.9818172 5.88071187,10.2666667 4.5,10.2666667 C3.11928813,10.2666667 2,8.9818172 2,7.39687502 L2,3.46979169 C2,1.88484952 3.11928813,0.600000024 4.5,0.600000024 S ")
+            let _ = try? drawSvgPath(context, path: "M1.32,5.65999985 L7.68,5.65999985 C8.40901587,5.65999985 9,6.25098398 9,6.97999985 L9,10.6733332 C9,11.4023491 8.40901587,11.9933332 7.68,11.9933332 L1.32,11.9933332 C0.59098413,11.9933332 1.11022302e-16,11.4023491 0,10.6733332 L2.22044605e-16,6.97999985 C1.11022302e-16,6.25098398 0.59098413,5.65999985 1.32,5.65999985 Z ")
+        })!
+        self.emptyChatListCheckIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Empty Chat/ListCheckIcon"), color: serviceColor.primaryText)!
     }
 }

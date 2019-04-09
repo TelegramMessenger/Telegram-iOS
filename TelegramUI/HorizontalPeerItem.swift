@@ -77,7 +77,7 @@ final class HorizontalPeerItemNode: ListViewItemNode {
     private(set) var peerNode: SelectablePeerNode
     let badgeBackgroundNode: ASImageNode
     let badgeTextNode: TextNode
-    let statusNode: ASImageNode
+    let onlineNode: ChatListOnlineNode
     private(set) var item: HorizontalPeerItem?
     
     init() {
@@ -91,18 +91,14 @@ final class HorizontalPeerItemNode: ListViewItemNode {
         self.badgeTextNode.isUserInteractionEnabled = false
         self.badgeTextNode.displaysAsynchronously = true
         
-        self.statusNode = ASImageNode()
-        self.statusNode.isLayerBacked = true
-        self.statusNode.displaysAsynchronously = false
-        self.statusNode.displayWithoutProcessing = true
-        self.statusNode.isHidden = true
+        self.onlineNode = ChatListOnlineNode()
         
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.peerNode)
         self.addSubnode(self.badgeBackgroundNode)
         self.addSubnode(self.badgeTextNode)
-        self.addSubnode(self.statusNode)
+        self.addSubnode(self.onlineNode)
         self.peerNode.toggleSelection = { [weak self] in
             if let item = self?.item {
                 item.action(item.peer)
@@ -123,6 +119,7 @@ final class HorizontalPeerItemNode: ListViewItemNode {
     
     func asyncLayout() -> (HorizontalPeerItem, ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let badgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
+        let onlineLayout = self.onlineNode.asyncLayout()
 
         return { [weak self] item, params in
             let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: 92.0, height: item.customWidth ?? 80.0), insets: UIEdgeInsets())
@@ -163,19 +160,13 @@ final class HorizontalPeerItemNode: ListViewItemNode {
                 badgeAttributedString = NSAttributedString()
             }
             
-            let currentStatusImage: UIImage?
+            var online = false
             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
             if let presence = item.presence as? TelegramUserPresence, !isServicePeer(item.peer) {
                 let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
-                switch relativeStatus {
-                    case .online:
-                        currentStatusImage =  PresentationResourcesChatList.recentStatusOnlineIcon(item.theme)
-                    default:
-                        currentStatusImage = nil
+                if case .online = relativeStatus {
+                    online = true
                 }
-                
-            } else {
-                currentStatusImage = nil
             }
             
             let (badgeLayout, badgeApply) = badgeTextLayout(TextNodeLayoutArguments(attributedString: badgeAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 50.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -184,6 +175,8 @@ final class HorizontalPeerItemNode: ListViewItemNode {
             if let currentBadgeBackgroundImage = currentBadgeBackgroundImage {
                 badgeSize += max(currentBadgeBackgroundImage.size.width, badgeLayout.size.width + 10.0) + 5.0
             }
+            
+            let (onlineLayout, onlineApply) = onlineLayout(online)
             
             return (itemLayout, { animated in
                 if let strongSelf = self {
@@ -210,18 +203,11 @@ final class HorizontalPeerItemNode: ListViewItemNode {
                         strongSelf.badgeBackgroundNode.isHidden = true
                     }
                     
-                    if let currentStatusImage = currentStatusImage {
-                        strongSelf.statusNode.image = currentStatusImage
-                        strongSelf.statusNode.isHidden = false
-                        
-                        let statusSize = currentStatusImage.size
-                        strongSelf.statusNode.frame = CGRect(x: itemLayout.size.width - statusSize.width - 18.0, y: itemLayout.size.height - statusSize.height - 18.0, width: statusSize.width, height: statusSize.height)
-                    } else {
-                        strongSelf.statusNode.isHidden = true
-                    }
-
+                    strongSelf.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(item.theme, state: .regular))
+                    strongSelf.onlineNode.frame = CGRect(x: itemLayout.size.width - onlineLayout.width - 18.0, y: itemLayout.size.height - onlineLayout.height - 18.0, width: onlineLayout.width, height: onlineLayout.height)
                     
                     let _ = badgeApply()
+                    let _ = onlineApply(true)
                 }
             })
         }

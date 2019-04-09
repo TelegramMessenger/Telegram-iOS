@@ -34,6 +34,7 @@ public class PeerMediaCollectionController: TelegramController {
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
     
     private let messageContextDisposable = MetaDisposable()
+    private var shareStatusDisposable: MetaDisposable?
     
     private var presentationData: PresentationData
     
@@ -283,6 +284,7 @@ public class PeerMediaCollectionController: TelegramController {
                     strongSelf.forwardMessages(forwardMessageIdsSet)
                 }
             }
+        }, forwardCurrentForwardMessages: {
         }, forwardMessages: { _ in
         }, shareSelectedMessages: { [weak self] in
             if let strongSelf = self, let selectedIds = strongSelf.interfaceState.selectionState?.selectedIds, !selectedIds.isEmpty {
@@ -618,15 +620,52 @@ public class PeerMediaCollectionController: TelegramController {
                         if let strongSelf = self {
                             strongSelf.updateInterfaceState(animated: false, { $0.withoutSelectionState() })
                             
-                            let ready = ValuePromise<Bool>()
-                            
-                            strongSelf.messageContextDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                            if peerId == strongSelf.context.account.peerId {
+                                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
+                                    return .forward(source: id, grouping: .auto)
+                                })
+                                |> deliverOnMainQueue).start(next: { [weak self] messageIds in
+                                    if let strongSelf = self {
+                                        let signals: [Signal<Bool, NoError>] = messageIds.compactMap({ id -> Signal<Bool, NoError>? in
+                                            guard let id = id else {
+                                                return nil
+                                            }
+                                            return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
+                                            |> mapToSignal { status -> Signal<Bool, NoError> in
+                                                if status != nil {
+                                                    return .never()
+                                                } else {
+                                                    return .single(true)
+                                                }
+                                            }
+                                            |> take(1)
+                                        })
+                                        if strongSelf.shareStatusDisposable == nil {
+                                            strongSelf.shareStatusDisposable = MetaDisposable()
+                                        }
+                                        strongSelf.shareStatusDisposable?.set((combineLatest(signals)
+                                        |> deliverOnMainQueue).start(completed: {
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .success), in: .window(.root))
+                                        }))
+                                    }
+                                })
                                 if let strongController = controller {
                                     strongController.dismiss()
                                 }
-                            }))
-                            
-                            (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                            } else {
+                                let ready = ValuePromise<Bool>()
+                                
+                                strongSelf.messageContextDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                                    if let strongController = controller {
+                                        strongController.dismiss()
+                                    }
+                                }))
+                                
+                                (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                            }
                         }
                     })
                 }

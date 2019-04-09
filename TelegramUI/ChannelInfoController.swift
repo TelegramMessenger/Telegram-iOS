@@ -469,13 +469,13 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
             if canEditMembers {
                 if peer.adminRights != nil || peer.flags.contains(.isCreator) {
                     let adminCount = cachedChannelData.participantsSummary.adminCount ?? 0
-                    entries.append(.admins(theme: presentationData.theme, text: presentationData.strings.GroupInfo_Administrators, value: "\(adminCount == 0 ? "" : "\(adminCount)")"))
+                    entries.append(.admins(theme: presentationData.theme, text: presentationData.strings.GroupInfo_Administrators, value: "\(adminCount == 0 ? "" : "\(presentationStringsFormattedNumber(adminCount, presentationData.dateTimeFormat.groupingSeparator))")"))
                     
                     let memberCount = cachedChannelData.participantsSummary.memberCount ?? 0
-                    entries.append(.members(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Subscribers, value: "\(memberCount == 0 ? "" : "\(memberCount)")"))
+                    entries.append(.members(theme: presentationData.theme, text: presentationData.strings.Channel_Info_Subscribers, value: "\(memberCount == 0 ? "" : "\(presentationStringsFormattedNumber(memberCount, presentationData.dateTimeFormat.groupingSeparator))")"))
                     
                     let bannedCount = cachedChannelData.participantsSummary.kickedCount ?? 0
-                    entries.append(.banned(theme: presentationData.theme, text: presentationData.strings.GroupRemoved_Title, value: "\(bannedCount == 0 ? "" : "\(bannedCount)")"))
+                    entries.append(.banned(theme: presentationData.theme, text: presentationData.strings.GroupRemoved_Title, value: "\(bannedCount == 0 ? "" : "\(presentationStringsFormattedNumber(bannedCount, presentationData.dateTimeFormat.groupingSeparator))")"))
                 }
             }
         }

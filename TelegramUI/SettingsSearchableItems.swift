@@ -670,9 +670,12 @@ private func appearanceSearchableItems(context: AccountContext) -> [SettingsSear
         SettingsSearchableItem(id: .appearance(6), title: strings.Appearance_ColorTheme, alternate: synonyms(strings.SettingsSearch_Synonyms_Appearance_ColorTheme), icon: icon, breadcrumbs: [strings.Settings_Appearance], present: { context, _, present in
             presentAppearanceSettings(context, present, .accentColor)
         }),
-        SettingsSearchableItem(id: .appearance(7), title: strings.Appearance_ReduceMotion, alternate: synonyms(strings.SettingsSearch_Synonyms_Appearance_Animations), icon: icon, breadcrumbs: [strings.Settings_Appearance, strings.Appearance_Animations], present: { context, _, present in
-            presentAppearanceSettings(context, present, .animations)
+        SettingsSearchableItem(id: .appearance(7), title: strings.Appearance_LargeEmoji, alternate: synonyms(strings.SettingsSearch_Synonyms_Appearance_LargeEmoji), icon: icon, breadcrumbs: [strings.Settings_Appearance, strings.Appearance_Other], present: { context, _, present in
+            presentAppearanceSettings(context, present, .largeEmoji)
         }),
+        SettingsSearchableItem(id: .appearance(8), title: strings.Appearance_ReduceMotion, alternate: synonyms(strings.SettingsSearch_Synonyms_Appearance_Animations), icon: icon, breadcrumbs: [strings.Settings_Appearance, strings.Appearance_Other], present: { context, _, present in
+            presentAppearanceSettings(context, present, .animations)
+        })
     ]
 }
 

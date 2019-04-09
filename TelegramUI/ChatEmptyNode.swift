@@ -116,7 +116,8 @@ private final class ChatEmptyNodeSecretChatContent: ASDisplayNode, ChatEmptyNode
             
             let lines: [NSAttributedString] = strings.map { NSAttributedString(string: $0, font: messageFont, textColor: serviceColor.primaryText) }
             
-            let lockIcon = PresentationResourcesChat.chatEmptyItemLockIcon(interfaceState.theme)
+            let graphics = PresentationResourcesChat.additionalGraphics(interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
+            let lockIcon = graphics.chatEmptyItemLockIcon
             
             for i in 0 ..< lines.count {
                 if i >= self.lineNodes.count {
@@ -231,7 +232,8 @@ private final class ChatEmptyNodeGroupChatContent: ASDisplayNode, ChatEmptyNodeC
             
             let lines: [NSAttributedString] = strings.map { NSAttributedString(string: $0, font: messageFont, textColor: serviceColor.primaryText) }
             
-            let lockIcon = PresentationResourcesChat.emptyChatListCheckIcon(interfaceState.theme)
+            let graphics = PresentationResourcesChat.additionalGraphics(interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
+            let lockIcon = graphics.emptyChatListCheckIcon
             
             for i in 0 ..< lines.count {
                 if i >= self.lineNodes.count {

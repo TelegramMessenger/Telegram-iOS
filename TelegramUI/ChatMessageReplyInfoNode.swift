@@ -67,7 +67,9 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 case .standalone:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     titleColor = serviceColor.primaryText
-                    lineImage = PresentationResourcesChat.chatServiceVerticalLineImage(presentationData.theme.theme)
+                    
+                    let graphics = PresentationResourcesChat.additionalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                    lineImage = graphics.chatServiceVerticalLineImage
                     textColor = titleColor
             }
             

@@ -7,12 +7,12 @@ import SwiftSignalKit
 import TelegramCore
 
 enum ChatListItemContent {
-    case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool)
+    case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool)
     //case groupReference(groupId: PeerGroupId, message: Message?, topPeers: [Peer], counters: GroupReferenceUnreadCounters)
     
     var chatLocation: ChatLocation {
         switch self {
-            case let .peer(_, peer, _, _, _, _, _, _, _):
+            case let .peer(_, peer, _, _, _, _, _, _, _, _):
                 return .peer(peer.peerId)
             /*case let .groupReference(groupId, _, _, _):
                 return .group(groupId)*/
@@ -99,7 +99,7 @@ class ChatListItem: ListViewItem {
     
     func selected(listView: ListView) {
         switch self.content {
-            case let .peer(message, peer, _, _, _, _, _, isAd, _):
+            case let .peer(message, peer, _, _, _, _, _, _, isAd, _):
                 if let message = message, let peer = peer.peer {
                     self.interaction.messageSelected(peer, message, isAd)
                 } else if let peer = peer.peer {
@@ -228,8 +228,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     let dateNode: TextNode
     let statusNode: ASImageNode
     let separatorNode: ASDisplayNode
-    let badgeBackgroundNode: ASImageNode
-    let badgeTextNode: TextNode
+    let badgeNode: ChatListBadgeNode
+    let onlineNode: ChatListOnlineNode
     let mentionBadgeNode: ASImageNode
     var secretIconNode: ASImageNode?
     var verificationIconNode: ASImageNode?
@@ -237,6 +237,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     
     var selectableControlNode: ItemListSelectableControlNode?
     var reorderControlNode: ItemListEditableReorderControlNode?
+    
+    private var peerPresenceManager: PeerPresenceStatusManager?
     
     var layoutParams: (ChatListItem, first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool, ListViewItemLayoutParams)?
     
@@ -354,19 +356,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.statusNode.displaysAsynchronously = false
         self.statusNode.displayWithoutProcessing = true
         
-        self.badgeBackgroundNode = ASImageNode()
-        self.badgeBackgroundNode.isLayerBacked = true
-        self.badgeBackgroundNode.displaysAsynchronously = false
-        self.badgeBackgroundNode.displayWithoutProcessing = true
+        self.badgeNode = ChatListBadgeNode()
+        self.onlineNode = ChatListOnlineNode()
         
         self.mentionBadgeNode = ASImageNode()
         self.mentionBadgeNode.isLayerBacked = true
         self.mentionBadgeNode.displaysAsynchronously = false
         self.mentionBadgeNode.displayWithoutProcessing = true
-        
-        self.badgeTextNode = TextNode()
-        self.badgeTextNode.isUserInteractionEnabled = false
-        self.badgeTextNode.displaysAsynchronously = true
         
         self.mutedIconNode = ASImageNode()
         self.mutedIconNode.isLayerBacked = true
@@ -383,16 +379,23 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.avatarNode)
+        self.addSubnode(self.onlineNode)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.authorNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.dateNode)
         self.addSubnode(self.statusNode)
-        self.addSubnode(self.badgeBackgroundNode)
+        self.addSubnode(self.badgeNode)
         self.addSubnode(self.mentionBadgeNode)
-        self.addSubnode(self.badgeTextNode)
         self.addSubnode(self.mutedIconNode)
+        
+        self.peerPresenceManager = PeerPresenceStatusManager(update: { [weak self] in
+            if let strongSelf = self, let layoutParams = strongSelf.layoutParams {
+                let (_, apply) = strongSelf.asyncLayout()(layoutParams.0, layoutParams.5, layoutParams.1, layoutParams.2, layoutParams.3, layoutParams.4)
+                let _ = apply(false, false)
+            }
+        })
     }
     
     func setupItem(item: ChatListItem, synchronousLoads: Bool) {
@@ -400,7 +403,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         var peer: Peer?
         switch item.content {
-            case let .peer(_, peerValue, _, _, _, _, _, _, _):
+            case let .peer(_, peerValue, _, _, _, _, _, _, _, _):
                 peer = peerValue.chatMainPeer
             /*case .groupReference:
                 break*/
@@ -452,6 +455,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             self.highlightedBackgroundNode.layer.removeAllAnimations()
             transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 1.0)
+            
+            if let item = self.item {
+                self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted))
+            }
         } else {
             if self.highlightedBackgroundNode.supernode != nil {
                 transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: 0.0, completion: { [weak self] completed in
@@ -461,6 +468,16 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                     }
                 })
+            }
+            
+            if let item = self.item {
+                let onlineIcon: UIImage?
+                if item.index.pinningIndex != nil {
+                    onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .pinned)
+                } else {
+                    onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .regular)
+                }
+                self.onlineNode.setImage(onlineIcon)
             }
         }
     }
@@ -478,7 +495,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         let titleLayout = TextNode.asyncLayout(self.titleNode)
         let authorLayout = TextNode.asyncLayout(self.authorNode)
         let inputActivitiesLayout = self.inputActivitiesNode.asyncLayout()
-        let badgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
+        let badgeLayout = self.badgeNode.asyncLayout()
+        let onlineLayout = self.onlineNode.asyncLayout()
         let selectableControlLayout = ItemListSelectableControlNode.asyncLayout(self.selectableControlNode)
         let reorderControlLayout = ItemListEditableReorderControlNode.asyncLayout(self.reorderControlNode)
         
@@ -493,6 +511,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let combinedReadState: CombinedPeerReadState?
             let unreadCount: (count: Int32, unread: Bool, muted: Bool)
             let notificationSettings: PeerNotificationSettings?
+            let peerPresence: PeerPresence?
             let embeddedState: PeerChatListEmbeddedInterfaceState?
             let summaryInfo: ChatListMessageTagSummaryInfo
             let inputActivities: [(Peer, PeerInputActivity)]?
@@ -502,7 +521,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var multipleAvatarsApply: ((Bool) -> MultipleAvatarsNode)?
             
             switch item.content {
-                case let .peer(messageValue, peerValue, combinedReadStateValue, notificationSettingsValue, summaryInfoValue, embeddedStateValue, inputActivitiesValue, isAdValue, ignoreUnreadBadge):
+                case let .peer(messageValue, peerValue, combinedReadStateValue, notificationSettingsValue, peerPresenceValue, summaryInfoValue, embeddedStateValue, inputActivitiesValue, isAdValue, ignoreUnreadBadge):
                     message = messageValue
                     itemPeer = peerValue
                     combinedReadState = combinedReadStateValue
@@ -516,6 +535,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         notificationSettings = notificationSettingsValue
                     }
+                    peerPresence = peerPresenceValue
                     embeddedState = embeddedStateValue
                     summaryInfo = summaryInfoValue
                     inputActivities = inputActivitiesValue
@@ -754,12 +774,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let (dateLayout, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentRect.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (badgeLayout, badgeApply) = badgeTextLayout(TextNodeLayoutArguments(attributedString: badgeAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 50.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (badgeLayout, badgeApply) = badgeLayout(CGSize(width: rawContentRect.width, height: CGFloat.greatestFiniteMagnitude), currentBadgeBackgroundImage, badgeAttributedString)
             
             var badgeSize: CGFloat = 0.0
-            if let currentBadgeBackgroundImage = currentBadgeBackgroundImage {
-                badgeSize += max(currentBadgeBackgroundImage.size.width, badgeLayout.size.width + 10.0) + 5.0
-            }
+            badgeSize += badgeLayout.width
             if let currentMentionBadgeImage = currentMentionBadgeImage {
                 if !badgeSize.isZero {
                     badgeSize += currentMentionBadgeImage.size.width + 4.0
@@ -785,13 +803,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 inputActivitiesApply = apply
             }
             
-            let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
-            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: itemHeight), insets: insets)
-            
+            var online = false
+
             let peerRevealOptions: [ItemListRevealOption]
             let peerLeftRevealOptions: [ItemListRevealOption]
             switch item.content {
-                case .peer:
+                case let .peer(_, renderedPeer, _, _, presence, _ ,_ ,_, _, _):
+                    if let peer = renderedPeer.peer, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && peer.id != item.account.peerId  {
+                        let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: timestamp)
+                        if case .online = relativeStatus {
+                            online = true
+                        }
+                    }
+                    
                     var hasPeerGroupId: Bool?
                     if GlobalExperimentalSettings.enableFeed {
                         if let chatMainPeer = itemPeer.chatMainPeer as? TelegramChannel, case .broadcast = chatMainPeer.info {
@@ -825,6 +849,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     peerLeftRevealOptions = []*/
             }
+            
+            let (onlineLayout, onlineApply) = onlineLayout(online)
+            var animateOnline = false
+            if let currentItem = currentItem, currentItem.content.chatLocation == item.content.chatLocation {
+                animateOnline = true
+            }
+            
+            let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
+            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: itemHeight), insets: insets)
             
             return (layout, { [weak self] synchronousLoads, animated in
                 if let strongSelf = self {
@@ -883,8 +916,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
                             
                             transition.updateAlpha(node: strongSelf.dateNode, alpha: 0.0)
-                            transition.updateAlpha(node: strongSelf.badgeTextNode, alpha: 0.0)
-                            transition.updateAlpha(node: strongSelf.badgeBackgroundNode, alpha: 0.0)
+                            transition.updateAlpha(node: strongSelf.badgeNode, alpha: 0.0)
                             transition.updateAlpha(node: strongSelf.mentionBadgeNode, alpha: 0.0)
                             transition.updateAlpha(node: strongSelf.statusNode, alpha: 0.0)
                         } else if let reorderControlNode = strongSelf.reorderControlNode {
@@ -897,14 +929,26 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             reorderControlNode?.removeFromSupernode()
                         })
                         transition.updateAlpha(node: strongSelf.dateNode, alpha: 1.0)
-                        transition.updateAlpha(node: strongSelf.badgeTextNode, alpha: 1.0)
-                        transition.updateAlpha(node: strongSelf.badgeBackgroundNode, alpha: 1.0)
+                        transition.updateAlpha(node: strongSelf.badgeNode, alpha: 1.0)
                         transition.updateAlpha(node: strongSelf.mentionBadgeNode, alpha: 1.0)
                         transition.updateAlpha(node: strongSelf.statusNode, alpha: 1.0)
                     }
                     
                     let avatarFrame = CGRect(origin: CGPoint(x: leftInset - 78.0 + editingOffset + 10.0 + revealOffset, y: 7.0), size: CGSize(width: 60.0, height: 60.0))
                     transition.updateFrame(node: strongSelf.avatarNode, frame: avatarFrame)
+                    
+                    let onlineFrame = CGRect(origin: CGPoint(x: avatarFrame.maxX - onlineLayout.width - 2.0, y: avatarFrame.maxY - onlineLayout.height - 2.0), size: onlineLayout)
+                    transition.updateFrame(node: strongSelf.onlineNode, frame: onlineFrame)
+                    
+                    let onlineIcon: UIImage?
+                    if strongSelf.isHighlighted {
+                        onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted)
+                    } else if item.index.pinningIndex != nil {
+                        onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .pinned)
+                    } else {
+                        onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .regular)
+                    }
+                    strongSelf.onlineNode.setImage(onlineIcon)
                     
                     if let multipleAvatarsApply = multipleAvatarsApply {
                         strongSelf.avatarNode.isHidden = true
@@ -927,6 +971,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let _ = authorApply()
                     let _ = titleApply()
                     let _ = badgeApply()
+                    let _ = onlineApply(animateOnline)
                     
                     let contentRect = rawContentRect.offsetBy(dx: editingOffset + leftInset + revealOffset, dy: 0.0)
                     
@@ -942,22 +987,27 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.statusNode.isHidden = true
                     }
                     
-                    let badgeBackgroundWidth: CGFloat
-                    if let currentBadgeBackgroundImage = currentBadgeBackgroundImage {
-                        strongSelf.badgeBackgroundNode.image = currentBadgeBackgroundImage
-                        strongSelf.badgeBackgroundNode.isHidden = false
-                        
-                        badgeBackgroundWidth = max(badgeLayout.size.width + 10.0, currentBadgeBackgroundImage.size.width)
-                        let badgeBackgroundFrame = CGRect(x: contentRect.maxX - badgeBackgroundWidth, y: contentRect.maxY - currentBadgeBackgroundImage.size.height - 2.0, width: badgeBackgroundWidth, height: currentBadgeBackgroundImage.size.height)
-                        let badgeTextFrame = CGRect(origin: CGPoint(x: badgeBackgroundFrame.midX - badgeLayout.size.width / 2.0, y: badgeBackgroundFrame.minY + 2.0), size: badgeLayout.size)
-                        
-                        strongSelf.badgeTextNode.frame = badgeTextFrame
-                        strongSelf.badgeBackgroundNode.frame = badgeBackgroundFrame
-                    } else {
-                        badgeBackgroundWidth = 0.0
-                        strongSelf.badgeBackgroundNode.image = nil
-                        strongSelf.badgeBackgroundNode.isHidden = true
+                    let badgeWidth = badgeLayout.width
+                    if let _ = currentBadgeBackgroundImage {
+                        let badgeFrame = CGRect(x: contentRect.maxX - badgeWidth, y: contentRect.maxY - badgeLayout.height - 2.0, width: badgeWidth, height: badgeLayout.height)
+                        strongSelf.badgeNode.frame = badgeFrame
                     }
+                    //: CGFloat
+//                    if let currentBadgeBackgroundImage = currentBadgeBackgroundImage {
+//                        strongSelf.badgeBackgroundNode.image = currentBadgeBackgroundImage
+//                        strongSelf.badgeBackgroundNode.isHidden = false
+//
+//                        badgeBackgroundWidth = max(badgeLayout.size.width + 10.0, currentBadgeBackgroundImage.size.width)
+//                        let badgeBackgroundFrame = CGRect(x: contentRect.maxX - badgeBackgroundWidth, y: contentRect.maxY - currentBadgeBackgroundImage.size.height - 2.0, width: badgeBackgroundWidth, height: currentBadgeBackgroundImage.size.height)
+//                        let badgeTextFrame = CGRect(origin: CGPoint(x: badgeBackgroundFrame.midX - badgeLayout.size.width / 2.0, y: badgeBackgroundFrame.minY + 2.0), size: badgeLayout.size)
+//
+//                        strongSelf.badgeTextNode.frame = badgeTextFrame
+//                        strongSelf.badgeBackgroundNode.frame = badgeBackgroundFrame
+//                    } else {
+//                        badgeBackgroundWidth = 0.0
+//                        strongSelf.badgeBackgroundNode.image = nil
+//                        strongSelf.badgeBackgroundNode.isHidden = true
+//                    }
                     
                     if let currentMentionBadgeImage = currentMentionBadgeImage {
                         strongSelf.mentionBadgeNode.image = currentMentionBadgeImage
@@ -965,10 +1015,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         let mentionBadgeSize = currentMentionBadgeImage.size
                         let mentionBadgeOffset: CGFloat
-                        if badgeBackgroundWidth.isZero {
+                        if badgeWidth.isZero {
                             mentionBadgeOffset = contentRect.maxX - mentionBadgeSize.width
                         } else {
-                            mentionBadgeOffset = contentRect.maxX - badgeBackgroundWidth - 6.0 - mentionBadgeSize.width
+                            mentionBadgeOffset = contentRect.maxX - badgeWidth - 6.0 - mentionBadgeSize.width
                         }
                         
                         let badgeBackgroundWidth = mentionBadgeSize.width
@@ -1124,6 +1174,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let topNegativeInset: CGFloat = 0.0
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height + separatorHeight + topNegativeInset))
                     
+                    if let peerPresence = peerPresence as? TelegramUserPresence {
+                        strongSelf.peerPresenceManager?.reset(presence: peerPresence)
+                    }
+                    
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
                     if item.editing {
@@ -1190,6 +1244,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 transition.updateFrame(node: multipleAvatarsNode, frame: avatarFrame)
             }
             
+            var onlineFrame = self.onlineNode.frame
+            onlineFrame.origin.x = avatarFrame.maxX - onlineFrame.width - 2.0
+            transition.updateFrame(node: self.onlineNode, frame: onlineFrame)
+            
             var titleOffset: CGFloat = 0.0
             if let secretIconNode = self.secretIconNode, let image = secretIconNode.image {
                 transition.updateFrame(node: secretIconNode, frame: CGRect(origin: CGPoint(x: contentRect.minX, y: secretIconNode.frame.minY), size: image.size))
@@ -1224,17 +1282,17 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             transition.updateFrame(node: self.mutedIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: contentRect.origin.y + 6.0), size: mutedIconFrame.size))
             nextTitleIconOrigin += mutedIconFrame.size.width + 3.0
             
-            let badgeBackgroundFrame = self.badgeBackgroundNode.frame
-            let updatedBadgeBackgroundFrame = CGRect(origin: CGPoint(x: contentRect.maxX - badgeBackgroundFrame.size.width, y: contentRect.maxY - badgeBackgroundFrame.size.height - 2.0), size: badgeBackgroundFrame.size)
-            transition.updateFrame(node: self.badgeBackgroundNode, frame: updatedBadgeBackgroundFrame)
+            let badgeFrame = self.badgeNode.frame
+            let updatedBadgeFrame = CGRect(origin: CGPoint(x: contentRect.maxX - badgeFrame.size.width, y: contentRect.maxY - badgeFrame.size.height - 2.0), size: badgeFrame.size)
+            transition.updateFrame(node: self.badgeNode, frame: updatedBadgeFrame)
             
             let mentionBadgeSize = self.mentionBadgeNode.bounds.size
             if mentionBadgeSize != CGSize.zero {
                 let mentionBadgeOffset: CGFloat
-                if updatedBadgeBackgroundFrame.size.width.isZero || self.badgeBackgroundNode.image == nil {
+                if updatedBadgeFrame.size.width.isZero {
                     mentionBadgeOffset = contentRect.maxX - mentionBadgeSize.width
                 } else {
-                    mentionBadgeOffset = contentRect.maxX - updatedBadgeBackgroundFrame.size.width - 6.0 - mentionBadgeSize.width
+                    mentionBadgeOffset = contentRect.maxX - updatedBadgeFrame.size.width - 6.0 - mentionBadgeSize.width
                 }
                 
                 let badgeBackgroundWidth = mentionBadgeSize.width
@@ -1242,8 +1300,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 transition.updateFrame(node: self.mentionBadgeNode, frame: badgeBackgroundFrame)
             }
             
-            let badgeTextFrame = self.badgeTextNode.frame
-            transition.updateFrame(node: self.badgeTextNode, frame: CGRect(origin: CGPoint(x: updatedBadgeBackgroundFrame.midX - badgeTextFrame.size.width / 2.0, y: badgeTextFrame.minY), size: badgeTextFrame.size))
+//            let badgeTextFrame = self.badgeTextNode.frame
+//            transition.updateFrame(node: self.badgeTextNode, frame: CGRect(origin: CGPoint(x: updatedBadgeFrame.midX - badgeTextFrame.size.width / 2.0, y: badgeTextFrame.minY), size: badgeTextFrame.size))
         }
     }
     
