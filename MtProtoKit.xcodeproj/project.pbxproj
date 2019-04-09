@@ -28,6 +28,12 @@
 		D0119CCC20CAD65D00895300 /* PingFoundation.m in Sources */ = {isa = PBXBuildFile; fileRef = D0119CC820CAD65D00895300 /* PingFoundation.m */; };
 		D0119CCD20CAD65D00895300 /* PingFoundation.m in Sources */ = {isa = PBXBuildFile; fileRef = D0119CC820CAD65D00895300 /* PingFoundation.m */; };
 		D0119CCE20CAD65D00895300 /* PingFoundation.m in Sources */ = {isa = PBXBuildFile; fileRef = D0119CC820CAD65D00895300 /* PingFoundation.m */; };
+		D015E018225CD19E00CB9E8A /* MTGzip.h in Headers */ = {isa = PBXBuildFile; fileRef = D015E016225CD19E00CB9E8A /* MTGzip.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D015E019225CD19E00CB9E8A /* MTGzip.h in Headers */ = {isa = PBXBuildFile; fileRef = D015E016225CD19E00CB9E8A /* MTGzip.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D015E01A225CD19E00CB9E8A /* MTGzip.h in Headers */ = {isa = PBXBuildFile; fileRef = D015E016225CD19E00CB9E8A /* MTGzip.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D015E01B225CD19E00CB9E8A /* MTGzip.m in Sources */ = {isa = PBXBuildFile; fileRef = D015E017225CD19E00CB9E8A /* MTGzip.m */; };
+		D015E01C225CD19E00CB9E8A /* MTGzip.m in Sources */ = {isa = PBXBuildFile; fileRef = D015E017225CD19E00CB9E8A /* MTGzip.m */; };
+		D015E01D225CD19E00CB9E8A /* MTGzip.m in Sources */ = {isa = PBXBuildFile; fileRef = D015E017225CD19E00CB9E8A /* MTGzip.m */; };
 		D0185E722089D265005E1A6C /* MTProxyConnectivity.h in Headers */ = {isa = PBXBuildFile; fileRef = D0185E702089D265005E1A6C /* MTProxyConnectivity.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0185E732089D265005E1A6C /* MTProxyConnectivity.h in Headers */ = {isa = PBXBuildFile; fileRef = D0185E702089D265005E1A6C /* MTProxyConnectivity.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0185E742089D265005E1A6C /* MTProxyConnectivity.h in Headers */ = {isa = PBXBuildFile; fileRef = D0185E702089D265005E1A6C /* MTProxyConnectivity.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -617,6 +623,8 @@
 		D0119CC020CAD34800895300 /* MTConnectionProbing.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MTConnectionProbing.m; sourceTree = "<group>"; };
 		D0119CC720CAD65D00895300 /* PingFoundation.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PingFoundation.h; sourceTree = "<group>"; };
 		D0119CC820CAD65D00895300 /* PingFoundation.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PingFoundation.m; sourceTree = "<group>"; };
+		D015E016225CD19E00CB9E8A /* MTGzip.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MTGzip.h; sourceTree = "<group>"; };
+		D015E017225CD19E00CB9E8A /* MTGzip.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MTGzip.m; sourceTree = "<group>"; };
 		D0185E702089D265005E1A6C /* MTProxyConnectivity.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MTProxyConnectivity.h; sourceTree = "<group>"; };
 		D0185E712089D265005E1A6C /* MTProxyConnectivity.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MTProxyConnectivity.m; sourceTree = "<group>"; };
 		D020FAF81D994E3100F279AA /* MTHttpRequestOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTHttpRequestOperation.h; path = MTProtoKit/MTHttpRequestOperation.h; sourceTree = "<group>"; };
@@ -1085,6 +1093,8 @@
 				D0119CC820CAD65D00895300 /* PingFoundation.m */,
 				D0338737223BC115007A2CE4 /* MTPKCS.h */,
 				D0338738223BC115007A2CE4 /* MTPKCS.m */,
+				D015E016225CD19E00CB9E8A /* MTGzip.h */,
+				D015E017225CD19E00CB9E8A /* MTGzip.m */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -1523,6 +1533,7 @@
 				D0CD981F1D74B99400F41187 /* MTResPqMessage.h in Headers */,
 				D0CD98E81D75C0BB00F41187 /* MTMessageService.h in Headers */,
 				D0B0DF621DD7E7A3003BA12D /* MTBag.h in Headers */,
+				D015E019225CD19E00CB9E8A /* MTGzip.h in Headers */,
 				D0CD98681D74B9E200F41187 /* MTContext.h in Headers */,
 				D0CD985B1D74B9BF00F41187 /* MTSetClientDhParamsResponseMessage.h in Headers */,
 				D0CD98741D74BA0100F41187 /* MTDiscoverDatacenterAddressAction.h in Headers */,
@@ -1699,6 +1710,7 @@
 				D0D1A0421ADD983C007D9ED6 /* MTFutureSaltsMessage.h in Headers */,
 				D0CB064B1ADC45B1005E298F /* MTRequest.h in Headers */,
 				D010DB811D70B3B90012AD96 /* MTAes.h in Headers */,
+				D015E018225CD19E00CB9E8A /* MTGzip.h in Headers */,
 				D0CB062C1ADC4575005E298F /* MTDatacenterAuthMessageService.h in Headers */,
 				D0CB061C1ADC4541005E298F /* MTInternalId.h in Headers */,
 			);
@@ -1723,6 +1735,7 @@
 				D0CD982D1D74B99500F41187 /* MTResPqMessage.h in Headers */,
 				D0CD98E91D75C0BB00F41187 /* MTMessageService.h in Headers */,
 				D0B0DF631DD7E7A4003BA12D /* MTBag.h in Headers */,
+				D015E01A225CD19E00CB9E8A /* MTGzip.h in Headers */,
 				D0CD98691D74B9E300F41187 /* MTContext.h in Headers */,
 				D0CD985F1D74B9BF00F41187 /* MTSetClientDhParamsResponseMessage.h in Headers */,
 				D0CD98751D74BA0100F41187 /* MTDiscoverDatacenterAddressAction.h in Headers */,
@@ -1910,16 +1923,16 @@
 					};
 					D079AB961AF39B8000076F59 = {
 						CreatedOnToolsVersion = 6.3.1;
-						LastSwiftMigration = 0930;
+						LastSwiftMigration = 1010;
 					};
 					D0CB05F61ADC4483005E298F = {
 						CreatedOnToolsVersion = 6.3;
-						LastSwiftMigration = 0930;
+						LastSwiftMigration = 1010;
 						ProvisioningStyle = Manual;
 					};
 					D0D2250A1B4D817B0085E26D = {
 						CreatedOnToolsVersion = 6.4;
-						LastSwiftMigration = 0930;
+						LastSwiftMigration = 1010;
 						ProvisioningStyle = Manual;
 					};
 					D0D225141B4D817B0085E26D = {
@@ -2090,6 +2103,7 @@
 				D0CD988E1D74BA5900F41187 /* MTDatacenterAddress.m in Sources */,
 				D0CD98521D74B9B700F41187 /* MTSetClientDhParamsResponseMessage.m in Sources */,
 				D0C932271E095D6A0074F044 /* MTNetworkUsageCalculationInfo.m in Sources */,
+				D015E01C225CD19E00CB9E8A /* MTGzip.m in Sources */,
 				D0CAF2CF1D75E25B0011F558 /* MTSignal.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2189,6 +2203,7 @@
 				D0D1A0631ADD983C007D9ED6 /* MTServerDhInnerDataMessage.m in Sources */,
 				D0D1A0571ADD983C007D9ED6 /* MTNewSessionCreatedMessage.m in Sources */,
 				D0C932261E095D6A0074F044 /* MTNetworkUsageCalculationInfo.m in Sources */,
+				D015E01B225CD19E00CB9E8A /* MTGzip.m in Sources */,
 				D0CAF2CC1D75E24C0011F558 /* MTSignal.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2288,6 +2303,7 @@
 				D0CD98931D74BA5A00F41187 /* MTDatacenterAddress.m in Sources */,
 				D0CD98571D74B9B700F41187 /* MTSetClientDhParamsResponseMessage.m in Sources */,
 				D0C932281E095D6A0074F044 /* MTNetworkUsageCalculationInfo.m in Sources */,
+				D015E01D225CD19E00CB9E8A /* MTGzip.m in Sources */,
 				D0CAF2D01D75E25B0011F558 /* MTSignal.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

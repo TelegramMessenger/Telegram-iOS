@@ -276,7 +276,7 @@
         MTRequest *request = [[MTRequest alloc] init];
         __autoreleasing NSData *noopData = nil;
         MTRequestNoopParser responseParser = [[_context serialization] requestNoop:&noopData];
-        [request setPayload:noopData metadata:@"noop" responseParser:responseParser];
+        [request setPayload:noopData metadata:@"noop" shortMetadata:@"noop" responseParser:responseParser];
         
         [request setCompleted:^(__unused id result, __unused NSTimeInterval timestamp, __unused id error) {
         }];
@@ -416,7 +416,7 @@
                 messageSeqNo = request.requestContext.messageSeqNo;
             }
             
-            MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:[self decorateRequestData:request initializeApi:requestsWillInitializeApi unresolvedDependencyOnRequestInternalId:&autoreleasingUnresolvedDependencyOnRequestInternalId] metadata:request.metadata messageId:messageId messageSeqNo:messageSeqNo];
+            MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:[self decorateRequestData:request initializeApi:requestsWillInitializeApi unresolvedDependencyOnRequestInternalId:&autoreleasingUnresolvedDependencyOnRequestInternalId] metadata:request.metadata shortMetadata:request.shortMetadata messageId:messageId messageSeqNo:messageSeqNo];
             outgoingMessage.needsQuickAck = request.acknowledgementReceived != nil;
             outgoingMessage.hasHighPriority = request.hasHighPriority;
             
@@ -460,7 +460,8 @@
         [dropAnswerBuffer appendInt32:(int32_t)0x58e4a740];
         [dropAnswerBuffer appendInt64:dropContext.dropMessageId];
         
-        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:dropAnswerBuffer.data metadata:[NSString stringWithFormat:@"dropAnswer for %" PRId64, dropContext.dropMessageId] messageId:dropContext.messageId messageSeqNo:dropContext.messageSeqNo];
+        NSString *messageDecription = [NSString stringWithFormat:@"dropAnswer for %" PRId64, dropContext.dropMessageId];
+        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:dropAnswerBuffer.data metadata:messageDecription shortMetadata:messageDecription messageId:dropContext.messageId messageSeqNo:dropContext.messageSeqNo];
         outgoingMessage.requiresConfirmation = false;
         dropMessageIdToMessageInternalId[@(dropContext.dropMessageId)] = outgoingMessage.internalId;
         [messages addObject:outgoingMessage];
@@ -704,9 +705,11 @@
                                 authInfo = [authInfo withUpdatedAuthKeyAttributes:authKeyAttributes];
                                 [_context updateAuthInfoForDatacenterWithId:mtProto.datacenterId authInfo:authInfo];
                             }];
+                        } else if (rpcError.errorCode == 406) {
+                            if (_didReceiveSoftAuthResetError) {
+                                _didReceiveSoftAuthResetError();
+                            }
                         }
-                        
-//#warning TODO other service errors
                     }
                     
                     request.requestContext = nil;

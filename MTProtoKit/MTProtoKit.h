@@ -73,3 +73,4 @@ FOUNDATION_EXPORT const unsigned char MtProtoKitVersionString[];
 #import <MTProtoKit/AFURLConnectionOperation.h>
 #import <MTProtoKit/AFHTTPRequestOperation.h>
 #import <MTProtoKit/MTProxyConnectivity.h>
+#import <MTProtoKit/MTGzip.h>

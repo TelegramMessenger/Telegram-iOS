@@ -12,6 +12,7 @@
 
 @property (nonatomic, strong, readonly) NSData *payload;
 @property (nonatomic, strong, readonly) id metadata;
+@property (nonatomic, strong, readonly) id shortMetadata;
 @property (nonatomic, strong, readonly) id (^responseParser)(NSData *);
 
 @property (nonatomic, strong) NSArray *decorators;
@@ -29,6 +30,6 @@
 @property (nonatomic, copy) bool (^shouldContinueExecutionWithErrorContext)(MTRequestErrorContext *errorContext);
 @property (nonatomic, copy) bool (^shouldDependOnRequest)(MTRequest *anotherRequest);
 
-- (void)setPayload:(NSData *)payload metadata:(id)metadata responseParser:(id (^)(NSData *))responseParser;
+- (void)setPayload:(NSData *)payload metadata:(id)metadata shortMetadata:(id)shortMetadata responseParser:(id (^)(NSData *))responseParser;
 
 @end

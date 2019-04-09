@@ -103,7 +103,7 @@
             NSData *getConfigData = nil;
             MTRequestDatacenterAddressListParser responseParser = [_context.serialization requestDatacenterAddressWithData:&getConfigData];
             
-            [request setPayload:getConfigData metadata:@"getConfig" responseParser:responseParser];
+            [request setPayload:getConfigData metadata:@"getConfig" shortMetadata:@"getConfig" responseParser:responseParser];
             
             __weak MTDiscoverDatacenterAddressAction *weakSelf = self;
             [request setCompleted:^(MTDatacenterAddressListData *result, __unused NSTimeInterval completionTimestamp, id error)

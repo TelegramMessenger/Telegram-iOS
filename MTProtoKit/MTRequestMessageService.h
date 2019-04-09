@@ -29,6 +29,8 @@
 
 @property (nonatomic, strong) MTApiEnvironment *apiEnvironment;
 @property (nonatomic) bool forceBackgroundRequests;
+    
+@property (nonatomic, copy) void (^didReceiveSoftAuthResetError)(void);
 
 - (instancetype)initWithContext:(MTContext *)context;
 

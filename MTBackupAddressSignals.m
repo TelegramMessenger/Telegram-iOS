@@ -162,7 +162,7 @@ static NSData *base64_decode(NSString *str) {
     NSData *getConfigData = nil;
     MTRequestDatacenterAddressListParser responseParser = [currentContext.serialization requestDatacenterAddressWithData:&getConfigData];
     
-    [request setPayload:getConfigData metadata:@"getConfig" responseParser:responseParser];
+    [request setPayload:getConfigData metadata:@"getConfig" shortMetadata:@"getConfig" responseParser:responseParser];
     
     __weak MTContext *weakCurrentContext = currentContext;
     return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {

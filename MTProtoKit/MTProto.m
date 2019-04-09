@@ -196,6 +196,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             if (MTLogEnabled()) {
                 MTLog(@"[MTProto#%p@%p pause]", self, _context);
             }
+            MTShortLog(@"[MTProto#%p@%p pause]", self, _context);
             
             _mtState |= MTProtoStatePaused;
             
@@ -214,6 +215,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             if (MTLogEnabled()) {
                 MTLog(@"[MTProto#%p@%p resume]", self, _context);
             }
+            MTShortLog(@"[MTProto#%p@%p resume]", self, _context);
             
             [self setMtState:_mtState & (~MTProtoStatePaused)];
             
@@ -338,12 +340,14 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             if (MTLogEnabled()) {
                 MTLog(@"[MTProto#%p@%p authInfoForDatacenterWithId:%d is nil]", self, _context, _datacenterId);
             }
+            MTShortLog(@"[MTProto#%p@%p authInfoForDatacenterWithId:%d is nil]", self, _context, _datacenterId);
             if ((_mtState & MTProtoStateAwaitingDatacenterAuthorization) == 0) {
                 [self setMtState:_mtState | MTProtoStateAwaitingDatacenterAuthorization];
                 
                 if (MTLogEnabled()) {
                     MTLog(@"[MTProto#%p@%p requesting authInfo for %d]", self, _context, _datacenterId);
                 }
+                MTShortLog(@"[MTProto#%p@%p requesting authInfo for %d]", self, _context, _datacenterId);
                 [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:_cdn];
             }
         }/* else if (!_useUnauthorizedMode && _useTempAuthKeys && [[_context authInfoForDatacenterWithId:_datacenterId] tempAuthKeyWithType:tempAuthKeyType] == nil) {
@@ -377,6 +381,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (MTLogEnabled()) {
             MTLog(@"[MTProto#%p@%p resetting session]", self, _context);
         }
+        MTShortLog(@"[MTProto#%p@%p resetting session]", self, _context);
         
         if (_authInfo.authKeyId != 0 && !self.cdn) {
             [_context scheduleSessionCleanupForAuthKeyId:_authInfo.authKeyId sessionInfo:_sessionInfo];
@@ -426,6 +431,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             if (MTLogEnabled()) {
                 MTLog(@"[MTProto#%p@%p begin time sync]", self, _context);
             }
+            MTShortLog(@"[MTProto#%p@%p begin time sync]", self, _context);
             
             MTTimeSyncMessageService *timeSyncService = [[MTTimeSyncMessageService alloc] init];
             timeSyncService.delegate = self;
@@ -458,6 +464,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (MTLogEnabled()) {
             MTLog(@"[MTProto#%p@%p service tasks state: %d, resend: %s]", self, _context, _mtState, haveResendMessagesPending ? "yes" : "no");
         }
+        MTShortLog(@"[MTProto#%p@%p service tasks state: %d, resend: %s]", self, _context, _mtState, haveResendMessagesPending ? "yes" : "no");
         
         for (id<MTMessageService> messageService in _messageServices)
         {
@@ -508,6 +515,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             if (MTLogEnabled()) {
                 MTLog(@"[MTProto#%p@%p service tasks state: %d, resend: %s]", self, _context, _mtState, "yes");
             }
+            MTShortLog(@"[MTProto#%p@%p service tasks state: %d, resend: %s]", self, _context, _mtState, "yes");
             
             for (id<MTMessageService> messageService in _messageServices)
             {
@@ -560,6 +568,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                     if (MTLogEnabled()) {
                         MTLog(@"[MTProto#%p@%p service tasks state: %d, resend: %s]", self, _context, _mtState, "no");
                     }
+                    MTShortLog(@"[MTProto#%p@%p service tasks state: %d, resend: %s]", self, _context, _mtState, "no");
                     
                     for (id<MTMessageService> messageService in _messageServices)
                     {
@@ -859,6 +868,11 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     return [[NSString alloc] initWithFormat:@"%@ (%" PRId64 "/%" PRId32 ")", message.metadata, message.messageId == 0 ? messageId : message.messageId, message.messageSeqNo == 0 ? message.messageSeqNo : messageSeqNo];
 }
 
+- (NSString *)outgoingShortMessageDescription:(MTOutgoingMessage *)message messageId:(int64_t)messageId messageSeqNo:(int32_t)messageSeqNo
+{
+    return [[NSString alloc] initWithFormat:@"%@ (%" PRId64 "/%" PRId32 ")", message.shortMetadata, message.messageId == 0 ? messageId : message.messageId, message.messageSeqNo == 0 ? message.messageSeqNo : messageSeqNo];
+}
+
 - (NSString *)incomingMessageDescription:(MTIncomingMessage *)message
 {
     return [[NSString alloc] initWithFormat:@"%@ (%" PRId64", %" PRId64"/%" PRId64")", message.body, message.messageId, message.authKeyId, message.sessionId];
@@ -938,7 +952,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                         [msgsAckBuffer appendInt64:(int64_t)[nMessageId longLongValue]];
                     }
                     
-                    MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:msgsAckBuffer.data metadata:@"msgsAck"];
+                    MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:msgsAckBuffer.data metadata:@"msgsAck" shortMetadata:@"msgsAck"];
                     outgoingMessage.requiresConfirmation = false;
                     
                     [messageTransactions addObject:[[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] prepared:nil failed:nil completion:^(__unused NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
@@ -1013,6 +1027,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                         }*/
                         MTLog(@"[MTProto#%p@%p preparing %@]", self, _context, messageDescription);
                     }
+                    NSString *shortMessageDescription = [self outgoingShortMessageDescription:outgoingMessage messageId:messageId messageSeqNo:messageSeqNo];
+                    MTShortLog(@"[MTProto#%p@%p preparing %@]", self, _context, shortMessageDescription);
                     
                     if (!monotonityViolated || _useUnauthorizedMode)
                     {
@@ -1057,6 +1073,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                     if (MTLogEnabled()) {
                         MTLog(@"[MTProto#%p@%p client message id monotonity violated]", self, _context);
                     }
+                    MTShortLog(@"[MTProto#%p@%p client message id monotonity violated]", self, _context);
                     
                     [self resetSessionInfo];
                 }
@@ -1300,6 +1317,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             if (MTLogEnabled()) {
                 MTLog(@"[MTProto#%p@%p sending time fix ping (%" PRId64 "/%" PRId32 ", %" PRId64 ")]", self, _context, timeFixMessageId, timeFixSeqNo, _sessionInfo.sessionId);
             }
+            MTShortLog(@"[MTProto#%p@%p sending time fix ping (%" PRId64 "/%" PRId32 ", %" PRId64 ")]", self, _context, timeFixMessageId, timeFixSeqNo, _sessionInfo.sessionId);
             
             [decryptedOs writeInt64:[_authInfo authSaltForMessageId:timeFixMessageId]]; // salt
             [decryptedOs writeInt64:_sessionInfo.sessionId];
@@ -1425,6 +1443,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             if (MTLogEnabled()) {
                 MTLog(@"[MTProto#%p@%p sending temp key binding message (%" PRId64 "/%" PRId32 ") for %lld (%d)]", self, _context, bindingMessageId, bindingSeqNo, effectiveTempAuthKey.authKeyId, (int)tempAuthKeyType);
             }
+            MTShortLog(@"[MTProto#%p@%p sending temp key binding message (%" PRId64 "/%" PRId32 ") for %lld (%d)]", self, _context, bindingMessageId, bindingSeqNo, effectiveTempAuthKey.authKeyId, (int)tempAuthKeyType);
             
             [decryptedOs writeInt64:[_authInfo authSaltForMessageId:bindingMessageId]];
             [decryptedOs writeInt64:_sessionInfo.sessionId];
@@ -1545,6 +1564,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (MTLogEnabled()) {
             MTLog(@"    container (%" PRId64 ") of (%@), in %" PRId64 "", containerMessageId, idsString, sessionInfo.sessionId);
         }
+        MTShortLog(@"    container (%" PRId64 ") of (%@), in %" PRId64 "", containerMessageId, idsString, sessionInfo.sessionId);
     }
     
     [decryptedOs writeInt64:salt];
@@ -2032,6 +2052,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             if (MTLogEnabled()) {
                 MTLog(@"[MTProto#%p@%p protocol error %" PRId32 "", self, _context, protocolErrorCode);
             }
+            MTShortLog(@"[MTProto#%p@%p protocol error %" PRId32 "", self, _context, protocolErrorCode);
             
             if (decodeResult != nil)
                 decodeResult(transactionId, false);
@@ -2083,6 +2104,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                             if (MTLogEnabled()) {
                                 MTLog(@"[MTProto#%p@%p received AUTH_KEY_PERM_EMPTY]", self, _context);
                             }
+                            MTShortLog(@"[MTProto#%p@%p received AUTH_KEY_PERM_EMPTY]", self, _context);
                             [self handleMissingKey:scheme.address];
                             [self requestSecureTransportReset];
                             
@@ -2095,6 +2117,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                 if (MTLogEnabled()) {
                     MTLog(@"[MTProto#%p@%p incoming data parse error, header: %d:%@]", self, _context, (int)decryptedData.length, dumpHexString(decryptedData, 128));
                 }
+                MTShortLog(@"[MTProto#%p@%p incoming data parse error, header: %d:%@]", self, _context, (int)decryptedData.length, dumpHexString(decryptedData, 128));
                 
                 [_context reportTransportSchemeFailureForDatacenterId:_datacenterId transportScheme:scheme];
                 [self transportTransactionsMayHaveFailed:transport transactionIds:@[transactionId]];
@@ -2116,6 +2139,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             if (MTLogEnabled()) {
                 MTLog(@"[MTProto#%p@%p couldn't decrypt incoming data]", self, _context);
             }
+            MTShortLog(@"[MTProto#%p@%p couldn't decrypt incoming data]", self, _context);
             
             if (decodeResult != nil)
                 decodeResult(transactionId, false);
@@ -2398,6 +2422,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
         if (MTLogEnabled()) {
             MTLog(@"[MTProto#%p@%p received duplicate message %" PRId64 "]", self, _context, incomingMessage.messageId);
         }
+        MTShortLog(@"[MTProto#%p@%p received duplicate message %" PRId64 "]", self, _context, incomingMessage.messageId);
         [_sessionInfo scheduleMessageConfirmation:incomingMessage.messageId size:incomingMessage.size];
         
         if ([_sessionInfo scheduledMessageConfirmationsExceedSize:MTMaxUnacknowledgedMessageSize orCount:MTMaxUnacknowledgedMessageCount])
@@ -2529,6 +2554,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             if (MTLogEnabled()) {
                 MTLog(@"[MTProto#%p@%p detailed info %" PRId64 " is for %" PRId64 "", self, _context, incomingMessage.messageId, requestMessageId);
             }
+            MTShortLog(@"[MTProto#%p@%p detailed info %" PRId64 " is for %" PRId64 "", self, _context, incomingMessage.messageId, requestMessageId);
             
             for (id<MTMessageService> messageService in _messageServices)
             {
@@ -2551,6 +2577,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             if (MTLogEnabled()) {
                 MTLog(@"[MTProto#%p@%p will request message %" PRId64 "", self, _context, detailedInfoMessage.responseMessageId);
             }
+            MTShortLog(@"[MTProto#%p@%p will request message %" PRId64 "", self, _context, detailedInfoMessage.responseMessageId);
         }
         else
         {
@@ -2639,6 +2666,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                 if (MTLogEnabled()) {
                     MTLog(@"[MTProto#%p@%p bindTempAuthKey error %@]", self, _context, rpcError);
                 }
+                MTShortLog(@"[MTProto#%p@%p bindTempAuthKey error %@]", self, _context, rpcError);
                 
                 [self requestTransportTransaction];
             }

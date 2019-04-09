@@ -75,3 +75,4 @@ FOUNDATION_EXPORT const unsigned char MtProtoKitDynamicVersionString[];
 #import <MTProtoKitDynamic/AFHTTPRequestOperation.h>
 #import <MTProtoKitDynamic/MTProxyConnectivity.h>
 #import <MTProtoKitDynamic/MTPKCS.h>
+#import <MTProtoKitDynamic/MTGzip.h>

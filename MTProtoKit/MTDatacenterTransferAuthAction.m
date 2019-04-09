@@ -96,7 +96,7 @@
     NSData *exportAuthRequestData = nil;
     MTExportAuthorizationResponseParser responseParser = [[context.serialization exportAuthorization:(int32_t)_destinationDatacenterId data:&exportAuthRequestData] copy];
     
-    [request setPayload:exportAuthRequestData metadata:@"exportAuthorization" responseParser:responseParser];
+    [request setPayload:exportAuthRequestData metadata:@"exportAuthorization" shortMetadata:@"exportAuthorization" responseParser:responseParser];
     
     __weak MTDatacenterTransferAuthAction *weakSelf = self;
     [request setCompleted:^(MTExportedAuthorizationData *result, __unused NSTimeInterval timestamp, id error)
@@ -133,7 +133,7 @@
     
     NSData *importAuthRequestData = [_context.serialization importAuthorization:dataId bytes:authData];
     
-    [request setPayload:importAuthRequestData metadata:@"importAuthorization" responseParser:^id (NSData *data)
+    [request setPayload:importAuthRequestData metadata:@"importAuthorization" shortMetadata:@"importAuthorization" responseParser:^id (NSData *data)
     {
         return @true;
     }];
