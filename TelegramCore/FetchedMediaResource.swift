@@ -499,9 +499,7 @@ public enum MediaResourceReference: Equatable {
 
 extension MediaResourceReference {
     var apiFileReference: Data? {
-        if let resource = self.resource as? CloudFileMediaResource {
-            return resource.fileReference
-        } else if let resource = self.resource as? CloudDocumentMediaResource {
+        if let resource = self.resource as? TelegramCloudMediaResourceWithFileReference {
             return resource.fileReference
         } else {
             return nil

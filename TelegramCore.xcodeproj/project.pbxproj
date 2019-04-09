@@ -135,6 +135,8 @@
 		D0119CB120CA9EA800895300 /* MarkAllChatsAsRead.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0119CAF20CA9EA800895300 /* MarkAllChatsAsRead.swift */; };
 		D0136309208F3B0900EB3653 /* SecureIdValueContentError.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0136308208F3B0900EB3653 /* SecureIdValueContentError.swift */; };
 		D013630A208F6E2800EB3653 /* SecureIdValueContentError.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0136308208F3B0900EB3653 /* SecureIdValueContentError.swift */; };
+		D015E00E225CA61100CB9E8A /* FindChannelById.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015E00D225CA61100CB9E8A /* FindChannelById.swift */; };
+		D015E00F225CA61100CB9E8A /* FindChannelById.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015E00D225CA61100CB9E8A /* FindChannelById.swift */; };
 		D01749591E1092BC0057C89A /* RequestStartBot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01749581E1092BC0057C89A /* RequestStartBot.swift */; };
 		D017495E1E118F790057C89A /* AccountStateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D017495D1E118F790057C89A /* AccountStateManager.swift */; };
 		D01749601E118FC30057C89A /* AccountIntermediateState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D017495F1E118FC30057C89A /* AccountIntermediateState.swift */; };
@@ -869,6 +871,7 @@
 		D00DBBD91E64E67E00DB5485 /* UpdateSecretChat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdateSecretChat.swift; sourceTree = "<group>"; };
 		D0119CAF20CA9EA800895300 /* MarkAllChatsAsRead.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkAllChatsAsRead.swift; sourceTree = "<group>"; };
 		D0136308208F3B0900EB3653 /* SecureIdValueContentError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdValueContentError.swift; sourceTree = "<group>"; };
+		D015E00D225CA61100CB9E8A /* FindChannelById.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindChannelById.swift; sourceTree = "<group>"; };
 		D01749581E1092BC0057C89A /* RequestStartBot.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RequestStartBot.swift; sourceTree = "<group>"; };
 		D017495D1E118F790057C89A /* AccountStateManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountStateManager.swift; sourceTree = "<group>"; };
 		D017495F1E118FC30057C89A /* AccountIntermediateState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountIntermediateState.swift; sourceTree = "<group>"; };
@@ -1988,6 +1991,7 @@
 				9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */,
 				D0F760D722202FE20074F7E5 /* ChannelStats.swift */,
 				D0633CD12253A528003DD95F /* ChatOnlineMembers.swift */,
+				D015E00D225CA61100CB9E8A /* FindChannelById.swift */,
 			);
 			name = Peers;
 			sourceTree = "<group>";
@@ -2362,6 +2366,7 @@
 				D05A32E11E6F0982002760B4 /* UpdatedAccountPrivacySettings.swift in Sources */,
 				0962E68121BAA20E00245FD9 /* SearchBotsConfiguration.swift in Sources */,
 				D003702B1DA42586004308D3 /* PhoneNumber.swift in Sources */,
+				D015E00E225CA61100CB9E8A /* FindChannelById.swift in Sources */,
 				D00BDA1C1EE5952A00C64C5E /* TelegramChannelBannedRights.swift in Sources */,
 				D03B0CF91D62250800955575 /* TelegramMediaMap.swift in Sources */,
 				D0E412E7206ABC7500BEE4A2 /* EncryptedMediaResource.swift in Sources */,
@@ -2849,6 +2854,7 @@
 				D0FA8BB11E1FEC7E001E855B /* SecretChatEncryptionConfig.swift in Sources */,
 				D0B418AA1D7E0597004562A4 /* Download.swift in Sources */,
 				D001F3F41E128A1C007A8C60 /* UpdatesApiUtils.swift in Sources */,
+				D015E00F225CA61100CB9E8A /* FindChannelById.swift in Sources */,
 				D04D8FF5209A4B0700865719 /* NetworkSettings.swift in Sources */,
 				D05464982073872C002ECC1E /* SecureIdBankStatementValue.swift in Sources */,
 				D0B4188E1D7E0578004562A4 /* StoreMessage_Telegram.swift in Sources */,

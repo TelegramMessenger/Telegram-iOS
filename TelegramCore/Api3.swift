@@ -5449,23 +5449,6 @@ extension Api {
                     })
                 }
             
-                static func requestCall(userId: Api.InputUser, randomId: Int32, gAHash: Buffer, `protocol`: Api.PhoneCallProtocol) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.PhoneCall>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1536537556)
-                    userId.serialize(buffer, true)
-                    serializeInt32(randomId, buffer: buffer, boxed: false)
-                    serializeBytes(gAHash, buffer: buffer, boxed: false)
-                    `protocol`.serialize(buffer, true)
-                    return (FunctionDescription(name: "phone.requestCall", parameters: [("userId", userId), ("randomId", randomId), ("gAHash", gAHash), ("`protocol`", `protocol`)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.phone.PhoneCall? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.phone.PhoneCall?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.phone.PhoneCall
-                        }
-                        return result
-                    })
-                }
-            
                 static func acceptCall(peer: Api.InputPhoneCall, gB: Buffer, `protocol`: Api.PhoneCallProtocol) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.PhoneCall>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1003664544)
@@ -5513,23 +5496,6 @@ extension Api {
                     })
                 }
             
-                static func discardCall(peer: Api.InputPhoneCall, duration: Int32, reason: Api.PhoneCallDiscardReason, connectionId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(2027164582)
-                    peer.serialize(buffer, true)
-                    serializeInt32(duration, buffer: buffer, boxed: false)
-                    reason.serialize(buffer, true)
-                    serializeInt64(connectionId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "phone.discardCall", parameters: [("peer", peer), ("duration", duration), ("reason", reason), ("connectionId", connectionId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
                 static func saveCallDebug(peer: Api.InputPhoneCall, debug: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(662363518)
@@ -5553,6 +5519,42 @@ extension Api {
                     serializeInt32(rating, buffer: buffer, boxed: false)
                     serializeString(comment, buffer: buffer, boxed: false)
                     return (FunctionDescription(name: "phone.setCallRating", parameters: [("flags", flags), ("peer", peer), ("rating", rating), ("comment", comment)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                static func requestCall(flags: Int32, userId: Api.InputUser, randomId: Int32, gAHash: Buffer, `protocol`: Api.PhoneCallProtocol) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.PhoneCall>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1124046573)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    userId.serialize(buffer, true)
+                    serializeInt32(randomId, buffer: buffer, boxed: false)
+                    serializeBytes(gAHash, buffer: buffer, boxed: false)
+                    `protocol`.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.requestCall", parameters: [("flags", flags), ("userId", userId), ("randomId", randomId), ("gAHash", gAHash), ("`protocol`", `protocol`)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.phone.PhoneCall? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.phone.PhoneCall?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.phone.PhoneCall
+                        }
+                        return result
+                    })
+                }
+            
+                static func discardCall(flags: Int32, peer: Api.InputPhoneCall, duration: Int32, reason: Api.PhoneCallDiscardReason, connectionId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1295269440)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(duration, buffer: buffer, boxed: false)
+                    reason.serialize(buffer, true)
+                    serializeInt64(connectionId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "phone.discardCall", parameters: [("flags", flags), ("peer", peer), ("duration", duration), ("reason", reason), ("connectionId", connectionId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

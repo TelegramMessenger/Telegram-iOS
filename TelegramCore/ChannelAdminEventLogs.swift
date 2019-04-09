@@ -150,7 +150,7 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                     case let .channelAdminLogEventActionChangeUsername(prev, new):
                                         action = .changeUsername(prev: prev, new: new)
                                     case let .channelAdminLogEventActionChangePhoto(prev, new):
-                                        action = .changePhoto(prev: imageRepresentationsForApiChatPhoto(prev), new: imageRepresentationsForApiChatPhoto(new))
+                                        action = .changePhoto(prev: telegramMediaImageFromApiPhoto(prev)?.representations ?? [], new: telegramMediaImageFromApiPhoto(new)?.representations ?? [])
                                     case let .channelAdminLogEventActionToggleInvites(new):
                                         action = .toggleInvites(boolFromApiValue(new))
                                     case let .channelAdminLogEventActionToggleSignatures(new):

@@ -6,17 +6,26 @@ import Foundation
 #endif
 
 func imageRepresentationsForApiChatPhoto(_ photo: Api.ChatPhoto) -> [TelegramMediaImageRepresentation] {
-    var telegramPhoto: [TelegramMediaImageRepresentation] = []
+    var representations: [TelegramMediaImageRepresentation] = []
     switch photo {
-    case let .chatPhoto(photoSmall, photoBig):
-        if let smallResource = mediaResourceFromApiFileLocation(photoSmall, size: nil), let largeResource = mediaResourceFromApiFileLocation(photoBig, size: nil) {
-            telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), resource: smallResource))
-            telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: largeResource))
-        }
-    case .chatPhotoEmpty:
-        break
+        case let .chatPhoto(photoSmall, photoBig, dcId):
+            
+            let smallResource: TelegramMediaResource
+            let fullSizeResource: TelegramMediaResource
+            switch photoSmall {
+                case let .fileLocationToBeDeprecated(volumeId, localId):
+                    smallResource = CloudPeerPhotoSizeMediaResource(datacenterId: dcId, sizeSpec: .small, volumeId: volumeId, localId: localId)
+            }
+            switch photoBig {
+                case let .fileLocationToBeDeprecated(volumeId, localId):
+                    fullSizeResource = CloudPeerPhotoSizeMediaResource(datacenterId: dcId, sizeSpec: .fullSize, volumeId: volumeId, localId: localId)
+            }
+            representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), resource: smallResource))
+            representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: fullSizeResource))
+        case .chatPhotoEmpty:
+            break
     }
-    return telegramPhoto
+    return representations
 }
 
 func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {

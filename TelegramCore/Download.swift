@@ -101,7 +101,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
                 saveFilePart = Api.functions.upload.saveFilePart(fileId: fileId, filePart: Int32(index), bytes: Buffer(data: data))
             }
             
-            request.setPayload(saveFilePart.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(saveFilePart.0), tag: nil), responseParser: { response in
+            request.setPayload(saveFilePart.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(saveFilePart.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(saveFilePart.0)), responseParser: { response in
                 if let result = saveFilePart.2.parse(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }
@@ -145,7 +145,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             let data = Api.functions.upload.getWebFile(location: location, offset: Int32(offset), limit: Int32(updatedLength))
             
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), responseParser: { response in
+            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedFunctionDescription(data.0)), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }
@@ -192,7 +192,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             
             let data = Api.functions.upload.getFile(location: location, offset: Int32(offset), limit: Int32(updatedLength))
             
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), responseParser: { response in
+            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }
@@ -235,7 +235,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         return Signal { subscriber in
             let request = MTRequest()
             
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), responseParser: { response in
+            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }
@@ -273,7 +273,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         return Signal { subscriber in
             let request = MTRequest()
             
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), responseParser: { response in
+            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
                 if let result = data.2(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }

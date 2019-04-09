@@ -7,5 +7,6 @@ void NetworkRegisterLoggingFunction();
 void NetworkSetLoggingEnabled(bool);
 
 void setBridgingTraceFunction(void (*)(NSString *, NSString *));
+void setBridgingShortTraceFunction(void (*)(NSString *, NSString *));
 
 #endif

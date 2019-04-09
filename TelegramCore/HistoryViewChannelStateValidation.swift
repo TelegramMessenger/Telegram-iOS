@@ -141,12 +141,7 @@ final class HistoryViewStateValidationContexts {
                         historyState = .channel(peerId, chatState)
                     }
                     break
-                } /*else if case let .peerGroupState(groupId, groupState) = entry {
-                    if let groupState = groupState as? TelegramPeerGroupState {
-                        historyState = .group(groupId, groupState)
-                    }
-                    break
-                }*/
+                }
             }
             
             if let historyState = historyState, historyState.hasInvalidationIndex {

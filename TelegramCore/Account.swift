@@ -959,6 +959,9 @@ public class Account {
     
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
     
+    private var lastSmallLogPostTimestamp: Double?
+    private let smallLogPostDisposable = MetaDisposable()
+    
     public init(accountManager: AccountManager, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods) {
         self.id = id
         self.basePath = basePath
@@ -1007,9 +1010,13 @@ public class Account {
                 strongSelf.callSessionManager.dropAll()
             }
         }
+        self.network.didReceiveSoftAuthResetError = { [weak self] in
+            self?.postSmallLogIfNeeded()
+        }
         
-        let previousNetworkStatus = Atomic<Bool?>(value: nil)
         let networkStateQueue = Queue()
+        /*
+        let previousNetworkStatus = Atomic<Bool?>(value: nil)
         let delayNetworkStatus = self.shouldBeServiceTaskMaster.get()
         |> map { mode -> Bool in
             switch mode {
@@ -1041,8 +1048,8 @@ public class Account {
             } else {
                 return .single(!value)
             }
-        }
-        let networkStateSignal = combineLatest(self.stateManager.isUpdating |> deliverOn(networkStateQueue), network.connectionStatus |> deliverOn(networkStateQueue)/*, delayNetworkStatus |> deliverOn(networkStateQueue)*/)
+        }*/
+        let networkStateSignal = combineLatest(queue: networkStateQueue, self.stateManager.isUpdating, network.connectionStatus/*, delayNetworkStatus*/)
         |> map { isUpdating, connectionStatus/*, delayNetworkStatus*/ -> AccountNetworkState in
             /*if delayNetworkStatus {
                 return .online(proxy: nil)
@@ -1224,6 +1231,30 @@ public class Account {
         self.managedServiceViewsDisposable.dispose()
         self.managedOperationsDisposable.dispose()
         self.storageSettingsDisposable?.dispose()
+        self.smallLogPostDisposable.dispose()
+    }
+    
+    private func postSmallLogIfNeeded() {
+        let timestamp = CFAbsoluteTimeGetCurrent()
+        if self.lastSmallLogPostTimestamp == nil || self.lastSmallLogPostTimestamp! < timestamp - 30.0 {
+            self.lastSmallLogPostTimestamp = timestamp
+            let network = self.network
+            
+            self.smallLogPostDisposable.set((Logger.shared.collectShortLog()
+            |> mapToSignal { events -> Signal<Never, NoError> in
+                if events.isEmpty {
+                    return .complete()
+                } else {
+                    return network.request(Api.functions.help.saveAppLog(events: events.map { event -> Api.InputAppEvent in
+                        return .inputAppEvent(time: event.0, type: "", peer: 0, data: .jsonString(value: event.1))
+                    }))
+                    |> ignoreValues
+                    |> `catch` { _ -> Signal<Never, NoError> in
+                        return .complete()
+                    }
+                }
+            }).start())
+        }
     }
     
     public func resetStateManagement() {

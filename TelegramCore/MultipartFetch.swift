@@ -679,6 +679,34 @@ func multipartFetch(postbox: Postbox, network: Network, mediaReferenceRevalidati
             location = .generic(Int32(datacenterId), { fileReference in
                 return resource.apiInputLocation(fileReference: fileReference)
             })
+        } else if let resource = resource as? CloudPeerPhotoSizeMediaResource {
+            guard let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo else {
+                subscriber.putError(.generic)
+                return EmptyDisposable
+            }
+            switch info.reference {
+                case let .avatar(peer, _):
+                    location = .generic(Int32(datacenterId), { fileReference in
+                        return resource.apiInputLocation(peerReference: peer)
+                    })
+                default:
+                    subscriber.putError(.generic)
+                    return EmptyDisposable
+            }
+        } else if let resource = resource as? CloudStickerPackThumbnailMediaResource {
+            guard let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo else {
+                subscriber.putError(.generic)
+                return EmptyDisposable
+            }
+            switch info.reference {
+                case let .stickerPackThumbnail(stickerPack, _):
+                    location = .generic(Int32(datacenterId), { fileReference in
+                        return resource.apiInputLocation(packReference: stickerPack)
+                    })
+                default:
+                    subscriber.putError(.generic)
+                    return EmptyDisposable
+            }
         } else if let resource = resource as? WebFileReferenceMediaResource {
             location = .web(Int32(datacenterId), resource.apiInputLocation)
         } else {

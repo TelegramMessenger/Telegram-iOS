@@ -135,6 +135,11 @@ private var declaredEncodables: Void = {
     declareEncodable(EmojiKeywordItem.self, f: { EmojiKeywordItem(decoder: $0) })
     declareEncodable(SynchronizeEmojiKeywordsOperation.self, f: { SynchronizeEmojiKeywordsOperation(decoder: $0) })
     
+    declareEncodable(CloudPhotoSizeMediaResource.self, f: { CloudPhotoSizeMediaResource(decoder: $0) })
+    declareEncodable(CloudDocumentSizeMediaResource.self, f: { CloudDocumentSizeMediaResource(decoder: $0) })
+    declareEncodable(CloudPeerPhotoSizeMediaResource.self, f: { CloudPeerPhotoSizeMediaResource(decoder: $0) })
+    declareEncodable(CloudStickerPackThumbnailMediaResource.self, f: { CloudStickerPackThumbnailMediaResource(decoder: $0) })
+    
     return
 }()
 

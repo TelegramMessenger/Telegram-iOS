@@ -8,7 +8,7 @@
 #endif
 
 
-public func exportMessageLink(account:Account, peerId:PeerId, messageId:MessageId) -> Signal<String?, NoError> {
+public func exportMessageLink(account: Account, peerId: PeerId, messageId: MessageId) -> Signal<String?, NoError> {
     return account.postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
     }

@@ -44,6 +44,18 @@ final class WrappedFunctionDescription: CustomStringConvertible {
     }
 }
 
+final class WrappedShortFunctionDescription: CustomStringConvertible {
+    private let desc: FunctionDescription
+    
+    init(_ desc: FunctionDescription) {
+        self.desc = desc
+    }
+    
+    var description: String {
+        return apiShortFunctionDescription(of: self.desc)
+    }
+}
+
 class WrappedRequestMetadata: NSObject {
     let metadata: CustomStringConvertible
     let tag: NetworkRequestDependencyTag?
@@ -55,6 +67,18 @@ class WrappedRequestMetadata: NSObject {
     
     override var description: String {
         return self.metadata.description
+    }
+}
+
+class WrappedRequestShortMetadata: NSObject {
+    let shortMetadata: CustomStringConvertible
+    
+    init(shortMetadata: CustomStringConvertible) {
+        self.shortMetadata = shortMetadata
+    }
+    
+    override var description: String {
+        return self.shortMetadata.description
     }
 }
 
@@ -606,6 +630,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     }
     
     var loggedOut: (() -> Void)?
+    var didReceiveSoftAuthResetError: (() -> Void)?
     
     override public var description: String {
         return "Network context: \(self.context)"
@@ -623,6 +648,10 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         self.basePath = basePath
         
         super.init()
+        
+        self.requestService.didReceiveSoftAuthResetError = { [weak self] in
+            self?.didReceiveSoftAuthResetError?()
+        }
         
         let _contextProxyId = self._contextProxyId
         context.add(NetworkHelper(requestPublicKeys: { [weak self] id in
@@ -793,7 +822,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         return Signal { subscriber in
             let request = MTRequest()
             
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag), responseParser: { response in
+            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }
@@ -862,7 +891,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         return Signal { subscriber in
             let request = MTRequest()
             
-            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag), responseParser: { response in
+            request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }
