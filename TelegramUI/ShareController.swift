@@ -200,7 +200,7 @@ public final class ShareController: ViewController {
     private let subject: ShareControllerSubject
     private let switchableAccounts: [AccountWithInfo]
     
-    private let peers = Promise<([RenderedPeer], Peer)>()
+    private let peers = Promise<([(RenderedPeer, PeerPresence?)], Peer)>()
     private let peersDisposable = MetaDisposable()
     private let readyDisposable = MetaDisposable()
     private let acountActiveDisposable = MetaDisposable()
@@ -656,16 +656,16 @@ public final class ShareController: ViewController {
         self.acountActiveDisposable.set(self.sharedContext.setAccountUserInterfaceInUse(account.id))
         
         self.peers.set(combineLatest(self.currentAccount.postbox.loadedPeerWithId(self.currentAccount.peerId) |> take(1), self.currentAccount.viewTracker.tailChatListView(groupId: nil, count: 150) |> take(1))
-        |> map { accountPeer, view -> ([RenderedPeer], Peer) in
-            var peers: [RenderedPeer] = []
+        |> map { accountPeer, view -> ([(RenderedPeer, PeerPresence?)], Peer) in
+            var peers: [(RenderedPeer, PeerPresence?)] = []
             for entry in view.0.entries.reversed() {
                 switch entry {
-                case let .MessageEntry(_, _, _, _, _, renderedPeer, _):
-                    if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id, canSendMessagesToPeer(peer) {
-                        peers.append(renderedPeer)
-                    }
-                default:
-                    break
+                    case let .MessageEntry(_, _, _, _, _, renderedPeer, presence, _):
+                        if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id, canSendMessagesToPeer(peer) {
+                            peers.append((renderedPeer, presence))
+                        }
+                    default:
+                        break
                 }
             }
             return (peers, accountPeer)

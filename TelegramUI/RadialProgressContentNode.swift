@@ -39,7 +39,7 @@ private final class RadialProgressContentSpinnerNode: ASDisplayNode {
             self.setNeedsDisplay()
         }
     }
-
+    
     var progress: CGFloat? {
         didSet {
             self.pop_removeAnimation(forKey: "progress")
@@ -56,10 +56,17 @@ private final class RadialProgressContentSpinnerNode: ASDisplayNode {
                     }
                     property?.threshold = 0.01
                 }) as! POPAnimatableProperty
+                
+                var duration = 0.2
+                let delta = max(0.0, progress - self.effectiveProgress)
+                if delta > 0.25 {
+                    duration += Double(min(0.45, 0.45 * ((delta - 0.25) * 5)))
+                }
+                
                 animation.fromValue = CGFloat(self.effectiveProgress) as NSNumber
                 animation.toValue = CGFloat(progress) as NSNumber
                 animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
-                animation.duration = 0.2
+                animation.duration = duration
                 animation.completionBlock = { [weak self] _, _ in
                     self?.progressAnimationCompleted?()
                 }

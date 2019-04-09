@@ -325,7 +325,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         var viewClassName: AnyClass = ChatMessageBubbleItemNode.self
         
-        loop: for media in message.media {
+        loop: for media in self.message.media {
             if let telegramFile = media as? TelegramMediaFile {
                 if GlobalExperimentalSettings.animatedStickers && telegramFile.fileName == "animation.json" {
                     viewClassName = ChatMessageAnimatedStickerItemNode.self
@@ -350,6 +350,10 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             } else if let _ = media as? TelegramMediaExpiredContent {
                 viewClassName = ChatMessageBubbleItemNode.self
             }
+        }
+        
+        if viewClassName == ChatMessageBubbleItemNode.self, self.message.text.containsOnlyEmoji && self.presentationData.largeEmoji, self.message.text.emojis.count < 4 {
+            viewClassName = ChatMessageStickerItemNode.self
         }
         
         let configure = {

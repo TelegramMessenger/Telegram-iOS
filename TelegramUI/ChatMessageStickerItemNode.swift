@@ -12,7 +12,7 @@ private let inlineBotNameFont = nameFont
 
 class ChatMessageStickerItemNode: ChatMessageItemView {
     let imageNode: TransformImageNode
-    var progressNode: RadialProgressNode?
+    var textNode: TextNode?
     
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
     private var swipeToReplyFeedback: HapticFeedback?
@@ -20,6 +20,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     private var selectionNode: ChatMessageSelectionNode?
     private var deliveryFailedNode: ChatMessageDeliveryFailedNode?
     private var shareButtonNode: HighlightableButtonNode?
+
     
     var telegramFile: TelegramMediaFile?
     
@@ -88,7 +89,6 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         for media in item.message.media {
             if let telegramFile = media as? TelegramMediaFile {
                 if self.telegramFile != telegramFile {
-                    
                     let signal = chatMessageSticker(account: item.context.account, file: telegramFile, small: false, onlyFullSize: self.telegramFile != nil)
                     self.telegramFile = telegramFile
                     self.imageNode.setSignal(signal)
@@ -107,6 +107,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         let imageLayout = self.imageNode.asyncLayout()
         let makeDateAndStatusLayout = self.dateAndStatusNode.asyncLayout()
         let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
+        let textLayout = TextNode.asyncLayout(self.textNode)
         
         let viaBotLayout = TextNode.asyncLayout(self.viaBotNode)
         let makeReplyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
@@ -214,6 +215,26 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(top: innerImageInset, left: innerImageInset, bottom: innerImageInset, right: innerImageInset))
             
             let imageApply = imageLayout(arguments)
+            
+            var textLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            if item.message.text.containsOnlyEmoji && item.presentationData.largeEmoji {
+                var textFont = item.presentationData.messageFont
+                let emojis = item.message.text.emojis
+                switch emojis.count {
+                    case 1:
+                        textFont = item.presentationData.messageEmojiFont1
+                    case 2:
+                        textFont = item.presentationData.messageEmojiFont2
+                    case 3:
+                        textFont = item.presentationData.messageEmojiFont3
+                    default:
+                        break
+                }
+                
+                let attributedText = NSAttributedString(string: item.message.text, font: textFont, textColor: .black)
+                textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: 120.0, height: 60.0), alignment: .natural))
+            }
+            
             
             let statusType: ChatMessageDateAndStatusType
             if item.message.effectivelyIncoming(item.context.account.peerId) {
@@ -346,10 +367,17 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     let updatedImageFrame = imageFrame.offsetBy(dx: 0.0, dy: floor((contentHeight - imageSize.height) / 2.0))
                     
                     transition.updateFrame(node: strongSelf.imageNode, frame: updatedImageFrame)
-                    if let progressNode = strongSelf.progressNode {
-                        transition.updatePosition(node: progressNode, position: strongSelf.imageNode.position)
-                    }
                     imageApply()
+                    
+                    if let (textLayout, textApply) = textLayoutAndApply {
+                        let textNode = textApply()
+                        if textNode !== strongSelf.textNode {
+                            strongSelf.textNode?.removeFromSupernode()
+                            strongSelf.addSubnode(textNode)
+                            strongSelf.textNode = textNode
+                        }
+                        transition.updateFrame(node: textNode, frame: CGRect(x: updatedImageFrame.maxX - textLayout.size.width, y: updatedImageFrame.maxY - textLayout.size.height - 30.0, width: textLayout.size.width, height: textLayout.size.height))
+                    }
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
                         if updatedShareButtonNode !== strongSelf.shareButtonNode {

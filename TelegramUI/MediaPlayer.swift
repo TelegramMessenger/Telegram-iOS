@@ -80,7 +80,7 @@ enum MediaPlayerStreaming {
             case .none, .conservative:
                 return (1.0, 2.0, 3.0)
             case .earlierStart:
-                return (0.5, 0.5, 1.0)
+                return (1.0, 1.0, 2.0)
         }
     }
 }

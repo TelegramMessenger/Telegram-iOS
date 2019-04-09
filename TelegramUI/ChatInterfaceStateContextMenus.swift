@@ -395,7 +395,19 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                         }
                     }
                 } else {
-                    UIPasteboard.general.string = message.text
+                    var messageEntities: [MessageTextEntity]?
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? TextEntitiesMessageAttribute {
+                            messageEntities = attribute.entities
+                            break
+                        }
+                    }
+                    if false, let messageEntities = messageEntities {
+                        let attributedString = stringWithAppliedEntities(message.text, entities: messageEntities, baseColor: .black, linkColor: .black, baseFont: Font.regular(14.0), linkFont: Font.regular(14.0), boldFont: Font.bold(14.0), italicFont: Font.italic(14.0), fixedFont: Font.monospace(14.0))
+                        UIPasteboard.general.set(attributedString: attributedString)
+                    } else {
+                        UIPasteboard.general.string = message.text
+                    }
                 }
             })))
         }

@@ -177,7 +177,7 @@ public final class RadialStatusNode: ASControlNode {
                                     contentNode.animateIn(from: fromState, delay: delay)
                                 }
                             }
-                            strongSelf.transitionToBackgroundColor(backgroundColor, previousContentNode: previousContentNode, animated: animated, completion: completion)
+                            strongSelf.transitionToBackgroundColor(strongSelf.contentNode != nil ? backgroundColor : nil, previousContentNode: previousContentNode, animated: animated, completion: completion)
                         })
                         previousContentNode.animateOut(to: state, completion: { [weak contentNode] in
                             if let strongSelf = self, let contentNode = contentNode {

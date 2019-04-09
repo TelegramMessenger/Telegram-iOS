@@ -182,7 +182,7 @@ final class ThemeGridController: ViewController {
                                 
                                 var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                 themeSpecificChatWallpapers[current.theme.index] = fallbackWallpaper
-                                return PresentationThemeSettings(chatWallpaper: fallbackWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                                return PresentationThemeSettings(chatWallpaper: fallbackWallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                             })).start()
                             break
                         }
@@ -254,7 +254,7 @@ final class ThemeGridController: ViewController {
                                         } else {
                                             wallpaper = .builtin(WallpaperSettings())
                                         }
-                                        return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: [:], fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, disableAnimations: current.disableAnimations)
+                                        return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeAccentColor: current.themeAccentColor, themeSpecificChatWallpapers: [:], fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                     })
                                 }).start()
                                 

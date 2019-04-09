@@ -5,10 +5,16 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
 
+enum ChatMediaInputStickerGridSectionAccessory {
+    case none
+    case setup
+    case clear
+}
+
 final class ChatMediaInputStickerGridSection: GridSection {
     let collectionId: ItemCollectionId
     let collectionInfo: StickerPackCollectionInfo?
-    let canManagePeerSpecificPack: Bool?
+    let accessory: ChatMediaInputStickerGridSectionAccessory
     let interaction: ChatMediaInputNodeInteraction
     let theme: PresentationTheme
     let height: CGFloat = 26.0
@@ -17,10 +23,10 @@ final class ChatMediaInputStickerGridSection: GridSection {
         return self.collectionId.hashValue
     }
     
-    init(collectionId: ItemCollectionId, collectionInfo: StickerPackCollectionInfo?, canManagePeerSpecificPack: Bool?, theme: PresentationTheme, interaction: ChatMediaInputNodeInteraction) {
+    init(collectionId: ItemCollectionId, collectionInfo: StickerPackCollectionInfo?, accessory: ChatMediaInputStickerGridSectionAccessory, theme: PresentationTheme, interaction: ChatMediaInputNodeInteraction) {
         self.collectionId = collectionId
         self.collectionInfo = collectionInfo
-        self.canManagePeerSpecificPack = canManagePeerSpecificPack
+        self.accessory = accessory
         self.theme = theme
         self.interaction = interaction
     }
@@ -34,7 +40,7 @@ final class ChatMediaInputStickerGridSection: GridSection {
     }
     
     func node() -> ASDisplayNode {
-        return ChatMediaInputStickerGridSectionNode(collectionInfo: self.collectionInfo, canManagePeerSpecificPack: self.canManagePeerSpecificPack, theme: self.theme, interaction: self.interaction)
+        return ChatMediaInputStickerGridSectionNode(collectionInfo: self.collectionInfo, accessory: self.accessory, theme: self.theme, interaction: self.interaction)
     }
 }
 
@@ -44,18 +50,25 @@ final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
     let titleNode: ASTextNode
     let setupNode: HighlightableButtonNode?
     let interaction: ChatMediaInputNodeInteraction
+    let accessory: ChatMediaInputStickerGridSectionAccessory
     
-    init(collectionInfo: StickerPackCollectionInfo?, canManagePeerSpecificPack: Bool?, theme: PresentationTheme, interaction: ChatMediaInputNodeInteraction) {
+    init(collectionInfo: StickerPackCollectionInfo?, accessory: ChatMediaInputStickerGridSectionAccessory, theme: PresentationTheme, interaction: ChatMediaInputNodeInteraction) {
         self.interaction = interaction
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
+        self.accessory = accessory
         
-        if collectionInfo?.id.namespace == ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, let canManage = canManagePeerSpecificPack, canManage {
-            let setupNode = HighlightableButtonNode()
-            setupNode.setImage(PresentationResourcesChat.chatInputMediaPanelGridSetupImage(theme), for: [])
-            self.setupNode = setupNode
-        } else {
-            self.setupNode = nil
+        switch accessory {
+            case .none:
+                self.setupNode = nil
+            case .setup:
+                let setupNode = HighlightableButtonNode()
+                setupNode.setImage(PresentationResourcesChat.chatInputMediaPanelGridSetupImage(theme), for: [])
+                self.setupNode = setupNode
+            case .clear:
+                let setupNode = HighlightableButtonNode()
+                setupNode.setImage(PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme), for: [])
+                self.setupNode = setupNode
         }
         
         super.init()
@@ -78,12 +91,19 @@ final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
         self.titleNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 9.0), size: titleSize)
         
         if let setupNode = self.setupNode {
-            setupNode.frame = CGRect(origin: CGPoint(x: bounds.width - 12.0 - 16.0, y: 2.0), size: CGSize(width: 16.0, height: 26.0))
+            setupNode.frame = CGRect(origin: CGPoint(x: bounds.width - 12.0 - 16.0, y: 3.0), size: CGSize(width: 16.0, height: 26.0))
         }
     }
     
     @objc private func setupPressed() {
-        self.interaction.openPeerSpecificSettings()
+        switch self.accessory {
+            case .setup:
+                self.interaction.openPeerSpecificSettings()
+            case .clear:
+                self.interaction.clearRecentlyUsedStickers()
+            default:
+                break
+        }
     }
 }
 
@@ -107,7 +127,15 @@ final class ChatMediaInputStickerGridItem: GridItem {
         if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue {
             self.section = nil
         } else {
-            self.section = ChatMediaInputStickerGridSection(collectionId: collectionId, collectionInfo: stickerPackInfo, canManagePeerSpecificPack: canManagePeerSpecificPack, theme: theme, interaction: inputNodeInteraction)
+            let accessory: ChatMediaInputStickerGridSectionAccessory
+            if stickerPackInfo?.id.namespace == ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, let canManage = canManagePeerSpecificPack, canManage {
+                accessory = .setup
+            } else if stickerPackInfo?.id.namespace == ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue {
+                accessory = .clear
+            } else {
+                accessory = .none
+            }
+            self.section = ChatMediaInputStickerGridSection(collectionId: collectionId, collectionInfo: stickerPackInfo, accessory: accessory, theme: theme, interaction: inputNodeInteraction)
         }
     }
     

@@ -446,7 +446,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
                     interaction.peerSelected(peer.peer)
                 })
             case let .message(message, readState, presentationData):
-                return ChatListItem(presentationData: presentationData, account: context.account, peerGroupId: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(message: message, peer: RenderedPeer(message: message), combinedReadState: readState, notificationSettings: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: true), editing: false, hasActiveRevealControls: false, selected: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, interaction: interaction)
+                return ChatListItem(presentationData: presentationData, account: context.account, peerGroupId: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(message: message, peer: RenderedPeer(message: message), combinedReadState: readState, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: true), editing: false, hasActiveRevealControls: false, selected: false, header: enableHeaders ? ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) : nil, enableContextActions: false, interaction: interaction)
             case let .addContact(phoneNumber, theme, strings):
                 return ContactsAddItem(theme: theme, strings: strings, phoneNumber: phoneNumber, header: ChatListSearchItemHeader(type: .phoneNumber, theme: theme, strings: strings, actionTitle: nil, action: nil), action: {
                     interaction.addContact(phoneNumber)
@@ -1173,7 +1173,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                 bounds = selectedItemNode.bounds
             }
             switch item.content {
-                case let .peer(message, peer, _, _, _, _, _, _, _):
+                case let .peer(message, peer, _, _, _, _, _, _, _, _):
                     return (selectedItemNode.view, bounds, message?.id ?? peer.peerId)
                 /*case let .groupReference(groupId, _, _, _):
                     return (selectedItemNode.view, bounds, groupId)*/

@@ -793,8 +793,9 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                     }
                     activePermissionCount = count
                 }
+                
                 entries.append(GroupInfoEntry.permissions(presentationData.theme, presentationData.strings.GroupInfo_Permissions, activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList.count)" }) ?? ""))
-                entries.append(GroupInfoEntry.administrators(presentationData.theme, presentationData.strings.GroupInfo_Administrators, cachedChannelData.participantsSummary.adminCount.flatMap { "\($0)" } ?? ""))
+                entries.append(GroupInfoEntry.administrators(presentationData.theme, presentationData.strings.GroupInfo_Administrators, cachedChannelData.participantsSummary.adminCount.flatMap { "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" } ?? ""))
             }
         }
     } else {

@@ -85,12 +85,6 @@ public final class TelegramRootController: NavigationController {
         self.pushViewController(tabBarController, animated: false)
     }
     
-    @objc func closeIt() {
-        self.wNode?.removeFromSupernode()
-    }
-    
-    private var wNode: ASDisplayNode?
-    
     public func updateRootControllers(showCallsTab: Bool) {
         guard let rootTabController = self.rootTabController else {
             return

@@ -68,7 +68,6 @@ private final class StickerAnimationNode : ASDisplayNode {
 class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     let imageNode: TransformImageNode
     private let animationNode: StickerAnimationNode
-    var progressNode: RadialProgressNode?
     
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
     private var swipeToReplyFeedback: HapticFeedback?
@@ -355,7 +354,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     strongSelf.imageNode.frame = updatedImageFrame
                     strongSelf.animationNode.frame = updatedImageFrame
-                    strongSelf.progressNode?.position = strongSelf.imageNode.position
                     imageApply()
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
