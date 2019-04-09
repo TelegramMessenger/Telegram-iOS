@@ -35,7 +35,17 @@ class MessageHistoryIndexTableTests: XCTestCase {
         var randomId: Int64 = 0
         arc4random_buf(&randomId, 8)
         path = NSTemporaryDirectory() + "\(randomId)"
-        self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue(), encryptionKey: "secret".data(using: .utf8)!)
+        
+        var randomKey = Data(count: 32)
+        randomKey.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            arc4random_buf(bytes, 32)
+        })
+        var randomSalt = Data(count: 16)
+        randomSalt.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            arc4random_buf(bytes, 16)
+        })
+        
+        self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue(), encryptionParameters: ValueBoxEncryptionParameters(key: ValueBoxEncryptionParameters.Key(data: randomKey)!, salt: ValueBoxEncryptionParameters.Salt(data: randomSalt)!))
         
         let messageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]] = [
             peerId.namespace: [

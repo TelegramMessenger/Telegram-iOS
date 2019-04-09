@@ -40,10 +40,12 @@ final class MessageHistoryIndexTable: Table {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
-    let messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable
-    let globalMessageIdsTable: GlobalMessageIdsTable
-    let metadataTable: MessageHistoryMetadataTable
-    let seedConfiguration: SeedConfiguration
+    private let messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable
+    private let globalMessageIdsTable: GlobalMessageIdsTable
+    private let metadataTable: MessageHistoryMetadataTable
+    private let seedConfiguration: SeedConfiguration
+    
+    private var cachedExistingNamespaces: [PeerId: Set<MessageId.Namespace>] = [:]
     
     init(valueBox: ValueBox, table: ValueBoxTable, messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable, globalMessageIdsTable: GlobalMessageIdsTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
         self.messageHistoryHoleIndexTable = messageHistoryHoleIndexTable
@@ -62,6 +64,12 @@ final class MessageHistoryIndexTable: Table {
         return key
     }
     
+    private func lowerBound(peerId: PeerId) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 8)
+        key.setInt64(0, value: peerId.toInt64())
+        return key
+    }
+    
     private func lowerBound(_ peerId: PeerId, namespace: MessageId.Namespace) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8 + 4)
         key.setInt64(0, value: peerId.toInt64())
@@ -76,6 +84,10 @@ final class MessageHistoryIndexTable: Table {
         return key.successor
     }
     
+    private func upperBound(peerId: PeerId) -> ValueBoxKey {
+        return self.lowerBound(peerId: peerId).successor
+    }
+    
     func addMessages(_ messages: [InternalStoreMessage], operations: inout [MessageHistoryIndexOperation]) {
         if messages.count == 0 {
             return
@@ -88,6 +100,8 @@ final class MessageHistoryIndexTable: Table {
                 operations.append(.InsertExistingMessage(message))
             } else {
                 self.justInsertMessage(message, operations: &operations)
+                
+                self.cachedExistingNamespaces[message.id.peerId]?.insert(message.id.namespace)
             }
         }
     }
@@ -301,6 +315,37 @@ final class MessageHistoryIndexTable: Table {
         return entries
     }
     
+    func existingNamespaces(peerId: PeerId) -> Set<MessageId.Namespace> {
+        if let cached = self.cachedExistingNamespaces[peerId] {
+            return cached
+        } else {
+            let namespaces = Set(self.fetchExistingNamespaces(peerId: peerId))
+            self.cachedExistingNamespaces[peerId] = namespaces
+            return namespaces
+        }
+    }
+    
+    private func fetchExistingNamespaces(peerId: PeerId) -> [MessageId.Namespace] {
+        var result: [MessageId.Namespace] = []
+        var lowerBound = self.lowerBound(peerId: peerId)
+        let upperBound = self.upperBound(peerId: peerId)
+        while true {
+            var namespace: MessageId.Namespace?
+            self.valueBox.range(self.table, start: lowerBound, end: upperBound, keys: { key in
+                assert(key.getInt64(0) == peerId.toInt64())
+                namespace = key.getInt32(8)
+                return false
+            }, limit: 1)
+            if let namespace = namespace {
+                result.append(namespace)
+                lowerBound = self.lowerBound(peerId, namespace: namespace + 1)
+            } else {
+                break
+            }
+        }
+        return result
+    }
+    
     func debugList(_ peerId: PeerId, namespace: MessageId.Namespace) -> [MessageIndex] {
         var list: [MessageIndex] = []
         self.valueBox.range(self.table, start: self.lowerBound(peerId, namespace: namespace), end: self.upperBound(peerId, namespace: namespace), values: { key, value in
@@ -330,5 +375,9 @@ final class MessageHistoryIndexTable: Table {
             
             return index
         }
+    }
+    
+    override func clearMemoryCache() {
+        self.cachedExistingNamespaces.removeAll()
     }
 }

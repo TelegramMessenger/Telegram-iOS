@@ -123,8 +123,16 @@ public struct MessageIndex: Comparable, Hashable {
         return MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: 0)
     }
     
+    public static func lowerBound(peerId: PeerId, namespace: MessageId.Namespace) -> MessageIndex {
+        return MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: 0), timestamp: 0)
+    }
+    
     public static func upperBound(peerId: PeerId) -> MessageIndex {
         return MessageIndex(id: MessageId(peerId: peerId, namespace: Int32(Int8.max), id: Int32.max), timestamp: Int32.max)
+    }
+    
+    public static func upperBound(peerId: PeerId, namespace: MessageId.Namespace) -> MessageIndex {
+        return MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: Int32.max), timestamp: Int32.max)
     }
     
     public static func upperBound(peerId: PeerId, timestamp: Int32, namespace: MessageId.Namespace) -> MessageIndex {
