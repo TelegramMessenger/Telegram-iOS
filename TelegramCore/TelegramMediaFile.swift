@@ -560,13 +560,13 @@ func telegramMediaFileThumbnailRepresentationsFromApiSizes(datacenterId: Int32, 
             case let .photoCachedSize(type, location, w, h, _):
                 switch location {
                     case let .fileLocationToBeDeprecated(volumeId, localId):
-                        let resource = CloudDocumentSizeMediaResource(datacenterId: datacenterId, documentId: documentId, accessHash: accessHash, sizeSpec: type, fileReference: fileReference)
+                        let resource = CloudDocumentSizeMediaResource(datacenterId: datacenterId, documentId: documentId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference)
                         representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: resource))
                 }
             case let .photoSize(type, location, w, h, _):
                 switch location {
                     case let .fileLocationToBeDeprecated(volumeId, localId):
-                        let resource = CloudDocumentSizeMediaResource(datacenterId: datacenterId, documentId: documentId, accessHash: accessHash, sizeSpec: type, fileReference: fileReference)
+                        let resource = CloudDocumentSizeMediaResource(datacenterId: datacenterId, documentId: documentId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference)
                         representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: resource))
                 }
             case let .photoStrippedSize(_, data):

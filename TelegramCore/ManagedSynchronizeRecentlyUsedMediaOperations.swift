@@ -158,8 +158,12 @@ private func synchronizeRecentlyUsedMedia(transaction: Transaction, postbox: Pos
                         |> mapError { _ -> SaveRecentlyUsedMediaError in
                             return .generic
                         }
-                        |> mapToSignal { reference -> Signal<Api.Bool, SaveRecentlyUsedMediaError> in
-                            return addSticker(reference)
+                        |> mapToSignal { resource -> Signal<Api.Bool, SaveRecentlyUsedMediaError> in
+                            if let resource = resource as? TelegramCloudMediaResourceWithFileReference, let reference = resource.fileReference {
+                                return addSticker(reference)
+                            } else {
+                                return .fail(.generic)
+                            }
                         }
                 }
             }

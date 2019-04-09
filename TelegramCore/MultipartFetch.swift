@@ -65,7 +65,7 @@ private enum MultipartFetchDownloadError {
 }
 
 private enum MultipartFetchMasterLocation {
-    case generic(Int32, (Data?) -> Api.InputFileLocation?)
+    case generic(Int32, (TelegramMediaResource, Data?) -> Api.InputFileLocation?)
     case web(Int32, Api.InputWebFileLocation)
     
     var datacenterId: Int32 {
@@ -272,7 +272,7 @@ private enum MultipartFetchSource {
     case master(location: MultipartFetchMasterLocation, download: DownloadWrapper)
     case cdn(masterDatacenterId: Int32, fileToken: Data, key: Data, iv: Data, download: DownloadWrapper, masterDownload: DownloadWrapper, hashSource: MultipartCdnHashSource)
     
-    func request(offset: Int32, limit: Int32, tag: MediaResourceFetchTag?, fileReference: Data?, continueInBackground: Bool) -> Signal<Data, MultipartFetchDownloadError> {
+    func request(offset: Int32, limit: Int32, tag: MediaResourceFetchTag?, resource: TelegramMediaResource, fileReference: Data?, continueInBackground: Bool) -> Signal<Data, MultipartFetchDownloadError> {
         switch self {
             case .none:
                 return .never()
@@ -284,7 +284,7 @@ private enum MultipartFetchSource {
                 
                 switch location {
                     case let .generic(_, location):
-                        if let parsedLocation = location(fileReference) {
+                        if let parsedLocation = location(resource, fileReference) {
                             return download.request(Api.functions.upload.getFile(location: parsedLocation, offset: offset, limit: Int32(updatedLength)), tag: tag, continueInBackground: continueInBackground)
                             |> mapError { error -> MultipartFetchDownloadError in
                                 if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_")  {
@@ -387,11 +387,10 @@ private final class MultipartFetchManager {
     let defaultPartSize = 128 * 1024
     let partAlignment = 128 * 1024
     
-    let resource: TelegramMediaResource
+    var resource: TelegramMediaResource
+    var fileReference: Data?
     let parameters: MediaResourceFetchParameters?
     let consumerId: Int64
-    
-    var fileReference: Data?
     
     let queue = Queue()
     
@@ -593,7 +592,7 @@ private final class MultipartFetchManager {
                 requestLimit = (requestLimit / self.partAlignment + 1) * self.partAlignment
             }
             
-            let part = self.source.request(offset: Int32(downloadRange.lowerBound), limit: Int32(requestLimit), tag: self.parameters?.tag, fileReference: self.fileReference, continueInBackground: self.continueInBackground)
+            let part = self.source.request(offset: Int32(downloadRange.lowerBound), limit: Int32(requestLimit), tag: self.parameters?.tag, resource: self.resource, fileReference: self.fileReference, continueInBackground: self.continueInBackground)
             |> deliverOn(self.queue)
             let partDisposable = MetaDisposable()
             self.fetchingParts[downloadRange.lowerBound] = (downloadRange.count, partDisposable)
@@ -622,11 +621,14 @@ private final class MultipartFetchManager {
                             strongSelf.revalidatingMediaReference = true
                             if let info = strongSelf.parameters?.info as? TelegramCloudMediaResourceFetchInfo {
                                 strongSelf.revalidateMediaReferenceDisposable.set((revalidateMediaResourceReference(postbox: strongSelf.postbox, network: strongSelf.network, revalidationContext: strongSelf.revalidationContext, info: info, resource: strongSelf.resource)
-                                |> deliverOn(strongSelf.queue)).start(next: { fileReference in
+                                |> deliverOn(strongSelf.queue)).start(next: { validatedResource in
                                     if let strongSelf = self {
                                         strongSelf.revalidatingMediaReference = false
                                         strongSelf.revalidatedMediaReference = true
-                                        strongSelf.fileReference = fileReference
+                                        if let validatedResource = validatedResource as? TelegramCloudMediaResourceWithFileReference, let reference = validatedResource.fileReference {
+                                            strongSelf.fileReference = reference
+                                        }
+                                        strongSelf.resource = validatedResource
                                         strongSelf.checkState()
                                     }
                                 }, error: { _ in
@@ -675,43 +677,36 @@ private final class MultipartFetchManager {
 func multipartFetch(postbox: Postbox, network: Network, mediaReferenceRevalidationContext: MediaReferenceRevalidationContext, resource: TelegramMediaResource, datacenterId: Int, size: Int?, intervals: Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, parameters: MediaResourceFetchParameters?, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil, continueInBackground: Bool = false) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         let location: MultipartFetchMasterLocation
-        if let resource = resource as? TelegramCloudMediaResource {
-            location = .generic(Int32(datacenterId), { fileReference in
-                return resource.apiInputLocation(fileReference: fileReference)
-            })
-        } else if let resource = resource as? CloudPeerPhotoSizeMediaResource {
-            guard let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo else {
-                subscriber.putError(.generic)
-                return EmptyDisposable
-            }
-            switch info.reference {
-                case let .avatar(peer, _):
-                    location = .generic(Int32(datacenterId), { fileReference in
-                        return resource.apiInputLocation(peerReference: peer)
-                    })
-                default:
-                    subscriber.putError(.generic)
-                    return EmptyDisposable
-            }
-        } else if let resource = resource as? CloudStickerPackThumbnailMediaResource {
-            guard let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo else {
-                subscriber.putError(.generic)
-                return EmptyDisposable
-            }
-            switch info.reference {
-                case let .stickerPackThumbnail(stickerPack, _):
-                    location = .generic(Int32(datacenterId), { fileReference in
-                        return resource.apiInputLocation(packReference: stickerPack)
-                    })
-                default:
-                    subscriber.putError(.generic)
-                    return EmptyDisposable
-            }
-        } else if let resource = resource as? WebFileReferenceMediaResource {
+        if let resource = resource as? WebFileReferenceMediaResource {
             location = .web(Int32(datacenterId), resource.apiInputLocation)
         } else {
-            assertionFailure("multipartFetch: unsupported resource type \(resource)")
-            return EmptyDisposable
+            location = .generic(Int32(datacenterId), { resource, fileReference in
+                if let resource = resource as? TelegramCloudMediaResource {
+                    return resource.apiInputLocation(fileReference: fileReference)
+                } else if let resource = resource as? CloudPeerPhotoSizeMediaResource {
+                    guard let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo else {
+                        return nil
+                    }
+                    switch info.reference {
+                        case let .avatar(peer, _):
+                            return resource.apiInputLocation(peerReference: peer)
+                        default:
+                            return nil
+                    }
+                } else if let resource = resource as? CloudStickerPackThumbnailMediaResource {
+                    guard let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo else {
+                        return nil
+                    }
+                    switch info.reference {
+                        case let .stickerPackThumbnail(stickerPack, _):
+                            return resource.apiInputLocation(packReference: stickerPack)
+                        default:
+                            return nil
+                    }
+                } else {
+                    return nil
+                }
+            })
         }
         
         if encryptionKey != nil {

@@ -13,7 +13,7 @@ private func collectPreCachedResources(for photo: Api.Photo) -> [(MediaResource,
                     case let .photoCachedSize(type, location, _, _, bytes):
                         switch location {
                             case let .fileLocationToBeDeprecated(volumeId, localId):
-                                let resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, fileReference: fileReference.makeData())
+                                let resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference.makeData())
                                 let data = bytes.makeData()
                                 return [(resource, data)]
                         }
@@ -36,7 +36,7 @@ private func collectPreCachedResources(for document: Api.Document) -> [(MediaRes
                         case let .photoCachedSize(type, location, _, _, bytes):
                             switch location {
                                 case let .fileLocationToBeDeprecated(volumeId, localId):
-                                    let resource = CloudDocumentSizeMediaResource(datacenterId: dcId, documentId: id, accessHash: accessHash, sizeSpec: type, fileReference: fileReference.makeData())
+                                    let resource = CloudDocumentSizeMediaResource(datacenterId: dcId, documentId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference.makeData())
                                     let data = bytes.makeData()
                                     return [(resource, data)]
                             }
