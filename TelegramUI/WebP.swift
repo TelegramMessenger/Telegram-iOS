@@ -2,6 +2,7 @@ import UIKit
 import SwiftSignalKit
 import LegacyComponents
 import Display
+import WebP
 
 private func scaleImage(_ image: UIImage, dimensions: CGSize) -> UIImage? {
     if #available(iOSApplicationExtension 10.0, *) {
@@ -33,7 +34,7 @@ func convertToWebP(image: UIImage, targetSize: CGSize?, quality: CGFloat) -> Sig
 //        if let data = try? UIImage.convert(toWebP: processedImage, quality: quality * 100.0) {
 //            subscriber.putNext(data)
 //        }
-        if let data = try? UIImage.convert(toWebP: image, quality: quality * 100.0) {
+        if let data = try? WebP.convert(toWebP: image, quality: quality * 100.0) {
             subscriber.putNext(data)
         }
         subscriber.putCompletion()

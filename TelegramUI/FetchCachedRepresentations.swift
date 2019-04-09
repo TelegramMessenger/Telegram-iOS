@@ -7,6 +7,7 @@ import MobileCoreServices
 import Display
 import UIKit
 import AVFoundation
+import WebP
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {
@@ -128,7 +129,7 @@ private func videoFirstFrameData(account: Account, resource: MediaResource, chun
 private func fetchCachedStickerAJpegRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedStickerAJpegRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            if let image = UIImage.convert(fromWebP: data) {
+            if let image = WebP.convert(fromWebP: data) {
                 var randomId: Int64 = 0
                 arc4random_buf(&randomId, 8)
                 let path = NSTemporaryDirectory() + "\(randomId)"

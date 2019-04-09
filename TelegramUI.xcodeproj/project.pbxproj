@@ -191,6 +191,7 @@
 		D0147BA7206E8B4F00E40378 /* SecureIdAuthAcceptNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0147BA6206E8B4F00E40378 /* SecureIdAuthAcceptNode.swift */; };
 		D0147BA9206EA35000E40378 /* SecureIdDocumentGalleryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0147BA8206EA35000E40378 /* SecureIdDocumentGalleryController.swift */; };
 		D0147BAB206EA6C100E40378 /* SecureIdDocumentImageGalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0147BAA206EA6C100E40378 /* SecureIdDocumentImageGalleryItem.swift */; };
+		D015E04F225D2E5900CB9E8A /* WebP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D015E04E225D2E5900CB9E8A /* WebP.framework */; };
 		D017734C22049BF800DA06A7 /* UpgradedAccounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D017734B22049BF800DA06A7 /* UpgradedAccounts.swift */; };
 		D01776B31F1D69A80044446D /* RadialStatusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01776B21F1D69A80044446D /* RadialStatusNode.swift */; };
 		D01776B51F1D6CCC0044446D /* RadialStatusContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01776B41F1D6CCC0044446D /* RadialStatusContentNode.swift */; };
@@ -1111,7 +1112,6 @@
 		D0EC6E831EB9F58900EBF1C3 /* NotificationItemContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C50E3D1E93D09200F62E39 /* NotificationItemContainerNode.swift */; };
 		D0EC6E841EB9F58900EBF1C3 /* NotificationItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C50E3B1E93CC2600F62E39 /* NotificationItem.swift */; };
 		D0EC6E851EB9F58900EBF1C3 /* ChatMessageNotificationItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C50E3F1E93D3B000F62E39 /* ChatMessageNotificationItem.swift */; };
-		D0EC6E861EB9F58900EBF1C3 /* UIImage+WebP.m in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E991D6B8D200046BCD6 /* UIImage+WebP.m */; };
 		D0EC6E871EB9F58900EBF1C3 /* FastBlur.m in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E801D6B8C850046BCD6 /* FastBlur.m */; };
 		D0EC6E891EB9F58900EBF1C3 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E831D6B8C850046BCD6 /* FrameworkBundle.swift */; };
 		D0EC6E8B1EB9F58900EBF1C3 /* RingBuffer.m in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E861D6B8C850046BCD6 /* RingBuffer.m */; };
@@ -1124,7 +1124,6 @@
 		D0EC6E921EB9F5B200EBF1C3 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08D452C1D5E340300A7428A /* SwiftSignalKit.framework */; };
 		D0EC6E931EB9F5B200EBF1C3 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08D452D1D5E340300A7428A /* TelegramCore.framework */; };
 		D0EC6E961EB9F5B300EBF1C3 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EC6E941EB9F5B300EBF1C3 /* MtProtoKitDynamic.framework */; };
-		D0EC6E9C1EB9F5E600EBF1C3 /* libwebp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0F69EA61D6B9BBC0046BCD6 /* libwebp.a */; };
 		D0EC6EA21EB9FAFA00EBF1C3 /* libopus.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D03B251DECB26D00220C46 /* libopus.a */; };
 		D0EC6EA31EB9FB7A00EBF1C3 /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D075518E1DDA4F9E0073E051 /* SSignalKit.framework */; };
 		D0EC6EA41EB9FB8000EBF1C3 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AB0BB21D6718EB002C78E7 /* libz.tbd */; };
@@ -1385,6 +1384,7 @@
 		D0147BA6206E8B4F00E40378 /* SecureIdAuthAcceptNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdAuthAcceptNode.swift; sourceTree = "<group>"; };
 		D0147BA8206EA35000E40378 /* SecureIdDocumentGalleryController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdDocumentGalleryController.swift; sourceTree = "<group>"; };
 		D0147BAA206EA6C100E40378 /* SecureIdDocumentImageGalleryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureIdDocumentImageGalleryItem.swift; sourceTree = "<group>"; };
+		D015E04E225D2E5900CB9E8A /* WebP.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WebP.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D017494D1E1059570057C89A /* StringWithAppliedEntities.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StringWithAppliedEntities.swift; sourceTree = "<group>"; };
 		D01749501E1067E40057C89A /* HashtagSearchController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HashtagSearchController.swift; sourceTree = "<group>"; };
 		D01749521E1068820057C89A /* HashtagSearchControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HashtagSearchControllerNode.swift; sourceTree = "<group>"; };
@@ -2374,8 +2374,6 @@
 		D0F69E871D6B8C850046BCD6 /* RingByteBuffer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RingByteBuffer.swift; sourceTree = "<group>"; };
 		D0F69E931D6B8C9B0046BCD6 /* ProgressiveImage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProgressiveImage.swift; sourceTree = "<group>"; };
 		D0F69E941D6B8C9B0046BCD6 /* WebP.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WebP.swift; sourceTree = "<group>"; };
-		D0F69E981D6B8D200046BCD6 /* UIImage+WebP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIImage+WebP.h"; sourceTree = "<group>"; };
-		D0F69E991D6B8D200046BCD6 /* UIImage+WebP.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIImage+WebP.m"; sourceTree = "<group>"; };
 		D0F69E9F1D6B8E380046BCD6 /* PhotoResources.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoResources.swift; sourceTree = "<group>"; };
 		D0F69EA01D6B8E380046BCD6 /* StickerResources.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerResources.swift; sourceTree = "<group>"; };
 		D0F69EA51D6B8F3E0046BCD6 /* TelegramUIIncludes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TelegramUIIncludes.h; sourceTree = "<group>"; };
@@ -2420,6 +2418,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D015E04F225D2E5900CB9E8A /* WebP.framework in Frameworks */,
 				D05B077421BFC38600B1D27C /* FFMpeg.framework in Frameworks */,
 				D045549A21B2F173007A6DD9 /* libturbojpeg.a in Frameworks */,
 				091BEAB3214552D9003AEA30 /* Vision.framework in Frameworks */,
@@ -2436,7 +2435,6 @@
 				D0EC6EA41EB9FB8000EBF1C3 /* libz.tbd in Frameworks */,
 				D0EC6EA31EB9FB7A00EBF1C3 /* SSignalKit.framework in Frameworks */,
 				D0EC6EA21EB9FAFA00EBF1C3 /* libopus.a in Frameworks */,
-				D0EC6E9C1EB9F5E600EBF1C3 /* libwebp.a in Frameworks */,
 				D0EC6E961EB9F5B300EBF1C3 /* MtProtoKitDynamic.framework in Frameworks */,
 				D0EC6E8F1EB9F5B200EBF1C3 /* AsyncDisplayKit.framework in Frameworks */,
 				D0EC6E901EB9F5B200EBF1C3 /* Display.framework in Frameworks */,
@@ -3601,6 +3599,7 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D015E04E225D2E5900CB9E8A /* WebP.framework */,
 				D05B077321BFC38600B1D27C /* FFMpeg.framework */,
 				D05B077121BFB9F600B1D27C /* FFMpeg.framework */,
 				D045549921B2F173007A6DD9 /* libturbojpeg.a */,
@@ -4831,8 +4830,6 @@
 			children = (
 				D007019F2029F6D0006B9E34 /* TGMimeTypeMap.h */,
 				D00701A02029F6D0006B9E34 /* TGMimeTypeMap.m */,
-				D0F69E981D6B8D200046BCD6 /* UIImage+WebP.h */,
-				D0F69E991D6B8D200046BCD6 /* UIImage+WebP.m */,
 				D0F69E7F1D6B8C850046BCD6 /* FastBlur.h */,
 				D0F69E801D6B8C850046BCD6 /* FastBlur.m */,
 				D0F69E831D6B8C850046BCD6 /* FrameworkBundle.swift */,
@@ -6232,7 +6229,6 @@
 				D0CB27D220C17A7F001ACF93 /* TermsOfServiceControllerNode.swift in Sources */,
 				D0EC6E841EB9F58900EBF1C3 /* NotificationItem.swift in Sources */,
 				D0EC6E851EB9F58900EBF1C3 /* ChatMessageNotificationItem.swift in Sources */,
-				D0EC6E861EB9F58900EBF1C3 /* UIImage+WebP.m in Sources */,
 				D0EC6E871EB9F58900EBF1C3 /* FastBlur.m in Sources */,
 				D093D80820654A2900BC3599 /* BotPaymentDateItemNode.swift in Sources */,
 				D04281FE200E639A009DDE36 /* ChatRecentActionsTitleView.swift in Sources */,

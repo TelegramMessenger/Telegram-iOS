@@ -151,7 +151,6 @@ final class SelectablePeerNode: ASDisplayNode {
                     context.fillEllipse(in: CGRect(origin: CGPoint(x: 2.0, y: 2.0), size: CGSize(width: size.width - 4.0, height: size.height - 4.0)))
                 })
                 if animated {
-                    //self.avatarNode.layer.animateSpring(from: 1.0 as NSNumber, to: 0.866666 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 10.0)
                     self.avatarNode.layer.animateScale(from: 1.0, to: 0.866666, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
                     self.avatarSelectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                 }
@@ -159,7 +158,6 @@ final class SelectablePeerNode: ASDisplayNode {
                 self.avatarNode.transform = CATransform3DIdentity
                 self.avatarSelectionNode.alpha = 0.0
                 if animated {
-                    //self.avatarNode.layer.animateSpring(from: 0.866666 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.6, initialVelocity: 10.0)
                     self.avatarNode.layer.animateScale(from: 0.866666, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
                     self.avatarSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.28, completion: { [weak avatarSelectionNode] _ in
                         avatarSelectionNode?.image = nil
