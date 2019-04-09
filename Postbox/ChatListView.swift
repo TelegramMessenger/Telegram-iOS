@@ -60,13 +60,13 @@ public struct ChatListMessageTagSummaryInfo: Equatable {
 }*/
 
 public enum ChatListEntry: Comparable {
-    case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer, ChatListMessageTagSummaryInfo)
+    case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer, PeerPresence?, ChatListMessageTagSummaryInfo)
     case HoleEntry(ChatListHole)
     //case GroupReferenceEntry(PeerGroupId, ChatListIndex, Message?, [Peer], GroupReferenceUnreadCounters)
     
     public var index: ChatListIndex {
         switch self {
-            case let .MessageEntry(index, _, _, _, _, _, _):
+            case let .MessageEntry(index, _, _, _, _, _, _, _):
                 return index
             case let .HoleEntry(hole):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
@@ -77,9 +77,9 @@ public enum ChatListEntry: Comparable {
 
     public static func ==(lhs: ChatListEntry, rhs: ChatListEntry) -> Bool {
         switch lhs {
-            case let .MessageEntry(lhsIndex, lhsMessage, lhsReadState, lhsSettings, lhsEmbeddedState, lhsPeer, lhsInfo):
+            case let .MessageEntry(lhsIndex, lhsMessage, lhsReadState, lhsSettings, lhsEmbeddedState, lhsPeer, lhsPresence, lhsInfo):
                 switch rhs {
-                    case let .MessageEntry(rhsIndex, rhsMessage, rhsReadState, rhsSettings, rhsEmbeddedState, rhsPeer, rhsInfo):
+                    case let .MessageEntry(rhsIndex, rhsMessage, rhsReadState, rhsSettings, rhsEmbeddedState, rhsPeer, rhsPresence, rhsInfo):
                         if lhsIndex != rhsIndex {
                             return false
                         }
@@ -104,6 +104,13 @@ public enum ChatListEntry: Comparable {
                             return false
                         }
                         if lhsPeer != rhsPeer {
+                            return false
+                        }
+                        if let lhsPresence = lhsPresence, let rhsPresence = rhsPresence {
+                            if !lhsPresence.isEqual(to: rhsPresence) {
+                                return false
+                            }
+                        } else if (lhsPresence != nil) != (rhsPresence != nil) {
                             return false
                         }
                         if lhsInfo != rhsInfo {
@@ -165,7 +172,7 @@ private func processedChatListEntry(_ entry: MutableChatListEntry, cachedDataTab
 
 enum MutableChatListEntry: Equatable {
     case IntermediateMessageEntry(ChatListIndex, IntermediateMessage?, CombinedPeerReadState?, PeerChatListEmbeddedInterfaceState?)
-    case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer, ChatListMessageTagSummaryInfo)
+    case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer, PeerPresence?, ChatListMessageTagSummaryInfo)
     case HoleEntry(ChatListHole)
     /*case IntermediateGroupReferenceEntry(PeerGroupId, ChatListIndex, ChatListGroupReferenceUnreadCounters?)
     case GroupReferenceEntry(PeerGroupId, ChatListIndex, Message?, ChatListGroupReferenceTopPeers, ChatListGroupReferenceUnreadCounters)*/
@@ -185,7 +192,7 @@ enum MutableChatListEntry: Equatable {
         switch self {
             case let .IntermediateMessageEntry(index, _, _, _):
                 return index
-            case let .MessageEntry(index, _, _, _, _, _, _):
+            case let .MessageEntry(index, _, _, _, _, _, _, _):
                 return index
             case let .HoleEntry(hole):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
@@ -350,7 +357,7 @@ final class MutableChatListView {
         }
     }
     
-    func replay(postbox: Postbox, operations: [WrappedPeerGroupId: [ChatListOperation]], updatedPeerNotificationSettings: [PeerId: PeerNotificationSettings], updatedPeers: [PeerId: Peer], transaction: PostboxTransaction, context: MutableChatListViewReplayContext) -> Bool {
+    func replay(postbox: Postbox, operations: [WrappedPeerGroupId: [ChatListOperation]], updatedPeerNotificationSettings: [PeerId: PeerNotificationSettings], updatedPeers: [PeerId: Peer], updatedPeerPresences: [PeerId: PeerPresence], transaction: PostboxTransaction, context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         //var cachedGroupCounters: [PeerGroupId: ChatListGroupReferenceUnreadCounters] = [:]
         
@@ -428,13 +435,13 @@ final class MutableChatListView {
         if !updatedPeerNotificationSettings.isEmpty {
             for i in 0 ..< self.entries.count {
                 switch self.entries[i] {
-                    case let .MessageEntry(index, message, readState, _, embeddedState, peer, summaryInfo):
+                    case let .MessageEntry(index, message, readState, _, embeddedState, peer, peerPresence, summaryInfo):
                         var notificationSettingsPeerId = peer.peerId
                         if let peer = peer.peers[peer.peerId], let associatedPeerId = peer.associatedPeerId {
                             notificationSettingsPeerId = associatedPeerId
                         }
                         if let settings = updatedPeerNotificationSettings[notificationSettingsPeerId] {
-                            self.entries[i] = .MessageEntry(index, message, readState, settings, embeddedState, peer, summaryInfo)
+                            self.entries[i] = .MessageEntry(index, message, readState, settings, embeddedState, peer, peerPresence, summaryInfo)
                             hasChanges = true
                         }
                     default:
@@ -445,14 +452,31 @@ final class MutableChatListView {
         if !updatedPeers.isEmpty {
             for i in 0 ..< self.entries.count {
                 switch self.entries[i] {
-                    case let .MessageEntry(index, message, readState, settings, embeddedState, peer, summaryInfo):
+                    case let .MessageEntry(index, message, readState, settings, embeddedState, peer, peerPresence, summaryInfo):
                         var updatedMessage: Message?
                         if let message = message {
                             updatedMessage = updateMessagePeers(message, updatedPeers: updatedPeers)
                         }
                         let updatedPeer = updatedRenderedPeer(peer, updatedPeers: updatedPeers)
                         if updatedMessage != nil || updatedPeer != nil {
-                            self.entries[i] = .MessageEntry(index, updatedMessage ?? message, readState, settings, embeddedState, updatedPeer ?? peer, summaryInfo)
+                            self.entries[i] = .MessageEntry(index, updatedMessage ?? message, readState, settings, embeddedState, updatedPeer ?? peer, peerPresence, summaryInfo)
+                            hasChanges = true
+                        }
+                    default:
+                        continue
+                }
+            }
+        }
+        if !updatedPeerPresences.isEmpty {
+            for i in 0 ..< self.entries.count {
+                switch self.entries[i] {
+                    case let .MessageEntry(index, message, readState, settings, embeddedState, peer, _, summaryInfo):
+                        var presencePeerId = peer.peerId
+                        if let peer = peer.peers[peer.peerId], let associatedPeerId = peer.associatedPeerId {
+                            presencePeerId = associatedPeerId
+                        }
+                        if let presence = updatedPeerPresences[presencePeerId] {
+                            self.entries[i] = .MessageEntry(index, message, readState, settings, embeddedState, peer, presence, summaryInfo)
                             hasChanges = true
                         }
                     default:
@@ -463,7 +487,7 @@ final class MutableChatListView {
         if !transaction.currentUpdatedMessageTagSummaries.isEmpty || !transaction.currentUpdatedMessageActionsSummaries.isEmpty {
             for i in 0 ..< self.entries.count {
                 switch self.entries[i] {
-                    case let .MessageEntry(index, message, readState, settings, embeddedState, peer, currentSummary):
+                    case let .MessageEntry(index, message, readState, settings, embeddedState, peer, peerPresence, currentSummary):
                         var updatedTagSummaryCount: Int32?
                         var updatedActionsSummaryCount: Int32?
                         
@@ -484,7 +508,7 @@ final class MutableChatListView {
                         if updatedTagSummaryCount != nil || updatedActionsSummaryCount != nil {
                             let summaryInfo = ChatListMessageTagSummaryInfo(tagSummaryCount: updatedTagSummaryCount ?? currentSummary.tagSummaryCount, actionsSummaryCount: updatedActionsSummaryCount ?? currentSummary.actionsSummaryCount)
                             
-                            self.entries[i] = .MessageEntry(index, message, readState, settings, embeddedState, peer, summaryInfo)
+                            self.entries[i] = .MessageEntry(index, message, readState, settings, embeddedState, peer, peerPresence, summaryInfo)
                             hasChanges = true
                         }
                     default:
@@ -737,7 +761,7 @@ final class MutableChatListView {
         return nil
     }
     
-    private func renderEntry(_ entry: MutableChatListEntry, postbox: Postbox, renderMessage: (IntermediateMessage) -> Message, getPeer: (PeerId) -> Peer?, getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?) -> MutableChatListEntry? {
+    private func renderEntry(_ entry: MutableChatListEntry, postbox: Postbox, renderMessage: (IntermediateMessage) -> Message, getPeer: (PeerId) -> Peer?, getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?, getPeerPresence: (PeerId) -> PeerPresence?) -> MutableChatListEntry? {
         switch entry {
             case let .IntermediateMessageEntry(index, message, combinedReadState, embeddedState):
                 let renderedMessage: Message?
@@ -748,6 +772,7 @@ final class MutableChatListView {
                 }
                 var peers = SimpleDictionary<PeerId, Peer>()
                 var notificationSettings: PeerNotificationSettings?
+                var presence: PeerPresence?
                 if let peer = getPeer(index.messageIndex.id.peerId) {
                     peers[peer.id] = peer
                     if let associatedPeerId = peer.associatedPeerId {
@@ -755,8 +780,10 @@ final class MutableChatListView {
                             peers[associatedPeer.id] = associatedPeer
                         }
                         notificationSettings = getPeerNotificationSettings(associatedPeerId)
+                        presence = getPeerPresence(associatedPeerId)
                     } else {
                         notificationSettings = getPeerNotificationSettings(index.messageIndex.id.peerId)
+                        presence = getPeerPresence(index.messageIndex.id.peerId)
                     }
                 }
                 
@@ -775,7 +802,7 @@ final class MutableChatListView {
                     actionsSummaryCount = postbox.pendingMessageActionsMetadataTable.getCount(.peerNamespaceAction(key.peerId, key.namespace, key.type))
                 }
                 
-                return .MessageEntry(index, renderedMessage, combinedReadState, notificationSettings, embeddedState, RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers), ChatListMessageTagSummaryInfo(tagSummaryCount: tagSummaryCount, actionsSummaryCount: actionsSummaryCount))
+                return .MessageEntry(index, renderedMessage, combinedReadState, notificationSettings, embeddedState, RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers), presence, ChatListMessageTagSummaryInfo(tagSummaryCount: tagSummaryCount, actionsSummaryCount: actionsSummaryCount))
             /*case let .IntermediateGroupReferenceEntry(groupId, index, counters):
                 let message = postbox.messageHistoryTable.getMessage(index.messageIndex).flatMap(postbox.renderIntermediateMessage)
                return .GroupReferenceEntry(groupId, index, message, ChatListGroupReferenceTopPeers(postbox: postbox, groupId: groupId), counters ?? ChatListGroupReferenceUnreadCounters(postbox: postbox, groupId: groupId))*/
@@ -784,14 +811,14 @@ final class MutableChatListView {
         }
     }
     
-    func render(postbox: Postbox, renderMessage: (IntermediateMessage) -> Message, getPeer: (PeerId) -> Peer?, getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?) {
+    func render(postbox: Postbox, renderMessage: (IntermediateMessage) -> Message, getPeer: (PeerId) -> Peer?, getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?, getPeerPresence: (PeerId) -> PeerPresence?) {
         for i in 0 ..< self.entries.count {
-            if let updatedEntry = self.renderEntry(self.entries[i], postbox: postbox, renderMessage: renderMessage, getPeer: getPeer, getPeerNotificationSettings: getPeerNotificationSettings) {
+            if let updatedEntry = self.renderEntry(self.entries[i], postbox: postbox, renderMessage: renderMessage, getPeer: getPeer, getPeerNotificationSettings: getPeerNotificationSettings, getPeerPresence: getPeerPresence) {
                 self.entries[i] = updatedEntry
             }
         }
         for i in 0 ..< self.additionalItemEntries.count {
-            if let updatedEntry = self.renderEntry(self.additionalItemEntries[i], postbox: postbox, renderMessage: renderMessage, getPeer: getPeer, getPeerNotificationSettings: getPeerNotificationSettings) {
+            if let updatedEntry = self.renderEntry(self.additionalItemEntries[i], postbox: postbox, renderMessage: renderMessage, getPeer: getPeer, getPeerNotificationSettings: getPeerNotificationSettings, getPeerPresence: getPeerPresence) {
                 self.additionalItemEntries[i] = updatedEntry
             }
         }
@@ -811,8 +838,8 @@ public final class ChatListView {
         var entries: [ChatListEntry] = []
         for entry in mutableView.entries {
             switch entry {
-                case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo):
-                    entries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo))
+                case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo):
+                    entries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo))
                 case let .HoleEntry(hole):
                     entries.append(.HoleEntry(hole))
                 /*case let .GroupReferenceEntry(groupId, index, message, topPeers, counters):
@@ -830,8 +857,8 @@ public final class ChatListView {
         var additionalItemEntries: [ChatListEntry] = []
         for entry in mutableView.additionalItemEntries {
             switch entry {
-                case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo):
-                    additionalItemEntries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo))
+                case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo):
+                    additionalItemEntries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo))
                 case .HoleEntry:
                     assertionFailure()
                 /*case .GroupReferenceEntry:
