@@ -225,6 +225,9 @@
 		D00ED75D1FE95287001F38BD /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D00ED75B1FE95287001F38BD /* InfoPlist.strings */; };
 		D015E011225CCEB300CB9E8A /* ReadBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015E010225CCEB300CB9E8A /* ReadBuffer.swift */; };
 		D015E01F225CDF5100CB9E8A /* Api0.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015E01E225CDF5000CB9E8A /* Api0.swift */; };
+		D015E04D225D2D8F00CB9E8A /* WebP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D015E04C225D2D8F00CB9E8A /* WebP.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		D015E050225D303F00CB9E8A /* WebP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D015E04C225D2D8F00CB9E8A /* WebP.framework */; };
+		D015E051225D303F00CB9E8A /* WebP.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D015E04C225D2D8F00CB9E8A /* WebP.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D01A47551F4DBED700383CC1 /* HockeySDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01A47541F4DBED700383CC1 /* HockeySDK.framework */; };
 		D021D4D9219CAEDD0064BEBA /* Config-Fork.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */; };
 		D02CF5FD215D9ABF00E0F56A /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AA1A671D568BA400152314 /* UserNotifications.framework */; };
@@ -545,6 +548,7 @@
 				D096C2C21CC3C104006D814E /* Postbox.framework in Embed Frameworks */,
 				D096C2C51CC3C11A006D814E /* SwiftSignalKit.framework in Embed Frameworks */,
 				D006CFA021A8D11B00FDCD32 /* ModernProto.framework in Embed Frameworks */,
+				D015E051225D303F00CB9E8A /* WebP.framework in Embed Frameworks */,
 				D0CAF3191D763B230011F558 /* MtProtoKitDynamic.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
@@ -932,6 +936,7 @@
 		D00ED75C1FE95287001F38BD /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		D015E010225CCEB300CB9E8A /* ReadBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadBuffer.swift; sourceTree = "<group>"; };
 		D015E01E225CDF5000CB9E8A /* Api0.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Api0.swift; sourceTree = "<group>"; };
+		D015E04C225D2D8F00CB9E8A /* WebP.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WebP.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01A47521F4DBEB100383CC1 /* libHockeySDK.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libHockeySDK.a; path = "../../build/HockeySDK-iOS/Support/build/Debug-iphoneos/libHockeySDK.a"; sourceTree = "<group>"; };
 		D01A47541F4DBED700383CC1 /* HockeySDK.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = HockeySDK.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D021D4D7219CAEDD0064BEBA /* Telegram-iOS-Fork.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Telegram-iOS-Fork.entitlements"; sourceTree = "<group>"; };
@@ -1214,6 +1219,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D015E04D225D2D8F00CB9E8A /* WebP.framework in Frameworks */,
 				D0CCD61D222EFFB000EE1E08 /* MtProtoKitDynamic.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1233,6 +1239,7 @@
 				D0CD17B51CC3AE14007C5650 /* AsyncDisplayKit.framework in Frameworks */,
 				D0D17E8A1CAAD66600C4750B /* Accelerate.framework in Frameworks */,
 				D0F575132083B96B00F1C1E1 /* CloudKit.framework in Frameworks */,
+				D015E050225D303F00CB9E8A /* WebP.framework in Frameworks */,
 				D006CF9F21A8D11B00FDCD32 /* ModernProto.framework in Frameworks */,
 				D0B4AF8F1EC122A700D51FF6 /* TelegramUI.framework in Frameworks */,
 				D096C2BE1CC3C021006D814E /* Display.framework in Frameworks */,
@@ -2042,6 +2049,7 @@
 		D00859C21B281E0000EAF753 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D015E04C225D2D8F00CB9E8A /* WebP.framework */,
 				D0CCD61C222EFFB000EE1E08 /* MtProtoKitDynamic.framework */,
 				D0CAD6A121C03BE2001E3055 /* FFMpeg.framework */,
 				D006CFA121A8D12600FDCD32 /* ModernProto.framework */,

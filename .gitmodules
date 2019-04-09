@@ -34,3 +34,6 @@ url=../ffmpeg.git
 [submodule "submodules/LegacyComponents"]
 	path = submodules/LegacyComponents
 url=../legacycomponents.git
+[submodule "submodules/webp"]
+	path = submodules/webp
+url=../webp.git

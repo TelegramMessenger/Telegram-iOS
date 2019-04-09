@@ -1,6 +1,7 @@
 import Foundation
 import UserNotifications
 import MtProtoKitDynamic
+import WebP
 
 private var sharedLogger: Logger?
 
@@ -324,7 +325,7 @@ class NotificationService: UNNotificationServiceExtension {
             let imagesPath = NSTemporaryDirectory() + "aps-data"
             let _ = try? FileManager.default.createDirectory(atPath: imagesPath, withIntermediateDirectories: true, attributes: nil)
             
-            let accountBasePath = rootPath + "account-\(UInt64(bitPattern: account.id))"
+            let accountBasePath = rootPath + "/account-\(UInt64(bitPattern: account.id))"
             
             let mediaBoxPath = accountBasePath + "/postbox/media"
             
@@ -333,6 +334,7 @@ class NotificationService: UNNotificationServiceExtension {
             
             var inputFileLocation: (Int32, Api.InputFileLocation)?
             var fetchResourceId: String?
+            var isPng = false
             
             if let attachment = attachment {
                 switch attachment {
@@ -356,14 +358,26 @@ class NotificationService: UNNotificationServiceExtension {
                         }
                     case let .document(document):
                         switch document {
-                            case let .document(_, id, accessHash, fileReference, _, _, _, thumbs, dcId, _):
+                            case let .document(_, id, accessHash, fileReference, _, _, _, thumbs, dcId, attributes):
+                                var isSticker = false
+                                for attribute in attributes {
+                                    switch attribute {
+                                        case .documentAttributeSticker:
+                                            isSticker = true
+                                        default:
+                                            break
+                                    }
+                                }
                                 if let thumbs = thumbs {
                                     loop: for size in thumbs {
                                         switch size {
                                             case let .photoSize(type, _, _, _, _):
-                                                if type == "m" {
+                                                if (isSticker && type == "s") || type == "m" {
+                                                    if isSticker {
+                                                        isPng = true
+                                                    }
                                                     inputFileLocation = (dcId, .inputDocumentFileLocation(id: id, accessHash: accessHash, fileReference: fileReference, thumbSize: type))
-                                                    fetchResourceId = "telegram-cloud-photo-size-\(dcId)-\(id)-\(type)"
+                                                    fetchResourceId = "telegram-cloud-document-size-\(dcId)-\(id)-\(type)"
                                                     break loop
                                                 }
                                             default:
@@ -376,8 +390,8 @@ class NotificationService: UNNotificationServiceExtension {
             }
             
             if let fetchResourceId = fetchResourceId {
-                tempImagePath = imagesPath + "/\(fetchResourceId).jpg"
-                mediaBoxThumbnailImagePath = mediaBoxPath + "/\(fetchResourceId).jpg"
+                tempImagePath = imagesPath + "/\(fetchResourceId).\(isPng ? "png" : "jpg")"
+                mediaBoxThumbnailImagePath = mediaBoxPath + "/\(fetchResourceId)"
             }
             
             if let aps = dict["aps"] as? [AnyHashable: Any] {
@@ -424,26 +438,49 @@ class NotificationService: UNNotificationServiceExtension {
             
             self.cancelFetch?()
             if let mediaBoxThumbnailImagePath = mediaBoxThumbnailImagePath, let tempImagePath = tempImagePath, let (datacenterId, inputFileLocation) = inputFileLocation {
-                self.cancelFetch = fetchImageWithAccount(proxyConnection: accountInfos.proxy, account: account, inputFileLocation: inputFileLocation, datacenterId: datacenterId, completion: { [weak self] data in
-                    DispatchQueue.main.async {
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.cancelFetch?()
-                        strongSelf.cancelFetch = nil
-                        if let data = data {
-                            let _ = try? data.write(to: URL(fileURLWithPath: mediaBoxThumbnailImagePath))
-                            if let _ = try? data.write(to: URL(fileURLWithPath: tempImagePath)) {
-                                if let attachment = try? UNNotificationAttachment(identifier: "image", url: URL(fileURLWithPath: tempImagePath)) {
-                                    strongSelf.bestAttemptContent?.attachments = [attachment]
-                                }
-                            }
-                        }
-                        if let bestAttemptContent = strongSelf.bestAttemptContent {
-                            contentHandler(bestAttemptContent)
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: mediaBoxThumbnailImagePath)) {
+                    var tempData = data
+                    if isPng {
+                        if let image = WebP.convert(fromWebP: data), let imageData = image.pngData() {
+                            tempData = imageData
                         }
                     }
-                })
+                    if let _ = try? tempData.write(to: URL(fileURLWithPath: tempImagePath)) {
+                        if let attachment = try? UNNotificationAttachment(identifier: "image", url: URL(fileURLWithPath: tempImagePath)) {
+                            self.bestAttemptContent?.attachments = [attachment]
+                        }
+                    }
+                    if let bestAttemptContent = self.bestAttemptContent {
+                        contentHandler(bestAttemptContent)
+                    }
+                } else {
+                    self.cancelFetch = fetchImageWithAccount(proxyConnection: accountInfos.proxy, account: account, inputFileLocation: inputFileLocation, datacenterId: datacenterId, completion: { [weak self] data in
+                        DispatchQueue.main.async {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.cancelFetch?()
+                            strongSelf.cancelFetch = nil
+                            if let data = data {
+                                let _ = try? data.write(to: URL(fileURLWithPath: mediaBoxThumbnailImagePath))
+                                var tempData = data
+                                if isPng {
+                                    if let image = WebP.convert(fromWebP: data), let imageData = image.pngData() {
+                                        tempData = imageData
+                                    }
+                                }
+                                if let _ = try? tempData.write(to: URL(fileURLWithPath: tempImagePath)) {
+                                    if let attachment = try? UNNotificationAttachment(identifier: "image", url: URL(fileURLWithPath: tempImagePath)) {
+                                        strongSelf.bestAttemptContent?.attachments = [attachment]
+                                    }
+                                }
+                            }
+                            if let bestAttemptContent = strongSelf.bestAttemptContent {
+                                contentHandler(bestAttemptContent)
+                            }
+                        }
+                    })
+                }
             } else {
                 if let bestAttemptContent = self.bestAttemptContent {
                     contentHandler(bestAttemptContent)

@@ -44,7 +44,7 @@ private func parseFileLocationResource(_ dict: [AnyHashable: Any]) -> TelegramMe
 
 class NotificationViewController: UIViewController, UNNotificationContentExtension {
     private let imageNode = TransformImageNode()
-    private var imageDimensions: CGSize?
+    private var imageInfo: (isSticker: Bool, dimensions: CGSize)?
     
     private let applyDisposable = MetaDisposable()
     private let fetchedDisposable = MetaDisposable()
@@ -147,7 +147,7 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
                 self.view.frame = CGRect(origin: self.view.frame.origin, size: fittedSize)
                 self.preferredContentSize = fittedSize
                 
-                self.imageDimensions = dimensions
+                self.imageInfo = (false, dimensions)
                 self.updateImageLayout(boundingSize: self.view.bounds.size)
                 
                 let mediaBoxPath = accountsPath + "/" + accountRecordIdPathName(AccountRecordId(rawValue: accountIdValue)) + "/postbox/media"
@@ -211,9 +211,12 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
                     return
                 }
                 
-                let fittedSize = dimensions.fitted(CGSize(width: min(300.0, self.view.bounds.width), height: 300.0))
+                let fittedSize = dimensions.fitted(CGSize(width: min(256.0, self.view.bounds.width), height: 256.0))
                 self.view.frame = CGRect(origin: self.view.frame.origin, size: fittedSize)
                 self.preferredContentSize = fittedSize
+                
+                self.imageInfo = (true, dimensions)
+                self.updateImageLayout(boundingSize: self.view.bounds.size)
                 
                 self.applyDisposable.set((sharedAccountContext.activeAccounts
                 |> map { _, accounts, _ -> Account? in
@@ -267,12 +270,18 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
     }
     
     private func updateImageLayout(boundingSize: CGSize) {
-        if let imageDimensions = self.imageDimensions {
+        if let (isSticker, dimensions) = self.imageInfo {
             let makeLayout = self.imageNode.asyncLayout()
-            let fittedSize = imageDimensions.fitted(CGSize(width: boundingSize.width, height: 1000.0))
+            let fittedSize: CGSize
+            if isSticker {
+                fittedSize = dimensions.fitted(CGSize(width: min(256.0, boundingSize.width), height: 256.0))
+            } else {
+                fittedSize = dimensions.fitted(CGSize(width: boundingSize.width, height: 1000.0))
+            }
             let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: 0.0), imageSize: fittedSize, boundingSize: fittedSize, intrinsicInsets: UIEdgeInsets()))
             apply()
-            self.imageNode.frame = CGRect(origin: CGPoint(), size: boundingSize)
+            let displaySize = isSticker ? fittedSize : boundingSize
+            self.imageNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - displaySize.width) / 2.0), y: 0.0), size: displaySize)
         }
     }
 }
