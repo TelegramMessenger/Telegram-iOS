@@ -4188,6 +4188,7 @@ Unused sets are archived when you add more.";
 "SettingsSearch.Synonyms.Appearance.ChatBackground.Custom" = " ";
 "SettingsSearch.Synonyms.Appearance.AutoNightTheme" = " ";
 "SettingsSearch.Synonyms.Appearance.ColorTheme" = " ";
+"SettingsSearch.Synonyms.Appearance.LargeEmoji" = " ";
 "SettingsSearch.Synonyms.Appearance.Animations" = "Animations";
 
 "SettingsSearch.Synonyms.SavedMessages" = " ";
@@ -4221,3 +4222,8 @@ Unused sets are archived when you add more.";
 
 "Conversation.PrivateMessageLinkCopied" = "This link will only work for members of this chat.";
 "Conversation.ErrorInaccessibleMessage" = "Unfortunately, you can't access this message. You are not a member of the chat where it was posted.";
+
+"Stickers.ClearRecent" = "Clear Recent Stickers";
+
+"Appearance.Other" = "Other";
+"Appearance.LargeEmoji" = "Large Emoji";
