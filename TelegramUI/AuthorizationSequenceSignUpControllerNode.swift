@@ -170,8 +170,8 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     
     func updateData(firstName: String, lastName: String, hasTermsOfService: Bool) {
         self.termsNode.isHidden = !hasTermsOfService
-        self.firstNameField.textField.attributedPlaceholder = NSAttributedString(string: firstName, font: Font.regular(20.0), textColor: self.theme.list.itemPlaceholderTextColor)
-        self.lastNameField.textField.attributedPlaceholder = NSAttributedString(string: lastName, font: Font.regular(20.0), textColor: self.theme.list.itemPlaceholderTextColor)
+        self.firstNameField.textField.attributedText = NSAttributedString(string: firstName, font: Font.regular(20.0), textColor: self.theme.list.itemPlaceholderTextColor)
+        self.lastNameField.textField.attributedText = NSAttributedString(string: lastName, font: Font.regular(20.0), textColor: self.theme.list.itemPlaceholderTextColor)
         
         if let (layout, navigationHeight) = self.layoutArguments {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
