@@ -69,3 +69,14 @@ public func imageRepresentationLargerThan(_ representations: [TelegramMediaImage
         }
     }
 }
+
+public func parseMediaData(data: Data) -> Media? {
+    if let object = Api.parse(Buffer(data: data)) {
+        if let photo = object as? Api.Photo {
+            return telegramMediaImageFromApiPhoto(photo)
+        } else if let document = object as? Api.Document {
+            return telegramMediaFileFromApiDocument(document)
+        }
+    }
+    return nil
+}
