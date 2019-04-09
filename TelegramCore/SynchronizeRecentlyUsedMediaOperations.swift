@@ -10,12 +10,14 @@ import SwiftSignalKit
 private enum SynchronizeRecentlyUsedMediaOperationContentType: Int32 {
     case add
     case remove
+    case clear
     case sync
 }
 
 enum SynchronizeRecentlyUsedMediaOperationContent: PostboxCoding {
     case add(id: Int64, accessHash: Int64, fileReference: FileMediaReference?)
     case remove(id: Int64, accessHash: Int64)
+    case clear
     case sync
     
     init(decoder: PostboxDecoder) {
@@ -24,6 +26,8 @@ enum SynchronizeRecentlyUsedMediaOperationContent: PostboxCoding {
                 self = .add(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0), fileReference: decoder.decodeAnyObjectForKey("fr", decoder: { FileMediaReference(decoder: $0) }) as? FileMediaReference)
             case SynchronizeRecentlyUsedMediaOperationContentType.remove.rawValue:
                 self = .remove(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("h", orElse: 0))
+            case SynchronizeRecentlyUsedMediaOperationContentType.clear.rawValue:
+                self = .clear
             case SynchronizeRecentlyUsedMediaOperationContentType.sync.rawValue:
                 self = .sync
             default:
@@ -47,6 +51,8 @@ enum SynchronizeRecentlyUsedMediaOperationContent: PostboxCoding {
                 encoder.encodeInt32(SynchronizeRecentlyUsedMediaOperationContentType.remove.rawValue, forKey: "r")
                 encoder.encodeInt64(id, forKey: "i")
                 encoder.encodeInt64(accessHash, forKey: "h")
+            case .clear:
+                encoder.encodeInt32(SynchronizeRecentlyUsedMediaOperationContentType.clear.rawValue, forKey: "r")
             case .sync:
                 encoder.encodeInt32(SynchronizeRecentlyUsedMediaOperationContentType.sync.rawValue, forKey: "r")
         }
@@ -103,3 +109,9 @@ func addRecentlyUsedSticker(transaction: Transaction, fileReference: FileMediaRe
         addSynchronizeRecentlyUsedMediaOperation(transaction: transaction, category: .stickers, operation: .add(id: resource.fileId, accessHash: resource.accessHash, fileReference: fileReference))
     }
 }
+
+public func clearRecentlyUsedStickers(transaction: Transaction) {
+    transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, items: [])
+    addSynchronizeRecentlyUsedMediaOperation(transaction: transaction, category: .stickers, operation: .clear)
+}
+

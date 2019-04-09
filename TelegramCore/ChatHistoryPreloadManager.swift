@@ -204,7 +204,7 @@ final class ChatHistoryPreloadManager {
             if let strongSelf = self {
                 var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []
                 for entry in view.0.entries {
-                    if case let .MessageEntry(index, _, readState, notificationSettings, _, _, _) = entry {
+                    if case let .MessageEntry(index, _, readState, notificationSettings, _, _, _, _) = entry {
                         var hasUnread = false
                         if let readState = readState {
                             hasUnread = readState.count != 0

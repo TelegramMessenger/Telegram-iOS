@@ -181,6 +181,14 @@ private func synchronizeRecentlyUsedMedia(transaction: Transaction, postbox: Pos
             |> mapToSignal { _ -> Signal<Void, NoError> in
                 return .complete()
             }
+        case .clear:
+            return network.request(Api.functions.messages.clearRecentStickers(flags: 0))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
         case .sync:
             return managedRecentStickers(postbox: postbox, network: network)
     }
