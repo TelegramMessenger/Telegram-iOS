@@ -130,7 +130,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
+                    let (size, apply) = statusLayout(item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
                     statusSize = size
                     statusApply = apply
                 }

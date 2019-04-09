@@ -257,7 +257,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                             break
                         case .ignore:
                             return .fail
-                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .call, .openMessage, .timecode:
+                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .call, .openMessage, .timecode, .tooltip:
                             return .waitForSingleTap
                     }
                 }
@@ -751,7 +751,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         }
                     }
                     
-                    mosaicStatusSizeAndApply = mosaicStatusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude))
+                    mosaicStatusSizeAndApply = mosaicStatusLayout(item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude))
                 }
             }
             
@@ -1620,7 +1620,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                 mediaMessage = item.message
                             }
                         }
-                        var forceOpen = false
                         if mediaMessage == nil {
                             for attribute in item.message.attributes {
                                 if let attribute = attribute as? ReplyMessageAttribute {
@@ -1762,6 +1761,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                             item.controllerInteraction.seekToTimecode(mediaMessage, timecode, forceOpen)
                                         }
                                         break loop
+                                    case let .tooltip(text, node, rect):
+                                        foundTapAction = true
+                                        if let item = self.item {
+                                            let _ = item.controllerInteraction.displayMessageTooltip(item.message.id, text, node, rect)
+                                        }
+                                        break loop
                                 }
                             }
                             if !foundTapAction {
@@ -1820,6 +1825,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                                 item.controllerInteraction.longTap(.timecode(timecode, text), mediaMessage)
                                             }
                                             break loop
+                                        case .tooltip:
+                                            break
                                     }
                                 }
                                 if !foundTapAction, let tapMessage = tapMessage {

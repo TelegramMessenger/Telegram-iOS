@@ -301,6 +301,7 @@ private func generatePercentageAnimationImages(presentationData: ChatPresentatio
 private struct ChatMessagePollOptionResult: Equatable {
     let normalized: CGFloat
     let percent: Int
+    let count: Int32
 }
 
 private final class ChatMessagePollOptionNode: ASDisplayNode {
@@ -314,7 +315,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     private let resultBarNode: ASImageNode
     
     var option: TelegramMediaPollOption?
-    private var currentResult: ChatMessagePollOptionResult?
+    public private(set) var currentResult: ChatMessagePollOptionResult?
     var pressed: (() -> Void)?
     
     override init() {
@@ -617,7 +618,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.presentationData.theme, item.presentationData.strings, edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
+                    let (size, apply) = statusLayout(item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
                     statusSize = size
                     statusApply = apply
                 }
@@ -727,12 +728,12 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         var optionResult: ChatMessagePollOptionResult?
                         if let count = optionVoterCount[i] {
                             if maxOptionVoterCount != 0 && totalVoterCount != 0 {
-                                optionResult = ChatMessagePollOptionResult(normalized: CGFloat(count) / CGFloat(maxOptionVoterCount), percent: optionVoterCounts[i])
+                                optionResult = ChatMessagePollOptionResult(normalized: CGFloat(count) / CGFloat(maxOptionVoterCount), percent: optionVoterCounts[i], count: count)
                             } else if poll.isClosed {
-                                optionResult = ChatMessagePollOptionResult(normalized: 0, percent: 0)
+                                optionResult = ChatMessagePollOptionResult(normalized: 0, percent: 0, count: 0)
                             }
                         } else if poll.isClosed {
-                            optionResult = ChatMessagePollOptionResult(normalized: 0, percent: 0)
+                            optionResult = ChatMessagePollOptionResult(normalized: 0, percent: 0, count: 0)
                         }
                         let result = makeLayout(item.context.account.peerId, item.presentationData, item.message, option, optionResult, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
                         boundingSize.width = max(boundingSize.width, result.minimumWidth + layoutConstants.bubble.borderInset * 2.0)
@@ -922,55 +923,21 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             }
         } else {
             for optionNode in self.optionNodes {
-                if optionNode.isUserInteractionEnabled {
-                    if optionNode.frame.contains(point) {
+                if optionNode.frame.contains(point) {
+                    if optionNode.isUserInteractionEnabled {
                         return .ignore
+                    } else if let result = optionNode.currentResult, let item = self.item {
+                        let string: String
+                        if result.count == 0 {
+                            string = item.presentationData.strings.MessagePoll_NoVotes
+                        } else {
+                            string = item.presentationData.strings.MessagePoll_VotedCount(result.count)
+                        }
+                        return .tooltip(string, optionNode, optionNode.bounds.offsetBy(dx: 0.0, dy: 10.0))
                     }
                 }
             }
             return .none
-        }
-    }
-    
-    override func updateTouchesAtPoint(_ point: CGPoint?) {
-        if let item = self.item {
-            /*var rects: [CGRect]?
-            if let point = point {
-                let textNodeFrame = self.textNode.frame
-                if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
-                    let possibleNames: [String] = [
-                        TelegramTextAttributes.URL,
-                        TelegramTextAttributes.PeerMention,
-                        TelegramTextAttributes.PeerTextMention,
-                        TelegramTextAttributes.BotCommand,
-                        TelegramTextAttributes.Hashtag
-                    ]
-                    for name in possibleNames {
-                        if let _ = attributes[NSAttributedStringKey(rawValue: name)] {
-                            rects = self.textNode.attributeRects(name: name, at: index)
-                            break
-                        }
-                    }
-                }
-            }
-            
-            if let rects = rects {
-                let linkHighlightingNode: LinkHighlightingNode
-                if let current = self.linkHighlightingNode {
-                    linkHighlightingNode = current
-                } else {
-                    linkHighlightingNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingLinkHighlightColor : item.presentationData.theme.theme.chat.bubble.outgoingLinkHighlightColor)
-                    self.linkHighlightingNode = linkHighlightingNode
-                    self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
-                }
-                linkHighlightingNode.frame = self.textNode.frame
-                linkHighlightingNode.updateRects(rects)
-            } else if let linkHighlightingNode = self.linkHighlightingNode {
-                self.linkHighlightingNode = nil
-                linkHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak linkHighlightingNode] _ in
-                    linkHighlightingNode?.removeFromSupernode()
-                })
-            }*/
         }
     }
 }

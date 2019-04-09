@@ -83,44 +83,6 @@ public final class TelegramRootController: NavigationController {
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
-        
-        
-        
-        
-//        guard let controller = self.viewControllers.last as? ViewController else {
-//            return
-//        }
-//        
-//        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0) {
-//            let wrapperNode = ASDisplayNode()
-//            let bounds = controller.displayNode.bounds
-//            wrapperNode.frame = bounds
-//            wrapperNode.backgroundColor = .gray
-//            //controller.displayNode.addSubnode(wrapperNode)
-//            
-//            let label = TGMarqLabel(frame: CGRect())
-//            label.textColor = .white
-//            label.font = Font.regular(28.0)
-//            label.scrollDuration = 15.0
-//            label.fadeLength = 25.0
-//            label.trailingBuffer = 60.0
-//            label.animationDelay = 2.0
-//            label.text = "Lorem ipsum dolor sir amet, consecteur"
-//            label.sizeToFit()
-//            label.frame = CGRect(x: bounds.width / 2.0 - 100.0, y: 100.0, width: 200.0, height: label.frame.height)
-//            //wrapperNode.view.addSubview(label)
-//            
-//            let data = testLineChartData()
-//            let node = LineChartContainerNode(data: data)
-//            node.frame = CGRect(x: 0.0, y: 100.0, width: bounds.width, height: 280.0)
-//            node.updateLayout(size: node.frame.size)
-//            wrapperNode.addSubnode(node)
-//        
-//            self.wNode = wrapperNode
-//            
-//            let gesture = UITapGestureRecognizer(target: self, action: #selector(self.closeIt))
-//            wrapperNode.view.addGestureRecognizer(gesture)
-//        }
     }
     
     @objc func closeIt() {

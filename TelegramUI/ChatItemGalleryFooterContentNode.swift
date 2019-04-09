@@ -115,6 +115,17 @@ enum ChatItemGalleryFooterContentTapAction {
     case ignore
 }
 
+class CaptionScrollWrapperNode: ASDisplayNode {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        if result == self.view, let subnode = self.subnodes?.first {
+            return subnode.hitTest(self.view.convert(point, to: subnode.view), with: event)
+        } else {
+            return result
+        }
+    }
+}
+
 final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var theme: PresentationTheme
@@ -124,7 +135,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private let deleteButton: UIButton
     private let actionButton: UIButton
     private let maskNode: ASDisplayNode
-    private let scrollWrapperNode: ASDisplayNode
+    private let scrollWrapperNode: CaptionScrollWrapperNode
     private let scrollNode: ASScrollNode
 
     private let textNode: ImmediateTextNode
@@ -230,7 +241,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.deleteButton.setImage(deleteImage, for: [.normal])
         self.actionButton.setImage(actionImage, for: [.normal])
         
-        self.scrollWrapperNode = ASDisplayNode()
+        self.scrollWrapperNode = CaptionScrollWrapperNode()
         self.scrollWrapperNode.clipsToBounds = true
         
         self.scrollNode = ASScrollNode()
@@ -338,16 +349,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     override func didLoad() {
         super.didLoad()
         self.scrollNode.view.delegate = self
-        
-        if let maskImage = captionMaskImage {
-            let mask = CALayer()
-            mask.contents = maskImage.cgImage
-            mask.contentsScale = maskImage.scale
-            //mask.contentsCenter = CGRect(x: max(corners.topLeft.radius, corners.bottomLeft.radius) / maskImage.size.width, y: max(corners.topLeft.radius, corners.topRight.radius) / maskImage.size.height, width: (maskImage.size.width - max(corners.topLeft.radius, corners.bottomLeft.radius) - max(corners.topRight.radius, corners.bottomRight.radius)) / maskImage.size.width, height: (maskImage.size.height - max(corners.topLeft.radius, corners.topRight.radius) - max(corners.bottomLeft.radius, corners.bottomRight.radius)) / maskImage.size.height)
-            
-            //self.scrollWrapperNode.layer.mask = mask
-            //self.scrollWrapperNode.layer.mask?.frame = self.scrollWrapperNode.bounds
-        }
+        self.scrollNode.view.showsVerticalScrollIndicator = false
     }
     
     private func actionForAttributes(_ attributes: [NSAttributedStringKey: Any]) -> GalleryControllerInteractionTapAction? {
@@ -488,19 +490,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.requestLayout?(.immediate)
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        let result = super.hitTest(point, with: event)
-        if self.scrollWrapperNode.frame.contains(point) {
-            return self.scrollNode.view
-        } else {
-            return result
-        }
-    }
-    
     override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         let width = size.width
         var bottomInset = bottomInset
-        if bottomInset < 30.0 {
+        if !bottomInset.isZero && bottomInset < 30.0 {
             bottomInset -= 7.0
         }
         var panelHeight: CGFloat = 44.0 + bottomInset
@@ -546,8 +539,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 panelHeight = max(0.0, panelHeight + visibleTextPanelHeight + textOffset)
                 
                 if self.scrollNode.view.isScrollEnabled {
-                    if self.scrollWrapperNode.layer.mask == nil {
-                        let maskImage = captionMaskImage!
+                    if self.scrollWrapperNode.layer.mask == nil, let maskImage = captionMaskImage {
                         let maskLayer = CALayer()
                         maskLayer.contents = maskImage.cgImage
                         maskLayer.contentsScale = maskImage.scale

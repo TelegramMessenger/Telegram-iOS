@@ -10,6 +10,8 @@ final class MediaNavigationAccessoryPanel: ASDisplayNode {
     var toggleRate: (() -> Void)?
     var togglePlayPause: (() -> Void)?
     var tapAction: (() -> Void)?
+    var playPrevious: (() -> Void)?
+    var playNext: (() -> Void)?
     
     init(context: AccountContext) {
         self.containerNode = MediaNavigationAccessoryContainerNode(context: context)
@@ -18,22 +20,32 @@ final class MediaNavigationAccessoryPanel: ASDisplayNode {
         
         self.addSubnode(self.containerNode)
         
-        containerNode.headerNode.close = { [weak self] in
+        self.containerNode.headerNode.close = { [weak self] in
             if let strongSelf = self, let close = strongSelf.close {
                 close()
             }
         }
-        containerNode.headerNode.toggleRate = { [weak self] in
+        self.containerNode.headerNode.toggleRate = { [weak self] in
             self?.toggleRate?()
         }
-        containerNode.headerNode.togglePlayPause = { [weak self] in
+        self.containerNode.headerNode.togglePlayPause = { [weak self] in
             if let strongSelf = self, let togglePlayPause = strongSelf.togglePlayPause {
                 togglePlayPause()
             }
         }
-        containerNode.headerNode.tapAction = { [weak self] in
+        self.containerNode.headerNode.tapAction = { [weak self] in
             if let strongSelf = self, let tapAction = strongSelf.tapAction {
                 tapAction()
+            }
+        }
+        self.containerNode.headerNode.playPrevious = { [weak self] in
+            if let strongSelf = self, let playPrevious = strongSelf.playPrevious {
+                playPrevious()
+            }
+        }
+        self.containerNode.headerNode.playNext = { [weak self] in
+            if let strongSelf = self, let playNext = strongSelf.playNext {
+                playNext()
             }
         }
     }

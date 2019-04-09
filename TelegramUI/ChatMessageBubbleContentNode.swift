@@ -74,6 +74,7 @@ enum ChatMessageBubbleContentTapAction {
     case call(PeerId)
     case openMessage
     case timecode(Double, String)
+    case tooltip(String, ASDisplayNode?, CGRect?)
     case ignore
 }
 

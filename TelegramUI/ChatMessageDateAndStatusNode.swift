@@ -125,7 +125,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         self.addSubnode(self.dateNode)
     }
     
-    func asyncLayout() -> (_ theme: ChatPresentationThemeData, _ strings: PresentationStrings, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> Void) {
+    func asyncLayout() -> (_ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         
         var checkReadNode = self.checkReadNode
@@ -139,7 +139,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         let currentType = self.type
         let currentTheme = self.theme
         
-        return { theme, strings, edited, impressionCount, dateText, type, constrainedSize in
+        return { presentationData, edited, impressionCount, dateText, type, constrainedSize in
             let dateColor: UIColor
             var backgroundImage: UIImage?
             var outgoingStatus: ChatMessageDateAndStatusOutgoingType?
@@ -151,14 +151,14 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             let clockMinImage: UIImage?
             var impressionImage: UIImage?
             
-            let themeUpdated = theme != currentTheme || type != currentType
+            let themeUpdated = presentationData.theme != currentTheme || type != currentType
             
-            let graphics = PresentationResourcesChat.principalGraphics(theme.theme, wallpaper: theme.wallpaper)
+            let graphics = PresentationResourcesChat.principalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             let offset: CGFloat = -UIScreenPixel
             
             switch type {
                 case .BubbleIncoming:
-                    dateColor = theme.theme.chat.bubble.incomingSecondaryTextColor
+                    dateColor = presentationData.theme.theme.chat.bubble.incomingSecondaryTextColor
                     leftInset = 10.0
                     loadedCheckFullImage = graphics.checkBubbleFullImage
                     loadedCheckPartialImage = graphics.checkBubblePartialImage
@@ -168,7 +168,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.incomingDateAndStatusImpressionIcon
                     }
                 case let .BubbleOutgoing(status):
-                    dateColor = theme.theme.chat.bubble.outgoingSecondaryTextColor
+                    dateColor = presentationData.theme.theme.chat.bubble.outgoingSecondaryTextColor
                     outgoingStatus = status
                     leftInset = 10.0
                     loadedCheckFullImage = graphics.checkBubbleFullImage
@@ -179,7 +179,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.outgoingDateAndStatusImpressionIcon
                     }
                 case .ImageIncoming:
-                    dateColor = theme.theme.chat.bubble.mediaDateAndStatusTextColor
+                    dateColor = presentationData.theme.theme.chat.bubble.mediaDateAndStatusTextColor
                     backgroundImage = graphics.dateAndStatusMediaBackground
                     leftInset = 0.0
                     loadedCheckFullImage = graphics.checkMediaFullImage
@@ -190,7 +190,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.mediaImpressionIcon
                     }
                 case let .ImageOutgoing(status):
-                    dateColor = theme.theme.chat.bubble.mediaDateAndStatusTextColor
+                    dateColor = presentationData.theme.theme.chat.bubble.mediaDateAndStatusTextColor
                     outgoingStatus = status
                     backgroundImage = graphics.dateAndStatusMediaBackground
                     leftInset = 0.0
@@ -202,7 +202,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.mediaImpressionIcon
                     }
                 case .FreeIncoming:
-                    let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
+                    let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     dateColor = serviceColor.primaryText
                     backgroundImage = graphics.dateAndStatusFreeBackground
                     leftInset = 0.0
@@ -214,7 +214,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionImage = graphics.freeImpressionIcon
                     }
                 case let .FreeOutgoing(status):
-                    let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
+                    let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     dateColor = serviceColor.primaryText
                     outgoingStatus = status
                     backgroundImage = graphics.dateAndStatusFreeBackground
@@ -230,10 +230,10 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             
             var updatedDateText = dateText
             if edited {
-                updatedDateText = "\(strings.Conversation_MessageEditedLabel) \(updatedDateText)"
+                updatedDateText = "\(presentationData.strings.Conversation_MessageEditedLabel) \(updatedDateText)"
             }
             if let impressionCount = impressionCount {
-                updatedDateText = compactNumericCountString(impressionCount) + " " + updatedDateText
+                updatedDateText = compactNumericCountString(impressionCount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) + " " + updatedDateText
             }
             
             let (date, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: updatedDateText, font: dateFont, textColor: dateColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -373,7 +373,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             
             return (layoutSize, { [weak self] animated in
                 if let strongSelf = self {
-                    strongSelf.theme = theme
+                    strongSelf.theme = presentationData.theme
                     strongSelf.type = type
                     
                     if backgroundImage != nil {
@@ -504,17 +504,17 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ theme: ChatPresentationThemeData, _ strings: PresentationStrings, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode) {
+    static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode) {
         let currentLayout = node?.asyncLayout()
-        return { theme, strings, edited, impressionCount, dateText, type, constrainedSize in
+        return { presentationData, edited, impressionCount, dateText, type, constrainedSize in
             let resultNode: ChatMessageDateAndStatusNode
             let resultSizeAndApply: (CGSize, (Bool) -> Void)
             if let node = node, let currentLayout = currentLayout {
                 resultNode = node
-                resultSizeAndApply = currentLayout(theme, strings, edited, impressionCount, dateText, type, constrainedSize)
+                resultSizeAndApply = currentLayout(presentationData, edited, impressionCount, dateText, type, constrainedSize)
             } else {
                 resultNode = ChatMessageDateAndStatusNode()
-                resultSizeAndApply = resultNode.asyncLayout()(theme, strings, edited, impressionCount, dateText, type, constrainedSize)
+                resultSizeAndApply = resultNode.asyncLayout()(presentationData, edited, impressionCount, dateText, type, constrainedSize)
             }
             
             return (resultSizeAndApply.0, { animated in

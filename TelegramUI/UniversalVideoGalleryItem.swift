@@ -641,6 +641,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 videoNode.seek(0.0)
                 videoNode.play()
             } else {
+                self.hideStatusNodeUntilCentrality = false
                 videoNode.playOnceWithSound(playAndRecord: false, seek: seek, actionAtEnd: .stop)
             }
         }
