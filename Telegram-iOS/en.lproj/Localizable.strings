@@ -4218,3 +4218,6 @@ Unused sets are archived when you add more.";
 "Call.Speaker" = "speaker";
 
 "MemberSearch.BotSection" = "BOTS";
+
+"Conversation.PrivateMessageLinkCopied" = "This link will only work for members of this chat.";
+"Conversation.ErrorInaccessibleMessage" = "Unfortunately, you can't access this message. You are not a member of the chat where it was posted.";

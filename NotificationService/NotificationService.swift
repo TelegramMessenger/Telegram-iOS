@@ -1,5 +1,6 @@
 import Foundation
 import UserNotifications
+import MtProtoKitDynamic
 
 private var sharedLogger: Logger?
 
@@ -146,92 +147,85 @@ private final class Logger {
     }
 }
 
-
-private func dataWithHexString(_ string: String) -> Data {
-    var hex = string
-    if hex.count % 2 != 0 {
-        return Data()
+private func parseBase64(string: String) -> Data? {
+    var string = string
+    string = string.replacingOccurrences(of: "-", with: "+")
+    string = string.replacingOccurrences(of: "_", with: "/")
+    while string.count % 4 != 0 {
+        string.append("=")
     }
-    var data = Data()
-    while hex.count > 0 {
-        let subIndex = hex.index(hex.startIndex, offsetBy: 2)
-        let c = String(hex[..<subIndex])
-        hex = String(hex[subIndex...])
-        var ch: UInt32 = 0
-        if !Scanner(string: c).scanHexInt32(&ch) {
-            return Data()
-        }
-        var char = UInt8(ch)
-        data.append(&char, count: 1)
-    }
-    return data
+    return Data(base64Encoded: string)
 }
 
-private func parseInt64(_ value: Any?) -> Int64? {
-    if let value = value as? String {
-        return Int64(value)
-    } else if let value = value as? Int64 {
-        return value
-    } else {
-        return nil
-    }
+enum ParsedMediaAttachment {
+    case document(Api.Document)
+    case photo(Api.Photo)
 }
 
-private func parseInt32(_ value: Any?) -> Int32? {
-    if let value = value as? String {
-        return Int32(value)
-    } else if let value = value as? Int32 {
-        return value
-    } else {
+private func parseAttachment(data: Data) -> (ParsedMediaAttachment, Data)? {
+    let reader = BufferReader(Buffer(data: data))
+    guard let initialSignature = reader.readInt32() else {
         return nil
-    }
-}
-
-private func parseImageLocation(_ dict: [AnyHashable: Any]) -> (size: (width: Int32, height: Int32)?, resource: ImageResource)? {
-    guard let datacenterId = parseInt32(dict["dc_id"]) else {
-        return nil
-    }
-    guard let volumeId = parseInt64(dict["volume_id"]) else {
-        return nil
-    }
-    guard let localId = parseInt32(dict["local_id"]) else {
-        return nil
-    }
-    guard let secret = parseInt64(dict["secret"]) else {
-        return nil
-    }
-    var fileReference: Data?
-    if let fileReferenceString = dict["file_reference"] as? String {
-        fileReference = Data(base64Encoded: fileReferenceString)
-    }
-    var size: (Int32, Int32)?
-    if let width = parseInt32(dict["w"]), let height = parseInt32(dict["h"]) {
-        size = (width, height)
-    }
-    return (size, ImageResource(datacenterId: Int(datacenterId), volumeId: volumeId, localId: localId, secret: secret, fileReference: fileReference))
-}
-
-private func hexString(_ data: Data) -> String {
-    let hexString = NSMutableString()
-    data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-        for i in 0 ..< data.count {
-            hexString.appendFormat("%02x", UInt(bytes.advanced(by: i).pointee))
-        }
     }
     
-    return hexString as String
+    let buffer: Buffer
+    if initialSignature == 0x3072cfa1 {
+        guard let bytes = parseBytes(reader) else {
+            return nil
+        }
+        guard let decompressedData = MTGzip.decompress(bytes.makeData()) else {
+            return nil
+        }
+        buffer = Buffer(data: decompressedData)
+    } else {
+        buffer = Buffer(data: data)
+    }
+    
+    if let result = Api.parse(buffer) {
+        if let photo = result as? Api.Photo {
+            return (.photo(photo), buffer.makeData())
+        } else if let document = result as? Api.Document {
+            return (.document(document), buffer.makeData())
+        } else {
+            return nil
+        }
+    } else {
+        return nil
+    }
 }
 
-private func serializeImageLocation(_ resource: ImageResource) -> [AnyHashable: Any] {
-    var result: [AnyHashable: Any] = [:]
-    result["datacenterId"] = Int32(resource.datacenterId)
-    result["volumeId"] = resource.volumeId
-    result["localId"] = resource.localId
-    result["secret"] = resource.secret
-    if let fileReference = resource.fileReference {
-        result["fileReference"] = hexString(fileReference)
+private func photoSizeDimensions(_ size: Api.PhotoSize) -> CGSize? {
+    switch size {
+        case let .photoSize(_, _, w, h, _):
+            return CGSize(width: CGFloat(w), height: CGFloat(h))
+        case let .photoCachedSize(_, _, w, h, _):
+            return CGSize(width: CGFloat(w), height: CGFloat(h))
+        default:
+            return nil
     }
-    return result
+}
+
+private func photoDimensions(_ photo: Api.Photo) -> CGSize? {
+    switch photo {
+        case let .photo(_, _, _, _, _, sizes, _):
+            for size in sizes.reversed() {
+                if let dimensions = photoSizeDimensions(size) {
+                    return dimensions
+                }
+            }
+            return nil
+        case .photoEmpty:
+            return nil
+    }
+}
+
+private func photoSizes(_ photo: Api.Photo) -> [Api.PhotoSize] {
+    switch photo {
+        case let .photo(_, _, _, _, _, sizes, _):
+            return sizes
+        case .photoEmpty:
+            return []
+    }
 }
 
 class NotificationService: UNNotificationServiceExtension {
@@ -281,13 +275,8 @@ class NotificationService: UNNotificationServiceExtension {
         self.bestAttemptContent = request.content.mutableCopy() as? UNMutableNotificationContent
         
         var encryptedData: Data?
-        if var encryptedPayload = request.content.userInfo["p"] as? String {
-            encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
-            encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
-            while encryptedPayload.count % 4 != 0 {
-                encryptedPayload.append("=")
-            }
-            encryptedData = Data(base64Encoded: encryptedPayload)
+        if let encryptedPayload = request.content.userInfo["p"] as? String {
+            encryptedData = parseBase64(string: encryptedPayload)
         }
         
         Logger.shared.log("NotificationService", "received notification \(request), parsed encryptedData \(String(describing: encryptedData))")
@@ -323,11 +312,13 @@ class NotificationService: UNNotificationServiceExtension {
                 }
             }
             
-            var thumbnailImage: ImageResource?
-            var fullSizeImage: (size: (width: Int32, height: Int32)?, resource: ImageResource)?
-            if let thumbLoc = dict["media_loc"] as? [AnyHashable: Any] {
-                thumbnailImage = (thumbLoc["thumb"] as? [AnyHashable: Any]).flatMap(parseImageLocation)?.resource
-                fullSizeImage = (thumbLoc["full"] as? [AnyHashable: Any]).flatMap(parseImageLocation)
+            var attachment: ParsedMediaAttachment?
+            var attachmentData: Data?
+            if let attachmentDataString = dict["attachb64"] as? String, let attachmentDataValue = parseBase64(string: attachmentDataString) {
+                if let value = parseAttachment(data: attachmentDataValue) {
+                    attachment = value.0
+                    attachmentData = value.1
+                }
             }
             
             let imagesPath = NSTemporaryDirectory() + "aps-data"
@@ -337,9 +328,57 @@ class NotificationService: UNNotificationServiceExtension {
             
             let mediaBoxPath = accountBasePath + "/postbox/media"
             
-            let tempImagePath = thumbnailImage.flatMap({ imagesPath + "/\($0.resourceId).jpg" })
-            let mediaBoxThumbnailImagePath = thumbnailImage.flatMap({ mediaBoxPath + "/\($0.resourceId)" })
-            let mediaBoxFullSizeImagePath = fullSizeImage.flatMap({ mediaBoxPath + "/\($0.resource.resourceId)" })
+            var tempImagePath: String?
+            var mediaBoxThumbnailImagePath: String?
+            
+            var inputFileLocation: (Int32, Api.InputFileLocation)?
+            var fetchResourceId: String?
+            
+            if let attachment = attachment {
+                switch attachment {
+                    case let .photo(photo):
+                        switch photo {
+                            case let .photo(_, id, accessHash, fileReference, _, sizes, dcId):
+                                loop: for size in sizes {
+                                    switch size {
+                                        case let .photoSize(type, _, _, _, _):
+                                            if type == "m" {
+                                                inputFileLocation = (dcId, .inputPhotoFileLocation(id: id, accessHash: accessHash, fileReference: fileReference, thumbSize: type))
+                                                fetchResourceId = "telegram-cloud-photo-size-\(dcId)-\(id)-\(type)"
+                                                break loop
+                                            }
+                                        default:
+                                            break
+                                    }
+                                }
+                            case .photoEmpty:
+                                break
+                        }
+                    case let .document(document):
+                        switch document {
+                            case let .document(_, id, accessHash, fileReference, _, _, _, thumbs, dcId, _):
+                                if let thumbs = thumbs {
+                                    loop: for size in thumbs {
+                                        switch size {
+                                            case let .photoSize(type, _, _, _, _):
+                                                if type == "m" {
+                                                    inputFileLocation = (dcId, .inputDocumentFileLocation(id: id, accessHash: accessHash, fileReference: fileReference, thumbSize: type))
+                                                    fetchResourceId = "telegram-cloud-photo-size-\(dcId)-\(id)-\(type)"
+                                                    break loop
+                                                }
+                                            default:
+                                                break
+                                        }
+                                    }
+                                }
+                        }
+                }
+            }
+            
+            if let fetchResourceId = fetchResourceId {
+                tempImagePath = imagesPath + "/\(fetchResourceId).jpg"
+                mediaBoxThumbnailImagePath = mediaBoxPath + "/\(fetchResourceId).jpg"
+            }
             
             if let aps = dict["aps"] as? [AnyHashable: Any] {
                 if let alert = aps["alert"] as? String {
@@ -365,31 +404,12 @@ class NotificationService: UNNotificationServiceExtension {
                 }
                 if let category = aps["category"] as? String {
                     self.bestAttemptContent?.categoryIdentifier = category
-                    if let peerId = peerId, let messageId = messageId, let thumbnailResource = thumbnailImage, let (maybeSize, resource) = fullSizeImage, let size = maybeSize {
+                    if let peerId = peerId, let messageId = messageId, let _ = attachment, let attachmentData = attachmentData {
                         userInfo["peerId"] = peerId.toInt64()
                         userInfo["messageId.namespace"] = 0 as Int32
                         userInfo["messageId.id"] = messageId
                         
-                        var imageInfo: [String: Any] = [:]
-                        imageInfo["width"] = Int(size.width)
-                        imageInfo["height"] = Int(size.height)
-                        
-                        var thumbnail: [String: Any] = [:]
-                        if let mediaBoxThumbnailImagePath = mediaBoxThumbnailImagePath {
-                            thumbnail["path"] = mediaBoxThumbnailImagePath
-                        }
-                        thumbnail["fileLocation"] = serializeImageLocation(thumbnailResource)
-                        
-                        var fullSize: [String: Any] = [:]
-                        if let mediaBoxFullSizeImagePath = mediaBoxFullSizeImagePath {
-                            fullSize["path"] = mediaBoxFullSizeImagePath
-                        }
-                        fullSize["fileLocation"] = serializeImageLocation(resource)
-                        
-                        imageInfo["thumbnail"] = thumbnail
-                        imageInfo["fullSize"] = fullSize
-                        
-                        userInfo["mediaInfo"] = ["image": imageInfo]
+                        userInfo["media"] = attachmentData.base64EncodedString()
                         
                         if category == "r" {
                             self.bestAttemptContent?.categoryIdentifier = "withReplyMedia"
@@ -403,8 +423,8 @@ class NotificationService: UNNotificationServiceExtension {
             self.bestAttemptContent?.userInfo = userInfo
             
             self.cancelFetch?()
-            if let mediaBoxThumbnailImagePath = mediaBoxThumbnailImagePath, let tempImagePath = tempImagePath, let thumbnailImage = thumbnailImage {
-                self.cancelFetch = fetchImageWithAccount(proxyConnection: accountInfos.proxy, account: account, resource: thumbnailImage, completion: { [weak self] data in
+            if let mediaBoxThumbnailImagePath = mediaBoxThumbnailImagePath, let tempImagePath = tempImagePath, let (datacenterId, inputFileLocation) = inputFileLocation {
+                self.cancelFetch = fetchImageWithAccount(proxyConnection: accountInfos.proxy, account: account, inputFileLocation: inputFileLocation, datacenterId: datacenterId, completion: { [weak self] data in
                     DispatchQueue.main.async {
                         guard let strongSelf = self else {
                             return

@@ -49,6 +49,8 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
     private let applyDisposable = MetaDisposable()
     private let fetchedDisposable = MetaDisposable()
     
+    private var accountsPath: String?
+    
     deinit {
         self.applyDisposable.dispose()
         self.fetchedDisposable.dispose()
@@ -84,6 +86,8 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
         
         setupSharedLogger(logsPath)
+        
+        accountsPath = rootPath
         
         if sharedAccountContext == nil {
             initializeAccountManagement()
@@ -130,21 +134,15 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
     }
     
     func didReceive(_ notification: UNNotification) {
-        if let accountIdValue = notification.request.content.userInfo["accountId"] as? Int64, let peerIdValue = notification.request.content.userInfo["peerId"] as? Int64, let messageIdNamespace = notification.request.content.userInfo["messageId.namespace"] as? Int32, let messageIdId = notification.request.content.userInfo["messageId.id"] as? Int32, let dict = notification.request.content.userInfo["mediaInfo"] as? [String: Any] {
+        guard let accountsPath = self.accountsPath else {
+            return
+        }
+        
+        if let accountIdValue = notification.request.content.userInfo["accountId"] as? Int64, let peerIdValue = notification.request.content.userInfo["peerId"] as? Int64, let messageIdNamespace = notification.request.content.userInfo["messageId.namespace"] as? Int32, let messageIdId = notification.request.content.userInfo["messageId.id"] as? Int32, let mediaDataString = notification.request.content.userInfo["media"] as? String, let mediaData = Data(base64Encoded: mediaDataString), let media = parseMediaData(data: mediaData) {
             let messageId = MessageId(peerId: PeerId(peerIdValue), namespace: messageIdNamespace, id: messageIdId)
             
-            if let imageInfo = dict["image"] as? [String: Any] {
-                guard let width = imageInfo["width"] as? Int, let height = imageInfo["height"] as? Int else {
-                    return
-                }
-                guard let thumbnailInfo = imageInfo["thumbnail"] as? [String: Any] else {
-                    return
-                }
-                guard let fullSizeInfo = imageInfo["fullSize"] as? [String: Any] else {
-                    return
-                }
-                
-                let dimensions = CGSize(width: CGFloat(width), height: CGFloat(height))
+            if let image = media as? TelegramMediaImage, let thumbnailRepresentation = imageRepresentationLargerThan(image.representations, size: CGSize(width: 120.0, height: 120.0)), let largestRepresentation = largestImageRepresentation(image.representations) {
+                let dimensions = largestRepresentation.dimensions
                 let fittedSize = dimensions.fitted(CGSize(width: self.view.bounds.width, height: 1000.0))
                 self.view.frame = CGRect(origin: self.view.frame.origin, size: fittedSize)
                 self.preferredContentSize = fittedSize
@@ -152,13 +150,15 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
                 self.imageDimensions = dimensions
                 self.updateImageLayout(boundingSize: self.view.bounds.size)
                 
-                if let path = fullSizeInfo["path"] as? String, let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                let mediaBoxPath = accountsPath + "/" + accountRecordIdPathName(AccountRecordId(rawValue: accountIdValue)) + "/postbox/media"
+                
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: mediaBoxPath + "/\(largestRepresentation.resource.id.uniqueId)"), options: .mappedRead) {
                     self.imageNode.setSignal(chatMessagePhotoInternal(photoData: .single((nil, data, true)))
                     |> map { $0.1 })
                     return
                 }
                 
-                if let path = thumbnailInfo["path"] as? String, let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: mediaBoxPath + "/\(thumbnailRepresentation.resource.id.uniqueId)"), options: .mappedRead) {
                     self.imageNode.setSignal(chatMessagePhotoInternal(photoData: .single((data, nil, false)))
                     |> map { $0.1 })
                 }
@@ -190,9 +190,7 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
                                 }
                             }
                         } else {
-                            if let thumbnailFileLocation = thumbnailInfo["fileLocation"] as? [AnyHashable: Any], let thumbnailResource = parseFileLocationResource(thumbnailFileLocation), let fileLocation = fullSizeInfo["fileLocation"] as? [AnyHashable: Any], let resource = parseFileLocationResource(fileLocation) {
-                                imageReference = .standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: 1), representations: [TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(width), height: CGFloat(height)).fitted(CGSize(width: 320.0, height: 320.0)), resource: thumbnailResource), TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(width), height: CGFloat(height)), resource: resource)], immediateThumbnailData: nil, reference: nil, partialReference: nil))
-                            }
+                            imageReference = .standalone(media: image)
                         }
                         return (account, imageReference)
                     }
@@ -206,6 +204,56 @@ class NotificationViewController: UIViewController, UNNotificationContentExtensi
                         
                         accountAndImage.0.network.shouldExplicitelyKeepWorkerConnections.set(.single(true))
                         strongSelf.fetchedDisposable.set(standaloneChatMessagePhotoInteractiveFetched(account: accountAndImage.0, photoReference: imageReference).start())
+                    }
+                }))
+            } else if let file = media as? TelegramMediaFile, let dimensions = file.dimensions {
+                guard let sharedAccountContext = sharedAccountContext else {
+                    return
+                }
+                
+                let fittedSize = dimensions.fitted(CGSize(width: min(300.0, self.view.bounds.width), height: 300.0))
+                self.view.frame = CGRect(origin: self.view.frame.origin, size: fittedSize)
+                self.preferredContentSize = fittedSize
+                
+                self.applyDisposable.set((sharedAccountContext.activeAccounts
+                |> map { _, accounts, _ -> Account? in
+                    return accounts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1
+                }
+                |> filter { account in
+                    return account != nil
+                }
+                |> take(1)
+                |> mapToSignal { account -> Signal<(Account, FileMediaReference?), NoError> in
+                    guard let account = account else {
+                        return .complete()
+                    }
+                    return account.postbox.messageAtId(messageId)
+                    |> take(1)
+                    |> map { message in
+                        var fileReference: FileMediaReference?
+                        if let message = message {
+                            for media in message.media {
+                                if let file = media as? TelegramMediaFile {
+                                    fileReference = .message(message: MessageReference(message), media: file)
+                                }
+                            }
+                        } else {
+                            fileReference = .standalone(media: file)
+                        }
+                        return (account, fileReference)
+                    }
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] accountAndImage in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let fileReference = accountAndImage.1 {
+                        if file.isSticker {
+                            strongSelf.imageNode.setSignal(chatMessageSticker(account: accountAndImage.0, file: file, small: false))
+                            
+                            accountAndImage.0.network.shouldExplicitelyKeepWorkerConnections.set(.single(true))
+                            strongSelf.fetchedDisposable.set(freeMediaFileInteractiveFetched(account: accountAndImage.0, fileReference: fileReference).start())
+                        }
                     }
                 }))
             }
