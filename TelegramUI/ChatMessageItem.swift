@@ -352,7 +352,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
         }
         
-        if viewClassName == ChatMessageBubbleItemNode.self, self.message.text.containsOnlyEmoji && self.presentationData.largeEmoji, self.message.text.emojis.count < 4 {
+        if viewClassName == ChatMessageBubbleItemNode.self, !self.message.text.isEmpty && self.message.text.containsOnlyEmoji && self.presentationData.largeEmoji, self.message.text.emojis.count < 4 {
             viewClassName = ChatMessageStickerItemNode.self
         }
         

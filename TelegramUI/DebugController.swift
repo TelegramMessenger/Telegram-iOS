@@ -172,7 +172,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     if let strongController = controller {
                                         strongController.dismiss()
                                         
-                                        let messages = logs.map { (name, path) -> EnqueueMessage in
+                                        let updatedLogs = logs.last.flatMap({ [$0] }) ?? []
+                                        
+                                        let messages = updatedLogs.map { (name, path) -> EnqueueMessage in
                                             let id = arc4random64()
                                             let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
                                             return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
@@ -201,24 +203,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             ])
                         ])
                         arguments.presentController(actionSheet, nil)
-                        
-                        
-                        let controller = PeerSelectionController(context: context)
-                        controller.peerSelected = { [weak controller] peerId in
-                            if let strongController = controller {
-                                strongController.dismiss()
-                                
-                                let updatedLogs = logs.last.flatMap({ [$0] }) ?? []
-                                
-                                let messages = updatedLogs.map { (name, path) -> EnqueueMessage in
-                                    let id = arc4random64()
-                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
-                                    return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
-                                }
-                                let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
-                            }
-                        }
-                        arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
                     })
                 })
             case let .sendNotificationLogs(theme):
