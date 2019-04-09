@@ -465,9 +465,24 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         
-        if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, let addressName = channel.addressName, !(message.media.first is TelegramMediaAction) {
+        if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, !(message.media.first is TelegramMediaAction) {
             actions.append(.sheet(ChatMessageContextMenuSheetAction(color: .accent, title: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopyLink, action: {
-                UIPasteboard.general.string = "https://t.me/\(addressName)/\(message.id.id)"
+                let _ = (exportMessageLink(account: context.account, peerId: message.id.peerId, messageId: message.id)
+                |> map { result -> String? in
+                    return result
+                }
+                |> deliverOnMainQueue).start(next: { link in
+                    if let link = link {
+                        UIPasteboard.general.string = link
+                        
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        if channel.addressName == nil {
+                            controllerInteraction.presentController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Conversation_PrivateMessageLinkCopied, false)), nil)
+                        } else {
+                            controllerInteraction.presentController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.GroupInfo_InviteLink_CopyAlert_Success, false)), nil)
+                        }
+                    }
+                })
             })))
         }
         

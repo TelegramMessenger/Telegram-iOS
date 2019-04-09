@@ -17,6 +17,7 @@ enum WallpaperUrlParameter {
 
 enum ParsedInternalUrl {
     case peerName(String, ParsedInternalPeerUrlParameter?)
+    case privateMessage(MessageId)
     case stickerPack(String)
     case join(String)
     case localization(String)
@@ -36,6 +37,7 @@ private enum ParsedUrl {
 enum ResolvedUrl {
     case externalUrl(String)
     case peer(PeerId?, ChatControllerInteractionNavigateToPeer)
+    case inaccessiblePeer
     case botStart(peerId: PeerId, payload: String)
     case groupBotStart(peerId: PeerId, payload: String)
     case channelMessage(peerId: PeerId, messageId: MessageId)
@@ -208,6 +210,12 @@ func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         parameter = .slug(component, options, color, intensity)
                     }
                     return .wallpaper(parameter)
+                } else if pathComponents.count == 3 && pathComponents[0] == "c" {
+                    if let channelId = Int32(pathComponents[1]), let messageId = Int32(pathComponents[2]) {
+                        return .privateMessage(MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: messageId))
+                    } else {
+                        return nil
+                    }
                 } else if let value = Int(pathComponents[1]) {
                     return .peerName(peerName, .channelMessage(Int32(value)))
                 } else {
@@ -255,6 +263,24 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                     }
                 } else {
                     return .peer(nil, .info)
+                }
+            }
+        case let .privateMessage(messageId):
+            return account.postbox.transaction { transaction -> Peer? in
+                return transaction.getPeer(messageId.peerId)
+            }
+            |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
+                if let peer = peer {
+                    return .single(.peer(peer.id, .chat(textInputState: nil, messageId: messageId)))
+                } else {
+                    return findChannelById(postbox: account.postbox, network: account.network, channelId: messageId.peerId.id)
+                    |> map { foundPeer -> ResolvedUrl? in
+                        if let foundPeer = foundPeer {
+                            return .peer(foundPeer.id, .chat(textInputState: nil, messageId: messageId))
+                        } else {
+                            return .inaccessiblePeer
+                        }
+                    }
                 }
             }
         case let .stickerPack(name):

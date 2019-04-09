@@ -285,17 +285,19 @@ public final class ShareController: ViewController {
                         })
                     }
                     else if let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, messages.count == 1 || sameGroupingKey {
-                        if message.id.namespace == Namespaces.Message.Cloud, let addressName = chatPeer.addressName, !addressName.isEmpty {
+                        if message.id.namespace == Namespaces.Message.Cloud {
                             self.defaultAction = ShareControllerAction(title: self.presentationData.strings.ShareMenu_CopyShareLink, action: { [weak self] in
                                 guard let strongSelf = self else {
                                     return
                                 }
                                 let _ = (exportMessageLink(account: strongSelf.currentAccount, peerId: chatPeer.id, messageId: message.id)
-                                |> map { result -> String in
-                                    return result ?? "https://t.me/\(addressName)/\(message.id.id)"
+                                |> map { result -> String? in
+                                    return result
                                 }
                                 |> deliverOnMainQueue).start(next: { link in
-                                    UIPasteboard.general.string = link
+                                    if let link = link {
+                                        UIPasteboard.general.string = link
+                                    }
                                 })
                                 strongSelf.controllerNode.cancel?()
                             })

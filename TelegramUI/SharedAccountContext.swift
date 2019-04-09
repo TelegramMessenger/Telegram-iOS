@@ -409,15 +409,31 @@ public final class SharedAccountContext {
                     self.activeAccountsValue = (nil, [], nil)
                     hadUpdates = true
                 }
+                
+                struct AccountPeerKey: Hashable {
+                    let peerId: PeerId
+                    let isTestingEnvironment: Bool
+                }
+                
+                var existingAccountPeerKeys = Set<AccountPeerKey>()
                 for accountRecord in addedAccounts {
                     if let account = accountRecord.1 {
-                        if let index = self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == account.id }) {
-                            self.activeAccountsValue?.accounts.remove(at: index)
-                            assertionFailure()
+                        if existingAccountPeerKeys.contains(AccountPeerKey(peerId: account.peerId, isTestingEnvironment: account.testingEnvironment)) {
+                            let _ = accountManager.transaction({ transaction in
+                                transaction.updateRecord(accountRecord.0, { _ in
+                                    return nil
+                                })
+                            }).start()
+                        } else {
+                            existingAccountPeerKeys.insert(AccountPeerKey(peerId: account.peerId, isTestingEnvironment: account.testingEnvironment))
+                            if let index = self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == account.id }) {
+                                self.activeAccountsValue?.accounts.remove(at: index)
+                                assertionFailure()
+                            }
+                            self.activeAccountsValue!.accounts.append((account.id, account, accountRecord.2))
+                            account.resetStateManagement()
+                            hadUpdates = true
                         }
-                        self.activeAccountsValue!.accounts.append((account.id, account, accountRecord.2))
-                        account.resetStateManagement()
-                        hadUpdates = true
                     } else {
                         let _ = accountManager.transaction({ transaction in
                             transaction.updateRecord(accountRecord.0, { _ in

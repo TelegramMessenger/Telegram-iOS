@@ -871,7 +871,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             if let link = link {
                 UIPasteboard.general.string = link
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Username_LinkCopied)), nil)
+                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), nil)
             }
         })
     }, revokePrivateLink: {

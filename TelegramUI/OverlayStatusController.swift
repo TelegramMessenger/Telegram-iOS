@@ -7,7 +7,7 @@ enum OverlayStatusControllerType {
     case loading(cancelled: (() -> Void)?)
     case success
     case shieldSuccess(String, Bool)
-    case genericSuccess(String)
+    case genericSuccess(String, Bool)
     case starSuccess(String)
 }
 
@@ -15,7 +15,7 @@ private enum OverlayStatusContentController {
     case loading(TGProgressWindowController)
     case progress(TGProgressWindowController)
     case shieldSuccess(TGProxyWindowController, Bool)
-    case genericSuccess(TGProxyWindowController)
+    case genericSuccess(TGProxyWindowController, Bool)
     case starSuccess(TGProxyWindowController)
     
     var view: UIView {
@@ -26,7 +26,7 @@ private enum OverlayStatusContentController {
                 return controller.view
             case let .shieldSuccess(controller, _):
                 return controller.view
-            case let .genericSuccess(controller):
+            case let .genericSuccess(controller, _):
                 return controller.view
             case let .starSuccess(controller):
                 return controller.view
@@ -41,7 +41,7 @@ private enum OverlayStatusContentController {
                 controller.updateLayout()
             case let .shieldSuccess(controller, _):
                 controller.updateLayout()
-            case let .genericSuccess(controller):
+            case let .genericSuccess(controller, _):
                 controller.updateLayout()
             case let .starSuccess(controller):
                 controller.updateLayout()
@@ -56,8 +56,8 @@ private enum OverlayStatusContentController {
                 controller.dismiss(success: success)
             case let .shieldSuccess(controller, increasedDelay):
                 controller.dismiss(success: success, increasedDelay: increasedDelay)
-            case let .genericSuccess(controller):
-                controller.dismiss(success: success, increasedDelay: false)
+            case let .genericSuccess(controller, increasedDelay):
+                controller.dismiss(success: success, increasedDelay: increasedDelay)
             case let .starSuccess(controller):
                 controller.dismiss(success: success, increasedDelay: false)
         }
@@ -92,10 +92,10 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
                 self.contentController = .progress(TGProgressWindowController(light: theme.actionSheet.backgroundType == .light))
             case let .shieldSuccess(text, increasedDelay):
                 self.contentController = .shieldSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: true, star: false), increasedDelay)
-            case let .genericSuccess(text):
-                self.contentController = .genericSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: false, star: false))
+            case let .genericSuccess(text, increasedDelay):
+                self.contentController = .genericSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: false, star: false), increasedDelay)
             case let .starSuccess(text):
-                self.contentController = .genericSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: false, star: true))
+                self.contentController = .genericSuccess(TGProxyWindowController(light: theme.actionSheet.backgroundType == .light, text: text, shield: false, star: true), false)
         }
         
         super.init()
