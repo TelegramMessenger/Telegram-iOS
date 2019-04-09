@@ -84,6 +84,26 @@ static bool TGProxyWindowIsLight = true;
         containerSize = CGSizeMake(207.0, 177.0);
         spinnerSize = CGSizeMake(40.0, 40.0);
     }
+    
+    if (_text.length != 0) {
+        NSMutableParagraphStyle *style = [[NSMutableParagraphStyle alloc] init];
+        style.lineBreakMode = NSLineBreakByWordWrapping;
+        style.lineSpacing = 2.0f;
+        style.alignment = NSTextAlignmentCenter;
+        
+        NSDictionary *attributes = @{NSForegroundColorAttributeName:_light ? UIColorRGB(0x5a5a5a) : [UIColor whiteColor], NSFontAttributeName:TGMediumSystemFontOfSize(17.0f), NSParagraphStyleAttributeName:style};
+        NSAttributedString *string = [[NSAttributedString alloc] initWithString:_text attributes:attributes];
+        
+        UILabel *label = [[UILabel alloc] init];
+        label.font = TGSystemFontOfSize(15.0f);
+        label.numberOfLines = 0;
+        label.textAlignment = NSTextAlignmentCenter;
+        label.attributedText = string;
+        CGSize labelSize = [label sizeThatFits:CGSizeMake(containerSize.width - 10.0 * 2.0, CGFLOAT_MAX)];
+        
+        containerSize.height += labelSize.height - 38.0;
+    }
+    
     CGRect spinnerFrame = CGRectMake((containerSize.width - spinnerSize.width) / 2.0f, _shieldIcon || _starIcon ? 40.0f : 45.0, spinnerSize.width, spinnerSize.height);
     if (_containerView == nil) {
         _containerView = [[UIView alloc] initWithFrame:CGRectMake(CGFloor(self.view.frame.size.width - containerSize.width) / 2, CGFloor(self.view.frame.size.height - containerSize.height) / 2, containerSize.width, containerSize.height)];
@@ -145,12 +165,12 @@ static bool TGProxyWindowIsLight = true;
         
         UILabel *label = [[UILabel alloc] init];
         label.font = TGSystemFontOfSize(15.0f);
-        label.numberOfLines = 2;
+        label.numberOfLines = 0;
         label.textAlignment = NSTextAlignmentCenter;
         label.attributedText = string;
         _label = label;
-        [label sizeToFit];
-        label.frame = CGRectMake((_containerView.frame.size.width - label.frame.size.width) / 2.0f, _containerView.frame.size.height - label.frame.size.height - 18.0f, label.frame.size.width, label.frame.size.height);
+        CGSize labelSize = [label sizeThatFits:CGSizeMake(_containerView.frame.size.width - 10.0 * 2.0, CGFLOAT_MAX)];
+        label.frame = CGRectMake((_containerView.frame.size.width - labelSize.width) / 2.0f, _containerView.frame.size.height - labelSize.height - 18.0f, labelSize.width, labelSize.height);
         [_containerView addSubview:label];
     } else {
         _containerView.frame = CGRectMake(CGFloor(self.view.frame.size.width - containerSize.width) / 2, CGFloor(self.view.frame.size.height - containerSize.width) / 2, containerSize.width, containerSize.height);
