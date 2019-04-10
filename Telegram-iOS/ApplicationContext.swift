@@ -75,6 +75,7 @@ final class AuthorizedApplicationContext {
     
     private var currentTermsOfServiceUpdate: TermsOfServiceUpdate?
     private var currentPermissionsController: PermissionController?
+    private var currentPermissionsState: PermissionState?
     
     private let unlockedStatePromise = Promise<Bool>()
     var unlockedState: Signal<Bool, NoError> {
@@ -659,35 +660,38 @@ final class AuthorizedApplicationContext {
                             })
                         }
                     } else {
-                        switch state {
-                            case .contacts:
-                                splitTest.addEvent(.ContactsRequest)
-                                DeviceAccess.authorizeAccess(to: .contacts, context: context) { result in
-                                    if result {
-                                        splitTest.addEvent(.ContactsAllowed)
-                                    } else {
-                                        splitTest.addEvent(.ContactsDenied)
+                        if strongSelf.currentPermissionsState != state {
+                            strongSelf.currentPermissionsState = state
+                            switch state {
+                                case .contacts:
+                                    splitTest.addEvent(.ContactsRequest)
+                                    DeviceAccess.authorizeAccess(to: .contacts, context: context) { result in
+                                        if result {
+                                            splitTest.addEvent(.ContactsAllowed)
+                                        } else {
+                                            splitTest.addEvent(.ContactsDenied)
+                                        }
+                                        permissionsPosition.set(position + 1)
+                                        ApplicationSpecificNotice.setContactsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 0)
                                     }
-                                    permissionsPosition.set(position + 1)
-                                    ApplicationSpecificNotice.setContactsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 0)
-                                }
-                            case .notifications:
-                                splitTest.addEvent(.NotificationsRequest)
-                                DeviceAccess.authorizeAccess(to: .notifications, context: context) { result in
-                                    if result {
-                                        splitTest.addEvent(.NotificationsAllowed)
-                                    } else {
-                                        splitTest.addEvent(.NotificationsDenied)
+                                case .notifications:
+                                    splitTest.addEvent(.NotificationsRequest)
+                                    DeviceAccess.authorizeAccess(to: .notifications, context: context) { result in
+                                        if result {
+                                            splitTest.addEvent(.NotificationsAllowed)
+                                        } else {
+                                            splitTest.addEvent(.NotificationsDenied)
+                                        }
+                                        permissionsPosition.set(position + 1)
+                                        ApplicationSpecificNotice.setNotificationsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 0)
                                     }
-                                    permissionsPosition.set(position + 1)
-                                    ApplicationSpecificNotice.setNotificationsPermissionWarning(accountManager: context.sharedContext.accountManager, value: 0)
-                                }
-                            case .siri:
-                                DeviceAccess.authorizeAccess(to: .siri, context: context) { result in
-                                    permissionsPosition.set(position + 1)
-                                }
-                            default:
-                                break
+                                case .siri:
+                                    DeviceAccess.authorizeAccess(to: .siri, context: context) { result in
+                                        permissionsPosition.set(position + 1)
+                                    }
+                                default:
+                                    break
+                            }
                         }
                     }
                 } else {
@@ -695,6 +699,7 @@ final class AuthorizedApplicationContext {
                         strongSelf.currentPermissionsController = nil
                         controller.dismiss(completion: {})
                     }
+                    strongSelf.currentPermissionsState = nil
                 }
             }))
         }
