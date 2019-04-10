@@ -126,6 +126,27 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             }
             
+            var textLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            if !item.message.text.isEmpty && item.message.text.containsOnlyEmoji && item.presentationData.largeEmoji {
+                var textFont = item.presentationData.messageFont
+                let emojis = item.message.text.emojis
+                switch emojis.count {
+                    case 1:
+                        textFont = item.presentationData.messageEmojiFont1
+                    case 2:
+                        textFont = item.presentationData.messageEmojiFont2
+                    case 3:
+                        textFont = item.presentationData.messageEmojiFont3
+                    default:
+                        break
+                }
+                
+                let attributedText = NSAttributedString(string: item.message.text, font: textFont, textColor: .black)
+                textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: 120.0, height: 60.0), alignment: .natural))
+                
+                imageSize = CGSize(width: textLayoutAndApply!.0.size.width, height: 100.0)
+            }
+            
             let avatarInset: CGFloat
             var hasAvatar = false
             
@@ -216,26 +237,6 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             let imageApply = imageLayout(arguments)
             
-            var textLayoutAndApply: (TextNodeLayout, () -> TextNode)?
-            if item.message.text.containsOnlyEmoji && item.presentationData.largeEmoji {
-                var textFont = item.presentationData.messageFont
-                let emojis = item.message.text.emojis
-                switch emojis.count {
-                    case 1:
-                        textFont = item.presentationData.messageEmojiFont1
-                    case 2:
-                        textFont = item.presentationData.messageEmojiFont2
-                    case 3:
-                        textFont = item.presentationData.messageEmojiFont3
-                    default:
-                        break
-                }
-                
-                let attributedText = NSAttributedString(string: item.message.text, font: textFont, textColor: .black)
-                textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: 120.0, height: 60.0), alignment: .natural))
-            }
-            
-            
             let statusType: ChatMessageDateAndStatusType
             if item.message.effectivelyIncoming(item.context.account.peerId) {
                 statusType = .FreeIncoming
@@ -270,7 +271,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             var replyBackgroundImage: UIImage?
             var replyMarkup: ReplyMarkupMessageAttribute?
             
-            let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - imageSize.width - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
+            let availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - max(imageSize.width, 160.0) - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
            
             for attribute in item.message.attributes {
                 if let attribute = attribute as? InlineBotMessageAttribute {
@@ -376,7 +377,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             strongSelf.addSubnode(textNode)
                             strongSelf.textNode = textNode
                         }
-                        transition.updateFrame(node: textNode, frame: CGRect(x: updatedImageFrame.maxX - textLayout.size.width, y: updatedImageFrame.maxY - textLayout.size.height - 30.0, width: textLayout.size.width, height: textLayout.size.height))
+                        transition.updateFrame(node: textNode, frame: CGRect(x: updatedImageFrame.maxX - textLayout.size.width - 10.0, y: updatedImageFrame.maxY - textLayout.size.height - 30.0, width: textLayout.size.width, height: textLayout.size.height))
                     }
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
