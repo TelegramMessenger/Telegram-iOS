@@ -35,7 +35,18 @@ public indirect enum JSON: PostboxCoding, Equatable {
                 }
             }
             self = .dictionary(values)
-        } else if let value = object as? String {
+        } else if let array = object as? [Any] {
+            var values: [JSON] = []
+            for value in array {
+                if let v = JSON(value) {
+                    values.append(v)
+                } else {
+                    return nil
+                }
+            }
+            self = .array(values)
+        }
+        else if let value = object as? String {
             self = .string(value)
         } else if let value = object as? Int {
             self = .number(Double(value))
