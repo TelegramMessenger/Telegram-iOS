@@ -203,9 +203,8 @@ enum MessageHistoryTopTaggedMessage {
 }
 
 public enum MessageHistoryViewRelativeHoleDirection: Equatable, Hashable {
-    case UpperToLower
-    case LowerToUpper
-    case AroundId(MessageId)
+    case range(start: MessageId, end: MessageId)
+    case aroundId(MessageId)
 }
 
 public struct MessageHistoryViewOrderStatistics: OptionSet {
@@ -300,8 +299,10 @@ final class MutableMessageHistoryView {
     fileprivate var topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?]
     fileprivate var additionalDatas: [AdditionalMessageHistoryViewDataEntry]
     
-    init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerIds: MessageHistoryViewPeerIds, anchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
-        self.anchor = anchor
+    fileprivate var sampledState: HistoryViewSample
+    
+    init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerIds: MessageHistoryViewPeerIds, anchor inputAnchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
+        self.anchor = inputAnchor
         
         self.orderStatistics = orderStatistics
         self.peerIds = peerIds
@@ -312,63 +313,31 @@ final class MutableMessageHistoryView {
         self.topTaggedMessages = topTaggedMessages
         self.additionalDatas = additionalDatas
         
-        preconditionFailure()
-        
-        /*if let tagMask = self.tagMask, !orderStatistics.isEmpty && !self.entries.isEmpty {
-            if orderStatistics.contains(.combinedLocation) {
-                if let location = postbox.messageHistoryTagsTable.entryLocation(at: self.entries[0].index, tagMask: tagMask) {
-                    self.entries[0] = self.entries[0].updatedLocation(location)
-                    
-                    var previousLocation = location
-                    for i in 1 ..< self.entries.count {
-                        previousLocation = previousLocation.successor
-                        self.entries[i] = self.entries[i].updatedLocation(previousLocation)
-                    }
-                } else {
-                    assertionFailure()
-                }
+        self.state = HistoryViewState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, limit: count, locations: peerIds)
+        if case let .loading(loadingState) = self.state {
+            let sampledState = loadingState.checkAndSample(postbox: postbox)
+            switch sampledState {
+                case let .ready(anchor, holes):
+                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, limit: count, locations: peerIds, postbox: postbox, holes: holes))
+                case .loadHole:
+                    break
             }
-            
-            if orderStatistics.contains(.locationWithinMonth) {
-                var peerId: PeerId?
-                switch self.peerIds {
-                    case let .single(id):
-                        peerId = id
-                    case let .associated(id, _):
-                        peerId = id
-                }
-                
-                if let peerId = peerId {
-                    var topMessageEntryIndex: Int?
-                    var index = self.entries.count - 1
-                    loop: for entry in self.entries.reversed() {
-                        switch entry {
-                            case .IntermediateMessageEntry, .MessageEntry:
-                                topMessageEntryIndex = index
-                                break loop
-                        }
-                        index -= 1
-                    }
-                    if let topMessageEntryIndex = topMessageEntryIndex {
-                        let topMessageIndex = self.entries[topMessageEntryIndex].index
-                        
-                        let monthIndex = MessageMonthIndex(timestamp: topMessageIndex.timestamp)
-                        
-                        let laterCount: Int32
-                        if self.later == nil {
-                            laterCount = 0
-                        } else {
-                            laterCount = postbox.messageHistoryTagsTable.getMessageCountInRange(tagMask: tagMask, peerId: peerId, lowerBound: topMessageIndex.successor(), upperBound: monthUpperBoundIndex(peerId: peerId, index: monthIndex))
-                        }
-                        self.entries[topMessageEntryIndex] = self.entries[topMessageEntryIndex].updatedMonthLocation(MessageHistoryEntryMonthLocation(indexInMonth: laterCount))
-                    }
-                }
-            }
-        }*/
+        }
+        self.sampledState = self.state.sample(postbox: postbox)
     }
     
     private func reset(postbox: Postbox) {
-        
+        self.state = HistoryViewState(postbox: postbox, inputAnchor: self.anchor, tag: self.tag, limit: self.fillCount, locations: self.peerIds)
+        if case let .loading(loadingState) = self.state {
+            let sampledState = loadingState.checkAndSample(postbox: postbox)
+            switch sampledState {
+                case let .ready(anchor, holes):
+                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, limit: self.fillCount, locations: self.peerIds, postbox: postbox, holes: holes))
+                case .loadHole:
+                    break
+            }
+        }
+        self.sampledState = self.state.sample(postbox: postbox)
     }
     
     func refreshDueToExternalTransaction(postbox: Postbox) -> Bool {
@@ -396,7 +365,7 @@ final class MutableMessageHistoryView {
     func replay(postbox: Postbox, transaction: PostboxTransaction, updatedMedia: [MediaId: Media?], updatedCachedPeerData: [PeerId: CachedPeerData], context: MutableMessageHistoryViewReplayContext, renderIntermediateMessage: (IntermediateMessage) -> Message) -> Bool {
         var operations: [[MessageHistoryOperation]] = []
         
-        /*switch self.peerIds {
+        switch self.peerIds {
             case let .single(peerId):
                 if let value = transaction.currentOperationsByPeerId[peerId] {
                     operations.append(value)
@@ -422,10 +391,62 @@ final class MutableMessageHistoryView {
                 }
         }
         
-        let tagMask = self.tagMask
-        let unwrappedTagMask: UInt32 = tagMask?.rawValue ?? 0*/
-        
         var hasChanges = false
+        
+        let unwrappedTag: MessageTags = self.tag ?? []
+        
+        switch self.state {
+            case .loading:
+                break
+            case let .loaded(loadedState):
+                for operationSet in operations {
+                    for operation in operationSet {
+                        switch operation {
+                            case let .InsertMessage(message):
+                                if unwrappedTag.isEmpty || message.tags.contains(unwrappedTag) {
+                                    if loadedState.add(entry: .IntermediateMessageEntry(message, nil, nil)) {
+                                        hasChanges = true
+                                    }
+                                }
+                            case let .Remove(indicesAndTags):
+                                for (index, _) in indicesAndTags {
+                                    if loadedState.remove(postbox: postbox, index: index) {
+                                        hasChanges = true
+                                    }
+                                }
+                            case let .UpdateEmbeddedMedia(index, buffer):
+                                if loadedState.updateEmbeddedMedia(postbox: postbox, index: index, buffer: buffer) {
+                                    hasChanges = true
+                                }
+                            case let .UpdateGroupInfos(groupInfos):
+                                if loadedState.updateGroupInfo(mapping: groupInfos) {
+                                    hasChanges = true
+                                }
+                            case let .UpdateReadState(peerId, combinedReadState):
+                                hasChanges = true
+                                if let transientReadStates = self.transientReadStates {
+                                    switch transientReadStates {
+                                        case let .peer(states):
+                                            var updatedStates = states
+                                            updatedStates[peerId] = combinedReadState
+                                            self.transientReadStates = .peer(updatedStates)
+                                    }
+                                }
+                            case let .UpdateTimestamp(index, timestamp):
+                                if loadedState.updateTimestamp(postbox: postbox, index: index, timestamp: timestamp) {
+                                    hasChanges = true
+                                }
+                        }
+                    }
+                }
+        }
+        
+        if hasChanges {
+            self.sampledState = self.state.sample(postbox: postbox)
+        }
+        
+        /*let tagMask = self.tagMask
+        */
         
         /*for operationSet in operations {
             for operation in operationSet {
@@ -571,7 +592,7 @@ final class MutableMessageHistoryView {
             }
         }*/
         
-        /*for operationSet in operations {
+        for operationSet in operations {
             for operation in operationSet {
                 switch operation {
                     case let .InsertMessage(message):
@@ -596,7 +617,7 @@ final class MutableMessageHistoryView {
                         break
                 }
             }
-        }*/
+        }
         
         var updatedCachedPeerDataMessages = false
         var currentCachedPeerData: CachedPeerData?
@@ -738,7 +759,27 @@ final class MutableMessageHistoryView {
     }
     
     func firstHole() -> (MessageHistoryViewHole, MessageHistoryViewRelativeHoleDirection)? {
-        return nil
+        switch self.sampledState {
+            case let .loading(loadingSample):
+                switch loadingSample {
+                    case .ready:
+                        return nil
+                    case let .loadHole(peerId, namespace, _, indices, id):
+                        return (MessageHistoryViewHole.peer(MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, indices: indices)), .aroundId(MessageId(peerId: peerId, namespace: namespace, id: id)))
+                }
+            case let .loaded(loadedSample):
+                if let hole = loadedSample.hole {
+                    let direction: MessageHistoryViewRelativeHoleDirection
+                    if let endId = hole.endId {
+                        direction = .range(start: MessageId(peerId: hole.peerId, namespace: hole.namespace, id: hole.startId), end: MessageId(peerId: hole.peerId, namespace: hole.namespace, id: endId))
+                    } else {
+                        direction = .aroundId(MessageId(peerId: hole.peerId, namespace: hole.namespace, id: hole.startId))
+                    }
+                    return (MessageHistoryViewHole.peer(MessageHistoryViewPeerHole(peerId: hole.peerId, namespace: hole.namespace, indices: hole.indices)), direction)
+                } else {
+                    return nil
+                }
+        }
     }
 }
 

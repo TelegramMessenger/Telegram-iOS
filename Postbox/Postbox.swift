@@ -2229,7 +2229,9 @@ public final class Postbox {
                     subscriber.putCompletion()
                 })
             }
-            if userInteractive {
+            if self.queue.isCurrent() {
+                f()
+            } else if userInteractive {
                 self.queue.justDispatchWithQoS(qos: DispatchQoS.userInteractive, f)
             } else {
                 self.queue.justDispatch(f)

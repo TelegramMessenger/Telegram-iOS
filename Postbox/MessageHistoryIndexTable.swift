@@ -251,64 +251,19 @@ final class MessageHistoryIndexTable: Table {
         return (count, holes)
     }
     
-    func entriesAround(id: MessageId, count: Int) -> ([MessageIndex], MessageIndex?, MessageIndex?) {
-        var lowerEntries: [MessageIndex] = []
-        var upperEntries: [MessageIndex] = []
-        var lower: MessageIndex?
-        var upper: MessageIndex?
-        
-        self.valueBox.range(self.table, start: self.key(id), end: self.lowerBound(id.peerId, namespace: id.namespace), values: { key, value in
-            lowerEntries.append(readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value))
-            return true
-        }, limit: count / 2 + 1)
-        
-        if lowerEntries.count >= count / 2 + 1 {
-            lower = lowerEntries.last
-            lowerEntries.removeLast()
-        }
-        
-        self.valueBox.range(self.table, start: self.key(id).predecessor, end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
-            upperEntries.append(readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value))
-            return true
-        }, limit: count - lowerEntries.count + 1)
-        if upperEntries.count >= count - lowerEntries.count + 1 {
-            upper = upperEntries.last
-            upperEntries.removeLast()
-        }
-        
-        if lowerEntries.count != 0 && lowerEntries.count + upperEntries.count < count {
-            var additionalLowerEntries: [MessageIndex] = []
-            self.valueBox.range(self.table, start: self.key(lowerEntries.last!.id), end: self.lowerBound(id.peerId, namespace: id.namespace), values: { key, value in
-                additionalLowerEntries.append(readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value))
-                return true
-            }, limit: count - lowerEntries.count - upperEntries.count + 1)
-            if additionalLowerEntries.count >= count - lowerEntries.count + upperEntries.count + 1 {
-                lower = additionalLowerEntries.last
-                additionalLowerEntries.removeLast()
-            }
-            lowerEntries.append(contentsOf: additionalLowerEntries)
-        }
-        
-        var entries: [MessageIndex] = []
-        entries.append(contentsOf: lowerEntries.reversed())
-        entries.append(contentsOf: upperEntries)
-        return (entries: entries, lower: lower, upper: upper)
+    func indexForId(higherThan id: MessageId) -> MessageIndex? {
+        var result: MessageIndex?
+        self.valueBox.range(self.table, start: self.key(id), end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
+            result = readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value)
+            return false
+        }, limit: 1)
+        return result
     }
     
     func earlierEntries(id: MessageId, count: Int) -> [MessageIndex] {
         var entries: [MessageIndex] = []
         let key = self.key(id)
         self.valueBox.range(self.table, start: key, end: self.lowerBound(id.peerId, namespace: id.namespace), values: { key, value in
-            entries.append(readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value))
-            return true
-        }, limit: count)
-        return entries
-    }
-    
-    func laterEntries(id: MessageId, count: Int) -> [MessageIndex] {
-        var entries: [MessageIndex] = []
-        let key = self.key(id)
-        self.valueBox.range(self.table, start: key, end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
             entries.append(readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value))
             return true
         }, limit: count)

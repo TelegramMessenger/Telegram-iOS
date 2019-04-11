@@ -451,7 +451,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         })
     }
     
-    func testBlobIncrementalUpdatePerformance() {
+    func _testBlobIncrementalUpdatePerformance() {
         let table = ValueBoxTable(id: 1000, keyType: .binary, compactValuesOnCreation: false)
         
         let valueBox = self.postbox!.valueBox
@@ -501,11 +501,11 @@ class MessageHistoryIndexTableTests: XCTestCase {
         })
     }
     
-    func testDirectWritePerformance() {
+    func _testDirectWritePerformance() {
         self.beginTestDirectWritePerformance(compactValuesOnCreation: false)
     }
     
-    func testDirectWritePerformanceCompact() {
+    func _testDirectWritePerformanceCompact() {
         self.beginTestDirectWritePerformance(compactValuesOnCreation: true)
     }
     
@@ -534,15 +534,15 @@ class MessageHistoryIndexTableTests: XCTestCase {
         })
     }
     
-    func testRangeAccessPerformance() {
+    func _testRangeAccessPerformance() {
         self.beginTestRangeAccessPerformance(compactValuesOnCreation: false)
     }
     
-    func testRangeAccessPerformanceCompact() {
+    func _testRangeAccessPerformanceCompact() {
         self.beginTestRangeAccessPerformance(compactValuesOnCreation: true)
     }
     
-    func testBinarySearchAccessPerformance() {
+    func _testBinarySearchAccessPerformance() {
         let table = ValueBoxTable(id: 1000, keyType: .binary, compactValuesOnCreation: true)
         
         let valueBox = self.postbox!.valueBox
