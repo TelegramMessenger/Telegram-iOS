@@ -98,6 +98,23 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 break
             }
         }
+        
+        if self.telegramFile == nil && !item.message.text.isEmpty && item.message.text.containsOnlyEmoji && item.presentationData.largeEmoji {
+            var textFont = item.presentationData.messageFont
+            let emojis = item.message.text.emojis
+            switch emojis.count {
+                case 1:
+                    textFont = item.presentationData.messageEmojiFont1
+                case 2:
+                    textFont = item.presentationData.messageEmojiFont2
+                case 3:
+                    textFont = item.presentationData.messageEmojiFont3
+                default:
+                    break
+            }
+            
+            self.imageNode.setSignal(largeEmoji(postbox: item.context.account.postbox, emoji: item.message.text, fontSize: textFont.pointSize))
+        }
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
@@ -144,7 +161,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 let attributedText = NSAttributedString(string: item.message.text, font: textFont, textColor: .black)
                 textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: 120.0, height: 60.0), alignment: .natural))
                 
-                imageSize = CGSize(width: textLayoutAndApply!.0.size.width, height: 100.0)
+                imageSize = CGSize(width: textLayoutAndApply!.0.size.width, height: max(90.0, textLayoutAndApply!.0.size.height))
             }
             
             let avatarInset: CGFloat
@@ -366,19 +383,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                     
                     let updatedImageFrame = imageFrame.offsetBy(dx: 0.0, dy: floor((contentHeight - imageSize.height) / 2.0))
-                    
                     transition.updateFrame(node: strongSelf.imageNode, frame: updatedImageFrame)
                     imageApply()
-                    
-                    if let (textLayout, textApply) = textLayoutAndApply {
-                        let textNode = textApply()
-                        if textNode !== strongSelf.textNode {
-                            strongSelf.textNode?.removeFromSupernode()
-                            strongSelf.addSubnode(textNode)
-                            strongSelf.textNode = textNode
-                        }
-                        transition.updateFrame(node: textNode, frame: CGRect(x: updatedImageFrame.maxX - textLayout.size.width - 10.0, y: updatedImageFrame.maxY - textLayout.size.height - 30.0, width: textLayout.size.width, height: textLayout.size.height))
-                    }
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
                         if updatedShareButtonNode !== strongSelf.shareButtonNode {

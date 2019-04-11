@@ -129,7 +129,7 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     }
     
     func setSelected(_ selected: Bool, animated: Bool = false) {
-        self.isSelected = selected
+        self._value = .check(selected)
         self.checkNode.setSelected(selected, animated: animated)
     }
     

@@ -171,3 +171,17 @@ final class CachedAlbumArtworkRepresentation: CachedMediaResourceRepresentation 
         }
     }
 }
+
+final class CachedLargeEmojiRepresentation: CachedMediaResourceRepresentation {
+    var uniqueId: String {
+        return "large-emoji"
+    }
+    
+    func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
+        if let to = to as? CachedLargeEmojiRepresentation {
+            return true
+        } else {
+            return false
+        }
+    }
+}

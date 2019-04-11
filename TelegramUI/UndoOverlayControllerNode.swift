@@ -125,24 +125,26 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         let contentHeight: CGFloat = 49.0
         let margin: CGFloat = 16.0
         
-        let panelFrame = CGRect(origin: CGPoint(x: margin, y: layout.size.height - contentHeight - layout.intrinsicInsets.bottom - margin - 49.0), size: CGSize(width: layout.size.width - margin * 2.0, height: contentHeight))
-        let panelWrapperFrame = CGRect(origin: CGPoint(x: margin, y: layout.size.height - contentHeight - layout.intrinsicInsets.bottom - margin - 49.0), size: CGSize(width: layout.size.width - margin * 2.0 + margin, height: contentHeight))
+        let insets = layout.insets(options: [.input])
+        
+        let panelFrame = CGRect(origin: CGPoint(x: margin + layout.safeInsets.left, y: layout.size.height - contentHeight - insets.bottom - margin - 49.0), size: CGSize(width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight))
+        let panelWrapperFrame = CGRect(origin: CGPoint(x: margin + layout.safeInsets.left, y: layout.size.height - contentHeight - insets.bottom - margin - 49.0), size: CGSize(width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight))
         transition.updateFrame(node: self.panelNode, frame: panelFrame)
         transition.updateFrame(node: self.panelWrapperNode, frame: panelWrapperFrame)
-        self.effectView.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width - margin * 2.0, height: contentHeight)
+        self.effectView.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight)
         
         let buttonTextSize = self.buttonTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
-        let buttonTextFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - rightInset - buttonTextSize.width - margin * 2.0, y: floor((contentHeight - buttonTextSize.height) / 2.0)), size: buttonTextSize)
+        let buttonTextFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - buttonTextSize.width - margin * 2.0, y: floor((contentHeight - buttonTextSize.height) / 2.0)), size: buttonTextSize)
         transition.updateFrame(node: self.buttonTextNode, frame: buttonTextFrame)
-        self.buttonNode.frame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - rightInset - buttonTextSize.width - 8.0 - margin, y: 0.0), size: CGSize(width: layout.safeInsets.right + rightInset + buttonTextSize.width + 8.0 + margin, height: contentHeight))
+        self.buttonNode.frame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - buttonTextSize.width - 8.0 - margin * 2.0, y: 0.0), size: CGSize(width: layout.safeInsets.right + rightInset + buttonTextSize.width + 8.0 + margin, height: contentHeight))
         
         let textSize = self.textNode.updateLayout(CGSize(width: buttonTextFrame.minX - 8.0 - leftInset - layout.safeInsets.left - layout.safeInsets.right - margin * 2.0, height: .greatestFiniteMagnitude))
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + leftInset, y: floor((contentHeight - textSize.height) / 2.0)), size: textSize))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset, y: floor((contentHeight - textSize.height) / 2.0)), size: textSize))
         
         let timerTextSize = self.timerTextNode.updateLayout(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.timerTextNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((leftInset - timerTextSize.width) / 2.0), y: floor((contentHeight - timerTextSize.height) / 2.0)), size: timerTextSize))
+        transition.updateFrame(node: self.timerTextNode, frame: CGRect(origin: CGPoint(x: floor((leftInset - timerTextSize.width) / 2.0), y: floor((contentHeight - timerTextSize.height) / 2.0)), size: timerTextSize))
         let statusSize: CGFloat = 30.0
-        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((leftInset - statusSize) / 2.0), y: floor((contentHeight - statusSize) / 2.0)), size: CGSize(width: statusSize, height: statusSize)))
+        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: floor((leftInset - statusSize) / 2.0), y: floor((contentHeight - statusSize) / 2.0)), size: CGSize(width: statusSize, height: statusSize)))
         if firstLayout {
             self.statusNode.transitionToState(.secretTimeout(color: .white, icon: nil, beginTime: CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, timeout: Double(self.remainingSeconds), sparks: false), completion: {})
         }
@@ -150,6 +152,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     func animateIn() {
         self.panelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.panelWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
     }
     
     func animateOut(completion: @escaping () -> Void) {
@@ -160,7 +163,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if !self.panelNode.frame.contains(point) {
+        if !self.panelNode.frame.insetBy(dx: -60.0, dy: 0.0).contains(point) {
             return nil
         }
         return super.hitTest(point, with: event)
