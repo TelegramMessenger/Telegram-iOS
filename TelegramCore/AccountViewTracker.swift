@@ -677,7 +677,7 @@ public final class AccountViewTracker {
                 return
             }
             let _ = (account.postbox.transaction { transaction -> Set<MessageId> in
-                let ids = Set(transaction.getMessageIndicesWithTag(peerId: peerId, tag: .unseenPersonalMessage).map({ $0.id }))
+                let ids = Set(transaction.getMessageIndicesWithTag(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: .unseenPersonalMessage).map({ $0.id }))
                 if let summary = transaction.getMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), summary.count > 0 {
                     var maxId: Int32 = summary.range.maxId
                     if let index = transaction.getTopPeerMessageIndex(peerId: peerId, namespace: Namespaces.Message.Cloud) {
@@ -892,27 +892,36 @@ public final class AccountViewTracker {
         }
     }
     
-    public func aroundMessageOfInterestHistoryViewForLocation(_ chatLocation: ChatLocation, count: Int, clipHoles: Bool = true, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundMessageOfInterestHistoryViewForLocation(_ chatLocation: ChatLocation, count: Int, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundMessageOfInterestHistoryViewForChatLocation(chatLocation, count: count, clipHoles: clipHoles, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
+            let signal = account.postbox.aroundMessageOfInterestHistoryViewForChatLocation(chatLocation, count: count, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
             return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal)
         } else {
             return .never()
         }
     }
     
-    public func aroundIdMessageHistoryViewForLocation(_ chatLocation: ChatLocation, count: Int, clipHoles: Bool = true, messageId: MessageId, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundIdMessageHistoryViewForLocation(_ chatLocation: ChatLocation, count: Int, messageId: MessageId, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundIdMessageHistoryViewForLocation(chatLocation, count: count, clipHoles: clipHoles, messageId: messageId, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
+            let signal = account.postbox.aroundIdMessageHistoryViewForLocation(chatLocation, count: count, messageId: messageId, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
             return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal)
         } else {
             return .never()
         }
     }
     
-    public func aroundMessageHistoryViewForLocation(_ chatLocation: ChatLocation, index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, count: Int, clipHoles: Bool = true, fixedCombinedReadStates: MessageHistoryViewReadState?, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundMessageHistoryViewForLocation(_ chatLocation: ChatLocation, index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, count: Int, fixedCombinedReadStates: MessageHistoryViewReadState?, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, index: index, anchorIndex: anchorIndex, count: count, clipHoles: clipHoles, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
+            let inputAnchor: HistoryViewInputAnchor
+            switch index {
+                case .upperBound:
+                    inputAnchor = .upperBound
+                case .lowerBound:
+                    inputAnchor = .lowerBound
+                case let .message(index):
+                    inputAnchor = .index(index)
+            }
+            let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: inputAnchor, count: count, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
             return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal)
         } else {
             return .never()

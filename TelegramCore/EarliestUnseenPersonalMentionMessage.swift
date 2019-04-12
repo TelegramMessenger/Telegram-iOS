@@ -22,7 +22,7 @@ private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Net
     return postbox.transaction { transaction -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
         var resultMessage: Message?
         var resultHole: MessageHistoryViewPeerHole?
-        transaction.scanMessages(peerId: peerId, tagMask: .unseenPersonalMessage, { message in
+        transaction.scanMessages(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: .unseenPersonalMessage, { message in
             for attribute in message.attributes {
                 if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
                     resultMessage = message
@@ -58,7 +58,7 @@ private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Net
             }
             
             if !locally, let _ = invalidateHistoryPts {
-                let validateSignal = fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, peerId: peerId, namespace: Namespaces.Message.Cloud, range: (resultMessage.id.id - 1) ... Int32.max, direction: .LowerToUpper, space: .tag(.unseenPersonalMessage), limit: 100)
+                let validateSignal = fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, peerId: peerId, namespace: Namespaces.Message.Cloud, direction: .range(start: MessageId(peerId: resultMessage.id.peerId, namespace: resultMessage.id.namespace, id: resultMessage.id.id - 1), end: MessageId(peerId: resultMessage.id.peerId, namespace: resultMessage.id.namespace, id: Int32.max - 1)), space: .tag(.unseenPersonalMessage), limit: 100)
                 |> `catch` { _ -> Signal<Never, NoError> in
                     return .complete()
                 }
@@ -74,7 +74,7 @@ private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Net
             }
         } else if let resultHole = resultHole, !locally {
             let holeRange = 1 ... Int32(resultHole.indices[resultHole.indices.endIndex] - 1)
-            let validateSignal = fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, peerId: peerId, namespace: Namespaces.Message.Cloud, range: holeRange, direction: .LowerToUpper, space: .tag(.unseenPersonalMessage))
+            let validateSignal = fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, peerId: peerId, namespace: Namespaces.Message.Cloud, direction: .range(start: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: 1), end: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32.max - 1)), space: .tag(.unseenPersonalMessage))
             |> `catch` { _ -> Signal<Never, NoError> in
                 return .complete()
             }

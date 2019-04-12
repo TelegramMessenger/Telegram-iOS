@@ -77,7 +77,8 @@ private final class HistoryPreloadEntry: Comparable {
                 |> take(1)
                 |> deliverOn(queue)
                 |> mapToSignal { download -> Signal<Never, NoError> in
-                    switch hole.hole {
+                    return .never()
+                    /*switch hole.hole {
                         case let .peer(peerHole):
                             let range: ClosedRange<MessageId.Id>
                             switch hole.direction {
@@ -89,9 +90,7 @@ private final class HistoryPreloadEntry: Comparable {
                                     range = Int32(peerHole.indices[peerHole.indices.startIndex]) ... Int32.max
                             }
                             return fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .download(download), postbox: postbox, peerId: peerHole.peerId, namespace: peerHole.namespace, range: range, direction: hole.direction, space: .everywhere, limit: 60)
-                        /*case let .groupFeed(groupId, lowerIndex, upperIndex):
-                            return fetchGroupFeedHole(source: .download(download), accountPeerId: accountPeerId, postbox: postbox, groupId: groupId, minIndex: lowerIndex, maxIndex: upperIndex, direction: hole.direction, limit: 60)*/
-                    }
+                    }*/
                 }
             )
             self.disposable.set(signal.start())

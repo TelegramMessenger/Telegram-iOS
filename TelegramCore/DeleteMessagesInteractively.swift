@@ -128,15 +128,16 @@ public func clearAuthorHistory(account: Account, peerId: PeerId, memberId: PeerI
                         return .fail(true)
                     }
             }
-            return (signal |> restart)
-                |> `catch` { success -> Signal<Void, NoError> in
-                    if success {
-                        return account.postbox.transaction { transaction -> Void in
-                            transaction.removeAllMessagesWithAuthor(peerId, authorId: memberId)
-                        }
-                    } else {
-                        return .complete()
+            return (signal
+            |> restart)
+            |> `catch` { success -> Signal<Void, NoError> in
+                if success {
+                    return account.postbox.transaction { transaction -> Void in
+                        transaction.removeAllMessagesWithAuthor(peerId, authorId: memberId, namespace: Namespaces.Message.Cloud)
                     }
+                } else {
+                    return .complete()
+                }
             }
         } else {
             return .complete()
