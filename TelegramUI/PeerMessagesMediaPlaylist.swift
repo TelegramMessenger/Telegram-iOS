@@ -496,7 +496,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                         guard let message = message else {
                             return .single(nil)
                         }
-                        return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), index: .message(message.index), anchorIndex: .message(message.index), count: 10, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: [])
+                        return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .index(message.index), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: [])
                         |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                             if let (message, aroundMessages, _) = navigatedMessageFromView(view.0, anchorIndex: message.index, position: .exact) {
                                 return .single((message, aroundMessages))
@@ -565,12 +565,12 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                             }
                                         }
                                     }
-                                    return transaction.findRandomMessage(peerId: peerId, tagMask: tagMask, ignoreIds: (playbackStack.ids, playbackStack.set)) ?? index
+                                    return transaction.findRandomMessage(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: tagMask, ignoreIds: (playbackStack.ids, playbackStack.set)) ?? index
                                 }
                         }
                         let historySignal = inputIndex
                         |> mapToSignal { inputIndex -> Signal<(Message, [Message])?, NoError> in
-                            return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), index: .message(inputIndex), anchorIndex: .message(inputIndex), count: 10, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: [])
+                            return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .index(inputIndex), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: [])
                             |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                 let position: NavigatedMessageFromViewPosition
                                 switch navigation {
@@ -594,13 +594,13 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                 }
                                 
                                 if case .all = looping {
-                                    let viewIndex: MessageHistoryAnchorIndex
+                                    let viewIndex: HistoryViewInputAnchor
                                     if case .earlier = navigation {
                                         viewIndex = .upperBound
                                     } else {
                                         viewIndex = .lowerBound
                                     }
-                                    return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), index: viewIndex, anchorIndex: viewIndex, count: 10, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: [])
+                                    return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: viewIndex, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, orderStatistics: [])
                                     |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                         let position: NavigatedMessageFromViewPosition
                                         switch navigation {

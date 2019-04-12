@@ -6070,7 +6070,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
                             if actions.contains(3) {
                                 let _ = strongSelf.context.account.postbox.transaction({ transaction -> Void in
-                                    transaction.removeAllMessagesWithAuthor(peerId, authorId: author.id)
+                                    transaction.removeAllMessagesWithAuthor(peerId, authorId: author.id, namespace: Namespaces.Message.Cloud)
                                 }).start()
                                 let _ = clearAuthorHistory(account: strongSelf.context.account, peerId: peerId, memberId: author.id).start()
                             } else if actions.contains(0) {

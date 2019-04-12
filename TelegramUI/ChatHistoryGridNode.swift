@@ -289,7 +289,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                             prepareOnMainQueue = !fadeIn
                         case let .Generic(genericType):
                             switch genericType {
-                                case .InitialUnread:
+                                case .InitialUnread, .Initial:
                                     reason = ChatHistoryViewTransitionReason.Initial(fadeIn: false)
                                 case .Generic:
                                     reason = ChatHistoryViewTransitionReason.InteractiveChanges

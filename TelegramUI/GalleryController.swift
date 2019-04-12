@@ -376,7 +376,7 @@ class GalleryController: ViewController {
             switch source {
                 case .peerMessagesAtId:
                     if let tags = tagsForMessage(message!) {
-                        let view = context.account.postbox.aroundMessageHistoryViewForLocation(.peer(message!.id.peerId), index: .message(message!.index), anchorIndex: .message(message!.index), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, orderStatistics: [.combinedLocation])
+                        let view = context.account.postbox.aroundMessageHistoryViewForLocation(.peer(message!.id.peerId), anchor: .index(message!.index), count: 50, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, orderStatistics: [.combinedLocation])
                         
                         return view
                         |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in

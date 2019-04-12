@@ -561,7 +561,7 @@ final class ChatListNode: ListView {
                     updatedScrollPosition = nil
                 } else {
                     switch update.type {
-                        case .InitialUnread:
+                        case .InitialUnread, .Initial:
                             reason = .initial
                             prepareOnMainQueue = true
                         case .Generic:
