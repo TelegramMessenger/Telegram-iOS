@@ -96,11 +96,12 @@ public struct PermissionUISplitTest: SplitTest {
 
 public func permissionUISplitTest(postbox: Postbox) -> Signal<PermissionUISplitTest, NoError> {
     return postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
-    |> map { view in
-        return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
-    }
-    |> map { appConfiguration in
-        let (config, bucket) = PermissionUISplitTest.Configuration.with(appConfiguration: appConfiguration)
-        return PermissionUISplitTest(postbox: postbox, bucket: bucket, configuration: config)
-    }
+    |> mapToSignal { view -> Signal<PermissionUISplitTest, NoError> in
+        if let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration, appConfiguration.data != nil {
+            let (config, bucket) = PermissionUISplitTest.Configuration.with(appConfiguration: appConfiguration)
+            return .single(PermissionUISplitTest(postbox: postbox, bucket: bucket, configuration: config))
+        } else {
+            return .never()
+        }
+    } |> take(1)
 }
