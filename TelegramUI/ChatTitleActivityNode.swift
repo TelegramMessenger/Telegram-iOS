@@ -86,6 +86,9 @@ class ChatTitleActivityNode: ASDisplayNode {
                 if case let .info(_, fromType) = fromState, case let .info(_, toType) = state, fromType == toType {
                     animation = .none
                 }
+                if case .typingText = fromState, case .typingText = state {
+                    animation = .none
+                }
                     
                 self.contentNode = node
                 if let contentNode = self.contentNode {

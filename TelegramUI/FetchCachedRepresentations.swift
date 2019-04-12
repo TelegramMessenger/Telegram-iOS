@@ -688,7 +688,7 @@ private func fetchLargeEmojiRepresentation(account: Account, resource: MediaReso
         let font = Font.regular(resource.fontSize)
         let stringAttributes = [NSAttributedStringKey.font: font]
         var emojiSize = nsString.size(withAttributes: stringAttributes)
-        emojiSize = CGSize(width: ceil(emojiSize.width), height: ceil(emojiSize.height))
+        emojiSize = CGSize(width: ceil(emojiSize.width) + 2.0, height: ceil(emojiSize.height) + 2.0)
         
         let image = generateImage(emojiSize, contextGenerator: { size, context in
             let bounds = CGRect(origin: CGPoint(), size: size)

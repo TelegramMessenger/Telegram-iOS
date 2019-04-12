@@ -328,6 +328,8 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
     var changeProfilePhotoImpl: (() -> Void)?
     
     var getNavigationController: (() -> NavigationController?)?
+    
+    let hapticFeedback = HapticFeedback()
         
     let arguments = EditSettingsItemArguments(context: context, accountManager: accountManager, avatarAndNameInfoContext: avatarAndNameInfoContext, avatarTapAction: {
         var updating = false
@@ -356,6 +358,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
     }, saveEditingState: {
         var updateName: ItemListAvatarAndNameInfoItemName?
         var updateBio: String?
+        var failed = false
         updateState { state in
             if state.editingName != currentName {
                 updateName = state.editingName
@@ -363,12 +366,24 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
             if state.editingBioText != currentBioText {
                 updateBio = state.editingBioText
             }
+            
+            if (updateBio?.count ?? 0) > 70 {
+                failed = true
+                return state
+            }
+            
             if updateName != nil || updateBio != nil {
                 return state.withUpdatedUpdatingName(state.editingName).withUpdatedUpdatingBioText(true)
             } else {
                 return state
             }
         }
+        
+        guard !failed else {
+            hapticFeedback.error()
+            return
+        }
+        
         var updateNameSignal: Signal<Void, NoError> = .complete()
         if let updateName = updateName, case let .personName(firstName, lastName) = updateName {
             updateNameSignal = updateAccountPeerName(account: context.account, firstName: firstName, lastName: lastName)

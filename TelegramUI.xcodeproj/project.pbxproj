@@ -143,6 +143,7 @@
 		09F21565225C83E100AEDF6D /* ChatListStatusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F21564225C83E100AEDF6D /* ChatListStatusNode.swift */; };
 		09F21567225C8EF500AEDF6D /* ChatListOnlineNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F21566225C8EF500AEDF6D /* ChatListOnlineNode.swift */; };
 		09F2158D225CF5BC00AEDF6D /* Pasteboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F2158C225CF5BC00AEDF6D /* Pasteboard.swift */; };
+		09F21594225F20D300AEDF6D /* LargeEmojiResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F21593225F20D300AEDF6D /* LargeEmojiResource.swift */; };
 		09F664C021EAAFAF00AB7E26 /* ThemeColorsGridController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F664BF21EAAFAF00AB7E26 /* ThemeColorsGridController.swift */; };
 		09F664C221EAAFCB00AB7E26 /* ThemeColorsGridControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F664C121EAAFCB00AB7E26 /* ThemeColorsGridControllerNode.swift */; };
 		09F664C421EAB98300AB7E26 /* ThemeColorsGridControllerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F664C321EAB98300AB7E26 /* ThemeColorsGridControllerItem.swift */; };
@@ -1309,6 +1310,7 @@
 		09F21564225C83E100AEDF6D /* ChatListStatusNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListStatusNode.swift; sourceTree = "<group>"; };
 		09F21566225C8EF500AEDF6D /* ChatListOnlineNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListOnlineNode.swift; sourceTree = "<group>"; };
 		09F2158C225CF5BC00AEDF6D /* Pasteboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pasteboard.swift; sourceTree = "<group>"; };
+		09F21593225F20D300AEDF6D /* LargeEmojiResource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LargeEmojiResource.swift; sourceTree = "<group>"; };
 		09F664BF21EAAFAF00AB7E26 /* ThemeColorsGridController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColorsGridController.swift; sourceTree = "<group>"; };
 		09F664C121EAAFCB00AB7E26 /* ThemeColorsGridControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColorsGridControllerNode.swift; sourceTree = "<group>"; };
 		09F664C321EAB98300AB7E26 /* ThemeColorsGridControllerItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColorsGridControllerItem.swift; sourceTree = "<group>"; };
@@ -4916,6 +4918,7 @@
 				099529AB21CDBBB200805E13 /* QRCode.swift */,
 				0910B0EE21FA532D00F8F87D /* WallpaperResources.swift */,
 				D0CCD61A222E8B4500EE1E08 /* TimeBasedVideoPreload.swift */,
+				09F21593225F20D300AEDF6D /* LargeEmojiResource.swift */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -6121,6 +6124,7 @@
 				D01776B31F1D69A80044446D /* RadialStatusNode.swift in Sources */,
 				D084023420E295F000065674 /* GroupStickerPackSetupController.swift in Sources */,
 				D01C06BE1FBCAF06001561AB /* ChatMessageBubbleMosaicLayout.swift in Sources */,
+				09F21594225F20D300AEDF6D /* LargeEmojiResource.swift in Sources */,
 				0900678D21ED5EA800530762 /* WallpaperColorPanelNode.swift in Sources */,
 				D0EC6E451EB9F58900EBF1C3 /* ItemListMultilineTextItem.swift in Sources */,
 				091417F421EF4F5F00C8325A /* WallpaperGalleryItem.swift in Sources */,

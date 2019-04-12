@@ -32,6 +32,27 @@ private func generateBadgeBackgroundImage(theme: PresentationTheme, active: Bool
     })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 10)
 }
 
+private func generateClockFrameImage(color: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 11.0, height: 11.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setStrokeColor(color.cgColor)
+        context.setFillColor(color.cgColor)
+        let strokeWidth: CGFloat = 1.0
+        context.setLineWidth(strokeWidth)
+        context.strokeEllipse(in: CGRect(x: strokeWidth / 2.0, y: strokeWidth / 2.0, width: size.width - strokeWidth, height: size.height - strokeWidth))
+        context.fill(CGRect(x: (11.0 - strokeWidth) / 2.0, y: strokeWidth * 3.0, width: strokeWidth, height: 11.0 / 2.0 - strokeWidth * 3.0))
+    })
+}
+
+private func generateClockMinImage(color: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 11.0, height: 11.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setFillColor(color.cgColor)
+        let strokeWidth: CGFloat = 1.0
+        context.fill(CGRect(x: (11.0 - strokeWidth) / 2.0, y: (11.0 - strokeWidth) / 2.0, width: 11.0 / 2.0 - strokeWidth, height: strokeWidth))
+    })
+}
+
 enum RecentStatusOnlineIconState {
     case regular
     case highlighted
@@ -63,6 +84,18 @@ struct PresentationResourcesChatList {
     static func doubleCheckImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListDoubleCheck.rawValue, { theme in
             return generateStatusCheckImage(theme: theme, single: false)
+        })
+    }
+    
+    static func clockFrameImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatListClockFrame.rawValue, { theme in
+            return generateClockFrameImage(color: theme.chatList.pendingIndicatorColor)
+        })
+    }
+    
+    static func clockMinImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatListClockMin.rawValue, { theme in
+            return generateClockMinImage(color: theme.chatList.pendingIndicatorColor)
         })
     }
     

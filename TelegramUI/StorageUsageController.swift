@@ -164,7 +164,7 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                     arguments.openClearAll()
                 })
             case let .peer(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer, chatPeer, value):
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, aliasHandling: .threatSelfAsSaved, nameColor: chatPeer == nil ? .primary : .secret, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, sectionId: self.section, action: {
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, aliasHandling: .threatSelfAsSaved, nameColor: chatPeer == nil ? .primary : .secret, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     let resolvedPeer = chatPeer ?? peer
                     arguments.openPeerMedia(resolvedPeer.id)
                 }, setPeerIdWithRevealedOptions: { previousId, id in

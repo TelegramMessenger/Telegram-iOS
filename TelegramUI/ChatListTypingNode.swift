@@ -31,6 +31,8 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                     }
                 }
                 
+                let lightColor = color.withAlphaComponent(0.85)
+                
                 if activities.count == 1 {
                     if activities[0].0.id == peerId {
                         let text: String
@@ -56,15 +58,15 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                         
                         switch activities[0].1 {
                             case .typingText:
-                                state = .typingText(string, color)
+                                state = .typingText(string, lightColor)
                             case .recordingVoice:
-                                state = .recordingVoice(string, color)
+                                state = .recordingVoice(string, lightColor)
                             case .recordingInstantVideo:
-                                state = .recordingVideo(string, color)
+                                state = .recordingVideo(string, lightColor)
                             case .uploadingFile, .uploadingInstantVideo, .uploadingPhoto, .uploadingVideo:
-                                state = .uploading(string, color)
+                                state = .uploading(string, lightColor)
                             case .playingGame:
-                                state = .playingGame(string, color)
+                                state = .playingGame(string, lightColor)
                         }
                     } else {
                         let text: String
@@ -95,15 +97,15 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                         
                         switch activities[0].1 {
                             case .typingText:
-                                state = .typingText(string, color)
+                                state = .typingText(string, lightColor)
                             case .recordingVoice:
-                                state = .recordingVoice(string, color)
+                                state = .recordingVoice(string, lightColor)
                             case .recordingInstantVideo:
-                                state = .recordingVideo(string, color)
+                                state = .recordingVideo(string, lightColor)
                             case .uploadingFile, .uploadingInstantVideo, .uploadingPhoto, .uploadingVideo:
-                                state = .uploading(string, color)
+                                state = .uploading(string, lightColor)
                             case .playingGame:
-                                state = .playingGame(string, color)
+                                state = .playingGame(string, lightColor)
                         }
                     }
                 } else {
@@ -114,7 +116,7 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                     } else {
                         string = NSAttributedString(string: strings.DialogList_MultipleTypingSuffix(activities.count).0, font: textFont, textColor: color)
                     }
-                    state = .typingText(string, color)
+                    state = .typingText(string, lightColor)
                 }
             }
             

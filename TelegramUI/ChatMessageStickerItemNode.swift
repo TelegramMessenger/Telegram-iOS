@@ -21,10 +21,14 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     private var deliveryFailedNode: ChatMessageDeliveryFailedNode?
     private var shareButtonNode: HighlightableButtonNode?
 
-    
     var telegramFile: TelegramMediaFile?
     
     private let fetchDisposable = MetaDisposable()
+    
+    private var appliedForwardInfo: (Peer?, String?)?
+    
+    private var forwardInfoNode: ChatMessageForwardInfoNode?
+    private var forwardBackgroundNode: ASImageNode?
     
     private var viaBotNode: TextNode?
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
@@ -101,7 +105,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         
         if self.telegramFile == nil && !item.message.text.isEmpty && item.message.text.containsOnlyEmoji && item.presentationData.largeEmoji {
             var textFont = item.presentationData.messageFont
-            let emojis = item.message.text.emojis
+            let emojis = item.message.text.emojiString
             switch emojis.count {
                 case 1:
                     textFont = item.presentationData.messageEmojiFont1
@@ -144,6 +148,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             
             var textLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            var isEmoji = false
             if !item.message.text.isEmpty && item.message.text.containsOnlyEmoji && item.presentationData.largeEmoji {
                 var textFont = item.presentationData.messageFont
                 let emojis = item.message.text.emojis
@@ -159,9 +164,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
                 
                 let attributedText = NSAttributedString(string: item.message.text, font: textFont, textColor: .black)
-                textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: 120.0, height: 60.0), alignment: .natural))
+                textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: 180.0, height: 90.0), alignment: .natural))
                 
-                imageSize = CGSize(width: textLayoutAndApply!.0.size.width, height: max(90.0, textLayoutAndApply!.0.size.height))
+                imageSize = CGSize(width: textLayoutAndApply!.0.size.width, height: textLayoutAndApply!.0.size.height)
+                isEmoji = true
             }
             
             let avatarInset: CGFloat
@@ -310,7 +316,6 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                 }
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-
                     replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute
@@ -371,6 +376,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             
             var layoutSize = CGSize(width: params.width, height: contentHeight)
+            if isEmoji && !incoming {
+                layoutSize.height += dateAndStatusSize.height
+            }
             if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
                 layoutSize.height += actionButtonsSizeAndApply.0.height
             }
@@ -408,7 +416,15 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                     
                     dateAndStatusApply(false)
-                    transition.updateFrame(node: strongSelf.dateAndStatusNode, frame: CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateAndStatusSize.width - 4.0), y: updatedImageFrame.maxY - dateAndStatusSize.height - 16.0), size: dateAndStatusSize))
+                    var dateOffset: CGPoint = CGPoint(x: dateAndStatusSize.width + 4.0, y: dateAndStatusSize.height + 16.0)
+                    if isEmoji {
+                        if incoming {
+                            dateOffset.x = 12.0
+                        } else {
+                            dateOffset.y = 12.0
+                        }
+                    }
+                    transition.updateFrame(node: strongSelf.dateAndStatusNode, frame: CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateOffset.x), y: updatedImageFrame.maxY - dateOffset.y), size: dateAndStatusSize))
                     
                     if let updatedReplyBackgroundNode = updatedReplyBackgroundNode {
                         if strongSelf.replyBackgroundNode == nil {

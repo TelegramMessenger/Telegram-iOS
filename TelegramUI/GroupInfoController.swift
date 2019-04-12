@@ -142,7 +142,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     case administrators(PresentationTheme, String, String)
     case permissions(PresentationTheme, String, String)
     case addMember(PresentationTheme, String, editing: Bool)
-    case member(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, index: Int, peerId: PeerId, peer: Peer, participant: RenderedChannelParticipant?, presence: PeerPresence?, memberStatus: GroupInfoMemberStatus, editing: ItemListPeerItemEditing, revealActions: [ParticipantRevealAction], enabled: Bool)
+    case member(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, index: Int, peerId: PeerId, peer: Peer, participant: RenderedChannelParticipant?, presence: PeerPresence?, memberStatus: GroupInfoMemberStatus, editing: ItemListPeerItemEditing, revealActions: [ParticipantRevealAction], enabled: Bool, selectable: Bool)
     case leave(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -303,8 +303,8 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .member(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameDisplayOrder, lhsIndex, lhsPeerId, lhsPeer, lhsParticipant, lhsPresence, lhsMemberStatus, lhsEditing, lhsActions, lhsEnabled):
-                if case let .member(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameDisplayOrder, rhsIndex, rhsPeerId, rhsPeer, rhsParticipant, rhsPresence, rhsMemberStatus, rhsEditing, rhsActions, rhsEnabled) = rhs {
+            case let .member(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameDisplayOrder, lhsIndex, lhsPeerId, lhsPeer, lhsParticipant, lhsPresence, lhsMemberStatus, lhsEditing, lhsActions, lhsEnabled, lhsSelectable):
+                if case let .member(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameDisplayOrder, rhsIndex, rhsPeerId, rhsPeer, rhsParticipant, rhsPresence, rhsMemberStatus, rhsEditing, rhsActions, rhsEnabled, rhsSelectable) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
@@ -348,6 +348,9 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                     if lhsEnabled != rhsEnabled {
                         return false
                     }
+                    if lhsSelectable != rhsSelectable {
+                        return false
+                    }
                     return true
                 } else {
                     return false
@@ -357,7 +360,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
     
     var stableId: GroupEntryStableId {
         switch self {
-            case let .member(_, _, _, _, _, peerId, _, _, _, _, _, _, _):
+            case let .member(_, _, _, _, _, peerId, _, _, _, _, _, _, _, _):
                 return .peer(peerId)
             default:
                 return .index(self.sortIndex)
@@ -394,7 +397,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return 15
             case .addMember:
                 return 17
-            case let .member(_, _, _, _, index, _, _, _, _, _, _, _, _):
+            case let .member(_, _, _, _, index, _, _, _, _, _, _, _, _, _):
                 return 20 + index
             case .leave:
                 return 100000 + 1
@@ -469,7 +472,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesChat.groupInfoAdminsIcon(theme), title: title, label: text, sectionId: self.section, style: .blocks, action: {
                     arguments.openAdministrators()
                 })
-            case let .member(theme, strings, dateTimeFormat, nameDisplayOrder, _, _, peer, participant, presence, memberStatus, editing, actions, enabled):
+            case let .member(theme, strings, dateTimeFormat, nameDisplayOrder, _, _, peer, participant, presence, memberStatus, editing, actions, enabled, selectable):
                 let label: String?
                 switch memberStatus {
                     case .admin:
@@ -494,8 +497,8 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                         }
                     }))
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!), editing: editing, revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: enabled, sectionId: self.section, action: {
-                    if let infoController = peerInfoController(context: arguments.context, peer: peer) {
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!), editing: editing, revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: enabled, selectable: selectable, sectionId: self.section, action: {
+                    if let infoController = peerInfoController(context: arguments.context, peer: peer), selectable {
                         arguments.pushController(infoController)
                     }
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
@@ -973,7 +976,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                     peerActions.append(ParticipantRevealAction(type: .destructive, title: presentationData.strings.Common_Delete, action: .remove))
                 }
                 
-                entries.append(GroupInfoEntry.member(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, index: i, peerId: peer.id, peer: peer, participant: RenderedChannelParticipant(participant: participant, peer: peer), presence: peerPresences[peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: canRemoveParticipant(account: account, isAdmin: canEditMembers, participantId: peer.id, invitedBy: sortedParticipants[i].invitedBy), editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == peer.id), revealActions: peerActions, enabled: !disabledPeerIds.contains(peer.id)))
+                entries.append(GroupInfoEntry.member(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, index: i, peerId: peer.id, peer: peer, participant: RenderedChannelParticipant(participant: participant, peer: peer), presence: peerPresences[peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: canRemoveParticipant(account: account, isAdmin: canEditMembers, participantId: peer.id, invitedBy: sortedParticipants[i].invitedBy), editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == peer.id), revealActions: peerActions, enabled: !disabledPeerIds.contains(peer.id), selectable: peer.id != account.peerId))
             }
         }
     } else if let channel = view.peers[view.peerId] as? TelegramChannel, let cachedChannelData = view.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
@@ -1095,7 +1098,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 peerActions.append(ParticipantRevealAction(type: .destructive, title: presentationData.strings.Common_Delete, action: .remove))
             }
             
-            entries.append(GroupInfoEntry.member(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, index: i, peerId: participant.peer.id, peer: participant.peer, participant: participant, presence: participant.presences[participant.peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: !peerActions.isEmpty, editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == participant.peer.id), revealActions: peerActions, enabled: true))
+            entries.append(GroupInfoEntry.member(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, index: i, peerId: participant.peer.id, peer: participant.peer, participant: participant, presence: participant.presences[participant.peer.id], memberStatus: memberStatus, editing: ItemListPeerItemEditing(editable: !peerActions.isEmpty, editing: state.editingState != nil && canRemoveAnyMember, revealed: state.peerIdWithRevealedOptions == participant.peer.id), revealActions: peerActions, enabled: true, selectable: participant.peer.id != account.peerId))
         }
     }
     
@@ -1892,6 +1895,8 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     
     let searchContext = GroupMembersSearchContext(context: context, peerId: originalPeerId)
     
+    let hapticFeedback = HapticFeedback()
+    
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), peerView.get(), context.account.postbox.combinedView(keys: [globalNotificationsKey]), channelMembersPromise.get())
     |> map { presentationData, state, view, combinedView, channelMembers -> (ItemListControllerState, (ItemListNodeState<GroupInfoEntry>, GroupInfoEntry.ItemGenerationArguments)) in
@@ -1942,13 +1947,23 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
             } else {
                 rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: doneEnabled, action: {
                     var updateValues: (title: String?, description: String?) = (nil, nil)
+                    var failed = false
                     updateState { state in
                         updateValues = valuesRequiringUpdate(state: state, view: view)
                         if updateValues.0 != nil || updateValues.1 != nil {
+                            if (updateValues.description?.count ?? 0) > 255 {
+                                failed = true
+                                return state
+                            }
                             return state.withUpdatedSavingData(true)
                         } else {
                             return state.withUpdatedEditingState(nil)
                         }
+                    }
+                    
+                    guard !failed else {
+                        hapticFeedback.error()
+                        return
                     }
                     
                     let updateTitle: Signal<Void, Void>

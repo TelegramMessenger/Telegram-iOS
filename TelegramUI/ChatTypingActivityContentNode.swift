@@ -70,7 +70,8 @@ private class ChatTypingActivityIndicatorNode: ChatTitleActivityIndicatorNode {
         radius = (max(minDiameter, radius) - minDiameter) / (maxDiameter - minDiameter)
         radius = radius * 1.5
 
-        var dotsColor = parameters.color.withAlphaComponent(radius * deltaAlpha + minAlpha)
+        let initialAlpha = parameters.color.alpha
+        var dotsColor = parameters.color.withAlphaComponent((radius * deltaAlpha + minAlpha) * initialAlpha)
         context.setFillColor(dotsColor.cgColor)
         
         context.fillEllipse(in: CGRect(x: leftPadding - minDiameter / 2.0 - radius / 2.0, y: topPadding - minDiameter / 2.0 - radius / 2.0, width: minDiameter + radius, height: minDiameter + radius))
@@ -79,7 +80,7 @@ private class ChatTypingActivityIndicatorNode: ChatTitleActivityIndicatorNode {
         radius = (max(minDiameter, radius) - minDiameter) / (maxDiameter - minDiameter)
         radius = radius * 1.5
         
-        dotsColor = parameters.color.withAlphaComponent(radius * deltaAlpha + minAlpha)
+        dotsColor = parameters.color.withAlphaComponent((radius * deltaAlpha + minAlpha) * initialAlpha)
         context.setFillColor(dotsColor.cgColor)
         
         context.fillEllipse(in: CGRect(x: leftPadding + distance - minDiameter / 2.0 - radius / 2.0, y: topPadding - minDiameter / 2.0 - radius / 2.0, width: minDiameter + radius, height: minDiameter + radius))
@@ -88,7 +89,7 @@ private class ChatTypingActivityIndicatorNode: ChatTitleActivityIndicatorNode {
         radius = (max(minDiameter, radius) - minDiameter) / (maxDiameter - minDiameter)
         radius = radius * 1.5
         
-        dotsColor = parameters.color.withAlphaComponent(radius * deltaAlpha + minAlpha)
+        dotsColor = parameters.color.withAlphaComponent((radius * deltaAlpha + minAlpha) * initialAlpha)
         context.setFillColor(dotsColor.cgColor)
         
         context.fillEllipse(in: CGRect(x: leftPadding + distance * 2.0 - minDiameter / 2.0 - radius / 2.0, y: topPadding - minDiameter / 2.0 - radius / 2.0, width: minDiameter + radius, height: minDiameter + radius))

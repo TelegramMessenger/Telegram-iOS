@@ -51,8 +51,8 @@ private class ChatUploadingActivityIndicatorNode: ChatTitleActivityIndicatorNode
         let size = CGSize(width: 13.0, height: 4.0)
         let radius: CGFloat = 1.25
         
-        var dotsColor = parameters.color.withAlphaComponent(0.3)
-        context.setFillColor(dotsColor.cgColor)
+        var color = parameters.color.withAlphaComponent(parameters.color.alpha * 0.3)
+        context.setFillColor(color.cgColor)
         
         var path = UIBezierPath(roundedRect: CGRect(origin: origin, size: size), cornerRadius: radius)
         path.fill(with: .normal, alpha: 1.0)
@@ -60,8 +60,8 @@ private class ChatUploadingActivityIndicatorNode: ChatTitleActivityIndicatorNode
         
         let progress = interpolate(from: 0.0, to: size.width * 2.0, value: parameters.progress)
         
-        dotsColor = parameters.color
-        context.setFillColor(dotsColor.cgColor)
+        color = parameters.color
+        context.setFillColor(color.cgColor)
         
         path = UIBezierPath(roundedRect: CGRect(origin: origin.offsetBy(dx: -size.width + progress, dy: 0.0), size: size), cornerRadius: radius)
         path.fill(with: .normal, alpha: 1.0)
