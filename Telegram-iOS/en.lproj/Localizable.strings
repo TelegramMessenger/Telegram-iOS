@@ -542,6 +542,7 @@
 "Message.Audio" = "Voice Message";
 "Message.ForwardedMessage" = "Forwarded Message\nFrom: %@";
 "Message.Animation" = "GIF";
+"Message.Game" = "Game";
 
 // Conversation Profile
 "ConversationProfile.ErrorCreatingConversation" = "An error occurred";
