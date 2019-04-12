@@ -2358,21 +2358,31 @@ final class MessageHistoryTable: Table {
         return result
     }
     
-    func findClosestMessageId(peerId: PeerId, namespace: MessageId.Namespace, timestamp: Int32) -> MessageId? {
-        var result: MessageId?
-        self.valueBox.range(self.table, start: self.key(MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: 0), timestamp: timestamp)), end: self.lowerBound(peerId: peerId, namespace: namespace), values: { key, value in
-            let entry = self.readIntermediateEntry(key, value: value)
-            result = entry.message.id
-            return false
-        }, limit: 1)
-        if result == nil {
-            self.valueBox.range(self.table, start: self.key(MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: 0), timestamp: timestamp)), end: self.upperBound(peerId: peerId, namespace: namespace), values: { key, value in
-                let entry = self.readIntermediateEntry(key, value: value)
-                result = entry.message.id
+    func findClosestMessageIndex(peerId: PeerId, timestamp: Int32) -> MessageIndex? {
+        var closestIndex: MessageIndex?
+        for namespace in self.messageHistoryIndexTable.existingNamespaces(peerId: peerId) {
+            var index: MessageIndex?
+            self.valueBox.range(self.table, start: self.key(MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: 0), timestamp: timestamp)), end: self.lowerBound(peerId: peerId, namespace: namespace), keys: { key in
+                index = extractKey(key)
                 return false
-            }, limit: 0)
+            }, limit: 1)
+            if index == nil {
+                self.valueBox.range(self.table, start: self.key(MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: 0), timestamp: timestamp)), end: self.upperBound(peerId: peerId, namespace: namespace), keys: { key in
+                    index = extractKey(key)
+                    return false
+                }, limit: 0)
+            }
+            if let index = index {
+                if let closestIndexValue = closestIndex {
+                    if abs(index.timestamp - timestamp) < abs(closestIndexValue.timestamp - timestamp) {
+                        closestIndex = index
+                    }
+                } else {
+                    closestIndex = index
+                }
+            }
         }
-        return result
+        return closestIndex
     }
     
     func findRandomMessage(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, ignoreIds: ([MessageId], Set<MessageId>)) -> MessageIndex? {
@@ -2554,6 +2564,8 @@ final class MessageHistoryTable: Table {
     }
     
     func fetch(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags?, from fromIndex: MessageIndex, includeFrom: Bool, to toIndex: MessageIndex, limit: Int) -> [IntermediateMessage] {
+        precondition(fromIndex.id.peerId == toIndex.id.peerId)
+        precondition(fromIndex.id.namespace == toIndex.id.namespace)
         var result: [IntermediateMessage] = []
         if let tag = tag {
             let indices: [MessageIndex]
@@ -2563,6 +2575,15 @@ final class MessageHistoryTable: Table {
                 indices = self.tagsTable.earlierIndices(tag: tag, peerId: peerId, namespace: namespace, index: fromIndex, includeFrom: includeFrom, count: limit)
             }
             for index in indices {
+                if fromIndex < toIndex {
+                    if index < fromIndex || index > toIndex {
+                        continue
+                    }
+                } else {
+                    if index < toIndex || index > fromIndex {
+                        continue
+                    }
+                }
                 if let message = self.getMessage(index) {
                     result.append(message)
                 } else {
@@ -2571,7 +2592,7 @@ final class MessageHistoryTable: Table {
             }
         } else {
             let startKey: ValueBoxKey
-            if includeFrom {
+            if includeFrom && fromIndex != MessageIndex.upperBound(peerId: peerId, namespace: namespace) {
                 if fromIndex < toIndex {
                     startKey = self.key(fromIndex).predecessor
                 } else {
@@ -2581,7 +2602,9 @@ final class MessageHistoryTable: Table {
                 startKey = self.key(fromIndex)
             }
             self.valueBox.range(self.table, start: startKey, end: self.key(toIndex), values: { key, value in
-                result.append(self.readIntermediateEntry(key, value: value).message)
+                let message = self.readIntermediateEntry(key, value: value).message
+                assert(message.id.peerId == peerId && message.id.namespace == namespace)
+                result.append(message)
                 return true
             }, limit: limit)
         }

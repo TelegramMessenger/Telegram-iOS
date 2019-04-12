@@ -142,6 +142,10 @@ public struct MessageIndex: Comparable, Hashable {
     func withPeerId(_ peerId: PeerId) -> MessageIndex {
         return MessageIndex(id: MessageId(peerId: peerId, namespace: self.id.namespace, id: self.id.id), timestamp: self.timestamp)
     }
+    
+    func withNamespace(_ namespace: MessageId.Namespace) -> MessageIndex {
+        return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: namespace, id: self.id.id), timestamp: self.timestamp)
+    }
 
     public static func <(lhs: MessageIndex, rhs: MessageIndex) -> Bool {
         if lhs.timestamp != rhs.timestamp {

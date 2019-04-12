@@ -624,9 +624,9 @@ public final class Transaction {
         return self.postbox?.messageHistoryTable.findMessageId(peerId: peerId, namespace: namespace, timestamp: timestamp)
     }
     
-    public func findClosestMessageIdByTimestamp(peerId: PeerId, namespace: MessageId.Namespace, timestamp: Int32) -> MessageId? {
+    public func findClosestMessageIdByTimestamp(peerId: PeerId, timestamp: Int32) -> MessageId? {
         assert(!self.disposed)
-        return self.postbox?.messageHistoryTable.findClosestMessageId(peerId: peerId, namespace: namespace, timestamp: timestamp)
+        return self.postbox?.messageHistoryTable.findClosestMessageIndex(peerId: peerId, timestamp: timestamp)?.id
     }
     
     public func findRandomMessage(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, ignoreIds: ([MessageId], Set<MessageId>)) -> MessageIndex? {
@@ -992,7 +992,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
 
             #if DEBUG
             //debugSaveState(basePath: basePath, name: "previous1")
-            //debugRestoreState(basePath: basePath, name: "previous1")
+            debugRestoreState(basePath: basePath, name: "previous1")
             #endif
             
             let startTime = CFAbsoluteTimeGetCurrent()
@@ -2229,7 +2229,7 @@ public final class Postbox {
                     subscriber.putCompletion()
                 })
             }
-            if self.queue.isCurrent() {
+            if self.queue.isCurrent() && Queue.mainQueue().isCurrent() {
                 f()
             } else if userInteractive {
                 self.queue.justDispatchWithQoS(qos: DispatchQoS.userInteractive, f)
