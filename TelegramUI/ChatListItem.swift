@@ -757,7 +757,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if isSecret {
                 currentSecretIconImage = PresentationResourcesChatList.secretIcon(item.presentationData.theme)
             }
-            
             if isVerified {
                 currentVerificationIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
             }
@@ -791,6 +790,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 } else {
                     badgeSize += badgeLayout.width + 5.0
                 }
+            }
+            if let currentPinnedIconImage = currentPinnedIconImage {
+                if !badgeSize.isZero {
+                    badgeSize += 4.0
+                } else {
+                    badgeSize += 5.0
+                }
+                badgeSize += currentPinnedIconImage.size.width
             }
             badgeSize = max(badgeSize, reorderInset)
             
@@ -1289,22 +1296,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let updatedBadgeFrame = CGRect(origin: CGPoint(x: contentRect.maxX - badgeFrame.size.width, y: contentRect.maxY - badgeFrame.size.height - 2.0), size: badgeFrame.size)
             transition.updateFrame(node: self.badgeNode, frame: updatedBadgeFrame)
             
-            let mentionBadgeSize = self.pinnedIconNode.bounds.size
-            if mentionBadgeSize != CGSize.zero {
+            let pinnedIconSize = self.pinnedIconNode.bounds.size
+            if pinnedIconSize != CGSize.zero {
                 let mentionBadgeOffset: CGFloat
                 if updatedBadgeFrame.size.width.isZero {
-                    mentionBadgeOffset = contentRect.maxX - mentionBadgeSize.width
+                    mentionBadgeOffset = contentRect.maxX - pinnedIconSize.width
                 } else {
-                    mentionBadgeOffset = contentRect.maxX - updatedBadgeFrame.size.width - 6.0 - mentionBadgeSize.width
+                    mentionBadgeOffset = contentRect.maxX - updatedBadgeFrame.size.width - 6.0 - pinnedIconSize.width
                 }
                 
-                let badgeBackgroundWidth = mentionBadgeSize.width
-                let badgeBackgroundFrame = CGRect(x: mentionBadgeOffset, y: self.pinnedIconNode.frame.origin.y, width: badgeBackgroundWidth, height: mentionBadgeSize.height)
+                let badgeBackgroundWidth = pinnedIconSize.width
+                let badgeBackgroundFrame = CGRect(x: mentionBadgeOffset, y: self.pinnedIconNode.frame.origin.y, width: badgeBackgroundWidth, height: pinnedIconSize.height)
                 transition.updateFrame(node: self.pinnedIconNode, frame: badgeBackgroundFrame)
             }
-            
-//            let badgeTextFrame = self.badgeTextNode.frame
-//            transition.updateFrame(node: self.badgeTextNode, frame: CGRect(origin: CGPoint(x: updatedBadgeFrame.midX - badgeTextFrame.size.width / 2.0, y: badgeTextFrame.minY), size: badgeTextFrame.size))
         }
     }
     

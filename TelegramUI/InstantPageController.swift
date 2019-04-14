@@ -92,7 +92,7 @@ final class InstantPageController: ViewController {
         self.displayNode = InstantPageControllerNode(context: self.context, settings: self.settings, themeSettings: self.themeSettings, presentationTheme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, statusBar: self.statusBar, sourcePeerType: self.sourcePeerType, getNavigationController: { [weak self] in
             return self?.navigationController as? NavigationController
         }, present: { [weak self] c, a in
-            self?.present(c, in: .window(.root), with: a)
+            self?.present(c, in: .window(.root), with: a, blockInteraction: true)
         }, pushController: { [weak self] c in
             (self?.navigationController as? NavigationController)?.pushViewController(c)
         }, openPeer: { [weak self] peerId in

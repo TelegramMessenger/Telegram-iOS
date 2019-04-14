@@ -2084,7 +2084,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.view.endEditing(true)
-        controller?.present(value, in: .window(.root), with: presentationArguments)
+        controller?.present(value, in: .window(.root), with: presentationArguments, blockInteraction: true)
     }
     upgradedToSupergroupImpl = { [weak controller] upgradedPeerId, f in
         let _ = (context.account.postbox.transaction { transaction -> Peer? in

@@ -811,7 +811,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                     }
                 }
                 strongSelf.chatDisplayNode.dismissInput()
-                strongSelf.present(shareController, in: .window(.root))
+                strongSelf.present(shareController, in: .window(.root), blockInteraction: true)
             }
         }, presentController: { [weak self] controller, arguments in
             self?.present(controller, in: .window(.root), with: arguments)
@@ -4066,7 +4066,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
                         self.navigationActionDisposable.set((peerView.get()
                             |> take(1)
                             |> deliverOnMainQueue).start(next: { [weak self] peerView in
-                                if let strongSelf = self, let peer = peerView.peers[peerView.peerId], peer.restrictionText == nil {
+                                if let strongSelf = self, let peer = peerView.peers[peerView.peerId], peer.restrictionText == nil && !strongSelf.presentationInterfaceState.isNotAccessible {
                                     if let infoController = peerInfoController(context: strongSelf.context, peer: peer) {
                                         (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                                     }
