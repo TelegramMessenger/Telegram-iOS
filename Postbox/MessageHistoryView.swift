@@ -412,7 +412,9 @@ final class MutableMessageHistoryView {
                         case .everywhere:
                             matchesSpace = unwrappedTag.isEmpty
                         case let .tag(tag):
-                            matchesSpace = tag.contains(unwrappedTag)
+                            if let currentTag = self.tag, currentTag == tag {
+                                matchesSpace = true
+                            }
                     }
                     if matchesSpace {
                         if peerIdsSet.contains(key.peerId) {
@@ -478,7 +480,9 @@ final class MutableMessageHistoryView {
                         case .everywhere:
                             matchesSpace = unwrappedTag.isEmpty
                         case let .tag(tag):
-                            matchesSpace = tag.contains(unwrappedTag)
+                            if let currentTag = self.tag, currentTag == tag {
+                                matchesSpace = true
+                            }
                     }
                     if matchesSpace {
                         if peerIdsSet.contains(key.peerId) {
@@ -497,6 +501,11 @@ final class MutableMessageHistoryView {
                         }
                     }
                 }
+                if !updatedMedia.isEmpty {
+                    if loadedState.updateMedia(updatedMedia: updatedMedia) {
+                        hasChanges = true
+                    }
+                }
         }
         
         if hasChanges {
@@ -511,123 +520,6 @@ final class MutableMessageHistoryView {
             }
             self.sampledState = self.state.sample(postbox: postbox)
         }
-        
-        /*let tagMask = self.tagMask
-        */
-        
-        /*for operationSet in operations {
-            for operation in operationSet {
-                switch operation {
-                    case let .InsertMessage(intermediateMessage):
-                        if tagMask == nil || (intermediateMessage.tags.rawValue & unwrappedTagMask) != 0 {
-                            if self.add(.IntermediateMessageEntry(intermediateMessage, nil, nil)) {
-                                hasChanges = true
-                            }
-                        }
-                    case let .Remove(indices):
-                        if self.remove(indices, context: context) {
-                            hasChanges = true
-                        }
-                    case let .UpdateReadState(peerId, combinedReadState):
-                        hasChanges = true
-                        if let transientReadStates = self.transientReadStates {
-                            switch transientReadStates {
-                                case let .peer(states):
-                                    var updatedStates = states
-                                    updatedStates[peerId] = combinedReadState
-                                    self.transientReadStates = .peer(updatedStates)
-                                /*case .group:
-                                    break*/
-                            }
-                        }
-                    case let .UpdateEmbeddedMedia(index, embeddedMediaData):
-                        for i in 0 ..< self.entries.count {
-                            if case let .IntermediateMessageEntry(message, location, monthLocation) = self.entries[i] , message.index == index {
-                                self.entries[i] = .IntermediateMessageEntry(IntermediateMessage(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: embeddedMediaData, referencedMedia: message.referencedMedia), location, monthLocation)
-                                hasChanges = true
-                                break
-                            }
-                        }
-                    case let .UpdateTimestamp(index, timestamp):
-                        for i in 0 ..< self.entries.count {
-                            let entry = self.entries[i]
-                            if entry.index == index {
-                                let _ = self.remove([(index, entry.tags)], context: context)
-                                let _ = self.add(entry.updatedTimestamp(timestamp))
-                                hasChanges = true
-                                break
-                            }
-                        }
-                    case let .UpdateGroupInfos(mapping):
-                        for i in 0 ..< self.entries.count {
-                            if let groupInfo = mapping[self.entries[i].index.id] {
-                                switch self.entries[i] {
-                                    case let .IntermediateMessageEntry(message, location, monthLocation):
-                                        self.entries[i] = .IntermediateMessageEntry(message.withUpdatedGroupInfo(groupInfo), location, monthLocation)
-                                        hasChanges = true
-                                    case let .MessageEntry(message):
-                                        self.entries[i] = .MessageEntry(MessageHistoryMessageEntry(message: message.message.withUpdatedGroupInfo(groupInfo), location: message.location, monthLocation: message.monthLocation, attributes: message.attributes))
-                                        hasChanges = true
-                                }
-                            }
-                    }
-                }
-            }
-        }*/
-            
-        /*if !updatedMedia.isEmpty {
-            for i in 0 ..< self.entries.count {
-                switch self.entries[i] {
-                    case let .MessageEntry(value):
-                        let message = value.message
-                        
-                        var rebuild = false
-                        for media in message.media {
-                            if let mediaId = media.id, let _ = updatedMedia[mediaId] {
-                                rebuild = true
-                                break
-                            }
-                        }
-                        
-                        if rebuild {
-                            var messageMedia: [Media] = []
-                            for media in message.media {
-                                if let mediaId = media.id, let updated = updatedMedia[mediaId] {
-                                    if let updated = updated {
-                                        messageMedia.append(updated)
-                                    }
-                                } else {
-                                    messageMedia.append(media)
-                                }
-                            }
-                            let updatedMessage = Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: messageMedia, peers: message.peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds)
-                            self.entries[i] = .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes))
-                            hasChanges = true
-                        }
-                    case let .IntermediateMessageEntry(message, location, monthLocation):
-                        var rebuild = false
-                        for mediaId in message.referencedMedia {
-                            if let media = updatedMedia[mediaId] , media?.id != mediaId {
-                                rebuild = true
-                                break
-                            }
-                        }
-                        if rebuild {
-                            var referencedMedia: [MediaId] = []
-                            for mediaId in message.referencedMedia {
-                                if let media = updatedMedia[mediaId] , media?.id != mediaId {
-                                    if let id = media?.id {
-                                        referencedMedia.append(id)
-                                    }
-                                } else {
-                                    referencedMedia.append(mediaId)
-                                }
-                            }
-                            hasChanges = true
-                        }
-                }
-            }
-        }*/
         
         /*for operationSet in operations {
             for operation in operationSet {
@@ -912,7 +804,7 @@ public final class MessageHistoryView {
                     let anchorIndex = binaryIndexOrLower(entries, state.anchor)
                     let lowerCount = mutableView.fillCount / 2 + 1
                     let upperCount = mutableView.fillCount / 2
-                    if entries.count - anchorIndex >= upperCount {
+                    if anchorIndex >= 0 && entries.count - anchorIndex >= upperCount {
                         self.laterId = entries[entries.count - 1].index
                         entries.removeLast()
                     } else {

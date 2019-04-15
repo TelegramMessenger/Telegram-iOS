@@ -215,7 +215,7 @@ private func isIndex(index: MessageIndex, closerTo anchor: HistoryViewAnchor, th
 
 private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: OrderedHistoryViewEntries], holes: HistoryViewHoles, anchor: HistoryViewAnchor, tag: MessageTags?) -> (clipRanges: [ClosedRange<MessageIndex>], sampledHole: SampledHistoryViewHole?) {
     var clipRanges: [ClosedRange<MessageIndex>] = []
-    var sampledHole: (index: MessageIndex, hole: SampledHistoryViewHole)?
+    var sampledHole: (itemIndex: Int, hole: SampledHistoryViewHole)?
     
     for (space, indices) in holes.holesBySpace {
         if indices.isEmpty {
@@ -276,8 +276,8 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
                     }
                     clipRanges.append(MessageIndex.absoluteLowerBound() ... itemClipIndex)
                     var replaceHole = false
-                    if let (currentIndex, _) = sampledHole {
-                        if isIndex(index: itemClipIndex, closerTo: anchor, than: currentIndex) {
+                    if let (currentItemIndex, _) = sampledHole {
+                        if abs(lowerDirectionIndex - anchorIndex) < abs(currentItemIndex - anchorIndex) {
                             replaceHole = true
                         }
                     } else {
@@ -292,7 +292,7 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
                             holeStartId = previousBoundaryIndex.id.id - 1
                         }
                         if let idInHole = indices.integerLessThanOrEqualTo(IndexSet.Element(holeStartId)) {
-                            sampledHole = (itemIndex, SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: MessageId.Id(idInHole), endId: 1))
+                            sampledHole = (lowerDirectionIndex, SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: MessageId.Id(idInHole), endId: 1))
                         } else {
                             assertionFailure()
                         }
@@ -308,17 +308,23 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
                 if higherDirectionIndex == items.entries.count - 1 && itemBoundaryMessageId == bounds.upper.id.id {
                     itemBoundaryMessageId = Int32.max - 1
                 }
+                let previousBoundaryIndex: MessageIndex
+                if lowerDirectionIndex == startingHigherDirectionIndex {
+                    previousBoundaryIndex = itemIndex
+                } else {
+                    previousBoundaryIndex = items.entries[higherDirectionIndex - 1].index
+                }
                 if indices.intersects(integersIn: min(Int(anchorStartingMessageId), Int(itemBoundaryMessageId)) ... max(Int(anchorStartingMessageId), Int(itemBoundaryMessageId))) {
                     var itemClipIndex: MessageIndex
-                    if indices.contains(Int(itemIndex.id.id)) {
-                        itemClipIndex = itemIndex
+                    if indices.contains(Int(previousBoundaryIndex.id.id)) {
+                        itemClipIndex = previousBoundaryIndex
                     } else {
-                        itemClipIndex = itemIndex.successor()
+                        itemClipIndex = previousBoundaryIndex.successor()
                     }
                     clipRanges.append(itemClipIndex ... MessageIndex.absoluteUpperBound())
                     var replaceHole = false
-                    if let (currentIndex, _) = sampledHole {
-                        if isIndex(index: itemIndex, closerTo: anchor, than: currentIndex) {
+                    if let (currentItemIndex, _) = sampledHole {
+                        if abs(higherDirectionIndex - anchorIndex) < abs(currentItemIndex - anchorIndex) {
                             replaceHole = true
                         }
                     } else {
@@ -327,13 +333,13 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
                     
                     if replaceHole {
                         let holeStartId: MessageId.Id
-                        if indices.contains(Int(itemIndex.id.id)) {
-                            holeStartId = itemIndex.id.id
+                        if indices.contains(Int(previousBoundaryIndex.id.id)) {
+                            holeStartId = previousBoundaryIndex.id.id
                         } else {
-                            holeStartId = itemIndex.id.id + 1
+                            holeStartId = previousBoundaryIndex.id.id + 1
                         }
                         if let idInHole = indices.integerGreaterThanOrEqualTo(IndexSet.Element(holeStartId)) {
-                            sampledHole = (itemIndex, SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: MessageId.Id(idInHole), endId: Int32.max - 1))
+                            sampledHole = (higherDirectionIndex, SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: MessageId.Id(idInHole), endId: Int32.max - 1))
                         }
                     }
                     higherDirectionIndex = items.entries.count
@@ -566,6 +572,64 @@ final class HistoryViewLoadedState {
         return true
     }
     
+    func updateMedia(updatedMedia: [MediaId: Media?]) -> Bool {
+        var hasChanges = false
+        for space in self.orderedEntriesBySpace.keys {
+            for i in 0 ..< self.orderedEntriesBySpace[space]!.entries.count {
+                switch self.orderedEntriesBySpace[space]!.entries[i] {
+                    case let .MessageEntry(value):
+                        let message = value.message
+                        
+                        var rebuild = false
+                        for media in message.media {
+                            if let mediaId = media.id, let _ = updatedMedia[mediaId] {
+                                rebuild = true
+                                break
+                            }
+                        }
+                        
+                        if rebuild {
+                            var messageMedia: [Media] = []
+                            for media in message.media {
+                                if let mediaId = media.id, let updated = updatedMedia[mediaId] {
+                                    if let updated = updated {
+                                        messageMedia.append(updated)
+                                    }
+                                } else {
+                                    messageMedia.append(media)
+                                }
+                            }
+                            let updatedMessage = Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: messageMedia, peers: message.peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds)
+                            self.orderedEntriesBySpace[space]!.entries[i] = .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes))
+                            hasChanges = true
+                        }
+                    case let .IntermediateMessageEntry(message, location, monthLocation):
+                        var rebuild = false
+                        for mediaId in message.referencedMedia {
+                            if let media = updatedMedia[mediaId] , media?.id != mediaId {
+                                rebuild = true
+                                break
+                            }
+                        }
+                        if rebuild {
+                            var referencedMedia: [MediaId] = []
+                            for mediaId in message.referencedMedia {
+                                if let media = updatedMedia[mediaId] , media?.id != mediaId {
+                                    if let id = media?.id {
+                                        referencedMedia.append(id)
+                                    }
+                                } else {
+                                    referencedMedia.append(mediaId)
+                                }
+                            }
+                            hasChanges = true
+                        }
+                }
+            }
+        }
+        return hasChanges
+    }
+    
     func add(entry: MutableMessageHistoryEntry) -> Bool {
         let space = PeerIdAndNamespace(peerId: entry.index.id.peerId, namespace: entry.index.id.namespace)
         
@@ -586,7 +650,7 @@ final class HistoryViewLoadedState {
         var shouldBeAdded = false
         if insertionIndex == 0 {
             if let bounds = self.orderedEntriesBySpace[space]!.bounds {
-                if entry.index < bounds.lower {
+                if entry.index <= bounds.lower {
                     shouldBeAdded = true
                 }
             } else {
@@ -595,7 +659,7 @@ final class HistoryViewLoadedState {
             }
         } else if insertionIndex == self.orderedEntriesBySpace[space]!.entries.count {
             if let bounds = self.orderedEntriesBySpace[space]!.bounds {
-                if entry.index > bounds.upper {
+                if entry.index >= bounds.upper {
                     shouldBeAdded = true
                 }
             } else {
@@ -637,6 +701,7 @@ final class HistoryViewLoadedState {
         if self.orderedEntriesBySpace[space] == nil {
             return false
         }
+        
         
         if let itemIndex = binarySearch(self.orderedEntriesBySpace[space]!.entries, extract: { $0.index }, searchItem: index) {
             if let currentBounds = self.orderedEntriesBySpace[space]!.bounds {

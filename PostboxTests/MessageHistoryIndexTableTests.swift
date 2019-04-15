@@ -530,7 +530,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
             }
             self.stopMeasuring()
             
-            valueBox.dropTable(table)
+            valueBox.deleteAllFromTable(table)
         })
     }
     

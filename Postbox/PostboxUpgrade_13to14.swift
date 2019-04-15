@@ -10,7 +10,7 @@ func postboxUpgrade_13to14(metadataTable: MetadataTable, valueBox: ValueBox, pro
         return true
     })
     
-    valueBox.dropTable(peerNotificationSettingsTable)
+    valueBox.removeAllFromTable(peerNotificationSettingsTable)
     let key = ValueBoxKey(length: 8)
     let buffer = WriteBuffer()
     for (peerId, settings) in peerSettings {

@@ -1,43 +1,11 @@
 import Foundation
 
-public struct PeerGroupId: Comparable, Hashable {
-    public let rawValue: Int32
-    
-    public init(rawValue: Int32) {
-        self.rawValue = rawValue
-    }
-    
-    public var hashValue: Int {
-        return self.rawValue.hashValue
-    }
-    
-    public static func ==(lhs: PeerGroupId, rhs: PeerGroupId) -> Bool {
-        return lhs.rawValue == rhs.rawValue
-    }
-    
-    public static func <(lhs: PeerGroupId, rhs: PeerGroupId) -> Bool {
-        return lhs.rawValue < rhs.rawValue
-    }
-}
-
-struct WrappedPeerGroupId: Hashable {
-    let groupId: PeerGroupId?
-    
-    var hashValue: Int {
-        return self.groupId?.hashValue ?? 0
-    }
-    
-    static func ==(lhs: WrappedPeerGroupId, rhs: WrappedPeerGroupId) -> Bool {
-        return lhs.groupId == rhs.groupId
-    }
-}
-
 final class PeerGroupAssociationTable: Table {
     private var cachedEntries: [PeerId: PeerGroupId]?
     private var updatedPeerIds = Set<PeerId>()
     
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64)
+        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: true)
     }
     
     private func preloadCache() {
