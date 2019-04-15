@@ -465,12 +465,14 @@ struct ListViewState {
             }
         }
         
+        var fixedNodeIsStationary = false
         if fixedNode == nil {
             if let (fixedIndex, _) = self.stationaryOffset {
                 for i in 0 ..< self.nodes.count {
                     let node = self.nodes[i]
                     if let index = node.index , index == fixedIndex {
                         fixedNode = (i, index, node.frame)
+                        fixedNodeIsStationary = true
                         break
                     }
                 }
@@ -523,7 +525,7 @@ struct ListViewState {
                     if currentUpperNode.frame.minY >= self.insets.top - CGFloat.ulpOfOne {
                         directionHint = ListViewInsertionOffsetDirection(hint)
                     }
-                } else if currentUpperNode.frame.minY >= self.insets.top - CGFloat.ulpOfOne {
+                } else if currentUpperNode.frame.minY >= self.insets.top - CGFloat.ulpOfOne && !fixedNodeIsStationary {
                     directionHint = .Down
                 }
                 

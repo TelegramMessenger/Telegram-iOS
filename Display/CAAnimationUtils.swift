@@ -278,14 +278,31 @@ public extension CALayer {
                 }
             }
         }
-        self.animatePosition(from: CGPoint(x: from.midX, y: from.midY), to: CGPoint(x: to.midX, y: to.midY), duration: duration, timingFunction: timingFunction, removeOnCompletion: removeOnCompletion, additive: additive, force: force, completion: { value in
+        
+        var fromPosition = CGPoint(x: from.midX, y: from.midY)
+        var toPosition = CGPoint(x: to.midX, y: to.midY)
+        
+        var fromBounds = CGRect(origin: self.bounds.origin, size: from.size)
+        var toBounds = CGRect(origin: self.bounds.origin, size: to.size)
+        
+        if additive {
+            fromPosition.x = -(toPosition.x - fromPosition.x)
+            fromPosition.y = -(toPosition.y - fromPosition.y)
+            toPosition = CGPoint()
+            
+            fromBounds.size.width = -(toBounds.width - fromBounds.width)
+            fromBounds.size.height = -(toBounds.height - fromBounds.height)
+            toBounds = CGRect()
+        }
+        
+        self.animatePosition(from: fromPosition, to: toPosition, duration: duration, timingFunction: timingFunction, removeOnCompletion: removeOnCompletion, additive: additive, force: force, completion: { value in
             if !value {
                 interrupted = true
             }
             completedPosition = true
             partialCompletion()
         })
-        self.animateBounds(from: CGRect(origin: self.bounds.origin, size: from.size), to: CGRect(origin: self.bounds.origin, size: to.size), duration: duration, timingFunction: timingFunction, removeOnCompletion: removeOnCompletion, additive: additive, force: force, completion: { value in
+        self.animateBounds(from: fromBounds, to: toBounds, duration: duration, timingFunction: timingFunction, removeOnCompletion: removeOnCompletion, additive: additive, force: force, completion: { value in
             if !value {
                 interrupted = true
             }

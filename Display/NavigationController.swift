@@ -849,6 +849,30 @@ open class NavigationController: UINavigationController, ContainableController, 
         }))
     }
     
+    public func replaceControllersAndPush(controllers: [UIViewController], controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
+        self.view.endEditing(true)
+        self.scheduleAfterLayout { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if let validLayout = strongSelf.validLayout {
+                var (_, controllerLayout) = strongSelf.layoutDataForConfiguration(strongSelf.layoutConfiguration(for: validLayout), layout: validLayout, index: strongSelf.viewControllers.count)
+                controllerLayout.inputHeight = nil
+                controller.containerLayoutUpdated(controllerLayout, transition: .immediate)
+            }
+            strongSelf.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: { _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                ready?.set(true)
+                var controllers = controllers
+                controllers.append(controller)
+                strongSelf.setViewControllers(controllers, animated: animated)
+                completion()
+            }))
+        }
+    }
+    
     public func replaceAllButRootController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
         self.view.endEditing(true)
         self.scheduleAfterLayout { [weak self] in

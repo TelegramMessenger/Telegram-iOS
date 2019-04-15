@@ -191,18 +191,18 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func animateFrame(node: ASDisplayNode, from frame: CGRect, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+    func animateFrame(node: ASDisplayNode, from frame: CGRect, to toFrame: CGRect? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self {
-        case .immediate:
-            if let completion = completion {
-                completion(true)
-            }
-        case let .animated(duration, curve):
-            node.layer.animateFrame(from: frame, to: node.layer.frame, duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: removeOnCompletion, completion: { result in
+            case .immediate:
                 if let completion = completion {
-                    completion(result)
+                    completion(true)
                 }
-            })
+            case let .animated(duration, curve):
+                node.layer.animateFrame(from: frame, to: toFrame ?? node.layer.frame, duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: { result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
         }
     }
     

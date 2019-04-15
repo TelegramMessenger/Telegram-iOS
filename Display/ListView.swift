@@ -1331,7 +1331,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         }
         
-        self.scrolledToItem = nil
+        if !deleteIndices.isEmpty || !insertIndicesAndItems.isEmpty || !updateIndicesAndItems.isEmpty {
+            self.scrolledToItem = nil
+        }
         
         let startTime = CACurrentMediaTime()
         var state = self.currentState()
@@ -2048,7 +2050,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 self.scrolledToItem = (originalScrollToItem.index, originalScrollToItem.position)
             }
         } else if let scrolledToItem = self.scrolledToItem {
-            scrollToItem = ListViewScrollToItem(index: scrolledToItem.0, position: scrolledToItem.1, animated: false, curve: .Default(duration: nil), directionHint: .Down)
+            var curve: ListViewAnimationCurve = .Default(duration: nil)
+            var animated = false
+            if let updateSizeAndInsets = updateSizeAndInsets {
+                curve = updateSizeAndInsets.curve
+                animated = !updateSizeAndInsets.duration.isZero
+            }
+            scrollToItem = ListViewScrollToItem(index: scrolledToItem.0, position: scrolledToItem.1, animated: animated, curve: curve, directionHint: .Down)
         }
         
         weak var highlightedItemNode: ListViewItemNode?
@@ -2413,6 +2421,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         var headerNodesTransition: (ContainedViewLayoutTransition, Bool, CGFloat) = (.immediate, false, 0.0)
         
         var deferredUpdateVisible = false
+        var insetTransitionOffset: CGFloat = 0.0
         
         if let updateSizeAndInsets = updateSizeAndInsets {
             if self.insets != updateSizeAndInsets.insets || self.headerInsets != updateSizeAndInsets.headerInsets || !self.visibleSize.height.isEqual(to: updateSizeAndInsets.size.height) {
@@ -2420,7 +2429,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 self.visibleSize = updateSizeAndInsets.size
                 
                 var offsetFix: CGFloat
-                if self.isTracking {
+                if self.isTracking || scrollToItem != nil {
                     offsetFix = 0.0
                 } else if self.snapToBottomInsetUntilFirstInteraction {
                     offsetFix = -updateSizeAndInsets.insets.bottom + self.insets.bottom
