@@ -429,7 +429,9 @@ public:
             if (_q[(i + n) % _count].try_push(std::move(task))) return;
         }
 
-        _q[i % _count].push(std::move(task));
+        if (_count > 0) {
+            _q[i % _count].push(std::move(task));
+        }
     }
 };
 
