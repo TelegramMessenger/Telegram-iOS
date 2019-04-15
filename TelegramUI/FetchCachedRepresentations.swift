@@ -101,6 +101,8 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
                 return .complete()
             }
         }
+    } else if let representation = representation as? CachedLargeEmojiRepresentation {
+        return fetchLargeEmojiRepresentation(account: account, resource: resource, representation: representation)
     }
     return .never()
 }
@@ -666,6 +668,66 @@ private func fetchCachedAlbumArtworkRepresentation(account: Account, resource: M
                 subscriber.putError(.moreDataNeeded(size))
             default:
                 break
+        }
+        subscriber.putCompletion()
+        return EmptyDisposable
+    }) |> runOn(Queue.concurrentDefaultQueue())
+}
+
+private func fetchLargeEmojiRepresentation(account: Account, resource: MediaResource, representation: CachedLargeEmojiRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+    guard let resource = resource as? LargeEmojiResource else {
+        return .never()
+    }
+    return Signal({ subscriber in
+        var randomId: Int64 = 0
+        arc4random_buf(&randomId, 8)
+        let path = NSTemporaryDirectory() + "\(randomId)"
+        let url = URL(fileURLWithPath: path)
+        
+        let nsString = (resource.emoji as NSString)
+        let font = Font.regular(resource.fontSize)
+        let stringAttributes = [NSAttributedStringKey.font: font]
+        var emojiSize = nsString.size(withAttributes: stringAttributes)
+        emojiSize = CGSize(width: ceil(emojiSize.width) + 2.0, height: ceil(emojiSize.height) + 2.0)
+        
+        let image = generateImage(emojiSize, contextGenerator: { size, context in
+            let bounds = CGRect(origin: CGPoint(), size: size)
+            
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.textMatrix = .identity
+
+            let path = CGMutablePath()
+            path.addRect(bounds)
+            let string = NSAttributedString(string: resource.emoji, font: font, textColor: .black)
+            let framesetter = CTFramesetterCreateWithAttributedString(string as CFAttributedString)
+            let frame = CTFramesetterCreateFrame(framesetter, CFRangeMake(0, string.length), path, nil)
+            CTFrameDraw(frame, context)
+        })!
+        
+        let borderImage = generateTintedImage(image: image, color: .white)!
+        
+        let lineWidth: CGFloat = 1.0
+        let colorImage = generateImage(CGSize(width: emojiSize.width + lineWidth * 2.0, height: emojiSize.height + lineWidth * 2.0), contextGenerator: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            let vectors: [CGPoint] = [CGPoint(x: -1.0, y: -1.0), CGPoint(x: -1.0, y: 0.0), CGPoint(x: -1.0, y: 1.0), CGPoint(x: 0.0, y: 1.0), CGPoint(x: 1.0, y: 1.0), CGPoint(x: 1.0, y: 0.0), CGPoint(x: 1.0, y: -1.0), CGPoint(x: 0.0, y: -1.0)]
+            if let image = image.cgImage, let borderImage = borderImage.cgImage {
+                let rect = CGRect(x: lineWidth, y: lineWidth, width: emojiSize.width, height: emojiSize.height)
+                let step = UIScreenPixel
+                for vector in vectors {
+                    for i in stride(from: step, through: lineWidth, by: step) {
+                        drawImage(context: context, image: borderImage, orientation: .up, in: rect.offsetBy(dx: vector.x * i, dy: vector.y * i))
+                    }
+                }
+                drawImage(context: context, image: image, orientation: .up, in: rect)
+            }
+        })!
+        
+        if let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypePNG, 1, nil) {
+            let options = NSMutableDictionary()
+            CGImageDestinationAddImage(colorDestination, colorImage.cgImage!, options as CFDictionary)
+            if CGImageDestinationFinalize(colorDestination) {
+                subscriber.putNext(CachedMediaResourceRepresentationResult(temporaryPath: path))
+            }
         }
         subscriber.putCompletion()
         return EmptyDisposable

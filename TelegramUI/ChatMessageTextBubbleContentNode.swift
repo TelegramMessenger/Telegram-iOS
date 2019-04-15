@@ -215,24 +215,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let bubbleTheme = item.presentationData.theme.theme.chat.bubble
                 
-                var textFont = item.presentationData.messageFont
-                var forceStatusNewline = false
-                if rawText.containsOnlyEmoji && item.presentationData.largeEmoji {
-                    let emojis = rawText.emojis
-                    switch emojis.count {
-                        case 1:
-                            textFont = item.presentationData.messageEmojiFont1
-                            forceStatusNewline = true
-                        case 2:
-                            textFont = item.presentationData.messageEmojiFont2
-                            forceStatusNewline = true
-                        case 3:
-                            textFont = item.presentationData.messageEmojiFont3
-                            forceStatusNewline = true
-                        default:
-                            break
-                    }
-                }
+                let textFont = item.presentationData.messageFont
+                let forceStatusNewline = false
                 
                 if let entities = entities {
                     attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: incoming ? bubbleTheme.incomingPrimaryTextColor : bubbleTheme.outgoingPrimaryTextColor, linkColor: incoming ? bubbleTheme.incomingLinkTextColor : bubbleTheme.outgoingLinkTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, fixedFont: item.presentationData.messageFixedFont)

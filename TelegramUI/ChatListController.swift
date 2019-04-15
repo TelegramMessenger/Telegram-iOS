@@ -260,16 +260,12 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             })
         }
         
-        self.badgeDisposable = (renderedTotalUnreadCount(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox) |> deliverOnMainQueue).start(next: { [weak self] count in
+        self.badgeDisposable = (combineLatest(renderedTotalUnreadCount(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox), self.presentationDataValue.get()) |> deliverOnMainQueue).start(next: { [weak self] count, presentationData in
             if let strongSelf = self {
                 if count.0 == 0 {
                     strongSelf.tabBarItem.badgeValue = ""
                 } else {
-                    if count.0 > 1000 {
-                        strongSelf.tabBarItem.badgeValue = "\(count.0 / 1000)K"
-                    } else {
-                        strongSelf.tabBarItem.badgeValue = "\(count.0)"
-                    }
+                    strongSelf.tabBarItem.badgeValue = compactNumericCountString(Int(count.0), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
                 }
             }
         })

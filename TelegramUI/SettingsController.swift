@@ -74,7 +74,7 @@ private enum SettingsEntry: ItemListNodeEntry {
     case keepPhone(PresentationTheme, String)
     case changePhone(PresentationTheme, String)
     
-    case account(Int, Account, PresentationTheme, PresentationStrings, Peer, Int32, Bool)
+    case account(Int, Account, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, Int32, Bool)
     case addAccount(PresentationTheme, String)
     
     case proxy(PresentationTheme, UIImage?, String, String)
@@ -202,8 +202,8 @@ private enum SettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .account(lhsIndex, lhsAccount, lhsTheme, lhsStrings, lhsPeer, lhsBadgeCount, lhsRevealed):
-                if case let .account(rhsIndex, rhsAccount, rhsTheme, rhsStrings, rhsPeer, rhsBadgeCount, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsAccount === rhsAccount, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsPeer.isEqual(rhsPeer), lhsBadgeCount == rhsBadgeCount, lhsRevealed == rhsRevealed {
+            case let .account(lhsIndex, lhsAccount, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsBadgeCount, lhsRevealed):
+                if case let .account(rhsIndex, rhsAccount, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsBadgeCount, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsAccount === rhsAccount, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsPeer.isEqual(rhsPeer), lhsBadgeCount == rhsBadgeCount, lhsRevealed == rhsRevealed {
                     return true
                 } else {
                     return false
@@ -362,16 +362,12 @@ private enum SettingsEntry: ItemListNodeEntry {
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.openPhoneNumberChange()
                 })
-            case let .account(_, account, theme, strings, peer, badgeCount, revealed):
+            case let .account(_, account, theme, strings, dateTimeFormat, peer, badgeCount, revealed):
                 var label: ItemListPeerItemLabel = .none
                 if badgeCount > 0 {
-                    if badgeCount > 1000 {
-                        label = .badge("\(badgeCount / 1000)K")
-                    } else {
-                        label = .badge("\(badgeCount)")
-                    }
+                    label = .badge(compactNumericCountString(Int(badgeCount), decimalSeparator: dateTimeFormat.decimalSeparator))
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, account: account, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, sectionId: self.section, action: {
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, account: account, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.switchToAccount(account.id)
                 }, setPeerIdWithRevealedOptions: { lhs, rhs in
                     var lhsAccountId: AccountRecordId?
@@ -475,7 +471,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         if !accountsAndPeers.isEmpty {
             var index = 0
             for (peerAccount, peer, badgeCount) in accountsAndPeers {
-                entries.append(.account(index, peerAccount, presentationData.theme, presentationData.strings, peer, inAppNotificationSettings.displayNotificationsFromAllAccounts ? badgeCount : 0, state.accountIdWithRevealedOptions == peerAccount.id))
+                entries.append(.account(index, peerAccount, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, inAppNotificationSettings.displayNotificationsFromAllAccounts ? badgeCount : 0, state.accountIdWithRevealedOptions == peerAccount.id))
                 index += 1
             }
             if accountsAndPeers.count + 1 < maximumNumberOfAccounts {
@@ -1234,11 +1230,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
         var otherAccountsBadge: String?
         if accountTabBarAvatarBadge > 0 {
-            if accountTabBarAvatarBadge > 1000 {
-                otherAccountsBadge = "\(accountTabBarAvatarBadge / 1000)K"
-            } else {
-                otherAccountsBadge = "\(accountTabBarAvatarBadge)"
-            }
+            otherAccountsBadge = compactNumericCountString(Int(accountTabBarAvatarBadge), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
         }
         return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: accountTabBarAvatar ?? icon, selectedImage: accountTabBarAvatar ?? icon, tintImages: accountTabBarAvatar == nil, badgeValue: notificationsWarning ? "!" : otherAccountsBadge)
     }

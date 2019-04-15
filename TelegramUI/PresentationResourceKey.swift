@@ -59,6 +59,8 @@ enum PresentationResourceKey: Int32 {
     case chatListLockTopUnlockedImage
     case chatListLockBottomUnlockedImage
     case chatListPending
+    case chatListClockFrame
+    case chatListClockMin
     case chatListSingleCheck
     case chatListDoubleCheck
     case chatListBadgeBackgroundActive

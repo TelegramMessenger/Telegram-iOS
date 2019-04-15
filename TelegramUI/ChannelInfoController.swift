@@ -851,6 +851,8 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
         actionsDisposable.add(toggleShouldChannelMessagesSignatures(account: context.account, peerId: peerId, enabled: enabled).start())
     })
     
+    let hapticFeedback = HapticFeedback()
+    
     let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set<ValueBoxKey>([PreferencesKeys.globalNotifications]))
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId), context.account.postbox.combinedView(keys: [globalNotificationsKey]))
         |> map { presentationData, state, view, combinedView -> (ItemListControllerState, (ItemListNodeState<ChannelInfoEntry>, ChannelInfoEntry.ItemGenerationArguments)) in
@@ -901,13 +903,23 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                 } else {
                     rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: doneEnabled, action: {
                         var updateValues: (title: String?, description: String?) = (nil, nil)
+                        var failed = false
                         updateState { state in
                             updateValues = valuesRequiringUpdate(state: state, view: view)
                             if updateValues.0 != nil || updateValues.1 != nil {
+                                if (updateValues.description?.count ?? 0) > 255 {
+                                    failed = true
+                                    return state
+                                }
                                 return state.withUpdatedSavingData(true)
                             } else {
                                 return state.withUpdatedEditingState(nil)
                             }
+                        }
+                        
+                        guard !failed else {
+                            hapticFeedback.error()
+                            return
                         }
                         
                         let updateTitle: Signal<Void, Void>

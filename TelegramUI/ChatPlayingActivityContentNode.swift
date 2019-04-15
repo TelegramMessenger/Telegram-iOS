@@ -43,8 +43,8 @@ private class ChatPlayingActivityIndicatorNode: ChatTitleActivityIndicatorNode {
             return
         }
         
-        let dotsColor = parameters.color.withAlphaComponent(0.5)
-        context.setFillColor(dotsColor.cgColor)
+        let color = parameters.color.withAlphaComponent(parameters.color.alpha * 0.5)
+        context.setFillColor(color.cgColor)
         
         let distance: CGFloat = 4.0
         var origin = CGPoint(x: (bounds.size.width - distance * 2.0) / 2.0 + 4.0, y: bounds.size.height / 2.0 + 1.0)

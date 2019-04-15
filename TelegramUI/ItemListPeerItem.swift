@@ -82,6 +82,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let revealOptions: ItemListPeerItemRevealOptions?
     let switchValue: ItemListPeerItemSwitch?
     let enabled: Bool
+    let selectable: Bool
     let sectionId: ItemListSectionId
     let action: (() -> Void)?
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
@@ -91,7 +92,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
     let hasTopGroupInset: Bool
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, account: Account, peer: Peer, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, selectable: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
@@ -108,6 +109,7 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.revealOptions = revealOptions
         self.switchValue = switchValue
         self.enabled = enabled
+        self.selectable = selectable
         self.sectionId = sectionId
         self.action = action
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
@@ -155,8 +157,6 @@ final class ItemListPeerItem: ListViewItem, ItemListItem {
             }
         }
     }
-    
-    var selectable: Bool = true
     
     func selected(listView: ListView){
         listView.clearHighlightAnimated(true)
