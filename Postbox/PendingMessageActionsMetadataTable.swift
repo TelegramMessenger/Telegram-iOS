@@ -37,7 +37,7 @@ enum PendingMessageActionsMetadataKey {
 
 final class PendingMessageActionsMetadataTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private var cachedCounts: [PendingMessageActionsMetadataCountKey: Int32] = [:]

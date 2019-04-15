@@ -7,7 +7,7 @@ private struct PeerChatTopTaggedUpdateRecord: Equatable, Hashable {
 
 final class PeerChatTopTaggedMessageIdsTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private var cachedTopIds: [PeerId: [MessageId.Namespace: MessageId?]] = [:]
@@ -72,7 +72,7 @@ final class PeerChatTopTaggedMessageIdsTable: Table {
                             }
                         }
                     case let .Remove(indices):
-                        for (index, _, _) in indices {
+                        for (index, _) in indices {
                             if let messageId = self.get(peerId: index.id.peerId, namespace: index.id.namespace), index.id == messageId {
                                 self.set(peerId: index.id.peerId, namespace: index.id.namespace, id: nil)
                             }
@@ -97,7 +97,7 @@ final class PeerChatTopTaggedMessageIdsTable: Table {
                         var messageIdId: Int32 = maybeMessageId.id
                         self.valueBox.set(self.table, key: self.key(peerId: record.peerId, namespace: record.namespace), value: MemoryBuffer(memory: &messageIdId, capacity: 4, length: 4, freeWhenDone: false))
                     } else {
-                        self.valueBox.remove(self.table, key: self.key(peerId: record.peerId, namespace: record.namespace))
+                        self.valueBox.remove(self.table, key: self.key(peerId: record.peerId, namespace: record.namespace), secure: false)
                     }
                 }
             }

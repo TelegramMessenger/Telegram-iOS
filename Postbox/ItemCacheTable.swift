@@ -26,7 +26,7 @@ private enum ItemCacheSection: Int8 {
 
 final class ItemCacheTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: false)
     }
     
     private func itemKey(id: ItemCacheEntryId) -> ValueBoxKey {
@@ -69,7 +69,7 @@ final class ItemCacheTable: Table {
     }
     
     func remove(id: ItemCacheEntryId, metaTable: ItemCacheMetaTable) {
-        self.valueBox.remove(self.table, key: self.itemKey(id: id))
+        self.valueBox.remove(self.table, key: self.itemKey(id: id), secure: false)
     }
     
     override func clearMemoryCache() {

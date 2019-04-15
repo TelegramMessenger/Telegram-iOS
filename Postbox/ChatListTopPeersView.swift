@@ -1,6 +1,6 @@
 import Foundation
 
-final class MutableChatListTopPeersView: MutablePostboxView {
+/*final class MutableChatListTopPeersView: MutablePostboxView {
     fileprivate let topPeers: ChatListGroupReferenceTopPeers
     
     init(postbox: Postbox, groupId: PeerGroupId) {
@@ -28,3 +28,4 @@ public final class ChatListTopPeersView: PostboxView {
     }
 }
 
+*/

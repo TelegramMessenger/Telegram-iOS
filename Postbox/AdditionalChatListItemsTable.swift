@@ -2,7 +2,7 @@ import Foundation
 
 final class AdditionalChatListItemsTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private var cachedItems: [PeerId]?
@@ -65,7 +65,7 @@ final class AdditionalChatListItemsTable: Table {
                 return true
             }, limit: 0)
             for key in keys {
-                self.valueBox.remove(self.table, key: key)
+                self.valueBox.remove(self.table, key: key, secure: false)
             }
             
             if let items = self.cachedItems {

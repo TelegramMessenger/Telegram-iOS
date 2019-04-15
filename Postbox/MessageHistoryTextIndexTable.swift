@@ -70,7 +70,7 @@ final class MessageHistoryTextIndexTable {
     }
     
     func search(peerId: PeerId?, text: String, tags: MessageTags?) -> [MessageId] {
-        var escapedText = String(text.characters.map({ c in
+        var escapedText = String(text.map({ c in
             var codeUnits: [UnicodeScalar] = []
             for codeUnit in String(c).unicodeScalars {
                 codeUnits.append(codeUnit)

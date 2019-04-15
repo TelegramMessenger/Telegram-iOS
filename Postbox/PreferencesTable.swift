@@ -13,7 +13,7 @@ final class PreferencesTable: Table {
     private var updatedEntryKeys = Set<ValueBoxKey>()
     
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: false)
     }
     
     func enumerateEntries(_ f: (PreferencesEntry) -> Bool) {
@@ -60,7 +60,7 @@ final class PreferencesTable: Table {
                         self.valueBox.set(self.table, key: key, value: encoder.readBufferNoCopy())
                     })
                 } else {
-                    self.valueBox.remove(self.table, key: key)
+                    self.valueBox.remove(self.table, key: key, secure: false)
                 }
             }
             

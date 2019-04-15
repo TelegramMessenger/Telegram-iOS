@@ -60,7 +60,7 @@ final class PeerGroupStateTable: Table {
                     sharedEncoder.encodeRootObject(state)
                     self.valueBox.set(self.table, key: self.key(id), value: sharedEncoder.readBufferNoCopy())
                 } else {
-                    self.valueBox.remove(self.table, key: self.key(id))
+                    self.valueBox.remove(self.table, key: self.key(id), secure: false)
                 }
             }
             self.updatedGroupIds.removeAll()

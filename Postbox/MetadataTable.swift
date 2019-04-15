@@ -11,7 +11,7 @@ private enum MetadataKey: Int32 {
 
 final class MetadataTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64)
+        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
     }
     
     private var cachedState: PostboxCoding?

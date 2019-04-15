@@ -2,7 +2,7 @@ import Foundation
 
 final class OrderedItemListIndexTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: false)
     }
     
     private func key(collectionId: Int32, id: MemoryBuffer) -> ValueBoxKey {
@@ -21,7 +21,7 @@ final class OrderedItemListIndexTable: Table {
     }
     
     func remove(collectionId: Int32, id: MemoryBuffer) {
-        self.valueBox.remove(self.table, key: self.key(collectionId: collectionId, id: id))
+        self.valueBox.remove(self.table, key: self.key(collectionId: collectionId, id: id), secure: false)
     }
     
     func set(collectionId: Int32, id: MemoryBuffer, content: PostboxCoding) {

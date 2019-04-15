@@ -96,7 +96,7 @@ final class ReverseIndexReferenceTable<T: ReverseIndexReference>: Table {
     private var updatedCachedEntriesByNamespace: [ReverseIndexNamespace: Set<ValueBoxKey>] = [:]
     
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private func key(namespace: ReverseIndexNamespace, token: ValueBoxKey) -> ValueBoxKey {
@@ -254,7 +254,7 @@ final class ReverseIndexReferenceTable<T: ReverseIndexReference>: Table {
                     if let cachedNamespace = self.cachedEntriesByNamespace[namespace], let cached = cachedNamespace[token] {
                         cached.withMemoryBuffer { buffer in
                             if buffer.length == 0 {
-                                self.valueBox.remove(self.table, key: self.key(namespace: namespace, token: token))
+                                self.valueBox.remove(self.table, key: self.key(namespace: namespace, token: token), secure: false)
                             } else {
                                 self.valueBox.set(self.table, key: self.key(namespace: namespace, token: token), value: buffer)
                             }

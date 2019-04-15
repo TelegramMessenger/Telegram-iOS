@@ -8,9 +8,9 @@ private enum InternalGlobalMessageTagsEntry: Comparable {
     var index: MessageIndex {
         switch self {
             case let .intermediateMessage(message):
-                return MessageIndex(message)
+                return message.index
             case let .message(message):
-                return MessageIndex(message)
+                return message.index
             case let .hole(index):
                 return index
         }
@@ -23,7 +23,7 @@ private enum InternalGlobalMessageTagsEntry: Comparable {
                     if lhsMessage.stableVersion != rhsMessage.stableVersion {
                         return false
                     }
-                    if MessageIndex(lhsMessage) != MessageIndex(rhsMessage) {
+                    if lhsMessage.index != rhsMessage.index {
                         return false
                     }
                     return true
@@ -35,7 +35,7 @@ private enum InternalGlobalMessageTagsEntry: Comparable {
                     if lhsMessage.stableVersion != rhsMessage.stableVersion {
                         return false
                     }
-                    if MessageIndex(lhsMessage) != MessageIndex(rhsMessage) {
+                    if lhsMessage.index != rhsMessage.index {
                         return false
                     }
                     return true
@@ -63,7 +63,7 @@ public enum GlobalMessageTagsEntry {
     public var index: MessageIndex {
         switch self {
             case let .message(message):
-                return MessageIndex(message)
+                return message.index
             case let .hole(index):
                 return index
         }

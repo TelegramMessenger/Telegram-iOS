@@ -17,7 +17,7 @@ private final class InternalPeerReadStates {
 
 final class MessageHistoryReadStateTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64)
+        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
     }
     
     private var cachedPeerReadStates: [PeerId: InternalPeerReadStates?] = [:]
@@ -557,7 +557,7 @@ final class MessageHistoryReadStateTable: Table {
                     }
                     self.valueBox.set(self.table, key: self.key(id), value: sharedBuffer)
                 } else {
-                    self.valueBox.remove(self.table, key: self.key(id))
+                    self.valueBox.remove(self.table, key: self.key(id), secure: false)
                 }
             }
             self.updatedInitialPeerReadStates.removeAll()

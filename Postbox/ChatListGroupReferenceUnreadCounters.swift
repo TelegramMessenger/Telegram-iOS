@@ -1,6 +1,6 @@
 import Foundation
 
-private final class UnreadCountersEntry {
+/*private final class UnreadCountersEntry {
     var unreadCount: Int32
     var isMuted: Bool
     
@@ -128,3 +128,4 @@ final class ChatListGroupReferenceUnreadCounters {
     }
 }
 
+*/

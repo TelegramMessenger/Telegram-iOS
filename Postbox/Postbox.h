@@ -17,4 +17,4 @@ FOUNDATION_EXPORT const unsigned char PostboxVersionString[];
 // In this header, you should import all the public headers of your framework using statements like #import <Postbox/PublicHeader.h>
 
 #import <Postbox/MurMurHash32.h>
-#import <Postbox/IpcNotifier.h>
+//#import <Postbox/IpcNotifier.h>

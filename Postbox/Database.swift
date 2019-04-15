@@ -32,7 +32,7 @@ public final class Database {
         let flags = SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX
         let res = sqlite3_open_v2(location.description, &self.handle, flags, nil)
         if res != SQLITE_OK {
-            preconditionFailure("sqlite3_open_v2: \(res)")
+            postboxLog("sqlite3_open_v2: \(res)")
             return nil
         }
     }
@@ -50,6 +50,14 @@ public final class Database {
                 print("SQL error \(res) on SQL")
             }
             return false
+        }
+    }
+    
+    public func currentError() -> String? {
+        if let error = sqlite3_errmsg(self.handle), let str = NSString(utf8String: error) {
+            return "SQL error \(str)"
+        } else {
+            return nil
         }
     }
 }

@@ -69,10 +69,10 @@ private func convertNamespaces(value: ReadBuffer, buffer: WriteBuffer) {
     }
 }
 
-func postboxUpgrade_17to18(metadataTable: MetadataTable, valueBox: ValueBox) {
+func postboxUpgrade_17to18(metadataTable: MetadataTable, valueBox: ValueBox, progress: (Float) -> Void) {
     var converted: [Int64: Data] = [:]
     
-    let readStateTable = ValueBoxTable(id: 14, keyType: .int64)
+    let readStateTable = ValueBoxTable(id: 14, keyType: .int64, compactValuesOnCreation: false)
     let buffer = WriteBuffer()
     valueBox.scanInt64(readStateTable, values: { key, value in
         buffer.reset()

@@ -13,7 +13,6 @@ public enum AdditionalMessageHistoryViewData {
     case cachedPeerData(PeerId)
     case cachedPeerDataMessages(PeerId)
     case peerChatState(PeerId)
-    case peerGroupState(PeerGroupId)
     case totalUnreadState
     case peerNotificationSettings(PeerId)
     case cacheEntry(ItemCacheEntryId)
@@ -26,53 +25,12 @@ public enum AdditionalMessageHistoryViewDataEntry {
     case cachedPeerData(PeerId, CachedPeerData?)
     case cachedPeerDataMessages(PeerId, [MessageId: Message]?)
     case peerChatState(PeerId, PeerChatState?)
-    case peerGroupState(PeerGroupId, PeerGroupState?)
     case totalUnreadState(ChatListTotalUnreadState)
     case peerNotificationSettings(PeerNotificationSettings?)
     case cacheEntry(ItemCacheEntryId, PostboxCoding?)
     case preferencesEntry(ValueBoxKey, PreferencesEntry?)
     case peerIsContact(PeerId, Bool)
     case peer(PeerId, Peer?)
-}
-
-public enum MessageHistoryViewHole: Hashable {
-    case peer(MessageHistoryHole)
-    case groupFeed(PeerGroupId, lowerIndex: MessageIndex, upperIndex: MessageIndex)
-    
-    public static func ==(lhs: MessageHistoryViewHole, rhs: MessageHistoryViewHole) -> Bool {
-        switch lhs {
-            case let .peer(hole):
-                if case .peer(hole) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .groupFeed(groupId, lowerIndex, upperIndex):
-                if case .groupFeed(groupId, lowerIndex, upperIndex) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    public var hashValue: Int {
-        switch self {
-            case let .peer(hole):
-                return hole.maxIndex.hashValue
-            case let .groupFeed(_, _, upperIndex):
-                return upperIndex.hashValue
-        }
-    }
-    
-    public var holeMaxIndex: MessageIndex {
-        switch self {
-            case let .peer(hole):
-                return hole.maxIndex
-            case let .groupFeed(_, _, upperIndex):
-                return upperIndex
-        }
-    }
 }
 
 public struct MessageHistoryViewId: Equatable {
@@ -101,10 +59,20 @@ public struct MutableMessageHistoryEntryAttributes: Equatable {
     }
 }
 
+
+public struct MessageHistoryViewPeerHole: Equatable, Hashable {
+    public let peerId: PeerId
+    public let namespace: MessageId.Namespace
+    public let indices: IndexSet
+}
+
+public enum MessageHistoryViewHole: Equatable, Hashable {
+    case peer(MessageHistoryViewPeerHole)
+}
+
 enum MutableMessageHistoryEntry {
     case IntermediateMessageEntry(IntermediateMessage, MessageHistoryEntryLocation?, MessageHistoryEntryMonthLocation?)
     case MessageEntry(Message, MessageHistoryEntryLocation?, MessageHistoryEntryMonthLocation?, MutableMessageHistoryEntryAttributes)
-    case HoleEntry(MessageHistoryHole, MessageHistoryEntryLocation?, lowerIndex: MessageIndex?)
     
     var index: MessageIndex {
         switch self {
@@ -112,8 +80,6 @@ enum MutableMessageHistoryEntry {
                 return MessageIndex(id: message.id, timestamp: message.timestamp)
             case let .MessageEntry(message, _, _, _):
                 return MessageIndex(id: message.id, timestamp: message.timestamp)
-            case let .HoleEntry(hole, _, _):
-                return hole.maxIndex
         }
     }
     
@@ -123,8 +89,6 @@ enum MutableMessageHistoryEntry {
                 return message.tags
             case let .MessageEntry(message, _, _, _):
                 return message.tags
-            case let .HoleEntry(hole, _, _):
-                return MessageTags(rawValue: hole.tags)
         }
     }
     
@@ -134,8 +98,6 @@ enum MutableMessageHistoryEntry {
                 return .IntermediateMessageEntry(message, location, monthLocation)
             case let .MessageEntry(message, _, monthLocation, attributes):
                 return .MessageEntry(message, location, monthLocation, attributes)
-            case let .HoleEntry(hole, _, lowerIndex):
-                return .HoleEntry(hole, location, lowerIndex: lowerIndex)
         }
     }
     
@@ -145,23 +107,11 @@ enum MutableMessageHistoryEntry {
                 return .IntermediateMessageEntry(message, location, monthLocation)
             case let .MessageEntry(message, location, _, attributes):
                 return .MessageEntry(message, location, monthLocation, attributes)
-            case .HoleEntry:
-                return self
         }
     }
     
-    func offsetLocationForInsertedIndex(_ index: MessageIndex, isMessage: Bool) -> MutableMessageHistoryEntry {
+    func offsetLocationForInsertedIndex(_ index: MessageIndex) -> MutableMessageHistoryEntry {
         switch self {
-            case let .HoleEntry(hole, location, lowerIndex):
-                if let location = location {
-                    if hole.maxIndex > index {
-                        return .HoleEntry(hole, MessageHistoryEntryLocation(index: location.index + 1, count: location.count + 1), lowerIndex: lowerIndex)
-                    } else {
-                        return .HoleEntry(hole, MessageHistoryEntryLocation(index: location.index, count: location.count + 1), lowerIndex: lowerIndex)
-                    }
-                } else {
-                    return self
-                }
             case let .IntermediateMessageEntry(message, location, monthLocation):
                 if let location = location {
                     if MessageIndex(id: message.id, timestamp: message.timestamp) > index {
@@ -185,20 +135,8 @@ enum MutableMessageHistoryEntry {
         }
     }
     
-    func offsetLocationForRemovedIndex(_ index: MessageIndex, wasMessage: Bool) -> MutableMessageHistoryEntry {
+    func offsetLocationForRemovedIndex(_ index: MessageIndex) -> MutableMessageHistoryEntry {
         switch self {
-            case let .HoleEntry(hole, location, lowerIndex):
-                if let location = location {
-                    if hole.maxIndex > index {
-                        //assert(location.index > 0)
-                        //assert(location.count != 0)
-                        return .HoleEntry(hole, MessageHistoryEntryLocation(index: location.index - 1, count: location.count - 1), lowerIndex: lowerIndex)
-                    } else {
-                        return .HoleEntry(hole, MessageHistoryEntryLocation(index: location.index, count: max(0, location.count - 1)), lowerIndex: lowerIndex)
-                    }
-                } else {
-                    return self
-                }
             case let .IntermediateMessageEntry(message, location, monthLocation):
                 if let location = location {
                     if MessageIndex(id: message.id, timestamp: message.timestamp) > index {
@@ -236,9 +174,6 @@ enum MutableMessageHistoryEntry {
             case let .MessageEntry(message, location, monthLocation, attributes):
                 let updatedMessage = Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: message.media, peers: message.peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds)
                 return .MessageEntry(updatedMessage, location, monthLocation, attributes)
-            case let .HoleEntry(hole, location, lowerIndex):
-                let updatedHole = MessageHistoryHole(stableId: hole.stableId, maxIndex: MessageIndex(id: hole.maxIndex.id, timestamp: timestamp), min: hole.min, tags: hole.tags)
-                return .HoleEntry(updatedHole, location, lowerIndex: lowerIndex)
         }
     }
 }
@@ -272,44 +207,35 @@ public struct MessageHistoryEntryMonthLocation: Equatable {
     }
 }
 
-public enum MessageHistoryEntry: Comparable {
-    case MessageEntry(Message, Bool, MessageHistoryEntryLocation?, MessageHistoryEntryMonthLocation?, MutableMessageHistoryEntryAttributes)
-    case HoleEntry(MessageHistoryHole, MessageHistoryEntryLocation?)
+public struct MessageHistoryEntry: Comparable {
+    public let message: Message
+    public let isRead: Bool
+    public let location: MessageHistoryEntryLocation?
+    public let monthLocation: MessageHistoryEntryMonthLocation?
+    public let attributes: MutableMessageHistoryEntryAttributes
     
     public var index: MessageIndex {
-        switch self {
-            case let .MessageEntry(message, _, _, _, _):
-                return MessageIndex(id: message.id, timestamp: message.timestamp)
-            case let .HoleEntry(hole, _):
-                return hole.maxIndex
+        return MessageIndex(id: self.message.id, timestamp: self.message.timestamp)
+    }
+    
+    public init(message: Message, isRead: Bool, location: MessageHistoryEntryLocation?, monthLocation: MessageHistoryEntryMonthLocation?, attributes: MutableMessageHistoryEntryAttributes) {
+        self.message = message
+        self.isRead = isRead
+        self.location = location
+        self.monthLocation = monthLocation
+        self.attributes = attributes
+    }
+
+    public static func ==(lhs: MessageHistoryEntry, rhs: MessageHistoryEntry) -> Bool {
+        if lhs.message.index == rhs.message.index && lhs.message.flags == rhs.message.flags && lhs.location == rhs.location && lhs.isRead == rhs.isRead && lhs.monthLocation == rhs.monthLocation && lhs.attributes == rhs.attributes {
+            return true
         }
+        return false
     }
-}
-
-public func ==(lhs: MessageHistoryEntry, rhs: MessageHistoryEntry) -> Bool {
-    switch lhs {
-        case let .MessageEntry(lhsMessage, lhsRead, lhsLocation, lhsMonthLocation, lhsAttributes):
-            switch rhs {
-                case .HoleEntry:
-                    return false
-                case let .MessageEntry(rhsMessage, rhsRead, rhsLocation, rhsMonthLocation, rhsAttributes):
-                    if MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags && lhsLocation == rhsLocation && lhsRead == rhsRead && lhsMonthLocation == rhsMonthLocation && lhsAttributes == rhsAttributes {
-                        return true
-                    }
-                    return false
-            }
-        case let .HoleEntry(lhsHole, lhsLocation):
-            switch rhs {
-                case let .HoleEntry(rhsHole, rhsLocation):
-                    return lhsHole == rhsHole && lhsLocation == rhsLocation
-                case .MessageEntry:
-                    return false
-            }
+    
+    public static func <(lhs: MessageHistoryEntry, rhs: MessageHistoryEntry) -> Bool {
+        return lhs.index < rhs.index
     }
-}
-
-public func <(lhs: MessageHistoryEntry, rhs: MessageHistoryEntry) -> Bool {
-    return lhs.index < rhs.index
 }
 
 final class MutableMessageHistoryViewReplayContext {
@@ -336,40 +262,11 @@ enum MessageHistoryTopTaggedMessage {
     }
 }
 
-public enum MessageHistoryViewRelativeHoleDirection: Equatable {
+public enum MessageHistoryViewRelativeHoleDirection: Equatable, Hashable {
     case UpperToLower
     case LowerToUpper
     case AroundId(MessageId)
     case AroundIndex(MessageIndex)
-    
-    public static func ==(lhs: MessageHistoryViewRelativeHoleDirection, rhs: MessageHistoryViewRelativeHoleDirection) -> Bool {
-        switch lhs {
-            case .UpperToLower:
-                if case .UpperToLower = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .LowerToUpper:
-                if case .LowerToUpper = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .AroundId(id):
-                if case .AroundId(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .AroundIndex(index):
-                if case .AroundIndex(index) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 public struct MessageHistoryViewOrderStatistics: OptionSet {
@@ -439,35 +336,12 @@ private func monthUpperBoundIndex(peerId: PeerId, index: MessageMonthIndex) -> M
 public enum MessageHistoryViewPeerIds: Equatable {
     case single(PeerId)
     case associated(PeerId, MessageId?)
-    case group(PeerGroupId)
-    
-    public static func ==(lhs: MessageHistoryViewPeerIds, rhs: MessageHistoryViewPeerIds) -> Bool {
-        switch lhs {
-            case let .single(peerId):
-                if case .single(peerId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .associated(lhsPeerIds, lhsAssociatedId):
-                if case let .associated(rhsPeerIds, rhsAssociatedId) = rhs, lhsPeerIds == rhsPeerIds, lhsAssociatedId == rhsAssociatedId {
-                    return true
-                } else {
-                    return false
-                }
-            case let .group(groupId):
-                if case .group(groupId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
+    //case group(PeerGroupId)
 }
 
 private func clipMessages(peerIds: MessageHistoryViewPeerIds, entries: [MutableMessageHistoryEntry]) -> [MutableMessageHistoryEntry] {
     switch peerIds {
-        case .single, .group:
+        case .single://, .group:
             return entries
         case let .associated(_, associatedId):
             if let associatedId = associatedId {
@@ -490,8 +364,6 @@ private func clipMessages(peerIds: MessageHistoryViewPeerIds, entries: [MutableM
                             } else {
                                 result.append(entry)
                             }
-                        case .HoleEntry:
-                            result.append(entry)
                     }
                 }
                 return result
@@ -515,7 +387,7 @@ private func fetchAround(postbox: Postbox, peerIds: MessageHistoryViewPeerIds, i
             if let associatedId = associatedId {
                 ids.append(associatedId.peerId)
             }
-        case let .group(groupId):
+        /*case let .group(groupId):
             switch index {
                 case let .message(index: index, _):
                     return postbox.fetchAroundGroupFeedEntries(groupId: groupId, index: index, count: count)
@@ -523,7 +395,7 @@ private func fetchAround(postbox: Postbox, peerIds: MessageHistoryViewPeerIds, i
                     return postbox.fetchAroundGroupFeedEntries(groupId: groupId, index: MessageIndex.absoluteUpperBound(), count: count)
                 case .lowerBound:
                     return postbox.fetchAroundGroupFeedEntries(groupId: groupId, index: MessageIndex.absoluteLowerBound(), count: count)
-            }
+            }*/
     }
     
     switch index {
@@ -536,9 +408,70 @@ private func fetchAround(postbox: Postbox, peerIds: MessageHistoryViewPeerIds, i
     }
 }
 
+private struct HoleKey: Hashable {
+    let peerId: PeerId
+    let namespace: MessageId.Namespace
+}
+
+private func fetchHoles(postbox: Postbox, peerIds: MessageHistoryViewPeerIds, tagMask: MessageTags?, entries: [MutableMessageHistoryEntry], hasEarlier: Bool, hasLater: Bool) -> [HoleKey: IndexSet] {
+    var peerIdsSet: [PeerId] = []
+    switch peerIds {
+        case let .single(peerId):
+            peerIdsSet.append(peerId)
+        case let .associated(peerId, associatedId):
+            peerIdsSet.append(peerId)
+            if let associatedId = associatedId {
+                peerIdsSet.append(associatedId.peerId)
+            }
+    }
+    var namespaceBounds: [(PeerId, MessageId.Namespace, ClosedRange<MessageId.Id>?)] = []
+    for peerId in peerIdsSet {
+        if let namespaces = postbox.seedConfiguration.messageHoles[peerId.namespace] {
+            for namespace in namespaces.keys {
+                var earlierId: MessageId.Id?
+                earlier: for entry in entries {
+                    if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace {
+                        earlierId = entry.index.id.id
+                        break earlier
+                    }
+                }
+                var laterId: MessageId.Id?
+                later: for entry in entries.reversed() {
+                    if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace {
+                        laterId = entry.index.id.id
+                        break later
+                    }
+                }
+                if let earlierId = earlierId, let laterId = laterId {
+                    namespaceBounds.append((peerId, namespace, earlierId ... laterId))
+                } else {
+                    namespaceBounds.append((peerId, namespace, nil))
+                }
+            }
+        }
+    }
+    let space: MessageHistoryHoleSpace = tagMask.flatMap(MessageHistoryHoleSpace.tag) ?? .everywhere
+    var result: [HoleKey: IndexSet] = [:]
+    for (peerId, namespace, bounds) in namespaceBounds {
+        var indices = postbox.messageHistoryHoleIndexTable.closest(peerId: peerId, namespace: namespace, space: space, range: 1 ... Int32.max)
+        if let bounds = bounds {
+            if hasEarlier {
+                indices.remove(integersIn: 1 ... Int(bounds.lowerBound))
+            }
+            if hasLater {
+                indices.remove(integersIn: Int(bounds.upperBound) ... Int(Int32.max))
+            }
+        }
+        if !indices.isEmpty {
+            result[HoleKey(peerId: peerId, namespace: namespace)] = indices
+        }
+    }
+    return result
+}
+
 public enum MessageHistoryViewReadState {
     case peer([PeerId: CombinedPeerReadState])
-    case group(PeerGroupId, GroupFeedReadState)
+    //case group(PeerGroupId, GroupFeedReadState)
 }
 
 final class MutableMessageHistoryView {
@@ -555,6 +488,7 @@ final class MutableMessageHistoryView {
     fileprivate var earlier: MutableMessageHistoryEntry?
     fileprivate var later: MutableMessageHistoryEntry?
     fileprivate var entries: [MutableMessageHistoryEntry]
+    fileprivate var holes: [HoleKey: IndexSet]
     fileprivate let fillCount: Int
     fileprivate let clipHoles: Bool
     
@@ -575,6 +509,7 @@ final class MutableMessageHistoryView {
                 self.later = nil
                 self.loadingInitialIndex = loadingIndex
         }
+        self.holes = fetchHoles(postbox: postbox, peerIds: peerIds, tagMask: tagMask, entries: self.entries, hasEarlier: self.earlier != nil, hasLater: self.later != nil)
         
         self.id = id
         self.orderStatistics = orderStatistics
@@ -610,8 +545,8 @@ final class MutableMessageHistoryView {
                         peerId = id
                     case let .associated(id, _):
                         peerId = id
-                    case .group:
-                        break
+                    /*case .group:
+                        break*/
                 }
                 
                 if let peerId = peerId {
@@ -708,6 +643,10 @@ final class MutableMessageHistoryView {
     }
     
     func updateAnchorIndex(_ getIndex: (MessageId) -> InternalMessageHistoryAnchorIndex?) -> Bool {
+        if true {
+            return false
+        }
+        
         switch self.anchorIndex {
             case let .message(index, exact):
                 if !exact {
@@ -745,8 +684,8 @@ final class MutableMessageHistoryView {
     
     func updatePeerIds(transaction: PostboxTransaction) {
         switch self.peerIds {
-            case .group:
-                break
+            /*case .group:
+                break*/
             case let .single(peerId):
                 if self.tagMask == nil, let updatedData = transaction.currentUpdatedCachedPeerData[peerId] {
                     if updatedData.associatedHistoryMessageId != nil {
@@ -764,18 +703,18 @@ final class MutableMessageHistoryView {
     
     func replay(postbox: Postbox, transaction: PostboxTransaction, updatedMedia: [MediaId: Media?], updatedCachedPeerData: [PeerId: CachedPeerData], context: MutableMessageHistoryViewReplayContext, renderIntermediateMessage: (IntermediateMessage) -> Message) -> Bool {
         var operations: [[MessageHistoryOperation]] = []
-        var groupOperations: [GroupFeedIndexOperation] = []
-        var holeFillDirections: [MessageIndex: HoleFillDirection] = [:]
+        /*var groupOperations: [GroupFeedIndexOperation] = []
+        var holeFillDirections: [MessageIndex: HoleFillDirection] = [:]*/
         
         switch self.peerIds {
             case let .single(peerId):
                 if let value = transaction.currentOperationsByPeerId[peerId] {
                     operations.append(value)
                 }
-                if let value = transaction.peerIdsWithFilledHoles[peerId] {
+                /*if let value = transaction.peerIdsWithFilledHoles[peerId] {
                     holeFillDirections = value
-                }
-            case .associated, .group:
+                }*/
+            case .associated://, .group:
                 var ids = Set<PeerId>()
                 switch self.peerIds {
                     case .single:
@@ -785,13 +724,13 @@ final class MutableMessageHistoryView {
                         if let associatedPeerId = associatedPeerId {
                             ids.insert(associatedPeerId.peerId)
                         }
-                    case let .group(groupId):
+                    /*case let .group(groupId):
                         if let operations = transaction.currentGroupFeedOperations[groupId] {
                             groupOperations = operations
                         }
                         if let value = transaction.groupFeedIdsWithFilledHoles[groupId] {
                             holeFillDirections = value
-                        }
+                        }*/
                 }
                 
                 if !ids.isEmpty {
@@ -801,13 +740,13 @@ final class MutableMessageHistoryView {
                         }
                     }
                     
-                    for (peerId, value) in transaction.peerIdsWithFilledHoles {
+                    /*for (peerId, value) in transaction.peerIdsWithFilledHoles {
                         if ids.contains(peerId) {
                             for (k, v) in value {
                                 holeFillDirections[k] = v
                             }
                         }
-                    }
+                    }*/
                 }
         }
         
@@ -819,7 +758,8 @@ final class MutableMessageHistoryView {
         if let loadingInitialIndex = self.loadingInitialIndex {
             switch loadingInitialIndex {
                 case let .groupFeedReadState(groupId):
-                    if case .group(groupId) = self.peerIds, let updatedState = transaction.currentGroupFeedReadStateContext.updatedStates[groupId], let state = updatedState.state {
+                    break
+                    /*if case .group(groupId) = self.peerIds, let updatedState = transaction.currentGroupFeedReadStateContext.updatedStates[groupId], let state = updatedState.state {
                         
                         self.combinedReadStates = .group(groupId, state)
                         self.transientReadStates = .group(groupId, state)
@@ -833,21 +773,15 @@ final class MutableMessageHistoryView {
                         self.loadingInitialIndex = nil
                         
                         hasChanges = true
-                    }
+                    }*/
             }
         } else {
             for operationSet in operations {
                 for operation in operationSet {
                     switch operation {
-                        case let .InsertHole(hole):
-                            if tagMask == nil || (hole.tags & unwrappedTagMask) != 0 {
-                                if self.add(.HoleEntry(hole, nil, lowerIndex: nil), holeFillDirections: holeFillDirections) {
-                                    hasChanges = true
-                                }
-                            }
                         case let .InsertMessage(intermediateMessage):
                             if tagMask == nil || (intermediateMessage.tags.rawValue & unwrappedTagMask) != 0 {
-                                if self.add(.IntermediateMessageEntry(intermediateMessage, nil, nil), holeFillDirections: holeFillDirections) {
+                                if self.add(.IntermediateMessageEntry(intermediateMessage, nil, nil)) {
                                     hasChanges = true
                                 }
                             }
@@ -863,13 +797,13 @@ final class MutableMessageHistoryView {
                                         var updatedStates = states
                                         updatedStates[peerId] = combinedReadState
                                         self.transientReadStates = .peer(updatedStates)
-                                    case .group:
-                                        break
+                                    /*case .group:
+                                        break*/
                                 }
                             }
                         case let .UpdateEmbeddedMedia(index, embeddedMediaData):
                             for i in 0 ..< self.entries.count {
-                                if case let .IntermediateMessageEntry(message, location, monthLocation) = self.entries[i] , MessageIndex(message) == index {
+                                if case let .IntermediateMessageEntry(message, location, monthLocation) = self.entries[i] , message.index == index {
                                     self.entries[i] = .IntermediateMessageEntry(IntermediateMessage(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: embeddedMediaData, referencedMedia: message.referencedMedia), location, monthLocation)
                                     hasChanges = true
                                     break
@@ -879,8 +813,8 @@ final class MutableMessageHistoryView {
                             for i in 0 ..< self.entries.count {
                                 let entry = self.entries[i]
                                 if entry.index == index {
-                                    let _ = self.remove([(index, true, entry.tags)], context: context)
-                                    let _ = self.add(entry.updatedTimestamp(timestamp), holeFillDirections: [:])
+                                    let _ = self.remove([(index, entry.tags)], context: context)
+                                    let _ = self.add(entry.updatedTimestamp(timestamp))
                                     hasChanges = true
                                     break
                                 }
@@ -895,16 +829,13 @@ final class MutableMessageHistoryView {
                                         case let .MessageEntry(message, location, monthLocation, attributes):
                                             self.entries[i] = .MessageEntry(message.withUpdatedGroupInfo(groupInfo), location, monthLocation, attributes)
                                             hasChanges = true
-                                        case .HoleEntry:
-                                            assertionFailure()
-                                            break
                                     }
                                 }
                         }
                     }
                 }
             }
-            for operation in groupOperations {
+            /*for operation in groupOperations {
                 switch operation {
                     case let .insertMessage(message):
                         if self.add(.IntermediateMessageEntry(message, nil, nil), holeFillDirections: holeFillDirections) {
@@ -923,7 +854,7 @@ final class MutableMessageHistoryView {
                             hasChanges = true
                         }
                 }
-            }
+            }*/
             
             if !updatedMedia.isEmpty {
                 for i in 0 ..< self.entries.count {
@@ -1022,7 +953,7 @@ final class MutableMessageHistoryView {
                             }
                         case let .Remove(indices):
                             if !self.topTaggedMessages.isEmpty {
-                                for (index, _, _) in indices {
+                                for (index, _) in indices {
                                     if let maybeCurrentTopMessage = self.topTaggedMessages[index.id.namespace], let currentTopMessage = maybeCurrentTopMessage, index.id == currentTopMessage.id {
                                         let item: MessageHistoryTopTaggedMessage? = nil
                                         self.topTaggedMessages[index.id.namespace] = item
@@ -1035,12 +966,12 @@ final class MutableMessageHistoryView {
                 }
             }
             
-            if case let .group(groupId) = self.peerIds, let updatedState = transaction.currentGroupFeedReadStateContext.updatedStates[groupId], let state = updatedState.state {
+            /*if case let .group(groupId) = self.peerIds, let updatedState = transaction.currentGroupFeedReadStateContext.updatedStates[groupId], let state = updatedState.state {
                 if let transientReadStates = transientReadStates, case .group(groupId, _) = transientReadStates {
                     self.transientReadStates = .group(groupId, state)
                     hasChanges = true
                 }
-            }
+            }*/
         }
         
         var updatedCachedPeerDataMessages = false
@@ -1064,11 +995,11 @@ final class MutableMessageHistoryView {
                         self.additionalDatas[i] = .peerChatState(peerId, postbox.peerChatStateTable.get(peerId) as? PeerChatState)
                         hasChanges = true
                     }
-                case let .peerGroupState(groupId, _):
+                /*case let .peerGroupState(groupId, _):
                     if transaction.currentUpdatedPeerGroupStates.contains(groupId) {
                         self.additionalDatas[i] = .peerGroupState(groupId, postbox.peerGroupStateTable.get(groupId))
                         hasChanges = true
-                    }
+                    }*/
                 case .totalUnreadState:
                     break
                 case .peerNotificationSettings:
@@ -1114,7 +1045,7 @@ final class MutableMessageHistoryView {
                                             break outer
                                         }
                                     case let .Remove(indicesWithTags):
-                                        for (index, _, _) in indicesWithTags {
+                                        for (index, _) in indicesWithTags {
                                             if cachedData.messageIds.contains(index.id) {
                                                 updatedCachedPeerDataMessages = true
                                                 break outer
@@ -1151,10 +1082,33 @@ final class MutableMessageHistoryView {
             }
         }
         
+        if !transaction.currentPeerHoleOperations.isEmpty {
+            var peerIdsSet: [PeerId] = []
+            switch peerIds {
+                case let .single(peerId):
+                    peerIdsSet.append(peerId)
+                case let .associated(peerId, associatedId):
+                    peerIdsSet.append(peerId)
+                    if let associatedId = associatedId {
+                        peerIdsSet.append(associatedId.peerId)
+                    }
+            }
+            let space: MessageHistoryHoleSpace = self.tagMask.flatMap(MessageHistoryHoleSpace.tag) ?? .everywhere
+            for key in transaction.currentPeerHoleOperations.keys {
+                if peerIdsSet.contains(key.peerId) && key.space == space {
+                    hasChanges = true
+                }
+            }
+        }
+        
+        if hasChanges {
+            self.holes = fetchHoles(postbox: postbox, peerIds: self.peerIds, tagMask: self.tagMask, entries: self.entries, hasEarlier: self.earlier != nil, hasLater: self.later != nil)
+        }
+        
         return hasChanges
     }
     
-    private func add(_ entry: MutableMessageHistoryEntry, holeFillDirections: [MessageIndex: HoleFillDirection]) -> Bool {
+    private func add(_ entry: MutableMessageHistoryEntry) -> Bool {
         let updated: Bool
         
         if self.entries.count == 0 {
@@ -1202,18 +1156,11 @@ final class MutableMessageHistoryView {
         
         if !self.orderStatistics.isEmpty {
             let entryIndex = entry.index
-            let isMessage: Bool
-            switch entry {
-                case .HoleEntry:
-                    isMessage = false
-                case .IntermediateMessageEntry, .MessageEntry:
-                    isMessage = true
-            }
             
             if self.orderStatistics.contains(.combinedLocation) {
                 for i in 0 ..< self.entries.count {
                     if self.entries[i].index != entryIndex {
-                        self.entries[i] = self.entries[i].offsetLocationForInsertedIndex(entryIndex, isMessage: isMessage)
+                        self.entries[i] = self.entries[i].offsetLocationForInsertedIndex(entryIndex)
                     }
                 }
             }
@@ -1225,7 +1172,7 @@ final class MutableMessageHistoryView {
         return updated
     }
     
-    private func remove(_ indicesAndFlags: [(MessageIndex, Bool, MessageTags)], context: MutableMessageHistoryViewReplayContext) -> Bool {
+    private func remove(_ indicesAndFlags: [(MessageIndex, MessageTags)], context: MutableMessageHistoryViewReplayContext) -> Bool {
         let indices = Set(indicesAndFlags.map { $0.0 })
         var hasChanges = false
         if let earlier = self.earlier , indices.contains(earlier.index) {
@@ -1233,7 +1180,7 @@ final class MutableMessageHistoryView {
             hasChanges = true
         }
         
-        if let later = self.later , indices.contains(later.index) {
+        if let later = self.later, indices.contains(later.index) {
             context.invalidLater = true
             hasChanges = true
         }
@@ -1268,10 +1215,10 @@ final class MutableMessageHistoryView {
         }
         
         if let tagMask = self.tagMask {
-            for (index, wasMessage, tags) in indicesAndFlags {
+            for (index, tags) in indicesAndFlags {
                 if (tagMask.rawValue & tags.rawValue) != 0 {
                     for i in 0 ..< self.entries.count {
-                        self.entries[i] = self.entries[i].offsetLocationForRemovedIndex(index, wasMessage: wasMessage)
+                        self.entries[i] = self.entries[i].offsetLocationForRemovedIndex(index)
                     }
                 }
             }
@@ -1294,8 +1241,8 @@ final class MutableMessageHistoryView {
                 if let associatedId = associatedId {
                     ids.append(associatedId.peerId)
                 }
-            case let .group(groupId):
-                return postbox.fetchEarlierGroupFeedEntries(groupId: groupId, index: index, count: count)
+            /*case let .group(groupId):
+                return postbox.fetchEarlierGroupFeedEntries(groupId: groupId, index: index, count: count)*/
         }
         
         return clipMessages(peerIds: peerIds, entries: postbox.fetchEarlierHistoryEntries(peerIds: ids, index: index, count: count, tagMask: self.tagMask))
@@ -1311,8 +1258,8 @@ final class MutableMessageHistoryView {
                 if let associatedId = associatedId {
                     ids.append(associatedId.peerId)
                 }
-            case let .group(groupId):
-                return postbox.fetchLaterGroupFeedEntries(groupId: groupId, index: index, count: count)
+            /*case let .group(groupId):
+                return postbox.fetchLaterGroupFeedEntries(groupId: groupId, index: index, count: count)*/
         }
         
         return clipMessages(peerIds: peerIds, entries: postbox.fetchLaterHistoryEntries(ids, index: index, count: count, tagMask: self.tagMask))
@@ -1453,7 +1400,35 @@ final class MutableMessageHistoryView {
     
     func firstHole() -> (MessageHistoryViewHole, MessageHistoryViewRelativeHoleDirection)? {
         if self.entries.isEmpty {
+            if let (key, holeIndices) = self.holes.first {
+                let hole = MessageHistoryViewPeerHole(peerId: key.peerId, namespace: key.namespace, indices: holeIndices)
+                switch self.anchorIndex {
+                    case let .message(index, _) where index.id.peerId == key.peerId && index.id.namespace == key.namespace:
+                        /*if case let .group(groupId) = self.peerIds {
+                         if let lowerIndex = lowerIndex {
+                         if index >= lowerIndex && index <= hole.maxIndex {
+                         return (.groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.maxIndex), .AroundIndex(index))
+                         }
+                         } else {
+                         assertionFailure()
+                         }
+                         } else {*/
+                        return (.peer(hole), .AroundId(index.id))
+                    //}
+                    default:
+                        return (.peer(hole), .UpperToLower)
+                }
+            }
             return nil
+        }
+        
+        if case let .message(index, _) = self.anchorIndex {
+            for (holeKey, indices) in self.holes {
+                if holeKey.peerId == index.id.peerId && holeKey.namespace == index.id.namespace && indices.contains(Int(index.id.id)) {
+                    let hole = MessageHistoryViewPeerHole(peerId: index.id.peerId, namespace: index.id.namespace, indices: indices)
+                    return (.peer(hole), .AroundId(index.id))
+                }
+            }
         }
         
         var referenceIndex = self.entries.count - 1
@@ -1467,87 +1442,107 @@ final class MutableMessageHistoryView {
         var i = referenceIndex
         var j = referenceIndex + 1
         
-        while i >= 0 || j < self.entries.count {
-            if j < self.entries.count {
-                if case let .HoleEntry(hole, _, lowerIndex) = self.entries[j] {
+        func processId(_ id: MessageId, toLower: Bool) -> (MessageHistoryViewHole, MessageHistoryViewRelativeHoleDirection)? {
+            if let holeIndices = self.holes[HoleKey(peerId: id.peerId, namespace: id.namespace)] {
+                if holeIndices.contains(Int(id.id)) {
+                    let hole = MessageHistoryViewPeerHole(peerId: id.peerId, namespace: id.namespace, indices: holeIndices)
                     switch self.anchorIndex {
-                        case let .message(index, _):
-                            if case let .group(groupId) = self.peerIds {
-                                if let lowerIndex = lowerIndex {
-                                    if index >= lowerIndex && index <= hole.maxIndex {
-                                        return (.groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.maxIndex), .AroundIndex(index))
-                                    }
-                                } else {
-                                    assertionFailure()
-                                }
-                            } else {
-                                if index.id.peerId == hole.maxIndex.id.peerId && index.id.namespace == hole.id.namespace {
-                                    if index.id.id >= hole.min && index.id.id <= hole.maxIndex.id.id {
-                                        return (.peer(hole), .AroundId(index.id))
-                                    }
-                                }
-                            }
+                        case let .message(index, _) where index.id.peerId == id.peerId && index.id.namespace == id.namespace && holeIndices.contains(Int(index.id.id)):
+                            return (.peer(hole), .AroundId(index.id))
                         default:
-                            break
+                            if toLower {
+                                return (.peer(hole), .UpperToLower)
+                            } else {
+                                return (.peer(hole), .LowerToUpper)
+                            }
                     }
-                    if case let .group(groupId) = self.peerIds {
-                        if let lowerIndex = lowerIndex {
-                            return (.groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.maxIndex), self.anchorIndex.isLessOrEqual(to: hole.maxIndex) ? .LowerToUpper : .UpperToLower)
-                        } else {
-                            assertionFailure()
-                        }
-                    } else {
-                        return (.peer(hole), self.anchorIndex.isLessOrEqual(to: hole.maxIndex) ? .LowerToUpper : .UpperToLower)
-                    }
+                }
+            }
+            return nil
+        }
+        
+        while i >= -1 || j <= self.entries.count {
+            if j < self.entries.count {
+                if let result = processId(entries[j].index.id, toLower: false) {
+                    return result
                 }
             }
             
             if i >= 0 {
-                if case let .HoleEntry(hole, _, lowerIndex) = self.entries[i] {
-                    switch self.anchorIndex {
-                        case let .message(index, _):
-                            if case let .group(groupId) = self.peerIds {
-                                if let lowerIndex = lowerIndex {
-                                    if index >= lowerIndex && index <= hole.maxIndex {
-                                        return (.groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.maxIndex), .AroundIndex(index))
-                                    }
-                                    
-                                    if hole.maxIndex.timestamp >= Int32.max - 1 && index.timestamp >= Int32.max - 1 {
-                                        return (.groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.maxIndex), .UpperToLower)
-                                    }
-                                } else {
-                                    assertionFailure()
-                                }
-                            } else {
-                                if index.id.peerId == hole.maxIndex.id.peerId && index.id.namespace == hole.id.namespace {
-                                    if index.id.id >= hole.min && index.id.id <= hole.maxIndex.id.id {
-                                        return (.peer(hole), .AroundId(index.id))
-                                    }
-                                }
-                            
-                                if hole.maxIndex.timestamp == Int32.max && index.timestamp == Int32.max {
-                                    return (.peer(hole), .UpperToLower)
-                                }
-                            }
-                        default:
-                            break
+                if let result = processId(entries[i].index.id, toLower: true) {
+                    return result
+                }
+            }
+            
+            if i == -1 || j == self.entries.count {
+                let toLower = i == -1
+                
+                var peerIdsSet: [PeerId] = []
+                switch self.peerIds {
+                    case let .single(peerId):
+                        peerIdsSet.append(peerId)
+                    case let .associated(peerId, associatedId):
+                        peerIdsSet.append(peerId)
+                        if let associatedId = associatedId {
+                            peerIdsSet.append(associatedId.peerId)
+                        }
+                }
+                var namespaceBounds: [(PeerId, MessageId.Namespace, ClosedRange<MessageId.Id>?)] = []
+                for (key, hole) in self.holes {
+                    var earlierId: MessageId.Id?
+                    earlier: for entry in self.entries {
+                        if entry.index.id.peerId == key.peerId && entry.index.id.namespace == key.namespace {
+                            earlierId = entry.index.id.id
+                            break earlier
+                        }
                     }
-                    
-                    if case .upperBound = self.anchorIndex, hole.maxIndex.timestamp >= Int32.max - 1 {
-                        if case let .group(groupId) = self.peerIds {
-                            if let lowerIndex = lowerIndex {
-                                return (.groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.maxIndex), .UpperToLower)
-                            }
+                    var laterId: MessageId.Id?
+                    later: for entry in self.entries.reversed() {
+                        if entry.index.id.peerId == key.peerId && entry.index.id.namespace == key.namespace {
+                            laterId = entry.index.id.id
+                            break later
+                        }
+                    }
+                    if let earlierId = earlierId, let laterId = laterId {
+                        let validHole: Bool
+                        if toLower {
+                            validHole = hole.intersects(integersIn: 1 ... Int(earlierId))
                         } else {
-                            return (.peer(hole), .UpperToLower)
+                            validHole = hole.intersects(integersIn: Int(laterId) ... Int(Int32.max))
+                        }
+                        if validHole {
+                            namespaceBounds.append((key.peerId, key.namespace, earlierId ... laterId))
                         }
                     } else {
-                        if case let .group(groupId) = self.peerIds {
-                            if let lowerIndex = lowerIndex {
-                                return (.groupFeed(groupId, lowerIndex: lowerIndex, upperIndex: hole.maxIndex), self.anchorIndex.isLessOrEqual(to: hole.maxIndex) ? .LowerToUpper : .UpperToLower)
+                        namespaceBounds.append((key.peerId, key.namespace, nil))
+                    }
+                }
+                
+                for (peerId, namespace, bounds) in namespaceBounds {
+                    if let indices = self.holes[HoleKey(peerId: peerId, namespace: namespace)] {
+                        assert(!indices.isEmpty)
+                        if let bounds = bounds {
+                            var updatedIndices = indices
+                            if toLower {
+                                updatedIndices.remove(integersIn: Int(bounds.lowerBound) ... Int(Int32.max))
+                            } else {
+                                updatedIndices.remove(integersIn: 0 ... Int(bounds.upperBound))
                             }
-                        } else{
-                            return (.peer(hole), self.anchorIndex.isLessOrEqual(to: hole.maxIndex) ? .LowerToUpper : .UpperToLower)
+                            if !updatedIndices.isEmpty {
+                                let hole = MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, indices: updatedIndices)
+                                if toLower {
+                                    return (.peer(hole), .UpperToLower)
+                                } else {
+                                    return (.peer(hole), .LowerToUpper)
+                                }
+                            }
+                        } else {
+                            let hole = MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, indices: indices)
+                            if toLower {
+                                return (.peer(hole), .UpperToLower)
+                            } else {
+                                return (.peer(hole), .LowerToUpper)
+                            }
                         }
                     }
                 }
@@ -1567,6 +1562,8 @@ public final class MessageHistoryView {
     public let anchorIndex: MessageHistoryAnchorIndex
     public let earlierId: MessageIndex?
     public let laterId: MessageIndex?
+    public let holeEarlier: Bool
+    public let holeLater: Bool
     public let entries: [MessageHistoryEntry]
     public let maxReadIndex: MessageIndex?
     public let fixedReadStates: MessageHistoryViewReadState?
@@ -1591,22 +1588,16 @@ public final class MessageHistoryView {
         if let transientReadStates = mutableView.transientReadStates, case let .peer(states) = transientReadStates {
             for entry in mutableView.entries {
                 switch entry {
-                    case let .HoleEntry(hole, location, _):
-                        if let removeUpperHolePeerId = removeUpperHolePeerId, removeUpperHolePeerId == hole.maxIndex.id.peerId, hole.maxIndex.timestamp >= Int32.max - 1 {
-                            // skip hole
-                        } else {
-                            entries.append(.HoleEntry(hole, location))
-                        }
                     case let .MessageEntry(message, location, monthLocation, attributes):
                         let read: Bool
                         if message.flags.contains(.Incoming) {
                             read = false
                         } else if let readState = states[message.id.peerId] {
-                            read = readState.isOutgoingMessageIndexRead(MessageIndex(message))
+                            read = readState.isOutgoingMessageIndexRead(message.index)
                         } else {
                             read = false
                         }
-                        entries.append(.MessageEntry(message, read, location, monthLocation, attributes))
+                        entries.append(MessageHistoryEntry(message: message, isRead: read, location: location, monthLocation: monthLocation, attributes: attributes))
                     case .IntermediateMessageEntry:
                         assertionFailure("unexpected IntermediateMessageEntry in MessageHistoryView.init()")
                 }
@@ -1614,83 +1605,126 @@ public final class MessageHistoryView {
         } else {
             for entry in mutableView.entries {
                 switch entry {
-                    case let .HoleEntry(hole, location, _):
-                        if let removeUpperHolePeerId = removeUpperHolePeerId, removeUpperHolePeerId == hole.maxIndex.id.peerId, hole.maxIndex.timestamp >= Int32.max - 1 {
-                            // skip hole
-                        } else {
-                            entries.append(.HoleEntry(hole, location))
-                        }
                     case let .MessageEntry(message, location, monthLocation, attributes):
-                        entries.append(.MessageEntry(message, false, location, monthLocation, attributes))
+                        entries.append(MessageHistoryEntry(message: message, isRead: false, location: location, monthLocation: monthLocation, attributes: attributes))
                     case .IntermediateMessageEntry:
                         assertionFailure("unexpected IntermediateMessageEntry in MessageHistoryView.init()")
                 }
             }
         }
-        if !entries.isEmpty && mutableView.clipHoles {
-            var referenceIndex = entries.count - 1
-            for i in 0 ..< entries.count {
-                if self.anchorIndex.isLessOrEqual(to: entries[i].index) {
-                    referenceIndex = i
-                    break
+        var holeEarlier = false
+        var holeLater = false
+        if mutableView.clipHoles {
+            if entries.isEmpty {
+                if !mutableView.holes.isEmpty {
+                    holeEarlier = true
+                    holeLater = true
                 }
-            }
-            var groupStart: (Int, MessageGroupInfo)?
-            for i in referenceIndex ..< entries.count {
-                if case .HoleEntry = entries[i] {
-                    if let groupStart = groupStart {
-                        entries.removeSubrange(groupStart.0 ..< entries.count)
-                        laterId = nil
-                    } else {
-                        if i != entries.count - 1 {
-                            entries.removeSubrange(i + 1 ..< entries.count)
-                            laterId = nil
-                        }
-                    }
-                    break
-                } else if case let .MessageEntry(message, _, _, _, _) = entries[i] {
-                    if let groupInfo = message.groupInfo {
-                        if let groupStart = groupStart, groupStart.1 == groupInfo {
-                        } else {
-                            groupStart = (i, groupInfo)
-                        }
-                    } else {
-                        groupStart = nil
-                    }
-                }
-            }
-            if let groupStart = groupStart, laterId != nil {
-                entries.removeSubrange(groupStart.0 ..< entries.count)
-            }
-            
-            groupStart = nil
-            for i in (0 ... min(referenceIndex, entries.count - 1)).reversed() {
-                if case .HoleEntry = entries[i] {
-                    if let groupStart = groupStart {
-                        entries.removeSubrange(0 ..< groupStart.0 + 1)
-                        earlierId = nil
-                    } else {
-                        if i != 0 {
-                            entries.removeSubrange(0 ..< i)
+            } else {
+                var clearAllEntries = false
+                if case let .message(index) = self.anchorIndex {
+                    for (holeKey, indices) in mutableView.holes {
+                        if holeKey.peerId == index.id.peerId && holeKey.namespace == index.id.namespace && indices.contains(Int(index.id.id)) {
+                            entries.removeAll()
                             earlierId = nil
+                            holeEarlier = true
+                            laterId = nil
+                            holeLater = true
+                            clearAllEntries = true
+                            break
                         }
-                    }
-                    break
-                } else if case let .MessageEntry(message, _, _, _, _) = entries[i] {
-                    if let groupInfo = message.groupInfo {
-                        if let groupStart = groupStart, groupStart.1 == groupInfo {
-                        } else {
-                            groupStart = (i, groupInfo)
-                        }
-                    } else {
-                        groupStart = nil
                     }
                 }
-            }
-            if let groupStart = groupStart, earlierId != nil {
-                entries.removeSubrange(0 ..< groupStart.0 + 1)
+                if !clearAllEntries {
+                    var referenceIndex = entries.count - 1
+                    for i in 0 ..< entries.count {
+                        if self.anchorIndex.isLessOrEqual(to: entries[i].index) {
+                            referenceIndex = i
+                            break
+                        }
+                    }
+                    var groupStart: (Int, MessageGroupInfo)?
+                    for i in referenceIndex ..< entries.count {
+                        let id = entries[i].message.id
+                        if let holeIndices = mutableView.holes[HoleKey(peerId: id.peerId, namespace: id.namespace)] {
+                            if holeIndices.contains(Int(id.id)) {
+                                if let groupStart = groupStart {
+                                    entries.removeSubrange(groupStart.0 ..< entries.count)
+                                } else {
+                                    entries.removeSubrange(i ..< entries.count)
+                                }
+                                laterId = nil
+                                holeLater = true
+                                break
+                            }
+                        }
+                        /*if let groupStart = groupStart {
+                            entries.removeSubrange(groupStart.0 ..< entries.count)
+                            laterId = nil
+                        } else {
+                            if i != entries.count - 1 {
+                                entries.removeSubrange(i + 1 ..< entries.count)
+                                laterId = nil
+                            }
+                        }*/
+                        if let groupInfo = entries[i].message.groupInfo {
+                            if let groupStart = groupStart, groupStart.1 == groupInfo {
+                            } else {
+                                groupStart = (i, groupInfo)
+                            }
+                        } else {
+                            groupStart = nil
+                        }
+                    }
+                    if let groupStart = groupStart, laterId != nil {
+                        entries.removeSubrange(groupStart.0 ..< entries.count)
+                    }
+                    
+                    groupStart = nil
+                    if !entries.isEmpty {
+                        for i in (0 ... min(referenceIndex, entries.count - 1)).reversed() {
+                            let id = entries[i].message.id
+                            if let holeIndices = mutableView.holes[HoleKey(peerId: id.peerId, namespace: id.namespace)] {
+                                if holeIndices.contains(Int(id.id)) {
+                                    if let groupStart = groupStart {
+                                        entries.removeSubrange(0 ..< groupStart.0 + 1)
+                                    } else {
+                                        entries.removeSubrange(0 ... i)
+                                    }
+                                    earlierId = nil
+                                    holeEarlier = true
+                                    break
+                                }
+                            }
+                            /*if let groupStart = groupStart {
+                                entries.removeSubrange(0 ..< groupStart.0 + 1)
+                                earlierId = nil
+                            } else {
+                                if i != 0 {
+                                    entries.removeSubrange(0 ..< i)
+                                    earlierId = nil
+                                }
+                            }
+                            break
+                            */
+                            if let groupInfo = entries[i].message.groupInfo {
+                                if let groupStart = groupStart, groupStart.1 == groupInfo {
+                                } else {
+                                    groupStart = (i, groupInfo)
+                                }
+                            } else {
+                                groupStart = nil
+                            }
+                        }
+                        if let groupStart = groupStart, earlierId != nil {
+                            entries.removeSubrange(0 ..< groupStart.0 + 1)
+                        }
+                    }
+                }
             }
         }
+        self.holeEarlier = holeEarlier
+        self.holeLater = holeLater
         self.entries = entries
         
         var topTaggedMessages: [Message] = []
@@ -1754,8 +1788,8 @@ public final class MessageHistoryView {
                                     }
                                     if let _ = maxNamespaceIndex , index + 1 < entries.count {
                                         for i in index + 1 ..< entries.count {
-                                            if case let .MessageEntry(message, _, _, _, _) = entries[i], !message.flags.contains(.Incoming) {
-                                                maxNamespaceIndex = MessageIndex(message)
+                                            if !entries[i].message.flags.contains(.Incoming) {
+                                                maxNamespaceIndex = entries[i].message.index
                                             } else {
                                                 break
                                             }
@@ -1769,7 +1803,7 @@ public final class MessageHistoryView {
                         }
                     }
                     self.maxReadIndex = maxIndex
-                case let .group(_, state):
+                /*case let .group(_, state):
                     var maxIndex: MessageIndex?
                     var index = entries.count - 1
                     for entry in entries.reversed() {
@@ -1795,7 +1829,7 @@ public final class MessageHistoryView {
                             }
                         }
                     }
-                    self.maxReadIndex = maxIndex
+                    self.maxReadIndex = maxIndex*/
             }
         } else {
             self.maxReadIndex = nil

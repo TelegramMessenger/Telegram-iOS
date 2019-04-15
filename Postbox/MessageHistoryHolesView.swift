@@ -1,20 +1,14 @@
 import Foundation
 
-public struct MessageHistoryHolesViewEntry: Hashable {
+public struct MessageHistoryHolesViewEntry: Equatable, Hashable {
     public let hole: MessageHistoryViewHole
     public let direction: MessageHistoryViewRelativeHoleDirection
-    public let tags: MessageTags?
+    public let space: MessageHistoryHoleSpace
     
-    public var hashValue: Int {
-        return self.hole.hashValue
-    }
-
-    public static func ==(lhs: MessageHistoryHolesViewEntry, rhs: MessageHistoryHolesViewEntry) -> Bool {
-        return lhs.hole == rhs.hole && lhs.direction == rhs.direction && lhs.tags == rhs.tags
-    }
-
-    public static func <(lhs: MessageHistoryHolesViewEntry, rhs: MessageHistoryHolesViewEntry) -> Bool {
-        return lhs.hole.holeMaxIndex < rhs.hole.holeMaxIndex
+    public init(hole: MessageHistoryViewHole, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace) {
+        self.hole = hole
+        self.direction = direction
+        self.space = space
     }
 }
 

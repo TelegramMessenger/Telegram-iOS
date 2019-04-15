@@ -8,10 +8,45 @@ enum ValueBoxKeyType: Int32 {
 struct ValueBoxTable {
     let id: Int32
     let keyType: ValueBoxKeyType
+    let compactValuesOnCreation: Bool
 }
 
 struct ValueBoxFullTextTable {
     let id: Int32
+}
+
+public struct ValueBoxEncryptionParameters {
+    public struct Key {
+        public let data: Data
+        
+        public init?(data: Data) {
+            if data.count == 32 {
+                self.data = data
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public struct Salt {
+        public let data: Data
+        
+        public init?(data: Data) {
+            if data.count == 16 {
+                self.data = data
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public let key: Key
+    public let salt: Salt
+    
+    public init(key: Key, salt: Salt) {
+        self.key = key
+        self.salt = salt
+    }
 }
 
 protocol ValueBox {
@@ -27,9 +62,11 @@ protocol ValueBox {
     func scan(_ table: ValueBoxTable, keys: (ValueBoxKey) -> Bool)
     func scanInt64(_ table: ValueBoxTable, values: (Int64, ReadBuffer) -> Bool)
     func get(_ table: ValueBoxTable, key: ValueBoxKey) -> ReadBuffer?
+    func read(_ table: ValueBoxTable, key: ValueBoxKey, _ process: (Int, (UnsafeMutableRawPointer, Int, Int) -> Void) -> Void)
+    func readWrite(_ table: ValueBoxTable, key: ValueBoxKey, _ process: (Int, (UnsafeMutableRawPointer, Int, Int) -> Void, (UnsafeRawPointer, Int, Int) -> Void) -> Void)
     func exists(_ table: ValueBoxTable, key: ValueBoxKey) -> Bool
     func set(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer)
-    func remove(_ table: ValueBoxTable, key: ValueBoxKey)
+    func remove(_ table: ValueBoxTable, key: ValueBoxKey, secure: Bool)
     func move(_ table: ValueBoxTable, from previousKey: ValueBoxKey, to updatedKey: ValueBoxKey)
     func removeRange(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey)
     func fullTextSet(_ table: ValueBoxFullTextTable, collectionId: String, itemId: String, contents: String, tags: String)
@@ -37,4 +74,7 @@ protocol ValueBox {
     func fullTextRemove(_ table: ValueBoxFullTextTable, itemId: String)
     func dropTable(_ table: ValueBoxTable)
     func drop()
+    func count(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey) -> Int
+    
+    func exportEncrypted(to exportBasePath: String, encryptionParameters: ValueBoxEncryptionParameters)
 }

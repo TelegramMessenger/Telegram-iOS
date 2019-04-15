@@ -2,7 +2,6 @@ import Foundation
 
 private enum MetadataPrefix: Int8 {
     case ChatListInitialized = 0
-    case PeerHistoryInitialized = 1
     case PeerNextMessageIdByNamespace = 2
     case NextStableMessageId = 3
     case ChatListTotalUnreadState = 4
@@ -10,6 +9,7 @@ private enum MetadataPrefix: Int8 {
     case ChatListGroupInitialized = 6
     case GroupFeedIndexInitialized = 7
     case ShouldReindexUnreadCounts = 8
+    case PeerHistoryInitialized = 9
 }
 
 public struct ChatListTotalUnreadCounters: PostboxCoding, Equatable {
@@ -116,37 +116,11 @@ private enum InitializedChatListKey: Hashable {
                 return groupId.rawValue
         }
     }
-    
-    var hashValue: Int {
-        switch self {
-            case .global:
-                return 0
-            case let .group(groupId):
-                return groupId.hashValue
-        }
-    }
-    
-    static func ==(lhs: InitializedChatListKey, rhs: InitializedChatListKey) -> Bool {
-        switch lhs {
-            case .global:
-                if case .global = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .group(groupId):
-                if case .group(groupId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 final class MessageHistoryMetadataTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     let sharedPeerHistoryInitializedKey = ValueBoxKey(length: 8 + 1)
@@ -242,7 +216,7 @@ final class MessageHistoryMetadataTable: Table {
         if value {
             self.valueBox.set(self.table, key: self.key(MetadataPrefix.ShouldReindexUnreadCounts), value: MemoryBuffer())
         } else {
-            self.valueBox.remove(self.table, key: self.key(MetadataPrefix.ShouldReindexUnreadCounts))
+            self.valueBox.remove(self.table, key: self.key(MetadataPrefix.ShouldReindexUnreadCounts), secure: false)
         }
     }
     
@@ -419,7 +393,7 @@ final class MessageHistoryMetadataTable: Table {
                     sharedBuffer.write(&mutableMaxId, offset: 0, length: 4)
                     self.valueBox.set(self.table, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace), value: sharedBuffer)
                 } else {
-                    self.valueBox.remove(self.table, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace))
+                    self.valueBox.remove(self.table, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace), secure: false)
                 }
             }
         }

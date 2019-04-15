@@ -2,7 +2,7 @@ import Foundation
 
 final class PendingPeerNotificationSettingsIndexTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64)
+        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
     }
     
     private let sharedKey = ValueBoxKey(length: 8)
@@ -34,7 +34,7 @@ final class PendingPeerNotificationSettingsIndexTable: Table {
         if pending {
             self.valueBox.set(self.table, key: self.key(peerId), value: MemoryBuffer())
         } else {
-            self.valueBox.remove(self.table, key: self.key(peerId))
+            self.valueBox.remove(self.table, key: self.key(peerId), secure: false)
         }
     }
 }

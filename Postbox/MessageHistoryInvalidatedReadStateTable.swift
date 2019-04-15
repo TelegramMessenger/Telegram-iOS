@@ -26,7 +26,7 @@ public func ==(lhs: PeerReadStateSynchronizationOperation, rhs: PeerReadStateSyn
 
 final class MessageHistorySynchronizeReadStateTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64)
+        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
     }
     
     private let sharedKey = ValueBoxKey(length: 8)
@@ -100,7 +100,7 @@ final class MessageHistorySynchronizeReadStateTable: Table {
                     
                     self.valueBox.set(self.table, key: key, value: buffer)
                 } else {
-                    self.valueBox.remove(self.table, key: key)
+                    self.valueBox.remove(self.table, key: key, secure: false)
                 }
             }
             self.updatedPeerIds.removeAll()

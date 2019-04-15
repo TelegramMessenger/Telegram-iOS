@@ -1,6 +1,6 @@
 import Foundation
 
-final class MutablePeerGroupStateView: MutablePostboxView {
+/*final class MutablePeerGroupStateView: MutablePostboxView {
     let groupId: PeerGroupId
     var state: PeerGroupState?
     
@@ -32,4 +32,4 @@ public final class PeerGroupStateView: PostboxView {
         self.state = view.state
     }
 }
-
+*/

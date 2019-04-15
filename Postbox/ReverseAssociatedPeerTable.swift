@@ -21,7 +21,7 @@ private func writePeerIds(_ buffer: WriteBuffer, _ peerIds: Set<PeerId>) {
 
 final class ReverseAssociatedPeerTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64)
+        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
     }
     
     private let sharedKey = ValueBoxKey(length: 8)
@@ -82,7 +82,7 @@ final class ReverseAssociatedPeerTable: Table {
             for peerId in self.updatedAssociations {
                 if let peerIds = self.cachedAssociations[peerId] {
                     if peerIds.isEmpty {
-                        self.valueBox.remove(self.table, key: self.key(peerId))
+                        self.valueBox.remove(self.table, key: self.key(peerId), secure: false)
                     } else {
                         buffer.reset()
                         writePeerIds(buffer, peerIds)

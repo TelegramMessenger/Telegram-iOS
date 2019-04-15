@@ -6,7 +6,7 @@ enum AccountManagerRecordOperation {
 
 final class AccountManagerRecordTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .int64)
+        return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
     }
     
     private func key(_ key: AccountRecordId) -> ValueBoxKey {
@@ -41,7 +41,7 @@ final class AccountManagerRecordTable: Table {
                 self.valueBox.set(self.table, key: self.key(id), value: encoder.readBufferNoCopy())
             })
         } else {
-            self.valueBox.remove(self.table, key: self.key(id))
+            self.valueBox.remove(self.table, key: self.key(id), secure: false)
         }
         operations.append(.set(id: id, record: record))
     }

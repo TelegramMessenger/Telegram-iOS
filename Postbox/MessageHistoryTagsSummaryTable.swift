@@ -72,7 +72,7 @@ private struct CachedEntry {
 
 class MessageHistoryTagsSummaryTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private let invalidateTable: InvalidatedMessageHistoryTagsSummaryTable
@@ -164,7 +164,7 @@ class MessageHistoryTagsSummaryTable: Table {
                         self.valueBox.set(self.table, key: self.key(key: key, sharedKey: self.sharedKey), value: buffer)
                     } else {
                         assertionFailure()
-                        self.valueBox.remove(self.table, key: self.key(key: key, sharedKey: self.sharedKey))
+                        self.valueBox.remove(self.table, key: self.key(key: key, sharedKey: self.sharedKey), secure: false)
                     }
                 } else {
                     assertionFailure()

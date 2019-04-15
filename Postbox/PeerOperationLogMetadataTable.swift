@@ -7,7 +7,7 @@ private enum PeerOperationLogIndexNamespace: Int8 {
 
 final class PeerOperationLogMetadataTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private func keyForNextMergedIndex() -> ValueBoxKey {

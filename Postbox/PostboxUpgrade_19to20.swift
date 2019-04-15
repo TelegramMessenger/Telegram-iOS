@@ -98,7 +98,7 @@ private func removeMediaReference(valueBox: ValueBox, table: ValueBoxTable, id: 
         sharedWriteBuffer.write(&messageReferenceCount, offset: 0, length: 4)
         
         if messageReferenceCount <= 0 {
-            valueBox.remove(table, key: mediaTableKey(id))
+            valueBox.remove(table, key: mediaTableKey(id), secure: false)
         } else {
             withExtendedLifetime(sharedWriteBuffer, {
                 valueBox.set(table, key: mediaTableKey(id), value: sharedWriteBuffer.readBufferNoCopy())
@@ -114,25 +114,25 @@ private func removeMediaReference(valueBox: ValueBox, table: ValueBoxTable, id: 
         value.read(&idId, offset: 0, length: 4)
         value.read(&idTimestamp, offset: 0, length: 4)
         
-        valueBox.remove(table, key: mediaTableKey(id))
+        valueBox.remove(table, key: mediaTableKey(id), secure: false)
     } else {
         assertionFailure()
     }
 }
 
-func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox) {
+func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox, progress: (Float) -> Void) {
     let startTime = CFAbsoluteTimeGetCurrent()
     
-    let messageHistoryIndexTable = ValueBoxTable(id: 4, keyType: .binary)
-    let messageHistoryTable = ValueBoxTable(id: 7, keyType: .binary)
-    let messageHistoryMetadataTable = ValueBoxTable(id: 10, keyType: .binary)
-    let chatListIndexTable = ValueBoxTable(id: 8, keyType: .int64)
-    let chatListTable = ValueBoxTable(id: 9, keyType: .binary)
-    let globalMessageIdsTable = ValueBoxTable(id: 3, keyType: .int64)
-    let messageHistoryTagsTable = ValueBoxTable(id: 12, keyType: .binary)
-    let globalMessageHistoryTagsTable = ValueBoxTable(id: 39, keyType: .binary)
-    let localMessageHistoryTagsTable = ValueBoxTable(id: 52, keyType: .binary)
-    let mediaTable = ValueBoxTable(id: 6, keyType: .binary)
+    let messageHistoryIndexTable = ValueBoxTable(id: 4, keyType: .binary, compactValuesOnCreation: true)
+    let messageHistoryTable = ValueBoxTable(id: 7, keyType: .binary, compactValuesOnCreation: false)
+    let messageHistoryMetadataTable = ValueBoxTable(id: 10, keyType: .binary, compactValuesOnCreation: true)
+    let chatListIndexTable = ValueBoxTable(id: 8, keyType: .int64, compactValuesOnCreation: false)
+    let chatListTable = ValueBoxTable(id: 9, keyType: .binary, compactValuesOnCreation: true)
+    let globalMessageIdsTable = ValueBoxTable(id: 3, keyType: .int64, compactValuesOnCreation: false)
+    let messageHistoryTagsTable = ValueBoxTable(id: 12, keyType: .binary, compactValuesOnCreation: true)
+    let globalMessageHistoryTagsTable = ValueBoxTable(id: 39, keyType: .binary, compactValuesOnCreation: true)
+    let localMessageHistoryTagsTable = ValueBoxTable(id: 52, keyType: .binary, compactValuesOnCreation: true)
+    let mediaTable = ValueBoxTable(id: 6, keyType: .binary, compactValuesOnCreation: false)
     
     var totalMessageCount = 0
     
@@ -166,8 +166,6 @@ func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox) {
                 matchingPeerIds.append(currentPeerId)
             }
             currentLowerBound.setInt64(0, value: currentPeerId.toInt64() + 1)
-            currentLowerBound.setInt32(8, value: 0)
-            currentLowerBound.setInt32(8 + 4, value: 0)
         } else {
             break
         }
@@ -194,7 +192,7 @@ func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox) {
             
             if (flags & HistoryEntryTypeMask) == HistoryEntryTypeMessage {
                 sharedGlobalIdsKey.setInt64(0, value: Int64(id))
-                valueBox.remove(globalMessageIdsTable, key: sharedGlobalIdsKey)
+                valueBox.remove(globalMessageIdsTable, key: sharedGlobalIdsKey, secure: false)
             }
             
             sharedMessageHistoryKey.setInt64(0, value: peerId.toInt64())
@@ -334,7 +332,7 @@ func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox) {
                         sharedMessageHistoryTagsKey.setInt32(8 + 4 + 4, value: 0)
                         sharedMessageHistoryTagsKey.setInt32(8 + 4 + 4 + 4, value: id)
                         
-                        valueBox.remove(messageHistoryTagsTable, key: sharedMessageHistoryTagsKey)
+                        valueBox.remove(messageHistoryTagsTable, key: sharedMessageHistoryTagsKey, secure: false)
                     }
                     
                     for tag in globalTags {
@@ -344,7 +342,7 @@ func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox) {
                         sharedGlobalTagsKey.setInt32(4 + 4 + 4, value: id)
                         sharedGlobalTagsKey.setInt64(4 + 4 + 4 + 4, value: peerId.toInt64())
                         
-                        valueBox.remove(globalMessageHistoryTagsTable, key: sharedGlobalTagsKey)
+                        valueBox.remove(globalMessageHistoryTagsTable, key: sharedGlobalTagsKey, secure: false)
                     }
                     
                     for tag in localTags {
@@ -353,7 +351,7 @@ func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox) {
                         sharedLocalTagsKey.setInt32(4 + 4, value: id)
                         sharedLocalTagsKey.setInt64(4 + 4 + 4, value: peerId.toInt64())
                         
-                        valueBox.remove(localMessageHistoryTagsTable, key: sharedLocalTagsKey)
+                        valueBox.remove(localMessageHistoryTagsTable, key: sharedLocalTagsKey, secure: false)
                     }
                     
                     for mediaId in referencedMediaIds {
@@ -390,10 +388,10 @@ func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox) {
                         sharedMessageHistoryTagsKey.setInt32(8 + 4 + 4, value: 0)
                         sharedMessageHistoryTagsKey.setInt32(8 + 4 + 4 + 4, value: id)
                         
-                        valueBox.remove(messageHistoryTagsTable, key: sharedMessageHistoryTagsKey)
+                        valueBox.remove(messageHistoryTagsTable, key: sharedMessageHistoryTagsKey, secure: false)
                     }
                 }
-                valueBox.remove(messageHistoryTable, key: sharedMessageHistoryKey)
+                valueBox.remove(messageHistoryTable, key: sharedMessageHistoryKey, secure: false)
             }
         
             return true
@@ -403,10 +401,10 @@ func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox) {
         
         sharedPeerHistoryInitializedKey.setInt64(0, value: peerId.toInt64())
         sharedPeerHistoryInitializedKey.setInt8(8, value: 1)
-        valueBox.remove(messageHistoryMetadataTable, key: sharedPeerHistoryInitializedKey)
+        valueBox.remove(messageHistoryMetadataTable, key: sharedPeerHistoryInitializedKey, secure: false)
         
         sharedChatListIndexKey.setInt64(0, value: peerId.toInt64())
-        valueBox.remove(chatListIndexTable, key: sharedChatListIndexKey)
+        valueBox.remove(chatListIndexTable, key: sharedChatListIndexKey, secure: false)
     }
     
     var removeChatListKeys: [ValueBoxKey] = []
@@ -414,7 +412,7 @@ func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox) {
         let (_, _, index, type) = extractChatListKey(key)
         if index.id.peerId.namespace != 3 { // Secret Chat
             sharedChatListIndexKey.setInt64(0, value: index.id.peerId.toInt64())
-            valueBox.remove(chatListIndexTable, key: sharedChatListIndexKey)
+            valueBox.remove(chatListIndexTable, key: sharedChatListIndexKey, secure: false)
             
             removeChatListKeys.append(key)
         } else if type == 2 { // Hole
@@ -424,12 +422,12 @@ func postboxUpgrade_19to20(metadataTable: MetadataTable, valueBox: ValueBox) {
     })
     
     for key in removeChatListKeys {
-        valueBox.remove(chatListTable, key: key)
+        valueBox.remove(chatListTable, key: key, secure: false)
     }
     
     let chatListInitializedKey = ValueBoxKey(length: 1)
     chatListInitializedKey.setInt8(0, value: 0)
-    valueBox.remove(messageHistoryMetadataTable, key: chatListInitializedKey)
+    valueBox.remove(messageHistoryMetadataTable, key: chatListInitializedKey, secure: false)
     
     let shouldReindexUnreadCountsKey = ValueBoxKey(length: 1)
     shouldReindexUnreadCountsKey.setInt8(0, value: 8)

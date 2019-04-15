@@ -2,7 +2,7 @@ import Foundation
 
 final class KeychainTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: false)
     }
     
     private func key(_ string: String) -> ValueBoxKey {
@@ -21,6 +21,6 @@ final class KeychainTable: Table {
     }
     
     func remove(_ key: String) {
-        self.valueBox.remove(self.table, key: self.key(key))
+        self.valueBox.remove(self.table, key: self.key(key), secure: false)
     }
 }

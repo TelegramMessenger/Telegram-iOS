@@ -8,7 +8,7 @@ enum IntermediateMessageHistoryLocalTagsOperation {
 
 final class LocalMessageHistoryTagsTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
-        return ValueBoxTable(id: id, keyType: .binary)
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private let sharedKey = ValueBoxKey(length: 4 + 4 + 4 + 8)
@@ -47,7 +47,7 @@ final class LocalMessageHistoryTagsTable: Table {
             operations.append(.Insert(tag, id))
         }
         for tag in removedTags {
-            self.valueBox.remove(self.table, key: self.key(id, tag: tag))
+            self.valueBox.remove(self.table, key: self.key(id, tag: tag), secure: false)
             operations.append(.Remove(tag, id))
         }
     }

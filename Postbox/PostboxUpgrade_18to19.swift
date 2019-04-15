@@ -22,11 +22,11 @@ private struct PrivatePeerId: Hashable {
     }
 }
 
-func postboxUpgrade_18to19(metadataTable: MetadataTable, valueBox: ValueBox) {
+func postboxUpgrade_18to19(metadataTable: MetadataTable, valueBox: ValueBox, progress: (Float) -> Void) {
     let startTime = CFAbsoluteTimeGetCurrent()
     
-    let globalMessageIdsTable = ValueBoxTable(id: 3, keyType: .int64)
-    let messageHistoryIndexTable = ValueBoxTable(id: 4, keyType: .binary)
+    let globalMessageIdsTable = ValueBoxTable(id: 3, keyType: .int64, compactValuesOnCreation: false)
+    let messageHistoryIndexTable = ValueBoxTable(id: 4, keyType: .binary, compactValuesOnCreation: true)
     
     valueBox.dropTable(globalMessageIdsTable)
     

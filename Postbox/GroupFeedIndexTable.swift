@@ -170,7 +170,7 @@ final class GroupFeedIndexTable: Table {
         if let value = self.valueBox.get(self.table, key: key) {
             switch readEntry(groupId: groupId, key: key, value: value) {
                 case .message:
-                    self.valueBox.remove(self.table, key: self.key(groupId: groupId, index: messageIndex))
+                    self.valueBox.remove(self.table, key: self.key(groupId: groupId, index: messageIndex), secure: false)
                     addOperation(groupId: groupId, operation: .removeMessage(messageIndex), to: &operations)
                 case .hole:
                     assertionFailure()
@@ -219,7 +219,7 @@ final class GroupFeedIndexTable: Table {
         if let value = self.valueBox.get(self.table, key: key) {
             switch readEntry(groupId: groupId, key: key, value: value) {
                 case .hole:
-                    self.valueBox.remove(self.table, key: self.key(groupId: groupId, index: messageIndex))
+                    self.valueBox.remove(self.table, key: self.key(groupId: groupId, index: messageIndex), secure: false)
                     addOperation(groupId, .removeHole(messageIndex))
                 case .message:
                     assertionFailure()
@@ -245,7 +245,7 @@ final class GroupFeedIndexTable: Table {
             return true
         }, limit: 0)
         for key in removeKeys {
-            self.valueBox.remove(self.table, key: key)
+            self.valueBox.remove(self.table, key: key, secure: false)
         }
     }
     
@@ -264,7 +264,7 @@ final class GroupFeedIndexTable: Table {
             return true
         }, limit: 0)
         for key in removeKeys {
-            self.valueBox.remove(self.table, key: key)
+            self.valueBox.remove(self.table, key: key, secure: false)
         }
         
         let buffer = WriteBuffer()
