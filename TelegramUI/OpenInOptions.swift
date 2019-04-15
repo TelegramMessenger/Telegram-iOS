@@ -78,9 +78,9 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                 return .none
             }))
         
-            options.append(OpenInOption(application: .other(title: "Opera Mini", identifier: 363729560, scheme: "opera-http"), action: {
+            options.append(OpenInOption(application: .other(title: "Opera Touch", identifier: 1411869974, scheme: "touch-http"), action: {
                 if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
-                    components.scheme = components.scheme == "https" ? "opera-https" : "opera-http"
+                    components.scheme = components.scheme == "https" ? "touch-https" : "touch-http"
                     if let url = components.string {
                         return .openUrl(url: url)
                     }

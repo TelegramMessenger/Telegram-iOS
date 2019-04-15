@@ -219,7 +219,17 @@ public class PeerMediaCollectionController: TelegramController {
                                 ActionSheetButtonItem(title: openText, color: .accent, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                     if let strongSelf = self {
-                                        strongSelf.context.sharedContext.applicationBindings.openUrl(url)
+                                        if canOpenIn {
+                                            let actionSheet = OpenInActionSheetController(context: strongSelf.context, item: .url(url: url), openUrl: { [weak self] url in
+                                                if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+                                                    openExternalUrl(context: strongSelf.context, url: url, forceExternal: true, presentationData: strongSelf.presentationData, navigationController: navigationController, dismissInput: {
+                                                    })
+                                                }
+                                            })
+                                            strongSelf.present(actionSheet, in: .window(.root))
+                                        } else {
+                                            strongSelf.context.sharedContext.applicationBindings.openUrl(url)
+                                        }
                                     }
                                 }),
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.ShareMenu_CopyShareLink, color: .accent, action: { [weak actionSheet] in

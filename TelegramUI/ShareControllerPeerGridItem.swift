@@ -192,6 +192,6 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
         
         let bounds = self.bounds
         self.peerNode.frame = bounds
-        self.onlineNode.frame = CGRect(origin: CGPoint(x: self.peerNode.frame.width - self.onlineNode.frame.width - 11.0, y: self.peerNode.frame.height - self.onlineNode.frame.height - 43.0), size: self.onlineNode.frame.size)
+        self.onlineNode.frame = CGRect(origin: CGPoint(x: self.peerNode.frame.width - self.onlineNode.frame.width - 13.0, y: self.peerNode.frame.height - self.onlineNode.frame.height - 45.0), size: self.onlineNode.frame.size)
     }
 }

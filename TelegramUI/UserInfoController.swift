@@ -1158,7 +1158,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
-        controller?.present(value, in: .window(.root), with: presentationArguments)
+        controller?.present(value, in: .window(.root), with: presentationArguments, blockInteraction: true)
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)

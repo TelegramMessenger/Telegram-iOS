@@ -979,7 +979,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
-        controller?.present(value, in: .window(.root), with: presentationArguments)
+        controller?.present(value, in: .window(.root), with: presentationArguments, blockInteraction: true)
     }
     removePeerChatImpl = { [weak controller] peer, deleteGloballyIfPossible in
         guard let controller = controller, let navigationController = controller.navigationController as? NavigationController else {
