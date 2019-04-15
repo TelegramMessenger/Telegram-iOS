@@ -235,7 +235,14 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
             return ([MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound()], SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: Int32.max - 1, endId: 1))
         }
         if items.entries.isEmpty {
-            return ([MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound()], SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: Int32.max - 1, endId: 1))
+            let holeBounds: (startId: MessageId.Id, endId: MessageId.Id)
+            switch anchor {
+                case .lowerBound:
+                    holeBounds = (1, Int32.max - 1)
+                case .upperBound, .index:
+                    holeBounds = (Int32.max - 1, 1)
+            }
+            return ([MessageIndex.absoluteLowerBound() ... MessageIndex.absoluteUpperBound()], SampledHistoryViewHole(peerId: space.peerId, namespace: space.namespace, tag: tag, indices: indices, startId: holeBounds.startId, endId: holeBounds.endId))
         }
         guard let bounds = items.bounds else {
             assertionFailure("A non-empty entry list should have non-nil bounds")
@@ -733,40 +740,46 @@ final class HistoryViewLoadedState {
         var holesToLower = false
         var holesToHigher = false
         var result: [MessageHistoryMessageEntry] = []
-        outer: for i in 0 ..< combinedSpacesAndIndices.count {
-            let (space, index) = combinedSpacesAndIndices[i]
-            
+        if combinedSpacesAndIndices.isEmpty {
             if !clipRanges.isEmpty {
-                let entryIndex = self.orderedEntriesBySpace[space]!.entries[index].index
-                for range in clipRanges {
-                    if range.contains(entryIndex) {
-                        if i == 0 {
-                            holesToLower = true
+                holesToLower = true
+                holesToHigher = true
+            }
+        } else {
+            outer: for i in 0 ..< combinedSpacesAndIndices.count {
+                let (space, index) = combinedSpacesAndIndices[i]
+                
+                if !clipRanges.isEmpty {
+                    let entryIndex = self.orderedEntriesBySpace[space]!.entries[index].index
+                    for range in clipRanges {
+                        if range.contains(entryIndex) {
+                            if i == 0 {
+                                holesToLower = true
+                            }
+                            if i == combinedSpacesAndIndices.count - 1 {
+                                holesToHigher = true
+                            }
+                            continue outer
                         }
-                        if i == combinedSpacesAndIndices.count - 1 {
-                            holesToHigher = true
-                        }
-                        continue outer
                     }
                 }
-            }
-            
-            switch self.orderedEntriesBySpace[space]!.entries[index] {
-                case let .MessageEntry(value):
-                    result.append(value)
-                case let .IntermediateMessageEntry(message, location, monthLocation):
-                    let renderedMessage = postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable)
-                    var authorIsContact = false
-                    if let author = renderedMessage.author {
-                        authorIsContact = postbox.contactsTable.isContact(peerId: author.id)
-                    }
-                    let entry = MessageHistoryMessageEntry(message: renderedMessage, location: location, monthLocation: monthLocation, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: authorIsContact))
-                    self.orderedEntriesBySpace[space]!.entries[index] = .MessageEntry(entry)
-                    result.append(entry)
+                
+                switch self.orderedEntriesBySpace[space]!.entries[index] {
+                    case let .MessageEntry(value):
+                        result.append(value)
+                    case let .IntermediateMessageEntry(message, location, monthLocation):
+                        let renderedMessage = postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable)
+                        var authorIsContact = false
+                        if let author = renderedMessage.author {
+                            authorIsContact = postbox.contactsTable.isContact(peerId: author.id)
+                        }
+                        let entry = MessageHistoryMessageEntry(message: renderedMessage, location: location, monthLocation: monthLocation, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: authorIsContact))
+                        self.orderedEntriesBySpace[space]!.entries[index] = .MessageEntry(entry)
+                        result.append(entry)
+                }
             }
         }
-        let stableIds = Set(result.map({ $0.message.stableId }))
-        assert(stableIds.count == result.count)
+        assert(Set(result.map({ $0.message.stableId })).count == result.count)
         return HistoryViewLoadedSample(anchor: self.anchor, entries: result, holesToLower: holesToLower, holesToHigher: holesToHigher, hole: sampledHole)
     }
 }

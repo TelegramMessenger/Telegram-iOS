@@ -150,9 +150,11 @@ final class MessageHistoryHoleIndexTable: Table {
                 idAndSpace = decomposeKey(key)
                 return false
             }, limit: 1)
-            if let (id, _) = idAndSpace {
-                result.insert(id.namespace)
-                currentLowerBound = self.namespaceLowerBound(peerId: peerId, namespace: id.namespace).successor
+            if let (id, space) = idAndSpace {
+                if space == holeSpace {
+                    result.insert(id.namespace)
+                }
+                currentLowerBound = self.upperBound(peerId: peerId, namespace: id.namespace, space: space)
             } else {
                 break
             }
