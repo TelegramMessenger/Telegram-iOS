@@ -60,8 +60,17 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                             }
                         }
                         
-                        let maxIndex = min(view.entries.count, targetIndex + count / 2)
+                        let maxIndex = targetIndex + count / 2
+                        let minIndex = targetIndex - count / 2
+                        if minIndex <= 0 && view.holeEarlier {
+                            fadeIn = true
+                            return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                        }
                         if maxIndex >= targetIndex {
+                            if view.holeLater {
+                                fadeIn = true
+                                return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                            }
                             if view.holeEarlier {
                                 var incomingCount: Int32 = 0
                                 inner: for entry in view.entries.reversed() {
