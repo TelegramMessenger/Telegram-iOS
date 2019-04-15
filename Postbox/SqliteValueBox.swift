@@ -141,6 +141,11 @@ private let dabaseFileNames: [String] = [
     "db_sqlite-wal"
 ]
 
+private struct TablePairKey: Hashable {
+    let table1: Int32
+    let table2: Int32
+}
+
 final class SqliteValueBox: ValueBox {
     private let lock = NSRecursiveLock()
     
@@ -168,6 +173,7 @@ final class SqliteValueBox: ValueBox {
     private var insertOrReplaceStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var deleteStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var moveStatements: [Int32 : SqlitePreparedStatement] = [:]
+    private var copyStatements: [TablePairKey : SqlitePreparedStatement] = [:]
     private var fullTextInsertStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var fullTextDeleteStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var fullTextMatchGlobalStatements: [Int32 : SqlitePreparedStatement] = [:]
@@ -1108,6 +1114,45 @@ final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
+    private func copyStatement(fromTable: ValueBoxTable, fromKey: ValueBoxKey, toTable: ValueBoxTable, toKey: ValueBoxKey) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
+        checkTable(fromTable)
+        checkTable(toTable)
+        checkTableKey(fromTable, fromKey)
+        checkTableKey(toTable, toKey)
+        
+        let resultStatement: SqlitePreparedStatement
+        
+        if let statement = self.copyStatements[TablePairKey(table1: fromTable.id, table2: toTable.id)] {
+            resultStatement = statement
+        } else {
+            var statement: OpaquePointer? = nil
+            let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(toTable.id) (key, value) SELECT ?, t\(fromTable.id).value FROM t\(fromTable.id) WHERE t\(fromTable.id).key=?", -1, &statement, nil)
+            assert(status == SQLITE_OK)
+            let preparedStatement = SqlitePreparedStatement(statement: statement)
+            self.copyStatements[TablePairKey(table1: fromTable.id, table2: toTable.id)] = preparedStatement
+            resultStatement = preparedStatement
+        }
+        
+        resultStatement.reset()
+        
+        switch toTable.keyType {
+            case .binary:
+                resultStatement.bind(1, data: toKey.memory, length: toKey.length)
+            case .int64:
+                resultStatement.bind(1, number: toKey.getInt64(0))
+        }
+        
+        switch fromTable.keyType {
+            case .binary:
+                resultStatement.bind(2, data: fromKey.memory, length: fromKey.length)
+            case .int64:
+                resultStatement.bind(2, number: fromKey.getInt64(0))
+        }
+        
+        return resultStatement
+    }
+    
     private func fullTextInsertStatement(_ table: ValueBoxFullTextTable, collectionId: Data, itemId: Data, contents: Data, tags: Data) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
         
@@ -1555,6 +1600,21 @@ final class SqliteValueBox: ValueBox {
         }
     }
     
+    public func copy(fromTable: ValueBoxTable, fromKey: ValueBoxKey, toTable: ValueBoxTable, toKey: ValueBoxKey) {
+        assert(self.queue.isCurrent())
+        if let _ = self.tables[fromTable.id] {
+            let statement = self.copyStatement(fromTable: fromTable, fromKey: fromKey, toTable: toTable, toKey: toKey)
+            while statement.step(handle: self.database.handle, path: self.databasePath) {
+            }
+            statement.reset()
+        }
+    }
+    
+    func renameTable(_ table: ValueBoxTable, to toTable: ValueBoxTable) {
+        let resultCode = database.execute("ALTER TABLE t\(table.id) RENAME TO t\(toTable.id)")
+        assert(resultCode)
+    }
+    
     public func fullTextMatch(_ table: ValueBoxFullTextTable, collectionId: String?, query: String, tags: String?, values: (String, String) -> Bool) {
         if let _ = self.fullTextTables[table.id] {
             guard let queryData = query.data(using: .utf8) else {
@@ -1640,6 +1700,23 @@ final class SqliteValueBox: ValueBox {
             case .int64:
                 statement.bind(2, number: end.getInt64(0))
         }
+        
+        var result = 0
+        while statement.step(handle: database.handle, true, path: self.databasePath) {
+            let value = statement.int32At(0)
+            result = Int(value)
+        }
+        statement.destroy()
+        return result
+    }
+    
+    public func count(_ table: ValueBoxTable) -> Int {
+        self.checkTable(table)
+        
+        var statementImpl: OpaquePointer? = nil
+        let status = sqlite3_prepare_v2(self.database.handle, "SELECT COUNT(*) FROM t\(table.id)", -1, &statementImpl, nil)
+        assert(status == SQLITE_OK)
+        let statement = SqlitePreparedStatement(statement: statementImpl)
         
         var result = 0
         while statement.step(handle: database.handle, true, path: self.databasePath) {
@@ -1742,6 +1819,11 @@ final class SqliteValueBox: ValueBox {
         }
         self.moveStatements.removeAll()
         
+        for (_, statement) in self.copyStatements {
+            statement.destroy()
+        }
+        self.copyStatements.removeAll()
+        
         for (_, statement) in self.fullTextInsertStatements {
             statement.destroy()
         }
@@ -1768,8 +1850,12 @@ final class SqliteValueBox: ValueBox {
         self.fullTextMatchCollectionTagsStatements.removeAll()
     }
     
-    public func dropTable(_ table: ValueBoxTable) {
+    public func removeAllFromTable(_ table: ValueBoxTable) {
         let _ = self.database.execute("DELETE FROM t\(table.id)")
+    }
+    
+    public func removeTable(_ table: ValueBoxTable) {
+        let _ = self.database.execute("DROP TABLE t\(table.id)")
     }
     
     public func drop() {

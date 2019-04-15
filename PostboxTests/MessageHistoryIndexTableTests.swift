@@ -35,7 +35,17 @@ class MessageHistoryIndexTableTests: XCTestCase {
         var randomId: Int64 = 0
         arc4random_buf(&randomId, 8)
         path = NSTemporaryDirectory() + "\(randomId)"
-        self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue(), encryptionKey: "secret".data(using: .utf8)!)
+        
+        var randomKey = Data(count: 32)
+        randomKey.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            arc4random_buf(bytes, 32)
+        })
+        var randomSalt = Data(count: 16)
+        randomSalt.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            arc4random_buf(bytes, 16)
+        })
+        
+        self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue(), encryptionParameters: ValueBoxEncryptionParameters(key: ValueBoxEncryptionParameters.Key(data: randomKey)!, salt: ValueBoxEncryptionParameters.Salt(data: randomSalt)!))
         
         let messageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]] = [
             peerId.namespace: [
@@ -441,7 +451,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         })
     }
     
-    func testBlobIncrementalUpdatePerformance() {
+    func _testBlobIncrementalUpdatePerformance() {
         let table = ValueBoxTable(id: 1000, keyType: .binary, compactValuesOnCreation: false)
         
         let valueBox = self.postbox!.valueBox
@@ -491,11 +501,11 @@ class MessageHistoryIndexTableTests: XCTestCase {
         })
     }
     
-    func testDirectWritePerformance() {
+    func _testDirectWritePerformance() {
         self.beginTestDirectWritePerformance(compactValuesOnCreation: false)
     }
     
-    func testDirectWritePerformanceCompact() {
+    func _testDirectWritePerformanceCompact() {
         self.beginTestDirectWritePerformance(compactValuesOnCreation: true)
     }
     
@@ -520,19 +530,19 @@ class MessageHistoryIndexTableTests: XCTestCase {
             }
             self.stopMeasuring()
             
-            valueBox.dropTable(table)
+            valueBox.deleteAllFromTable(table)
         })
     }
     
-    func testRangeAccessPerformance() {
+    func _testRangeAccessPerformance() {
         self.beginTestRangeAccessPerformance(compactValuesOnCreation: false)
     }
     
-    func testRangeAccessPerformanceCompact() {
+    func _testRangeAccessPerformanceCompact() {
         self.beginTestRangeAccessPerformance(compactValuesOnCreation: true)
     }
     
-    func testBinarySearchAccessPerformance() {
+    func _testBinarySearchAccessPerformance() {
         let table = ValueBoxTable(id: 1000, keyType: .binary, compactValuesOnCreation: true)
         
         let valueBox = self.postbox!.valueBox

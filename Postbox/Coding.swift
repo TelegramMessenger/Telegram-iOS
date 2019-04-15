@@ -173,6 +173,10 @@ public final class WriteBuffer: MemoryBuffer {
 public final class ReadBuffer: MemoryBuffer {
     public var offset = 0
     
+    override public init(data: Data) {
+        super.init(data: data)
+    }
+    
     public init(memory: UnsafeMutableRawPointer, length: Int, freeWhenDone: Bool) {
         super.init(memory: memory, capacity: length, length: length, freeWhenDone: freeWhenDone)
     }

@@ -81,7 +81,7 @@ func postboxUpgrade_17to18(metadataTable: MetadataTable, valueBox: ValueBox, pro
         return true
     })
     
-    valueBox.dropTable(readStateTable)
+    valueBox.removeAllFromTable(readStateTable)
     let key = ValueBoxKey(length: 8)
     for (int64key, data) in converted {
         key.setInt64(0, value: int64key)

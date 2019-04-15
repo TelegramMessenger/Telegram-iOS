@@ -59,6 +59,11 @@ public struct ChatListMessageTagSummaryInfo: Equatable {
     }
 }*/
 
+public struct ChatListGroupReferenceEntry {
+    public let groupId: PeerGroupId
+    public let message: Message?
+}
+
 public enum ChatListEntry: Comparable {
     case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer, PeerPresence?, ChatListMessageTagSummaryInfo)
     case HoleEntry(ChatListHole)
@@ -316,6 +321,7 @@ final class MutableChatListView {
     fileprivate var earlier: MutableChatListEntry?
     fileprivate var later: MutableChatListEntry?
     fileprivate var entries: [MutableChatListEntry]
+    fileprivate var groupEntries: [ChatListGroupReferenceEntry]
     private var count: Int
     
     init(postbox: Postbox, groupId: PeerGroupId?, earlier: MutableChatListEntry?, entries: [MutableChatListEntry], later: MutableChatListEntry?, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
@@ -334,8 +340,30 @@ final class MutableChatListView {
                     self.additionalItemEntries.append(MutableChatListEntry(entry, cachedDataTable: postbox.cachedPeerDataTable, readStateTable: postbox.readStateTable, messageHistoryTable: postbox.messageHistoryTable))
                 }
             }
+            self.groupEntries = []
+            self.reloadGroups(postbox: postbox)
         } else {
             self.additionalItemIds = Set()
+            self.groupEntries = []
+        }
+    }
+    
+    private func reloadGroups(postbox: Postbox) {
+        self.groupEntries.removeAll()
+        for groupId in postbox.chatListTable.existingGroups() {
+            var upperBound: (ChatListIndex, Bool)?
+            inner: while true {
+                if let entry = postbox.chatListTable.earlierEntries(groupId: groupId, index: upperBound, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: 1).first {
+                    if case let .message(_, maybeMessage, _) = entry, let message = maybeMessage {
+                        self.groupEntries.append(ChatListGroupReferenceEntry(groupId: groupId, message: postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable)))
+                        break inner
+                    } else {
+                        upperBound = (entry.index, false)
+                    }
+                } else {
+                    break inner
+                }
+            }
         }
     }
     
@@ -405,6 +433,19 @@ final class MutableChatListView {
                             hasChanges = true
                         }
                 }
+            }
+        }
+        
+        if self.groupId == nil {
+            var invalidatedGroups = false
+            for (wrappedGroupId, groupOperations) in operations {
+                if wrappedGroupId.groupId != nil && !groupOperations.isEmpty {
+                    invalidatedGroups = true
+                }
+            }
+            if invalidatedGroups {
+                self.reloadGroups(postbox: postbox)
+                hasChanges = true
             }
         }
         
@@ -829,6 +870,7 @@ public final class ChatListView {
     public let groupId: PeerGroupId?
     public let additionalItemEntries: [ChatListEntry]
     public let entries: [ChatListEntry]
+    public let groupEntries: [ChatListGroupReferenceEntry]
     public let earlierIndex: ChatListIndex?
     public let laterIndex: ChatListIndex?
     
@@ -850,6 +892,7 @@ public final class ChatListView {
                     assertionFailure()*/
             }
         }
+        self.groupEntries = mutableView.groupEntries
         self.entries = entries
         self.earlierIndex = mutableView.earlier?.index
         self.laterIndex = mutableView.later?.index

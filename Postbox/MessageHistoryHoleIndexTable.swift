@@ -72,6 +72,16 @@ final class MessageHistoryHoleIndexTable: Table {
         return key
     }
     
+    private func lowerBound(peerId: PeerId) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 8)
+        key.setInt64(0, value: peerId.toInt64())
+        return key
+    }
+    
+    private func upperBound(peerId: PeerId) -> ValueBoxKey {
+        return self.lowerBound(peerId: peerId).successor
+    }
+    
     private func lowerBound(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8 + 4 + 4)
         key.setInt64(0, value: peerId.toInt64())
@@ -126,6 +136,28 @@ final class MessageHistoryHoleIndexTable: Table {
                 }
             }
         }
+    }
+    
+    func existingNamespaces(peerId: PeerId, holeSpace: MessageHistoryHoleSpace) -> Set<MessageId.Namespace> {
+        self.ensureInitialized(peerId: peerId)
+        
+        var result = Set<MessageId.Namespace>()
+        var currentLowerBound = self.lowerBound(peerId: peerId)
+        let upperBound = self.upperBound(peerId: peerId)
+        while true {
+            var idAndSpace: (MessageId, MessageHistoryHoleSpace)?
+            self.valueBox.range(self.table, start: currentLowerBound, end: upperBound, keys: { key in
+                idAndSpace = decomposeKey(key)
+                return false
+            }, limit: 1)
+            if let (id, _) = idAndSpace {
+                result.insert(id.namespace)
+                currentLowerBound = self.namespaceLowerBound(peerId: peerId, namespace: id.namespace).successor
+            } else {
+                break
+            }
+        }
+        return result
     }
     
     private func scanSpaces(peerId: PeerId, namespace: MessageId.Namespace) -> [MessageHistoryHoleSpace] {

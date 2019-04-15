@@ -156,12 +156,14 @@ final class ChatListTable: Table {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
+    let groupAssociationTable: PeerGroupAssociationTable
     let indexTable: ChatListIndexTable
     let emptyMemoryBuffer = MemoryBuffer()
     let metadataTable: MessageHistoryMetadataTable
     let seedConfiguration: SeedConfiguration
     
-    init(valueBox: ValueBox, table: ValueBoxTable, indexTable: ChatListIndexTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
+    init(valueBox: ValueBox, table: ValueBoxTable, groupAssociationTable: PeerGroupAssociationTable, indexTable: ChatListIndexTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
+        self.groupAssociationTable = groupAssociationTable
         self.indexTable = indexTable
         self.metadataTable = metadataTable
         self.seedConfiguration = seedConfiguration
@@ -287,7 +289,7 @@ final class ChatListTable: Table {
     
     func getPeerChatListIndex(peerId: PeerId) -> (PeerGroupId?, ChatListIndex)? {
         if let index = self.indexTable.get(peerId: peerId).includedIndex(peerId: peerId) {
-            return (nil, index)
+            return (self.groupAssociationTable.get(peerId: peerId), index)
         } else {
             return nil
         }
@@ -327,7 +329,7 @@ final class ChatListTable: Table {
         }
         
         self.ensureInitialized(groupId: nil)
-        /*var usedGroupIds = self.groupAssociationTable.get(peerIds: changedPeerIds)
+        var usedGroupIds = self.groupAssociationTable.get(peerIds: changedPeerIds)
         for groupId in updatedChatListGroupInclusions.keys {
             usedGroupIds.insert(groupId)
         }
@@ -342,14 +344,13 @@ final class ChatListTable: Table {
         }
         for groupId in usedGroupIds {
             self.ensureInitialized(groupId: groupId)
-        }*/
+        }
         
         for peerId in changedPeerIds {
-            //let groupId = self.groupAssociationTable.get(peerId: peerId)
-            let groupId: PeerGroupId? = nil
+            let groupId = self.groupAssociationTable.get(peerId: peerId)
             
             var currentIndex: ChatListIndex? = self.indexTable.get(peerId: peerId).includedIndex(peerId: peerId)
-            /*if let previousGroupId = initialPeerGroupIdsBeforeUpdate[peerId] {
+            if let previousGroupId = initialPeerGroupIdsBeforeUpdate[peerId] {
                 if previousGroupId.groupId != groupId {
                     if let currentIndex = currentIndex {
                         self.justRemoveMessageIndex(groupId: previousGroupId.groupId, index: currentIndex)
@@ -357,7 +358,7 @@ final class ChatListTable: Table {
                     }
                     currentIndex = nil
                 }
-            }*/
+            }
             
             let topMessage = messageHistoryTable.topMessage(peerId)
             let embeddedChatState = peerChatInterfaceStateTable.get(peerId)?.chatListEmbeddedState
@@ -592,13 +593,33 @@ final class ChatListTable: Table {
         return indices
     }
     
-    func earlierEntries(groupId: PeerGroupId?, index: ChatListIndex?, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, count: Int) -> [ChatListIntermediateEntry] {
+    func existingGroups() -> [PeerGroupId] {
+        var result: [PeerGroupId] = []
+        var lowerBound = self.lowerBound(groupId: PeerGroupId(rawValue: 1))
+        let upperBound = self.upperBound(groupId: PeerGroupId(rawValue: Int32.max - 1))
+        while true {
+            var groupId: PeerGroupId?
+            self.valueBox.range(self.table, start: lowerBound, end: upperBound, keys: { key in
+                groupId = extractKey(key).groupId
+                return false
+            }, limit: 1)
+            if let groupId = groupId {
+                result.append(groupId)
+                lowerBound = self.lowerBound(groupId: PeerGroupId(rawValue: groupId.rawValue + 1))
+            } else {
+                break
+            }
+        }
+        return result
+    }
+    
+    func earlierEntries(groupId: PeerGroupId?, index: (ChatListIndex, Bool)?, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, count: Int) -> [ChatListIntermediateEntry] {
         self.ensureInitialized(groupId: groupId)
         
         var entries: [ChatListIntermediateEntry] = []
         let key: ValueBoxKey
-        if let index = index {
-            key = self.key(groupId: groupId, index: index, type: .message)
+        if let (index, message) = index {
+            key = self.key(groupId: groupId, index: index, type: message ? .message : .hole)
         } else {
             key = self.upperBound(groupId: groupId)
         }
@@ -610,13 +631,13 @@ final class ChatListTable: Table {
         return entries
     }
     
-    func laterEntries(groupId: PeerGroupId?, index: ChatListIndex?, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, count: Int) -> [ChatListIntermediateEntry] {
+    func laterEntries(groupId: PeerGroupId?, index: (ChatListIndex, Bool)?, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, count: Int) -> [ChatListIntermediateEntry] {
         self.ensureInitialized(groupId: groupId)
         
         var entries: [ChatListIntermediateEntry] = []
         let key: ValueBoxKey
-        if let index = index {
-            key = self.key(groupId: groupId, index: index, type: .message)
+        if let (index, message) = index {
+            key = self.key(groupId: groupId, index: index, type: message ? .message : .hole)
         } else {
             key = self.lowerBound(groupId: groupId)
         }
@@ -773,7 +794,7 @@ final class ChatListTable: Table {
     }
     
     func debugList(groupId: PeerGroupId?, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) -> [ChatListIntermediateEntry] {
-        return self.laterEntries(groupId: groupId, index: ChatListIndex.absoluteLowerBound, messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable, count: 1000)
+        return self.laterEntries(groupId: groupId, index: (ChatListIndex.absoluteLowerBound, true), messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable, count: 1000)
     }
     
     func getNamespaceEntries(groupId: PeerGroupId?, namespace: MessageId.Namespace, summaryTag: MessageTags?, messageIndexTable: MessageHistoryIndexTable, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, readStateTable: MessageHistoryReadStateTable, summaryTable: MessageHistoryTagsSummaryTable) -> [ChatListNamespaceEntry] {

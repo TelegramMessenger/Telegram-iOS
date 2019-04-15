@@ -40,10 +40,12 @@ final class MessageHistoryIndexTable: Table {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
-    let messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable
-    let globalMessageIdsTable: GlobalMessageIdsTable
-    let metadataTable: MessageHistoryMetadataTable
-    let seedConfiguration: SeedConfiguration
+    private let messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable
+    private let globalMessageIdsTable: GlobalMessageIdsTable
+    private let metadataTable: MessageHistoryMetadataTable
+    private let seedConfiguration: SeedConfiguration
+    
+    private var cachedExistingNamespaces: [PeerId: Set<MessageId.Namespace>] = [:]
     
     init(valueBox: ValueBox, table: ValueBoxTable, messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable, globalMessageIdsTable: GlobalMessageIdsTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
         self.messageHistoryHoleIndexTable = messageHistoryHoleIndexTable
@@ -62,6 +64,12 @@ final class MessageHistoryIndexTable: Table {
         return key
     }
     
+    private func lowerBound(peerId: PeerId) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 8)
+        key.setInt64(0, value: peerId.toInt64())
+        return key
+    }
+    
     private func lowerBound(_ peerId: PeerId, namespace: MessageId.Namespace) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8 + 4)
         key.setInt64(0, value: peerId.toInt64())
@@ -76,6 +84,10 @@ final class MessageHistoryIndexTable: Table {
         return key.successor
     }
     
+    private func upperBound(peerId: PeerId) -> ValueBoxKey {
+        return self.lowerBound(peerId: peerId).successor
+    }
+    
     func addMessages(_ messages: [InternalStoreMessage], operations: inout [MessageHistoryIndexOperation]) {
         if messages.count == 0 {
             return
@@ -88,6 +100,8 @@ final class MessageHistoryIndexTable: Table {
                 operations.append(.InsertExistingMessage(message))
             } else {
                 self.justInsertMessage(message, operations: &operations)
+                
+                self.cachedExistingNamespaces[message.id.peerId]?.insert(message.id.namespace)
             }
         }
     }
@@ -237,48 +251,13 @@ final class MessageHistoryIndexTable: Table {
         return (count, holes)
     }
     
-    func entriesAround(id: MessageId, count: Int) -> ([MessageIndex], MessageIndex?, MessageIndex?) {
-        var lowerEntries: [MessageIndex] = []
-        var upperEntries: [MessageIndex] = []
-        var lower: MessageIndex?
-        var upper: MessageIndex?
-        
-        self.valueBox.range(self.table, start: self.key(id), end: self.lowerBound(id.peerId, namespace: id.namespace), values: { key, value in
-            lowerEntries.append(readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value))
-            return true
-        }, limit: count / 2 + 1)
-        
-        if lowerEntries.count >= count / 2 + 1 {
-            lower = lowerEntries.last
-            lowerEntries.removeLast()
-        }
-        
-        self.valueBox.range(self.table, start: self.key(id).predecessor, end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
-            upperEntries.append(readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value))
-            return true
-        }, limit: count - lowerEntries.count + 1)
-        if upperEntries.count >= count - lowerEntries.count + 1 {
-            upper = upperEntries.last
-            upperEntries.removeLast()
-        }
-        
-        if lowerEntries.count != 0 && lowerEntries.count + upperEntries.count < count {
-            var additionalLowerEntries: [MessageIndex] = []
-            self.valueBox.range(self.table, start: self.key(lowerEntries.last!.id), end: self.lowerBound(id.peerId, namespace: id.namespace), values: { key, value in
-                additionalLowerEntries.append(readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value))
-                return true
-            }, limit: count - lowerEntries.count - upperEntries.count + 1)
-            if additionalLowerEntries.count >= count - lowerEntries.count + upperEntries.count + 1 {
-                lower = additionalLowerEntries.last
-                additionalLowerEntries.removeLast()
-            }
-            lowerEntries.append(contentsOf: additionalLowerEntries)
-        }
-        
-        var entries: [MessageIndex] = []
-        entries.append(contentsOf: lowerEntries.reversed())
-        entries.append(contentsOf: upperEntries)
-        return (entries: entries, lower: lower, upper: upper)
+    func indexForId(higherThan id: MessageId) -> MessageIndex? {
+        var result: MessageIndex?
+        self.valueBox.range(self.table, start: self.key(id), end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
+            result = readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value)
+            return false
+        }, limit: 1)
+        return result
     }
     
     func earlierEntries(id: MessageId, count: Int) -> [MessageIndex] {
@@ -291,14 +270,35 @@ final class MessageHistoryIndexTable: Table {
         return entries
     }
     
-    func laterEntries(id: MessageId, count: Int) -> [MessageIndex] {
-        var entries: [MessageIndex] = []
-        let key = self.key(id)
-        self.valueBox.range(self.table, start: key, end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
-            entries.append(readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value))
-            return true
-        }, limit: count)
-        return entries
+    func existingNamespaces(peerId: PeerId) -> Set<MessageId.Namespace> {
+        if let cached = self.cachedExistingNamespaces[peerId] {
+            return cached
+        } else {
+            let namespaces = Set(self.fetchExistingNamespaces(peerId: peerId))
+            self.cachedExistingNamespaces[peerId] = namespaces
+            return namespaces
+        }
+    }
+    
+    private func fetchExistingNamespaces(peerId: PeerId) -> [MessageId.Namespace] {
+        var result: [MessageId.Namespace] = []
+        var lowerBound = self.lowerBound(peerId: peerId)
+        let upperBound = self.upperBound(peerId: peerId)
+        while true {
+            var namespace: MessageId.Namespace?
+            self.valueBox.range(self.table, start: lowerBound, end: upperBound, keys: { key in
+                assert(key.getInt64(0) == peerId.toInt64())
+                namespace = key.getInt32(8)
+                return false
+            }, limit: 1)
+            if let namespace = namespace {
+                result.append(namespace)
+                lowerBound = self.lowerBound(peerId, namespace: namespace + 1)
+            } else {
+                break
+            }
+        }
+        return result
     }
     
     func debugList(_ peerId: PeerId, namespace: MessageId.Namespace) -> [MessageIndex] {
@@ -330,5 +330,9 @@ final class MessageHistoryIndexTable: Table {
             
             return index
         }
+    }
+    
+    override func clearMemoryCache() {
+        self.cachedExistingNamespaces.removeAll()
     }
 }

@@ -28,7 +28,7 @@ func postboxUpgrade_18to19(metadataTable: MetadataTable, valueBox: ValueBox, pro
     let globalMessageIdsTable = ValueBoxTable(id: 3, keyType: .int64, compactValuesOnCreation: false)
     let messageHistoryIndexTable = ValueBoxTable(id: 4, keyType: .binary, compactValuesOnCreation: true)
     
-    valueBox.dropTable(globalMessageIdsTable)
+    valueBox.removeAllFromTable(globalMessageIdsTable)
     
     /*var debugPeerIds = Set<PrivatePeerId>()
     var debugMessageIds = Set<MessageId>()
