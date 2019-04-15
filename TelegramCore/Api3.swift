@@ -2656,25 +2656,6 @@ extension Api {
                     })
                 }
             
-                static func getDialogs(flags: Int32, offsetDate: Int32, offsetId: Int32, offsetPeer: Api.InputPeer, limit: Int32, hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Dialogs>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1332171034)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(offsetDate, buffer: buffer, boxed: false)
-                    serializeInt32(offsetId, buffer: buffer, boxed: false)
-                    offsetPeer.serialize(buffer, true)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    serializeInt32(hash, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getDialogs", parameters: [("flags", flags), ("offsetDate", offsetDate), ("offsetId", offsetId), ("offsetPeer", offsetPeer), ("limit", limit), ("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Dialogs? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.Dialogs?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.Dialogs
-                        }
-                        return result
-                    })
-                }
-            
                 static func updatePinnedMessage(flags: Int32, peer: Api.InputPeer, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-760547348)
@@ -2885,6 +2866,26 @@ extension Api {
                         var result: Api.EmojiURL?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.EmojiURL
+                        }
+                        return result
+                    })
+                }
+            
+                static func getDialogs(flags: Int32, folderId: Int32?, offsetDate: Int32, offsetId: Int32, offsetPeer: Api.InputPeer, limit: Int32, hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Dialogs>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1594999949)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
+                    serializeInt32(offsetDate, buffer: buffer, boxed: false)
+                    serializeInt32(offsetId, buffer: buffer, boxed: false)
+                    offsetPeer.serialize(buffer, true)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getDialogs", parameters: [("flags", flags), ("folderId", folderId), ("offsetDate", offsetDate), ("offsetId", offsetId), ("offsetPeer", offsetPeer), ("limit", limit), ("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Dialogs? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Dialogs?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Dialogs
                         }
                         return result
                     })
@@ -4351,6 +4352,39 @@ extension Api {
                         var result: Api.updates.ChannelDifference?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.updates.ChannelDifference
+                        }
+                        return result
+                    })
+                }
+            }
+            struct folders {
+                static func editPeerFolders(folderPeers: [Api.InputFolderPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1749536939)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(folderPeers.count))
+                    for item in folderPeers {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "folders.editPeerFolders", parameters: [("folderPeers", folderPeers)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                static func deleteFolder(folderId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(472471681)
+                    serializeInt32(folderId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "folders.deleteFolder", parameters: [("folderId", folderId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })

@@ -939,19 +939,13 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
             case let .updateReadHistoryOutbox(peer, maxId, _, _):
                 updatedState.readOutbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId), timestamp: updatesDate)
             case let .updateDialogUnreadMark(flags, peer):
-                let peerId: PeerId
                 switch peer {
                     case let .dialogPeer(peer):
-                        peerId = peer.peerId
+                        let peerId = peer.peerId
+                        updatedState.updatePeerChatUnreadMark(peerId, namespace: Namespaces.Message.Cloud, value: (flags & (1 << 0)) != 0)
+                    case .dialogPeerFolder:
+                        break
                 }
-                updatedState.updatePeerChatUnreadMark(peerId, namespace: Namespaces.Message.Cloud, value: (flags & (1 << 0)) != 0)
-            /*feed*/
-            /*case let .updateReadFeed(_, feedId, maxPosition, unreadCount, unreadMutedCount):
-                switch maxPosition {
-                    case let .feedPosition(date, peer, id):
-                        let index = MessageIndex(id: MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: id), timestamp: date)
-                        updatedState.readGroupFeedInbox(groupId: PeerGroupId(rawValue: feedId), index: index)
-                }*/
             case let .updateWebPage(apiWebpage, _, _):
                 switch apiWebpage {
                     case let .webPageEmpty(id):
@@ -1174,9 +1168,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 switch peer {
                     case let .dialogPeer(peer):
                         item = .peer(peer.peerId)
-                    /*feed*/
-                    /*case let .dialogPeerFeed(feedId):
-                        item = .group(PeerGroupId(rawValue: feedId))*/
+                    case .dialogPeerFolder:
+                        preconditionFailure()
                 }
                 if (flags & (1 << 0)) != 0 {
                     updatedState.addUpdatePinnedItemIds(.pin(item))
@@ -1190,9 +1183,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         switch $0 {
                             case let .dialogPeer(peer):
                                 item = .peer(peer.peerId)
-                            /*feed*/
-                            /*case let .dialogPeerFeed(feedId):
-                                item = .group(PeerGroupId(rawValue: feedId))*/
+                            case .dialogPeerFolder:
+                                preconditionFailure()
                         }
                         return item
                     }))
@@ -1245,6 +1237,13 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.updateLangPack(langCode: langCode, difference: difference)
             case let .updateMessagePoll(_, pollId, poll, results):
                 updatedState.updateMessagePoll(MediaId(namespace: Namespaces.Media.CloudPoll, id: pollId), poll: poll, results: results)
+            case let .updateFolderPeers(folderPeers, _, _):
+                for folderPeer in folderPeers {
+                    switch folderPeer {
+                        case let .folderPeer(peer, folderId):
+                            updatedState.updatePeerGroup(peerId: peer.peerId, groupId: folderId == 0 ? nil : PeerGroupId(rawValue: folderId))
+                    }
+                }
             default:
                 break
         }
@@ -1540,7 +1539,7 @@ private func resetChannels(network: Network, peers: [Peer], state: AccountMutabl
                         let apiNotificationSettings: Api.PeerNotifySettings
                         let apiMarkedUnread: Bool
                         switch dialog {
-                            case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _):
+                            case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _, folderId):
                                 apiPeer = peer
                                 apiTopMessage = topMessage
                                 apiReadInboxMaxId = readInboxMaxId
@@ -1550,10 +1549,9 @@ private func resetChannels(network: Network, peers: [Peer], state: AccountMutabl
                                 apiUnreadMentionsCount = unreadMentionsCount
                                 apiNotificationSettings = peerNotificationSettings
                                 apiChannelPts = pts
-                            /*feed*/
-                            /*case .dialogFeed:
+                            case .dialogFolder:
                                 assertionFailure()
-                                continue loop*/
+                                continue loop
                         }
                         
                         let peerId: PeerId
@@ -1892,7 +1890,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerInclusionMinTimestamp, .UpdateIsContact:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerInclusionMinTimestamp, .UpdatePeerGroup, .UpdateIsContact:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -2053,7 +2051,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                                     switch action.action {
                                         case .groupCreated, .channelMigratedFromGroup:
                                             let holesAtHistoryStart = transaction.getHole(containing: MessageId(peerId: chatPeerId, namespace: Namespaces.Message.Cloud, id: id.id - 1))
-                                            for (space, hole) in holesAtHistoryStart {
+                                            for (space, _) in holesAtHistoryStart {
                                                 transaction.removeHole(peerId: chatPeerId, namespace: Namespaces.Message.Cloud, space: space, range: 1 ... id.id)
                                             }
                                         default:
@@ -2115,6 +2113,8 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     default:
                         break
                 }
+            case let .UpdatePeerGroup(peerId, groupId):
+                transaction.updatePeerGroupId(peerId, groupId: groupId)
             case let .EditMessage(id, message):
                 transaction.updateMessage(id, update: { previousMessage in
                     var updatedFlags = message.flags
@@ -2180,13 +2180,11 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             case let .ResetMessageTagSummary(peerId, namespace, count, range):
                 transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: namespace, count: count, maxId: range.maxId)
                 if count == 0 {
-                    /*
-                    let ids = transaction.getMessageIndicesWithTag(peerId: peerId, tag: .unseenPersonalMessage).map({ $0.id })
+                    transaction.removeHole(peerId: peerId, namespace: namespace, space: .tag(.unseenPersonalMessage), range: 1 ... (Int32.max - 1))
+                    let ids = transaction.getMessageIndicesWithTag(peerId: peerId, namespace: namespace, tag: .unseenPersonalMessage).map({ $0.id })
                     for id in ids {
-                        if id.namespace == namespace {
-                            markUnseenPersonalMessage(transaction: transaction, id: id, addSynchronizeAction: false)
-                        }
-                    }*/
+                        markUnseenPersonalMessage(transaction: transaction, id: id, addSynchronizeAction: false)
+                    }
                 }
             case let .UpdateState(state):
                 let currentState = transaction.getState() as! AuthorizedAccountState

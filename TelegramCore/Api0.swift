@@ -140,7 +140,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-496024847] = { return Api.UserStatus.parse_userStatusRecently($0) }
     dict[129960444] = { return Api.UserStatus.parse_userStatusLastWeek($0) }
     dict[2011940674] = { return Api.UserStatus.parse_userStatusLastMonth($0) }
-    dict[-455150117] = { return Api.Dialog.parse_dialog($0) }
+    dict[-11252123] = { return Api.Folder.parse_folder($0) }
+    dict[739712882] = { return Api.Dialog.parse_dialog($0) }
+    dict[1908216652] = { return Api.Dialog.parse_dialogFolder($0) }
     dict[381645902] = { return Api.SendMessageAction.parse_sendMessageTypingAction($0) }
     dict[-44119819] = { return Api.SendMessageAction.parse_sendMessageCancelAction($0) }
     dict[-1584933265] = { return Api.SendMessageAction.parse_sendMessageRecordVideoAction($0) }
@@ -229,7 +231,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1398708869] = { return Api.Update.parse_updateMessagePoll($0) }
     dict[1421875280] = { return Api.Update.parse_updateChatDefaultBannedRights($0) }
     dict[-519195831] = { return Api.Update.parse_updateChatPinnedMessage($0) }
+    dict[422972864] = { return Api.Update.parse_updateFolderPeers($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
+    dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
     dict[367766557] = { return Api.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1557620115] = { return Api.ChannelParticipant.parse_channelParticipantSelf($0) }
     dict[-471670279] = { return Api.ChannelParticipant.parse_channelParticipantCreator($0) }
@@ -238,6 +242,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[471043349] = { return Api.contacts.Blocked.parse_blocked($0) }
     dict[-1878523231] = { return Api.contacts.Blocked.parse_blockedSlice($0) }
     dict[-55902537] = { return Api.InputDialogPeer.parse_inputDialogPeer($0) }
+    dict[1684014375] = { return Api.InputDialogPeer.parse_inputDialogPeerFolder($0) }
     dict[-994444869] = { return Api.Error.parse_error($0) }
     dict[-1560655744] = { return Api.KeyboardButton.parse_keyboardButton($0) }
     dict[629866245] = { return Api.KeyboardButton.parse_keyboardButtonUrl($0) }
@@ -545,6 +550,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[859091184] = { return Api.InputSecureFile.parse_inputSecureFileUploaded($0) }
     dict[1399317950] = { return Api.InputSecureFile.parse_inputSecureFile($0) }
     dict[512535275] = { return Api.PostAddress.parse_postAddress($0) }
+    dict[-70073706] = { return Api.InputFolderPeer.parse_inputFolderPeer($0) }
     dict[2104790276] = { return Api.DataJSON.parse_dataJSON($0) }
     dict[-433014407] = { return Api.InputWallPaper.parse_inputWallPaper($0) }
     dict[1913199744] = { return Api.InputWallPaper.parse_inputWallPaperSlug($0) }
@@ -677,6 +683,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[686618977] = { return Api.help.TermsOfServiceUpdate.parse_termsOfServiceUpdate($0) }
     dict[1674235686] = { return Api.account.AutoDownloadSettings.parse_autoDownloadSettings($0) }
     dict[-445792507] = { return Api.DialogPeer.parse_dialogPeer($0) }
+    dict[1363483106] = { return Api.DialogPeer.parse_dialogPeerFolder($0) }
     dict[1599050311] = { return Api.ContactLink.parse_contactLinkUnknown($0) }
     dict[-17968211] = { return Api.ContactLink.parse_contactLinkNone($0) }
     dict[646922073] = { return Api.ContactLink.parse_contactLinkHasPhone($0) }
@@ -880,6 +887,8 @@ struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.UserStatus:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.Folder:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Dialog:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SendMessageAction:
@@ -889,6 +898,8 @@ struct Api {
             case let _1 as Api.Update:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PopularContact:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.FolderPeer:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ChannelParticipant:
                 _1.serialize(buffer, boxed)
@@ -1159,6 +1170,8 @@ struct Api {
             case let _1 as Api.InputSecureFile:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PostAddress:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.InputFolderPeer:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.DataJSON:
                 _1.serialize(buffer, boxed)

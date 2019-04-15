@@ -76,7 +76,7 @@ public struct Namespaces {
     }
     
     public struct PeerGroup {
-        public static let feed = PeerGroupId(rawValue: 1)
+        public static let archive = PeerGroupId(rawValue: 1)
     }
 }
 

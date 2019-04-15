@@ -3425,14 +3425,63 @@ extension Api {
         }
     
     }
-    enum Dialog: TypeConstructorDescription {
-        case dialog(flags: Int32, peer: Api.Peer, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, notifySettings: Api.PeerNotifySettings, pts: Int32?, draft: Api.DraftMessage?)
+    enum Folder: TypeConstructorDescription {
+        case folder(flags: Int32, id: Int32, title: String, photo: Api.ChatPhoto?)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let notifySettings, let pts, let draft):
+                case .folder(let flags, let id, let title, let photo):
                     if boxed {
-                        buffer.appendInt32(-455150117)
+                        buffer.appendInt32(-11252123)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 3) != 0 {photo!.serialize(buffer, true)}
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .folder(let flags, let id, let title, let photo):
+                return ("folder", [("flags", flags), ("id", id), ("title", title), ("photo", photo)])
+    }
+    }
+    
+        static func parse_folder(_ reader: BufferReader) -> Folder? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Api.ChatPhoto?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.ChatPhoto
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.Folder.folder(flags: _1!, id: _2!, title: _3!, photo: _4)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    enum Dialog: TypeConstructorDescription {
+        case dialog(flags: Int32, peer: Api.Peer, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, notifySettings: Api.PeerNotifySettings, pts: Int32?, draft: Api.DraftMessage?, folderId: Int32?)
+        case dialogFolder(flags: Int32, folder: Api.Folder, peer: Api.Peer, topMessage: Int32, unreadMutedPeersCount: Int32, unreadUnmutedPeersCount: Int32, unreadMutedMessagesCount: Int32, unreadUnmutedMessagesCount: Int32)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let notifySettings, let pts, let draft, let folderId):
+                    if boxed {
+                        buffer.appendInt32(739712882)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
@@ -3444,14 +3493,30 @@ extension Api {
                     notifySettings.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(pts!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {draft!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
+                    break
+                case .dialogFolder(let flags, let folder, let peer, let topMessage, let unreadMutedPeersCount, let unreadUnmutedPeersCount, let unreadMutedMessagesCount, let unreadUnmutedMessagesCount):
+                    if boxed {
+                        buffer.appendInt32(1908216652)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    folder.serialize(buffer, true)
+                    peer.serialize(buffer, true)
+                    serializeInt32(topMessage, buffer: buffer, boxed: false)
+                    serializeInt32(unreadMutedPeersCount, buffer: buffer, boxed: false)
+                    serializeInt32(unreadUnmutedPeersCount, buffer: buffer, boxed: false)
+                    serializeInt32(unreadMutedMessagesCount, buffer: buffer, boxed: false)
+                    serializeInt32(unreadUnmutedMessagesCount, buffer: buffer, boxed: false)
                     break
     }
     }
     
     func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let notifySettings, let pts, let draft):
-                return ("dialog", [("flags", flags), ("peer", peer), ("topMessage", topMessage), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("unreadMentionsCount", unreadMentionsCount), ("notifySettings", notifySettings), ("pts", pts), ("draft", draft)])
+                case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let notifySettings, let pts, let draft, let folderId):
+                return ("dialog", [("flags", flags), ("peer", peer), ("topMessage", topMessage), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("unreadMentionsCount", unreadMentionsCount), ("notifySettings", notifySettings), ("pts", pts), ("draft", draft), ("folderId", folderId)])
+                case .dialogFolder(let flags, let folder, let peer, let topMessage, let unreadMutedPeersCount, let unreadUnmutedPeersCount, let unreadMutedMessagesCount, let unreadUnmutedMessagesCount):
+                return ("dialogFolder", [("flags", flags), ("folder", folder), ("peer", peer), ("topMessage", topMessage), ("unreadMutedPeersCount", unreadMutedPeersCount), ("unreadUnmutedPeersCount", unreadUnmutedPeersCount), ("unreadMutedMessagesCount", unreadMutedMessagesCount), ("unreadUnmutedMessagesCount", unreadUnmutedMessagesCount)])
     }
     }
     
@@ -3482,6 +3547,8 @@ extension Api {
             if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
                 _10 = Api.parse(reader, signature: signature) as? Api.DraftMessage
             } }
+            var _11: Int32?
+            if Int(_1!) & Int(1 << 4) != 0 {_11 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -3492,8 +3559,45 @@ extension Api {
             let _c8 = _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 0) == 0) || _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 1) == 0) || _10 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.Dialog.dialog(flags: _1!, peer: _2!, topMessage: _3!, readInboxMaxId: _4!, readOutboxMaxId: _5!, unreadCount: _6!, unreadMentionsCount: _7!, notifySettings: _8!, pts: _9, draft: _10)
+            let _c11 = (Int(_1!) & Int(1 << 4) == 0) || _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.Dialog.dialog(flags: _1!, peer: _2!, topMessage: _3!, readInboxMaxId: _4!, readOutboxMaxId: _5!, unreadCount: _6!, unreadMentionsCount: _7!, notifySettings: _8!, pts: _9, draft: _10, folderId: _11)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_dialogFolder(_ reader: BufferReader) -> Dialog? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Folder?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Folder
+            }
+            var _3: Api.Peer?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Int32?
+            _6 = reader.readInt32()
+            var _7: Int32?
+            _7 = reader.readInt32()
+            var _8: Int32?
+            _8 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.Dialog.dialogFolder(flags: _1!, folder: _2!, peer: _3!, topMessage: _4!, unreadMutedPeersCount: _5!, unreadUnmutedPeersCount: _6!, unreadMutedMessagesCount: _7!, unreadUnmutedMessagesCount: _8!)
             }
             else {
                 return nil
@@ -3867,6 +3971,7 @@ extension Api {
         case updateMessagePoll(flags: Int32, pollId: Int64, poll: Api.Poll?, results: Api.PollResults)
         case updateChatDefaultBannedRights(peer: Api.Peer, defaultBannedRights: Api.ChatBannedRights, version: Int32)
         case updateChatPinnedMessage(chatId: Int32, id: Int32, version: Int32)
+        case updateFolderPeers(folderPeers: [Api.FolderPeer], pts: Int32, ptsCount: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4438,6 +4543,18 @@ extension Api {
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeInt32(version, buffer: buffer, boxed: false)
                     break
+                case .updateFolderPeers(let folderPeers, let pts, let ptsCount):
+                    if boxed {
+                        buffer.appendInt32(422972864)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(folderPeers.count))
+                    for item in folderPeers {
+                        item.serialize(buffer, true)
+                    }
+                    serializeInt32(pts, buffer: buffer, boxed: false)
+                    serializeInt32(ptsCount, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -4581,6 +4698,8 @@ extension Api {
                 return ("updateChatDefaultBannedRights", [("peer", peer), ("defaultBannedRights", defaultBannedRights), ("version", version)])
                 case .updateChatPinnedMessage(let chatId, let id, let version):
                 return ("updateChatPinnedMessage", [("chatId", chatId), ("id", id), ("version", version)])
+                case .updateFolderPeers(let folderPeers, let pts, let ptsCount):
+                return ("updateFolderPeers", [("folderPeers", folderPeers), ("pts", pts), ("ptsCount", ptsCount)])
     }
     }
     
@@ -5739,6 +5858,25 @@ extension Api {
                 return nil
             }
         }
+        static func parse_updateFolderPeers(_ reader: BufferReader) -> Update? {
+            var _1: [Api.FolderPeer]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.FolderPeer.self)
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateFolderPeers(folderPeers: _1!, pts: _2!, ptsCount: _3!)
+            }
+            else {
+                return nil
+            }
+        }
     
     }
     enum PopularContact: TypeConstructorDescription {
@@ -5772,6 +5910,46 @@ extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.PopularContact.popularContact(clientId: _1!, importers: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    enum FolderPeer: TypeConstructorDescription {
+        case folderPeer(peer: Api.Peer, folderId: Int32)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .folderPeer(let peer, let folderId):
+                    if boxed {
+                        buffer.appendInt32(-373643672)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(folderId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .folderPeer(let peer, let folderId):
+                return ("folderPeer", [("peer", peer), ("folderId", folderId)])
+    }
+    }
+    
+        static func parse_folderPeer(_ reader: BufferReader) -> FolderPeer? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.FolderPeer.folderPeer(peer: _1!, folderId: _2!)
             }
             else {
                 return nil
@@ -5947,6 +6125,7 @@ extension Api {
     }
     enum InputDialogPeer: TypeConstructorDescription {
         case inputDialogPeer(peer: Api.InputPeer)
+        case inputDialogPeerFolder(folderId: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -5956,6 +6135,12 @@ extension Api {
                     }
                     peer.serialize(buffer, true)
                     break
+                case .inputDialogPeerFolder(let folderId):
+                    if boxed {
+                        buffer.appendInt32(1684014375)
+                    }
+                    serializeInt32(folderId, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -5963,6 +6148,8 @@ extension Api {
         switch self {
                 case .inputDialogPeer(let peer):
                 return ("inputDialogPeer", [("peer", peer)])
+                case .inputDialogPeerFolder(let folderId):
+                return ("inputDialogPeerFolder", [("folderId", folderId)])
     }
     }
     
@@ -5974,6 +6161,17 @@ extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.InputDialogPeer.inputDialogPeer(peer: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_inputDialogPeerFolder(_ reader: BufferReader) -> InputDialogPeer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputDialogPeer.inputDialogPeerFolder(folderId: _1!)
             }
             else {
                 return nil
@@ -14077,6 +14275,46 @@ extension Api {
         }
     
     }
+    enum InputFolderPeer: TypeConstructorDescription {
+        case inputFolderPeer(peer: Api.InputPeer, folderId: Int32)
+    
+    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputFolderPeer(let peer, let folderId):
+                    if boxed {
+                        buffer.appendInt32(-70073706)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(folderId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputFolderPeer(let peer, let folderId):
+                return ("inputFolderPeer", [("peer", peer), ("folderId", folderId)])
+    }
+    }
+    
+        static func parse_inputFolderPeer(_ reader: BufferReader) -> InputFolderPeer? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputFolderPeer.inputFolderPeer(peer: _1!, folderId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     enum DataJSON: TypeConstructorDescription {
         case dataJSON(data: String)
     
@@ -16981,6 +17219,7 @@ extension Api {
     }
     enum DialogPeer: TypeConstructorDescription {
         case dialogPeer(peer: Api.Peer)
+        case dialogPeerFolder(folderId: Int32)
     
     func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -16990,6 +17229,12 @@ extension Api {
                     }
                     peer.serialize(buffer, true)
                     break
+                case .dialogPeerFolder(let folderId):
+                    if boxed {
+                        buffer.appendInt32(1363483106)
+                    }
+                    serializeInt32(folderId, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -16997,6 +17242,8 @@ extension Api {
         switch self {
                 case .dialogPeer(let peer):
                 return ("dialogPeer", [("peer", peer)])
+                case .dialogPeerFolder(let folderId):
+                return ("dialogPeerFolder", [("folderId", folderId)])
     }
     }
     
@@ -17008,6 +17255,17 @@ extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.DialogPeer.dialogPeer(peer: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        static func parse_dialogPeerFolder(_ reader: BufferReader) -> DialogPeer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.DialogPeer.dialogPeerFolder(folderId: _1!)
             }
             else {
                 return nil

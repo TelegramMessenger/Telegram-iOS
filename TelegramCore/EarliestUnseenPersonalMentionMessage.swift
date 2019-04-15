@@ -9,16 +9,68 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public enum EarliestUnseenPersonalMentionMessageResult {
+public enum EarliestUnseenPersonalMentionMessageResult: Equatable {
     case loading
     case result(MessageId?)
 }
 
-public func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
-    return earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, locally: false)
+public func legacy_earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
+    return legacy_earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, locally: false)
 }
 
-private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, locally: Bool) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
+public func earliestUnseenPersonalMentionMessage(account: Account, peerId: PeerId) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
+    return account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId), index: .lowerBound, anchorIndex: .lowerBound, count: 4, fixedCombinedReadStates: nil, tagMask: .unseenPersonalMessage, additionalData: [.peerChatState(peerId)])
+    |> mapToSignal { view -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
+        if view.0.isLoading {
+            return .single(.loading)
+        }
+        if let message = view.0.entries.first?.message {
+            if peerId.namespace == Namespaces.Peer.CloudChannel {
+                var invalidatedPts: Int32?
+                for data in view.0.additionalData {
+                    switch data {
+                        case let .peerChatState(_, state):
+                            if let state = state as? ChannelState {
+                                invalidatedPts = state.invalidatedPts
+                            }
+                        default:
+                            break
+                    }
+                }
+                if let invalidatedPts = invalidatedPts {
+                    var messagePts: Int32?
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? ChannelMessageStateVersionAttribute {
+                            messagePts = attribute.pts
+                            break
+                        }
+                    }
+                    
+                    if let messagePts = messagePts {
+                        if messagePts < invalidatedPts {
+                            return .single(.loading)
+                        }
+                    }
+                }
+                return .single(.result(message.id))
+            } else {
+                return .single(.result(message.id))
+            }
+        } else {
+            return .single(.result(nil))
+        }
+    }
+    |> distinctUntilChanged
+    |> take(until: { value in
+        if case .result = value {
+            return SignalTakeAction(passthrough: true, complete: true)
+        } else {
+            return SignalTakeAction(passthrough: true, complete: false)
+        }
+    })
+}
+
+private func legacy_earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, locally: Bool) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
     return postbox.transaction { transaction -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
         var resultMessage: Message?
         var resultHole: MessageHistoryViewPeerHole?
@@ -66,7 +118,7 @@ private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Net
                     return .complete()
                 }
                 |> then(
-                    earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, locally: true)
+                    legacy_earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, locally: true)
                 )
                 return .single(.loading) |> then(validateSignal)
             } else {
@@ -82,7 +134,7 @@ private func earliestUnseenPersonalMentionMessage(postbox: Postbox, network: Net
                 return .complete()
             }
             |> then(
-                earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, locally: true)
+                legacy_earliestUnseenPersonalMentionMessage(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, locally: true)
             )
             return .single(.loading) |> then(validateSignal)
         } else if let summary = transaction.getMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), summary.count > 0 {

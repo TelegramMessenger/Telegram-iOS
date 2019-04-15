@@ -202,11 +202,10 @@ extension Api.Peer {
 extension Api.Dialog {
     var peerId: PeerId? {
         switch self {
-            case let .dialog(_, peer, _, _, _, _, _, _, _, _):
+            case let .dialog(_, peer, _, _, _, _, _, _, _, _, _):
                 return peer.peerId
-            /*feed*/
-            /*case .dialogFeed:
-                return nil*/
+            case .dialogFolder:
+                return nil
         }
     }
 }
@@ -505,7 +504,7 @@ extension Api.Updates {
                 }
                 return result
             case let .updateShort(update, _):
-                if let message = update.channelPts {
+                if let channelPts = update.channelPts {
                     return channelPts
                 } else {
                     return nil

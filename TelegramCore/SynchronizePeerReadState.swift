@@ -77,16 +77,15 @@ func fetchPeerCloudReadState(network: Network, postbox: Postbox, peerId: PeerId,
                     let apiUnreadCount: Int32
                     let apiMarkedUnread: Bool
                     switch dialog {
-                        case let .dialog(flags, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, _, _):
+                        case let .dialog(flags, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, _, _, _):
                             apiTopMessage = topMessage
                             apiReadInboxMaxId = readInboxMaxId
                             apiReadOutboxMaxId = readOutboxMaxId
                             apiUnreadCount = unreadCount
                             apiMarkedUnread = (flags & (1 << 3)) != 0
-                        /*feed*/
-                        /*case .dialogFeed:
+                        case .dialogFolder:
                             assertionFailure()
-                            return nil*/
+                            return nil
                     }
                     
                     return .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
@@ -118,7 +117,7 @@ private func dialogReadState(network: Network, postbox: Postbox, peerId: PeerId)
                                         let apiMarkedUnread: Bool
                                         var apiChannelPts: Int32 = 0
                                         switch dialog {
-                                            case let .dialog(flags, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, pts, _):
+                                            case let .dialog(flags, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, pts, _, _):
                                                 apiTopMessage = topMessage
                                                 apiReadInboxMaxId = readInboxMaxId
                                                 apiReadOutboxMaxId = readOutboxMaxId
@@ -127,10 +126,9 @@ private func dialogReadState(network: Network, postbox: Postbox, peerId: PeerId)
                                                 if let pts = pts {
                                                     apiChannelPts = pts
                                                 }
-                                            /*feed*/
-                                            /*case .dialogFeed:
+                                            case .dialogFolder:
                                                 assertionFailure()
-                                                return .fail(.Abort)*/
+                                                return .fail(.Abort)
                                         }
                                         
                                         let marker: PeerReadStateMarker

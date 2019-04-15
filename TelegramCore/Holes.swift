@@ -353,184 +353,6 @@ func groupBoundaryPeer(_ peerId: PeerId, accountPeerId: PeerId) -> Api.Peer {
     }
 }
 
-func fetchGroupFeedHole(source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, postbox: Postbox, groupId: PeerGroupId, minIndex: MessageIndex, maxIndex: MessageIndex, direction: MessageHistoryViewRelativeHoleDirection, limit: Int = 100) -> Signal<Void, NoError> {
-    /*feed*/
-    return .complete()
-    /*return postbox.transaction { transaction -> (Peer?, Peer?) in
-            return (transaction.getPeer(minIndex.id.peerId), transaction.getPeer(maxIndex.id.peerId))
-        }
-        |> mapToSignal { lowerPeer, upperPeer in
-            print("fetchGroupFeedHole for \(groupId)")
-            
-            let request: Signal<Api.messages.FeedMessages, MTRpcError>
-            
-            let offsetPosition: Api.FeedPosition?
-            let addOffset: Int32
-            let selectedLimit = limit
-            var maxPositionAndClipIndex: (Api.FeedPosition, MessageIndex)?
-            var minPositionAndClipIndex: (Api.FeedPosition, MessageIndex)?
-            
-            let lowerInputPeer: Api.Peer = groupBoundaryPeer(minIndex.id.peerId, accountPeerId: accountPeerId)
-            let upperInputPeer: Api.Peer = groupBoundaryPeer(maxIndex.id.peerId, accountPeerId: accountPeerId)
-            
-            switch direction {
-                case .UpperToLower:
-                    let upperIndex = maxIndex.successor()
-                    if upperIndex.timestamp != Int32.max {
-                        offsetPosition = .feedPosition(date: min(upperIndex.timestamp, Int32.max - 1), peer: upperInputPeer, id: min(upperIndex.id.id, Int32.max - 1))
-                        maxPositionAndClipIndex = (.feedPosition(date: min(upperIndex.timestamp, Int32.max - 1), peer: upperInputPeer, id: min(upperIndex.id.id, Int32.max - 1)), maxIndex)
-                    } else {
-                        offsetPosition = nil
-                        maxPositionAndClipIndex = nil
-                    }
-                    addOffset = 0
-                    //minPosition = .feedPosition(date: 1, peer: lowerInputPeer, id: 1)
-                case .LowerToUpper:
-                    let lowerIndex = minIndex.predecessor()
-                    offsetPosition = .feedPosition(date: minIndex.timestamp, peer: lowerInputPeer, id: lowerIndex.id.id)
-                    addOffset = Int32(-selectedLimit)
-                    //maxPosition = .feedPosition(date: Int32.max, peer: emptyInputPeer, id: Int32.max)
-                    minPositionAndClipIndex = (.feedPosition(date: minIndex.timestamp, peer: lowerInputPeer, id: max(0, minIndex.id.id - 1)), minIndex)
-                case .AroundId:
-                    preconditionFailure()
-                case let .AroundIndex(index):
-                    let upperIndex = maxIndex.successor()
-                    let lowerIndex = minIndex.predecessor()
-                    
-                    offsetPosition = .feedPosition(date: index.timestamp, peer: groupBoundaryPeer(index.id.peerId, accountPeerId: accountPeerId), id: index.id.id)
-                    addOffset = Int32(-selectedLimit / 2)
-                    if maxIndex.timestamp <= Int32.max - 1 {
-                        //maxPositionAndClipIndex = (.feedPosition(date: upperIndex.timestamp, peer: upperInputPeer, id: upperIndex.id.id), maxIndex)
-                    }
-                    if minIndex.timestamp >= 2 {
-                        //minPositionAndClipIndex = (.feedPosition(date: lowerIndex.timestamp, peer: lowerInputPeer, id: lowerIndex.id.id), minIndex)
-                    }
-            }
-            
-            var flags: Int32 = 0
-            if offsetPosition != nil {
-                flags |= (1 << 0)
-            }
-            if maxPositionAndClipIndex != nil {
-                flags |= (1 << 1)
-            }
-            if minPositionAndClipIndex != nil {
-                flags |= (1 << 2)
-            }
-            
-            request = source.request(Api.functions.channels.getFeed(flags: flags, feedId: groupId.rawValue, offsetPosition: offsetPosition, addOffset: addOffset, limit: Int32(selectedLimit), maxPosition: maxPositionAndClipIndex?.0, minPosition: minPositionAndClipIndex?.0, hash: 0))
-            
-            return request
-                |> retryRequest
-                |> mapToSignal { result in
-                    let messages: [Api.Message]
-                    let chats: [Api.Chat]
-                    let users: [Api.User]
-                    var updatedMinIndex: MessageIndex?
-                    var updatedMaxIndex: MessageIndex?
-                    switch result {
-                        case let .feedMessages(_, resultMaxPosition, resultMinPosition, _, apiMessages, apiChats, apiUsers):
-                            if let resultMaxPosition = resultMaxPosition {
-                                switch resultMaxPosition {
-                                    case let .feedPosition(date, peer, id):
-                                        let index = MessageIndex(id: MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: id), timestamp: date).successor()
-                                        if index < maxIndex {
-                                            updatedMaxIndex = index
-                                        } else {
-                                            //assertionFailure()
-                                            updatedMaxIndex = maxIndex
-                                        }
-                                }
-                            }
-                            if let resultMinPosition = resultMinPosition {
-                                switch resultMinPosition {
-                                    case let .feedPosition(date, peer, id):
-                                        let index = MessageIndex(id: MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: id), timestamp: date).predecessor()
-                                        if index > minIndex {
-                                            updatedMinIndex = index
-                                        } else {
-                                            //assertionFailure()
-                                            updatedMinIndex = minIndex
-                                        }
-                                }
-                            }
-                            messages = apiMessages
-                            chats = apiChats
-                            users = apiUsers
-                        case .feedMessagesNotModified:
-                            messages = []
-                            chats = []
-                            users = []
-                    }
-                    
-                    return postbox.transaction { transaction in
-                        var storeMessages: [StoreMessage] = []
-                        
-                        loop: for message in messages {
-                            if let storeMessage = StoreMessage(apiMessage: message), let messageIndex = storeMessage.index {
-                                if let minClipIndex = minPositionAndClipIndex?.1 {
-                                    if messageIndex < minClipIndex {
-                                        continue loop
-                                    }
-                                }
-                                if let maxClipIndex = maxPositionAndClipIndex?.1 {
-                                    if messageIndex > maxClipIndex {
-                                        continue loop
-                                    }
-                                }
-                                storeMessages.append(storeMessage)
-                            }
-                        }
-                        
-                        var complete = false
-                        let fillDirection: HoleFillDirection
-                        switch direction {
-                            case .UpperToLower:
-                                if updatedMinIndex == nil {
-                                    complete = true
-                                }
-                                fillDirection = .UpperToLower(updatedMinIndex: nil, clippingMaxIndex: updatedMinIndex)
-                            case .LowerToUpper:
-                                if updatedMaxIndex == nil {
-                                    complete = true
-                                }
-                                fillDirection = .LowerToUpper(updatedMaxIndex: nil, clippingMinIndex: updatedMaxIndex)
-                            case let .AroundId(id):
-                                fillDirection = .AroundId(id, lowerComplete: false, upperComplete: false)
-                            case let .AroundIndex(index):
-                                fillDirection = .AroundIndex(index, lowerComplete: updatedMinIndex == nil, upperComplete: updatedMaxIndex == nil, clippingMinIndex: updatedMinIndex, clippingMaxIndex: updatedMaxIndex)
-                        }
-                        
-                        transaction.fillMultipleGroupFeedHoles(groupId: groupId, mainHoleMaxIndex: maxIndex, fillType: HoleFill(complete: messages.count == 0 || complete, direction: fillDirection), messages: storeMessages)
-                        
-                        var peers: [Peer] = []
-                        var peerPresences: [PeerId: PeerPresence] = [:]
-                        for chat in chats {
-                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                peers.append(groupOrChannel)
-                            }
-                        }
-                        for user in users {
-                            let telegramUser = TelegramUser(user: user)
-                            peers.append(telegramUser)
-                            if let presence = TelegramUserPresence(apiUser: user) {
-                                peerPresences[telegramUser.id] = presence
-                            }
-                        }
-                        
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                            return updated
-                        })
-                        transaction.updatePeerPresences(peerPresences)
-                        
-                        print("fetchGroupFeedHole for \(groupId) done")
-                        
-                        return
-                    }
-            }
-    }*/
-}
-
 func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId, groupId: PeerGroupId?, hole: ChatListHole) -> Signal<Never, NoError> {
     let location: FetchChatListLocation
     if let groupId = groupId {
@@ -559,11 +381,15 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             
             transaction.replaceChatListHole(groupId: groupId, index: hole.index, hole: fetchedChats.lowerNonPinnedIndex.flatMap(ChatListHole.init))
             
-            for (feedGroupId, lowerIndex) in fetchedChats.feeds {
-                if let hole = postbox.seedConfiguration.initializeChatListWithHole.groups {
-                    transaction.replaceChatListHole(groupId: feedGroupId, index: hole.index, hole: lowerIndex.flatMap(ChatListHole.init))
-                }
+            for (peerId, groupId) in fetchedChats.peerGroupIds {
+                transaction.updatePeerGroupId(peerId, groupId: groupId)
             }
+            
+            /*for (groupId, lowerIndex) in fetchedChats.folders {
+                if let hole = postbox.seedConfiguration.initializeChatListWithHole.groups {
+                    transaction.replaceChatListHole(groupId: groupId, index: hole.index, hole: lowerIndex.flatMap(ChatListHole.init))
+                }
+            }*/
             
             for (peerId, chatState) in fetchedChats.chatStates {
                 if let chatState = chatState as? ChannelState {

@@ -69,7 +69,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
         } |> switchToLatest
 }
 
-func managedSynchronizeGroupedPeersOperations(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+func managedSynchronizeGroupedPeersOperations(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
     return Signal { _ in
         let tag: PeerOperationLogTag = OperationLogTags.SynchronizeGroupedPeers
         
@@ -88,7 +88,7 @@ func managedSynchronizeGroupedPeersOperations(postbox: Postbox, network: Network
                 let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeGroupedPeersOperation {
-                            return synchronizeGroupedPeers(transaction: transaction, postbox: postbox, network: network, operation: operation)
+                            return synchronizeGroupedPeers(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, operation: operation)
                         } else {
                             assertionFailure()
                         }
@@ -115,99 +115,21 @@ func managedSynchronizeGroupedPeersOperations(postbox: Postbox, network: Network
     }
 }
 
-private func hashForIds(_ ids: [Int32]) -> Int32 {
-    var acc: UInt32 = 0
-    
-    for id in ids {
-        let low = UInt32(bitPattern: id)
-        acc = (acc &* 20261) &+ low
+private func synchronizeGroupedPeers(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, operation: SynchronizeGroupedPeersOperation) -> Signal<Void, NoError> {
+    guard let inputPeer = transaction.getPeer(operation.peerId).flatMap(apiInputPeer) else {
+        return .complete()
     }
-    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
-}
-
-private func synchronizeGroupedPeers(transaction: Transaction, postbox: Postbox, network: Network, operation: SynchronizeGroupedPeersOperation) -> Signal<Void, NoError> {
-    /*feed*/
-    return .complete()
-    /*let initialRemotePeerIds = operation.initialPeerIds
-    let localPeerIds = transaction.getPeerIdsInGroup(operation.groupId)
-    
-    return network.request(Api.functions.channels.getFeedSources(flags: 1 << 0, feedId: operation.groupId.rawValue, hash: hashForIds(localPeerIds.map({ $0.id }).sorted())))
-    |> retryRequest
-    |> mapToSignal { sources -> Signal<Void, NoError> in
-        switch sources {
-            case .feedSourcesNotModified:
-                return .complete()
-            case let .feedSources(_, newlyJoinedFeed, feeds, chats, users):
-                var remotePeerIds = Set<PeerId>()
-                for feedsInfo in feeds {
-                    switch feedsInfo {
-                        case let .feedBroadcasts(feedId, channels):
-                            if feedId == operation.groupId.rawValue {
-                                for id in channels {
-                                    remotePeerIds.insert(PeerId(namespace: Namespaces.Peer.CloudChannel, id: id))
-                                }
-                            }
-                        case .feedBroadcastsUngrouped:
-                            break
-                    }
-                }
-            
-                let remoteAdded = remotePeerIds.subtracting(initialRemotePeerIds)
-                let remoteRemoved = initialRemotePeerIds.subtracting(remotePeerIds)
-                var finalPeerIds = localPeerIds
-                finalPeerIds.formUnion(remoteAdded)
-                finalPeerIds.subtract(remoteRemoved)
-                
-                //channels.setFeedBroadcasts feed_id:int channels:Vector<InputChannel> also_newly_joined:Bool = Bool;
-                return postbox.transaction { transaction -> Signal<Void, NoError> in
-                    var peers: [PeerId: Peer] = [:]
-                    var peerPresences: [PeerId: PeerPresence] = [:]
-                    for chat in chats {
-                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                            peers[groupOrChannel.id] = groupOrChannel
-                        }
-                    }
-                    for user in users {
-                        let telegramUser = TelegramUser(user: user)
-                        peers[telegramUser.id] = telegramUser
-                        if let presence = TelegramUserPresence(apiUser: user) {
-                            peerPresences[telegramUser.id] = presence
-                        }
-                    }
-                    
-                    var inputChannels: [Api.InputChannel] = []
-                    for peerId in finalPeerIds {
-                        if let peer = transaction.getPeer(peerId) ?? peers[peerId], let inputChannel = apiInputChannel(peer) {
-                            inputChannels.append(inputChannel)
-                        } else {
-                            assertionFailure()
-                        }
-                    }
-                    
-                    updatePeers(transaction: transaction, peers: Array(peers.values), update: { _, updated -> Peer in
-                        return updated
-                    })
-                    transaction.updatePeerPresences(peerPresences)
-                    
-                    return network.request(Api.functions.channels.setFeedBroadcasts(flags: 1 << 0, feedId: operation.groupId.rawValue, channels: inputChannels, alsoNewlyJoined: nil))
-                    |> retryRequest
-                    |> mapToSignal { _ -> Signal<Void, NoError> in
-                        return postbox.transaction { transaction -> Void in
-                            let currentLocalPeerIds = transaction.getPeerIdsInGroup(operation.groupId)
-                            
-                            for peerId in currentLocalPeerIds {
-                                if !finalPeerIds.contains(peerId) {
-                                    transaction.updatePeerGroupId(peerId, groupId: nil)
-                                }
-                            }
-                            
-                            for peerId in finalPeerIds {
-                                transaction.updatePeerGroupId(peerId, groupId: operation.groupId)
-                            }
-                        }
-                    }
-                } |> switchToLatest
+    let folderPeer: Api.InputFolderPeer = Api.InputFolderPeer.inputFolderPeer(peer: inputPeer, folderId: operation.groupId?.rawValue ?? 0)
+    return network.request(Api.functions.folders.editPeerFolders(folderPeers: [folderPeer]))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { updates -> Signal<Void, NoError> in
+        if let updates = updates {
+            stateManager.addUpdates(updates)
         }
-    }*/
+        return .complete()
+    }
 }
 
