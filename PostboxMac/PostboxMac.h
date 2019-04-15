@@ -18,4 +18,3 @@ FOUNDATION_EXPORT const unsigned char PostboxMacVersionString[];
 
 
 #import <PostboxMac/MurMurHash32.h>
-#import <PostboxMac/IpcNotifier.h>
