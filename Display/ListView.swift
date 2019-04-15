@@ -2049,7 +2049,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             if self.experimentalSnapScrollToItem {
                 self.scrolledToItem = (originalScrollToItem.index, originalScrollToItem.position)
             }
-        } else if let scrolledToItem = self.scrolledToItem {
+        } else if let scrolledToItem = self.scrolledToItem, self.experimentalSnapScrollToItem {
             var curve: ListViewAnimationCurve = .Default(duration: nil)
             var animated = false
             if let updateSizeAndInsets = updateSizeAndInsets {
