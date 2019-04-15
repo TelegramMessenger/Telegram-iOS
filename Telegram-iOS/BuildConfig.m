@@ -227,6 +227,7 @@ static MTPKCS * _Nullable checkSignature(const char *filename) {
     return result;
 }
 
+API_AVAILABLE(ios(10))
 @interface LocalPrivateKey : NSObject {
     SecKeyRef _privateKey;
     SecKeyRef _publicKey;
@@ -473,7 +474,7 @@ static MTPKCS * _Nullable checkSignature(const char *filename) {
     return bundleSeedID;
 }
 
-+ (LocalPrivateKey * _Nullable)getLocalPrivateKey:(NSString * _Nonnull)baseAppBundleId {
++ (LocalPrivateKey * _Nullable)getLocalPrivateKey:(NSString * _Nonnull)baseAppBundleId API_AVAILABLE(ios(10)) {
     NSString *bundleSeedId = [self bundleSeedId];
     if (bundleSeedId == nil) {
         return nil;
@@ -516,7 +517,7 @@ static MTPKCS * _Nullable checkSignature(const char *filename) {
     return result;
 }
 
-+ (bool)removeLocalPrivateKey:(NSString * _Nonnull)baseAppBundleId {
++ (bool)removeLocalPrivateKey:(NSString * _Nonnull)baseAppBundleId API_AVAILABLE(ios(10)) {
     NSString *bundleSeedId = [self bundleSeedId];
     if (bundleSeedId == nil) {
         return nil;
@@ -538,7 +539,7 @@ static MTPKCS * _Nullable checkSignature(const char *filename) {
     return true;
 }
 
-+ (LocalPrivateKey * _Nullable)addLocalPrivateKey:(NSString * _Nonnull)baseAppBundleId {
++ (LocalPrivateKey * _Nullable)addLocalPrivateKey:(NSString * _Nonnull)baseAppBundleId API_AVAILABLE(ios(10)) {
     NSString *bundleSeedId = [self bundleSeedId];
     if (bundleSeedId == nil) {
         return nil;
@@ -621,26 +622,28 @@ static MTPKCS * _Nullable checkSignature(const char *filename) {
         [resultData writeToFile:filePath atomically:false];
     }
     
-    LocalPrivateKey *localPrivateKey = [self getLocalPrivateKey:baseAppBundleId];
+    if (@available(iOS 10, *)) {
+        NSData *currentEncryptedData = [NSData dataWithContentsOfFile:encryptedPath];
+        
+        LocalPrivateKey *localPrivateKey = [self getLocalPrivateKey:baseAppBundleId];
+        
+        if (localPrivateKey == nil) {
+            localPrivateKey = [self addLocalPrivateKey:baseAppBundleId];
+        }
     
-    if (localPrivateKey == nil) {
-        localPrivateKey = [self addLocalPrivateKey:baseAppBundleId];
-    }
-    
-    NSData *currentEncryptedData = [NSData dataWithContentsOfFile:encryptedPath];
-    
-    if (localPrivateKey != nil) {
-        if (currentEncryptedData != nil) {
-            NSData *decryptedData = [localPrivateKey decrypt:currentEncryptedData];
-            
-            if (![resultData isEqualToData:decryptedData]) {
+        if (localPrivateKey != nil) {
+            if (currentEncryptedData != nil) {
+                NSData *decryptedData = [localPrivateKey decrypt:currentEncryptedData];
+                
+                if (![resultData isEqualToData:decryptedData]) {
+                    NSData *encryptedData = [localPrivateKey encrypt:resultData];
+                    [encryptedData writeToFile:encryptedPath atomically:false];
+                    assert(false);
+                }
+            } else {
                 NSData *encryptedData = [localPrivateKey encrypt:resultData];
                 [encryptedData writeToFile:encryptedPath atomically:false];
-                assert(false);
             }
-        } else {
-            NSData *encryptedData = [localPrivateKey encrypt:resultData];
-            [encryptedData writeToFile:encryptedPath atomically:false];
         }
     }
     

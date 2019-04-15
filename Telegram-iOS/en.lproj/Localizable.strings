@@ -4227,3 +4227,8 @@ Unused sets are archived when you add more.";
 
 "Appearance.Other" = "Other";
 "Appearance.LargeEmoji" = "Large Emoji";
+
+"ChatList.ArchiveAction" = "Archive";
+"ChatList.UnarchiveAction" = "Unarchive";
+"ChatList.HideAction" = "Hide";
+"ChatList.UnhideAction" = "Unhide";
