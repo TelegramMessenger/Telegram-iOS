@@ -78,8 +78,8 @@
 		<string>googlechrome</string>
 		<string>googlechromes</string>
 		<string>firefox</string>
-		<string>opera-http</string>
-		<string>opera-https</string>
+		<string>touch-http</string>
+		<string>touch-https</string>
 		<string>yandexbrowser-open-url</string>
 		<string>vimeo</string>
 		<string>vine</string>
