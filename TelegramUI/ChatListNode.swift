@@ -204,8 +204,8 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
                 }
             case let .HoleEntry(_, theme):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
-            /*case let .GroupReferenceEntry(index, presentationData, groupId, message, topPeers, counters, editing):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, message: message, topPeers: topPeers, counters: counters), editing: editing, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: true, interaction: nodeInteraction), directionHint: entry.directionHint)*/
+            case let .GroupReferenceEntry(index, presentationData, groupId, message, editing):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, message: message), editing: editing, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: true, interaction: nodeInteraction), directionHint: entry.directionHint)
         }
     }
 }
@@ -241,8 +241,8 @@ private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNode
                 }
             case let .HoleEntry(_, theme):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
-            /*case let .GroupReferenceEntry(index, presentationData, groupId, message, topPeers, counters, editing):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, message: message, topPeers: topPeers, counters: counters), editing: editing, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: true, interaction: nodeInteraction), directionHint: entry.directionHint)*/
+            case let .GroupReferenceEntry(index, presentationData, groupId, message, editing):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(presentationData: presentationData, account: account, peerGroupId: peerGroupId, index: index, content: .groupReference(groupId: groupId, message: message), editing: editing, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: true, interaction: nodeInteraction), directionHint: entry.directionHint)
         }
     }
 }
@@ -352,19 +352,6 @@ final class ChatListNode: ListView {
             }
         }
     }
-    
-    /*override var accessibilityElements: [Any]? {
-        get {
-            var accessibilityElements: [Any] = []
-            self.forEachVisibleItemNode { itemNode in
-                if itemNode.isAccessibilityElement {
-                    accessibilityElements.append(itemNode)
-                }
-            }
-            return accessibilityElements
-        } set(value) {
-        }
-    }*/
     
     var isEmptyUpdated: ((ChatListNodeEmtpyState) -> Void)?
     private var currentIsEmptyState: ChatListNodeEmtpyState?

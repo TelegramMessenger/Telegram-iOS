@@ -413,6 +413,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         super.init()
         
         self.dynamicBounceEnabled = !self.currentPresentationData.disableAnimations
+        self.experimentalSnapScrollToItem = true
         
         //self.debugInfo = true
         

@@ -45,7 +45,7 @@ enum ChatListNodeEntryId: Hashable {
 enum ChatListNodeEntry: Comparable, Identifiable {
     case PeerEntry(index: ChatListIndex, presentationData: ChatListPresentationData, message: Message?, readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, peer: RenderedPeer, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool)
     case HoleEntry(ChatListHole, theme: PresentationTheme)
-    //case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, message: Message?, topPeers: [Peer], counters: GroupReferenceUnreadCounters, editing: Bool)
+    case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, message: Message?, editing: Bool)
     
     var index: ChatListIndex {
         switch self {
@@ -53,8 +53,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 return index
             case let .HoleEntry(hole, _):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
-            /*case let .GroupReferenceEntry(index, _, _, _, _, _, _):
-                return index*/
+            case let .GroupReferenceEntry(index, _, _, _, _):
+                return index
         }
     }
     
@@ -64,8 +64,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 return .PeerId(index.messageIndex.id.peerId.toInt64())
             case let .HoleEntry(hole, _):
                 return .Hole(Int64(hole.index.id.id))
-            /*case let .GroupReferenceEntry(_, _, groupId, _, _, _, _):
-                return .GroupId(groupId)*/
+            case let .GroupReferenceEntry(_, _, groupId, _, _):
+                return .GroupId(groupId)
         }
     }
     
@@ -156,8 +156,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                     default:
                         return false
                 }
-            /*case let .GroupReferenceEntry(lhsIndex, lhsPresentationData, lhsGroupId, lhsMessage, lhsTopPeers, lhsCounters, lhsEditing):
-                if case let .GroupReferenceEntry(rhsIndex, rhsPresentationData, rhsGroupId, rhsMessage, rhsTopPeers, rhsCounters, rhsEditing) = rhs {
+            case let .GroupReferenceEntry(lhsIndex, lhsPresentationData, lhsGroupId, lhsMessage, lhsEditing):
+                if case let .GroupReferenceEntry(rhsIndex, rhsPresentationData, rhsGroupId, rhsMessage, rhsEditing) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -173,25 +173,13 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                     if lhsMessage?.id != rhsMessage?.id || lhsMessage?.flags != rhsMessage?.flags {
                         return false
                     }
-                    if lhsTopPeers.count != rhsTopPeers.count {
-                        return false
-                    } else {
-                        for i in 0 ..< lhsTopPeers.count {
-                            if !arePeersEqual(lhsTopPeers[i], rhsTopPeers[i]) {
-                                return false
-                            }
-                        }
-                    }
-                    if lhsCounters != rhsCounters {
-                        return false
-                    }
                     if lhsEditing != rhsEditing {
                         return false
                     }
                     return true
                 } else {
                     return false
-                }*/
+                }
         }
     }
 }
@@ -206,11 +194,22 @@ private func offsetPinnedIndex(_ index: ChatListIndex, offset: UInt16) -> ChatLi
 
 func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, savedMessagesPeer: Peer?, mode: ChatListNodeMode) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var result: [ChatListNodeEntry] = []
+    
     var pinnedIndexOffset: UInt16 = 0
-    if view.laterIndex == nil && savedMessagesPeer == nil {
-        pinnedIndexOffset = UInt16(view.additionalItemEntries.count)
+    
+    if view.laterIndex == nil, case .chatList = mode {
+        var groupEntryCount = 0
+        for groupReference in view.groupEntries {
+            if let _ = groupReference.message {
+                groupEntryCount += 1
+            }
+        }
+        pinnedIndexOffset += UInt16(groupEntryCount)
     }
     
+    if view.laterIndex == nil && savedMessagesPeer == nil {
+        pinnedIndexOffset += UInt16(view.additionalItemEntries.count)
+    }
     loop: for entry in view.entries {
         switch entry {
             case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo):
@@ -232,18 +231,15 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
                     return ([], true)
                 }
                 result.append(.HoleEntry(hole, theme: state.presentationData.theme))
-            /*case let .GroupReferenceEntry(groupId, index, message, topPeers, counters):
-                if case .chatList = mode {
-                    result.append(.GroupReferenceEntry(index: index, presentationData: state.presentationData, groupId: groupId, message: message, topPeers: topPeers, counters: counters, editing: state.editing))
-                }*/
         }
     }
     if view.laterIndex == nil {
+        var pinningIndex: UInt16 = UInt16(pinnedIndexOffset == 0 ? 0 : (pinnedIndexOffset - 1))
+        
         if let savedMessagesPeer = savedMessagesPeer {
             result.append(.PeerEntry(index: ChatListIndex.absoluteUpperBound.predecessor, presentationData: state.presentationData, message: nil, readState: nil, notificationSettings: nil, embeddedInterfaceState: nil, peer: RenderedPeer(peerId: savedMessagesPeer.id, peers: SimpleDictionary([savedMessagesPeer.id: savedMessagesPeer])), presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), editing: state.editing, hasActiveRevealControls: false, selected: false, inputActivities: nil, isAd: false))
         } else {
             if !view.additionalItemEntries.isEmpty {
-                var pinningIndex: UInt16 = UInt16(view.additionalItemEntries.count - 1)
                 for entry in view.additionalItemEntries.reversed() {
                     switch entry {
                         case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, peerPresence, summaryInfo):
@@ -253,6 +249,17 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
                             }
                         default:
                             break
+                    }
+                }
+            }
+        }
+        
+        if view.laterIndex == nil, case .chatList = mode {
+            for groupReference in view.groupEntries {
+                if let message = groupReference.message {
+                    result.append(.GroupReferenceEntry(index: ChatListIndex(pinningIndex: pinningIndex, messageIndex: message.index), presentationData: state.presentationData, groupId: groupReference.groupId, message: groupReference.message, editing: state.editing))
+                    if pinningIndex != 0 {
+                        pinningIndex -= 1
                     }
                 }
             }

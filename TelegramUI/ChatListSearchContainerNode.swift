@@ -1175,8 +1175,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
             switch item.content {
                 case let .peer(message, peer, _, _, _, _, _, _, _, _):
                     return (selectedItemNode.view, bounds, message?.id ?? peer.peerId)
-                /*case let .groupReference(groupId, _, _, _):
-                    return (selectedItemNode.view, bounds, groupId)*/
+                case let .groupReference(groupId, _):
+                    return (selectedItemNode.view, bounds, groupId)
             }
         }
         return nil

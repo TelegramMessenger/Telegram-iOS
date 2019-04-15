@@ -286,7 +286,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
             }, tapticAction: { [weak self] in
                 self?.hapticImpact()
             })
-            revealNode.setOptions(self.revealOptions.left)
+            revealNode.setOptions(self.revealOptions.left, isLeft: true)
             self.leftRevealNode = revealNode
             
             if let (size, leftInset, _) = self.validLayout {
@@ -308,7 +308,7 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
             }, tapticAction: { [weak self] in
                 self?.hapticImpact()
             })
-            revealNode.setOptions(self.revealOptions.right)
+            revealNode.setOptions(self.revealOptions.right, isLeft: false)
             self.rightRevealNode = revealNode
             
             if let (size, _, rightInset) = self.validLayout {
@@ -365,8 +365,8 @@ class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelega
         if let rightRevealNode = self.rightRevealNode {
             let revealSize = rightRevealNode.bounds.size
             
-            let revealFrame = CGRect(origin: CGPoint(x: size.width + max(self.revealOffset, -revealSize.width), y: 0.0), size: revealSize)
-            let revealNodeOffset = -max(self.revealOffset, -revealSize.width)
+            let revealFrame = CGRect(origin: CGPoint(x: min(size.width, size.width + self.revealOffset), y: 0.0), size: revealSize)
+            let revealNodeOffset = -self.revealOffset
             rightRevealNode.updateRevealOffset(offset: revealNodeOffset, sideInset: -rightInset, transition: transition)
             
             if CGFloat(0.0).isLessThanOrEqualTo(offset) {

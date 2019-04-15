@@ -77,6 +77,12 @@ func peerAvatarImage(account: Account, peer: Peer, authorOfMessage: MessageRefer
                             context.draw(dataImage, in: CGRect(origin: CGPoint(), size: displayDimensions))
                             context.setBlendMode(.destinationOut)
                             context.draw(roundCorners.cgImage!, in: CGRect(origin: CGPoint(), size: displayDimensions))
+                        } else {
+                            if let emptyColor = emptyColor {
+                                context.clear(CGRect(origin: CGPoint(), size: displayDimensions))
+                                context.setFillColor(emptyColor.cgColor)
+                                context.fillEllipse(in: CGRect(origin: CGPoint(), size: displayDimensions))
+                            }
                         }
                     } else if let emptyColor = emptyColor {
                         context.clear(CGRect(origin: CGPoint(), size: displayDimensions))

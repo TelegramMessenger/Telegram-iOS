@@ -8,6 +8,50 @@ public func useSpecialTabBarIcons() -> Bool {
     return (Date(timeIntervalSince1970: 1545642000)...Date(timeIntervalSince1970: 1546387200)).contains(Date())
 }
 
+private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
+    if searchNode.expansionProgress > 0.0 && searchNode.expansionProgress < 1.0 {
+        let scrollToItem: ListViewScrollToItem
+        let targetProgress: CGFloat
+        if searchNode.expansionProgress < 0.6 {
+            scrollToItem = ListViewScrollToItem(index: 1, position: .top(-navigationBarSearchContentHeight), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
+            targetProgress = 0.0
+        } else {
+            scrollToItem = ListViewScrollToItem(index: 1, position: .top(0.0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
+            targetProgress = 1.0
+        }
+        searchNode.updateExpansionProgress(targetProgress, animated: true)
+        
+        listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: scrollToItem, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        return true
+    } else if searchNode.expansionProgress == 1.0 {
+        var sortItemNode: ListViewItemNode?
+        var nextItemNode: ListViewItemNode?
+        
+        listNode.forEachItemNode({ itemNode in
+            if sortItemNode == nil, let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item, case .groupReference = item.content {
+                sortItemNode = itemNode
+            } else if sortItemNode != nil && nextItemNode == nil {
+                nextItemNode = itemNode as? ListViewItemNode
+            }
+        })
+        
+        if let sortItemNode = sortItemNode {
+            let itemFrame = sortItemNode.apparentFrame
+            if itemFrame.contains(CGPoint(x: 0.0, y: listNode.insets.top)) {
+                var scrollToItem: ListViewScrollToItem?
+                if itemFrame.minY + itemFrame.height * 0.6 < listNode.insets.top {
+                    scrollToItem = ListViewScrollToItem(index: 0, position: .top(-76.0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
+                } else {
+                    scrollToItem = ListViewScrollToItem(index: 0, position: .top(0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
+                }
+                listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: scrollToItem, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                return true
+            }
+        }
+    }
+    return false
+}
+
 public class ChatListController: TelegramController, KeyShortcutResponder, UIViewControllerPreviewingDelegate {
     private var validLayout: ContainerViewLayout?
     
@@ -90,7 +134,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             rightBarButtonItem.accessibilityLabel = "Compose"
             self.navigationItem.rightBarButtonItem = rightBarButtonItem
         } else {
-            self.navigationItem.title = "Channels"
+            self.navigationItem.title = "Archived Chats"
             let rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
             rightBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Edit
             self.navigationItem.rightBarButtonItem = rightBarButtonItem
@@ -564,24 +608,28 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
-        /*self.chatListDisplayNode.chatListNode.groupSelected = { [weak self] groupId in
+        self.chatListDisplayNode.chatListNode.groupSelected = { [weak self] groupId in
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
-                    var scrollToEndIfExists = false
-                    if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
-                        scrollToEndIfExists = true
-                    }
-                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .group(groupId), scrollToEndIfExists: scrollToEndIfExists)
+                    let chatListController = ChatListController(context: strongSelf.context, groupId: groupId, controlsHistoryPreload: false)
+                    navigationController.pushViewController(chatListController)
                     strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                 }
             }
         }
         
         self.chatListDisplayNode.chatListNode.updatePeerGrouping = { [weak self] peerId, group in
-            if let strongSelf = self {
-                let _ = updatePeerGroupIdInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, groupId: group ? Namespaces.PeerGroup.feed : nil).start()
+            guard let strongSelf = self else {
+                return
             }
-        }*/
+            strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+            let _ = updatePeerGroupIdInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, groupId: group ? Namespaces.PeerGroup.archive : nil).start(completed: {
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+            })
+        }
         
         self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, messageId in
             if let strongSelf = self {
@@ -664,6 +712,14 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
+        self.chatListDisplayNode.dismissSelf = { [weak self] in
+            if let navigationController = self?.navigationController as? NavigationController {
+                if navigationController.viewControllers.count > 1 {
+                    let _ = navigationController.popViewController(animated: true)
+                }
+            }
+        }
+        
         self.chatListDisplayNode.chatListNode.contentOffsetChanged = { [weak self] offset in
             if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode, let validLayout = strongSelf.validLayout {
                 var offset = offset
@@ -674,13 +730,28 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             }
         }
         
+        /*self.chatListDisplayNode.chatListNode.contentOffsetChanged = { [weak self] offset in
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
+                var progress: CGFloat = 0.0
+                switch offset {
+                    case let .known(offset):
+                        progress = max(0.0, (searchContentNode.nominalHeight - max(0.0, offset - 76.0))) / searchContentNode.nominalHeight
+                    case .none:
+                        progress = 1.0
+                    default:
+                        break
+                }
+                searchContentNode.updateExpansionProgress(progress)
+            }
+        }
+        
         self.chatListDisplayNode.chatListNode.contentScrollingEnded = { [weak self] listView in
             if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
-                return fixNavigationSearchableListNodeScrolling(listView, searchNode: searchContentNode)
+                return fixListNodeScrolling(listView, searchNode: searchContentNode)
             } else {
                 return false
             }
-        }
+        }*/
         
         let context = self.context
         let peerIdsAndOptions: Signal<(ChatListSelectionOptions, Set<PeerId>)?, NoError> = self.chatListDisplayNode.chatListNode.state
@@ -1034,10 +1105,10 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     } else {
                         return nil
                     }
-                /*case let .groupReference(groupId, _, _, _):
+                case let .groupReference(groupId, _):
                     let chatListController = ChatListController(context: self.context, groupId: groupId, controlsHistoryPreload: false)
                     chatListController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
-                    return (chatListController, sourceRect)*/
+                    return (chatListController, sourceRect)
             }
         } else {
             return nil
@@ -1055,6 +1126,11 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 chatController.updatePresentationMode(.standard(previewing: false))
                 if let navigationController = self.navigationController as? NavigationController {
                     navigateToChatController(navigationController: navigationController, chatController: chatController, context: self.context, chatLocation: chatController.chatLocation, animated: false)
+                    self.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+                }
+            } else if let chatListController = viewControllerToCommit as? ChatListController {
+                if let navigationController = self.navigationController as? NavigationController {
+                    navigationController.pushViewController(chatListController, animated: false, completion: {})
                     self.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                 }
             }

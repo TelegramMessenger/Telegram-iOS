@@ -57,7 +57,12 @@ public func navigateToChatController(navigationController: NavigationController,
         if resolvedKeepStack {
             navigationController.pushViewController(controller, animated: animated, completion: completion)
         } else {
-            navigationController.replaceAllButRootController(controller, animated: animated, completion: completion)
+            let viewControllers = navigationController.viewControllers.filter({ $0 is ChatListController || $0 is TabBarController })
+            if viewControllers.isEmpty {
+                navigationController.replaceAllButRootController(controller, animated: animated, completion: completion)
+            } else {
+                navigationController.replaceControllersAndPush(controllers: viewControllers, controller: controller, animated: animated, completion: completion)
+            }
         }
     }
 }

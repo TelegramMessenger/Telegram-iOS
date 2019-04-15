@@ -2179,7 +2179,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         
         self.chatDisplayNode.navigateButtons.mentionsPressed = { [weak self] in
             if let strongSelf = self, strongSelf.isNodeLoaded, case let .peer(peerId) = strongSelf.chatLocation {
-                let signal = earliestUnseenPersonalMentionMessage(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, accountPeerId: strongSelf.context.account.peerId, peerId: peerId)
+                let signal = earliestUnseenPersonalMentionMessage(account: strongSelf.context.account, peerId: peerId)
                 strongSelf.navigationActionDisposable.set((signal |> deliverOnMainQueue).start(next: { result in
                     if let strongSelf = self {
                         switch result {
@@ -3406,6 +3406,7 @@ public final class ChatController: TelegramController, KeyShortcutResponder, Gal
         super.viewDidAppear(animated)
         
         self.chatDisplayNode.historyNode.preloadPages = true
+        self.chatDisplayNode.historyNode.experimentalSnapScrollToItem = false
         self.chatDisplayNode.historyNode.canReadHistory.set(combineLatest(context.sharedContext.applicationBindings.applicationInForeground, self.canReadHistory.get()) |> map { a, b in
             return a && b
         })

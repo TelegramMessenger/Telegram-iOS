@@ -10,6 +10,7 @@ final class ChatListOnlineNode: ASDisplayNode {
         self.iconNode.isLayerBacked = true
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
+        self.iconNode.isHidden = true
     
         super.init()
         
@@ -29,14 +30,16 @@ final class ChatListOnlineNode: ASDisplayNode {
                     strongSelf.iconNode.frame = CGRect(x: 0.0, y: 0.0, width: 14.0, height: 14.0)
 
                     if animated {
-                        let initialScale: CGFloat = CGFloat((strongSelf.iconNode.value(forKeyPath: "layer.presentationLayer.transform.scale.x") as? NSNumber)?.floatValue ?? 1.0)
-                        let targetScale: CGFloat = online ? 1.0 : 0.0
-                        strongSelf.iconNode.isHidden = false
-                        strongSelf.iconNode.layer.animateScale(from: initialScale, to: targetScale, duration: 0.2, removeOnCompletion: false, completion: { [weak self] finished in
-                            if let strongSelf = self, finished {
-                                strongSelf.iconNode.isHidden = !online
-                            }
-                        })
+                        if online || !strongSelf.iconNode.isHidden {
+                            let initialScale: CGFloat = CGFloat((strongSelf.iconNode.value(forKeyPath: "layer.presentationLayer.transform.scale.x") as? NSNumber)?.floatValue ?? 1.0)
+                            let targetScale: CGFloat = online ? 1.0 : 0.0
+                            strongSelf.iconNode.isHidden = false
+                            strongSelf.iconNode.layer.animateScale(from: initialScale, to: targetScale, duration: 0.2, removeOnCompletion: false, completion: { [weak self] finished in
+                                if let strongSelf = self, finished {
+                                    strongSelf.iconNode.isHidden = !online
+                                }
+                            })
+                        }
                     } else {
                         strongSelf.iconNode.isHidden = !online
                     }

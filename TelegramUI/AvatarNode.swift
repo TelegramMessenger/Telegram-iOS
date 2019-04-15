@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 
 private let savedMessagesIcon = UIImage(bundleImageName: "Avatar/SavedMessagesIcon")?.precomposed()
+private let archivedChatsIcon = UIImage(bundleImageName: "Avatar/ArchiveAvatarIcon")?.precomposed()
 
 private class AvatarNodeParameters: NSObject {
     let theme: PresentationTheme?
@@ -76,6 +77,7 @@ private func ==(lhs: AvatarNodeState, rhs: AvatarNodeState) -> Bool {
 enum AvatarNodeIcon {
     case none
     case savedMessagesIcon
+    case archivedChatsIcon
     case editAvatarIcon
 }
 
@@ -83,6 +85,7 @@ public enum AvatarNodeImageOverride {
     case none
     case image(TelegramMediaImageRepresentation)
     case savedMessagesIcon
+    case archivedChatsIcon
     case editAvatarIcon
 }
 
@@ -91,7 +94,6 @@ public enum AvatarNodeColorOverride {
 }
 
 public final class AvatarEditOverlayNode: ASDisplayNode {
-    
     override public init() {
         super.init()
         
@@ -200,7 +202,7 @@ public final class AvatarNode: ASDisplayNode {
         }
     }
     
-    public func setPeer(account: Account, theme: PresentationTheme, peer: Peer, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, synchronousLoad: Bool = false) {
+    public func setPeer(account: Account, theme: PresentationTheme, peer: Peer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, synchronousLoad: Bool = false) {
         var synchronousLoad = synchronousLoad
         var representation: TelegramMediaImageRepresentation?
         var icon = AvatarNodeIcon.none
@@ -214,14 +216,17 @@ public final class AvatarNode: ASDisplayNode {
                 case .savedMessagesIcon:
                     representation = nil
                     icon = .savedMessagesIcon
+                case .archivedChatsIcon:
+                    representation = nil
+                    icon = .archivedChatsIcon
                 case .editAvatarIcon:
-                    representation = peer.smallProfileImage
+                    representation = peer?.smallProfileImage
                     icon = .editAvatarIcon
             }
-        } else if peer.restrictionText == nil {
-            representation = peer.smallProfileImage
+        } else if peer?.restrictionText == nil {
+            representation = peer?.smallProfileImage
         }
-        let updatedState: AvatarNodeState = .peerAvatar(peer.id, peer.displayLetters, representation)
+        let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? PeerId(namespace: 0, id: 0), peer?.displayLetters ?? [], representation)
         if updatedState != self.state {
             self.state = updatedState
             
@@ -230,7 +235,7 @@ public final class AvatarNode: ASDisplayNode {
             self.displaySuspended = true
             self.contents = nil
             
-            if let signal = peerAvatarImage(account: account, peer: peer, authorOfMessage: authorOfMessage, representation: representation, emptyColor: emptyColor, synchronousLoad: synchronousLoad) {
+            if let peer = peer, let signal = peerAvatarImage(account: account, peer: peer, authorOfMessage: authorOfMessage, representation: representation, emptyColor: emptyColor, synchronousLoad: synchronousLoad) {
                 self.imageReady.set(self.imageNode.ready)
                 self.imageNode.setSignal(signal)
                 
@@ -256,7 +261,7 @@ public final class AvatarNode: ASDisplayNode {
                 }
                 
                 self.editOverlayNode?.isHidden = true
-                parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, icon: icon, explicitColorIndex: nil, hasImage: false)
+                parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer?.id ?? PeerId(namespace: 0, id: 0), letters: peer?.displayLetters ?? [], font: self.font, icon: icon, explicitColorIndex: nil, hasImage: false)
             }
             if self.parameters == nil || self.parameters != parameters {
                 self.parameters = parameters
@@ -307,13 +312,20 @@ public final class AvatarNode: ASDisplayNode {
             context.fill(bounds)
         }
         
-        context.beginPath()
-        context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: bounds.size.width, height:
-            bounds.size.height))
-        context.clip()
+        
         
         let colorIndex: Int
         if let parameters = parameters as? AvatarNodeParameters {
+            if case .archivedChatsIcon = parameters.icon {
+                let path = UIBezierPath(roundedRect: bounds, cornerRadius: floor(bounds.width / 3.8))
+                path.addClip()
+            } else {
+                context.beginPath()
+                context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: bounds.size.width, height:
+                    bounds.size.height))
+                context.clip()
+            }
+            
             if let explicitColorIndex = parameters.explicitColorIndex {
                 colorIndex = explicitColorIndex
             } else {
@@ -336,7 +348,10 @@ public final class AvatarNode: ASDisplayNode {
             if case .savedMessagesIcon = parameters.icon {
                 colorsArray = savedMessagesColors
             } else if case .editAvatarIcon = parameters.icon, let theme = parameters.theme {
-                colorsArray = [ theme.list.blocksBackgroundColor.cgColor, theme.list.blocksBackgroundColor.cgColor ]
+                colorsArray = [theme.list.blocksBackgroundColor.cgColor, theme.list.blocksBackgroundColor.cgColor]
+            } else if case .archivedChatsIcon = parameters.icon {
+                let color = UIColor(rgb: 0x4ac058)
+                colorsArray = [color.cgColor, color.cgColor]
             } else {
                 colorsArray = grayscaleColors
             }
@@ -372,6 +387,15 @@ public final class AvatarNode: ASDisplayNode {
                 
                 if let editAvatarIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/EditAvatarIcon"), color: theme.list.freeMonoIcon) {
                     context.draw(editAvatarIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - editAvatarIcon.size.width) / 2.0), y: floor((bounds.size.height - editAvatarIcon.size.height) / 2.0)), size: editAvatarIcon.size))
+                }
+            } else if case .archivedChatsIcon = parameters.icon {
+                let factor = bounds.size.width / 60.0
+                context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
+                context.scaleBy(x: factor, y: -factor)
+                context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
+                
+                if let archivedChatsIcon = archivedChatsIcon {
+                    context.draw(archivedChatsIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - archivedChatsIcon.size.width) / 2.0), y: floor((bounds.size.height - archivedChatsIcon.size.height) / 2.0)), size: archivedChatsIcon.size))
                 }
             } else {
                 let letters = parameters.letters

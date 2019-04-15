@@ -37,15 +37,7 @@ final class ChatListControllerNode: ASDisplayNode {
     var requestOpenRecentPeerOptions: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
     var requestAddContact: ((String) -> Void)?
-    
-    /*override var accessibilityElements: [Any]? {
-        get {
-            var accessibilityElements: [Any] = []
-            addAccessibilityChildren(of: self.chatListNode, container: self.chatListNode, to: &accessibilityElements)
-            return accessibilityElements
-        } set(value) {
-        }
-    }*/
+    var dismissSelf: (() -> Void)?
     
     init(context: AccountContext, groupId: PeerGroupId?, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListController) {
         self.context = context
@@ -71,7 +63,9 @@ final class ChatListControllerNode: ASDisplayNode {
             }
             switch isEmptyState {
                 case .empty(false):
-                    if strongSelf.chatListEmptyNode == nil {
+                    if strongSelf.groupId != nil {
+                        strongSelf.dismissSelf?()
+                    } else if strongSelf.chatListEmptyNode == nil {
                         let chatListEmptyNode = ChatListEmptyNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings)
                         strongSelf.chatListEmptyNode = chatListEmptyNode
                         strongSelf.insertSubnode(chatListEmptyNode, belowSubnode: strongSelf.chatListNode)
