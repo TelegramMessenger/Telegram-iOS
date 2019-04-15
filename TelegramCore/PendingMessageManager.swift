@@ -354,7 +354,7 @@ public final class PendingMessageManager {
                         return nil
                     }
                 }).sorted(by: { lhs, rhs in
-                    return MessageIndex(lhs.1) < MessageIndex(rhs.1)
+                    return lhs.1.index < rhs.1.index
                 }) {
                     if case let .collectingInfo(message) = messageContext.state {
                         let (contentUploadSignal, contentType) = messageContentToUpload(network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload:  messageContext.forcedReuploadOnce, message: message)
@@ -620,7 +620,7 @@ public final class PendingMessageManager {
                 }
             }
             
-            messages.sort { MessageIndex($0.0) < MessageIndex($1.0) }
+            messages.sort { $0.0.index < $1.0.index }
             
             if peerId.namespace == Namespaces.Peer.SecretChat {
                 for (message, content) in messages {

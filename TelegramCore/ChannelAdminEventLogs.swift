@@ -125,11 +125,16 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                 
                 switch result {
                 case let .adminLogResults(apiEvents, apiChats, apiUsers):
-                    let peers = (apiChats.flatMap { parseTelegramGroupOrChannel(chat: $0) } + apiUsers.flatMap { TelegramUser(user: $0) } + Array(arrayLiteral: peer)).reduce([:], { current, peer -> [PeerId : Peer] in
-                        var current = current
-                        current[peer.id] = peer
-                        return current
-                    })
+                    var peers: [PeerId: Peer] = [:]
+                    for apiChat in apiChats {
+                        if let peer = parseTelegramGroupOrChannel(chat: apiChat) {
+                            peers[peer.id] = peer
+                        }
+                    }
+                    for apiUser in apiUsers {
+                        let peer = TelegramUser(user: apiUser)
+                        peers[peer.id] = peer
+                    }
                     
                     var events: [AdminLogEvent] = []
                     
@@ -145,7 +150,7 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                     case let .channelAdminLogEventActionChangeUsername(prev, new):
                                         action = .changeUsername(prev: prev, new: new)
                                     case let .channelAdminLogEventActionChangePhoto(prev, new):
-                                        action = .changePhoto(prev: imageRepresentationsForApiChatPhoto(prev), new: imageRepresentationsForApiChatPhoto(new))
+                                        action = .changePhoto(prev: telegramMediaImageFromApiPhoto(prev)?.representations ?? [], new: telegramMediaImageFromApiPhoto(new)?.representations ?? [])
                                     case let .channelAdminLogEventActionToggleInvites(new):
                                         action = .toggleInvites(boolFromApiValue(new))
                                     case let .channelAdminLogEventActionToggleSignatures(new):

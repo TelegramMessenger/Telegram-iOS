@@ -59,6 +59,10 @@ func apiFunctionDescription(of desc: FunctionDescription) -> String {
     return result
 }
 
+func apiShortFunctionDescription(of desc: FunctionDescription) -> String {
+    return desc.name
+}
+
 private func recursiveDescription(redact: Bool, of value: Any) -> String {
     let mirror = Mirror(reflecting: value)
     var result = ""
@@ -202,7 +206,7 @@ public class BoxedMessage: NSObject {
 
 public class Serialization: NSObject, MTSerialization {
     public func currentLayer() -> UInt {
-        return 97
+        return 99
     }
     
     public func parseMessage(_ data: Data!) -> Any! {

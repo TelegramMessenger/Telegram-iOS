@@ -91,6 +91,7 @@ enum AccountStateMutationOperation {
     case UpdateLangPack(String, Api.LangPackDifference?)
     case UpdateMinAvailableMessage(MessageId)
     case UpdatePeerInclusionMinTimestamp(PeerId, Int32)
+    case UpdatePeerGroup(PeerId, PeerGroupId?)
 }
 
 struct AccountMutableState {
@@ -109,7 +110,7 @@ struct AccountMutableState {
     var namespacesWithHolesFromPreviousState: [PeerId: Set<MessageId.Namespace>]
     
     var storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]
-    var displayAlerts: [String] = []
+    var displayAlerts: [(text: String, isDropAuth: Bool)] = []
     
     var insertedPeers: [PeerId: Peer] = [:]
     
@@ -132,7 +133,7 @@ struct AccountMutableState {
         self.namespacesWithHolesFromPreviousState = [:]
     }
     
-    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], chatStates: [PeerId: PeerChatState], peerNotificationSettings: [PeerId: PeerNotificationSettings], referencedMessageIds: Set<MessageId>, storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], namespacesWithHolesFromPreviousState: [PeerId: Set<MessageId.Namespace>], displayAlerts: [String], branchOperationIndex: Int) {
+    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], chatStates: [PeerId: PeerChatState], peerNotificationSettings: [PeerId: PeerNotificationSettings], referencedMessageIds: Set<MessageId>, storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], namespacesWithHolesFromPreviousState: [PeerId: Set<MessageId.Namespace>], displayAlerts: [(text: String, isDropAuth: Bool)], branchOperationIndex: Int) {
         self.initialState = initialState
         self.operations = operations
         self.state = state
@@ -180,8 +181,8 @@ struct AccountMutableState {
         self.addOperation(.AddMessages(messages, location))
     }
     
-    mutating func addDisplayAlert(_ text: String) {
-        self.displayAlerts.append(text)
+    mutating func addDisplayAlert(_ text: String, isDropAuth: Bool) {
+        self.displayAlerts.append((text: text, isDropAuth: isDropAuth))
     }
     
     mutating func deleteMessagesWithGlobalIds(_ globalIds: [Int32]) {
@@ -282,6 +283,10 @@ struct AccountMutableState {
         self.addOperation(.UpdatePeerInclusionMinTimestamp(peerId, timestamp))
     }
     
+    mutating func updatePeerGroup(peerId: PeerId, groupId: PeerGroupId?) {
+        self.addOperation(.UpdatePeerGroup(peerId, groupId))
+    }
+    
     mutating func mergeUsers(_ users: [Api.User]) {
         self.addOperation(.MergeApiUsers(users))
         
@@ -352,7 +357,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerInclusionMinTimestamp, .UpdatePeerChatUnreadMark, .UpdateIsContact:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerInclusionMinTimestamp, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerGroup:
                 break
             case let .AddMessages(messages, location):
                 for message in messages {
@@ -451,7 +456,7 @@ struct AccountFinalStateEvents {
     let updatedWebpages: [MediaId: TelegramMediaWebpage]
     let updatedCalls: [Api.PhoneCall]
     let isContactUpdates: [(PeerId, Bool)]
-    let displayAlerts: [String]
+    let displayAlerts: [(text: String, isDropAuth: Bool)]
     let delayNotificatonsUntil: Int32?
     let updatedMaxMessageId: Int32?
     let updatedQts: Int32?
@@ -472,7 +477,7 @@ struct AccountFinalStateEvents {
         self.updatedQts = nil
     }
     
-    init(addedIncomingMessageIds: [MessageId], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]], updatedWebpages: [MediaId: TelegramMediaWebpage], updatedCalls: [Api.PhoneCall], isContactUpdates: [(PeerId, Bool)], displayAlerts: [String], delayNotificatonsUntil: Int32?, updatedMaxMessageId: Int32?, updatedQts: Int32?) {
+    init(addedIncomingMessageIds: [MessageId], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]], updatedWebpages: [MediaId: TelegramMediaWebpage], updatedCalls: [Api.PhoneCall], isContactUpdates: [(PeerId, Bool)], displayAlerts: [(text: String, isDropAuth: Bool)], delayNotificatonsUntil: Int32?, updatedMaxMessageId: Int32?, updatedQts: Int32?) {
         self.addedIncomingMessageIds = addedIncomingMessageIds
         self.updatedTypingActivities = updatedTypingActivities
         self.updatedWebpages = updatedWebpages

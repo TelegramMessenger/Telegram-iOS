@@ -492,7 +492,7 @@ private final class CallSessionManagerContext {
         switch call {
         case .phoneCallEmpty:
             break
-        case let .phoneCallAccepted(id, _, _, _, _, gB, _):
+        case let .phoneCallAccepted(flags, id, _, _, _, _, gB, _):
             if let internalId = self.contextIdByStableId[id] {
                 if let context = self.contexts[internalId] {
                     switch context.state {
@@ -591,7 +591,7 @@ private final class CallSessionManagerContext {
                     //assertionFailure()
                 }
             }
-        case let .phoneCall(flags, id, _, _, _, _, gAOrB, keyFingerprint, callProtocol, connection, alternativeConnections, startDate):
+        case let .phoneCall(flags, id, _, _, _, _, gAOrB, keyFingerprint, callProtocol, connections, startDate):
             let allowsP2P = (flags & (1 << 5)) != 0
             if let internalId = self.contextIdByStableId[id] {
                 if let context = self.contexts[internalId] {
@@ -603,7 +603,7 @@ private final class CallSessionManagerContext {
                                 if keyFingerprint == calculatedKeyId {
                                     switch callProtocol {
                                         case let .phoneCallProtocol(_, _, maxLayer):
-                                            context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: calculatedKeyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connection, alternative: alternativeConnections), maxLayer: maxLayer, allowsP2P: allowsP2P)
+                                            context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: calculatedKeyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connections.first!, alternative: Array(connections[1...])), maxLayer: maxLayer, allowsP2P: allowsP2P)
                                             self.contextUpdated(internalId: internalId)
                                     }
                                 } else {
@@ -613,9 +613,9 @@ private final class CallSessionManagerContext {
                                 self.drop(internalId: internalId, reason: .disconnect)
                             }
                         case let .confirming(id, accessHash, key, keyId, keyVisualHash, _):
-                            switch callProtocol    {
+                            switch callProtocol {
                                 case let .phoneCallProtocol(_, _, maxLayer):
-                                    context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connection, alternative: alternativeConnections), maxLayer: maxLayer, allowsP2P: allowsP2P)
+                                    context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connections.first!, alternative: Array(connections[1...])), maxLayer: maxLayer, allowsP2P: allowsP2P)
                                     self.contextUpdated(internalId: internalId)
                             }
                     }
@@ -623,7 +623,7 @@ private final class CallSessionManagerContext {
                     assertionFailure()
                 }
             }
-        case let .phoneCallRequested(id, accessHash, date, adminId, _, gAHash, _):
+        case let .phoneCallRequested(flags, id, accessHash, date, adminId, _, gAHash, _):
             if self.contextIdByStableId[id] == nil {
                 self.addIncoming(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), stableId: id, accessHash: accessHash, timestamp: date, gAHash: gAHash.makeData())
             }
@@ -853,11 +853,11 @@ private func acceptCallSession(postbox: Postbox, network: Network, stableId: Cal
                             return .failed
                         case .phoneCallWaiting:
                             return .success(.waiting(config: config))
-                        case let .phoneCall(flags, id, _, _, _, _, gAOrB, _, callProtocol, connection, alternativeConnections, startDate):
+                        case let .phoneCall(flags, id, _, _, _, _, gAOrB, _, callProtocol, connections, startDate):
                             if id == stableId {
                                 switch callProtocol{
-                                case let .phoneCallProtocol(_, _, maxLayer):
-                                    return .success(.call(config: config, gA: gAOrB.makeData(), timestamp: startDate, connections: parseConnectionSet(primary: connection, alternative: alternativeConnections), maxLayer: maxLayer, allowsP2P: (flags & (1 << 5)) != 0))
+                                    case let .phoneCallProtocol(_, _, maxLayer):
+                                        return .success(.call(config: config, gA: gAOrB.makeData(), timestamp: startDate, connections: parseConnectionSet(primary: connections.first!, alternative: Array(connections[1...])), maxLayer: maxLayer, allowsP2P: (flags & (1 << 5)) != 0))
                                 }
                             } else {
                                 return .failed
@@ -893,12 +893,12 @@ private func requestCallSession(postbox: Postbox, network: Network, peerId: Peer
                 
                 let gAHash = MTSha256(ga)!
                 
-                return network.request(Api.functions.phone.requestCall(userId: inputUser, randomId: Int32(bitPattern: arc4random()), gAHash: Buffer(data: gAHash), protocol: .phoneCallProtocol(flags: (1 << 0) | (1 << 1), minLayer: minLayer, maxLayer: maxLayer)))
+                return network.request(Api.functions.phone.requestCall(flags: 0, userId: inputUser, randomId: Int32(bitPattern: arc4random()), gAHash: Buffer(data: gAHash), protocol: .phoneCallProtocol(flags: (1 << 0) | (1 << 1), minLayer: minLayer, maxLayer: maxLayer)))
                 |> map { result -> RequestCallSessionResult in
                     switch result {
                         case let .phoneCall(phoneCall, _):
                             switch phoneCall {
-                                case let .phoneCallRequested(id, accessHash, _, _, _, _, _):
+                                case let .phoneCallRequested(flags, id, accessHash, _, _, _, _, _):
                                     return .success(id: id, accessHash: accessHash, config: config, gA: ga, remoteConfirmationTimestamp: nil)
                                 case let .phoneCallWaiting(_, id, accessHash, _, _, _, _, receiveDate):
                                     return .success(id: id, accessHash: accessHash, config: config, gA: ga, remoteConfirmationTimestamp: receiveDate)
@@ -971,7 +971,7 @@ private func dropCallSession(network: Network, addUpdates: @escaping (Api.Update
         case .missed:
             mappedReason = .phoneCallDiscardReasonMissed
     }
-    return network.request(Api.functions.phone.discardCall(peer: Api.InputPhoneCall.inputPhoneCall(id: stableId, accessHash: accessHash), duration: duration, reason: mappedReason, connectionId: 0))
+    return network.request(Api.functions.phone.discardCall(flags: 0, peer: Api.InputPhoneCall.inputPhoneCall(id: stableId, accessHash: accessHash), duration: duration, reason: mappedReason, connectionId: 0))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)

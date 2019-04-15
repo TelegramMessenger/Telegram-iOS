@@ -154,8 +154,12 @@ private func synchronizeSavedStickers(transaction: Transaction, postbox: Postbox
                         |> mapError { _ -> SaveStickerError in
                             return .generic
                         }
-                        |> mapToSignal { reference -> Signal<Api.Bool, SaveStickerError> in
-                            return saveSticker(reference)
+                        |> mapToSignal { resource -> Signal<Api.Bool, SaveStickerError> in
+                            if let resource = resource as? TelegramCloudMediaResourceWithFileReference, let reference = resource.fileReference {
+                                return saveSticker(reference)
+                            } else {
+                                return .fail(.generic)
+                            }
                         }
                 }
             }

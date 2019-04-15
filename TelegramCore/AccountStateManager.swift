@@ -101,8 +101,8 @@ public final class AccountStateManager {
         return self.notificationMessagesPipe.signal()
     }
     
-    private let displayAlertsPipe = ValuePipe<[String]>()
-    public var displayAlerts: Signal<[String], NoError> {
+    private let displayAlertsPipe = ValuePipe<[(text: String, isDropAuth: Bool)]>()
+    public var displayAlerts: Signal<[(text: String, isDropAuth: Bool)], NoError> {
         return self.displayAlertsPipe.signal()
     }
     
@@ -630,7 +630,8 @@ public final class AccountStateManager {
                     for id in events.addedIncomingMessageIds {
                         let (messages, notify, _, _) = messagesForNotification(transaction: transaction, id: id, alwaysReturnMessage: false)
                         if !messages.isEmpty {
-                            messageList.append((messages, transaction.getPeerGroupId(messages[0].id.peerId), notify))
+                            messageList.append((messages, nil, notify))
+                            //messageList.append((messages, transaction.getPeerGroupId(messages[0].id.peerId), notify))
                         }
                     }
                     return messageList
@@ -988,7 +989,7 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
     var foundReadState = false
     var isUnread = true
     if let readState = transaction.getCombinedPeerReadState(id.peerId) {
-        if readState.isIncomingMessageIndexRead(MessageIndex(message)) {
+        if readState.isIncomingMessageIndexRead(message.index) {
             isUnread = false
         }
         foundReadState = true

@@ -105,12 +105,6 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
         if let updatedInclusion = updatedInclusion {
             transaction.updatePeerChatListInclusion(peerId, inclusion: updatedInclusion)
         }
-        if let channel = updated as? TelegramChannel {
-            let previousGroupId = (previous as? TelegramChannel)?.peerGroupId
-            if previousGroupId != channel.peerGroupId {
-                transaction.updatePeerGroupId(peerId, groupId: channel.peerGroupId)
-            }
-        }
         return update(previous, updated)
     })
 }

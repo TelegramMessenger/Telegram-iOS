@@ -7,42 +7,38 @@ import Foundation
 
 private func collectPreCachedResources(for photo: Api.Photo) -> [(MediaResource, Data)]? {
     switch photo {
-        case let .photo(_, _, _, _, _, sizes):
+        case let .photo(_, id, accessHash, fileReference, _, sizes, dcId):
             for size in sizes {
                 switch size {
-                    case let .photoCachedSize(_, location, _, _, bytes):
+                    case let .photoCachedSize(type, location, _, _, bytes):
                         switch location {
-                            case let .fileLocation(dcId, volumeId, localId, secret, fileReference):
+                            case let .fileLocationToBeDeprecated(volumeId, localId):
+                                let resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference.makeData())
                                 let data = bytes.makeData()
-                                let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: data.count, fileReference: fileReference.makeData())
                                 return [(resource, data)]
-                            default:
-                                break
                         }
                     default:
                         break
                 }
             }
             return nil
-        default:
+        case .photoEmpty:
             return nil
     }
 }
 
 private func collectPreCachedResources(for document: Api.Document) -> [(MediaResource, Data)]? {
     switch document {
-        case let .document(content):
-            if let thumbs = content.thumbs {
+        case let .document(_, id, accessHash, fileReference, _, _, _, thumbs, dcId, _):
+            if let thumbs = thumbs {
                 for thumb in thumbs {
                     switch thumb {
-                        case let .photoCachedSize(_, location, _, _, bytes):
+                        case let .photoCachedSize(type, location, _, _, bytes):
                             switch location {
-                                case let .fileLocation(dcId, volumeId, localId, secret, fileReference):
+                                case let .fileLocationToBeDeprecated(volumeId, localId):
+                                    let resource = CloudDocumentSizeMediaResource(datacenterId: dcId, documentId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference.makeData())
                                     let data = bytes.makeData()
-                                    let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: data.count, fileReference: fileReference.makeData())
                                     return [(resource, data)]
-                                default:
-                                    break
                             }
                         default:
                             break
@@ -206,11 +202,10 @@ extension Api.Peer {
 extension Api.Dialog {
     var peerId: PeerId? {
         switch self {
-            case let .dialog(_, peer, _, _, _, _, _, _, _, _):
+            case let .dialog(_, peer, _, _, _, _, _, _, _, _, _):
                 return peer.peerId
-            /*feed*/
-            /*case .dialogFeed:
-                return nil*/
+            case .dialogFolder:
+                return nil
         }
     }
 }
@@ -509,7 +504,7 @@ extension Api.Updates {
                 }
                 return result
             case let .updateShort(update, _):
-                if let message = update.channelPts {
+                if let channelPts = update.channelPts {
                     return channelPts
                 } else {
                     return nil

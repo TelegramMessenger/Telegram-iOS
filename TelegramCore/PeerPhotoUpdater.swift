@@ -65,21 +65,31 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                             case let .inputFile(file):
                                 if peer is TelegramUser {
                                     return network.request(Api.functions.photos.uploadProfilePhoto(file: file))
-                                    |> mapError {_ in return UploadPeerPhotoError.generic}
+                                    |> mapError { _ in return UploadPeerPhotoError.generic }
                                     |> mapToSignal { photo -> Signal<(UpdatePeerPhotoStatus, MediaResource?), UploadPeerPhotoError> in
-                                        
-                                        let representations: [TelegramMediaImageRepresentation]
+                                        var representations: [TelegramMediaImageRepresentation] = []
                                         switch photo {
                                         case let .photo(photo: apiPhoto, users: _):
                                             switch apiPhoto {
                                                 case .photoEmpty:
-                                                    representations = []
-                                                case let .photo(photo):
-                                                    var sizes = photo.sizes
+                                                    break
+                                                case let .photo(_, _, _, _, _, sizes, dcId):
+                                                    var sizes = sizes
                                                     if sizes.count == 3 {
                                                         sizes.remove(at: 1)
                                                     }
-                                                    representations = telegramMediaImageRepresentationsFromApiSizes(sizes).1
+                                                    for size in sizes {
+                                                        switch size {
+                                                            case let .photoSize(_, location, w, h, _):
+                                                                switch location {
+                                                                    case let .fileLocationToBeDeprecated(volumeId, localId):
+                                                                        representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: CloudPeerPhotoSizeMediaResource(datacenterId: dcId, sizeSpec: w <= 200 ? .small : .fullSize, volumeId: volumeId, localId: localId)))
+                                                                }
+                                                            default:
+                                                                break
+                                                        }
+                                                    }
+                                                    
                                                     if let resource = result.resource as? LocalFileReferenceMediaResource {
                                                         if let data = try? Data(contentsOf: URL(fileURLWithPath: resource.localFilePath)) {
                                                             for representation in representations {

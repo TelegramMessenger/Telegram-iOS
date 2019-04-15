@@ -115,7 +115,7 @@ private func mergedState(transaction: Transaction, state: SearchMessagesPeerStat
     }
     
     renderedMessages.sort(by: { lhs, rhs in
-        return MessageIndex(lhs) > MessageIndex(rhs)
+        return lhs.index > rhs.index
     })
     
     let completed = renderedMessages.isEmpty
@@ -137,7 +137,7 @@ private func mergedState(transaction: Transaction, state: SearchMessagesPeerStat
             mergedMessages.append(message)
         }
         mergedMessages.sort(by: { lhs, rhs in
-            return MessageIndex(lhs) > MessageIndex(rhs)
+            return lhs.index > rhs.index
         })
         return SearchMessagesPeerState(messages: mergedMessages, readStates: readStates, totalCount: completed ? Int32(mergedMessages.count) : totalCount, completed: completed)
     } else {
@@ -151,12 +151,12 @@ private func mergedResult(_ state: SearchMessagesState) -> SearchMessagesResult 
         if state.main.completed {
             messages.append(contentsOf: additional.messages)
         } else if let lastMessage = state.main.messages.last {
-            let earliestIndex = MessageIndex(lastMessage)
-            messages.append(contentsOf: additional.messages.filter({ MessageIndex($0) > earliestIndex }))
+            let earliestIndex = lastMessage.index
+            messages.append(contentsOf: additional.messages.filter({ $0.index > earliestIndex }))
         }
     }
     messages.sort(by: { lhs, rhs in
-        return MessageIndex(lhs) > MessageIndex(rhs)
+        return lhs.index > rhs.index
     })
     
     var readStates: [PeerId: CombinedPeerReadState] = [:]
@@ -233,7 +233,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 if let completed = state?.main.completed, completed {
                     peerMessages = .single(nil)
                 } else {
-                    let lowerBound = state?.main.messages.last.flatMap(MessageIndex.init)
+                    let lowerBound = state?.main.messages.last.flatMap({ $0.index })
                     peerMessages =  account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: lowerBound?.id.id ?? 0, addOffset: 0, limit: limit, maxId: Int32.max - 1, minId: 0, hash: 0))
                     |> map(Optional.init)
                     |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
@@ -247,7 +247,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     if let completed = state?.additional?.completed, completed {
                         additionalPeerMessages = .single(nil)
                     } else if mainCompleted || !hasAdditional {
-                        let lowerBound = state?.additional?.messages.last.flatMap(MessageIndex.init)
+                        let lowerBound = state?.additional?.messages.last.flatMap({ $0.index })
                         additionalPeerMessages = account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: lowerBound?.id.id ?? 0, addOffset: 0, limit: limit, maxId: Int32.max - 1, minId: 0, hash: 0))
                         |> map(Optional.init)
                         |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
@@ -262,7 +262,6 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 return combineLatest(peerMessages, additionalPeerMessages)
             }
         case let .group(groupId):
-            /*feed*/
             remoteSearchResult = .single((nil, nil))
             /*remoteSearchResult = account.network.request(Api.functions.channels.searchFeed(feedId: groupId.rawValue, q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64), automaticFloodWait: false)
                 |> mapError { _ in } |> map(Optional.init)*/
@@ -270,7 +269,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
             remoteSearchResult = account.postbox.transaction { transaction -> (MessageIndex?, Api.InputPeer) in
                 var lowerBound: MessageIndex?
                 if let state = state, let message = state.main.messages.last {
-                    lowerBound = MessageIndex(message)
+                    lowerBound = message.index
                 }
                 if let lowerBound = lowerBound, let peer = transaction.getPeer(lowerBound.id.peerId), let inputPeer = apiInputPeer(peer) {
                     return (lowerBound, inputPeer)

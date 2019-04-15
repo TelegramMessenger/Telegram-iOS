@@ -499,9 +499,7 @@ public enum MediaResourceReference: Equatable {
 
 extension MediaResourceReference {
     var apiFileReference: Data? {
-        if let resource = self.resource as? CloudFileMediaResource {
-            return resource.fileReference
-        } else if let resource = self.resource as? CloudDocumentMediaResource {
+        if let resource = self.resource as? TelegramCloudMediaResourceWithFileReference {
             return resource.fileReference
         } else {
             return nil
@@ -552,11 +550,20 @@ public func stickerPackFileReference(_ file: TelegramMediaFile) -> FileMediaRefe
     return .standalone(media: file)
 }
 
-private func findMediaResource(media: Media, resource: MediaResource) -> MediaResource? {
+private func findMediaResource(media: Media, previousMedia: Media?, resource: MediaResource) -> TelegramMediaResource? {
     if let image = media as? TelegramMediaImage {
         for representation in image.representations {
             if representation.resource.id.isEqual(to: resource.id) {
                 return representation.resource
+            }
+        }
+        if let legacyResource = resource as? CloudFileMediaResource {
+            for representation in image.representations {
+                if let updatedResource = representation.resource as? CloudPhotoSizeMediaResource {
+                    if updatedResource.localId == legacyResource.localId && updatedResource.volumeId == legacyResource.volumeId {
+                        return representation.resource
+                    }
+                }
             }
         }
     } else if let file = media as? TelegramMediaFile {
@@ -568,32 +575,41 @@ private func findMediaResource(media: Media, resource: MediaResource) -> MediaRe
                     return representation.resource
                 }
             }
+            if let legacyResource = resource as? CloudFileMediaResource {
+                for representation in file.previewRepresentations {
+                    if let updatedResource = representation.resource as? CloudDocumentSizeMediaResource {
+                        if updatedResource.localId == legacyResource.localId && updatedResource.volumeId == legacyResource.volumeId {
+                            return representation.resource
+                        }
+                    }
+                }
+            }
         }
     } else if let webPage = media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content {
-        if let image = content.image, let result = findMediaResource(media: image, resource: resource) {
+        if let image = content.image, let result = findMediaResource(media: image, previousMedia: previousMedia, resource: resource) {
             return result
         }
-        if let file = content.file, let result = findMediaResource(media: file, resource: resource) {
+        if let file = content.file, let result = findMediaResource(media: file, previousMedia: previousMedia, resource: resource) {
             return result
         }
         if let instantPage = content.instantPage {
             for pageMedia in instantPage.media.values {
-                if let result = findMediaResource(media: pageMedia, resource: resource) {
+                if let result = findMediaResource(media: pageMedia, previousMedia: previousMedia, resource: resource) {
                     return result
                 }
             }
         }
     } else if let game = media as? TelegramMediaGame {
-        if let image = game.image, let result = findMediaResource(media: image, resource: resource) {
+        if let image = game.image, let result = findMediaResource(media: image, previousMedia: previousMedia, resource: resource) {
             return result
         }
-        if let file = game.file, let result = findMediaResource(media: file, resource: resource) {
+        if let file = game.file, let result = findMediaResource(media: file, previousMedia: previousMedia, resource: resource) {
             return result
         }
     } else if let action = media as? TelegramMediaAction {
         switch action.action {
             case let .photoUpdated(image):
-                if let image = image, let result = findMediaResource(media: image, resource: resource) {
+                if let image = image, let result = findMediaResource(media: image, previousMedia: previousMedia, resource: resource) {
                     return result
                 }
             default:
@@ -603,19 +619,9 @@ private func findMediaResource(media: Media, resource: MediaResource) -> MediaRe
     return nil
 }
 
-private func findMediaResourceReference(media: Media, resource: MediaResource) -> Data? {
-    if let foundResource = findMediaResource(media: media, resource: resource) {
-        return findResourceReference(in: foundResource, resource: resource)
-    } else {
-        return nil
-    }
-}
-
-private func findResourceReference(in foundResource: MediaResource, resource: MediaResource) -> Data? {
-    if let foundResource = foundResource as? CloudFileMediaResource {
-        return foundResource.fileReference
-    } else if let foundResource = foundResource as? CloudDocumentMediaResource {
-        return foundResource.fileReference
+private func findUpdatedMediaResource(media: Media, previousMedia: Media?, resource: MediaResource) -> TelegramMediaResource? {
+    if let foundResource = findMediaResource(media: media, previousMedia: previousMedia, resource: resource) {
+        return foundResource
     } else {
         return nil
     }
@@ -896,7 +902,7 @@ final class MediaReferenceRevalidationContext {
     }
 }
 
-func revalidateMediaResourceReference(postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo, resource: MediaResource) -> Signal<Data, RevalidateMediaReferenceError> {
+func revalidateMediaResourceReference(postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo, resource: MediaResource) -> Signal<TelegramMediaResource, RevalidateMediaReferenceError> {
     var updatedReference = info.reference
     if case let .media(media, resource) = updatedReference {
         if case let .message(_, mediaValue) = media {
@@ -928,45 +934,45 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
     switch updatedReference {
         case let .media(media, _):
             switch media {
-                case let .message(message, _):
+                case let .message(message, previousMedia):
                     return revalidationContext.message(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, message: message)
-                    |> mapToSignal { message -> Signal<Data, RevalidateMediaReferenceError> in
+                    |> mapToSignal { message -> Signal<TelegramMediaResource, RevalidateMediaReferenceError> in
                         for media in message.media {
-                            if let fileReference = findMediaResourceReference(media: media, resource: resource) {
-                                return .single(fileReference)
+                            if let updatedResource = findUpdatedMediaResource(media: media, previousMedia: previousMedia, resource: resource) {
+                                return .single(updatedResource)
                             }
                         }
                         return .fail(.generic)
                     }
                 case let .stickerPack(stickerPack, media):
                     return revalidationContext.stickerPack(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, stickerPack: stickerPack)
-                    |> mapToSignal { result -> Signal<Data, RevalidateMediaReferenceError> in
+                    |> mapToSignal { result -> Signal<TelegramMediaResource, RevalidateMediaReferenceError> in
                         for item in result.1 {
                             if let item = item as? StickerPackItem {
                                 if media.id != nil && item.file.id == media.id {
-                                    if let fileReference = findMediaResourceReference(media: item.file, resource: resource) {
-                                        return .single(fileReference)
+                                    if let updatedResource = findUpdatedMediaResource(media: item.file, previousMedia: media, resource: resource) {
+                                        return .single(updatedResource)
                                     }
                                 }
                             }
                         }
                         return .fail(.generic)
                     }
-                case let .webPage(webPage, _):
+                case let .webPage(webPage, previousMedia):
                     return revalidationContext.webPage(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, webPage: webPage)
-                    |> mapToSignal { result -> Signal<Data, RevalidateMediaReferenceError> in
-                        if let fileReference = findMediaResourceReference(media: result, resource: resource) {
-                            return .single(fileReference)
+                    |> mapToSignal { result -> Signal<TelegramMediaResource, RevalidateMediaReferenceError> in
+                        if let updatedResource = findUpdatedMediaResource(media: result, previousMedia: previousMedia, resource: resource) {
+                            return .single(updatedResource)
                         }
                         return .fail(.generic)
                     }
                 case let .savedGif(media):
                     return revalidationContext.savedGifs(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation)
-                    |> mapToSignal { result -> Signal<Data, RevalidateMediaReferenceError> in
+                    |> mapToSignal { result -> Signal<TelegramMediaResource, RevalidateMediaReferenceError> in
                         for file in result {
                             if media.id != nil && file.id == media.id {
-                                if let fileReference = findMediaResourceReference(media: file, resource: resource) {
-                                    return .single(fileReference)
+                                if let updatedResource = findUpdatedMediaResource(media: file, previousMedia: media, resource: resource) {
+                                    return .single(updatedResource)
                                 }
                             }
                         }
@@ -977,17 +983,17 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                         for attribute in file.attributes {
                             if case let .Sticker(sticker) = attribute, let stickerPack = sticker.packReference {
                                 return revalidationContext.stickerPack(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, stickerPack: stickerPack)
-                                    |> mapToSignal { result -> Signal<Data, RevalidateMediaReferenceError> in
-                                        for item in result.1 {
-                                            if let item = item as? StickerPackItem {
-                                                if media.id != nil && item.file.id == media.id {
-                                                    if let fileReference = findMediaResourceReference(media: item.file, resource: resource) {
-                                                        return .single(fileReference)
-                                                    }
+                                |> mapToSignal { result -> Signal<TelegramMediaResource, RevalidateMediaReferenceError> in
+                                    for item in result.1 {
+                                        if let item = item as? StickerPackItem {
+                                            if media.id != nil && item.file.id == media.id {
+                                                if let updatedResource = findUpdatedMediaResource(media: item.file, previousMedia: media,  resource: resource) {
+                                                    return .single(updatedResource)
                                                 }
                                             }
                                         }
-                                        return .fail(.generic)
+                                    }
+                                    return .fail(.generic)
                                 }
                             }
                         }
@@ -996,21 +1002,39 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
             }
         case let .avatar(peer, _):
             return revalidationContext.peer(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, peer: peer)
-            |> mapToSignal { updatedPeer -> Signal<Data, RevalidateMediaReferenceError> in
+            |> mapToSignal { updatedPeer -> Signal<TelegramMediaResource, RevalidateMediaReferenceError> in
                 for representation in updatedPeer.profileImageRepresentations {
-                    if representation.resource.id.isEqual(to: resource.id), let representationResource = representation.resource as? CloudFileMediaResource, let fileReference = representationResource.fileReference {
-                        return .single(fileReference)
+                    if representation.resource.id.isEqual(to: resource.id) {
+                        return .single(representation.resource)
+                    }
+                }
+                if let legacyResource = resource as? CloudFileMediaResource {
+                    for representation in updatedPeer.profileImageRepresentations {
+                        if let updatedResource = representation.resource as? CloudPeerPhotoSizeMediaResource {
+                            if updatedResource.localId == legacyResource.localId && updatedResource.volumeId == legacyResource.volumeId {
+                                return .single(updatedResource)
+                            }
+                        }
                     }
                 }
                 return .fail(.generic)
             }
         case let .messageAuthorAvatar(message, _):
             return revalidationContext.message(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, message: message)
-            |> mapToSignal { updatedMessage -> Signal<Data, RevalidateMediaReferenceError> in
+            |> mapToSignal { updatedMessage -> Signal<TelegramMediaResource, RevalidateMediaReferenceError> in
                 if let author = updatedMessage.author {
                     for representation in author.profileImageRepresentations {
-                        if representation.resource.id.isEqual(to: resource.id), let representationResource = representation.resource as? CloudFileMediaResource, let fileReference = representationResource.fileReference {
-                            return .single(fileReference)
+                        if representation.resource.id.isEqual(to: resource.id) {
+                            return .single(representation.resource)
+                        }
+                    }
+                    if let legacyResource = resource as? CloudFileMediaResource {
+                        for representation in author.profileImageRepresentations {
+                            if let updatedResource = representation.resource as? CloudPeerPhotoSizeMediaResource {
+                                if updatedResource.localId == legacyResource.localId && updatedResource.volumeId == legacyResource.volumeId {
+                                    return .single(updatedResource)
+                                }
+                            }
                         }
                     }
                 }
@@ -1018,18 +1042,18 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
             }
         case .wallpaper:
             return revalidationContext.wallpapers(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation)
-            |> mapToSignal { wallpapers -> Signal<Data, RevalidateMediaReferenceError> in
+            |> mapToSignal { wallpapers -> Signal<TelegramMediaResource, RevalidateMediaReferenceError> in
                 for wallpaper in wallpapers {
                     switch wallpaper {
                         case let .image(representations, _):
                             for representation in representations {
-                                if representation.resource.id.isEqual(to: resource.id), let representationResource = representation.resource as? CloudFileMediaResource, let fileReference = representationResource.fileReference {
-                                    return .single(fileReference)
+                                if representation.resource.id.isEqual(to: resource.id) {
+                                    return .single(representation.resource)
                                 }
                             }
                         case let .file(_, _, _, _, _, _, _, file, _):
-                            if let fileReference = findMediaResourceReference(media: file, resource: resource) {
-                                return .single(fileReference)
+                            if let updatedResource = findUpdatedMediaResource(media: file, previousMedia: nil, resource: resource) {
+                                return .single(updatedResource)
                             }
                         default:
                             break
@@ -1039,11 +1063,16 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
             }
         case let .stickerPackThumbnail(packReference, resource):
             return revalidationContext.stickerPack(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, stickerPack: packReference)
-            |> mapToSignal { result -> Signal<Data, RevalidateMediaReferenceError> in
+            |> mapToSignal { result -> Signal<TelegramMediaResource, RevalidateMediaReferenceError> in
                 if let thumbnail = result.0.thumbnail {
                     if thumbnail.resource.id.isEqual(to: resource.id) {
-                        if let fileReference = findResourceReference(in: thumbnail.resource, resource: resource) {
-                            return .single(fileReference)
+                        return .single(thumbnail.resource)
+                    }
+                    if let legacyResource = resource as? CloudFileMediaResource {
+                        if let updatedResource = thumbnail.resource as? CloudStickerPackThumbnailMediaResource {
+                            if updatedResource.localId == legacyResource.localId && updatedResource.volumeId == legacyResource.volumeId {
+                                return .single(updatedResource)
+                            }
                         }
                     }
                 }

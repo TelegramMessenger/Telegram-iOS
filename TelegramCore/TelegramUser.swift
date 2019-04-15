@@ -236,38 +236,33 @@ public final class TelegramUser: Peer {
     }
 }
 
-func parsedTelegramProfilePhoto(_ photo: Api.UserProfilePhoto?) -> [TelegramMediaImageRepresentation] {
-    var telegramPhoto: [TelegramMediaImageRepresentation] = []
-    if let photo = photo {
-        switch photo {
-            case let .userProfilePhoto(_, photoSmall, photoBig):
-                if let smallResource = mediaResourceFromApiFileLocation(photoSmall, size: nil), let largeResource = mediaResourceFromApiFileLocation(photoBig, size: nil) {
-                    telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), resource: smallResource))
-                    telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: largeResource))
-                }
-            case .userProfilePhotoEmpty:
-                break
-        }
+func parsedTelegramProfilePhoto(_ photo: Api.UserProfilePhoto) -> [TelegramMediaImageRepresentation] {
+    var representations: [TelegramMediaImageRepresentation] = []
+    switch photo {
+        case let .userProfilePhoto(photoId, photoSmall, photoBig, dcId):
+            let smallResource: TelegramMediaResource
+            let fullSizeResource: TelegramMediaResource
+            switch photoSmall {
+                case let .fileLocationToBeDeprecated(volumeId, localId):
+                    smallResource = CloudPeerPhotoSizeMediaResource(datacenterId: dcId, sizeSpec: .small, volumeId: volumeId, localId: localId)
+            }
+            switch photoBig {
+                case let .fileLocationToBeDeprecated(volumeId, localId):
+                    fullSizeResource = CloudPeerPhotoSizeMediaResource(datacenterId: dcId, sizeSpec: .fullSize, volumeId: volumeId, localId: localId)
+            }
+            representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), resource: smallResource))
+            representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: fullSizeResource))
+        case .userProfilePhotoEmpty:
+            break
     }
-    return telegramPhoto
+    return representations
 }
 
 extension TelegramUser {
     convenience init(user: Api.User) {
         switch user {
         case let .user(flags, id, accessHash, firstName, lastName, username, phone, photo, _, _, restrictionReason, botInlinePlaceholder, _):
-            var telegramPhoto: [TelegramMediaImageRepresentation] = []
-            if let photo = photo {
-                switch photo {
-                case let .userProfilePhoto(_, photoSmall, photoBig):
-                    if let smallResource = mediaResourceFromApiFileLocation(photoSmall, size: nil), let largeResource = mediaResourceFromApiFileLocation(photoBig, size: nil) {
-                        telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), resource: smallResource))
-                        telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: largeResource))
-                    }
-                case .userProfilePhotoEmpty:
-                    break
-                }
-            }
+            let representations: [TelegramMediaImageRepresentation] = photo.flatMap(parsedTelegramProfilePhoto) ?? []
             
             var userFlags: UserInfoFlags = []
             if (flags & (1 << 17)) != 0 {
@@ -294,7 +289,7 @@ extension TelegramUser {
             
             let restrictionInfo: PeerAccessRestrictionInfo? = restrictionReason.flatMap(PeerAccessRestrictionInfo.init)
             
-            self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), accessHash: accessHash, firstName: firstName, lastName: lastName, username: username, phone: phone, photo: telegramPhoto, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags)
+            self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), accessHash: accessHash, firstName: firstName, lastName: lastName, username: username, phone: phone, photo: representations, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags)
         case let .userEmpty(id):
             self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: id), accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
         }
@@ -306,7 +301,7 @@ extension TelegramUser {
                 if let _ = accessHash {
                     return TelegramUser(user: rhs)
                 } else {
-                    let telegramPhoto = parsedTelegramProfilePhoto(photo)
+                    let telegramPhoto = photo.flatMap(parsedTelegramProfilePhoto) ?? []
                     if let lhs = lhs {
                         var userFlags: UserInfoFlags = []
                         if (flags & (1 << 17)) != 0 {

@@ -552,11 +552,37 @@ public func fileNameFromFileAttributes(_ attributes: [TelegramMediaFileAttribute
     return nil
 }
 
+func telegramMediaFileThumbnailRepresentationsFromApiSizes(datacenterId: Int32, documentId: Int64, accessHash: Int64, fileReference: Data?, sizes: [Api.PhotoSize]) -> (immediateThumbnail: Data?, representations:  [TelegramMediaImageRepresentation]) {
+    var immediateThumbnailData: Data?
+    var representations: [TelegramMediaImageRepresentation] = []
+    for size in sizes {
+        switch size {
+            case let .photoCachedSize(type, location, w, h, _):
+                switch location {
+                    case let .fileLocationToBeDeprecated(volumeId, localId):
+                        let resource = CloudDocumentSizeMediaResource(datacenterId: datacenterId, documentId: documentId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference)
+                        representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: resource))
+                }
+            case let .photoSize(type, location, w, h, _):
+                switch location {
+                    case let .fileLocationToBeDeprecated(volumeId, localId):
+                        let resource = CloudDocumentSizeMediaResource(datacenterId: datacenterId, documentId: documentId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference)
+                        representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: resource))
+                }
+            case let .photoStrippedSize(_, data):
+                immediateThumbnailData = data.makeData()
+            case .photoSizeEmpty:
+                break
+        }
+    }
+    return (immediateThumbnailData, representations)
+}
+
 func telegramMediaFileFromApiDocument(_ document: Api.Document) -> TelegramMediaFile? {
     switch document {
         case let .document(_, id, accessHash, fileReference, _, mimeType, size, thumbs, dcId, attributes):
             let parsedAttributes = telegramMediaFileAttributesFromApiAttributes(attributes)
-            let (immediateThumbnail, previewRepresentations) = telegramMediaImageRepresentationsFromApiSizes(thumbs ?? [])
+            let (immediateThumbnail, previewRepresentations) = telegramMediaFileThumbnailRepresentationsFromApiSizes(datacenterId: dcId, documentId: id, accessHash: accessHash, fileReference: fileReference.makeData(), sizes: thumbs ?? [])
             
             return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size), fileReference: fileReference.makeData(), fileName: fileNameFromFileAttributes(parsedAttributes)), previewRepresentations: previewRepresentations, immediateThumbnailData: immediateThumbnail, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
         case .documentEmpty:

@@ -62,17 +62,7 @@ public func joinLinkInformation(_ hash: String, account: Account) -> Signal<Exte
         if let result = result {
             switch result {
                 case let .chatInvite(invite):
-                    let photo: TelegramMediaImageRepresentation?
-                    switch invite.photo {
-                        case let .chatPhoto(photos):
-                            if let resource = mediaResourceFromApiFileLocation(photos.photoSmall, size: nil) {
-                                photo = TelegramMediaImageRepresentation(dimensions: CGSize(width: 100.0, height: 100.0), resource: resource)
-                            } else {
-                                photo = nil
-                            }
-                        case .chatPhotoEmpty:
-                            photo = nil
-                    }
+                    let photo = telegramMediaImageFromApiPhoto(invite.photo).flatMap({ smallestImageRepresentation($0.representations) })
                     return .single(.invite(title: invite.title, photoRepresentation: photo, participantsCount: invite.participantsCount, participants: invite.participants?.map({TelegramUser(user: $0)})))
                 case let .chatInviteAlready(chat: chat):
                     if let peer = parseTelegramGroupOrChannel(chat: chat) {

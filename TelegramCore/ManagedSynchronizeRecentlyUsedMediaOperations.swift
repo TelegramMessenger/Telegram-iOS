@@ -158,8 +158,12 @@ private func synchronizeRecentlyUsedMedia(transaction: Transaction, postbox: Pos
                         |> mapError { _ -> SaveRecentlyUsedMediaError in
                             return .generic
                         }
-                        |> mapToSignal { reference -> Signal<Api.Bool, SaveRecentlyUsedMediaError> in
-                            return addSticker(reference)
+                        |> mapToSignal { resource -> Signal<Api.Bool, SaveRecentlyUsedMediaError> in
+                            if let resource = resource as? TelegramCloudMediaResourceWithFileReference, let reference = resource.fileReference {
+                                return addSticker(reference)
+                            } else {
+                                return .fail(.generic)
+                            }
                         }
                 }
             }
@@ -171,6 +175,14 @@ private func synchronizeRecentlyUsedMedia(transaction: Transaction, postbox: Pos
             }
         case let .remove(id, accessHash):
             return network.request(Api.functions.messages.saveRecentSticker(flags: 0, id: .inputDocument(id: id, accessHash: accessHash, fileReference: Buffer()), unsave: .boolTrue))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
+        case .clear:
+            return network.request(Api.functions.messages.clearRecentStickers(flags: 0))
             |> `catch` { _ -> Signal<Api.Bool, NoError> in
                 return .single(.boolFalse)
             }

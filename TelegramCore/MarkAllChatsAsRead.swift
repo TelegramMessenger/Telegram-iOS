@@ -56,6 +56,8 @@ public func markAllChatsAsRead(postbox: Postbox, network: Network, stateManager:
                         } else {
                             assertionFailure()
                         }
+                    case .dialogPeerFolder:
+                        assertionFailure()
                 }
             }
             

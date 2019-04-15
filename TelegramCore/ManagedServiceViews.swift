@@ -13,7 +13,7 @@ func managedServiceViews(accountPeerId: PeerId, network: Network, postbox: Postb
         disposable.add(managedMessageHistoryHoles(accountPeerId: accountPeerId, network: network, postbox: postbox).start())
         disposable.add(managedChatListHoles(network: network, postbox: postbox, accountPeerId: accountPeerId).start())
         disposable.add(managedSynchronizePeerReadStates(network: network, postbox: postbox, stateManager: stateManager).start())
-        disposable.add(managedGroupFeedReadStateSyncOperations(postbox: postbox, network: network, accountPeerId: accountPeerId, stateManager: stateManager).start())
+        //disposable.add(managedGroupFeedReadStateSyncOperations(postbox: postbox, network: network, accountPeerId: accountPeerId, stateManager: stateManager).start())
         
         return disposable
     }

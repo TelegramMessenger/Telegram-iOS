@@ -17,6 +17,8 @@ public enum ChannelMembersCategoryFilter {
 public enum ChannelMembersCategory {
     case recent(ChannelMembersCategoryFilter)
     case admins
+    case contacts(ChannelMembersCategoryFilter)
+    case bots(ChannelMembersCategoryFilter)
     case restricted(ChannelMembersCategoryFilter)
     case banned(ChannelMembersCategoryFilter)
 }
@@ -35,6 +37,15 @@ public func channelMembers(postbox: Postbox, network: Network, accountPeerId: Pe
                     }
                 case .admins:
                     apiFilter = .channelParticipantsAdmins
+                case let .contacts(filter):
+                    switch filter {
+                        case .all:
+                            apiFilter = .channelParticipantsContacts(q: "")
+                        case let .search(query):
+                            apiFilter = .channelParticipantsContacts(q: query)
+                    }
+                case .bots:
+                    apiFilter = .channelParticipantsBots
                 case let .restricted(filter):
                     switch filter {
                         case .all:
