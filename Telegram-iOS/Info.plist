@@ -87,6 +87,9 @@
 		<string>uber</string>
 		<string>citymapper</string>
 		<string>lyft</string>
+		<string>opera-http</string>
+		<string>opera-https</string>
+		<string>firefox-focus</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>

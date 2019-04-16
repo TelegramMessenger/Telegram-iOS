@@ -359,7 +359,6 @@
 		D09DCBB71D0C856B00F51FFE /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = D09DCBB51D0C856B00F51FFE /* Localizable.strings */; };
 		D0A18D631E149043004C6734 /* PushKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0A18D621E149043004C6734 /* PushKit.framework */; };
 		D0A18D651E15C020004C6734 /* WakeupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A18D641E15C020004C6734 /* WakeupManager.swift */; };
-		D0A18D691E16AC9D004C6734 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A18D681E16AC9D004C6734 /* NotificationManager.swift */; };
 		D0ADF958212B56DC00310BBC /* LegacyUserDataImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ADF957212B56DC00310BBC /* LegacyUserDataImport.swift */; };
 		D0ADF95A212B5AC600310BBC /* LegacyResourceImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ADF959212B5AC600310BBC /* LegacyResourceImport.swift */; };
 		D0ADF95C212B636D00310BBC /* LegacyChatImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ADF95B212B636D00310BBC /* LegacyChatImport.swift */; };
@@ -1089,7 +1088,6 @@
 		D09DCBB61D0C856B00F51FFE /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		D0A18D621E149043004C6734 /* PushKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PushKit.framework; path = System/Library/Frameworks/PushKit.framework; sourceTree = SDKROOT; };
 		D0A18D641E15C020004C6734 /* WakeupManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WakeupManager.swift; sourceTree = "<group>"; };
-		D0A18D681E16AC9D004C6734 /* NotificationManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		D0AA1A671D568BA400152314 /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
 		D0AA1A691D568BA400152314 /* UserNotificationsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotificationsUI.framework; path = System/Library/Frameworks/UserNotificationsUI.framework; sourceTree = SDKROOT; };
 		D0AB0B9F1D6708B9002C78E7 /* Postbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Postbox.framework; path = "submodules/Postbox/build/Debug-iphoneos/Postbox.framework"; sourceTree = "<group>"; };
@@ -1989,7 +1987,6 @@
 				D053DAD22018ED2B00993D32 /* LockedWindowCoveringView.swift */,
 				D084023120E1883500065674 /* ApplicationShortcutItem.swift */,
 				D0A18D641E15C020004C6734 /* WakeupManager.swift */,
-				D0A18D681E16AC9D004C6734 /* NotificationManager.swift */,
 				D0EB243A201B77C400F6CC13 /* ClearNotificationsManager.swift */,
 				D00859A81B28189D00EAF753 /* Images.xcassets */,
 				D00859AA1B28189D00EAF753 /* LaunchScreen.xib */,
@@ -3304,7 +3301,6 @@
 				D0ADF961212C8DF600310BBC /* TGAutoDownloadPreferences.m in Sources */,
 				D05B37FB1FEA8D020041D2A5 /* SnapshotAppearanceSettings.swift in Sources */,
 				D0CE6F1C213ED11100BCD44B /* TGPresentationAutoNightPreferences.m in Sources */,
-				D0A18D691E16AC9D004C6734 /* NotificationManager.swift in Sources */,
 				D053DAD32018ED2B00993D32 /* LockedWindowCoveringView.swift in Sources */,
 				D09250021FE52D2A003F693F /* BuildConfig.m in Sources */,
 				09D304392174344900C00567 /* TGBridgeMessageEntities.m in Sources */,

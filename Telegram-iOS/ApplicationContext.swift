@@ -71,7 +71,7 @@ final class AuthorizedApplicationContext {
     private var inAppNotificationSettings: InAppNotificationSettings?
     
     private var isLocked: Bool = true
-    var passcodeController: ViewController?
+    var passcodeController: PasscodeEntryController?
     
     private var currentTermsOfServiceUpdate: TermsOfServiceUpdate?
     private var currentPermissionsController: PermissionController?
@@ -205,111 +205,27 @@ final class AuthorizedApplicationContext {
                 }
                 
                 strongSelf.isLocked = isLocked
-                //strongSelf.notificationManager.isApplicationLocked = isLocked
                 
                 if isLocked {
                     if updatedState.isActive {
                         if strongSelf.passcodeController == nil {
-                            var attemptData: TGPasscodeEntryAttemptData?
-                            if let attempts = updatedState.challengeData.attempts {
-                                attemptData = TGPasscodeEntryAttemptData(numberOfInvalidAttempts: Int(attempts.count), dateOfLastInvalidAttempt: Double(attempts.timestamp))
-                            }
-                            var mode: TGPasscodeEntryControllerMode
-                            switch updatedState.challengeData {
-                                case .none:
-                                    mode = TGPasscodeEntryControllerModeVerifySimple
-                                case .numericalPassword:
-                                    mode = TGPasscodeEntryControllerModeVerifySimple
-                                case .plaintextPassword:
-                                    mode = TGPasscodeEntryControllerModeVerifyComplex
-                            }
-                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                             let presentAnimated = previousState != nil && previousState!.isActive
-                            let legacyController = LegacyController(presentation: LegacyControllerPresentation.modal(animateIn: presentAnimated), theme: presentationData.theme)
-                            let controller = TGPasscodeEntryController(context: legacyController.context, style: TGPasscodeEntryControllerStyleDefault, mode: mode, cancelEnabled: false, allowTouchId: updatedState.enableBiometrics, attemptData: attemptData, completion: { value in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                if value != nil {
-                                    let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
-                                        let data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(nil)
-                                        transaction.setAccessChallengeData(data)
-                                    }).start()
-                                }
-                            })!
-                            controller.checkCurrentPasscode = { value in
-                                if let value = value {
-                                    switch updatedState.challengeData {
-                                        case .none:
-                                            return true
-                                        case let .numericalPassword(code, _, _):
-                                            return value == code
-                                        case let .plaintextPassword(code, _, _):
-                                            return value == code
-                                    }
-                                } else {
-                                    return false
-                                }
-                            }
-                            controller.updateAttemptData = { attemptData in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                let _ = strongSelf.context.sharedContext.accountManager.transaction({ transaction -> Void in
-                                    var attempts: AccessChallengeAttempts?
-                                    if let attemptData = attemptData {
-                                        attempts = AccessChallengeAttempts(count: Int32(attemptData.numberOfInvalidAttempts), timestamp: Int32(attemptData.dateOfLastInvalidAttempt))
-                                    }
-                                    var data = transaction.getAccessChallengeData()
-                                    switch data {
-                                        case .none:
-                                            break
-                                        case let .numericalPassword(value, timeout, _):
-                                            data = .numericalPassword(value: value, timeout: timeout, attempts: attempts)
-                                        case let .plaintextPassword(value, timeout, _):
-                                            data = .plaintextPassword(value: value, timeout: timeout, attempts: attempts)
-                                    }
-                                    transaction.setAccessChallengeData(data)
-                                }).start()
-                            }
-                            controller.touchIdCompletion = {
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
-                                    let data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(nil)
-                                    transaction.setAccessChallengeData(data)
-                                }).start()
-                            }
-                            legacyController.bind(controller: controller)
-                            legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
-                            legacyController.statusBar.statusBarStyle = .White
-                            strongSelf.passcodeController = legacyController
+                            let controller = PasscodeEntryController(context: strongSelf.context, challengeData: updatedState.challengeData, enableBiometrics: updatedState.enableBiometrics, animated: presentAnimated)
+                            strongSelf.passcodeController = controller
                             
                             strongSelf.unlockedStatePromise.set(.single(false))
-                            if presentAnimated {
-                                legacyController.presentationCompleted = {
-                                    if let strongSelf = self {
-                                        strongSelf.rootController.view.isHidden = true
-                                        strongSelf.context.sharedContext.mediaManager.overlayMediaManager.controller?.view.isHidden = true
-                                        strongSelf.notificationController.view.isHidden = true
-                                    }
-                                }
-                            } else {
+                            controller.presentationCompleted = {
                                 strongSelf.rootController.view.isHidden = true
                                 strongSelf.context.sharedContext.mediaManager.overlayMediaManager.controller?.view.isHidden = true
                                 strongSelf.notificationController.view.isHidden = true
                             }
-                            
-                            strongSelf.mainWindow.present(legacyController, on: .passcode)
+                            strongSelf.mainWindow.present(controller, on: .passcode)
                             
                             if !presentAnimated {
-                                controller.refreshTouchId()
+                                controller.requestBiometrics()
                             }
-                        } else if previousState?.isActive != updatedState.isActive, updatedState.isActive, let passcodeController = strongSelf.passcodeController as? LegacyController {
-                            if let controller = passcodeController.legacyController as? TGPasscodeEntryController {
-                                controller.refreshTouchId()
-                            }
+                        } else if previousState?.isActive != updatedState.isActive, updatedState.isActive, let passcodeController = strongSelf.passcodeController {
+                            passcodeController.requestBiometrics()
                         }
                         strongSelf.updateCoveringViewSnaphot(false)
                         strongSelf.mainWindow.coveringView = nil
@@ -376,12 +292,7 @@ final class AuthorizedApplicationContext {
                     }
                     strongSelf.unlockedStatePromise.set(.single(true))
                 }
-            }/* else if updatedAutolockDeadline != previousState?.challengeData.autolockDeadline {
-                let _ = (account.postbox.transaction { transaction -> Void in
-                    let data = transaction.getAccessChallengeData().withUpdatedAutolockDeadline(updatedAutolockDeadline)
-                    transaction.setAccessChallengeData(data)
-                }).start()
-            }*/
+            }
             if let tabsController = strongSelf.rootController.viewControllers.first as? TabBarController, !tabsController.controllers.isEmpty, tabsController.selectedIndex >= 0 {
                 let controller = tabsController.controllers[tabsController.selectedIndex]
                 let combinedReady = combineLatest(tabsController.ready.get(), controller.ready.get())
