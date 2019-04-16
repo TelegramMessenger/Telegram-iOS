@@ -47,12 +47,11 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
             }
         }
         
-        if transaction.currentUpdatedTotalUnreadState != nil || !transaction.alteredInitialPeerCombinedReadStates.isEmpty || updatedPreferencesEntry != nil {
+        if transaction.currentUpdatedTotalUnreadStates[WrappedPeerGroupId(groupId: nil)] != nil || !transaction.alteredInitialPeerCombinedReadStates.isEmpty || updatedPreferencesEntry != nil {
             for i in 0 ..< self.entries.count {
                 switch self.entries[i] {
                     case let .total(keyAndEntry, state):
-                        if transaction.currentUpdatedTotalUnreadState != nil {
-                            let updatedState = postbox.messageHistoryMetadataTable.getChatListTotalUnreadState()
+                        if let updatedState = transaction.currentUpdatedTotalUnreadStates[WrappedPeerGroupId(groupId: nil)] {
                             if updatedState != state {
                                 self.entries[i] = .total(keyAndEntry.flatMap({ ($0.0, updatedPreferencesEntry ?? $0.1) }), updatedState)
                                 updated = true

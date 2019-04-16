@@ -316,7 +316,7 @@ private func sampleHoleRanges(orderedEntriesBySpace: [PeerIdAndNamespace: Ordere
                     itemBoundaryMessageId = Int32.max - 1
                 }
                 let previousBoundaryIndex: MessageIndex
-                if lowerDirectionIndex == startingHigherDirectionIndex {
+                if higherDirectionIndex == startingHigherDirectionIndex {
                     previousBoundaryIndex = itemIndex
                 } else {
                     previousBoundaryIndex = items.entries[higherDirectionIndex - 1].index
