@@ -61,7 +61,7 @@ class ModernCheckNode: ASDisplayNode {
         
         if selected && animated {
             let animation = POPBasicAnimation()
-            animation.property = POPAnimatableProperty.property(withName: "progress", initializer: { property in
+            animation.property = (POPAnimatableProperty.property(withName: "progress", initializer: { property in
                 property?.readBlock = { node, values in
                     values?.pointee = (node as! ModernCheckNode).animationProgress
                 }
@@ -70,7 +70,7 @@ class ModernCheckNode: ASDisplayNode {
                     (node as! ModernCheckNode).setNeedsDisplay()
                 }
                 property?.threshold = 0.01
-            }) as! POPAnimatableProperty
+            }) as! POPAnimatableProperty)
             animation.fromValue = 0.0 as NSNumber
             animation.toValue = 1.0 as NSNumber
             animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)

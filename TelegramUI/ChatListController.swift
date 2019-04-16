@@ -282,12 +282,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                         }
                         transaction.setAccessChallengeData(data)
                     }
-                }) |> deliverOnMainQueue).start(completed: {
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.presentInGlobalOverlay(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .shieldSuccess(strongSelf.presentationData.strings.Passcode_AppLockedAlert, true)))
-                })
+                }) |> deliverOnMainQueue).start()
             }
         }
         

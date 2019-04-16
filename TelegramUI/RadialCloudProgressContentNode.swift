@@ -53,7 +53,7 @@ private final class RadialCloudProgressContentSpinnerNode: ASDisplayNode {
                 self.pop_removeAnimation(forKey: "indefiniteProgress")
                 
                 let animation = POPBasicAnimation()
-                animation.property = POPAnimatableProperty.property(withName: "progress", initializer: { property in
+                animation.property = (POPAnimatableProperty.property(withName: "progress", initializer: { property in
                     property?.readBlock = { node, values in
                         values?.pointee = (node as! RadialCloudProgressContentSpinnerNode).effectiveProgress
                     }
@@ -61,7 +61,7 @@ private final class RadialCloudProgressContentSpinnerNode: ASDisplayNode {
                         (node as! RadialCloudProgressContentSpinnerNode).effectiveProgress = values!.pointee
                     }
                     property?.threshold = 0.01
-                }) as! POPAnimatableProperty
+                }) as! POPAnimatableProperty)
                 animation.fromValue = CGFloat(self.effectiveProgress) as NSNumber
                 animation.toValue = CGFloat(progress) as NSNumber
                 animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
@@ -72,7 +72,7 @@ private final class RadialCloudProgressContentSpinnerNode: ASDisplayNode {
                 self.pop_add(animation, forKey: "progress")
             } else if self.pop_animation(forKey: "indefiniteProgress") == nil {
                 let animation = POPBasicAnimation()
-                animation.property = POPAnimatableProperty.property(withName: "progress", initializer: { property in
+                animation.property = (POPAnimatableProperty.property(withName: "progress", initializer: { property in
                     property?.readBlock = { node, values in
                         values?.pointee = (node as! RadialCloudProgressContentSpinnerNode).effectiveProgress
                     }
@@ -80,7 +80,7 @@ private final class RadialCloudProgressContentSpinnerNode: ASDisplayNode {
                         (node as! RadialCloudProgressContentSpinnerNode).effectiveProgress = values!.pointee
                     }
                     property?.threshold = 0.01
-                }) as! POPAnimatableProperty
+                }) as! POPAnimatableProperty)
                 animation.fromValue = CGFloat(0.0) as NSNumber
                 animation.toValue = CGFloat(2.0) as NSNumber
                 animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)

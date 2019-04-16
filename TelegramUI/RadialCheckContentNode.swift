@@ -51,7 +51,7 @@ final class RadialCheckContentNode: RadialStatusContentNode {
         self.animationCompletionTimer?.invalidate()
         self.animationCompletionTimer = nil
         let animation = POPBasicAnimation()
-        animation.property = POPAnimatableProperty.property(withName: "progress", initializer: { property in
+        animation.property = (POPAnimatableProperty.property(withName: "progress", initializer: { property in
             property?.readBlock = { node, values in
                 values?.pointee = (node as! RadialCheckContentNode).effectiveProgress
             }
@@ -59,7 +59,7 @@ final class RadialCheckContentNode: RadialStatusContentNode {
                 (node as! RadialCheckContentNode).effectiveProgress = values!.pointee
             }
             property?.threshold = 0.01
-        }) as! POPAnimatableProperty
+        }) as! POPAnimatableProperty)
         animation.fromValue = 0.0 as NSNumber
         animation.toValue = 1.0 as NSNumber
         animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
@@ -107,7 +107,7 @@ final class RadialCheckContentNode: RadialStatusContentNode {
             let progress = parameters.progress
             
             var pathLineWidth: CGFloat = 2.0
-            
+
             if (abs(diameter - 37.0) < 0.1) {
                 pathLineWidth = 2.5
             } else if (abs(diameter - 32.0) < 0.1) {

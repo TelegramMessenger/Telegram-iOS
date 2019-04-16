@@ -45,6 +45,12 @@ public final class ServiceSoundManager {
             AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
         }
     }
+    
+    public func playLockSound() {
+        self.queue.async {
+            AudioServicesPlaySystemSound(1100)
+        }
+    }
 }
 
 public let serviceSoundManager = ServiceSoundManager()

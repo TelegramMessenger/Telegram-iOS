@@ -77,6 +77,23 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                 }
                 return .none
             }))
+            
+            options.append(OpenInOption(application: .other(title: "Firefox Focus", identifier: 1055677337, scheme: "firefox-focus"), action: {
+                if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) {
+                    return .openUrl(url: "firefox-focus://open-url?url=\(escapedUrl)")
+                }
+                return .none
+            }))
+            
+            options.append(OpenInOption(application: .other(title: "Opera Mini", identifier: 363729560, scheme: "opera-http"), action: {
+                if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
+                    components.scheme = components.scheme == "https" ? "opera-https" : "opera-http"
+                    if let url = components.string {
+                        return .openUrl(url: url)
+                    }
+                }
+                return .none
+            }))
         
             options.append(OpenInOption(application: .other(title: "Opera Touch", identifier: 1411869974, scheme: "touch-http"), action: {
                 if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {

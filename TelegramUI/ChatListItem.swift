@@ -607,7 +607,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var mentionBadgeContent = ChatListBadgeContent.none
             var statusState = ChatListStatusNodeState.none
             
-            var statusImage: UIImage?
             var currentBadgeBackgroundImage: UIImage?
             var currentMentionBadgeImage: UIImage?
             var currentPinnedIconImage: UIImage?
@@ -721,7 +720,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if !isPeerGroup, let message = message, message.author?.id == account.peerId && !hasDraft {
                 if message.flags.isSending && !message.isSentOrAcknowledged {
                     statusState = .clock(PresentationResourcesChatList.clockFrameImage(item.presentationData.theme), PresentationResourcesChatList.clockMinImage(item.presentationData.theme))
-                } else {
+                } else if message.id.peerId != account.peerId {
                     if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
                         statusState = .read(item.presentationData.theme.chatList.checkmarkColor)
                     } else {
@@ -778,7 +777,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
-            let statusWidth = statusImage?.size.width ?? 0.0
+            let statusWidth: CGFloat
+            if case .none = statusState {
+                statusWidth = 0.0
+            } else {
+                statusWidth = 24.0
+            }
             
             var titleIconsWidth: CGFloat = 0.0
             if let currentMutedIconImage = currentMutedIconImage {

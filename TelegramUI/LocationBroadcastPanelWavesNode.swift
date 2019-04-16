@@ -48,7 +48,7 @@ final class LocationBroadcastPanelWavesNode: ASDisplayNode {
         self.pop_removeAnimation(forKey: "indefiniteProgress")
         
         let animation = POPBasicAnimation()
-        animation.property = POPAnimatableProperty.property(withName: "progress", initializer: { property in
+        animation.property = (POPAnimatableProperty.property(withName: "progress", initializer: { property in
             property?.readBlock = { node, values in
                 values?.pointee = (node as! LocationBroadcastPanelWavesNode).effectiveProgress
             }
@@ -56,7 +56,7 @@ final class LocationBroadcastPanelWavesNode: ASDisplayNode {
                 (node as! LocationBroadcastPanelWavesNode).effectiveProgress = values!.pointee
             }
             property?.threshold = 0.01
-        }) as! POPAnimatableProperty
+        }) as! POPAnimatableProperty)
         animation.fromValue = CGFloat(0.0) as NSNumber
         animation.toValue = CGFloat(1.0) as NSNumber
         animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)

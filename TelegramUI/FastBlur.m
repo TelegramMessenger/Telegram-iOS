@@ -220,3 +220,74 @@ void stickerThumbnailAlphaBlur(int imageWidth, int imageHeight, int imageStride,
         vImageBoxConvolve_ARGB8888(&srcBuffer, &dstBuffer, NULL, 0, 0, boxSize, boxSize, NULL, kvImageEdgeExtend);
     }
 }
+
+static void modifyImage(void *pixels, unsigned int width, unsigned int height, unsigned int stride, int16_t *matrix)
+{
+    vImage_Buffer dstBuffer;
+    dstBuffer.width = width;
+    dstBuffer.height = height;
+    dstBuffer.rowBytes = stride;
+    dstBuffer.data = pixels;
+    
+    int32_t divisor = 256;
+    vImageMatrixMultiply_ARGB8888(&dstBuffer, &dstBuffer, matrix, divisor, NULL, NULL, kvImageDoNotTile);
+}
+
+static void matrixMul(CGFloat *a, CGFloat *b, CGFloat *result)
+{
+    for (int i = 0; i != 4; ++i)
+    {
+        for (int j = 0; j != 4; ++j)
+        {
+            CGFloat sum = 0;
+            for (int k = 0; k != 4; ++k)
+            {
+                sum += a[i + k * 4] * b[k + j * 4];
+            }
+            result[i + j * 4] = sum;
+        }
+    }
+}
+
+static int16_t *lightBrightenMatrix(int32_t *outDivisor)
+{
+    static int16_t saturationMatrix[16];
+    static const int32_t divisor = 256;
+    
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^
+    {
+        CGFloat s = 1.2f;
+        CGFloat offset = 0.01f;
+        CGFloat factor = 1.02f;
+        CGFloat satMatrix[] = {
+          0.0722f + 0.9278f * s,  0.0722f - 0.0722f * s,  0.0722f - 0.0722f * s,  0,
+          0.7152f - 0.7152f * s,  0.7152f + 0.2848f * s,  0.7152f - 0.7152f * s,  0,
+          0.2126f - 0.2126f * s,  0.2126f - 0.2126f * s,  0.2126f + 0.7873f * s,  0,
+          0.0f,                    0.0f,                    0.0f,  1,
+        };
+        CGFloat contrastMatrix[] = {
+          factor, 0.0f, 0.0f, 0.0f,
+          0.0f, factor, 0.0f, 0.0f,
+          0.0f, 0.0f, factor, 0.0f,
+          offset, offset, offset, 1.0f
+        };
+        CGFloat colorMatrix[16];
+        matrixMul(satMatrix, contrastMatrix, colorMatrix);
+
+        NSUInteger matrixSize = sizeof(colorMatrix) / sizeof(colorMatrix[0]);
+        for (NSUInteger i = 0; i < matrixSize; ++i) {
+            saturationMatrix[i] = (int16_t)round(colorMatrix[i] * divisor);
+        }
+    });
+    
+    if (outDivisor != NULL)
+        *outDivisor = divisor;
+    
+    return saturationMatrix;
+}
+
+void telegramBrightenImage(int imageWidth, int imageHeight, int imageStride, void *pixels)
+{
+    modifyImage(pixels, imageWidth, imageHeight, imageStride, lightBrightenMatrix(NULL));
+}

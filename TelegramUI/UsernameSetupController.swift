@@ -102,7 +102,7 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                 let string: NSAttributedString
                 switch status {
                     case .invalidFormat:
-                        string = NSAttributedString(string: text, textColor: theme.list.freeTextSuccessColor)
+                        string = NSAttributedString(string: text, textColor: theme.list.freeTextErrorColor)
                     case let .availability(availability):
                         switch availability {
                             case .available:

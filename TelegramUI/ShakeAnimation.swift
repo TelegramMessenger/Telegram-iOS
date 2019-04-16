@@ -2,18 +2,22 @@ import Foundation
 import UIKit
 
 extension CALayer {
-    func addShakeAnimation() {
+    func addShakeAnimation(amplitude: CGFloat = 3.0, duration: Double = 0.3, count: Int = 4, decay: Bool = false) {
         let k = Float(UIView.animationDurationFactor())
         var speed: Float = 1.0
         if k != 0 && k != 1 {
             speed = Float(1.0) / k
         }
-        
-        let duration = 0.3
-        let amplitude: CGFloat = 3.0
-        
+                
         let animation = CAKeyframeAnimation(keyPath: "position.x")
-        let values: [CGFloat] = [0.0, amplitude, -amplitude, amplitude, -amplitude, 0.0]
+        var values: [CGFloat] = []
+        values.append(0.0)
+        for i in 0 ..< count {
+            let sign: CGFloat = (i % 2 == 0) ? 1.0 : -1.0
+            let multiplier = decay ? 1.0 / CGFloat(i + 1) : 1.0
+            values.append(amplitude * sign * multiplier)
+        }
+        values.append(0.0)
         animation.values = values.map { ($0 as NSNumber) as AnyObject }
         var keyTimes: [NSNumber] = []
         for i in 0 ..< values.count {

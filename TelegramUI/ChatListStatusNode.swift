@@ -36,7 +36,6 @@ class ChatListStatusContentNode: ASDisplayNode {
     }
     
     func updateWithState(_ state: ChatListStatusNodeState, animated: Bool) {
-        
     }
     
     func animateOut(to: ChatListStatusNodeState, completion: @escaping () -> Void) {
@@ -220,7 +219,7 @@ private class ChatListStatusChecksNode: ChatListStatusContentNode {
         self.pop_removeAllAnimations()
         
         let animation = POPBasicAnimation()
-        animation.property = POPAnimatableProperty.property(withName: "progress", initializer: { property in
+        animation.property = (POPAnimatableProperty.property(withName: "progress", initializer: { property in
             property?.readBlock = { node, values in
                 values?.pointee = (node as! ChatListStatusChecksNode).effectiveProgress
             }
@@ -228,7 +227,7 @@ private class ChatListStatusChecksNode: ChatListStatusContentNode {
                 (node as! ChatListStatusChecksNode).effectiveProgress = values!.pointee
             }
             property?.threshold = 0.01
-        }) as! POPAnimatableProperty
+        }) as! POPAnimatableProperty)
         animation.fromValue = from as NSNumber
         animation.toValue = to as NSNumber
         animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
@@ -312,6 +311,12 @@ private class ChatListStatusChecksNode: ChatListStatusContentNode {
     }
     
     override func updateWithState(_ state: ChatListStatusNodeState, animated: Bool) {
+        switch state {
+            case let .delivered(color), let .read(color):
+                self.color = color
+            default:
+                break
+        }
         if let previousState = self.state, case .delivered = previousState, case .read = state, animated {
             self.animateProgress(from: 1.0, to: 2.0)
         }
