@@ -1151,16 +1151,13 @@ void LOTPaintDataItem::addPathItems(std::vector<LOTPathDataItem *> &list, int st
 
 
 LOTFillItem::LOTFillItem(LOTFillData *data)
-    : LOTPaintDataItem(data->isStatic()), mData(data)
+    : LOTPaintDataItem(data->isStatic()), mModel(data)
 {
 }
 
 void LOTFillItem::updateContent(int frameNo)
 {
-    LottieColor c = mData->mColor.value(frameNo);
-    float       opacity = mData->opacity(frameNo);
-    mColor = c.toColor(opacity);
-    mFillRule = mData->fillRule();
+    mColor = mModel.color(frameNo).toColor(mModel.opacity(frameNo));
 }
 
 void LOTFillItem::updateRenderNode()
@@ -1170,7 +1167,7 @@ void LOTFillItem::updateRenderNode()
     color.setAlpha(color.a * parentAlpha());
     VBrush brush(color);
     mDrawable->setBrush(brush);
-    mDrawable->setFillRule(mFillRule);
+    mDrawable->setFillRule(mModel.fillRule());
 }
 
 LOTGFillItem::LOTGFillItem(LOTGFillData *data)
@@ -1194,22 +1191,17 @@ void LOTGFillItem::updateRenderNode()
 }
 
 LOTStrokeItem::LOTStrokeItem(LOTStrokeData *data)
-    : LOTPaintDataItem(data->isStatic()), mData(data)
+    : LOTPaintDataItem(data->isStatic()), mModel(data)
 {
     mDashArraySize = 0;
 }
 
 void LOTStrokeItem::updateContent(int frameNo)
 {
-    LottieColor c = mData->mColor.value(frameNo);
-    float       opacity = mData->opacity(frameNo);
-    mColor = c.toColor(opacity);
-    mCap = mData->capStyle();
-    mJoin = mData->joinStyle();
-    mMiterLimit = mData->meterLimit();
-    mWidth = mData->width(frameNo);
-    if (mData->hasDashInfo()) {
-        mDashArraySize = mData->getDashInfo(frameNo, mDashArray);
+    mColor = mModel.color(frameNo).toColor(mModel.opacity(frameNo));
+    mWidth = mModel.strokeWidth(frameNo);
+    if (mModel.hasDashInfo()) {
+        mDashArraySize = mModel.getDashInfo(frameNo, mDashArray);
     }
 }
 
@@ -1233,7 +1225,7 @@ void LOTStrokeItem::updateRenderNode()
     VBrush brush(color);
     mDrawable->setBrush(brush);
     float scale = getScale(static_cast<LOTContentGroupItem *>(parent())->matrix());
-    mDrawable->setStrokeInfo(mCap, mJoin, mMiterLimit,
+    mDrawable->setStrokeInfo(mModel.capStyle(), mModel.joinStyle(), mModel.meterLimit(),
                             mWidth * scale);
     if (mDashArraySize) {
         for (int i = 0 ; i < mDashArraySize ; i++)

@@ -19,10 +19,10 @@
 #ifndef LOTTIEITEM_H
 #define LOTTIEITEM_H
 
-#include<lottiemodel.h>
 #include<sstream>
 #include<memory>
 
+#include"lottieproxymodel.h"
 #include"vmatrix.h"
 #include"vpath.h"
 #include"vpoint.h"
@@ -45,6 +45,7 @@ enum class DirtyFlagBit : uchar
 class LOTLayerItem;
 class LOTMaskItem;
 class VDrawable;
+
 
 class LOTCompItem
 {
@@ -398,9 +399,8 @@ protected:
    void updateContent(int frameNo) final;
    void updateRenderNode() final;
 private:
-   LOTFillData             *mData;
-   VColor                  mColor;
-   FillRule                mFillRule{FillRule::Winding};
+   LOTProxyModel<LOTFillData> mModel;
+   VColor                     mColor;
 };
 
 class LOTGFillItem : public LOTPaintDataItem
@@ -425,14 +425,12 @@ protected:
    void updateContent(int frameNo) final;
    void updateRenderNode() final;
 private:
-   LOTStrokeData             *mData;
-   CapStyle                  mCap{CapStyle::Flat};
-   JoinStyle                 mJoin{JoinStyle::Miter};
-   float                     mMiterLimit{0};
-   VColor                    mColor;
-   float                     mWidth{0};
-   float                     mDashArray[6];
-   int                       mDashArraySize{0};
+   LOTProxyModel<LOTStrokeData> mModel;
+   LOTStrokeData               *mData;
+   VColor                       mColor;
+   float                        mWidth{0};
+   float                        mDashArray[6];
+   int                          mDashArraySize{0};
 };
 
 class LOTGStrokeItem : public LOTPaintDataItem

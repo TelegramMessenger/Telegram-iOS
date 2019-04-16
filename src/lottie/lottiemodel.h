@@ -519,6 +519,7 @@ class LOTFillData : public LOTData
 {
 public:
     LOTFillData():LOTData(LOTData::Type::Fill){}
+    LottieColor color(int frameNo) const {return mColor.value(frameNo);}
     float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
     FillRule fillRule() const {return mFillRule;}
 public:
@@ -539,8 +540,9 @@ class LOTStrokeData : public LOTData
 {
 public:
     LOTStrokeData():LOTData(LOTData::Type::Stroke){}
+    LottieColor color(int frameNo) const {return mColor.value(frameNo);}
     float opacity(int frameNo) const {return mOpacity.value(frameNo)/100.0;}
-    float width(int frameNo) const {return mWidth.value(frameNo);}
+    float strokeWidth(int frameNo) const {return mWidth.value(frameNo);}
     CapStyle capStyle() const {return mCapStyle;}
     JoinStyle joinStyle() const {return mJoinStyle;}
     float meterLimit() const{return mMeterLimit;}
