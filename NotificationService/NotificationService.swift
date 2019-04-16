@@ -335,12 +335,14 @@ class NotificationService: UNNotificationServiceExtension {
             var inputFileLocation: (Int32, Api.InputFileLocation)?
             var fetchResourceId: String?
             var isPng = false
+            var isExpandableMedia = false
             
             if let attachment = attachment {
                 switch attachment {
                     case let .photo(photo):
                         switch photo {
                             case let .photo(_, id, accessHash, fileReference, _, sizes, dcId):
+                                isExpandableMedia = true
                                 loop: for size in sizes {
                                     switch size {
                                         case let .photoSize(type, _, _, _, _):
@@ -367,6 +369,9 @@ class NotificationService: UNNotificationServiceExtension {
                                         default:
                                             break
                                     }
+                                }
+                                if isSticker {
+                                    isExpandableMedia = true
                                 }
                                 if let thumbs = thumbs {
                                     loop: for size in thumbs {
@@ -425,10 +430,12 @@ class NotificationService: UNNotificationServiceExtension {
                         
                         userInfo["media"] = attachmentData.base64EncodedString()
                         
-                        if category == "r" {
-                            self.bestAttemptContent?.categoryIdentifier = "withReplyMedia"
-                        } else if category == "m" {
-                            self.bestAttemptContent?.categoryIdentifier = "withMuteMedia"
+                        if isExpandableMedia {
+                            if category == "r" {
+                                self.bestAttemptContent?.categoryIdentifier = "withReplyMedia"
+                            } else if category == "m" {
+                                self.bestAttemptContent?.categoryIdentifier = "withMuteMedia"
+                            }
                         }
                     }
                 }
