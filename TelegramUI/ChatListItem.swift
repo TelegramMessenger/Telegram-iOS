@@ -8,7 +8,7 @@ import TelegramCore
 
 enum ChatListItemContent {
     case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool)
-    case groupReference(groupId: PeerGroupId, message: Message?)
+    case groupReference(groupId: PeerGroupId, message: Message?, unreadState: ChatListTotalUnreadState)
     
     var chatLocation: ChatLocation? {
         switch self {
@@ -107,7 +107,7 @@ class ChatListItem: ListViewItem {
                 } else if let peer = peer.peers[peer.peerId] {
                     self.interaction.peerSelected(peer)
                 }
-            case let .groupReference(groupId, _):
+            case let .groupReference(groupId, _, _):
                 self.interaction.groupSelected(groupId)
         }
     }
@@ -202,7 +202,7 @@ private func revealOptions(strings: PresentationStrings, theme: PresentationThem
 
 private func groupReferenceRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isEditing: Bool) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
-    if false && !isEditing {
+    if !isEditing {
         if false {
             options.append(ItemListRevealOption(key: RevealOptionKey.unhide.rawValue, title: strings.ChatList_UnhideAction, icon: unhideIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
         } else {
@@ -533,7 +533,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var message: Message?
             let itemPeer: RenderedPeer
             let combinedReadState: CombinedPeerReadState?
-            let unreadCount: (count: Int32, unread: Bool, muted: Bool)
+            let unreadCount: (count: Int32, unread: Bool, muted: Bool, mutedCount: Int32?)
             let notificationSettings: PeerNotificationSettings?
             let peerPresence: PeerPresence?
             let embeddedState: PeerChatListEmbeddedInterfaceState?
@@ -542,17 +542,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let isPeerGroup: Bool
             let isAd: Bool
             
-            var multipleAvatarsApply: ((Bool) -> MultipleAvatarsNode)?
-            
             switch item.content {
                 case let .peer(messageValue, peerValue, combinedReadStateValue, notificationSettingsValue, peerPresenceValue, summaryInfoValue, embeddedStateValue, inputActivitiesValue, isAdValue, ignoreUnreadBadge):
                     message = messageValue
                     itemPeer = peerValue
                     combinedReadState = combinedReadStateValue
                     if let combinedReadState = combinedReadState, !isAdValue && !ignoreUnreadBadge {
-                        unreadCount = (combinedReadState.count, combinedReadState.isUnread, notificationSettingsValue?.isRemovedFromTotalUnreadCount ?? false)
+                        unreadCount = (combinedReadState.count, combinedReadState.isUnread, notificationSettingsValue?.isRemovedFromTotalUnreadCount ?? false, nil)
                     } else {
-                        unreadCount = (0, false, false)
+                        unreadCount = (0, false, false, nil)
                     }
                     if isAdValue {
                         notificationSettings = nil
@@ -565,7 +563,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     inputActivities = inputActivitiesValue
                     isPeerGroup = false
                     isAd = isAdValue
-                case let .groupReference(_, messageValue):
+                case let .groupReference(_, messageValue, unreadState):
                     if let messageValue = messageValue {
                         itemPeer = RenderedPeer(message: messageValue)
                     } else {
@@ -578,7 +576,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     summaryInfo = ChatListMessageTagSummaryInfo()
                     inputActivities = nil
                     isPeerGroup = true
-                    unreadCount = (0, false, false)
+                    let unmutedCount = unreadState.count(for: .filtered, in: .chats, with: [.regularChatsAndPrivateGroups, .publicGroups, .channels])
+                    let mutedCount = unreadState.count(for: .raw, in: .chats, with: [.regularChatsAndPrivateGroups, .publicGroups, .channels])
+                    unreadCount = (unmutedCount, unmutedCount != 0 || mutedCount != 0, false, max(0, mutedCount - unmutedCount))
                     peerPresence = nil
                     isAd = false
             }
@@ -700,7 +700,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat ? theme.secretTitleColor : theme.titleColor)
                     }
                 case .groupReference:
-                    titleAttributedString = NSAttributedString(string: "Archived Chats", font: titleFont, textColor: theme.titleColor)
+                    titleAttributedString = NSAttributedString(string: item.presentationData.strings.ChatList_ArchivedChatsTitle, font: titleFont, textColor: theme.titleColor)
             }
             
             textAttributedString = attributedText
@@ -731,7 +731,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             if unreadCount.unread {
-                if let message = message, message.tags.contains(.unseenPersonalMessage), unreadCount.count == 1 {
+                if !isPeerGroup, let message = message, message.tags.contains(.unseenPersonalMessage), unreadCount.count == 1 {
                 } else {
                     let badgeTextColor: UIColor
                     if unreadCount.muted {
@@ -744,8 +744,18 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let unreadCountText = compactNumericCountString(Int(unreadCount.count), decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
                     if unreadCount.count > 0 {
                         badgeContent = .text(NSAttributedString(string: unreadCountText, font: badgeFont, textColor: badgeTextColor))
+                    } else if isPeerGroup {
+                        badgeContent = .none
                     } else {
                         badgeContent = .blank
+                    }
+                    
+                    if let mutedCount = unreadCount.mutedCount, mutedCount > 0 {
+                        let mutedUnreadCountText = compactNumericCountString(Int(mutedCount), decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
+                        
+                        currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundInactive(item.presentationData.theme)
+                        
+                        mentionBadgeContent = .text(NSAttributedString(string: mutedUnreadCountText, font: badgeFont, textColor: theme.unreadBadgeInactiveTextColor))
                     }
                 }
             }
@@ -753,11 +763,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let tagSummaryCount = summaryInfo.tagSummaryCount ?? 0
             let actionsSummaryCount = summaryInfo.actionsSummaryCount ?? 0
             let totalMentionCount = tagSummaryCount - actionsSummaryCount
-            if totalMentionCount > 0 {
-                currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundMention(item.presentationData.theme)
-                mentionBadgeContent = .mention
-            } else if item.index.pinningIndex != nil && !isAd && !isPeerGroup && currentBadgeBackgroundImage == nil {
-                currentPinnedIconImage = PresentationResourcesChatList.badgeBackgroundPinned(item.presentationData.theme)
+            if !isPeerGroup {
+                if totalMentionCount > 0 {
+                    currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundMention(item.presentationData.theme)
+                    mentionBadgeContent = .mention
+                } else if item.index.pinningIndex != nil && !isAd && currentBadgeBackgroundImage == nil {
+                    currentPinnedIconImage = PresentationResourcesChatList.badgeBackgroundPinned(item.presentationData.theme)
+                }
             }
             
             if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
@@ -987,7 +999,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     strongSelf.onlineNode.setImage(onlineIcon)
                     
-                    if let multipleAvatarsApply = multipleAvatarsApply {
+                    /*if let multipleAvatarsApply = multipleAvatarsApply {
                         strongSelf.avatarNode.isHidden = true
                         let multipleAvatarsNode = multipleAvatarsApply(animated && strongSelf.multipleAvatarsNode != nil)
                         if strongSelf.multipleAvatarsNode != multipleAvatarsNode {
@@ -1001,7 +1013,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else if let multipleAvatarsNode = strongSelf.multipleAvatarsNode {
                         multipleAvatarsNode.removeFromSupernode()
                         strongSelf.avatarNode.isHidden = false
-                    }
+                    }*/
                     
                     let _ = dateApply()
                     let _ = textApply()
@@ -1036,10 +1048,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if badgeLayout.width.isZero {
                             mentionBadgeOffset = contentRect.maxX - mentionBadgeLayout.width
                         } else {
-                            mentionBadgeOffset = contentRect.maxX - badgeLayout.width - 6.0 - mentionBadgeLayout.height
+                            mentionBadgeOffset = contentRect.maxX - badgeLayout.width - 6.0 - mentionBadgeLayout.width
                         }
                         
-                        let badgeFrame = CGRect(x: mentionBadgeOffset, y: contentRect.maxY - mentionBadgeLayout.height - 2.0, width: mentionBadgeLayout.height, height: mentionBadgeLayout.height)
+                        let badgeFrame = CGRect(x: mentionBadgeOffset, y: contentRect.maxY - mentionBadgeLayout.height - 2.0, width: mentionBadgeLayout.width, height: mentionBadgeLayout.height)
                         strongSelf.mentionBadgeNode.position = badgeFrame.center
                         strongSelf.mentionBadgeNode.bounds = CGRect(origin: CGPoint(), size: badgeFrame.size)
                         
@@ -1317,6 +1329,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let badgeFrame = self.badgeNode.frame
             let updatedBadgeFrame = CGRect(origin: CGPoint(x: contentRect.maxX - badgeFrame.size.width, y: contentRect.maxY - badgeFrame.size.height - 2.0), size: badgeFrame.size)
             transition.updateFrame(node: self.badgeNode, frame: updatedBadgeFrame)
+            
+            var mentionBadgeFrame = self.mentionBadgeNode.frame
+            mentionBadgeFrame.origin.x = updatedBadgeFrame.minX - 6.0 - mentionBadgeFrame.width
+            transition.updateFrame(node: self.mentionBadgeNode, frame: mentionBadgeFrame)
             
             let pinnedIconSize = self.pinnedIconNode.bounds.size
             if pinnedIconSize != CGSize.zero {

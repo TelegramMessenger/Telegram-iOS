@@ -107,37 +107,35 @@ final class RadialCheckContentNode: RadialStatusContentNode {
             let progress = parameters.progress
             
             var pathLineWidth: CGFloat = 2.0
-            var pathDiameter: CGFloat = diameter - pathLineWidth
             
             if (abs(diameter - 37.0) < 0.1) {
                 pathLineWidth = 2.5
-                pathDiameter = diameter - pathLineWidth * 2.0 - 1.5
             } else if (abs(diameter - 32.0) < 0.1) {
                 pathLineWidth = 2.0
-                pathDiameter = diameter - pathLineWidth * 2.0 - 1.5
             } else {
                 pathLineWidth = 2.5
-                pathDiameter = diameter - pathLineWidth * 2.0 - 1.5
             }
             
             let center = CGPoint(x: diameter / 2.0, y: diameter / 2.0)
             
+            let factor: CGFloat = max(0.3, diameter / 50.0)
+            
             context.setStrokeColor(parameters.color.cgColor)
-            context.setLineWidth(pathLineWidth)
+            context.setLineWidth(max(1.7, pathLineWidth * factor))
             context.setLineCap(.round)
             context.setLineJoin(.round)
             context.setMiterLimit(10.0)
             
             let firstSegment: CGFloat = max(0.0, min(1.0, progress * 3.0))
             
-            var s = CGPoint(x: center.x - 10.0, y: center.y + 1.0)
-            var p1 = CGPoint(x: 7.0, y: 7.0)
-            var p2 = CGPoint(x: 13.0, y: -15.0)
+            var s = CGPoint(x: center.x - 10.0 * factor, y: center.y + 1.0 * factor)
+            var p1 = CGPoint(x: 7.0 * factor, y: 7.0 * factor)
+            var p2 = CGPoint(x: 13.0 * factor, y: -15.0 * factor)
             
             if diameter < 36.0 {
-                s = CGPoint(x: center.x - 7.0, y: center.y + 1.0)
-                p1 = CGPoint(x: 4.5, y: 4.5)
-                p2 = CGPoint(x: 10.0, y: -11.0)
+                s = CGPoint(x: center.x - 7.0 * factor, y: center.y + 1.0 * factor)
+                p1 = CGPoint(x: 4.5 * factor, y: 4.5 * factor)
+                p2 = CGPoint(x: 10.0 * factor, y: -11.0 * factor)
             }
             
             if !firstSegment.isZero {

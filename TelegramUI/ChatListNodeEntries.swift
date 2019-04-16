@@ -45,7 +45,7 @@ enum ChatListNodeEntryId: Hashable {
 enum ChatListNodeEntry: Comparable, Identifiable {
     case PeerEntry(index: ChatListIndex, presentationData: ChatListPresentationData, message: Message?, readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedInterfaceState: PeerChatListEmbeddedInterfaceState?, peer: RenderedPeer, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool)
     case HoleEntry(ChatListHole, theme: PresentationTheme)
-    case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, message: Message?, editing: Bool)
+    case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, message: Message?, editing: Bool, unreadState: ChatListTotalUnreadState)
     
     var index: ChatListIndex {
         switch self {
@@ -53,7 +53,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 return index
             case let .HoleEntry(hole, _):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
-            case let .GroupReferenceEntry(index, _, _, _, _):
+            case let .GroupReferenceEntry(index, _, _, _, _, _):
                 return index
         }
     }
@@ -64,7 +64,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 return .PeerId(index.messageIndex.id.peerId.toInt64())
             case let .HoleEntry(hole, _):
                 return .Hole(Int64(hole.index.id.id))
-            case let .GroupReferenceEntry(_, _, groupId, _, _):
+            case let .GroupReferenceEntry(_, _, groupId, _, _, _):
                 return .GroupId(groupId)
         }
     }
@@ -156,8 +156,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                     default:
                         return false
                 }
-            case let .GroupReferenceEntry(lhsIndex, lhsPresentationData, lhsGroupId, lhsMessage, lhsEditing):
-                if case let .GroupReferenceEntry(rhsIndex, rhsPresentationData, rhsGroupId, rhsMessage, rhsEditing) = rhs {
+            case let .GroupReferenceEntry(lhsIndex, lhsPresentationData, lhsGroupId, lhsMessage, lhsEditing, lhsUnreadState):
+                if case let .GroupReferenceEntry(rhsIndex, rhsPresentationData, rhsGroupId, rhsMessage, rhsEditing, rhsUnreadState) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -174,6 +174,9 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                         return false
                     }
                     if lhsEditing != rhsEditing {
+                        return false
+                    }
+                    if lhsUnreadState != rhsUnreadState {
                         return false
                     }
                     return true
@@ -257,7 +260,7 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
         if view.laterIndex == nil, case .chatList = mode {
             for groupReference in view.groupEntries {
                 if let message = groupReference.message {
-                    result.append(.GroupReferenceEntry(index: ChatListIndex(pinningIndex: pinningIndex, messageIndex: message.index), presentationData: state.presentationData, groupId: groupReference.groupId, message: groupReference.message, editing: state.editing))
+                    result.append(.GroupReferenceEntry(index: ChatListIndex(pinningIndex: pinningIndex, messageIndex: message.index), presentationData: state.presentationData, groupId: groupReference.groupId, message: groupReference.message, editing: state.editing, unreadState: groupReference.unreadState))
                     if pinningIndex != 0 {
                         pinningIndex -= 1
                     }

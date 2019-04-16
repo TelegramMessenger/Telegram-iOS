@@ -618,13 +618,17 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
-            let _ = updatePeerGroupIdInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, groupId: group ? Namespaces.PeerGroup.archive : nil).start(completed: {
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
-            })
+            if group {
+                strongSelf.archiveChat(peerId: peerId)
+            } else {
+                strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+                let _ = updatePeerGroupIdInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, groupId: group ? Namespaces.PeerGroup.archive : nil).start(completed: {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                })
+            }
         }
         
         self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, messageId in
@@ -1101,7 +1105,7 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     } else {
                         return nil
                     }
-                case let .groupReference(groupId, _):
+                case let .groupReference(groupId, _, _):
                     let chatListController = ChatListController(context: self.context, groupId: groupId, controlsHistoryPreload: false)
                     chatListController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                     return (chatListController, sourceRect)
@@ -1320,6 +1324,33 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                 removed()
             })
         }
+    }
+    
+    private func archiveChat(peerId: PeerId) {
+        self.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+        let _ = (updatePeerGroupIdInteractively(postbox: self.context.account.postbox, peerId: peerId, groupId: Namespaces.PeerGroup.archive)
+        |> deliverOnMainQueue).start(completed: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+            
+            strongSelf.present(UndoOverlayController(context: strongSelf.context, isArchive: true, title: strongSelf.presentationData.strings.ChatList_UndoArchiveTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveText, action: { [weak self] shouldCommit in
+                guard let strongSelf = self else {
+                    return
+                }
+                if !shouldCommit {
+                    strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(peerId)
+                    let _ = (updatePeerGroupIdInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, groupId: nil)
+                    |> deliverOnMainQueue).start(completed: {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.chatListDisplayNode.chatListNode.setCurrentRemovingPeerId(nil)
+                    })
+                }
+            }), in: .window(.root))
+        })
     }
     
     private func schedulePeerChatRemoval(peer: RenderedPeer, type: InteractiveMessagesDeletionType, deleteGloballyIfPossible: Bool, completion: @escaping () -> Void) {

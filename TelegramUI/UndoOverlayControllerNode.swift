@@ -6,6 +6,9 @@ import SwiftSignalKit
 final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let statusNode: RadialStatusNode
     private let timerTextNode: ImmediateTextNode
+    private let iconNode: ASImageNode?
+    private let iconCheckNode: RadialStatusNode
+    private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let buttonTextNode: ImmediateTextNode
     private let buttonNode: HighlightTrackingButtonNode
@@ -21,17 +24,37 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     private var validLayout: ContainerViewLayout?
     
-    init(presentationData: PresentationData, text: String, action: @escaping (Bool) -> Void, dismiss: @escaping () -> Void) {
+    init(presentationData: PresentationData, isArchive: Bool, title: String?, text: String, action: @escaping (Bool) -> Void, dismiss: @escaping () -> Void) {
         self.action = action
         self.dismiss = dismiss
+        
+        if isArchive {
+            self.iconNode = ASImageNode()
+            self.iconNode?.displayWithoutProcessing = true
+            self.iconNode?.displaysAsynchronously = false
+            self.iconNode?.image = UIImage(bundleImageName: "Chat List/ArchivedUndoIcon")
+        } else {
+            self.iconNode = nil
+        }
+        
+        self.iconCheckNode = RadialStatusNode(backgroundNodeColor: .clear)
         
         self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
         
         self.timerTextNode = ImmediateTextNode()
         self.timerTextNode.displaysAsynchronously = false
         
+        self.titleNode = ImmediateTextNode()
+        self.titleNode.displaysAsynchronously = false
+        self.titleNode.maximumNumberOfLines = 0
+        
+        if let title = title {
+            self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(15.0), textColor: .white)
+        }
+        
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
+        self.textNode.maximumNumberOfLines = 0
         
         self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: .white)
         
@@ -52,8 +75,13 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         super.init()
         
-        self.panelWrapperNode.addSubnode(self.timerTextNode)
-        self.panelWrapperNode.addSubnode(self.statusNode)
+        if !isArchive {
+            self.panelWrapperNode.addSubnode(self.timerTextNode)
+            self.panelWrapperNode.addSubnode(self.statusNode)
+        }
+        self.iconNode.flatMap(self.panelWrapperNode.addSubnode)
+        self.panelWrapperNode.addSubnode(self.iconCheckNode)
+        self.panelWrapperNode.addSubnode(self.titleNode)
         self.panelWrapperNode.addSubnode(self.textNode)
         self.panelWrapperNode.addSubnode(self.buttonTextNode)
         self.panelWrapperNode.addSubnode(self.buttonNode)
@@ -122,8 +150,22 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         let leftInset: CGFloat = 50.0
         let rightInset: CGFloat = 16.0
-        let contentHeight: CGFloat = 49.0
+        var contentHeight: CGFloat = 20.0
+        
         let margin: CGFloat = 16.0
+        
+        let buttonTextSize = self.buttonTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
+        let buttonMinX = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - buttonTextSize.width - margin * 2.0
+        
+        let titleSize = self.titleNode.updateLayout(CGSize(width: buttonMinX - 8.0 - leftInset - layout.safeInsets.left - layout.safeInsets.right - margin, height: .greatestFiniteMagnitude))
+        let textSize = self.textNode.updateLayout(CGSize(width: buttonMinX - 8.0 - leftInset - layout.safeInsets.left - layout.safeInsets.right - margin, height: .greatestFiniteMagnitude))
+        
+        if !titleSize.width.isZero {
+            contentHeight += titleSize.height + 1.0
+        }
+        contentHeight += textSize.height
+        
+        contentHeight = max(49.0, contentHeight)
         
         let insets = layout.insets(options: [.input])
         
@@ -133,13 +175,30 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.panelWrapperNode, frame: panelWrapperFrame)
         self.effectView.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight)
         
-        let buttonTextSize = self.buttonTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
         let buttonTextFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - buttonTextSize.width - margin * 2.0, y: floor((contentHeight - buttonTextSize.height) / 2.0)), size: buttonTextSize)
         transition.updateFrame(node: self.buttonTextNode, frame: buttonTextFrame)
         self.buttonNode.frame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - rightInset - buttonTextSize.width - 8.0 - margin * 2.0, y: 0.0), size: CGSize(width: layout.safeInsets.right + rightInset + buttonTextSize.width + 8.0 + margin, height: contentHeight))
         
-        let textSize = self.textNode.updateLayout(CGSize(width: buttonTextFrame.minX - 8.0 - leftInset - layout.safeInsets.left - layout.safeInsets.right - margin * 2.0, height: .greatestFiniteMagnitude))
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset, y: floor((contentHeight - textSize.height) / 2.0)), size: textSize))
+        var textContentHeight = textSize.height
+        var textOffset: CGFloat = 0.0
+        if !titleSize.width.isZero {
+            textContentHeight += titleSize.height + 1.0
+            textOffset += titleSize.height + 1.0
+        }
+        
+        let textContentOrigin = floor((contentHeight - textContentHeight) / 2.0)
+        
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: textContentOrigin), size: titleSize))
+        
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset, y: textContentOrigin + textOffset), size: textSize))
+        
+        if let iconNode = self.iconNode, let iconSize = iconNode.image?.size {
+            let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
+            transition.updateFrame(node: iconNode, frame: iconFrame)
+            
+            let statusSize: CGFloat = 24.0
+            transition.updateFrame(node: self.iconCheckNode, frame: CGRect(origin: CGPoint(x: iconFrame.minX + floor((iconFrame.width - statusSize) / 2.0), y: iconFrame.minY + floor((iconFrame.height - statusSize) / 2.0) + 3.0), size: CGSize(width: statusSize, height: statusSize)))
+        }
         
         let timerTextSize = self.timerTextNode.updateLayout(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.timerTextNode, frame: CGRect(origin: CGPoint(x: floor((leftInset - timerTextSize.width) / 2.0), y: floor((contentHeight - timerTextSize.height) / 2.0)), size: timerTextSize))
@@ -153,6 +212,10 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     func animateIn() {
         self.panelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.panelWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        
+        if self.iconNode != nil {
+            self.iconCheckNode.transitionToState(.check(.black), completion: {})
+        }
     }
     
     func animateOut(completion: @escaping () -> Void) {

@@ -5,14 +5,18 @@ import TelegramCore
 final class UndoOverlayController: ViewController {
     private let context: AccountContext
     private let presentationData: PresentationData
+    private let isArchive: Bool
+    private let textTitle: String?
     private let text: String
     private let action: (Bool) -> Void
     
     private var didPlayPresentationAnimation = false
     
-    init(context: AccountContext, text: String, action: @escaping (Bool) -> Void) {
+    init(context: AccountContext, isArchive: Bool = false, title: String? = nil, text: String, action: @escaping (Bool) -> Void) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.isArchive = isArchive
+        self.textTitle = title
         self.text = text
         self.action = action
         
@@ -26,7 +30,7 @@ final class UndoOverlayController: ViewController {
     }
     
     override func loadDisplayNode() {
-        self.displayNode = UndoOverlayControllerNode(presentationData: self.presentationData, text: self.text, action: self.action, dismiss: { [weak self] in
+        self.displayNode = UndoOverlayControllerNode(presentationData: self.presentationData, isArchive: self.isArchive, title: self.textTitle, text: self.text, action: self.action, dismiss: { [weak self] in
             self?.dismiss()
         })
         self.displayNodeDidLoad()
