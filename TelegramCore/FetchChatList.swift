@@ -228,13 +228,14 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                 additionalPinnedChats = .single(nil)
             }
             
-            let flags: Int32 = 1 << 1
+            var flags: Int32 = 1 << 1
             let requestFolderId: Int32
             
             switch location {
                 case .general:
                     requestFolderId = 0
                 case let .group(groupId):
+                    flags |= 1 << 0
                     requestFolderId = groupId.rawValue
             }
             let requestChats = network.request(Api.functions.messages.getDialogs(flags: flags, folderId: requestFolderId, offsetDate: timestamp, offsetId: id, offsetPeer: peer, limit: limit, hash: hash))
@@ -336,6 +337,22 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         storeMessages.append(contentsOf: folderChats.storeMessages)
                     }
                     
+                    var pinnedItemIds: [PinnedItemId]?
+                    if let parsedPinnedChats = parsedPinnedChats {
+                        var array: [PinnedItemId] = []
+                        for itemId in parsedPinnedChats.itemIds {
+                            switch itemId {
+                                case let .peer(peerId):
+                                    if peerGroupIds[peerId] == nil {
+                                        array.append(itemId)
+                                    }
+                                case .group:
+                                    break
+                            }
+                        }
+                        pinnedItemIds = array
+                    }
+                    
                     return FetchedChatList(
                         peers: peers,
                         peerPresences: peerPresences,
@@ -348,7 +365,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                     
                         lowerNonPinnedIndex: parsedRemoteChats.lowerNonPinnedIndex,
                     
-                        pinnedItemIds: parsedPinnedChats.flatMap { $0.itemIds },
+                        pinnedItemIds: pinnedItemIds,
                         folders: folders.map { ($0.0, $0.1.lowerNonPinnedIndex) },
                         peerGroupIds: peerGroupIds
                     )

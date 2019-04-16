@@ -385,12 +385,6 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
                 transaction.updatePeerGroupId(peerId, groupId: groupId)
             }
             
-            /*for (groupId, lowerIndex) in fetchedChats.folders {
-                if let hole = postbox.seedConfiguration.initializeChatListWithHole.groups {
-                    transaction.replaceChatListHole(groupId: groupId, index: hole.index, hole: lowerIndex.flatMap(ChatListHole.init))
-                }
-            }*/
-            
             for (peerId, chatState) in fetchedChats.chatStates {
                 if let chatState = chatState as? ChannelState {
                     if let current = transaction.getPeerChatState(peerId) as? ChannelState {
