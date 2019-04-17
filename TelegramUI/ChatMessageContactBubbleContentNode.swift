@@ -147,7 +147,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         sentViaBot = true
                     }
                 }
-                if let author = item.message.author as? TelegramUser, author.botInfo != nil {
+                if let author = item.message.author as? TelegramUser, author.botInfo != nil || author.flags.contains(.isSupport) {
                     sentViaBot = true
                 }
                 

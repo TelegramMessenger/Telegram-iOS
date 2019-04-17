@@ -50,7 +50,7 @@ private class RadialProgressOverlayNode: ASDisplayNode {
         didSet {
             if case let .Fetching(progress) = oldValue {
                 let animation = POPBasicAnimation()
-                animation.property = POPAnimatableProperty.property(withName: "progress", initializer: { property in
+                animation.property = (POPAnimatableProperty.property(withName: "progress", initializer: { property in
                     property?.readBlock = { node, values in
                         values?.pointee = CGFloat((node as! RadialProgressOverlayNode).effectiveProgress)
                     }
@@ -58,7 +58,7 @@ private class RadialProgressOverlayNode: ASDisplayNode {
                         (node as! RadialProgressOverlayNode).effectiveProgress = Float(values!.pointee)
                     }
                     property?.threshold = 0.01
-                }) as! POPAnimatableProperty
+                }) as! POPAnimatableProperty)
                 animation.fromValue = CGFloat(effectiveProgress) as NSNumber
                 animation.toValue = CGFloat(progress) as NSNumber
                 animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
