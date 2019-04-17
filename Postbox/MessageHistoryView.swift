@@ -769,7 +769,7 @@ public final class MessageHistoryView {
                 self.earlierId = nil
                 self.laterId = nil
             case let .loaded(state):
-                self.isLoading = false
+                var isLoading = false
                 switch state.anchor {
                     case .lowerBound:
                         self.anchorIndex = .lowerBound
@@ -798,8 +798,7 @@ public final class MessageHistoryView {
                         entries.append(MessageHistoryEntry(message: entry.message, isRead: false, location: entry.location, monthLocation: entry.monthLocation, attributes: entry.attributes))
                     }
                 }
-                let stableIds = Set(entries.map({ $0.message.stableId }))
-                assert(stableIds.count == entries.count)
+                assert(Set(entries.map({ $0.message.stableId })).count == entries.count)
                 if !entries.isEmpty {
                     let anchorIndex = binaryIndexOrLower(entries, state.anchor)
                     let lowerCount = mutableView.fillCount / 2 + 1
@@ -819,7 +818,11 @@ public final class MessageHistoryView {
                 } else {
                     self.earlierId = nil
                     self.laterId = nil
+                    if state.holesToLower || state.holesToHigher {
+                        isLoading = true
+                    }
                 }
+                self.isLoading = isLoading
         }
         
         
