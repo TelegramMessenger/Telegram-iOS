@@ -424,7 +424,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             context?.account.viewTracker.updateUnsupportedMediaForMessageIds(messageIds: messageIds)
         }
         self.messageMentionProcessingManager.process = { [weak context] messageIds in
-            //context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
+            context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
         }
         
         self.preloadPages = false
