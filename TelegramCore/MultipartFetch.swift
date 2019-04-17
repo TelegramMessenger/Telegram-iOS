@@ -690,6 +690,9 @@ func multipartFetch(postbox: Postbox, network: Network, mediaReferenceRevalidati
                     switch info.reference {
                         case let .avatar(peer, _):
                             return resource.apiInputLocation(peerReference: peer)
+                        case let .messageAuthorAvatar(message, resource):
+                            
+                            return nil
                         default:
                             return nil
                     }

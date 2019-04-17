@@ -307,8 +307,8 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             let ids = messages.map({ $0.id!.id })
                             let messageRange = ids.min()! ... ids.max()!
                             switch direction {
-                                case .aroundId:
-                                    filledRange = messageRange
+                                case let .aroundId(aroundId):
+                                    filledRange = min(aroundId.id, messageRange.lowerBound) ... max(aroundId.id, messageRange.lowerBound)
                                 case let .range(start, end):
                                     if start.id <= end.id {
                                         let minBound = start.id
@@ -384,12 +384,6 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             for (peerId, groupId) in fetchedChats.peerGroupIds {
                 transaction.updatePeerGroupId(peerId, groupId: groupId)
             }
-            
-            /*for (groupId, lowerIndex) in fetchedChats.folders {
-                if let hole = postbox.seedConfiguration.initializeChatListWithHole.groups {
-                    transaction.replaceChatListHole(groupId: groupId, index: hole.index, hole: lowerIndex.flatMap(ChatListHole.init))
-                }
-            }*/
             
             for (peerId, chatState) in fetchedChats.chatStates {
                 if let chatState = chatState as? ChannelState {
