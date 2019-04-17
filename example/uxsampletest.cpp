@@ -57,7 +57,7 @@ public:
 
 private:
   void show() {
-      mView = std::make_unique<LottieView>(mApp->evas(), mRenderMode);
+      mView = std::make_unique<LottieView>(mApp->evas(), Strategy::renderCAsync);
       mView->setFilePath(mResourceList[mCurIndex].c_str());
       mView->setPos(0, 0);
       mView->setSize(mApp->width(), mApp->height());

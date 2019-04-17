@@ -45,7 +45,7 @@ main(void)
    app->setup();
 
    std::string filePath = DEMO_DIR;
-   filePath +="image_test.json";
+   filePath +="3d.json";
 
    LottieView *view = new LottieView(app->evas());
    view->setFilePath(filePath.c_str());

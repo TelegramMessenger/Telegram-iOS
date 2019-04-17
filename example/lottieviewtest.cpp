@@ -35,10 +35,9 @@ using namespace std;
 class LottieViewTest
 {
 public:
-  LottieViewTest(EvasApp *app, bool renderMode) {
+  LottieViewTest(EvasApp *app, Strategy st) {
+      mStrategy = st;
       mApp = app;
-      mRenderMode = renderMode;
-      ecore_animator_frametime_set(1.0/120.0);
   }
 
   void show(int numberOfImage) {
@@ -56,7 +55,7 @@ public:
     int resourceSize = resource.size();
     for (int i = 0 ; i < numberOfImage; i++) {
         int index = i % resourceSize;
-        std::unique_ptr<LottieView> view(new LottieView(mApp->evas(), mRenderMode));
+        std::unique_ptr<LottieView> view(new LottieView(mApp->evas(), mStrategy));
         view->setFilePath(resource[index].c_str());
         view->setPos(posx, posy);
         view->setSize(vw, vh);
@@ -85,7 +84,7 @@ public:
 
 public:
   EvasApp     *mApp;
-  bool         mRenderMode = false;
+  Strategy     mStrategy;
   std::vector<std::unique_ptr<LottieView>>   mViews;
 };
 
@@ -106,16 +105,31 @@ onRenderPreCb(void *data, void *extra)
 int
 main(int argc, char **argv)
 {
+    if (argc > 1) {
+        if (!strcmp(argv[1],"--help") || !strcmp(argv[1],"-h")) {
+            printf("Usage ./lottieviewTest 1 \n");
+            printf("\t 0  - Test Lottie SYNC Renderer with CPP API\n");
+            printf("\t 1  - Test Lottie ASYNC Renderer with CPP API\n");
+            printf("\t 2  - Test Lottie SYNC Renderer with C API\n");
+            printf("\t 3  - Test Lottie ASYNC Renderer with C API\n");
+            printf("\t 4  - Test Lottie Tree Api using Efl VG Render\n");
+            printf("\t Default is ./lottieviewTest 1 \n");
+            return 0;
+        }
+    } else {
+        printf("Run ./lottieviewTest -h  for more option\n");
+    }
+
    EvasApp *app = new EvasApp(800, 800);
    app->setup();
 
-   bool renderMode = true;
+   Strategy st = Strategy::renderCppAsync;
    if (argc > 1) {
-       if (!strcmp(argv[1],"--disable-render"))
-           renderMode = false;
+       int option = atoi(argv[1]);
+       st = static_cast<Strategy>(option);
    }
-   LottieViewTest *view = new LottieViewTest(app, renderMode);
-   view->show(250);
+   LottieViewTest *view = new LottieViewTest(app, st);
+   view->show(150);
 
    app->addExitCb(onExitCb, view);
    app->addRenderPreCb(onRenderPreCb, view);

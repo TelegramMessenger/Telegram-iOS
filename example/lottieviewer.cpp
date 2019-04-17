@@ -147,7 +147,7 @@ create_layout(Evas_Object *parent, const char *file)
    elm_layout_file_set(layout, edjPath.c_str(), "layout");
 
    //LOTTIEVIEW
-   LottieView *view = new LottieView(evas_object_evas_get(layout), renderMode);
+   LottieView *view = new LottieView(evas_object_evas_get(layout), Strategy::renderCppAsync);
    view->setFilePath(file);
    view->setSize(500, 500);
 
