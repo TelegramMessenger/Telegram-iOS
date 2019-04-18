@@ -317,10 +317,12 @@ private class ChatListStatusChecksNode: ChatListStatusContentNode {
             default:
                 break
         }
+        var animating = false
         if let previousState = self.state, case .delivered = previousState, case .read = state, animated {
+            animating = true
             self.animateProgress(from: 1.0, to: 2.0)
         }
-        if !animated {
+        if !animating {
             if case .delivered = state {
                 self.effectiveProgress = 1.0
             } else if case .read = state {

@@ -837,9 +837,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             if !mentionBadgeLayout.width.isZero {
                 if !badgeSize.isZero {
-                    badgeSize += badgeLayout.width + 4.0
+                    badgeSize += mentionBadgeLayout.width + 4.0
                 } else {
-                    badgeSize += badgeLayout.width + 5.0
+                    badgeSize += mentionBadgeLayout.width + 5.0
                 }
             }
             if let currentPinnedIconImage = currentPinnedIconImage {

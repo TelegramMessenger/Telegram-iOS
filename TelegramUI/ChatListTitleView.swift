@@ -39,11 +39,10 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
                 self.buttonView.isHidden = !self.title.isPasscodeSet
                 if self.title.isPasscodeSet && !self.title.activity {
                     self.lockView.isHidden = false
-                    self.lockView.setIsLocked(self.title.isManuallyLocked, theme: self.theme, animated: !self.bounds.size.width.isZero)
                 } else {
                     self.lockView.isHidden = true
-                    self.lockView.setIsLocked(false, theme: self.theme, animated: false)
                 }
+                self.lockView.updateTheme(self.theme)
                 
                 self.setNeedsLayout()
             }
@@ -60,11 +59,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         didSet {
             self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
             
-            if self.isPasscodeSet {
-                self.lockView.setIsLocked(self.isManuallyLocked, theme: self.theme, animated: false)
-            } else {
-                self.lockView.setIsLocked(false, theme: self.theme, animated: false)
-            }
+            self.lockView.updateTheme(self.theme)
             
             self.activityIndicator.type = .custom(self.theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5, false)
             self.proxyNode.theme = self.theme
@@ -202,7 +197,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         let buttonX = max(0.0, titleFrame.minX - 10.0)
         self.buttonView.frame = CGRect(origin: CGPoint(x: buttonX, y: 0.0), size: CGSize(width: min(titleFrame.maxX + 28.0, size.width) - buttonX, height: size.height))
         
-        self.lockView.frame = CGRect(x: titleFrame.maxX + 6.0, y: titleFrame.minY + 3.0, width: 2.0, height: 2.0)
+        self.lockView.frame = CGRect(x: titleFrame.maxX + 6.0, y: titleFrame.minY + 2.0, width: 2.0, height: 2.0)
         
         self.activityIndicator.frame = CGRect(origin: CGPoint(x: titleFrame.minX - indicatorSize.width - 4.0, y: titleFrame.minY - 1.0), size: indicatorSize)
     }

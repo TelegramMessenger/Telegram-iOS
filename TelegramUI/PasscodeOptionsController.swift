@@ -209,11 +209,6 @@ private func passcodeOptionsControllerEntries(presentationData: PresentationData
                         entries.append(.touchId(presentationData.theme, presentationData.strings.PasscodeSettings_UnlockWithFaceId, passcodeOptionsData.presentationSettings.enableBiometrics))
                 }
             }
-            var simplePasscode = false
-            if case .numericalPassword = passcodeOptionsData.accessChallenge {
-                simplePasscode = true
-            }
-            entries.append(.simplePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_SimplePasscode, simplePasscode))
     }
     
     return entries

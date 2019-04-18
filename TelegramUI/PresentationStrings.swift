@@ -3474,229 +3474,230 @@ public final class PresentationStrings {
     }
     public var Group_AdminLog_EmptyText: String { return self._s[3123]! }
     public var SettingsSearch_Synonyms_Appearance_Title: String { return self._s[3124]! }
-    public var AccessDenied_VideoMicrophone: String { return self._s[3126]! }
-    public var Conversation_ContextMenuStickerPackAdd: String { return self._s[3127]! }
-    public var Cache_ClearNone: String { return self._s[3128]! }
-    public var SocksProxySetup_FailedToConnect: String { return self._s[3129]! }
-    public var Permissions_NotificationsTitle_v0: String { return self._s[3130]! }
+    public var Conversation_PrivateChannelTooltip: String { return self._s[3126]! }
+    public var AccessDenied_VideoMicrophone: String { return self._s[3127]! }
+    public var Conversation_ContextMenuStickerPackAdd: String { return self._s[3128]! }
+    public var Cache_ClearNone: String { return self._s[3129]! }
+    public var SocksProxySetup_FailedToConnect: String { return self._s[3130]! }
+    public var Permissions_NotificationsTitle_v0: String { return self._s[3131]! }
     public func Channel_AdminLog_MessageEdited(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3131]!, self._r[3131]!, [_0])
+        return formatWithArgumentRanges(self._s[3132]!, self._r[3132]!, [_0])
     }
-    public var Passport_Identity_Country: String { return self._s[3132]! }
+    public var Passport_Identity_Country: String { return self._s[3133]! }
     public func ChatSettings_AutoDownloadSettings_TypeFile(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3133]!, self._r[3133]!, [_0])
-    }
-    public func Notification_CreatedChat(_ _0: String) -> (String, [(Int, NSRange)]) {
         return formatWithArgumentRanges(self._s[3134]!, self._r[3134]!, [_0])
     }
-    public var AccessDenied_Settings: String { return self._s[3135]! }
-    public var Passport_Address_TypeUtilityBillUploadScan: String { return self._s[3136]! }
-    public var Month_ShortMay: String { return self._s[3137]! }
-    public var Compose_NewGroup: String { return self._s[3138]! }
-    public var Group_Setup_TypePrivate: String { return self._s[3140]! }
-    public var Login_PadPhoneHelpTitle: String { return self._s[3142]! }
-    public var Appearance_ThemeDayClassic: String { return self._s[3143]! }
-    public var Channel_AdminLog_MessagePreviousCaption: String { return self._s[3144]! }
-    public var AutoDownloadSettings_OffForAll: String { return self._s[3145]! }
-    public var Privacy_GroupsAndChannels_WhoCanAddMe: String { return self._s[3146]! }
-    public var Conversation_typing: String { return self._s[3148]! }
-    public var Paint_Masks: String { return self._s[3149]! }
-    public var Username_InvalidTaken: String { return self._s[3150]! }
-    public var Call_StatusNoAnswer: String { return self._s[3151]! }
-    public var TwoStepAuth_EmailAddSuccess: String { return self._s[3152]! }
-    public var SettingsSearch_Synonyms_Privacy_BlockedUsers: String { return self._s[3153]! }
-    public var Passport_Identity_Selfie: String { return self._s[3154]! }
-    public var Login_InfoLastNamePlaceholder: String { return self._s[3155]! }
-    public var Privacy_SecretChatsLinkPreviewsHelp: String { return self._s[3156]! }
-    public var Conversation_ClearSecretHistory: String { return self._s[3157]! }
-    public var NetworkUsageSettings_Title: String { return self._s[3159]! }
-    public var Your_cards_security_code_is_invalid: String { return self._s[3161]! }
+    public func Notification_CreatedChat(_ _0: String) -> (String, [(Int, NSRange)]) {
+        return formatWithArgumentRanges(self._s[3135]!, self._r[3135]!, [_0])
+    }
+    public var AccessDenied_Settings: String { return self._s[3136]! }
+    public var Passport_Address_TypeUtilityBillUploadScan: String { return self._s[3137]! }
+    public var Month_ShortMay: String { return self._s[3138]! }
+    public var Compose_NewGroup: String { return self._s[3139]! }
+    public var Group_Setup_TypePrivate: String { return self._s[3141]! }
+    public var Login_PadPhoneHelpTitle: String { return self._s[3143]! }
+    public var Appearance_ThemeDayClassic: String { return self._s[3144]! }
+    public var Channel_AdminLog_MessagePreviousCaption: String { return self._s[3145]! }
+    public var AutoDownloadSettings_OffForAll: String { return self._s[3146]! }
+    public var Privacy_GroupsAndChannels_WhoCanAddMe: String { return self._s[3147]! }
+    public var Conversation_typing: String { return self._s[3149]! }
+    public var Paint_Masks: String { return self._s[3150]! }
+    public var Username_InvalidTaken: String { return self._s[3151]! }
+    public var Call_StatusNoAnswer: String { return self._s[3152]! }
+    public var TwoStepAuth_EmailAddSuccess: String { return self._s[3153]! }
+    public var SettingsSearch_Synonyms_Privacy_BlockedUsers: String { return self._s[3154]! }
+    public var Passport_Identity_Selfie: String { return self._s[3155]! }
+    public var Login_InfoLastNamePlaceholder: String { return self._s[3156]! }
+    public var Privacy_SecretChatsLinkPreviewsHelp: String { return self._s[3157]! }
+    public var Conversation_ClearSecretHistory: String { return self._s[3158]! }
+    public var NetworkUsageSettings_Title: String { return self._s[3160]! }
+    public var Your_cards_security_code_is_invalid: String { return self._s[3162]! }
     public func Notification_LeftChannel(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3163]!, self._r[3163]!, [_0])
+        return formatWithArgumentRanges(self._s[3164]!, self._r[3164]!, [_0])
     }
     public func Call_CallInProgressMessage(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3164]!, self._r[3164]!, [_1, _2])
+        return formatWithArgumentRanges(self._s[3165]!, self._r[3165]!, [_1, _2])
     }
-    public var SaveIncomingPhotosSettings_From: String { return self._s[3166]! }
-    public var Map_LiveLocationTitle: String { return self._s[3167]! }
-    public var Login_InfoAvatarAdd: String { return self._s[3168]! }
-    public var Passport_Identity_FilesView: String { return self._s[3169]! }
-    public var UserInfo_GenericPhoneLabel: String { return self._s[3170]! }
-    public var Privacy_Calls_NeverAllow: String { return self._s[3171]! }
+    public var SaveIncomingPhotosSettings_From: String { return self._s[3167]! }
+    public var Map_LiveLocationTitle: String { return self._s[3168]! }
+    public var Login_InfoAvatarAdd: String { return self._s[3169]! }
+    public var Passport_Identity_FilesView: String { return self._s[3170]! }
+    public var UserInfo_GenericPhoneLabel: String { return self._s[3171]! }
+    public var Privacy_Calls_NeverAllow: String { return self._s[3172]! }
     public func Contacts_AddPhoneNumber(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3172]!, self._r[3172]!, [_0])
+        return formatWithArgumentRanges(self._s[3173]!, self._r[3173]!, [_0])
     }
-    public var TwoStepAuth_ConfirmationText: String { return self._s[3173]! }
-    public var ChatSettings_AutomaticVideoMessageDownload: String { return self._s[3174]! }
+    public var TwoStepAuth_ConfirmationText: String { return self._s[3174]! }
+    public var ChatSettings_AutomaticVideoMessageDownload: String { return self._s[3175]! }
     public func PUSH_CHAT_MESSAGE_VIDEOS(_ _1: String, _ _2: String, _ _3: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3175]!, self._r[3175]!, [_1, _2, _3])
+        return formatWithArgumentRanges(self._s[3176]!, self._r[3176]!, [_1, _2, _3])
     }
-    public var Channel_AdminLogFilter_AdminsAll: String { return self._s[3176]! }
-    public var Tour_Title2: String { return self._s[3177]! }
-    public var Conversation_FileOpenIn: String { return self._s[3178]! }
-    public var Checkout_ErrorPrecheckoutFailed: String { return self._s[3179]! }
-    public var Wallpaper_Set: String { return self._s[3180]! }
-    public var Passport_Identity_Translations: String { return self._s[3182]! }
+    public var Channel_AdminLogFilter_AdminsAll: String { return self._s[3177]! }
+    public var Tour_Title2: String { return self._s[3178]! }
+    public var Conversation_FileOpenIn: String { return self._s[3179]! }
+    public var Checkout_ErrorPrecheckoutFailed: String { return self._s[3180]! }
+    public var Wallpaper_Set: String { return self._s[3181]! }
+    public var Passport_Identity_Translations: String { return self._s[3183]! }
     public func Channel_AdminLog_MessageChangedChannelAbout(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3183]!, self._r[3183]!, [_0])
+        return formatWithArgumentRanges(self._s[3184]!, self._r[3184]!, [_0])
     }
-    public var Channel_LeaveChannel: String { return self._s[3184]! }
+    public var Channel_LeaveChannel: String { return self._s[3185]! }
     public func PINNED_INVOICE(_ _1: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3185]!, self._r[3185]!, [_1])
+        return formatWithArgumentRanges(self._s[3186]!, self._r[3186]!, [_1])
     }
-    public var SettingsSearch_Synonyms_Proxy_AddProxy: String { return self._s[3186]! }
-    public var PhotoEditor_HighlightsTint: String { return self._s[3187]! }
-    public var Passport_Email_Delete: String { return self._s[3188]! }
-    public var Conversation_Mute: String { return self._s[3190]! }
-    public var Channel_AdminLog_CanSendMessages: String { return self._s[3192]! }
+    public var SettingsSearch_Synonyms_Proxy_AddProxy: String { return self._s[3187]! }
+    public var PhotoEditor_HighlightsTint: String { return self._s[3188]! }
+    public var Passport_Email_Delete: String { return self._s[3189]! }
+    public var Conversation_Mute: String { return self._s[3191]! }
+    public var Channel_AdminLog_CanSendMessages: String { return self._s[3193]! }
     public func Notification_PassportValuesSentMessage(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3194]!, self._r[3194]!, [_1, _2])
+        return formatWithArgumentRanges(self._s[3195]!, self._r[3195]!, [_1, _2])
     }
-    public var Calls_CallTabDescription: String { return self._s[3195]! }
-    public var Passport_Identity_NativeNameHelp: String { return self._s[3196]! }
-    public var Common_No: String { return self._s[3197]! }
-    public var Weekday_Sunday: String { return self._s[3198]! }
-    public var Notification_Reply: String { return self._s[3199]! }
-    public var Conversation_ViewMessage: String { return self._s[3200]! }
+    public var Calls_CallTabDescription: String { return self._s[3196]! }
+    public var Passport_Identity_NativeNameHelp: String { return self._s[3197]! }
+    public var Common_No: String { return self._s[3198]! }
+    public var Weekday_Sunday: String { return self._s[3199]! }
+    public var Notification_Reply: String { return self._s[3200]! }
+    public var Conversation_ViewMessage: String { return self._s[3201]! }
     public func Checkout_SavePasswordTimeoutAndFaceId(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3201]!, self._r[3201]!, [_0])
-    }
-    public func Map_LiveLocationPrivateDescription(_ _0: String) -> (String, [(Int, NSRange)]) {
         return formatWithArgumentRanges(self._s[3202]!, self._r[3202]!, [_0])
     }
-    public var SettingsSearch_Synonyms_EditProfile_AddAccount: String { return self._s[3203]! }
-    public var Message_PinnedDocumentMessage: String { return self._s[3204]! }
-    public var DialogList_TabTitle: String { return self._s[3206]! }
-    public var ChatSettings_AutoPlayTitle: String { return self._s[3207]! }
-    public var Passport_FieldEmail: String { return self._s[3208]! }
-    public var Conversation_UnpinMessageAlert: String { return self._s[3209]! }
-    public var Passport_Address_TypeBankStatement: String { return self._s[3210]! }
-    public var Passport_Identity_ExpiryDate: String { return self._s[3211]! }
-    public var Privacy_Calls_P2P: String { return self._s[3212]! }
+    public func Map_LiveLocationPrivateDescription(_ _0: String) -> (String, [(Int, NSRange)]) {
+        return formatWithArgumentRanges(self._s[3203]!, self._r[3203]!, [_0])
+    }
+    public var SettingsSearch_Synonyms_EditProfile_AddAccount: String { return self._s[3204]! }
+    public var Message_PinnedDocumentMessage: String { return self._s[3205]! }
+    public var DialogList_TabTitle: String { return self._s[3207]! }
+    public var ChatSettings_AutoPlayTitle: String { return self._s[3208]! }
+    public var Passport_FieldEmail: String { return self._s[3209]! }
+    public var Conversation_UnpinMessageAlert: String { return self._s[3210]! }
+    public var Passport_Address_TypeBankStatement: String { return self._s[3211]! }
+    public var Passport_Identity_ExpiryDate: String { return self._s[3212]! }
+    public var Privacy_Calls_P2P: String { return self._s[3213]! }
     public func CancelResetAccount_Success(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3214]!, self._r[3214]!, [_0])
+        return formatWithArgumentRanges(self._s[3215]!, self._r[3215]!, [_0])
     }
-    public var SocksProxySetup_UseForCallsHelp: String { return self._s[3215]! }
+    public var SocksProxySetup_UseForCallsHelp: String { return self._s[3216]! }
     public func PUSH_CHAT_ALBUM(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3216]!, self._r[3216]!, [_1, _2])
+        return formatWithArgumentRanges(self._s[3217]!, self._r[3217]!, [_1, _2])
     }
-    public var Stickers_ClearRecent: String { return self._s[3217]! }
-    public var EnterPasscode_ChangeTitle: String { return self._s[3218]! }
-    public var Passport_InfoText: String { return self._s[3219]! }
-    public var Checkout_NewCard_SaveInfoEnableHelp: String { return self._s[3220]! }
+    public var Stickers_ClearRecent: String { return self._s[3218]! }
+    public var EnterPasscode_ChangeTitle: String { return self._s[3219]! }
+    public var Passport_InfoText: String { return self._s[3220]! }
+    public var Checkout_NewCard_SaveInfoEnableHelp: String { return self._s[3221]! }
     public func Login_InvalidPhoneEmailSubject(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3221]!, self._r[3221]!, [_0])
+        return formatWithArgumentRanges(self._s[3222]!, self._r[3222]!, [_0])
     }
     public func Time_PreciseDate_m3(_ _1: String, _ _2: String, _ _3: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3222]!, self._r[3222]!, [_1, _2, _3])
+        return formatWithArgumentRanges(self._s[3223]!, self._r[3223]!, [_1, _2, _3])
     }
-    public var SettingsSearch_Synonyms_Notifications_BadgeIncludeMutedChannels: String { return self._s[3223]! }
-    public var Passport_Identity_EditDriversLicense: String { return self._s[3224]! }
-    public var Conversation_TapAndHoldToRecord: String { return self._s[3226]! }
-    public var SettingsSearch_Synonyms_Notifications_BadgeIncludeMutedChats: String { return self._s[3227]! }
+    public var SettingsSearch_Synonyms_Notifications_BadgeIncludeMutedChannels: String { return self._s[3224]! }
+    public var Passport_Identity_EditDriversLicense: String { return self._s[3225]! }
+    public var Conversation_TapAndHoldToRecord: String { return self._s[3227]! }
+    public var SettingsSearch_Synonyms_Notifications_BadgeIncludeMutedChats: String { return self._s[3228]! }
     public func Notification_CallTimeFormat(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3228]!, self._r[3228]!, [_1, _2])
+        return formatWithArgumentRanges(self._s[3229]!, self._r[3229]!, [_1, _2])
     }
-    public var Channel_EditAdmin_PermissionInviteViaLink: String { return self._s[3230]! }
+    public var Channel_EditAdmin_PermissionInviteViaLink: String { return self._s[3231]! }
     public func Generic_OpenHiddenLinkAlert(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3232]!, self._r[3232]!, [_0])
+        return formatWithArgumentRanges(self._s[3233]!, self._r[3233]!, [_0])
     }
-    public var DialogList_Unread: String { return self._s[3233]! }
+    public var DialogList_Unread: String { return self._s[3234]! }
     public func PUSH_CHAT_MESSAGE_GIF(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3234]!, self._r[3234]!, [_1, _2])
+        return formatWithArgumentRanges(self._s[3235]!, self._r[3235]!, [_1, _2])
     }
-    public var User_DeletedAccount: String { return self._s[3235]! }
+    public var User_DeletedAccount: String { return self._s[3236]! }
     public func Watch_Time_ShortYesterdayAt(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3236]!, self._r[3236]!, [_0])
+        return formatWithArgumentRanges(self._s[3237]!, self._r[3237]!, [_0])
     }
-    public var UserInfo_NotificationsDefault: String { return self._s[3237]! }
-    public var SharedMedia_CategoryMedia: String { return self._s[3238]! }
-    public var SocksProxySetup_ProxyStatusUnavailable: String { return self._s[3239]! }
-    public var Channel_AdminLog_MessageRestrictedForever: String { return self._s[3240]! }
-    public var Watch_ChatList_Compose: String { return self._s[3241]! }
-    public var Notifications_MessageNotificationsExceptionsHelp: String { return self._s[3242]! }
-    public var AutoDownloadSettings_Delimeter: String { return self._s[3243]! }
-    public var Watch_Microphone_Access: String { return self._s[3244]! }
-    public var Group_Setup_HistoryHeader: String { return self._s[3245]! }
-    public var Activity_UploadingPhoto: String { return self._s[3246]! }
-    public var Conversation_Edit: String { return self._s[3248]! }
-    public var Group_ErrorSendRestrictedMedia: String { return self._s[3249]! }
-    public var Login_TermsOfServiceDecline: String { return self._s[3250]! }
-    public var Message_PinnedContactMessage: String { return self._s[3251]! }
+    public var UserInfo_NotificationsDefault: String { return self._s[3238]! }
+    public var SharedMedia_CategoryMedia: String { return self._s[3239]! }
+    public var SocksProxySetup_ProxyStatusUnavailable: String { return self._s[3240]! }
+    public var Channel_AdminLog_MessageRestrictedForever: String { return self._s[3241]! }
+    public var Watch_ChatList_Compose: String { return self._s[3242]! }
+    public var Notifications_MessageNotificationsExceptionsHelp: String { return self._s[3243]! }
+    public var AutoDownloadSettings_Delimeter: String { return self._s[3244]! }
+    public var Watch_Microphone_Access: String { return self._s[3245]! }
+    public var Group_Setup_HistoryHeader: String { return self._s[3246]! }
+    public var Activity_UploadingPhoto: String { return self._s[3247]! }
+    public var Conversation_Edit: String { return self._s[3249]! }
+    public var Group_ErrorSendRestrictedMedia: String { return self._s[3250]! }
+    public var Login_TermsOfServiceDecline: String { return self._s[3251]! }
+    public var Message_PinnedContactMessage: String { return self._s[3252]! }
     public func Channel_AdminLog_MessageRestrictedNameUsername(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3252]!, self._r[3252]!, [_1, _2])
+        return formatWithArgumentRanges(self._s[3253]!, self._r[3253]!, [_1, _2])
     }
     public func Login_PhoneBannedEmailBody(_ _1: String, _ _2: String, _ _3: String, _ _4: String, _ _5: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3253]!, self._r[3253]!, [_1, _2, _3, _4, _5])
+        return formatWithArgumentRanges(self._s[3254]!, self._r[3254]!, [_1, _2, _3, _4, _5])
     }
-    public var Appearance_LargeEmoji: String { return self._s[3254]! }
-    public var TwoStepAuth_AdditionalPassword: String { return self._s[3256]! }
+    public var Appearance_LargeEmoji: String { return self._s[3255]! }
+    public var TwoStepAuth_AdditionalPassword: String { return self._s[3257]! }
     public func PUSH_CHAT_DELETE_YOU(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3257]!, self._r[3257]!, [_1, _2])
+        return formatWithArgumentRanges(self._s[3258]!, self._r[3258]!, [_1, _2])
     }
-    public var Passport_Phone_EnterOtherNumber: String { return self._s[3258]! }
-    public var Message_PinnedPhotoMessage: String { return self._s[3259]! }
-    public var Passport_FieldPhone: String { return self._s[3260]! }
-    public var TwoStepAuth_RecoveryEmailAddDescription: String { return self._s[3261]! }
-    public var ChatSettings_AutoPlayGifs: String { return self._s[3262]! }
-    public var InfoPlist_NSCameraUsageDescription: String { return self._s[3264]! }
-    public var Conversation_Call: String { return self._s[3265]! }
-    public var Common_TakePhoto: String { return self._s[3267]! }
-    public var Channel_NotificationLoading: String { return self._s[3268]! }
+    public var Passport_Phone_EnterOtherNumber: String { return self._s[3259]! }
+    public var Message_PinnedPhotoMessage: String { return self._s[3260]! }
+    public var Passport_FieldPhone: String { return self._s[3261]! }
+    public var TwoStepAuth_RecoveryEmailAddDescription: String { return self._s[3262]! }
+    public var ChatSettings_AutoPlayGifs: String { return self._s[3263]! }
+    public var InfoPlist_NSCameraUsageDescription: String { return self._s[3265]! }
+    public var Conversation_Call: String { return self._s[3266]! }
+    public var Common_TakePhoto: String { return self._s[3268]! }
+    public var Channel_NotificationLoading: String { return self._s[3269]! }
     public func Notification_Exceptions_Sound(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3269]!, self._r[3269]!, [_0])
+        return formatWithArgumentRanges(self._s[3270]!, self._r[3270]!, [_0])
     }
     public func PUSH_CHANNEL_MESSAGE_VIDEO(_ _1: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3270]!, self._r[3270]!, [_1])
+        return formatWithArgumentRanges(self._s[3271]!, self._r[3271]!, [_1])
     }
-    public var Permissions_SiriTitle_v0: String { return self._s[3271]! }
+    public var Permissions_SiriTitle_v0: String { return self._s[3272]! }
     public func Login_ResetAccountProtected_Text(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3272]!, self._r[3272]!, [_0])
+        return formatWithArgumentRanges(self._s[3273]!, self._r[3273]!, [_0])
     }
-    public var Channel_MessagePhotoRemoved: String { return self._s[3273]! }
-    public var Common_edit: String { return self._s[3274]! }
-    public var PrivacySettings_AuthSessions: String { return self._s[3275]! }
-    public var Month_ShortJune: String { return self._s[3276]! }
-    public var PrivacyLastSeenSettings_AlwaysShareWith_Placeholder: String { return self._s[3277]! }
-    public var Call_ReportSend: String { return self._s[3278]! }
-    public var Watch_LastSeen_JustNow: String { return self._s[3279]! }
-    public var Notifications_MessageNotifications: String { return self._s[3280]! }
-    public var WallpaperSearch_ColorGreen: String { return self._s[3281]! }
-    public var BroadcastListInfo_AddRecipient: String { return self._s[3283]! }
-    public var Group_Status: String { return self._s[3284]! }
+    public var Channel_MessagePhotoRemoved: String { return self._s[3274]! }
+    public var Common_edit: String { return self._s[3275]! }
+    public var PrivacySettings_AuthSessions: String { return self._s[3276]! }
+    public var Month_ShortJune: String { return self._s[3277]! }
+    public var PrivacyLastSeenSettings_AlwaysShareWith_Placeholder: String { return self._s[3278]! }
+    public var Call_ReportSend: String { return self._s[3279]! }
+    public var Watch_LastSeen_JustNow: String { return self._s[3280]! }
+    public var Notifications_MessageNotifications: String { return self._s[3281]! }
+    public var WallpaperSearch_ColorGreen: String { return self._s[3282]! }
+    public var BroadcastListInfo_AddRecipient: String { return self._s[3284]! }
+    public var Group_Status: String { return self._s[3285]! }
     public func AutoNightTheme_LocationHelp(_ _0: String, _ _1: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3285]!, self._r[3285]!, [_0, _1])
+        return formatWithArgumentRanges(self._s[3286]!, self._r[3286]!, [_0, _1])
     }
-    public var ShareMenu_ShareTo: String { return self._s[3286]! }
-    public var Conversation_Moderate_Ban: String { return self._s[3287]! }
+    public var ShareMenu_ShareTo: String { return self._s[3287]! }
+    public var Conversation_Moderate_Ban: String { return self._s[3288]! }
     public func Conversation_DeleteMessagesFor(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3288]!, self._r[3288]!, [_0])
+        return formatWithArgumentRanges(self._s[3289]!, self._r[3289]!, [_0])
     }
-    public var SharedMedia_ViewInChat: String { return self._s[3289]! }
-    public var Map_LiveLocationFor8Hours: String { return self._s[3290]! }
+    public var SharedMedia_ViewInChat: String { return self._s[3290]! }
+    public var Map_LiveLocationFor8Hours: String { return self._s[3291]! }
     public func PUSH_PINNED_PHOTO(_ _1: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3291]!, self._r[3291]!, [_1])
+        return formatWithArgumentRanges(self._s[3292]!, self._r[3292]!, [_1])
     }
     public func PUSH_PINNED_POLL(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3292]!, self._r[3292]!, [_1, _2])
+        return formatWithArgumentRanges(self._s[3293]!, self._r[3293]!, [_1, _2])
     }
     public func Map_AccurateTo(_ _0: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3294]!, self._r[3294]!, [_0])
+        return formatWithArgumentRanges(self._s[3295]!, self._r[3295]!, [_0])
     }
-    public var Map_OpenInHereMaps: String { return self._s[3295]! }
-    public var Appearance_ReduceMotion: String { return self._s[3296]! }
+    public var Map_OpenInHereMaps: String { return self._s[3296]! }
+    public var Appearance_ReduceMotion: String { return self._s[3297]! }
     public func PUSH_MESSAGE_TEXT(_ _1: String, _ _2: String) -> (String, [(Int, NSRange)]) {
-        return formatWithArgumentRanges(self._s[3297]!, self._r[3297]!, [_1, _2])
+        return formatWithArgumentRanges(self._s[3298]!, self._r[3298]!, [_1, _2])
     }
-    public var Channel_Setup_TypePublicHelp: String { return self._s[3298]! }
-    public var Passport_Identity_EditInternalPassport: String { return self._s[3299]! }
-    public var PhotoEditor_Skip: String { return self._s[3300]! }
-    public func Conversation_LiveLocationMembersCount(_ value: Int32) -> String {
+    public var Channel_Setup_TypePublicHelp: String { return self._s[3299]! }
+    public var Passport_Identity_EditInternalPassport: String { return self._s[3300]! }
+    public var PhotoEditor_Skip: String { return self._s[3301]! }
+    public func Notification_GameScoreSelfSimple(_ value: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, value)
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
         return String(format: self._ps[0 * 6 + Int(form.rawValue)]!, stringValue)
     }
-    public func UserCount(_ value: Int32) -> String {
+    public func ChatList_SelectedChats(_ value: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, value)
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
         return String(format: self._ps[1 * 6 + Int(form.rawValue)]!, stringValue)
@@ -3706,511 +3707,511 @@ public final class PresentationStrings {
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
         return String(format: self._ps[2 * 6 + Int(form.rawValue)]!, stringValue)
     }
-    public func Notification_GameScoreSelfExtended(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[3 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func MessageTimer_Weeks(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[4 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func PrivacyLastSeenSettings_AddUsers(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[5 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Map_ETAHours(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[6 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func SharedMedia_Video(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[7 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func ForwardedGifs(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[8 * 6 + Int(form.rawValue)]!, stringValue)
+    public func PUSH_CHAT_MESSAGE_FWDS(_ selector: Int32, _ _2: String, _ _1: String, _ _3: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, selector)
+        return String(format: self._ps[3 * 6 + Int(form.rawValue)]!, _2, _1, _3)
     }
     public func PUSH_MESSAGES(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[9 * 6 + Int(form.rawValue)]!, _1, _2)
-    }
-    public func DialogList_LiveLocationChatsCount(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[10 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func MessageTimer_ShortDays(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[11 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Notification_GameScoreExtended(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[12 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func ForwardedFiles(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[13 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func SharedMedia_Photo(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[14 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func PUSH_CHANNEL_MESSAGE_PHOTOS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[15 * 6 + Int(form.rawValue)]!, _1, _2)
-    }
-    public func ForwardedMessages(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[16 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func ForwardedStickers(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[17 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func StickerPack_RemoveMaskCount(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[18 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func MuteExpires_Days(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[19 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func MessageTimer_Seconds(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[20 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func PUSH_CHAT_MESSAGE_ROUNDS(_ selector: Int32, _ _2: String, _ _1: String, _ _3: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[21 * 6 + Int(form.rawValue)]!, _2, _1, _3)
-    }
-    public func ServiceMessage_GameScoreExtended(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[22 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func ForwardedVideoMessages(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[23 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Watch_LastSeen_MinutesAgo(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[24 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func PUSH_CHANNEL_MESSAGE_ROUNDS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[25 * 6 + Int(form.rawValue)]!, _1, _2)
-    }
-    public func MessageTimer_Hours(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[26 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Notifications_ExceptionMuteExpires_Hours(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[27 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Media_ShareVideo(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[28 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Notifications_ExceptionMuteExpires_Days(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[29 * 6 + Int(form.rawValue)]!, stringValue)
+        return String(format: self._ps[4 * 6 + Int(form.rawValue)]!, _1, _2)
     }
     public func MessageTimer_ShortWeeks(_ value: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, value)
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[30 * 6 + Int(form.rawValue)]!, stringValue)
+        return String(format: self._ps[5 * 6 + Int(form.rawValue)]!, stringValue)
     }
-    public func MessageTimer_ShortHours(_ value: Int32) -> String {
+    public func ServiceMessage_GameScoreExtended(_ value: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, value)
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[31 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func StickerPack_AddMaskCount(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[32 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func MuteExpires_Minutes(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[33 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Watch_LastSeen_HoursAgo(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[34 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func AttachmentMenu_SendVideo(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[35 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func PUSH_MESSAGE_PHOTOS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[36 * 6 + Int(form.rawValue)]!, _1, _2)
-    }
-    public func ServiceMessage_GameScoreSimple(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[37 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func PUSH_MESSAGE_ROUNDS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[38 * 6 + Int(form.rawValue)]!, _1, _2)
-    }
-    public func StickerPack_RemoveStickerCount(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[39 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func PUSH_CHANNEL_MESSAGE_FWDS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[40 * 6 + Int(form.rawValue)]!, _1, _2)
-    }
-    public func Media_SharePhoto(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[41 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Wallpaper_DeleteConfirmation(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[42 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func AttachmentMenu_SendPhoto(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[43 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Map_ETAMinutes(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[44 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func PUSH_CHAT_MESSAGE_FWDS(_ selector: Int32, _ _2: String, _ _1: String, _ _3: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[45 * 6 + Int(form.rawValue)]!, _2, _1, _3)
-    }
-    public func PUSH_CHAT_MESSAGES(_ selector: Int32, _ _2: String, _ _1: String, _ _3: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[46 * 6 + Int(form.rawValue)]!, _2, _1, _3)
-    }
-    public func MessageTimer_Years(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[47 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func MuteFor_Hours(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[48 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Call_Seconds(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[49 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func CreatePoll_AddMoreOptions(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[50 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func PUSH_CHANNEL_MESSAGES(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[51 * 6 + Int(form.rawValue)]!, _1, _2)
-    }
-    public func Media_ShareItem(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[52 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Passport_Scans(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[53 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func ServiceMessage_GameScoreSelfExtended(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[54 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func LastSeen_HoursAgo(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[55 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func ForwardedAudios(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[56 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func PUSH_CHANNEL_MESSAGE_VIDEOS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[57 * 6 + Int(form.rawValue)]!, _1, _2)
-    }
-    public func Notification_GameScoreSimple(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[58 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Call_Minutes(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[59 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func ForwardedLocations(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[60 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func SharedMedia_File(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[61 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func MessageTimer_ShortMinutes(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[62 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func SharedMedia_Generic(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[63 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func ChatList_DeleteConfirmation(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[64 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func MuteExpires_Hours(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[65 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func PasscodeSettings_FailedAttempts(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[66 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func LastSeen_MinutesAgo(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[67 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func MessagePoll_VotedCount(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[68 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func LiveLocationUpdated_MinutesAgo(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[69 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Watch_UserInfo_Mute(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[70 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func AttachmentMenu_SendGif(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[71 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func ServiceMessage_GameScoreSelfSimple(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[72 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func MuteFor_Days(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[73 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func ForwardedContacts(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[74 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func StickerPack_StickerCount(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[75 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func QuickSend_Photos(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[76 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Conversation_StatusSubscribers(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[77 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Notification_GameScoreSelfSimple(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[78 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func ForwardedVideos(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[79 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func GroupInfo_ParticipantCount(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[80 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func LiveLocation_MenuChatsCount(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[81 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func MessageTimer_Minutes(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[82 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Notifications_Exceptions(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[83 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func MessageTimer_ShortSeconds(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[84 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func PUSH_MESSAGE_VIDEOS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[85 * 6 + Int(form.rawValue)]!, _1, _2)
-    }
-    public func ForwardedPolls(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[86 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func MessageTimer_Months(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[87 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func StickerPack_AddStickerCount(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[88 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func PUSH_CHAT_MESSAGE_PHOTOS(_ selector: Int32, _ _2: String, _ _1: String, _ _3: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[89 * 6 + Int(form.rawValue)]!, _2, _1, _3)
-    }
-    public func Conversation_StatusMembers(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[90 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func ForwardedPhotos(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[91 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Call_ShortSeconds(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[92 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func ForwardedAuthorsOthers(_ selector: Int32, _ _0: String, _ _1: String) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[93 * 6 + Int(form.rawValue)]!, _0, _1)
-    }
-    public func InviteText_ContactsCountText(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[94 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func Contacts_ImportersCount(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[95 * 6 + Int(form.rawValue)]!, stringValue)
+        return String(format: self._ps[6 * 6 + Int(form.rawValue)]!, stringValue)
     }
     public func Chat_DeleteMessagesConfirmation(_ value: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, value)
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[96 * 6 + Int(form.rawValue)]!, stringValue)
+        return String(format: self._ps[7 * 6 + Int(form.rawValue)]!, stringValue)
     }
-    public func ChatList_SelectedChats(_ value: Int32) -> String {
+    public func ForwardedAuthorsOthers(_ selector: Int32, _ _0: String, _ _1: String) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, selector)
+        return String(format: self._ps[8 * 6 + Int(form.rawValue)]!, _0, _1)
+    }
+    public func DialogList_LiveLocationChatsCount(_ value: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, value)
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[97 * 6 + Int(form.rawValue)]!, stringValue)
+        return String(format: self._ps[9 * 6 + Int(form.rawValue)]!, stringValue)
     }
-    public func PUSH_CHAT_MESSAGE_VIDEOS(_ selector: Int32, _ _2: String, _ _1: String, _ _3: Int32) -> String {
+    public func ForwardedPhotos(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[10 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func MessageTimer_ShortMinutes(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[11 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func PUSH_CHANNEL_MESSAGE_PHOTOS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[98 * 6 + Int(form.rawValue)]!, _2, _1, _3)
+        return String(format: self._ps[12 * 6 + Int(form.rawValue)]!, _1, _2)
+    }
+    public func PrivacyLastSeenSettings_AddUsers(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[13 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func LiveLocationUpdated_MinutesAgo(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[14 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func AttachmentMenu_SendGif(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[15 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func MessageTimer_ShortSeconds(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[16 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func StickerPack_RemoveMaskCount(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[17 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func ForwardedVideos(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[18 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Call_ShortSeconds(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[19 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func PasscodeSettings_FailedAttempts(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[20 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Notifications_ExceptionMuteExpires_Days(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[21 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func StickerPack_StickerCount(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[22 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func MuteFor_Hours(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[23 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func InviteText_ContactsCountText(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[24 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Watch_UserInfo_Mute(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[25 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func PUSH_MESSAGE_FWDS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, selector)
+        return String(format: self._ps[26 * 6 + Int(form.rawValue)]!, _1, _2)
+    }
+    public func MuteExpires_Days(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[27 * 6 + Int(form.rawValue)]!, stringValue)
     }
     public func AttachmentMenu_SendItem(_ value: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, value)
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[99 * 6 + Int(form.rawValue)]!, stringValue)
-    }
-    public func SharedMedia_Link(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[100 * 6 + Int(form.rawValue)]!, stringValue)
+        return String(format: self._ps[28 * 6 + Int(form.rawValue)]!, stringValue)
     }
     public func Invitation_Members(_ value: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, value)
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[101 * 6 + Int(form.rawValue)]!, stringValue)
+        return String(format: self._ps[29 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func MuteExpires_Hours(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[30 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Media_ShareVideo(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[31 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Media_SharePhoto(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[32 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Notification_GameScoreExtended(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[33 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func PUSH_CHANNEL_MESSAGE_VIDEOS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, selector)
+        return String(format: self._ps[34 * 6 + Int(form.rawValue)]!, _1, _2)
+    }
+    public func Map_ETAMinutes(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[35 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func MessageTimer_Years(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[36 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Conversation_StatusSubscribers(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[37 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func ForwardedMessages(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[38 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func ServiceMessage_GameScoreSimple(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[39 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func ChatList_DeleteConfirmation(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[40 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func PUSH_MESSAGE_ROUNDS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, selector)
+        return String(format: self._ps[41 * 6 + Int(form.rawValue)]!, _1, _2)
+    }
+    public func ServiceMessage_GameScoreSelfExtended(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[42 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func SharedMedia_File(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[43 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func MessagePoll_VotedCount(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[44 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func ForwardedAudios(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[45 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func ForwardedContacts(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[46 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func MessageTimer_Hours(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[47 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func PUSH_CHAT_MESSAGE_PHOTOS(_ selector: Int32, _ _2: String, _ _1: String, _ _3: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, selector)
+        return String(format: self._ps[48 * 6 + Int(form.rawValue)]!, _2, _1, _3)
+    }
+    public func ForwardedStickers(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[49 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func SharedMedia_Photo(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[50 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func PUSH_CHAT_MESSAGE_ROUNDS(_ selector: Int32, _ _2: String, _ _1: String, _ _3: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, selector)
+        return String(format: self._ps[51 * 6 + Int(form.rawValue)]!, _2, _1, _3)
+    }
+    public func MessageTimer_Minutes(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[52 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func LastSeen_MinutesAgo(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[53 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Media_ShareItem(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[54 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func MessageTimer_ShortDays(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[55 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func MuteExpires_Minutes(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[56 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Watch_LastSeen_MinutesAgo(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[57 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Contacts_ImportersCount(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[58 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func LastSeen_HoursAgo(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[59 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func PUSH_CHANNEL_MESSAGES(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, selector)
+        return String(format: self._ps[60 * 6 + Int(form.rawValue)]!, _1, _2)
+    }
+    public func UserCount(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[61 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func MuteFor_Days(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[62 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func PUSH_MESSAGE_PHOTOS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, selector)
+        return String(format: self._ps[63 * 6 + Int(form.rawValue)]!, _1, _2)
     }
     public func MessageTimer_Days(_ value: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, value)
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[102 * 6 + Int(form.rawValue)]!, stringValue)
+        return String(format: self._ps[64 * 6 + Int(form.rawValue)]!, stringValue)
     }
-    public func PUSH_MESSAGE_FWDS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, selector)
-        return String(format: self._ps[103 * 6 + Int(form.rawValue)]!, _1, _2)
-    }
-    public func Notifications_ExceptionMuteExpires_Minutes(_ value: Int32) -> String {
+    public func MessageTimer_Weeks(_ value: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, value)
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[104 * 6 + Int(form.rawValue)]!, stringValue)
+        return String(format: self._ps[65 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func ForwardedPolls(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[66 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Notification_GameScoreSelfExtended(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[67 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func PUSH_CHAT_MESSAGES(_ selector: Int32, _ _2: String, _ _1: String, _ _3: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, selector)
+        return String(format: self._ps[68 * 6 + Int(form.rawValue)]!, _2, _1, _3)
+    }
+    public func Wallpaper_DeleteConfirmation(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[69 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func AttachmentMenu_SendVideo(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[70 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func LiveLocation_MenuChatsCount(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[71 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Watch_LastSeen_HoursAgo(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[72 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func ForwardedFiles(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[73 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func SharedMedia_Video(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[74 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func ForwardedVideoMessages(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[75 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Notifications_ExceptionMuteExpires_Hours(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[76 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func AttachmentMenu_SendPhoto(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[77 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func MessageTimer_Seconds(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[78 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func GroupInfo_ParticipantCount(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[79 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func PUSH_MESSAGE_VIDEOS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, selector)
+        return String(format: self._ps[80 * 6 + Int(form.rawValue)]!, _1, _2)
+    }
+    public func Call_Minutes(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[81 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Call_ShortMinutes(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[82 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func SharedMedia_Generic(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[83 * 6 + Int(form.rawValue)]!, stringValue)
     }
     public func Conversation_StatusOnline(_ value: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, value)
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
-        return String(format: self._ps[105 * 6 + Int(form.rawValue)]!, stringValue)
+        return String(format: self._ps[84 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func QuickSend_Photos(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[85 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Map_ETAHours(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[86 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func StickerPack_AddStickerCount(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[87 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Conversation_LiveLocationMembersCount(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[88 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func ForwardedGifs(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[89 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func SharedMedia_Link(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[90 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Call_Seconds(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[91 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Passport_Scans(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[92 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func StickerPack_AddMaskCount(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[93 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func PUSH_CHAT_MESSAGE_VIDEOS(_ selector: Int32, _ _2: String, _ _1: String, _ _3: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, selector)
+        return String(format: self._ps[94 * 6 + Int(form.rawValue)]!, _2, _1, _3)
+    }
+    public func Notification_GameScoreSimple(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[95 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func PUSH_CHANNEL_MESSAGE_FWDS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, selector)
+        return String(format: self._ps[96 * 6 + Int(form.rawValue)]!, _1, _2)
+    }
+    public func Notifications_ExceptionMuteExpires_Minutes(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[97 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func PUSH_CHANNEL_MESSAGE_ROUNDS(_ selector: Int32, _ _1: String, _ _2: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, selector)
+        return String(format: self._ps[98 * 6 + Int(form.rawValue)]!, _1, _2)
+    }
+    public func CreatePoll_AddMoreOptions(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[99 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func MessageTimer_ShortHours(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[100 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func StickerPack_RemoveStickerCount(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[101 * 6 + Int(form.rawValue)]!, stringValue)
     }
     public func Forward_ConfirmMultipleFiles(_ value: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, value)
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[102 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func MessageTimer_Months(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[103 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func ForwardedLocations(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[104 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Conversation_StatusMembers(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        return String(format: self._ps[105 * 6 + Int(form.rawValue)]!, stringValue)
+    }
+    public func Notifications_Exceptions(_ value: Int32) -> String {
+        let form = presentationStringsPluralizationForm(self.lc, value)
+        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
         return String(format: self._ps[106 * 6 + Int(form.rawValue)]!, stringValue)
     }
-    public func Call_ShortMinutes(_ value: Int32) -> String {
+    public func ServiceMessage_GameScoreSelfSimple(_ value: Int32) -> String {
         let form = presentationStringsPluralizationForm(self.lc, value)
         let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
         return String(format: self._ps[107 * 6 + Int(form.rawValue)]!, stringValue)

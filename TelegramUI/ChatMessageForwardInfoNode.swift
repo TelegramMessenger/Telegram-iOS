@@ -2,6 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 import Postbox
+import TelegramCore
 
 private let prefixFont = Font.regular(13.0)
 private let peerFont = Font.medium(13.0)
@@ -48,9 +49,21 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                     completeSourceString = strings.Message_ForwardedMessageShort(peerString)
             }
             
+            var highlight = true
+            if let peer = peer {
+                if let channel = peer as? TelegramChannel, channel.username == nil {
+                    if case .member = channel.participationStatus {
+                    } else {
+                        highlight = false
+                    }
+                }
+            } else {
+                highlight = false
+            }
+            
             let completeString: NSString = completeSourceString.0 as NSString
             let string = NSMutableAttributedString(string: completeString as String, attributes: [NSAttributedStringKey.foregroundColor: titleColor, NSAttributedStringKey.font: prefixFont])
-            if peer != nil, let range = completeSourceString.1.first?.1 {
+            if highlight, let range = completeSourceString.1.first?.1 {
                 string.addAttributes([NSAttributedStringKey.font: peerFont], range: range)
             }
             let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

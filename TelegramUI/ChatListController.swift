@@ -830,7 +830,6 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
         })
         #endif
 
-        
         if let lockViewFrame = self.titleView.lockViewFrame, !self.didShowPasscodeLockTooltipController {
             self.passcodeLockTooltipDisposable.set(combineLatest(queue: .mainQueue(), ApplicationSpecificNotice.getPasscodeLockTips(accountManager: self.context.sharedContext.accountManager), self.context.sharedContext.accountManager.accessChallengeData() |> take(1)).start(next: { [weak self] tooltipValue, passcodeView in
                     if let strongSelf = self {
@@ -1066,16 +1065,6 @@ public class ChatListController: TelegramController, KeyShortcutResponder, UIVie
                     return (chatController, sourceRect)
                 }
             }
-            return nil
-        }
-        
-        var isEditing = false
-        self.chatListDisplayNode.chatListNode.updateState { state in
-            isEditing = state.editing
-            return state
-        }
-        
-        if isEditing {
             return nil
         }
         

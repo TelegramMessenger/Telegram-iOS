@@ -159,14 +159,15 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
         let peersDisposable = DisposableSet()
         
         let recent: Signal<([Peer], [PeerId: UnreadSearchBadge], [PeerId : PeerPresence]), NoError> = recentPeers(account: account)
-            |> filter { value -> Bool in
-                switch value {
-                    case .disabled:
-                        return false
-                    default:
-                        return true
-                }
-            } |> mapToSignal { recent in
+        |> filter { value -> Bool in
+            switch value {
+                case .disabled:
+                    return false
+                default:
+                    return true
+            }
+        }
+        |> mapToSignal { recent in
             switch recent {
                 case .disabled:
                     return .single(([], [:], [:]))

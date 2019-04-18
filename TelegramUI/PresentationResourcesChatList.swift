@@ -99,30 +99,6 @@ struct PresentationResourcesChatList {
         })
     }
     
-    static func lockTopLockedImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatListLockTopLockedImage.rawValue, { theme in
-            return generateImage(CGSize(width: 7.0, height: 6.0), rotatedContext: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.rootController.navigationBar.accentTextColor.cgColor)
-                context.setStrokeColor(theme.rootController.navigationBar.accentTextColor.cgColor)
-                context.setLineWidth(1.5)
-                context.addPath(UIBezierPath(roundedRect: CGRect(x: 0.75, y: 0.75, width: 5.5, height: 12.0), cornerRadius: 2.5).cgPath)
-                context.strokePath()
-            })
-        })
-    }
-    
-    static func lockBottomLockedImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatListLockBottomLockedImage.rawValue, { theme in
-            return generateImage(CGSize(width: 10.0, height: 7.0), rotatedContext: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.rootController.navigationBar.accentTextColor.cgColor)
-                context.addPath(UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: 10.0, height: 7.0), cornerRadius: 1.33).cgPath)
-                context.fillPath()
-            })
-        })
-    }
-    
     static func lockTopUnlockedImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListLockTopUnlockedImage.rawValue, { theme in
             return generateImage(CGSize(width: 7.0, height: 6.0), rotatedContext: { size, context in
@@ -141,16 +117,14 @@ struct PresentationResourcesChatList {
     
     static func lockBottomUnlockedImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListLockBottomUnlockedImage.rawValue, { theme in
-            return generateImage(CGSize(width: 10.0, height: 7.0), rotatedContext: { size, context in
+            return generateImage(CGSize(width: 10.0, height: 8.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setFillColor(theme.rootController.navigationBar.primaryTextColor.cgColor)
-                context.addPath(UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: 10.0, height: 7.0), cornerRadius: 1.33).cgPath)
+                context.addPath(UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: 10.0, height: 8.0), cornerRadius: 1.5).cgPath)
                 context.fillPath()
             })
         })
     }
-    
-    
     
     static func recentStatusOnlineIcon(_ theme: PresentationTheme, state: RecentStatusOnlineIconState) -> UIImage? {
         let key: PresentationResourceKey

@@ -120,6 +120,8 @@ final class HorizontalPeerItemNode: ListViewItemNode {
     func asyncLayout() -> (HorizontalPeerItem, ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let badgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
         let onlineLayout = self.onlineNode.asyncLayout()
+        
+        let currentItem = self.item
 
         return { [weak self] item, params in
             let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: 92.0, height: item.customWidth ?? 80.0), insets: UIEdgeInsets())
@@ -177,6 +179,10 @@ final class HorizontalPeerItemNode: ListViewItemNode {
             }
             
             let (onlineLayout, onlineApply) = onlineLayout(online)
+            var animateContent = false
+            if let currentItem = currentItem, currentItem.peer.id == item.peer.id {
+                animateContent = true
+            }
             
             return (itemLayout, { animated in
                 if let strongSelf = self {
@@ -207,7 +213,7 @@ final class HorizontalPeerItemNode: ListViewItemNode {
                     strongSelf.onlineNode.frame = CGRect(x: itemLayout.size.width - onlineLayout.width - 18.0, y: itemLayout.size.height - onlineLayout.height - 18.0, width: onlineLayout.width, height: onlineLayout.height)
                     
                     let _ = badgeApply()
-                    let _ = onlineApply(true)
+                    let _ = onlineApply(animateContent)
                 }
             })
         }

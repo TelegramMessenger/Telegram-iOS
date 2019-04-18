@@ -71,7 +71,7 @@ final class ChatBackgroundNode: ASDisplayNode {
 private var backgroundImageForWallpaper: (TelegramWallpaper, Bool, UIImage)?
 private var serviceBackgroundColorForWallpaper: (TelegramWallpaper, UIColor)?
 
-func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mediaBox: MediaBox) -> UIImage? {
+func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mediaBox: MediaBox, composed: Bool = false) -> UIImage? {
     var backgroundImage: UIImage?
     if wallpaper == backgroundImageForWallpaper?.0, (wallpaper.settings?.blur ?? false) == backgroundImageForWallpaper?.1 {
         backgroundImage = backgroundImageForWallpaper?.2
@@ -88,7 +88,7 @@ func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mediaBox: Media
                 })
             case let .image(representations, settings):
                 if let largest = largestImageRepresentation(representations) {
-                    if settings.blur {
+                    if settings.blur && composed {
                         var image: UIImage?
                         let _ = mediaBox.cachedResourceRepresentation(largest.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                             if data.complete {
@@ -111,7 +111,7 @@ func chatControllerBackgroundImage(wallpaper: TelegramWallpaper, mediaBox: Media
                     })
                     backgroundImage = image
                 } else {
-                    if file.settings.blur {
+                    if file.settings.blur && composed {
                         var image: UIImage?
                         let _ = mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true, attemptSynchronously: true).start(next: { data in
                             if data.complete {

@@ -534,6 +534,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                 if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
                                     item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
                                 } else {
+                                    if let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
+                                        if case .member = channel.participationStatus {
+                                        } else {
+                                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
+                                            return
+                                        }
+                                    }
                                     item.controllerInteraction.openPeer(item.effectiveAuthorId ?? author.id, navigate, item.message)
                                 }
                             }
@@ -554,6 +561,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         if let forwardInfoNode = self.forwardInfoNode, forwardInfoNode.frame.contains(location) {
                             if let item = self.item, let forwardInfo = item.message.forwardInfo {
                                 if let sourceMessageId = forwardInfo.sourceMessageId {
+                                    if let channel = forwardInfo.author as? TelegramChannel, channel.username == nil {
+                                        if case .member = channel.participationStatus {
+                                        } else {
+                                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
+                                            return
+                                        }
+                                    }
                                     item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                                 } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
                                     item.controllerInteraction.openPeer(id, .chat(textInputState: nil, messageId: nil), nil)

@@ -43,13 +43,13 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
         } else if let image = media as? TelegramMediaImage {
             galleryMedia = image
         } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-                if let file = content.file {
-                    galleryMedia = file
-                } else if let image = content.image {
-                    if ["photo", "document", "video", "gif"].contains(content.type) {
-                        galleryMedia = image
-                    }
+            if let file = content.file {
+                galleryMedia = file
+            } else if let image = content.image {
+                if ["photo", "document", "video", "gif", "telegram_album"].contains(content.type) {
+                    galleryMedia = image
                 }
+            }
             
             if let instantPage = content.instantPage, let galleryMedia = galleryMedia {
                 switch instantPageType(of: content) {

@@ -3,8 +3,17 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
-private let titleFont = Font.regular(40.0)
-private let subtitleFont: UIFont = {
+private let regularTitleFont = Font.regular(36.0)
+private let regularSubtitleFont: UIFont = {
+    if #available(iOS 8.2, *) {
+        return UIFont.systemFont(ofSize: 10.0, weight: UIFont.Weight.bold)
+    } else {
+        return CTFontCreateWithName("HelveticaNeue-Bold" as CFString, 10.0, nil)
+    }
+}()
+
+private let largeTitleFont = Font.regular(40.0)
+private let largeSubtitleFont: UIFont = {
     if #available(iOS 8.2, *) {
         return UIFont.systemFont(ofSize: 12.0, weight: UIFont.Weight.bold)
     } else {
@@ -35,13 +44,32 @@ private func generateButtonImage(background: PasscodeBackground, frame: CGRect, 
         context.setAlpha(1.0)
         context.textMatrix = .identity
         
-        var offset: CGFloat = -11.0
-        if subtitle.isEmpty {
-            offset -= 7.0
+        let titleFont: UIFont
+        let subtitleFont: UIFont
+        let titleOffset: CGFloat
+        let subtitleOffset: CGFloat
+        if size.width > 80.0 {
+            titleFont = largeTitleFont
+            subtitleFont = largeSubtitleFont
+            if subtitle.isEmpty {
+                titleOffset = -18.0
+            } else {
+                titleOffset = -11.0
+            }
+            subtitleOffset = -54.0
+        } else {
+            titleFont = regularTitleFont
+            subtitleFont = regularSubtitleFont
+            if subtitle.isEmpty {
+                titleOffset = -17.0
+            } else {
+                titleOffset = -10.0
+            }
+            subtitleOffset = -48.0
         }
         
         let titlePath = CGMutablePath()
-        titlePath.addRect(bounds.offsetBy(dx: 0.0, dy: offset))
+        titlePath.addRect(bounds.offsetBy(dx: 0.0, dy: titleOffset))
         let titleString = NSAttributedString(string: title, font: titleFont, textColor: .white, paragraphAlignment: .center)
         let titleFramesetter = CTFramesetterCreateWithAttributedString(titleString as CFAttributedString)
         let titleFrame = CTFramesetterCreateFrame(titleFramesetter, CFRangeMake(0, titleString.length), titlePath, nil)
@@ -49,7 +77,7 @@ private func generateButtonImage(background: PasscodeBackground, frame: CGRect, 
         
         if !subtitle.isEmpty {
             let subtitlePath = CGMutablePath()
-            subtitlePath.addRect(bounds.offsetBy(dx: 0.0, dy: -54.0))
+            subtitlePath.addRect(bounds.offsetBy(dx: 0.0, dy: subtitleOffset))
             let subtitleString = NSAttributedString(string: subtitle, font: subtitleFont, textColor: .white, paragraphAlignment: .center)
             let subtitleFramesetter = CTFramesetterCreateWithAttributedString(subtitleString as CFAttributedString)
             let subtitleFrame = CTFramesetterCreateFrame(subtitleFramesetter, CFRangeMake(0, subtitleString.length), subtitlePath, nil)
@@ -205,75 +233,85 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
         let size: CGSize
         let offset: CGFloat
         
-        let height = Int(max(layout.size.width, layout.size.height))
-        switch height {
-            case 1024, 1194, 1366:
-                buttonSize = 81.0
-                horizontalSecond = 106.0
-                horizontalThird = 212.0
-                verticalSecond = 100.0 + UIScreenPixel
-                verticalThird = 202.0
-                verticalFourth = 303.0
-                size = CGSize(width: 293.0, height: 384.0)
-                offset = 0.0
-            case 896:
-                buttonSize = 85.0
-                horizontalSecond = 115.0
-                horizontalThird = 230.0
-                verticalSecond = 100.0
-                verticalThird = 200.0
-                verticalFourth = 300.0
-                size = CGSize(width: 315.0, height: 385.0)
-                offset = 240.0
-            case 812:
-                buttonSize = 85.0
-                horizontalSecond = 115.0
-                horizontalThird = 230.0
-                verticalSecond = 100.0
-                verticalThird = 200.0
-                verticalFourth = 300.0
-                size = CGSize(width: 315.0, height: 385.0)
-                offset = 240.0
-            case 736:
-                buttonSize = 75.0
-                horizontalSecond = 103.5
-                horizontalThird = 206.0
-                verticalSecond = 90.0
-                verticalThird = 180.0
-                verticalFourth = 270.0
-                size = CGSize(width: 281.0, height: 345.0)
-                offset = 0.0
-            case 667:
-                buttonSize = 75.0
-                horizontalSecond = 103.5
-                horizontalThird = 206.0
-                verticalSecond = 90.0
-                verticalThird = 180.0
-                verticalFourth = 270.0
-                size = CGSize(width: 281.0, height: 345.0)
-                offset = 0.0
-            case 568:
-                buttonSize = 75.0
-                horizontalSecond = 95.0
-                horizontalThird = 190.0
-                verticalSecond = 88.0
-                verticalThird = 176.0
-                verticalFourth = 264.0
-                size = CGSize(width: 265.0, height: 339.0)
-                offset = 0.0
-            default:
-                buttonSize = 75.0
-                horizontalSecond = 95.0
-                horizontalThird = 190.0
-                verticalSecond = 88.0
-                verticalThird = 176.0
-                verticalFourth = 264.0
-                size = CGSize(width: 265.0, height: 339.0)
-                offset = 0.0
+        let metrics = DeviceMetrics.forScreenSize(layout.size)
+        if let metrics = metrics {
+            switch metrics {
+                case .iPhone4:
+                    buttonSize = 75.0
+                    horizontalSecond = 95.0
+                    horizontalThird = 190.0
+                    verticalSecond = 88.0
+                    verticalThird = 176.0
+                    verticalFourth = 264.0
+                    size = CGSize(width: 265.0, height: 339.0)
+                    offset = 0.0
+                case .iPhone5:
+                    buttonSize = 75.0
+                    horizontalSecond = 95.0
+                    horizontalThird = 190.0
+                    verticalSecond = 88.0
+                    verticalThird = 176.0
+                    verticalFourth = 264.0
+                    size = CGSize(width: 265.0, height: 339.0)
+                    offset = 0.0
+                case .iPhone6:
+                    buttonSize = 75.0
+                    horizontalSecond = 103.0
+                    horizontalThird = 206.0
+                    verticalSecond = 90.0
+                    verticalThird = 180.0
+                    verticalFourth = 270.0
+                    size = CGSize(width: 281.0, height: 345.0)
+                    offset = 0.0
+                case .iPhone6Plus:
+                    buttonSize = 75.0
+                    horizontalSecond = 103.0
+                    horizontalThird = 206.0
+                    verticalSecond = 90.0
+                    verticalThird = 180.0
+                    verticalFourth = 270.0
+                    size = CGSize(width: 281.0, height: 345.0)
+                    offset = 0.0
+                case .iPhoneX:
+                    buttonSize = 75.0
+                    horizontalSecond = 103.0
+                    horizontalThird = 206.0
+                    verticalSecond = 91.0
+                    verticalThird = 182.0
+                    verticalFourth = 273.0
+                    size = CGSize(width: 281.0, height: 345.0)
+                    offset = 294.0
+                case .iPhoneXSMax:
+                    buttonSize = 85.0
+                    horizontalSecond = 115.0
+                    horizontalThird = 230.0
+                    verticalSecond = 100.0
+                    verticalThird = 200.0
+                    verticalFourth = 300.0
+                    size = CGSize(width: 315.0, height: 385.0)
+                    offset = 240.0
+                case .iPad, .iPadPro10Inch, .iPadPro11Inch, .iPadPro, .iPadPro3rdGen:
+                    buttonSize = 81.0
+                    horizontalSecond = 106.0
+                    horizontalThird = 212.0
+                    verticalSecond = 101.0
+                    verticalThird = 202.0
+                    verticalFourth = 303.0
+                    size = CGSize(width: 293.0, height: 384.0)
+                    offset = 0.0
+            }
+        } else {
+            buttonSize = 75.0
+            horizontalSecond = 95.0
+            horizontalThird = 190.0
+            verticalSecond = 88.0
+            verticalThird = 176.0
+            verticalFourth = 264.0
+            size = CGSize(width: 265.0, height: 339.0)
+            offset = 0.0
         }
         
         let origin = CGPoint(x: floor((layout.size.width - size.width) / 2.0), y: offset)
-        
         if let subnodes = self.subnodes {
             for i in 0 ..< subnodes.count {
                 var origin = origin

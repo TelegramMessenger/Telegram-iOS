@@ -116,7 +116,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         
         switch self.wallpaper {
             case .image, .file:
-                if let image = chatControllerBackgroundImage(wallpaper: self.wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox) {
+                if let image = chatControllerBackgroundImage(wallpaper: self.wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, composed: false) {
                     self.background = ImageBasedPasscodeBackground(image: image, size: validLayout.size)
                 } else {
                     self.background = DefaultPasscodeBackground(size: validLayout.size)
@@ -210,7 +210,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         transition.updateFrame(view: self.effectView, frame: bounds)
         
         let iconSize = CGSize(width: 35.0, height: 37.0)
-        transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0) + 11.0, y: layout.insets(options: .statusBar).top + 15.0), size: iconSize))
+        transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0) + 6.0, y: layout.insets(options: .statusBar).top + 15.0), size: iconSize))
         
         let titleSize = self.titleNode.updateLayout(layout: layout, transition: transition)
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 123.0), size: titleSize))

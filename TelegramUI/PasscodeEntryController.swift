@@ -4,6 +4,16 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 
+final public class PasscodeEntryControllerPresentationArguments {
+    let animated: Bool
+    let lockIconInitialFrame: () -> CGRect
+    
+    public init(animated: Bool = true, lockIconInitialFrame: @escaping () -> CGRect) {
+        self.animated = animated
+        self.lockIconInitialFrame = lockIconInitialFrame
+    }
+}
+
 final public class PasscodeEntryController: ViewController {
     private var controllerNode: PasscodeEntryControllerNode {
         return self.displayNode as! PasscodeEntryControllerNode
@@ -15,18 +25,18 @@ final public class PasscodeEntryController: ViewController {
         
     private let challengeData: PostboxAccessChallengeData
     private let enableBiometrics: Bool
-    private let animated: Bool
+    private let arguments: PasscodeEntryControllerPresentationArguments
     
     public var presentationCompleted: (() -> Void)?
     
     private let biometricsDisposable = MetaDisposable()
     
-    public init(context: AccountContext, challengeData: PostboxAccessChallengeData, enableBiometrics: Bool, animated: Bool = false) {
+    public init(context: AccountContext, challengeData: PostboxAccessChallengeData, enableBiometrics: Bool, arguments: PasscodeEntryControllerPresentationArguments) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.challengeData = challengeData
         self.enableBiometrics = enableBiometrics
-        self.animated = animated
+        self.arguments = arguments
         
         super.init(navigationBarPresentationData: nil)
         
@@ -123,7 +133,7 @@ final public class PasscodeEntryController: ViewController {
         super.viewDidAppear(animated)
         
         self.controllerNode.activateInput()
-        if self.animated {
+        if self.arguments.animated {
             Queue.mainQueue().after(0.5) {
                 serviceSoundManager.playLockSound()
             }
