@@ -480,7 +480,7 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute], t
                 result.append(.documentAttributeSticker(alt: displayText, stickerset: stickerSet))
             case let .ImageSize(size):
                 result.append(.documentAttributeImageSize(w: Int32(size.width), h: Int32(size.height)))
-            case let .Video(duration, size, videoFlags):
+            case let .Video(duration, size, _):
                 result.append(.documentAttributeVideo(duration: Int32(duration), w: Int32(size.width), h: Int32(size.height)))
             case let .Audio(isVoice, duration, title, performer, waveform):
                 var flags: Int32 = 0
@@ -745,21 +745,7 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
                     var decryptedMedia: SecretApi73.DecryptedMessageMedia?
                     
                     if let uploadedFile = uploadedFile {
-                        var voiceDuration: Int32?
-                        for attribute in file.attributes {
-                            if case let .Audio(isVoice, duration, _, _, _) = attribute {
-                                if isVoice {
-                                    voiceDuration = Int32(duration)
-                                }
-                                break
-                            }
-                        }
-                        
-                        /*if let voiceDuration = voiceDuration {
-                            decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaAudio(duration: voiceDuration, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv))
-                        } else { */
                         decryptedMedia = SecretApi73.DecryptedMessageMedia.decryptedMessageMediaDocument(thumb: thumb, thumbW: thumbW, thumbH: thumbH, mimeType: file.mimeType, size: uploadedFile.size, key: Buffer(data: uploadedFile.key.aesKey), iv: Buffer(data: uploadedFile.key.aesIv), attributes: decryptedAttributes73(file.attributes, transaction: transaction), caption: "")
-                        //}
                     } else {
                         if let resource = file.resource as? CloudDocumentMediaResource, let size = file.size {
                             let thumb: SecretApi73.PhotoSize
@@ -1134,15 +1120,18 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                     return sendBoxedDecryptedMessage(postbox: postbox, network: network, peer: peer, state: state, operationIndex: tagLocalIndex, decryptedMessage: decryptedMessage, globallyUniqueId: globallyUniqueId, file: file, asService: wasDelivered, wasDelivered: wasDelivered)
                     |> mapToSignal { result in
                         return postbox.transaction { transaction -> Void in
-                            if result == nil {
-                                replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: globallyUniqueId)
-                            } else {
-                                markOutgoingOperationAsCompleted(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
+                            let forceRemove: Bool
+                            switch result {
+                                case .message:
+                                    forceRemove = false
+                                case .error:
+                                    forceRemove = true
                             }
+                            markOutgoingOperationAsCompleted(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, forceRemove: forceRemove)
                             
                             var timestamp = message.timestamp
                             var encryptedFile: SecretChatFileReference?
-                            if let result = result {
+                            if case let .message(result) = result {
                                 switch result {
                                     case let .sentEncryptedMessage(date):
                                         timestamp = date
@@ -1156,7 +1145,7 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                             
                             transaction.updateMessage(message.id, update: { currentMessage in
                                 var flags = StoreMessageFlags(currentMessage.flags)
-                                if let _ = result {
+                                if case .message = result {
                                     flags.remove(.Unsent)
                                     flags.remove(.Sending)
                                 } else {
@@ -1199,12 +1188,15 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                             for file in sentStickers {
                                 addRecentlyUsedSticker(transaction: transaction, fileReference: .standalone(media: file))
                             }
+                            
+                            if case .error(.chatCancelled) = result {
+                                
+                            }
                         }
                     }
                 } else {
                     replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: messageId.peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: arc4random64())
                     deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [messageId])
-                    //assertionFailure()
                     return .complete()
                 }
             } else {
@@ -1221,17 +1213,20 @@ private func sendServiceActionMessage(postbox: Postbox, network: Network, peerId
             return sendBoxedDecryptedMessage(postbox: postbox, network: network, peer: peer, state: state, operationIndex: tagLocalIndex, decryptedMessage: decryptedMessage, globallyUniqueId: action.globallyUniqueId, file: nil, asService: true, wasDelivered: wasDelivered)
             |> mapToSignal { result in
                 return postbox.transaction { transaction -> Void in
-                    if result == nil {
-                        replaceOutgoingOperationWithEmptyMessage(transaction: transaction, peerId: peerId, tagLocalIndex: tagLocalIndex, globallyUniqueId: action.globallyUniqueId)
-                    } else {
-                        markOutgoingOperationAsCompleted(transaction: transaction, peerId: peerId, tagLocalIndex: tagLocalIndex, forceRemove: result == nil)
+                    let forceRemove: Bool
+                    switch result {
+                        case .message:
+                            forceRemove = false
+                        case .error:
+                            forceRemove = true
                     }
+                    markOutgoingOperationAsCompleted(transaction: transaction, peerId: peerId, tagLocalIndex: tagLocalIndex, forceRemove: forceRemove)
                     if let messageId = action.messageId {
                         var resultTimestamp: Int32?
                         transaction.updateMessage(messageId, update: { currentMessage in
                             var flags = StoreMessageFlags(currentMessage.flags)
                             var timestamp = currentMessage.timestamp
-                            if let result = result {
+                            if case let .message(result) = result {
                                 switch result {
                                     case let .sentEncryptedMessage(date):
                                         timestamp = date
@@ -1264,7 +1259,17 @@ private func sendServiceActionMessage(postbox: Postbox, network: Network, peerId
     |> switchToLatest
 }
 
-private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer: TelegramSecretChat, state: SecretChatState, operationIndex: Int32, decryptedMessage: BoxedDecryptedMessage, globallyUniqueId: Int64, file: SecretChatOutgoingFile?, asService: Bool, wasDelivered: Bool) -> Signal<Api.messages.SentEncryptedMessage?, NoError> {
+private enum SendBoxedDecryptedMessageError {
+    case chatCancelled
+    case generic
+}
+
+private enum SendBoxedDecryptedMessageResult {
+    case message(Api.messages.SentEncryptedMessage)
+    case error(SendBoxedDecryptedMessageError)
+}
+
+private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer: TelegramSecretChat, state: SecretChatState, operationIndex: Int32, decryptedMessage: BoxedDecryptedMessage, globallyUniqueId: Int64, file: SecretChatOutgoingFile?, asService: Bool, wasDelivered: Bool) -> Signal<SendBoxedDecryptedMessageResult, NoError> {
     let payload = Buffer()
     var sequenceInfo: SecretChatOperationSequenceInfo?
     var maybeParameters: SecretChatEncryptionParameters?
@@ -1301,7 +1306,7 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
     
     guard let parameters = maybeParameters else {
         Logger.shared.log("SecretChat", "no valid key found")
-        return .single(nil)
+        return .single(.error(.chatCancelled))
     }
     
     decryptedMessage.serialize(payload, role: state.role, sequenceInfo: sequenceInfo)
@@ -1325,60 +1330,64 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
         }
     }
     return sendMessage
-    |> map { next -> Api.messages.SentEncryptedMessage? in
-        return next
+    |> map { next -> SendBoxedDecryptedMessageResult in
+        return .message(next)
     }
-    |> `catch`{ _ in
-        return .single(nil)
+    |> `catch` { error -> Signal<SendBoxedDecryptedMessageResult, NoError> in
+        if error.errorDescription == "ENCRYPTION_DECLINED" {
+            return .single(.error(.chatCancelled))
+        } else {
+            return .single(.error(.generic))
+        }
     }
 }
 
 private func requestTerminateSecretChat(postbox: Postbox, network: Network, peerId: PeerId, tagLocalIndex: Int32, reportSpam: Bool) -> Signal<Void, NoError> {
     return network.request(Api.functions.messages.discardEncryption(chatId: peerId.id))
-        |> map(Optional.init)
-        |> `catch` { _ in
-            return .single(nil)
-        }
-        |> mapToSignal { _ -> Signal<Void, NoError> in
-            if reportSpam {
-                return postbox.transaction { transaction -> TelegramSecretChat? in
-                    if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
-                        return peer
-                    } else {
-                        return nil
-                    }
+    |> map(Optional.init)
+    |> `catch` { _ in
+        return .single(nil)
+    }
+    |> mapToSignal { _ -> Signal<Void, NoError> in
+        if reportSpam {
+            return postbox.transaction { transaction -> TelegramSecretChat? in
+                if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
+                    return peer
+                } else {
+                    return nil
                 }
-                |> mapToSignal { peer -> Signal<Void, NoError> in
-                    if let peer = peer {
-                        return network.request(Api.functions.messages.reportEncryptedSpam(peer: Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id, accessHash: peer.accessHash)))
-                        |> map(Optional.init)
-                        |> `catch` { _ -> Signal<Api.Bool?, NoError> in
-                            return .single(nil)
-                        }
-                        |> mapToSignal { result -> Signal<Void, NoError> in
-                            return postbox.transaction { transaction -> Void in
-                                if result != nil {
-                                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                                        if let current = current as? CachedSecretChatData {
-                                            return current.withUpdatedReportStatus(.didReport)
-                                        } else {
-                                            return current
-                                        }
-                                    })
-                                }
+            }
+            |> mapToSignal { peer -> Signal<Void, NoError> in
+                if let peer = peer {
+                    return network.request(Api.functions.messages.reportEncryptedSpam(peer: Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id, accessHash: peer.accessHash)))
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+                        return .single(nil)
+                    }
+                    |> mapToSignal { result -> Signal<Void, NoError> in
+                        return postbox.transaction { transaction -> Void in
+                            if result != nil {
+                                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                                    if let current = current as? CachedSecretChatData {
+                                        return current.withUpdatedReportStatus(.didReport)
+                                    } else {
+                                        return current
+                                    }
+                                })
                             }
                         }
-                    } else {
-                        return .single(Void())
                     }
+                } else {
+                    return .single(Void())
                 }
-            } else {
-                return .single(Void())
             }
+        } else {
+            return .single(Void())
         }
-        |> mapToSignal { _ -> Signal<Void, NoError> in
-            return postbox.transaction { transaction -> Void in
-                markOutgoingOperationAsCompleted(transaction: transaction, peerId: peerId, tagLocalIndex: tagLocalIndex, forceRemove: true)
-            }
+    }
+    |> mapToSignal { _ -> Signal<Void, NoError> in
+        return postbox.transaction { transaction -> Void in
+            markOutgoingOperationAsCompleted(transaction: transaction, peerId: peerId, tagLocalIndex: tagLocalIndex, forceRemove: true)
         }
+    }
 }
