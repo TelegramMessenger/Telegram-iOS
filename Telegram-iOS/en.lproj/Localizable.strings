@@ -4239,3 +4239,5 @@ Unused sets are archived when you add more.";
 "ChatList.ArchivedChatsTitle" = "Archived Chats";
 
 "PasscodeSettings.PasscodeOptions" = "Passcode Options";
+
+"Conversation.PrivateChannelTooltip" = "This channel is private";
