@@ -821,11 +821,13 @@ public:
     bool hasMtrixChange(int /*frameNo*/) const {
         return !(mTransform->isStatic() && mOffset.isStatic());
     }
+    int maxCopies() const { return int(mMaxCopies);}
     float copies(int frameNo) const {return mCopies.value(frameNo);}
     float offset(int frameNo) const {return mOffset.value(frameNo);}
 public:
     LOTAnimatable<float>             mCopies{0};
     LOTAnimatable<float>             mOffset{0};
+    float                            mMaxCopies{0.0};
 };
 
 class LOTModel

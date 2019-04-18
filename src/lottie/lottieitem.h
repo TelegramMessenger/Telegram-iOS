@@ -268,7 +268,7 @@ public:
    void applyTrim();
    void processTrimItems(std::vector<LOTPathDataItem *> &list);
    void processPaintItems(std::vector<LOTPathDataItem *> &list);
-   void renderList(std::vector<VDrawable *> &list) final;
+   void renderList(std::vector<VDrawable *> &list);
    const VMatrix & matrix() const { return mMatrix;}
 protected:
    LOTGroupData                                  *mData{nullptr};
@@ -488,8 +488,11 @@ class LOTRepeaterItem : public LOTContentGroupItem
 public:
    LOTRepeaterItem(LOTRepeaterData *data);
    void update(int frameNo, const VMatrix &parentMatrix, float parentAlpha, const DirtyFlag &flag) final;
+   void renderList(std::vector<VDrawable *> &list) final;
 private:
    LOTRepeaterData             *mData;
+   bool                         mHidden{false};
+   int                          mCopies{0};
 };
 
 

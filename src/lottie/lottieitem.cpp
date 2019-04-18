@@ -1383,7 +1383,9 @@ LOTRepeaterItem::LOTRepeaterItem(LOTRepeaterData *data) : mData(data)
     LOTGroupData *root = reinterpret_cast<LOTGroupData *>(mData->mChildren[0].get());
     assert(root);
 
-    for (int i= 0; i < mData->copies(0); i++) {
+    mCopies = mData->maxCopies();
+
+    for (int i= 0; i < mCopies; i++) {
         auto content = std::make_unique<LOTContentGroupItem>(static_cast<LOTGroupData *>(root));
         content->setParent(this);
         mContents.push_back(std::move(content));
@@ -1395,25 +1397,41 @@ void LOTRepeaterItem::update(int frameNo, const VMatrix &parentMatrix, float par
 
     DirtyFlag newFlag = flag;
 
+    float copies = mData->copies(frameNo);
+    int visibleCopies = int(copies);
+
+    if (visibleCopies == 0) {
+        mHidden = true;
+        return;
+    } else {
+        mHidden = false;
+    }
+
     if (mData->hasMtrixChange(frameNo)) {
         newFlag |= DirtyFlagBit::Matrix;
     }
 
-    float multiplier = mData->offset(frameNo);
+    float offset = mData->offset(frameNo);
     float startOpacity = mData->mTransform->startOpacity(frameNo);
     float endOpacity = mData->mTransform->endOpacity(frameNo);
-    float index = 0;
-    float copies = mData->copies(frameNo);
-    if (!vCompare(copies, 1)) copies -=1;
 
     newFlag |= DirtyFlagBit::Alpha;
-    for (const auto &content : mContents) {
-        float newAlpha = parentAlpha * lerp(startOpacity, endOpacity, index / copies);
-        VMatrix result = mData->mTransform->matrixForRepeater(frameNo, multiplier) * parentMatrix;
-        content->update(frameNo, result, newAlpha, newFlag);
-        multiplier += 1;
-        index +=1;
+
+    for (int i = 0; i < mCopies; ++i) {
+        float newAlpha = parentAlpha * lerp(startOpacity, endOpacity, i / copies);
+
+        // hide rest of the copies , @TODO find a better solution.
+        if ( i >= visibleCopies) newAlpha = 0;
+
+        VMatrix result = mData->mTransform->matrixForRepeater(frameNo, i + offset) * parentMatrix;
+        mContents[i]->update(frameNo, result, newAlpha, newFlag);
     }
+}
+
+void LOTRepeaterItem::renderList(std::vector<VDrawable *> &list)
+{
+    if (mHidden) return;
+    return LOTContentGroupItem::renderList(list);
 }
 
 static void updateGStops(LOTNode *n, const VGradient *grad)

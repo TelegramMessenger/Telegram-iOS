@@ -1282,6 +1282,18 @@ std::shared_ptr<LOTData> LottieParserImpl::parseReapeaterObject()
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "c")) {
             parseProperty(obj->mCopies);
+            float maxCopy= 0.0;
+            if (!obj->mCopies.isStatic()) {
+                for(auto &keyFrame : obj->mCopies.mAnimInfo->mKeyFrames) {
+                    if (maxCopy < keyFrame.mValue.mStartValue)
+                        maxCopy = keyFrame.mValue.mStartValue;
+                    if (maxCopy < keyFrame.mValue.mEndValue)
+                        maxCopy = keyFrame.mValue.mEndValue;
+                }
+            } else {
+                maxCopy = obj->mCopies.mValue;
+            }
+            obj->mMaxCopies = maxCopy;
         } else if (0 == strcmp(key, "o")) {
             parseProperty(obj->mOffset);
         } else if (0 == strcmp(key, "tr")) {
@@ -2109,7 +2121,7 @@ public:
         case LOTData::Type::Repeater: {
             auto r = static_cast<LOTRepeaterData *>(obj);
             vDebug << level << "{ Repeater: a:" << !obj->isStatic()
-                   << ", copies:" << r->copies(0)
+                   << ", copies:" << r->maxCopies()
                    << ", offset:" << r->offset(0);
             visitChildren(static_cast<LOTGroupData *>(obj), level);
             vDebug << level << "} Repeater";

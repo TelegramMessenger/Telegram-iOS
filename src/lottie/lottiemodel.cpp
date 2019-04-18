@@ -94,9 +94,10 @@ VMatrix LOTTransformData::matrixForRepeater(int frameNo, float multiplier) const
     scale.setY(std::pow(scale.y(), multiplier));
     VMatrix m;
     m.translate(mPosition.value(frameNo) * multiplier)
-     .rotate(mRotation.value(frameNo) * multiplier)
      .scale(scale)
-     .translate(mAnchor.value(frameNo));
+     .translate(mAnchor.value(frameNo))
+     .rotate(mRotation.value(frameNo) * multiplier)
+     .translate(-mAnchor.value(frameNo));
     return m;
 }
 
