@@ -695,19 +695,19 @@ public final class Transaction {
         self.postbox?.setPreferencesEntry(key: key, value: f(self.postbox?.getPreferencesEntry(key: key)))
     }
     
-    public func getPinnedItemIds() -> [PinnedItemId] {
+    public func getPinnedItemIds(groupId: PeerGroupId?) -> [PinnedItemId] {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            return postbox.chatListTable.getPinnedItemIds(messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable)
+            return postbox.chatListTable.getPinnedItemIds(groupId: groupId, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable)
         } else {
             return []
         }
     }
     
-    public func setPinnedItemIds(_ itemIds: [PinnedItemId]) {
+    public func setPinnedItemIds(groupId: PeerGroupId?, itemIds: [PinnedItemId]) {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            postbox.setPinnedItemIds(itemIds)
+            postbox.setPinnedItemIds(groupId: groupId, itemIds: itemIds)
         }
     }
     
@@ -928,7 +928,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
 
             #if DEBUG
             //debugSaveState(basePath: basePath, name: "previous1")
-            //debugRestoreState(basePath: basePath, name: "previous1")
+            debugRestoreState(basePath: basePath, name: "previous1")
             #endif
             
             let startTime = CFAbsoluteTimeGetCurrent()
@@ -1805,20 +1805,18 @@ public final class Postbox {
         let previousGroupId = self.groupAssociationTable.get(peerId: id)
         if previousGroupId != groupId {
             self.groupAssociationTable.set(peerId: id, groupId: groupId, initialPeerGroupIdsBeforeUpdate: &self.currentInitialPeerGroupIdsBeforeUpdate)
-            if let _ = groupId {
-                if let index = self.chatListTable.getPeerChatListIndex(peerId: id), index.1.pinningIndex != nil {
-                    var itemIds = self.chatListTable.getPinnedItemIds(messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable)
-                    if let index = itemIds.index(of: .peer(id)) {
-                        itemIds.remove(at: index)
-                        self.chatListTable.setPinnedItemIds(itemIds, updatedChatListInclusions: &self.currentUpdatedChatListInclusions, updatedChatListGroupInclusions: &self.currentUpdatedChatListGroupInclusions, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable)
-                    }
+            if let index = self.chatListTable.getPeerChatListIndex(peerId: id), index.1.pinningIndex != nil {
+                var itemIds = self.chatListTable.getPinnedItemIds(groupId: previousGroupId, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable)
+                if let index = itemIds.index(of: .peer(id)) {
+                    itemIds.remove(at: index)
+                    self.chatListTable.setPinnedItemIds(groupId: previousGroupId, itemIds: itemIds, updatedChatListInclusions: &self.currentUpdatedChatListInclusions, updatedChatListGroupInclusions: &self.currentUpdatedChatListGroupInclusions, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable)
                 }
             }
         }
     }
     
-    fileprivate func setPinnedItemIds(_ itemIds: [PinnedItemId]) {
-        self.chatListTable.setPinnedItemIds(itemIds, updatedChatListInclusions: &self.currentUpdatedChatListInclusions, updatedChatListGroupInclusions: &self.currentUpdatedChatListGroupInclusions, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable)
+    fileprivate func setPinnedItemIds(groupId: PeerGroupId?, itemIds: [PinnedItemId]) {
+        self.chatListTable.setPinnedItemIds(groupId: groupId, itemIds: itemIds, updatedChatListInclusions: &self.currentUpdatedChatListInclusions, updatedChatListGroupInclusions: &self.currentUpdatedChatListGroupInclusions, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable)
     }
     
     fileprivate func updateCurrentPeerNotificationSettings(_ notificationSettings: [PeerId: PeerNotificationSettings]) {
@@ -2348,7 +2346,6 @@ public final class Postbox {
                 return 0
             }
         })
-        mutableView.render(postbox: self)
         
         let initialUpdateType: ViewUpdateType = .Initial
         

@@ -3,7 +3,6 @@ import Foundation
 public struct MessageHistoryViewPeerHole: Equatable, Hashable {
     public let peerId: PeerId
     public let namespace: MessageId.Namespace
-    public let indices: IndexSet
 }
 
 public enum MessageHistoryViewHole: Equatable, Hashable {
@@ -178,16 +177,6 @@ public struct MessageHistoryEntry: Comparable {
     }
 }
 
-final class MutableMessageHistoryViewReplayContext {
-    var invalidEarlier: Bool = false
-    var invalidLater: Bool = false
-    var removedEntries: Bool = false
-    
-    func empty() -> Bool {
-        return !self.removedEntries && !invalidEarlier && !invalidLater
-    }
-}
-
 enum MessageHistoryTopTaggedMessage {
     case message(Message)
     case intermediate(IntermediateMessage)
@@ -276,7 +265,7 @@ public enum MessageHistoryViewReadState {
     case peer([PeerId: CombinedPeerReadState])
 }
 
-public enum HistoryViewInputAnchor {
+public enum HistoryViewInputAnchor: Equatable {
     case lowerBound
     case upperBound
     case message(MessageId)
@@ -299,7 +288,7 @@ final class MutableMessageHistoryView {
     fileprivate var topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?]
     fileprivate var additionalDatas: [AdditionalMessageHistoryViewDataEntry]
     
-    fileprivate var sampledState: HistoryViewSample
+    fileprivate(set) var sampledState: HistoryViewSample
     
     init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerIds: MessageHistoryViewPeerIds, anchor inputAnchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
         self.anchor = inputAnchor
@@ -372,7 +361,7 @@ final class MutableMessageHistoryView {
         }
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction, updatedMedia: [MediaId: Media?], updatedCachedPeerData: [PeerId: CachedPeerData], context: MutableMessageHistoryViewReplayContext, renderIntermediateMessage: (IntermediateMessage) -> Message) -> Bool {
+    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
         var operations: [[MessageHistoryOperation]] = []
         var peerIdsSet = Set<PeerId>()
         
@@ -501,8 +490,8 @@ final class MutableMessageHistoryView {
                         }
                     }
                 }
-                if !updatedMedia.isEmpty {
-                    if loadedState.updateMedia(updatedMedia: updatedMedia) {
+                if !transaction.updatedMedia.isEmpty {
+                    if loadedState.updateMedia(updatedMedia: transaction.updatedMedia) {
                         hasChanges = true
                     }
                 }
@@ -584,7 +573,7 @@ final class MutableMessageHistoryView {
             switch self.additionalDatas[i] {
                 case let .cachedPeerData(peerId, currentData):
                     currentCachedPeerData = currentData
-                    if let updatedData = updatedCachedPeerData[peerId] {
+                    if let updatedData = transaction.currentUpdatedCachedPeerData[peerId] {
                         if currentData?.messageIds != updatedData.messageIds {
                             updatedCachedPeerDataMessages = true
                         }
@@ -700,21 +689,16 @@ final class MutableMessageHistoryView {
             }
         }
         
-        return hasChanges
-    }
-    
-    func updatePeers(_ peers: [PeerId: Peer]) -> Bool {
-        return false
-    }
-    
-    func render(postbox: Postbox) {
-        
-        for namespace in self.topTaggedMessages.keys {
-            if let entry = self.topTaggedMessages[namespace]!, case let .intermediate(message) = entry {
-                let item: MessageHistoryTopTaggedMessage? = .message(postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable))
-                self.topTaggedMessages[namespace] = item
+        if hasChanges {
+            for namespace in self.topTaggedMessages.keys {
+                if let entry = self.topTaggedMessages[namespace]!, case let .intermediate(message) = entry {
+                    let item: MessageHistoryTopTaggedMessage? = .message(postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable))
+                    self.topTaggedMessages[namespace] = item
+                }
             }
         }
+        
+        return hasChanges
     }
     
     func firstHole() -> (MessageHistoryViewHole, MessageHistoryViewRelativeHoleDirection)? {
@@ -723,8 +707,8 @@ final class MutableMessageHistoryView {
                 switch loadingSample {
                     case .ready:
                         return nil
-                    case let .loadHole(peerId, namespace, _, indices, id):
-                        return (MessageHistoryViewHole.peer(MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, indices: indices)), .aroundId(MessageId(peerId: peerId, namespace: namespace, id: id)))
+                    case let .loadHole(peerId, namespace, _, id):
+                        return (.peer(MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace)), .aroundId(MessageId(peerId: peerId, namespace: namespace, id: id)))
                 }
             case let .loaded(loadedSample):
                 if let hole = loadedSample.hole {
@@ -734,7 +718,7 @@ final class MutableMessageHistoryView {
                     } else {
                         direction = .aroundId(MessageId(peerId: hole.peerId, namespace: hole.namespace, id: hole.startId))
                     }
-                    return (MessageHistoryViewHole.peer(MessageHistoryViewPeerHole(peerId: hole.peerId, namespace: hole.namespace, indices: hole.indices)), direction)
+                    return (.peer(MessageHistoryViewPeerHole(peerId: hole.peerId, namespace: hole.namespace)), direction)
                 } else {
                     return nil
                 }

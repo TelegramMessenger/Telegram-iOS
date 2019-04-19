@@ -240,13 +240,11 @@ final class ChatListTable: Table {
         }
     }
     
-    func getPinnedItemIds(messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) -> [PinnedItemId] {
+    func getPinnedItemIds(groupId: PeerGroupId?, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) -> [PinnedItemId] {
         var itemIds: [PinnedItemId] = []
-        self.valueBox.range(self.table, start: self.upperBound(groupId: nil), end: self.key(groupId: nil, index: ChatListIndex(pinningIndex: UInt16.max - 1, messageIndex: MessageIndex.absoluteUpperBound()), type: .message).successor, values: { key, value in
-            let entry = readEntry(groupId: nil, messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable, key: key, value: value)
+        self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.key(groupId: groupId, index: ChatListIndex(pinningIndex: UInt16.max - 1, messageIndex: MessageIndex.absoluteUpperBound()), type: .message).successor, values: { key, value in
+            let entry = readEntry(groupId: groupId, messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable, key: key, value: value)
             switch entry {
-                /*case let .groupReference(groupId, _):
-                    itemIds.append(.group(groupId))*/
                 case let .message(index, _, _):
                     itemIds.append(.peer(index.messageIndex.id.peerId))
                 default:
@@ -257,9 +255,9 @@ final class ChatListTable: Table {
         return itemIds
     }
     
-    func setPinnedItemIds(_ itemIds: [PinnedItemId], updatedChatListInclusions: inout [PeerId: PeerChatListInclusion], updatedChatListGroupInclusions: inout [PeerGroupId: GroupChatListInclusion], messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) {
+    func setPinnedItemIds(groupId: PeerGroupId?, itemIds: [PinnedItemId], updatedChatListInclusions: inout [PeerId: PeerChatListInclusion], updatedChatListGroupInclusions: inout [PeerGroupId: GroupChatListInclusion], messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable) {
         let updatedIds = Set(itemIds)
-        for itemId in self.getPinnedItemIds(messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable) {
+        for itemId in self.getPinnedItemIds(groupId: groupId, messageHistoryTable: messageHistoryTable, peerChatInterfaceStateTable: peerChatInterfaceStateTable) {
             if !updatedIds.contains(itemId) {
                 switch itemId {
                     case let .peer(peerId):
