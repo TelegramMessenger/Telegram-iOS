@@ -90,6 +90,7 @@
 		<string>opera-http</string>
 		<string>opera-https</string>
 		<string>firefox-focus</string>
+		<string>ddgQuickLink</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>

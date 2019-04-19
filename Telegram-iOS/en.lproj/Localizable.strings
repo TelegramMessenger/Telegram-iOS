@@ -4241,3 +4241,10 @@ Unused sets are archived when you add more.";
 "PasscodeSettings.PasscodeOptions" = "Passcode Options";
 
 "Conversation.PrivateChannelTooltip" = "This channel is private";
+
+"PasscodeSettings.PasscodeOptions" = "Passcode Options";
+"PasscodeSettings.AlphanumericCode" = "Custom Alphanumeric Code";
+"PasscodeSettings.4DigitCode" = "4-Digit Numeric Code";
+"PasscodeSettings.6DigitCode" = "6-Digit Numeric Code";
+
+"Conversation.ScamWarning" = "⚠️ Warning: Many users reported this account as a scam. Please be careful, especially if it asks you for money.";
